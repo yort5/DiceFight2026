@@ -8,12 +8,15 @@ using Xunit;
 namespace DiceFight.Engine.Tests;
 
 // End-to-end proof that the two curated sample teams actually play against
-// each other through the real engine: Field (Main Step) triggers a
-// WhenFielded ability via the AbilityQueue + EffectInterpreter, then the
-// fielded die attacks and deals real combat damage using the team's own
-// card stats. This bypasses Purchase/Roll (not built yet - see
-// RULES_ENGINE_DESIGN.md) by seeding Reserve Pool dice directly; everything
-// downstream (Field, DeclareAttackers/Blockers, AssignCombatDamage,
+// each other through the real engine: Purchase -> Field -> Attack, with
+// WhenFielded/WhenUsed/Global abilities running through the real
+// AbilityQueue + EffectInterpreter. This bypasses actual dice rolling
+// (GameState.NewGame/TeamSetup already provisions real team dice into
+// Zone.Unpurchased; this file just marks a handful of Sidekicks as
+// "already rolled onto an energy face" to pay for things, since Roll and
+// Reroll's IDiceRoller-driven randomness isn't the thing being tested
+// here) - everything downstream (Purchase, Field, DeclareAttackers/
+// Blockers, AssignCombatDamage, UseActionDie, UseGlobalAbility,
 // AbilityQueue) is the real engine path.
 public class TwoTeamsDemoTests
 {
@@ -33,19 +36,42 @@ public class TwoTeamsDemoTests
         return state;
     }
 
+    // Converts N of a player's own Sidekick dice into ready Wild energy
+    // sitting in the Reserve Pool - Sidekick energy faces satisfy any
+    // required type (rule 1.3.10), which keeps these tests focused on the
+    // mechanics being exercised rather than energy-type bookkeeping.
+    private static List<DieInstance> GiveWildEnergy(GameState state, string playerId, int count)
+    {
+        var dice = state.DiceIn(playerId, Zone.Bag).Take(count).ToList();
+        foreach (var die in dice)
+        {
+            die.Zone = Zone.ReservePool;
+            die.Status = DieStatus.Energy;
+            die.EnergyKind = EnergyKind.Wild;
+        }
+        return dice;
+    }
+
+    private static DieInstance FindUnpurchased(GameState state, string playerId, string cardId) =>
+        state.DiceIn(playerId, Zone.Unpurchased).First(d => d.CardId == cardId);
+
     [Fact]
-    public void FieldingDazzler_TriggersWhenFieldedAbility_ThroughTheRealQueueAndInterpreter()
+    public void PurchasingAndFieldingDazzler_TriggersWhenFieldedAbility_ThroughTheRealQueueAndInterpreter()
     {
         var state = BuildTwoTeamGame();
         state.ActivePlayerId = "teamA";
-
-        var dazzlerDie = new DieInstance
-        {
-            Id = "teamA-dazzler-1", CardId = SampleCards.Dazzler.Id, OwnerId = "teamA", ControllerId = "teamA",
-            Zone = Zone.ReservePool, Status = DieStatus.Character, Level = 1 // level 1 fielding cost is 0
-        };
-        state.Dice.Add(dazzlerDie);
+        var dazzlerDie = FindUnpurchased(state, "teamA", SampleCards.Dazzler.Id);
         var opposingTarget = state.DiceFor("teamB").First(); // a Sidekick, 1D
+
+        var purchaseEnergy = GiveWildEnergy(state, "teamA", SampleCards.Dazzler.PurchaseCost);
+        TurnEngine.Purchase(state, dazzlerDie.Id, purchaseEnergy.Select(d => d.Id).ToList());
+        Assert.Equal(Zone.UsedPile, dazzlerDie.Zone);
+
+        // Rule 2.4 bypass: mark the purchased die as already rolled to its
+        // level-1 character face, ready to field.
+        dazzlerDie.Zone = Zone.ReservePool;
+        dazzlerDie.Status = DieStatus.Character;
+        dazzlerDie.Level = 1; // fielding cost 0 at level 1
 
         var queue = new AbilityQueue();
         TurnEngine.Field(state, queue, dazzlerDie.Id, energyDieIdsToSpend: []);
@@ -62,30 +88,27 @@ public class TwoTeamsDemoTests
     }
 
     [Fact]
-    public void FieldedCharacterAttacksUnblocked_DealsRealCombatDamageToOpponent()
+    public void PurchasingAndFieldingApocalypse_ThenAttackingUnblocked_DealsRealCombatDamage()
     {
         var state = BuildTwoTeamGame();
         state.ActivePlayerId = "teamA";
+        var apocalypseDie = FindUnpurchased(state, "teamA", SampleCards.Apocalypse.Id);
 
-        // Apocalypse's placeholder level-2 face: fielding cost 1, 2A/3D.
-        var apocalypseDie = new DieInstance
-        {
-            Id = "teamA-apocalypse-1", CardId = SampleCards.Apocalypse.Id, OwnerId = "teamA", ControllerId = "teamA",
-            Zone = Zone.ReservePool, Status = DieStatus.Character, Level = 2
-        };
-        var energyDie = new DieInstance
-        {
-            Id = "teamA-energy-1", CardId = null, OwnerId = "teamA", ControllerId = "teamA",
-            Zone = Zone.ReservePool, Status = DieStatus.Energy
-        };
-        state.Dice.Add(apocalypseDie);
-        state.Dice.Add(energyDie);
+        var purchaseEnergy = GiveWildEnergy(state, "teamA", SampleCards.Apocalypse.PurchaseCost);
+        TurnEngine.Purchase(state, apocalypseDie.Id, purchaseEnergy.Select(d => d.Id).ToList());
+        Assert.Equal(Zone.UsedPile, apocalypseDie.Zone);
+        Assert.Equal("teamA", apocalypseDie.ControllerId);
 
+        apocalypseDie.Zone = Zone.ReservePool;
+        apocalypseDie.Status = DieStatus.Character;
+        apocalypseDie.Level = 2; // placeholder level-2 face: fielding cost 1, 2A/3D
+
+        var fieldEnergy = GiveWildEnergy(state, "teamA", 1);
         var queue = new AbilityQueue();
-        TurnEngine.Field(state, queue, apocalypseDie.Id, energyDieIdsToSpend: [energyDie.Id]);
+        TurnEngine.Field(state, queue, apocalypseDie.Id, energyDieIdsToSpend: [fieldEnergy[0].Id]);
 
         Assert.Equal(Zone.FieldZone, apocalypseDie.Zone);
-        Assert.Equal(Zone.OutOfPlay, energyDie.Zone); // spent to pay the fielding cost
+        Assert.Equal(Zone.OutOfPlay, fieldEnergy[0].Zone);
 
         TurnEngine.EnterAttackStep(state);
         CombatEngine.DeclareAttackers(state, queue, [apocalypseDie.Id]);
@@ -98,5 +121,110 @@ public class TwoTeamsDemoTests
         Assert.Equal(Zone.OutOfPlay, apocalypseDie.Zone); // unblocked attacker leaves play
         Assert.Empty(result.KOdDieIds);
         Assert.Equal(TurnStep.CleanUp, state.CurrentStep);
+    }
+
+    [Fact]
+    public void UsingShockingGraspActionDie_KOsTargetAndPrepsItself_ThroughTheRealQueue()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamA";
+        var shockingGraspDie = FindUnpurchased(state, "teamA", SampleCards.ShockingGrasp.Id);
+        var target = state.DiceFor("teamB").First(); // Sidekick, 1D - lethal to 1 damage
+
+        var purchaseEnergy = GiveWildEnergy(state, "teamA", SampleCards.ShockingGrasp.PurchaseCost);
+        TurnEngine.Purchase(state, shockingGraspDie.Id, purchaseEnergy.Select(d => d.Id).ToList());
+
+        // Rule 2.4 bypass: mark as already rolled to its action face.
+        shockingGraspDie.Zone = Zone.ReservePool;
+        shockingGraspDie.Status = DieStatus.Action;
+
+        var queue = new AbilityQueue();
+        TurnEngine.UseActionDie(state, queue, shockingGraspDie.Id);
+
+        Assert.Equal(Zone.OutOfPlay, shockingGraspDie.Zone); // rule 2.6.4.1, before the ability resolves
+        Assert.False(queue.IsEmpty);
+
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [target.Id])));
+
+        Assert.Equal(Zone.PrepArea, target.Zone); // KO'd
+        Assert.Equal(Zone.PrepArea, shockingGraspDie.Zone); // its own Conditional Prepped it
+    }
+
+    [Fact]
+    public void UsingCosmicCube_EpicBasicAction_ReturnsToItsCardInsteadOfOutOfPlay_AndIsOncePerTurn()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamA";
+        // Rule 1.2.3(4) - needs an active Character die with purchase cost 4+.
+        var qualifyingCharacter = FindUnpurchased(state, "teamA", SampleCards.CaptainMarvel.Id);
+        qualifyingCharacter.Zone = Zone.FieldZone;
+        qualifyingCharacter.Status = DieStatus.Character;
+
+        var cosmicCubeDie = FindUnpurchased(state, "teamA", SampleCards.CosmicCube.Id);
+        var purchaseEnergy = GiveWildEnergy(state, "teamA", SampleCards.CosmicCube.PurchaseCost);
+        TurnEngine.Purchase(state, cosmicCubeDie.Id, purchaseEnergy.Select(d => d.Id).ToList());
+        cosmicCubeDie.Zone = Zone.ReservePool;
+        cosmicCubeDie.Status = DieStatus.Action;
+
+        state.PlayerOne.Life = 15;
+        state.PlayerTwo.Life = 20;
+        var queue = new AbilityQueue();
+        TurnEngine.UseActionDie(state, queue, cosmicCubeDie.Id);
+
+        Assert.Equal(Zone.Unpurchased, cosmicCubeDie.Zone); // rule 1.2.3(2), not Out of Play
+        Assert.True(state.EpicBasicActionUsedThisTurn);
+
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [])));
+        Assert.Equal(20, state.PlayerOne.Life);
+        Assert.Equal(15, state.PlayerTwo.Life);
+
+        // A second Epic Basic Action this turn is rejected (rule 1.2.3(3)).
+        var secondEpicDie = FindUnpurchased(state, "teamB", SampleCards.CasketOfAncientWinters.Id);
+        secondEpicDie.ControllerId = "teamA"; // pretend it was also purchased
+        secondEpicDie.Zone = Zone.ReservePool;
+        secondEpicDie.Status = DieStatus.Action;
+        Assert.Throws<InvalidOperationException>(() => TurnEngine.UseActionDie(state, queue, secondEpicDie.Id));
+    }
+
+    [Fact]
+    public void UsingDistractionGlobalAbility_RemovesAttackerFromCombat_PaidByTheInactivePlayer()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamA";
+        var attacker = FindUnpurchased(state, "teamA", SampleCards.Apocalypse.Id);
+        attacker.Zone = Zone.FieldZone;
+        attacker.Status = DieStatus.Character;
+        attacker.Level = 1;
+
+        state.CurrentStep = TurnStep.Attack;
+        state.AttackSubStep = AttackSubStep.DeclareAttackers;
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        CombatEngine.DeclareBlockers(state, new CombatAssignment(), blockerDieIds: []);
+        Assert.Equal(Zone.AttackZone, attacker.Zone);
+
+        // Team B (Inactive player) pays for Distraction's Global ability
+        // using their own energy - printed on a card from Team A's pool,
+        // which rule 2.6.5.2 explicitly allows.
+        var teamBEnergy = GiveWildEnergy(state, "teamB", 1);
+        TurnEngine.UseGlobalAbility(
+            state, queue, SampleCards.Distraction.Id, "teamB", teamBEnergy.Select(d => d.Id).ToList());
+
+        Assert.Equal(Zone.UsedPile, teamBEnergy[0].Zone); // rule 2.6.1.2 - Inactive player's spend, not Out of Play
+
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [attacker.Id])));
+
+        Assert.Equal(Zone.FieldZone, attacker.Zone); // removed from combat
+
+        var result = CombatEngine.AssignCombatDamage(
+            state, queue, new CombatAssignment(), new Dictionary<string, IReadOnlyDictionary<string, int>>());
+
+        Assert.Equal(Player.StartingLife, state.PlayerTwo.Life); // no damage - attacker never made it to the Attack Zone at resolution time
+        Assert.Empty(result.KOdDieIds);
     }
 }

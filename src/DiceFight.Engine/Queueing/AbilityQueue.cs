@@ -25,7 +25,7 @@ public sealed class AbilityQueue
 
     public IReadOnlyList<QueuedAbility> Pending => _queue.ToList();
 
-    public QueuedAbility Enqueue(string sourceDieId, string controllerId, TriggerType trigger, EffectNode effect)
+    public QueuedAbility Enqueue(string? sourceDieId, string controllerId, TriggerType trigger, EffectNode effect)
     {
         var ability = new QueuedAbility(sourceDieId, controllerId, trigger, effect, _nextSequence++);
         _queue.Enqueue(ability);
@@ -34,7 +34,7 @@ public sealed class AbilityQueue
 
     // Rule 3.2.8 - an interrupting ability happens simultaneously with,
     // and ahead of, whatever is currently at the front of the queue.
-    public QueuedAbility Interrupt(string sourceDieId, string controllerId, TriggerType trigger, EffectNode effect)
+    public QueuedAbility Interrupt(string? sourceDieId, string controllerId, TriggerType trigger, EffectNode effect)
     {
         var ability = new QueuedAbility(sourceDieId, controllerId, trigger, effect, _nextSequence++);
         var rest = _queue.ToArray();

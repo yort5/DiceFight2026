@@ -27,7 +27,7 @@ public class AbilityQueueTests
 
         queue.Drain(ability =>
         {
-            resolutionOrder.Add(ability.SourceDieId);
+            resolutionOrder.Add(ability.SourceDieId!);
 
             if (ability.Trigger == TriggerType.WhenAttacks)
             {
@@ -58,7 +58,7 @@ public class AbilityQueueTests
 
         queue.Drain(ability =>
         {
-            order.Add(ability.SourceDieId);
+            order.Add(ability.SourceDieId!);
             if (ability.SourceDieId == "First")
             {
                 // A Prevent/Redirect-type reaction (3.2.8) jumping ahead of

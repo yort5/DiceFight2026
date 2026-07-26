@@ -16,9 +16,11 @@ namespace DiceFight.Engine.Data;
 // against rule 1.2.11's fixed "Use 3" for every Basic Action card sampled)
 // - purchase cost, energy type, and full 3-level fielding/attack/defense
 // are not recoverable from it. So every card below shares one placeholder
-// PurchaseCost/EnergyType/Levels progression; only Name/Subtitle/RawText/
-// DieLimit are real. Replace PlaceholderLevels etc. once a real stats
-// source is available.
+// PurchaseCost/EnergyType/Levels progression (a few characters are bumped
+// to a higher placeholder cost just to exercise Epic Basic Action's
+// cost-4+ gate, rule 1.2.3(4)); only Name/Subtitle/RawText/DieLimit are
+// real. Replace PlaceholderLevels etc. once a real stats source is
+// available.
 //
 // Scripting policy: a card only gets an AbilityDef when its FULL ability
 // text (not just part of it) maps onto EffectNode primitives with nothing
@@ -40,13 +42,14 @@ public static class SampleCards
     private static CardDef Character(
         string id, string name, string subtitle, int dieLimit, string rawText,
         IReadOnlyList<KeywordInstance>? keywords = null,
-        IReadOnlyList<AbilityDef>? abilities = null) => new()
+        IReadOnlyList<AbilityDef>? abilities = null,
+        int purchaseCost = PlaceholderCost) => new()
     {
         Id = id,
         Name = name,
         Subtitle = subtitle,
         Type = CardType.Character,
-        PurchaseCost = PlaceholderCost,
+        PurchaseCost = purchaseCost,
         EnergyTypes = [PlaceholderEnergy],
         DieLimit = dieLimit,
         Levels = PlaceholderLevels,
@@ -101,7 +104,8 @@ public static class SampleCards
 
     public static readonly CardDef CaptainMarvel = Character(
         "captain-marvel", "Captain Marvel", "Alpha Flight", dieLimit: 4,
-        "While Captain Marvel is active, your Character dice get +1 attack and +1 defense.");
+        "While Captain Marvel is active, your Character dice get +1 attack and +1 defense.",
+        purchaseCost: 4);
 
     public static readonly CardDef Colossus = Character(
         "colossus", "Colossus", "Inferno", dieLimit: 4, ""); // real card, genuinely blank text box
@@ -129,10 +133,18 @@ public static class SampleCards
                 new PrepDie(new TargetSpec("self")))
         ]))]);
 
+    // Distraction's Non-global ability ("target opponent chooses two...
+    // cannot block") is left unscripted (multi-die opponent choice + a
+    // persistent "cannot block" flag we don't model) but its separate
+    // Global ability maps cleanly on its own - Non-global and Global are
+    // genuinely independent ability slots (rule 3.1.3), scored separately.
     public static readonly CardDef Distraction = BasicAction(
         "distraction", "Distraction",
         "Target opponent chooses two of their character dice. They cannot block this turn. " +
-        "Global: Pay [M]. Remove target attacking character die from combat.");
+        "Global: Pay [M]. Remove target attacking character die from combat.",
+        abilities: [new AbilityDef(TriggerType.Global, Cost: null,
+            Effect: new MoveDie(new TargetSpec("target attacking character die"), Zone.FieldZone),
+            EnergyCost: new EnergyCost(Amount: 1, RequiredType: EnergyType.Mask))]);
 
     // ---- Team B: 10 characters + 3 Basic Actions ----
 

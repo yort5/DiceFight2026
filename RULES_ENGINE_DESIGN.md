@@ -209,7 +209,54 @@ rest are intentionally left vanilla (empty `Abilities`, real `RawText` +
 a more complex card's text. The scripting bar was: the *entire* ability
 text maps onto existing primitives, nothing dropped.
 
-Still not built: Purchase Dice (rule 2.6.2, with its energy-type-matching
-requirement, unlike Field's any-energy rule), the Main Step priority-passing
-loop, Global abilities, and any keyword *behavior* (Overcrush/Regenerate
-are tagged as data on cards but not simulated by CombatEngine yet).
+Still not built: any keyword *behavior* (Overcrush/Regenerate are tagged
+as data on cards but not simulated by CombatEngine yet), and the real
+IDiceRoller face-table data behind Purchase/Field/UseActionDie (this
+section's tests seed dice directly onto the face they need rather than
+rolling for it).
+
+## Status update — Main Step mechanics finished
+
+All four Main Step game actions (rule 2.6.0.1) now exist: `TurnEngine.
+Purchase` (rule 2.6.2 - unlike Field, requires at least one spent energy
+die per distinct required `EnergyType`; `DieInstance.EnergyKind`
+Wild/Specific/Generic, derived in `ApplyRoll` from the die's type, decides
+what satisfies that), `Field` (already existed), `UseActionDie` (rule
+2.6.4 - enqueues `WhenUsed`, and special-cases Epic Basic Actions
+returning to their card instead of Out of Play plus the once-per-turn
+limit, rule 1.2.3), and `UseGlobalAbility` (rule 2.6.5 - `AbilityDef` now
+carries an optional `EnergyCost`; either player can pay, with the
+Active/Inactive energy-destination split from rule 2.6.1.1/2.6.1.2).
+
+`TeamSetup.SetupTeamDice` (called from `GameState.NewGame`) instantiates
+each player's team-card dice into a new `Zone.Unpurchased`, so
+`SampleCards`'s teams are now real, purchasable rosters rather than
+hand-built `DieInstance`s in test code. One deliberate scope cut: rule
+2.1.3's 20-dice team cap is a team-*construction* legality rule (is this
+TeamCardIds list even a legal team to bring), not something die
+instantiation should silently enforce - our 10-character sample teams
+already exceed it (by design, per an earlier explicit ask for 20
+characters total rather than the standard 8-card format), and an early
+version of `TeamSetup` that tried to truncate at 20 silently produced
+cards with zero dice. Team legality validation is unbuilt; every card
+gets its full Die Limit regardless of team size for now.
+
+On "priority passing" (rule 2.6.6): this turned out not to need its own
+mechanical construct. The engine doesn't model an interactive turn loop -
+it's a library of validated game actions (`Purchase`, `Field`,
+`UseActionDie`, `UseGlobalAbility`, `DeclareAttackers`, ...) that a caller
+sequences, with each action's legal window (`CurrentStep`/`AttackSubStep`)
+enforced at the point of the call. Both players can already call
+`UseGlobalAbility` in the right window in whatever order the caller
+chooses; formalizing whose "turn" it is to act next is a caller-side (or
+future network-protocol) concern, not something the engine itself needs
+to arbitrate.
+
+37 tests total (up from 26): new coverage includes `PurchaseTests`
+(energy-type matching success/failure, Wild-vs-Generic, opponent's-card
+rejection, Basic Action community purchase preserving owner vs.
+controller, Epic Basic Action's cost-4+ gate) and expanded
+`TwoTeamsDemoTests` (Purchase → Field → Attack end to end, Shocking
+Grasp's action-die use, Cosmic Cube's Epic-specific return-to-card and
+once-per-turn behavior, Distraction's Global ability paid by the
+Inactive player).

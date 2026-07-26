@@ -2,8 +2,13 @@ namespace DiceFight.Engine.Model;
 
 // Rule 1.5 - Play Areas. AttackZone is a subset of FieldZone (1.5.6.1) but
 // tracked separately here since attacker/blocker state needs to be queryable.
+// Unpurchased isn't one of the rulebook's named play areas - it's engine
+// bookkeeping for "sitting on its card, not yet bought" (rule 2.1.3's dice
+// supply), which the rules assume as a physical fact about components
+// rather than a play area a die moves through.
 public enum Zone
 {
+    Unpurchased,
     Bag,
     PrepArea,
     ReservePool,
@@ -21,6 +26,19 @@ public enum EnergyType
     Bolt,
     Mask,
     Shield
+}
+
+// Rule 1.4.2/1.3.10 - what an energy-face die actually provides once
+// rolled, needed for Purchase's per-type matching requirement (2.6.2.3).
+// Wild (Sidekick energy faces) satisfies any specific-type requirement;
+// Generic (Basic Action dice) contributes to the total but never
+// satisfies a specific-type requirement.
+public enum EnergyKind
+{
+    None,
+    Specific,
+    Wild,
+    Generic
 }
 
 public enum Alignment

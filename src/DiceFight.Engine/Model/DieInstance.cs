@@ -26,6 +26,11 @@ public sealed class DieInstance
 
     public int Damage { get; set; }
 
+    // Only meaningful when Status == Energy; derived by TurnEngine.ApplyRoll
+    // from the die's type/card, not chosen freely (rule 1.3.10/1.4.2).
+    public EnergyKind EnergyKind { get; set; } = EnergyKind.None;
+    public EnergyType? ProvidedEnergyType { get; set; }
+
     public List<Modifier> AppliedModifiers { get; } = [];
     public List<DieInstance> AttachedGear { get; } = [];
 

@@ -20,6 +20,10 @@ public sealed class GameState
     // Rule 2.3.3 - the very first turn of the game draws one fewer die.
     public bool IsFirstTurn { get; set; } = true;
 
+    // Rule 1.2.3(3) - at most one Epic Basic Action die may be used or
+    // obtained per turn; reset in CleanUp.
+    public bool EpicBasicActionUsedThisTurn { get; set; }
+
     public Player GetPlayer(string playerId) =>
         playerId == PlayerOne.Id ? PlayerOne
         : playerId == PlayerTwo.Id ? PlayerTwo
@@ -64,6 +68,10 @@ public sealed class GameState
                     Status = DieStatus.Unrolled
                 });
             }
+
+            // Rule 2.1.3 - each team's Character/Action/Basic Action dice
+            // sit unpurchased on their cards until bought.
+            TeamSetup.SetupTeamDice(state, player, catalog);
         }
 
         return state;
