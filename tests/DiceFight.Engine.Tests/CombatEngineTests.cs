@@ -1,6 +1,7 @@
 using DiceFight.Engine;
 using DiceFight.Engine.Combat;
 using DiceFight.Engine.Model;
+using DiceFight.Engine.Queueing;
 using Xunit;
 
 namespace DiceFight.Engine.Tests;
@@ -50,7 +51,8 @@ public class CombatEngineTests
     {
         var (state, bruiser, unblocked, blocker) = CreateSkirmishState();
 
-        CombatEngine.DeclareAttackers(state, [bruiser.Id, unblocked.Id]);
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [bruiser.Id, unblocked.Id]);
         var assignment = new CombatAssignment();
         assignment.AssignBlocker(bruiser.Id, blocker.Id); // only Bruiser is blocked
         CombatEngine.DeclareBlockers(state, assignment, [blocker.Id]);
@@ -59,7 +61,7 @@ public class CombatEngineTests
         {
             [bruiser.Id] = new Dictionary<string, int> { [blocker.Id] = 3 } // Bruiser's full 3A
         };
-        var result = CombatEngine.AssignCombatDamage(state, assignment, splits);
+        var result = CombatEngine.AssignCombatDamage(state, queue, assignment, splits);
 
         // Unblocked sidekick attacker (1A) hits the player for 1 and leaves play.
         Assert.Equal(19, state.PlayerTwo.Life);
@@ -73,7 +75,8 @@ public class CombatEngineTests
     {
         var (state, bruiser, unblocked, blocker) = CreateSkirmishState();
 
-        CombatEngine.DeclareAttackers(state, [bruiser.Id]);
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [bruiser.Id]);
         var assignment = new CombatAssignment();
         assignment.AssignBlocker(bruiser.Id, blocker.Id);
         CombatEngine.DeclareBlockers(state, assignment, [blocker.Id]);
@@ -82,7 +85,7 @@ public class CombatEngineTests
         {
             [bruiser.Id] = new Dictionary<string, int> { [blocker.Id] = 3 }
         };
-        var result = CombatEngine.AssignCombatDamage(state, assignment, splits);
+        var result = CombatEngine.AssignCombatDamage(state, queue, assignment, splits);
 
         // Blocker's 1A doesn't reach Bruiser's 2D - Bruiser survives, returns to Field Zone.
         Assert.DoesNotContain(bruiser.Id, result.KOdDieIds);
@@ -96,7 +99,8 @@ public class CombatEngineTests
     {
         var (state, bruiser, _, blocker) = CreateSkirmishState();
 
-        CombatEngine.DeclareAttackers(state, [bruiser.Id]);
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [bruiser.Id]);
         var assignment = new CombatAssignment();
         assignment.AssignBlocker(bruiser.Id, blocker.Id);
         CombatEngine.DeclareBlockers(state, assignment, [blocker.Id]);
@@ -107,7 +111,7 @@ public class CombatEngineTests
         };
 
         Assert.Throws<InvalidOperationException>(() =>
-            CombatEngine.AssignCombatDamage(state, assignment, incompleteSplit));
+            CombatEngine.AssignCombatDamage(state, queue, assignment, incompleteSplit));
     }
 
     [Fact]
@@ -116,6 +120,6 @@ public class CombatEngineTests
         var (state, bruiser, _, _) = CreateSkirmishState();
         bruiser.Zone = Zone.ReservePool;
 
-        Assert.Throws<InvalidOperationException>(() => CombatEngine.DeclareAttackers(state, [bruiser.Id]));
+        Assert.Throws<InvalidOperationException>(() => CombatEngine.DeclareAttackers(state, new AbilityQueue(), [bruiser.Id]));
     }
 }

@@ -1,4 +1,5 @@
 using DiceFight.Engine.Model;
+using DiceFight.Engine.Queueing;
 
 namespace DiceFight.Engine.Combat;
 
@@ -12,7 +13,7 @@ namespace DiceFight.Engine.Combat;
 public static class CombatEngine
 {
     // Rule 2.7.1 - move the chosen Field Zone dice into the Attack Zone.
-    public static void DeclareAttackers(GameState state, IReadOnlyList<string> attackerDieIds)
+    public static void DeclareAttackers(GameState state, AbilityQueue queue, IReadOnlyList<string> attackerDieIds)
     {
         RequireSubStep(state, AttackSubStep.DeclareAttackers);
 
@@ -22,6 +23,9 @@ public static class CombatEngine
             if (die.ControllerId != state.ActivePlayerId || die.Zone != Zone.FieldZone)
                 throw new InvalidOperationException($"Die {id} is not an eligible attacker.");
             die.Zone = Zone.AttackZone;
+
+            // Rule 2.7.1.2 - "when attacks" fires for each attacking die.
+            TurnEngine.EnqueueTriggered(state, queue, die, TriggerType.WhenAttacks);
         }
 
         state.AttackSubStep = AttackSubStep.DeclareBlockers;
@@ -50,6 +54,7 @@ public static class CombatEngine
     // its blocker(s) - the active player's choice per 2.7.4.3.5.
     public static CombatResult AssignCombatDamage(
         GameState state,
+        AbilityQueue queue,
         CombatAssignment assignment,
         IReadOnlyDictionary<string, IReadOnlyDictionary<string, int>> attackerDamageSplits)
     {
@@ -105,13 +110,11 @@ public static class CombatEngine
         var koDieIds = new List<string>();
         foreach (var die in state.Dice.Where(d => d.Zone == Zone.AttackZone).ToList())
         {
-            if (die.Damage < DieStats.EffectiveDefense(state, die)) continue;
-
+            if (!DieStats.TryResolveKO(state, die)) continue;
             koDieIds.Add(die.Id);
-            die.Zone = Zone.PrepArea; // rule 1.5.3.2
-            die.Damage = 0;
-            die.Level = 1;
-            die.Status = DieStatus.Unrolled;
+
+            // Rule 2.7.6.5 - "when KO'd" fires for each die KO'd this way.
+            TurnEngine.EnqueueTriggered(state, queue, die, TriggerType.WhenKOd);
         }
 
         // Rule 2.7.6.6 - survivors return to the Field Zone.

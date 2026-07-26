@@ -31,4 +31,22 @@ public static class DieStats
         var total = face.Defense + die.AppliedModifiers.Sum(m => m.DefenseDelta);
         return Math.Max(0, total);
     }
+
+    // Rule 2.7.6.1 - KO once damage reaches/exceeds defense. Shared by
+    // CombatEngine (simultaneous batch check after combat damage) and
+    // EffectInterpreter (ability damage KOs immediately, since abilities
+    // resolve one at a time rather than in a simultaneous batch - rule
+    // 3.2.2). Regenerate/Overcrush and other keyword interactions are not
+    // applied here yet (see RULES_ENGINE_DESIGN.md).
+    public static bool TryResolveKO(GameState state, DieInstance die)
+    {
+        if (die.Damage < EffectiveDefense(state, die)) return false;
+
+        die.Zone = Zone.PrepArea; // rule 1.5.3.2
+        die.Damage = 0;
+        die.Level = 1;
+        die.Status = DieStatus.Unrolled;
+        die.AppliedModifiers.Clear(); // rule 3.4.5.4 lifetime ends when the die leaves the Field Zone
+        return true;
+    }
 }

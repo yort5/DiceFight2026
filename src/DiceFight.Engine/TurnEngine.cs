@@ -1,4 +1,5 @@
 using DiceFight.Engine.Model;
+using DiceFight.Engine.Queueing;
 
 namespace DiceFight.Engine;
 
@@ -125,6 +126,61 @@ public static class TurnEngine
         var result = roller.Roll(die, card);
         die.Status = result.Status;
         die.Level = result.Level;
+    }
+
+    // Rule 2.6.3 - Field Character Dice, one of the four Main Step game
+    // actions. Fielding cost may be paid with any type of energy (2.6.3.2),
+    // so energyDieIdsToSpend just needs to be Reserve Pool energy dice
+    // totalling at least the fielding cost - no type-matching requirement
+    // (that only applies to Purchase Dice, rule 2.6.2.3, which isn't
+    // implemented yet).
+    public static void Field(GameState state, AbilityQueue queue, string dieId, IReadOnlyList<string> energyDieIdsToSpend)
+    {
+        if (state.CurrentStep != TurnStep.Main)
+            throw new InvalidOperationException("Fielding requires the Main Step.");
+
+        var die = FindDie(state, dieId);
+        if (die.ControllerId != state.ActivePlayerId || die.Zone != Zone.ReservePool)
+            throw new InvalidOperationException($"Die {dieId} cannot be fielded from its current state.");
+        if (die.Status is not (DieStatus.Character or DieStatus.SidekickCharacter))
+            throw new InvalidOperationException($"Die {dieId} is not on a character face.");
+
+        var fieldingCost = DieStats.GetFace(state, die).FieldingCost;
+        var energyDice = energyDieIdsToSpend.Select(id => FindEnergyDie(state, id)).ToList();
+        if (energyDice.Count < fieldingCost)
+            throw new InvalidOperationException($"Not enough energy offered to field {dieId} (needs {fieldingCost}).");
+
+        foreach (var energyDie in energyDice.Take(fieldingCost))
+            energyDie.Zone = Zone.OutOfPlay; // rule 2.6.3.2
+
+        die.Zone = Zone.FieldZone;
+
+        // Rule 2.6.3.6 - "when fielded" fires immediately upon entering the Field Zone.
+        EnqueueTriggered(state, queue, die, TriggerType.WhenFielded);
+    }
+
+    private static DieInstance FindEnergyDie(GameState state, string id)
+    {
+        var die = FindDie(state, id);
+        if (die.ControllerId != state.ActivePlayerId || die.Zone != Zone.ReservePool || die.Status != DieStatus.Energy)
+            throw new InvalidOperationException($"Die {id} is not available energy in the Reserve Pool.");
+        return die;
+    }
+
+    private static DieInstance FindDie(GameState state, string id) =>
+        state.Dice.SingleOrDefault(d => d.Id == id)
+        ?? throw new InvalidOperationException($"No die with id '{id}'.");
+
+    // Shared by TurnEngine.Field and CombatEngine - enqueues every ability
+    // on a die's card matching the given trigger. Internal so CombatEngine
+    // (same assembly) can reuse it for WhenAttacks/WhenKOd.
+    internal static void EnqueueTriggered(GameState state, AbilityQueue queue, DieInstance die, TriggerType trigger)
+    {
+        var cardId = die.VirtualCardId ?? die.CardId;
+        if (cardId is null || !state.CardCatalog.TryGetValue(cardId, out var card)) return;
+
+        foreach (var ability in card.Abilities.Where(a => a.Trigger == trigger))
+            queue.Enqueue(die.Id, die.ControllerId, trigger, ability.Effect);
     }
 
     // Rule 2.6.7.1(3)/2.6.7.2 - the active player chooses to attack or not

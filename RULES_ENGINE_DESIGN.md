@@ -175,3 +175,41 @@ against the real rules and cover the trickiest timing/interrupt edge cases.
   to the DieInstance model — these mutate "which CardDef does this die
   reference" at runtime and need their own indirection (e.g. `virtualCardId`
   override) rather than being bolted onto `appliedModifiers`.
+
+## Status update — first real cards wired in
+
+Built: `EffectContext`/`EffectInterpreter` (executes the DSL against
+`GameState`, with target resolution delegated to a caller-supplied callback
+— the "legal target query layer" above still doesn't exist, this is just
+the seam for it), `TurnEngine.Field` (Main Step fielding, pays cost from any
+Reserve Pool energy per rule 2.6.3.2, enqueues `WhenFielded`), and
+`CombatEngine` now enqueues `WhenAttacks`/`WhenKOd` too. `DieStats.TryResolveKO`
+is shared between combat's simultaneous batch KO and the interpreter's
+"ability damage KOs immediately" (abilities resolve one at a time, not in a
+batch — rule 3.2.2).
+
+`src/DiceFight.Engine/Data/SampleCards.cs` has 20 characters + 6 Basic
+Actions (real names/subtitles/ability text from Teambuilder's `cards.php`,
+`msw` set), split into two 10-character/3-Basic-Action teams. **Important
+caveat discovered while building this**: none of the six cloned
+DiceCoalition repos contain real per-level attack/defense numbers — every
+community tool (including Teambuilder) represents combat stats only via
+card-face images. So every sample card's `PurchaseCost`/`EnergyTypes`/
+`Levels` are placeholder values, clearly marked as such in code comments;
+only `Name`/`Subtitle`/`RawText`/`DieLimit` are real (die limit was
+reverse-engineered from Teambuilder's card-line prefix and cross-checked
+against every Basic Action card sharing the same value, matching rule
+1.2.11's fixed "Use 3"). A real stats source is still needed before numbers
+mean anything competitively.
+
+Only 6 of the 26 cards got a scripted `AbilityDef` (Dazzler, God Emperor
+Doom, Groot, Cosmic Cube, Shocking Grasp, Casket of Ancient Winters) — the
+rest are intentionally left vanilla (empty `Abilities`, real `RawText` +
+`Keywords` retained) rather than simulating a partial/incorrect subset of
+a more complex card's text. The scripting bar was: the *entire* ability
+text maps onto existing primitives, nothing dropped.
+
+Still not built: Purchase Dice (rule 2.6.2, with its energy-type-matching
+requirement, unlike Field's any-energy rule), the Main Step priority-passing
+loop, Global abilities, and any keyword *behavior* (Overcrush/Regenerate
+are tagged as data on cards but not simulated by CombatEngine yet).

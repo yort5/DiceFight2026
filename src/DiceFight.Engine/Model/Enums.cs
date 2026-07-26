@@ -63,6 +63,13 @@ public enum TriggerType
     WhenEngaged,
     WhenDamaged,
     WhenKOd,
+
+    // Rule 2.6.4.1 - a non-Continuous Action die's ability, triggered when
+    // the die is used. Not yet wired into TurnEngine's Main Step (no
+    // "use an Action die" mechanic exists yet); currently exercised only
+    // via direct EffectInterpreter calls in tests.
+    WhenUsed,
+
     Global,
     Burst1,
     Burst2
