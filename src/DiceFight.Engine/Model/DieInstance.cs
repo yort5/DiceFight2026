@@ -1,0 +1,33 @@
+namespace DiceFight.Engine.Model;
+
+// Rule 3.6 - a running attack/defense modifier from an Applied or Static
+// ability. Kept separate rather than folded into the die so Static
+// modifiers (3.6.6) can be recomputed live while Applied modifiers (3.6.5)
+// persist independently until end of turn.
+public sealed record Modifier(int AttackDelta, int DefenseDelta, string Source);
+
+// A physical die in play. CardId is null for Sidekick dice (rule 1.3.9 -
+// no corresponding card). VirtualCardId is the "which card does this die
+// currently reference" override needed for Copying (rule 3.10) - left as
+// a stub per the design doc's open questions.
+public sealed class DieInstance
+{
+    public required string Id { get; init; }
+    public string? CardId { get; init; }
+    public string? VirtualCardId { get; set; }
+    public required string OwnerId { get; init; }
+    public required string ControllerId { get; set; }
+
+    public Zone Zone { get; set; } = Zone.Bag;
+    public DieStatus Status { get; set; } = DieStatus.Unrolled;
+
+    // 1-based character level; 0/unused for non-character dice.
+    public int Level { get; set; } = 1;
+
+    public int Damage { get; set; }
+
+    public List<Modifier> AppliedModifiers { get; } = [];
+    public List<DieInstance> AttachedGear { get; } = [];
+
+    public bool IsSidekick => CardId is null;
+}

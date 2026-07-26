@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DiceFight.Engine/DiceFight.Engine.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DiceFight.Engine.Tests/DiceFight.Engine.Tests.csproj" />
+  </Folder>
+</Solution>
