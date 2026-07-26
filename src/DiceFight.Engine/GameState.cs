@@ -2,17 +2,6 @@ using DiceFight.Engine.Model;
 
 namespace DiceFight.Engine;
 
-// Rule 2.2 - Clear and Draw / Roll and Reroll / Main / Attack / Clean Up.
-// Step methods will be added incrementally; this is just the sequence.
-public enum TurnStep
-{
-    ClearAndDraw,
-    RollAndReroll,
-    Main,
-    Attack,
-    CleanUp
-}
-
 // Root mutable game state: players, every die in play, whose turn it is.
 // CardCatalog is the static card database (keyed by CardDef.Id) shared
 // across the game, not per-player - matches the "cards are always laid
@@ -26,6 +15,20 @@ public sealed class GameState
 
     public string ActivePlayerId { get; set; } = string.Empty;
     public TurnStep CurrentStep { get; set; } = TurnStep.ClearAndDraw;
+    public AttackSubStep AttackSubStep { get; set; } = AttackSubStep.NotInAttack;
+
+    // Rule 2.3.3 - the very first turn of the game draws one fewer die.
+    public bool IsFirstTurn { get; set; } = true;
+
+    public Player GetPlayer(string playerId) =>
+        playerId == PlayerOne.Id ? PlayerOne
+        : playerId == PlayerTwo.Id ? PlayerTwo
+        : throw new ArgumentException($"Unknown player id '{playerId}'.", nameof(playerId));
+
+    public string OpponentOf(string playerId) =>
+        playerId == PlayerOne.Id ? PlayerTwo.Id
+        : playerId == PlayerTwo.Id ? PlayerOne.Id
+        : throw new ArgumentException($"Unknown player id '{playerId}'.", nameof(playerId));
 
     public IEnumerable<DieInstance> DiceFor(string playerId) =>
         Dice.Where(d => d.ControllerId == playerId);

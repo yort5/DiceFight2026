@@ -67,3 +67,29 @@ public enum TriggerType
     Burst1,
     Burst2
 }
+
+// Rule 2.2.3 - the five steps of a turn, in fixed order (2.2.4 - cannot
+// return to a completed step).
+public enum TurnStep
+{
+    ClearAndDraw,
+    RollAndReroll,
+    Main,
+    Attack,
+    CleanUp
+}
+
+// Rule 2.7.0.1 - the six sub-steps of the Attack Step, stricter and
+// one-way (2.7.0.3) even relative to the outer TurnStep sequence.
+// NotInAttack/Done are engine bookkeeping states, not rulebook sub-steps.
+public enum AttackSubStep
+{
+    NotInAttack,
+    DeclareAttackers,
+    DeclareBlockers,
+    ActionAndGlobalWindow,
+    AssignCombatDamage,
+    WhenDamagedAbilities,
+    ResolveDamageAndWhenKOd,
+    Done
+}
