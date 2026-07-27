@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "./api";
 import { ActionTray } from "./ActionTray";
+import { HowToPlay } from "./HowToPlay";
 import { PlayerBoard, type Selection } from "./PlayerBoard";
 import type { CardDef, GameState } from "./types";
 import "./App.css";
@@ -11,6 +12,7 @@ function App() {
   const [selection, setSelection] = useState<Selection>({ primary: null, secondary: [] });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [showHowToPlay, setShowHowToPlay] = useState(false);
 
   useEffect(() => {
     api.getCards().then(setCards).catch((e) => setError(String(e)));
@@ -66,8 +68,11 @@ function App() {
         <button disabled={busy} onClick={() => run(() => api.createGame())}>
           New Game (Team A vs Team B)
         </button>
+        <button onClick={() => setShowHowToPlay(true)}>How to Play</button>
         {error && <div className="error">{error}</div>}
       </header>
+
+      {showHowToPlay && <HowToPlay onClose={() => setShowHowToPlay(false)} />}
 
       {game && gameId && (
         <>
