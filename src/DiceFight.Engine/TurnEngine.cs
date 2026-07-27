@@ -46,11 +46,21 @@ public static class TurnEngine
         foreach (var die in state.DiceIn(activeId, Zone.ReservePool).ToList())
             die.Zone = Zone.UsedPile;
 
+        // Carry over anything a KO or a Prep effect left sitting in the
+        // Prep Area since this player's last Roll & Reroll - it rolls
+        // alongside this turn's fresh draw, but is kept in its own zone
+        // (rather than merged into the same PrepArea the draw uses) so
+        // that a die a card Preps *later in this same Clear and Draw step*
+        // (see remarks on the Zone enum) is left alone: it lands in
+        // PrepArea after this sweep already ran, so it won't be picked up
+        // until this same sweep runs again next turn.
+        foreach (var die in state.DiceIn(activeId, Zone.PrepArea).ToList())
+            die.Zone = Zone.DiceFromPrep;
+
         // Rule 2.3.3 - the very first turn of the game draws 3, not 4, with
         // the 4th die drawn and set Out of Play instead of into Prep Area.
         var drawCount = state.IsFirstTurn ? 3 : 4;
         var drawn = DrawFromBag(state, activeId, drawCount, random);
-        foreach (var die in drawn) die.Zone = Zone.PrepArea;
 
         if (state.IsFirstTurn)
         {
@@ -88,7 +98,7 @@ public static class TurnEngine
             }
 
             var picked = bag[random.Next(bag.Count)];
-            picked.Zone = Zone.PrepArea; // provisional, so it isn't drawn twice this loop
+            picked.Zone = Zone.DiceFromBag; // out of the Bag immediately, so it isn't drawn twice this loop
             drawn.Add(picked);
         }
 
@@ -105,17 +115,25 @@ public static class TurnEngine
         if (state.CurrentStep != TurnStep.RollAndReroll)
             throw new InvalidOperationException($"Expected RollAndReroll step, was {state.CurrentStep}.");
 
-        var prepDice = state.DiceIn(state.ActivePlayerId, Zone.PrepArea).ToList();
+        // Combines this turn's fresh draw (DiceFromBag) with whatever
+        // Clear and Draw carried over from the Prep Area (DiceFromPrep).
+        // Deliberately does NOT read Zone.PrepArea itself - anything
+        // sitting there was either never swept (a die Prepped after this
+        // step's Clear phase already ran) or belongs to a future Roll &
+        // Reroll, not this one.
+        var readyToRoll = state.DiceIn(state.ActivePlayerId, Zone.DiceFromBag)
+            .Concat(state.DiceIn(state.ActivePlayerId, Zone.DiceFromPrep))
+            .ToList();
 
-        foreach (var die in prepDice)
+        foreach (var die in readyToRoll)
             ApplyRoll(state, roller, die);
 
-        var rerollIds = chooseRerolls(prepDice).ToHashSet();
-        foreach (var die in prepDice.Where(d => rerollIds.Contains(d.Id)))
+        var rerollIds = chooseRerolls(readyToRoll).ToHashSet();
+        foreach (var die in readyToRoll.Where(d => rerollIds.Contains(d.Id)))
             ApplyRoll(state, roller, die);
 
         // Rule 2.4.4 - move to the Reserve Pool, keeping the same face up.
-        foreach (var die in prepDice)
+        foreach (var die in readyToRoll)
             die.Zone = Zone.ReservePool;
     }
 

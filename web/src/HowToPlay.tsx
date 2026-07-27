@@ -40,18 +40,20 @@ export function HowToPlay(props: { onClose: () => void }) {
           <ul>
             <li>
               <strong>Clear &amp; Draw</strong> - start of turn: unspent Reserve Pool energy goes to
-              the Used Pile, then you draw new dice from the Bag into the Prep Area. In this engine
-              the Prep Area is a single zone - it holds this turn's fresh draws alongside any dice
-              that landed there from other effects (a KO, for instance), not just what you drew.
+              the Used Pile, any dice already sitting in the Prep Area (from a KO or a Prep effect
+              since your last Roll &amp; Reroll) move out to wait alongside this turn's draw, then
+              you draw new dice from the Bag. The Prep Area itself stays empty afterward - it's
+              reserved for whatever a card Preps from here on, which won't roll until next turn.
             </li>
             <li>
               <strong>Advance Step</strong> - moves from Prep Area to Main Step, and later from Main
               Step into the Attack Step.
             </li>
             <li>
-              <strong>Roll &amp; Reroll</strong> - rolls everything currently sitting in the Prep
-              Area into the Reserve Pool; whichever dice you've selected first are rerolled instead
-              of kept as rolled.
+              <strong>Roll &amp; Reroll</strong> - rolls this turn's draw (plus whatever carried over
+              from the Prep Area at Clear &amp; Draw) into the Reserve Pool; whichever dice you've
+              selected first are rerolled instead of kept as rolled. Anything a card Preps after that
+              point sits in the Prep Area untouched until next turn's Clear &amp; Draw.
             </li>
             <li>
               <strong>Enter Attack Step</strong> / <strong>Skip Attack Step</strong> - choose

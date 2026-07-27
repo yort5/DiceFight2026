@@ -6,11 +6,23 @@ namespace DiceFight.Engine.Model;
 // bookkeeping for "sitting on its card, not yet bought" (rule 2.1.3's dice
 // supply), which the rules assume as a physical fact about components
 // rather than a play area a die moves through.
+//
+// DiceFromBag and DiceFromPrep aren't named play areas either - they're
+// transient staging zones that only ever hold dice between a
+// TurnEngine.ClearAndDraw call and the TurnEngine.RollAndReroll call that
+// follows it, kept apart from each other and from PrepArea so that a card
+// which Preps a die *during* Clear and Draw (e.g. Pepper Potts: "draw an
+// extra die at the beginning of your Clear and Draw Step... Prep it")
+// doesn't get swept into this turn's roll just because it landed in the
+// same zone this turn's normal draw did - see TurnEngine.ClearAndDraw's
+// remarks for the full sequencing.
 public enum Zone
 {
     Unpurchased,
     Bag,
     PrepArea,
+    DiceFromBag,
+    DiceFromPrep,
     ReservePool,
     FieldZone,
     AttackZone,

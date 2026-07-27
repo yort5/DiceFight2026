@@ -57,6 +57,8 @@ export const ZONES = [
   "Unpurchased",
   "Bag",
   "PrepArea",
+  "DiceFromBag",
+  "DiceFromPrep",
   "ReservePool",
   "FieldZone",
   "AttackZone",

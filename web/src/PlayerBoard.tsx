@@ -12,7 +12,7 @@ export interface Selection {
 // Unpurchased roster (the biggest, least-active zone - up to 4 dice per
 // card) collapsed by default.
 const PROMINENT_ZONES = ["AttackZone", "FieldZone", "ReservePool"] as const;
-const SIDE_ZONES = ["Bag", "PrepArea", "UsedPile", "OutOfPlay"] as const;
+const SIDE_ZONES = ["Bag", "PrepArea", "DiceFromBag", "DiceFromPrep", "UsedPile", "OutOfPlay"] as const;
 
 export function PlayerBoard(props: {
   title: string;
@@ -82,6 +82,8 @@ const ZONE_DISPLAY_NAMES: Record<string, string> = {
   ReservePool: "Reserve Pool",
   Bag: "Bag",
   PrepArea: "Prep Area",
+  DiceFromBag: "Drawn (unrolled)",
+  DiceFromPrep: "Carried from Prep (unrolled)",
   UsedPile: "Used Pile",
   OutOfPlay: "Out of Play",
   Unpurchased: "Unpurchased",

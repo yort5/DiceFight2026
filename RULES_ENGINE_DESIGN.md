@@ -8,7 +8,12 @@ actions, combat, the ability queue, the legal-target system),
 action, in-memory game store, no persistence), `web/` (React + Vite - a
 functional "dev console" board: click dice, contextual action tray, real
 zone layout, a "How to Play" dialog explaining the controls - not a
-polished game UI yet). 47 xUnit tests, all passing.
+polished game UI yet). 49 xUnit tests, all passing. `Zone` now splits the
+Prep Area into a persistent zone (targeted by KO/Prep effects) plus two
+transient staging zones used only within a single Clear & Draw → Roll &
+Reroll cycle (`DiceFromBag`, `DiceFromPrep`) - see the bottom-most status
+update for why (a Pepper Potts-shaped rules interaction the old
+single-zone model couldn't express).
 `Data/SampleCards.cs` has 26 real cards (20 characters + 6 Basic Actions,
 two 10-card teams) with real names/subtitles/ability text pulled from
 Teambuilder's data; only 6 have a scripted `AbilityDef` (see the
@@ -388,3 +393,47 @@ mistake an unimplemented feature for a bug. Verified in both light and
 dark rendering via the headless-Chromium/Playwright setup (screenshots,
 not just a type-check). `dotnet build` + `dotnet test` (47/47) and
 `npm run build` both still pass - this pass touched only the web client.
+
+## Status update — split Prep Area into a persistent zone plus two transient staging zones
+
+The How to Play dialog write-up above surfaced a real engine bug, not
+just a wording issue: `Zone.PrepArea` was doing double duty as both "this
+turn's fresh draw, about to be rolled by Roll & Reroll" and "wherever a
+KO or a Prep effect (`EffectNode.PrepDie`, used by Shocking Grasp) parks a
+die," with no way to tell those apart. That's invisible for KO'd dice
+(they're always Prepped by something that already happened *before* this
+turn's Clear and Draw runs, so getting swept into this turn's roll is
+correct), but it breaks a card like Pepper Potts: "draw an extra die at
+the beginning of your Clear and Draw Step... If it is a non-Sidekick die,
+Prep it." That extra die is Prepped *during* the same Clear and Draw step
+its own turn's draw happens in - per the ruling, it should sit out this
+Roll & Reroll and only get rolled next turn, but a single shared PrepArea
+zone can't express "prepped a moment too late to make this turn's roll."
+
+Fix: `Zone` gained two transient staging zones, `DiceFromBag` and
+`DiceFromPrep` (`Model/Enums.cs`). `TurnEngine.ClearAndDraw` now sweeps
+whatever's sitting in `PrepArea` into `DiceFromPrep` *before* drawing, then
+draws straight into `DiceFromBag` (previously both landed in `PrepArea`
+directly). `TurnEngine.RollAndReroll` now reads `DiceFromBag ∪
+DiceFromPrep` as its working set instead of `PrepArea` itself. Net effect:
+`PrepArea` is empty immediately after `ClearAndDraw` returns, and only
+ever holds a die that landed there *after* that step's sweep already
+ran - exactly the dice that should wait for next turn. KO and `PrepDie`
+themselves are unchanged (still target `PrepArea` directly) since nothing
+about how KO'd dice land there was wrong.
+
+No turn-step-start trigger system exists yet (`TriggerType` has no
+"beginning of Clear and Draw" timing - see `AbilityQueue`/`TurnEngine`
+remarks), so Pepper Potts itself still can't be scripted; this pass only
+fixes the zone model it depends on, verified with two new
+`TurnEngineTests` cases that plant a die directly in `PrepArea` mid-test
+to simulate the "Prepped after this step's sweep" and "left over from
+before this step's sweep" cases without needing the trigger system to
+exist. Also updated the How to Play dialog's Clear & Draw / Roll & Reroll
+copy to describe the corrected model, and added both new zones to the web
+client's zone list/display names (`web/src/types.ts`,
+`web/src/PlayerBoard.tsx`) so they're visible in the board UI between a
+Clear & Draw click and the Roll & Reroll click that follows it - confirmed
+visually via the headless-Chromium setup (a full turn's Clear & Draw
+followed by Roll & Reroll, screenshotted at each step). 49 tests total (up
+from 47), all passing; `npm run build` still passes.

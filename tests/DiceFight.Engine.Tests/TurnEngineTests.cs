@@ -20,26 +20,26 @@ public class TurnEngineTests
             new Player { Id = "p2", Name = "Player Two" });
 
     [Fact]
-    public void ClearAndDraw_FirstTurn_Draws3ToPrepAnd1OutOfPlay()
+    public void ClearAndDraw_FirstTurn_Draws3ToDiceFromBagAnd1OutOfPlay()
     {
         var state = CreateNewGame();
 
         TurnEngine.ClearAndDraw(state, new Random(1));
 
-        Assert.Equal(3, state.DiceIn("p1", Zone.PrepArea).Count());
+        Assert.Equal(3, state.DiceIn("p1", Zone.DiceFromBag).Count());
         Assert.Single(state.DiceIn("p1", Zone.OutOfPlay));
         Assert.Equal(4, state.DiceIn("p1", Zone.Bag).Count()); // 8 - 3 - 1
     }
 
     [Fact]
-    public void ClearAndDraw_SubsequentTurn_Draws4ToPrepArea()
+    public void ClearAndDraw_SubsequentTurn_Draws4ToDiceFromBag()
     {
         var state = CreateNewGame();
         state.IsFirstTurn = false;
 
         TurnEngine.ClearAndDraw(state, new Random(1));
 
-        Assert.Equal(4, state.DiceIn("p1", Zone.PrepArea).Count());
+        Assert.Equal(4, state.DiceIn("p1", Zone.DiceFromBag).Count());
         Assert.Empty(state.DiceIn("p1", Zone.OutOfPlay));
     }
 
@@ -58,7 +58,7 @@ public class TurnEngineTests
         // Still draws the full 4 by refilling from the Used Pile mid-draw:
         // 2 from the bag, then a refill from the 6-die Used Pile for the
         // other 2, leaving 4 of that refill in the bag.
-        Assert.Equal(4, state.DiceIn("p1", Zone.PrepArea).Count());
+        Assert.Equal(4, state.DiceIn("p1", Zone.DiceFromBag).Count());
         Assert.Equal(4, state.DiceIn("p1", Zone.Bag).Count());
     }
 
@@ -74,16 +74,36 @@ public class TurnEngineTests
 
         TurnEngine.ClearAndDraw(state, new Random(1));
 
-        Assert.Equal(2, state.DiceIn("p1", Zone.PrepArea).Count());
+        Assert.Equal(2, state.DiceIn("p1", Zone.DiceFromBag).Count());
         Assert.Equal(18, state.PlayerOne.Life); // 20 - 2 short
         Assert.Equal(2, state.PlayerOne.VirtualGenericEnergy);
     }
 
     [Fact]
-    public void RollAndReroll_MovesPrepAreaDiceToReservePoolOnRolledFace()
+    public void ClearAndDraw_SweepsExistingPrepAreaDiceIntoDiceFromPrep()
     {
         var state = CreateNewGame();
         state.IsFirstTurn = false;
+        // e.g. left there by a KO, or Shocking Grasp's own Conditional Prep,
+        // sometime before this player's turn came back around.
+        var leftover = state.DiceIn("p1", Zone.Bag).First();
+        leftover.Zone = Zone.PrepArea;
+
+        TurnEngine.ClearAndDraw(state, new Random(1));
+
+        Assert.Empty(state.DiceIn("p1", Zone.PrepArea));
+        Assert.Contains(leftover, state.DiceIn("p1", Zone.DiceFromPrep));
+        Assert.Equal(4, state.DiceIn("p1", Zone.DiceFromBag).Count());
+    }
+
+    [Fact]
+    public void RollAndReroll_CombinesDiceFromBagAndDiceFromPrep_IntoReservePool()
+    {
+        var state = CreateNewGame();
+        state.IsFirstTurn = false;
+        var leftover = state.DiceIn("p1", Zone.Bag).First();
+        leftover.Zone = Zone.PrepArea;
+
         TurnEngine.ClearAndDraw(state, new Random(1));
         TurnEngine.AdvanceStep(state); // Main is skipped for this test's purposes; just move past ClearAndDraw
         state.CurrentStep = TurnStep.RollAndReroll;
@@ -91,9 +111,34 @@ public class TurnEngineTests
         TurnEngine.RollAndReroll(state, new FixedRoller(DieStatus.SidekickCharacter, 1), _ => []);
 
         var reserve = state.DiceIn("p1", Zone.ReservePool).ToList();
-        Assert.Equal(4, reserve.Count);
+        Assert.Equal(5, reserve.Count); // 4 fresh draws + the 1 carried over from the Prep Area
+        Assert.Contains(leftover, reserve);
         Assert.All(reserve, d => Assert.Equal(DieStatus.SidekickCharacter, d.Status));
-        Assert.Empty(state.DiceIn("p1", Zone.PrepArea));
+        Assert.Empty(state.DiceIn("p1", Zone.DiceFromBag));
+        Assert.Empty(state.DiceIn("p1", Zone.DiceFromPrep));
+    }
+
+    [Fact]
+    public void RollAndReroll_LeavesDieSteppedIntoPrepAreaAfterThisSteps_ClearPhase_ForNextTurn()
+    {
+        // Models a card like Pepper Potts ("draw an extra die at the
+        // beginning of your Clear and Draw Step... If it is a non-Sidekick
+        // die, Prep it.") - a die that lands in the Prep Area *after* this
+        // step's own Clear-phase sweep already ran must sit out this
+        // turn's Roll & Reroll and only get rolled next turn.
+        var state = CreateNewGame();
+        state.IsFirstTurn = false;
+
+        TurnEngine.ClearAndDraw(state, new Random(1));
+        var lateEntrant = state.DiceIn("p1", Zone.Bag).First();
+        lateEntrant.Zone = Zone.PrepArea; // simulates a same-step Prep effect
+        TurnEngine.AdvanceStep(state);
+        state.CurrentStep = TurnStep.RollAndReroll;
+
+        TurnEngine.RollAndReroll(state, new FixedRoller(DieStatus.SidekickCharacter, 1), _ => []);
+
+        Assert.Equal(4, state.DiceIn("p1", Zone.ReservePool).Count()); // just this turn's draw
+        Assert.Equal(Zone.PrepArea, lateEntrant.Zone); // untouched - waits for next turn
     }
 
     [Fact]
