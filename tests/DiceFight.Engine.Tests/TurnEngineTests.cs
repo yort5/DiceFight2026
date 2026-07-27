@@ -11,6 +11,17 @@ file sealed class FixedRoller(DieStatus status, int level) : IDiceRoller
     public RolledFace Roll(DieInstance die, CardDef? card) => new(status, level);
 }
 
+// Distinguishes "rerolled" from "kept as originally rolled" by giving each
+// successive Roll() call, across the test's whole Roll+FinishRoll
+// sequence, a strictly increasing Level - a die that gets rolled twice
+// (Roll, then FinishRoll's reroll) ends up with a visibly different Level
+// than one only ever rolled once.
+file sealed class SequentialRoller : IDiceRoller
+{
+    private int _calls;
+    public RolledFace Roll(DieInstance die, CardDef? card) => new(DieStatus.SidekickCharacter, ++_calls);
+}
+
 public class TurnEngineTests
 {
     private static GameState CreateNewGame() =>
@@ -97,29 +108,56 @@ public class TurnEngineTests
     }
 
     [Fact]
-    public void RollAndReroll_CombinesDiceFromBagAndDiceFromPrep_IntoReservePool()
+    public void Roll_LeavesDiceStagedWithRolledFaces_NotYetInReservePool()
+    {
+        // Rule 2.4.3's reroll decision is made *after* seeing the roll -
+        // Roll alone must not commit dice to the Reserve Pool yet.
+        var state = CreateNewGame();
+        state.IsFirstTurn = false;
+        TurnEngine.ClearAndDraw(state, new Random(1));
+        TurnEngine.AdvanceStep(state); // Main is skipped for this test's purposes; just move past ClearAndDraw
+        state.CurrentStep = TurnStep.RollAndReroll;
+
+        TurnEngine.Roll(state, new FixedRoller(DieStatus.SidekickCharacter, 1));
+
+        var staged = state.DiceIn("p1", Zone.DiceFromBag).ToList();
+        Assert.Equal(4, staged.Count);
+        Assert.All(staged, d => Assert.Equal(DieStatus.SidekickCharacter, d.Status));
+        Assert.Empty(state.DiceIn("p1", Zone.ReservePool));
+    }
+
+    [Fact]
+    public void FinishRoll_RerollsOnlySelectedDice_ThenSettlesEveryoneIntoReservePool()
     {
         var state = CreateNewGame();
         state.IsFirstTurn = false;
         var leftover = state.DiceIn("p1", Zone.Bag).First();
         leftover.Zone = Zone.PrepArea;
-
         TurnEngine.ClearAndDraw(state, new Random(1));
-        TurnEngine.AdvanceStep(state); // Main is skipped for this test's purposes; just move past ClearAndDraw
+        TurnEngine.AdvanceStep(state);
         state.CurrentStep = TurnStep.RollAndReroll;
 
-        TurnEngine.RollAndReroll(state, new FixedRoller(DieStatus.SidekickCharacter, 1), _ => []);
+        var roller = new SequentialRoller();
+        TurnEngine.Roll(state, roller);
+        var rolled = state.DiceIn("p1", Zone.DiceFromBag).Concat(state.DiceIn("p1", Zone.DiceFromPrep)).ToList();
+        Assert.Equal(5, rolled.Count); // 4 fresh draws + the 1 carried over from the Prep Area
+        var toReroll = rolled[0];
+        var levelsAfterRoll = rolled.ToDictionary(d => d.Id, d => d.Level);
+
+        TurnEngine.FinishRoll(state, roller, [toReroll.Id]);
 
         var reserve = state.DiceIn("p1", Zone.ReservePool).ToList();
-        Assert.Equal(5, reserve.Count); // 4 fresh draws + the 1 carried over from the Prep Area
+        Assert.Equal(5, reserve.Count);
         Assert.Contains(leftover, reserve);
-        Assert.All(reserve, d => Assert.Equal(DieStatus.SidekickCharacter, d.Status));
+        Assert.NotEqual(levelsAfterRoll[toReroll.Id], toReroll.Level); // rerolled
+        foreach (var die in rolled.Where(d => d.Id != toReroll.Id))
+            Assert.Equal(levelsAfterRoll[die.Id], die.Level); // everyone else kept as originally rolled
         Assert.Empty(state.DiceIn("p1", Zone.DiceFromBag));
         Assert.Empty(state.DiceIn("p1", Zone.DiceFromPrep));
     }
 
     [Fact]
-    public void RollAndReroll_LeavesDieSteppedIntoPrepAreaAfterThisSteps_ClearPhase_ForNextTurn()
+    public void FinishRoll_LeavesDieSteppedIntoPrepAreaAfterThisSteps_ClearPhase_ForNextTurn()
     {
         // Models a card like Pepper Potts ("draw an extra die at the
         // beginning of your Clear and Draw Step... If it is a non-Sidekick
@@ -135,7 +173,9 @@ public class TurnEngineTests
         TurnEngine.AdvanceStep(state);
         state.CurrentStep = TurnStep.RollAndReroll;
 
-        TurnEngine.RollAndReroll(state, new FixedRoller(DieStatus.SidekickCharacter, 1), _ => []);
+        var roller = new FixedRoller(DieStatus.SidekickCharacter, 1);
+        TurnEngine.Roll(state, roller);
+        TurnEngine.FinishRoll(state, roller, []);
 
         Assert.Equal(4, state.DiceIn("p1", Zone.ReservePool).Count()); // just this turn's draw
         Assert.Equal(Zone.PrepArea, lateEntrant.Zone); // untouched - waits for next turn
@@ -149,7 +189,9 @@ public class TurnEngineTests
 
         TurnEngine.ClearAndDraw(state, new Random(1));
         TurnEngine.AdvanceStep(state);
-        TurnEngine.RollAndReroll(state, new FixedRoller(DieStatus.Energy, 0), _ => []);
+        var roller = new FixedRoller(DieStatus.Energy, 0);
+        TurnEngine.Roll(state, roller);
+        TurnEngine.FinishRoll(state, roller, []);
         TurnEngine.AdvanceStep(state);
         Assert.Equal(TurnStep.Main, state.CurrentStep);
 

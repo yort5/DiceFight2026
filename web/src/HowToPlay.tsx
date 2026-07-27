@@ -46,14 +46,18 @@ export function HowToPlay(props: { onClose: () => void }) {
               reserved for whatever a card Preps from here on, which won't roll until next turn.
             </li>
             <li>
-              <strong>Advance Step</strong> - moves from Prep Area to Main Step, and later from Main
-              Step into the Attack Step.
+              <strong>Advance Step</strong> - moves to the next step. While you're in Roll &amp;
+              Reroll it's disabled until you've rolled, and once you have, clicking it keeps
+              everything as rolled and moves on (rule 2.4.3 lets you reroll none).
             </li>
             <li>
-              <strong>Roll &amp; Reroll</strong> - rolls this turn's draw (plus whatever carried over
-              from the Prep Area at Clear &amp; Draw) into the Reserve Pool; whichever dice you've
-              selected first are rerolled instead of kept as rolled. Anything a card Preps after that
-              point sits in the Prep Area untouched until next turn's Clear &amp; Draw.
+              <strong>Roll</strong> - only shows up during Roll &amp; Reroll, while there's still
+              something unrolled. Rolls this turn's draw plus whatever carried over from the Prep
+              Area at Clear &amp; Draw - no need to select anything first, it's always all of them.
+              After rolling, select any dice you want to reroll and use the Action Tray's "Reroll
+              Selected," or just click Advance Step to keep everything as rolled. Anything a card
+              Preps after this point sits in the Prep Area untouched until next turn's Clear &amp;
+              Draw.
             </li>
             <li>
               <strong>Enter Attack Step</strong> / <strong>Skip Attack Step</strong> - choose

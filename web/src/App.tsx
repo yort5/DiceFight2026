@@ -59,7 +59,20 @@ function App() {
   }
 
   const gameId = game?.gameId;
-  const allSelectedIds = selection.primary ? [selection.primary, ...selection.secondary] : [];
+
+  // The Roll & Reroll step's dice: this turn's fresh draw plus whatever
+  // Clear & Draw carried over from the Prep Area. Rolling and finalizing
+  // always act on all of them at once - there's no reason to make the
+  // player select them individually just to roll.
+  const rollStepDice = game
+    ? game.dice.filter(
+        (d) =>
+          d.controllerId === game.activePlayerId &&
+          (d.zone === "DiceFromBag" || d.zone === "DiceFromPrep"),
+      )
+    : [];
+  const hasUnrolledStepDice = rollStepDice.some((d) => d.status === "Unrolled");
+  const hasRolledPendingStepDice = rollStepDice.length > 0 && !hasUnrolledStepDice;
 
   return (
     <div className="app">
@@ -92,12 +105,28 @@ function App() {
             <button disabled={busy} onClick={() => run(() => api.clearAndDraw(gameId))}>
               Clear &amp; Draw
             </button>
-            <button disabled={busy} onClick={() => run(() => api.advanceStep(gameId))}>
+            <button
+              disabled={busy || (game.currentStep === "RollAndReroll" && hasUnrolledStepDice)}
+              onClick={() =>
+                run(async () => {
+                  // Rolled but hasn't finalized a reroll decision yet - treat
+                  // advancing as "keep everything as rolled" (rule 2.4.3
+                  // allows rerolling none) rather than leaving these dice
+                  // stuck in DiceFromBag/DiceFromPrep forever.
+                  if (game.currentStep === "RollAndReroll" && hasRolledPendingStepDice) {
+                    await api.finishRoll(gameId, []);
+                  }
+                  return api.advanceStep(gameId);
+                })
+              }
+            >
               Advance Step
             </button>
-            <button disabled={busy} onClick={() => run(() => api.rollAndReroll(gameId, allSelectedIds))}>
-              Roll &amp; Reroll (selected = reroll)
-            </button>
+            {game.currentStep === "RollAndReroll" && hasUnrolledStepDice && (
+              <button disabled={busy} onClick={() => run(() => api.roll(gameId))}>
+                Roll ({rollStepDice.length} dice)
+              </button>
+            )}
             <button disabled={busy} onClick={() => run(() => api.enterAttackStep(gameId))}>
               Enter Attack Step
             </button>

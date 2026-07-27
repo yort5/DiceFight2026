@@ -105,37 +105,47 @@ public static class TurnEngine
         return drawn;
     }
 
-    // Rule 2.4 - Roll and Reroll Step. chooseRerolls represents the
-    // player's decision (rule 2.4.3 - any/all/none, as a single group).
-    public static void RollAndReroll(
-        GameState state,
-        IDiceRoller roller,
-        Func<IReadOnlyList<DieInstance>, IReadOnlyList<string>> chooseRerolls)
+    // Rule 2.4 - Roll and Reroll Step, split into two calls so a player can
+    // see this turn's roll (rule 2.4.1/2.4.2) before deciding what to
+    // reroll (rule 2.4.3 - any/all/none, as a single group) rather than
+    // having to commit to a reroll set blind, before the roll happens.
+    // Combines this turn's fresh draw (DiceFromBag) with whatever Clear and
+    // Draw carried over from the Prep Area (DiceFromPrep). Deliberately
+    // does NOT read Zone.PrepArea itself - anything sitting there was
+    // either never swept (a die Prepped after this step's Clear phase
+    // already ran) or belongs to a future Roll & Reroll, not this one.
+    public static void Roll(GameState state, IDiceRoller roller)
     {
         if (state.CurrentStep != TurnStep.RollAndReroll)
             throw new InvalidOperationException($"Expected RollAndReroll step, was {state.CurrentStep}.");
 
-        // Combines this turn's fresh draw (DiceFromBag) with whatever
-        // Clear and Draw carried over from the Prep Area (DiceFromPrep).
-        // Deliberately does NOT read Zone.PrepArea itself - anything
-        // sitting there was either never swept (a die Prepped after this
-        // step's Clear phase already ran) or belongs to a future Roll &
-        // Reroll, not this one.
-        var readyToRoll = state.DiceIn(state.ActivePlayerId, Zone.DiceFromBag)
-            .Concat(state.DiceIn(state.ActivePlayerId, Zone.DiceFromPrep))
-            .ToList();
+        foreach (var die in RollStepDice(state))
+            ApplyRoll(state, roller, die);
+    }
 
-        foreach (var die in readyToRoll)
+    // rerollDieIds is the player's rule-2.4.3 decision, made after seeing
+    // Roll's results - rerolls just those, then moves everyone in this
+    // step (rerolled or not) to the Reserve Pool, keeping the same face up
+    // (rule 2.4.4). Safe to call with an empty list to keep every die as
+    // rolled.
+    public static void FinishRoll(GameState state, IDiceRoller roller, IReadOnlyList<string> rerollDieIds)
+    {
+        if (state.CurrentStep != TurnStep.RollAndReroll)
+            throw new InvalidOperationException($"Expected RollAndReroll step, was {state.CurrentStep}.");
+
+        var dice = RollStepDice(state);
+        var rerollSet = rerollDieIds.ToHashSet();
+        foreach (var die in dice.Where(d => rerollSet.Contains(d.Id)))
             ApplyRoll(state, roller, die);
 
-        var rerollIds = chooseRerolls(readyToRoll).ToHashSet();
-        foreach (var die in readyToRoll.Where(d => rerollIds.Contains(d.Id)))
-            ApplyRoll(state, roller, die);
-
-        // Rule 2.4.4 - move to the Reserve Pool, keeping the same face up.
-        foreach (var die in readyToRoll)
+        foreach (var die in dice)
             die.Zone = Zone.ReservePool;
     }
+
+    private static List<DieInstance> RollStepDice(GameState state) =>
+        state.DiceIn(state.ActivePlayerId, Zone.DiceFromBag)
+            .Concat(state.DiceIn(state.ActivePlayerId, Zone.DiceFromPrep))
+            .ToList();
 
     private static void ApplyRoll(GameState state, IDiceRoller roller, DieInstance die)
     {

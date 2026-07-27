@@ -32,7 +32,10 @@ export function ActionTray(props: {
   if (!primaryDie) {
     return (
       <div className="action-tray empty">
-        <p>Click a die to select it, then click others to add them as energy, ability targets, or extra attackers.</p>
+        <p>
+          Click a die to select it, then click others to add them as energy, ability targets, extra
+          attackers, or (after rolling) dice to reroll.
+        </p>
       </div>
     );
   }
@@ -81,6 +84,20 @@ export function ActionTray(props: {
   }
 
   if (
+    game.currentStep === "RollAndReroll" &&
+    (primaryDie.zone === "DiceFromBag" || primaryDie.zone === "DiceFromPrep") &&
+    primaryDie.status !== "Unrolled" &&
+    isActiveController
+  ) {
+    actions.push({
+      key: "reroll-selected",
+      label: "Reroll Selected",
+      hint: "Rerolls the selected dice; everything else in this Roll & Reroll step is kept as rolled",
+      run: () => api.finishRoll(game.gameId, [primaryDie.id, ...secondaryIds]),
+    });
+  }
+
+  if (
     game.currentStep === "Attack" &&
     game.attackSubStep === "DeclareAttackers" &&
     primaryDie.zone === "FieldZone" &&
@@ -98,11 +115,11 @@ export function ActionTray(props: {
     <div className="action-tray">
       <div className="selection-summary">
         <span className="primary-chip">{dieLabel(primaryDie, props.cardsById)}</span>
-        {secondaryIds.length > 0 && (
-          <span className="secondary-chips">
-            + {secondaryIds.map((id) => dieLabel(dice.find((d) => d.id === id)!, props.cardsById)).join(", ")}
+        {secondaryIds.map((id) => (
+          <span key={id} className="secondary-chip">
+            {dieLabel(dice.find((d) => d.id === id)!, props.cardsById)}
           </span>
-        )}
+        ))}
         <button className="clear-btn" onClick={onClear}>
           Clear selection
         </button>

@@ -8,12 +8,14 @@ actions, combat, the ability queue, the legal-target system),
 action, in-memory game store, no persistence), `web/` (React + Vite - a
 functional "dev console" board: click dice, contextual action tray, real
 zone layout, a "How to Play" dialog explaining the controls - not a
-polished game UI yet). 49 xUnit tests, all passing. `Zone` now splits the
+polished game UI yet). 50 xUnit tests, all passing. `Zone` now splits the
 Prep Area into a persistent zone (targeted by KO/Prep effects) plus two
 transient staging zones used only within a single Clear & Draw → Roll &
-Reroll cycle (`DiceFromBag`, `DiceFromPrep`) - see the bottom-most status
-update for why (a Pepper Potts-shaped rules interaction the old
-single-zone model couldn't express).
+Reroll cycle (`DiceFromBag`, `DiceFromPrep`) - see the two most recent
+status updates for why (a Pepper Potts-shaped rules interaction the old
+single-zone model couldn't express) and for the follow-up split of
+`TurnEngine.RollAndReroll` into `Roll` + `FinishRoll` so a player sees the
+roll before deciding what to reroll, instead of committing blind.
 `Data/SampleCards.cs` has 26 real cards (20 characters + 6 Basic Actions,
 two 10-card teams) with real names/subtitles/ability text pulled from
 Teambuilder's data; only 6 have a scripted `AbilityDef` (see the
@@ -437,3 +439,61 @@ Clear & Draw click and the Roll & Reroll click that follows it - confirmed
 visually via the headless-Chromium setup (a full turn's Clear & Draw
 followed by Roll & Reroll, screenshotted at each step). 49 tests total (up
 from 47), all passing; `npm run build` still passes.
+
+## Status update — split Roll & Reroll into Roll + FinishRoll, and other web-client UX fixes
+
+User feedback after trying the new zones surfaced a second, related
+correctness gap: rule 2.4.3 lets a player reroll any/some/none of their
+dice, but only *after* seeing the roll (rule 2.4.1/2.4.2 happen first).
+The old `TurnEngine.RollAndReroll(state, roller, chooseRerolls)` rolled and
+rerolled in one atomic call, and the web client's only caller
+(`GamesController.RollAndReroll`) had the client submit its reroll-id list
+in the *same* HTTP request that triggered the roll - meaning the player
+was committing to a reroll decision blind, before the dice had actually
+been rolled. Real physical play doesn't work that way: you roll, look at
+the faces, then decide.
+
+Fix: `TurnEngine.RollAndReroll` is now two calls. `Roll(state, roller)`
+rolls every die in `DiceFromBag`/`DiceFromPrep` and leaves them there
+(now showing real faces, not yet in the Reserve Pool). `FinishRoll(state,
+roller, rerollDieIds)` rerolls just the requested ids, then moves
+everyone in the step to the Reserve Pool (rule 2.4.4). The API grew a
+matching `/roll` and `/finish-roll` in place of the old `/roll-and-reroll`.
+Added `TurnEngineTests` covering the two-phase split directly (`Roll`
+alone must not touch the Reserve Pool; `FinishRoll` must reroll only the
+requested ids, verified with a `SequentialRoller` fake that gives each
+`Roll()` call a distinguishable, increasing Level so "rerolled" vs. "kept
+as rolled" is observable). 50 tests total.
+
+Web client changes to go with it: the "Roll & Reroll (selected = reroll)"
+turn-control button (which required pre-selecting dice, playing right
+into the same blind-decision bug) is gone. In its place: a "Roll" button
+that appears only while the active player has unrolled dice in
+`DiceFromBag`/`DiceFromPrep` and always rolls all of them - no selection
+needed, since a player never rolls only *some* of this turn's dice.
+"Advance Step" is disabled until rolled, and once rolled, clicking it
+calls `finishRoll` with an empty reroll list before advancing - so a
+player who wants to keep everything just clicks Advance Step once, rather
+than needing a separate "keep all" button. To actually reroll, select the
+dice first (the ordinary click-to-select flow, unchanged) and a new
+contextual "Reroll Selected" action appears in the Action Tray whenever
+the primary selection is a rolled (non-`Unrolled`) die in one of those two
+zones.
+
+Also fixed, from the same feedback: the Action Tray's secondary
+selections were rendered as one joined text string ("+ Sidekick,
+Sidekick") instead of individual chips, which read as a single
+"+Sidekick" label piling up rather than one chip per die - each secondary
+selection now gets its own `.secondary-chip` element, matching how the
+primary chip already looked. Also renamed the `DiceFromBag`/`DiceFromPrep`
+zone display labels from "... (unrolled)" to "Drawn This Turn"/"Carried
+From Prep" - the old labels became actively wrong the moment `Roll`
+executes, since the same zone then holds rolled dice awaiting the reroll
+decision, not unrolled ones.
+
+Verified the whole Roll → select-and-reroll → Reserve Pool flow, and the
+"just click Advance Step to keep everything" shortcut, end-to-end via the
+headless-Chromium setup (screenshots at each step, both Team A's `Roll`
+button and disabled `Advance Step` before rolling, then the individual
+selection chips and successful reroll). `dotnet build`/`test` (50/50) and
+`npm run build` all pass.
