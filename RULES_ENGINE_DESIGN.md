@@ -1,5 +1,65 @@
 # Dice Masters Rules Engine — Design Notes (v0)
 
+## Start here (current state, 2026-07-27)
+
+**What exists**: `DiceFight.Engine` (rules engine - all four Main Step
+actions, combat, the ability queue, the legal-target system),
+`DiceFight.Api` (ASP.NET Core wrapper, one controller action per engine
+action, in-memory game store, no persistence), `web/` (React + Vite - a
+functional "dev console" board: click dice, contextual action tray, real
+zone layout - not a polished game UI yet). 47 xUnit tests, all passing.
+`Data/SampleCards.cs` has 26 real cards (20 characters + 6 Basic Actions,
+two 10-card teams) with real names/subtitles/ability text pulled from
+Teambuilder's data; only 6 have a scripted `AbilityDef` (see the
+"Scripting policy" note near the top of that file) - the rest are
+intentionally vanilla rather than simulating a partial/wrong subset of a
+more complex card. Numeric stats (cost/energy/attack/defense) are all
+placeholder values - see next paragraph.
+
+**Deployed**: live on GCP Cloud Run with continuous deployment already
+configured - every push to `main` on GitHub auto-builds the repo-root
+`Dockerfile` (a combined container: the React build is copied into the
+API's `wwwroot`, one process serves both `/api/*` and the app) and
+redeploys automatically. Publicly accessible with no auth - acceptable for
+now, explicitly a hobby project rather than something sensitive. The GCP
+console/IAM setup details aren't recorded here since it's done and
+working; nothing about continuing game development needs to touch it
+unless the deploy itself breaks.
+
+**Blocked on user input, not a technical task**: real per-level
+attack/defense numbers. None of the six cloned DiceCoalition repos contain
+them (confirmed by inspection - every community tool represents combat
+stats via card-face images, never structured data), so every sample card
+currently runs on placeholder stats. Getting real numbers means either a
+manual data-entry effort against real physical/reference cards, or finding
+a different data source - worth asking the user before investing time
+here rather than assuming which approach they'd want.
+
+**Actionable next steps, roughly high to low value**:
+1. Keyword *behavior* (Overcrush, Regenerate, etc.) - currently just
+   tagged as data on `CardDef.Keywords`, not simulated by `CombatEngine`.
+2. Global ability UX in the web client - needs a two-phase secondary
+   selection (energy, then targets) the current single-secondary-selection
+   Action Tray can't express yet.
+3. Real per-attacker blocker assignment in the web client - only "no
+   blockers" is wired up today.
+4. Legal-target exclusions for captured dice / per-die "cannot be
+   targeted" abilities - blocked on Capturing (rule 3.8) not being built.
+5. A real `IDiceRoller` with actual face-table data, replacing the
+   rough-guess placeholder roller (`DiceFight.Api/PlaceholderDiceRoller.cs`).
+6. Team-construction legality (die-limit-sum-to-20, unique-card-name
+   checks, rule 2.1.1/2.1.3) - currently unenforced; every card gets its
+   full die limit regardless of team size (see `TeamSetup.cs`'s remarks).
+7. Auth/login in front of the API - currently wide open, matches the
+   deployment note above.
+
+The chronological "Status update" sections below explain the reasoning
+and bugs found behind each already-built piece - worth reading before
+touching that area, since several of them (the legal-target system
+especially) encode a real correctness fix, not just a design choice.
+
+---
+
 Scope: server-side rules engine only, no UI. Goal of this pass: settle on a
 data model and architecture that can scale to the full card pool (thousands
 of cards, each with bespoke ability text) without rewriting the core loop
