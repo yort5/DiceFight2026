@@ -83,17 +83,12 @@ export function ActionTray(props: {
     });
   }
 
-  if (
-    game.currentStep === "RollAndReroll" &&
-    (primaryDie.zone === "DiceFromBag" || primaryDie.zone === "DiceFromPrep") &&
-    primaryDie.status !== "Unrolled" &&
-    isActiveController
-  ) {
+  if (game.currentStep === "RollAndReroll" && primaryDie.zone === "ReservePool" && isActiveController) {
     actions.push({
       key: "reroll-selected",
       label: "Reroll Selected",
-      hint: "Rerolls the selected dice; everything else in this Roll & Reroll step is kept as rolled",
-      run: () => api.finishRoll(game.gameId, [primaryDie.id, ...secondaryIds]),
+      hint: "Rerolls the selected dice; everything else already rolled this step is left as-is",
+      run: () => api.reroll(game.gameId, [primaryDie.id, ...secondaryIds]),
     });
   }
 

@@ -32,10 +32,20 @@ export function HowToPlay(props: { onClose: () => void }) {
             Sidekicks."
           </p>
 
-          <h3>Turn controls</h3>
+          <h3>Advance Step</h3>
           <p>
-            The buttons under the header are the raw engine actions, one per button, run in the
-            order the physical game's turn structure requires:
+            The blue <strong>Advance Step ▶</strong> button next to the step/active-player readout
+            is the one control you use every step, in every turn - it moves you to the next step.
+            While you're in Roll &amp; Reroll it's disabled until you've rolled at least once; after
+            that, clicking it keeps everything as currently rolled and moves on (rule 2.4.3 lets you
+            reroll none).
+          </p>
+
+          <h3>Step actions</h3>
+          <p>
+            The dashed row below that holds the raw per-step engine actions - closer to admin/debug
+            controls than a polished turn flow, since most of them only make sense (and only do
+            something) during their own step:
           </p>
           <ul>
             <li>
@@ -46,18 +56,13 @@ export function HowToPlay(props: { onClose: () => void }) {
               reserved for whatever a card Preps from here on, which won't roll until next turn.
             </li>
             <li>
-              <strong>Advance Step</strong> - moves to the next step. While you're in Roll &amp;
-              Reroll it's disabled until you've rolled, and once you have, clicking it keeps
-              everything as rolled and moves on (rule 2.4.3 lets you reroll none).
-            </li>
-            <li>
               <strong>Roll</strong> - only shows up during Roll &amp; Reroll, while there's still
               something unrolled. Rolls this turn's draw plus whatever carried over from the Prep
-              Area at Clear &amp; Draw - no need to select anything first, it's always all of them.
-              After rolling, select any dice you want to reroll and use the Action Tray's "Reroll
-              Selected," or just click Advance Step to keep everything as rolled. Anything a card
-              Preps after this point sits in the Prep Area untouched until next turn's Clear &amp;
-              Draw.
+              Area at Clear &amp; Draw straight into the Reserve Pool - no need to select anything
+              first, it's always all of them. After rolling, select any dice you want to reroll and
+              use the Action Tray's "Reroll Selected," or just click Advance Step to keep everything
+              as rolled. Anything a card Preps after this point sits in the Prep Area untouched
+              until next turn's Clear &amp; Draw.
             </li>
             <li>
               <strong>Enter Attack Step</strong> / <strong>Skip Attack Step</strong> - choose

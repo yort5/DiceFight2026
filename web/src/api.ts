@@ -34,8 +34,8 @@ export const api = {
   advanceStep: (id: string) => request<GameState>(`/games/${id}/advance-step`, { method: "POST" }),
   clearAndDraw: (id: string) => request<GameState>(`/games/${id}/clear-and-draw`, { method: "POST" }),
   roll: (id: string) => request<GameState>(`/games/${id}/roll`, { method: "POST" }),
-  finishRoll: (id: string, rerollDieIds: string[]) =>
-    request<GameState>(`/games/${id}/finish-roll`, {
+  reroll: (id: string, rerollDieIds: string[]) =>
+    request<GameState>(`/games/${id}/reroll`, {
       method: "POST",
       body: JSON.stringify({ rerollDieIds }),
     }),

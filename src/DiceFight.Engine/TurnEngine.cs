@@ -114,38 +114,40 @@ public static class TurnEngine
     // does NOT read Zone.PrepArea itself - anything sitting there was
     // either never swept (a die Prepped after this step's Clear phase
     // already ran) or belongs to a future Roll & Reroll, not this one.
+    // Rolled dice land straight in the Reserve Pool (rule 2.4.2) - the
+    // reroll decision that follows (Reroll, below) acts on them there,
+    // there's no separate "rolled but not yet placed" holding zone.
     public static void Roll(GameState state, IDiceRoller roller)
     {
         if (state.CurrentStep != TurnStep.RollAndReroll)
             throw new InvalidOperationException($"Expected RollAndReroll step, was {state.CurrentStep}.");
 
-        foreach (var die in RollStepDice(state))
-            ApplyRoll(state, roller, die);
-    }
+        var dice = state.DiceIn(state.ActivePlayerId, Zone.DiceFromBag)
+            .Concat(state.DiceIn(state.ActivePlayerId, Zone.DiceFromPrep))
+            .ToList();
 
-    // rerollDieIds is the player's rule-2.4.3 decision, made after seeing
-    // Roll's results - rerolls just those, then moves everyone in this
-    // step (rerolled or not) to the Reserve Pool, keeping the same face up
-    // (rule 2.4.4). Safe to call with an empty list to keep every die as
-    // rolled.
-    public static void FinishRoll(GameState state, IDiceRoller roller, IReadOnlyList<string> rerollDieIds)
-    {
-        if (state.CurrentStep != TurnStep.RollAndReroll)
-            throw new InvalidOperationException($"Expected RollAndReroll step, was {state.CurrentStep}.");
-
-        var dice = RollStepDice(state);
-        var rerollSet = rerollDieIds.ToHashSet();
-        foreach (var die in dice.Where(d => rerollSet.Contains(d.Id)))
+        foreach (var die in dice)
             ApplyRoll(state, roller, die);
 
         foreach (var die in dice)
             die.Zone = Zone.ReservePool;
     }
 
-    private static List<DieInstance> RollStepDice(GameState state) =>
-        state.DiceIn(state.ActivePlayerId, Zone.DiceFromBag)
-            .Concat(state.DiceIn(state.ActivePlayerId, Zone.DiceFromPrep))
-            .ToList();
+    // rerollDieIds is the player's rule-2.4.3 decision, made after seeing
+    // Roll's results (any/some/none of them) - purely optional, since Roll
+    // already placed everyone in the Reserve Pool. Anything in the active
+    // player's Reserve Pool right now is this turn's roll: Clear and Draw
+    // always empties it first (rule 2.3.1), and nothing else can add to it
+    // before this step ends.
+    public static void Reroll(GameState state, IDiceRoller roller, IReadOnlyList<string> rerollDieIds)
+    {
+        if (state.CurrentStep != TurnStep.RollAndReroll)
+            throw new InvalidOperationException($"Expected RollAndReroll step, was {state.CurrentStep}.");
+
+        var rerollSet = rerollDieIds.ToHashSet();
+        foreach (var die in state.DiceIn(state.ActivePlayerId, Zone.ReservePool).Where(d => rerollSet.Contains(d.Id)))
+            ApplyRoll(state, roller, die);
+    }
 
     private static void ApplyRoll(GameState state, IDiceRoller roller, DieInstance die)
     {

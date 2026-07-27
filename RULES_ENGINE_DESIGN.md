@@ -497,3 +497,56 @@ headless-Chromium setup (screenshots at each step, both Team A's `Roll`
 button and disabled `Advance Step` before rolling, then the individual
 selection chips and successful reroll). `dotnet build`/`test` (50/50) and
 `npm run build` all pass.
+
+## Status update — rolled dice land straight in the Reserve Pool; Advance Step moved out of Step actions
+
+Two follow-up fixes from user feedback on the Roll/Reroll split above.
+
+**Rolled dice now land directly in the Reserve Pool, not a holding zone.**
+The previous pass had `Roll` roll dice in place (`DiceFromBag`/
+`DiceFromPrep`) and only `FinishRoll` moved them to the Reserve Pool -
+modeled on "the reroll decision needs to see the roll first," but that
+detail (seeing results before deciding) doesn't require a separate
+holding zone once you notice rule 2.4.3 is phrased as "may reroll any
+dice in your Reserve Pool," i.e. the real rulebook already has rolled
+dice land in the Reserve Pool and lets you reroll them *there*. Simpler
+and more correct: `Roll(state, roller)` now rolls every
+`DiceFromBag`/`DiceFromPrep` die and moves it straight to `ReservePool`
+in the same call. `FinishRoll` is gone; `Reroll(state, roller,
+rerollDieIds)` replaces it and just rerolls the requested ids in place
+(no zone change) - it's now genuinely optional, since Roll alone already
+leaves the turn in a valid state. This also simplified the web client:
+Advance Step no longer needs to silently call a "finish with no rerolls"
+before advancing (there's nothing left to finish), so that composed
+handler in `App.tsx` is gone too.
+
+**Advance Step moved out of the Step actions row into the status bar.**
+User's observation: once Roll/Reroll/Advance Step got teased apart,
+Advance Step is the one control a player uses every step of every turn,
+while Clear & Draw / Roll / Enter or Skip Attack Step / Declare Blockers
+/ Assign Combat Damage / Clean Up are really per-step admin actions -
+each is only legal (and only does something) during its own step, closer
+to a debug console's step-firing buttons than a normal play flow. Moved
+the (now-styled, blue, disabled-while-unrolled) Advance Step button to
+the status bar, to the left of the Step/Active readout; renamed the
+remaining row's label from "Turn controls" to "Step actions" to match.
+How to Play updated to match (a new "Advance Step" section ahead of "Step
+actions").
+
+Also answered (not a bug): why only Sidekick faces (`L1`/`Wild`) have
+shown up in every demo so far - `PlaceholderDiceRoller` is a rough
+probability model, not a real fixed-face table (still tracked as a
+follow-up - see "Actionable next steps" above), and Sidekick dice are
+correctly limited to exactly those two outcomes by rule 1.6.8 (always
+Level 1). A non-Sidekick character die, once one is purchased/fielded and
+rolled, will already show varying levels 1..N per the card's level count
+under the current placeholder logic - it just hasn't come up yet because
+every demo so far only ever rolled starting Sidekicks.
+
+Verified the whole new flow end-to-end via headless Chromium: Roll lands
+dice directly in the Reserve Pool (no more transient "Drawn This Turn"
+sighting for rolled faces), reroll works in place, and Advance Step's new
+position/disabled-state behaves correctly through a full
+ClearAndDraw → Roll → Reroll → Advance → Main sequence. `dotnet
+build`/`test` (50/50, tests updated for the `Reroll` rename and the
+straight-to-Reserve-Pool behavior) and `npm run build` both pass.

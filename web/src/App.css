@@ -61,11 +61,26 @@
 }
 
 .turn-controls button,
+.status-bar button,
 .app-header button {
   font-size: 13px;
   padding: 6px 10px;
   border-radius: 6px;
   cursor: pointer;
+}
+
+.advance-step-btn {
+  font-weight: 700;
+  background: #6ea8ff;
+  color: #06122b;
+  border: none;
+}
+
+.advance-step-btn:disabled {
+  background: rgba(127, 127, 127, 0.25);
+  color: inherit;
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* ---- How to Play modal ---- */

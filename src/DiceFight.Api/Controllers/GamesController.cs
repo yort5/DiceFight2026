@@ -57,11 +57,11 @@ public sealed class GamesController(GameStore store) : ControllerBase
         return Ok(GameStateDto.From(gameId, state));
     }
 
-    [HttpPost("{gameId}/finish-roll")]
-    public ActionResult<GameStateDto> FinishRoll(string gameId, [FromBody] FinishRollRequest request)
+    [HttpPost("{gameId}/reroll")]
+    public ActionResult<GameStateDto> Reroll(string gameId, [FromBody] RerollRequest request)
     {
         var state = store.Get(gameId);
-        TurnEngine.FinishRoll(state, new PlaceholderDiceRoller(new Random()), request.RerollDieIds);
+        TurnEngine.Reroll(state, new PlaceholderDiceRoller(new Random()), request.RerollDieIds);
         return Ok(GameStateDto.From(gameId, state));
     }
 
