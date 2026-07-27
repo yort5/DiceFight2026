@@ -19,7 +19,7 @@ public class AbilityQueueTests
         var resolutionOrder = new List<string>();
         var koOrder = new List<string>();
         var koTargets = new Queue<string>(["DieA", "DieB"]);
-        var placeholderEffect = new DealDamage(1, new TargetSpec("all opposing dice"));
+        var placeholderEffect = new DealDamage(1, TargetSpec.CharacterDie("all opposing dice"));
 
         // (1) Die A and Die B declared as attackers.
         queue.Enqueue("DieA", "active", TriggerType.WhenAttacks, placeholderEffect);
@@ -51,7 +51,7 @@ public class AbilityQueueTests
     {
         var queue = new AbilityQueue();
         var order = new List<string>();
-        var effect = new Ko(new TargetSpec("target"));
+        var effect = new Ko(TargetSpec.CharacterDie("target"));
 
         queue.Enqueue("First", "p1", TriggerType.WhenKOd, effect);
         queue.Enqueue("Second", "p1", TriggerType.WhenKOd, effect);

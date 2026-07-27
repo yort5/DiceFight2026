@@ -260,3 +260,56 @@ controller, Epic Basic Action's cost-4+ gate) and expanded
 Grasp's action-die use, Cosmic Cube's Epic-specific return-to-card and
 once-per-turn behavior, Distraction's Global ability paid by the
 Inactive player).
+
+## Status update — a first web client, then the legal-target system
+
+Added `DiceFight.Api` (ASP.NET Core, in-memory `GameStore`, one controller
+action per engine action) and `web/` (Vite + React + TypeScript). No engine
+changes for that pass - the API is a thin DTO-mapping layer, verified
+end-to-end with a locally-run headless Chromium (Playwright, with a
+`LD_LIBRARY_PATH` workaround for missing shared libs - `apt-get download`
++ `dpkg-deb -x`, no root needed) clicking through Purchase/Field/Attack in
+an actual rendered browser. The web board was then redesigned around the
+playmat's zone layout and a Primary/Secondary die-selection model instead
+of a flat "1st selected/rest" scheme.
+
+Then: `TargetSpec` (Effects/EffectNode.cs) went from an opaque
+`Description` string to a real structured filter - `TargetOwnership`
+(Any/Own/Opposing), `CharacterDiceOnly`, `EligibleZones` (defaulting to
+Field + Attack Zone per rule 3.3.4/3.3.5), `RequiredEnergyType`, and
+`Count` - plus a `TargetSpec.Self` marker for self-reference (Shocking
+Grasp's "Prep this die"). `LegalTargets.Query` computes the actual
+candidate set from `GameState` (still a first pass: no captured-die or
+per-die "cannot be targeted" exclusions, since neither Capturing nor
+per-die targeting restrictions exist yet). `EffectInterpreter` now
+validates every caller-chosen target against that computed legal set
+instead of trusting whatever id a caller supplies, and enforces rule
+3.3.11's "up to Count, or all of them if fewer exist" requirement.
+
+The interesting bug this surfaced: resolving each `TargetSpec` live,
+clause-by-clause, breaks rule 3.2.5 the moment an ability's own earlier
+clause mutates the board state its later clause's legality depends on.
+Casket of Ancient Winters makes this concrete - its own first clause KOs
+3 dice (which land in the Prep Area, rule 1.5.3.2) before its third clause
+asks for "3 dice from their Prep Area," so live resolution let clause 1's
+own KOs inflate clause 3's candidate pool. Fixed by resolving every
+`TargetSpec` in an ability's tree once, upfront, against the
+pre-execution state (`EffectInterpreter.Execute` now walks the tree via
+`CollectTargetSpecs` before running any clause) - which is also what
+correctly handles a spec referenced twice within one ability (Shocking
+Grasp's damage clause and its own "if that character is KO'd" check;
+God Emperor Doom's damage-then-reroll of the same die) without a
+re-derived legal set disagreeing with itself mid-ability.
+
+47 tests total (up from 37): new `LegalTargetsTests` (ownership/zone/
+character-only/energy-type filters, illegal-target rejection, the
+count-enforcement rule, `Self` bypassing filtering entirely), plus fixes
+to existing tests that had been implicitly relying on there being no
+target validation at all (e.g. targeting Sidekicks with abilities that
+require a specific energy type, which Sidekicks structurally can't have).
+
+Still not built: legal-target exclusions for captured dice and per-die
+"cannot be targeted" abilities (both because Capturing and per-die
+restrictions aren't modeled yet), and Global ability UX in the web client
+(needs two distinct kinds of secondary selection - energy, then targets -
+that don't fit the current single-secondary-selection Action Tray).

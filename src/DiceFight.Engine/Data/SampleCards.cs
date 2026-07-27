@@ -118,7 +118,7 @@ public static class SampleCards
         "dazzler", "Dazzler", "Lightbringer", dieLimit: 4,
         "When fielded, deal 4 damage to target [M] character die.",
         abilities: [new AbilityDef(TriggerType.WhenFielded, Cost: null,
-            Effect: new DealDamage(4, new TargetSpec("target character die")))]);
+            Effect: new DealDamage(4, TargetSpec.CharacterDie("target [M] character die", energyType: EnergyType.Mask)))]);
 
     public static readonly CardDef CosmicCube = BasicAction(
         "cosmic-cube", "Cosmic Cube", "Switch life totals with your opponent.", epic: true,
@@ -128,9 +128,9 @@ public static class SampleCards
         "shocking-grasp", "Shocking Grasp",
         "Deal 1 damage to target character die. If that character is KO'd by this damage, you may Prep this die.",
         abilities: [new AbilityDef(TriggerType.WhenUsed, Cost: null, Effect: new Sequence([
-            new DealDamage(1, new TargetSpec("target character die")),
-            new Conditional(new TargetSpec("target character die"), EffectCondition.TargetWasKOd,
-                new PrepDie(new TargetSpec("self")))
+            new DealDamage(1, TargetSpec.CharacterDie("target character die")),
+            new Conditional(TargetSpec.CharacterDie("target character die"), EffectCondition.TargetWasKOd,
+                new PrepDie(TargetSpec.Self))
         ]))]);
 
     // Distraction's Non-global ability ("target opponent chooses two...
@@ -143,7 +143,9 @@ public static class SampleCards
         "Target opponent chooses two of their character dice. They cannot block this turn. " +
         "Global: Pay [M]. Remove target attacking character die from combat.",
         abilities: [new AbilityDef(TriggerType.Global, Cost: null,
-            Effect: new MoveDie(new TargetSpec("target attacking character die"), Zone.FieldZone),
+            Effect: new MoveDie(
+                TargetSpec.CharacterDie("target attacking character die", zones: [Zone.AttackZone]),
+                Zone.FieldZone),
             EnergyCost: new EnergyCost(Amount: 1, RequiredType: EnergyType.Mask))]);
 
     // ---- Team B: 10 characters + 3 Basic Actions ----
@@ -161,8 +163,8 @@ public static class SampleCards
         "god-emperor-doom", "God Emperor Doom", "Harnessing the Beyonders", dieLimit: 4,
         "When fielded, deal 3 damage to target character die and reroll target character die.",
         abilities: [new AbilityDef(TriggerType.WhenFielded, Cost: null, Effect: new Sequence([
-            new DealDamage(3, new TargetSpec("target character die")),
-            new Reroll(new TargetSpec("target character die"))
+            new DealDamage(3, TargetSpec.CharacterDie("target character die")),
+            new Reroll(TargetSpec.CharacterDie("target character die"))
         ]))]);
 
     public static readonly CardDef GoddessOfThunder = Character(
@@ -201,9 +203,14 @@ public static class SampleCards
         "Your opponent KOs three of their character dice, moves 3 dice from their Reserve Pool to their bag, " +
         "and moves 3 dice from their Prep Area to their Used Pile.", epic: true,
         abilities: [new AbilityDef(TriggerType.WhenUsed, Cost: null, Effect: new Sequence([
-            new Ko(new TargetSpec("opponent's 3 character dice")),
-            new MoveDie(new TargetSpec("opponent's 3 reserve pool dice"), Zone.Bag),
-            new MoveDie(new TargetSpec("opponent's 3 prep area dice"), Zone.UsedPile)
+            new Ko(TargetSpec.CharacterDie(
+                "opponent's 3 character dice", TargetOwnership.Opposing, count: 3, zones: [Zone.FieldZone])),
+            new MoveDie(
+                TargetSpec.AnyDie("opponent's 3 reserve pool dice", TargetOwnership.Opposing, [Zone.ReservePool], count: 3),
+                Zone.Bag),
+            new MoveDie(
+                TargetSpec.AnyDie("opponent's 3 prep area dice", TargetOwnership.Opposing, [Zone.PrepArea], count: 3),
+                Zone.UsedPile)
         ]))]);
 
     public static readonly CardDef DailyBugle = BasicAction(

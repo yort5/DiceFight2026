@@ -61,7 +61,11 @@ public class TwoTeamsDemoTests
         var state = BuildTwoTeamGame();
         state.ActivePlayerId = "teamA";
         var dazzlerDie = FindUnpurchased(state, "teamA", SampleCards.Dazzler.Id);
-        var opposingTarget = state.DiceFor("teamB").First(); // a Sidekick, 1D
+        // Dazzler's spec requires Mask energy type, which Sidekicks don't
+        // have (rule 1.3.10) - use a real fielded opposing character.
+        var opposingTarget = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        opposingTarget.Zone = Zone.FieldZone;
+        opposingTarget.Status = DieStatus.Character;
 
         var purchaseEnergy = GiveWildEnergy(state, "teamA", SampleCards.Dazzler.PurchaseCost);
         TurnEngine.Purchase(state, dazzlerDie.Id, purchaseEnergy.Select(d => d.Id).ToList());
@@ -130,6 +134,8 @@ public class TwoTeamsDemoTests
         state.ActivePlayerId = "teamA";
         var shockingGraspDie = FindUnpurchased(state, "teamA", SampleCards.ShockingGrasp.Id);
         var target = state.DiceFor("teamB").First(); // Sidekick, 1D - lethal to 1 damage
+        target.Zone = Zone.FieldZone; // legal targets must be in the Field Zone (rule 3.3.4)
+        target.Status = DieStatus.SidekickCharacter;
 
         var purchaseEnergy = GiveWildEnergy(state, "teamA", SampleCards.ShockingGrasp.PurchaseCost);
         TurnEngine.Purchase(state, shockingGraspDie.Id, purchaseEnergy.Select(d => d.Id).ToList());

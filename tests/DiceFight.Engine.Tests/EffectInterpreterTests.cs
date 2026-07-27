@@ -16,14 +16,26 @@ public class EffectInterpreterTests
             new Player { Id = "p1", Name = "Player One" },
             new Player { Id = "p2", Name = "Player Two" });
 
+    // A legal target for most of these specs: in the Field Zone, on a
+    // character face - Sidekicks satisfy the default TargetSpec.CharacterDie
+    // (rule 3.3.4/1.6.6) but not one with a RequiredEnergyType, since
+    // Sidekicks have no energy type at all (rule 1.3.10).
+    private static DieInstance FieldSidekickTarget(GameState state, string playerId)
+    {
+        var die = state.DiceFor(playerId).First();
+        die.Zone = Zone.FieldZone;
+        die.Status = DieStatus.SidekickCharacter;
+        return die;
+    }
+
     [Fact]
     public void DealDamage_KOsDieWhenDamageReachesDefense()
     {
         var state = CreateState();
-        var target = state.DiceFor("p2").First(); // Sidekick, 1D by default
+        var target = FieldSidekickTarget(state, "p2");
 
         EffectInterpreter.Execute(
-            new DealDamage(4, new TargetSpec("t")),
+            new DealDamage(4, TargetSpec.CharacterDie("t")),
             new EffectContext(state, "p1", SourceDieId: null, _ => [target.Id]));
 
         Assert.Equal(Zone.PrepArea, target.Zone);
@@ -34,12 +46,20 @@ public class EffectInterpreterTests
     public void Dazzler_WhenFielded_Deals4DamageToChosenTarget()
     {
         var state = CreateState();
-        var target = state.DiceFor("p2").First();
+        // Dazzler's spec requires Mask energy type, which Sidekicks don't
+        // have (rule 1.3.10) - needs an opposing Mask-type character die,
+        // e.g. any of the sample Characters (all placeholder Mask type).
+        var target = new DieInstance
+        {
+            Id = "p2-captain-marvel-1", CardId = SampleCards.CaptainMarvel.Id, OwnerId = "p2", ControllerId = "p2",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1
+        };
+        state.Dice.Add(target);
 
         var ability = SampleCards.Dazzler.Abilities.Single(a => a.Trigger == TriggerType.WhenFielded);
         EffectInterpreter.Execute(ability.Effect, new EffectContext(state, "p1", "p1-dazzler-1", _ => [target.Id]));
 
-        Assert.Equal(Zone.PrepArea, target.Zone); // 4 damage vs 1D Sidekick
+        Assert.Equal(Zone.PrepArea, target.Zone); // 4 damage vs 2D at level 1
     }
 
     [Fact]
@@ -60,7 +80,7 @@ public class EffectInterpreterTests
     public void ShockingGrasp_KOingTarget_PrepsTheActionDieItself()
     {
         var state = CreateState();
-        var target = state.DiceFor("p2").First(); // 1D - lethal to 1 damage? No, need >=1: 1 damage vs 1D is lethal.
+        var target = FieldSidekickTarget(state, "p2"); // 1D - lethal to 1 damage
         var sourceDie = new DieInstance
         {
             Id = "p1-shockinggrasp-1", CardId = SampleCards.ShockingGrasp.Id,
@@ -113,7 +133,11 @@ public class EffectInterpreterTests
         var fieldTargets = opponentDice.Take(3).ToList();
         var reserveTargets = opponentDice.Skip(3).Take(3).ToList();
         var prepTargets = opponentDice.Skip(6).Take(2).ToList(); // only 2 left; exercises "as many as available"
-        foreach (var die in fieldTargets) die.Zone = Zone.FieldZone;
+        foreach (var die in fieldTargets)
+        {
+            die.Zone = Zone.FieldZone;
+            die.Status = DieStatus.SidekickCharacter; // the Ko clause requires a character face (rule 1.6.6)
+        }
         foreach (var die in reserveTargets) die.Zone = Zone.ReservePool;
         foreach (var die in prepTargets) die.Zone = Zone.PrepArea;
 
