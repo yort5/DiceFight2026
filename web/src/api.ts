@@ -1,6 +1,9 @@
 import type { CardDef, GameState } from "./types";
 
-const BASE_URL = "http://localhost:5284/api";
+// Relative on purpose: in production the API and built app share one
+// origin (combined container), and in dev the Vite proxy (vite.config.ts)
+// forwards this to the API dev server - no hardcoded host/CORS needed.
+const BASE_URL = "/api";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
