@@ -1,0 +1,94 @@
+.app {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+  text-align: left;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.app-header h1 {
+  font-size: 22px;
+  margin: 0;
+}
+
+.error {
+  color: #ff6b6b;
+  font-weight: 600;
+}
+
+.status-bar {
+  display: flex;
+  gap: 24px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: rgba(127, 127, 127, 0.12);
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.actions button,
+.app-header button {
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.boards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 900px) {
+  .boards {
+    grid-template-columns: 1fr;
+  }
+}
+
+.board h2 {
+  font-size: 16px;
+  border-bottom: 1px solid rgba(127, 127, 127, 0.3);
+  padding-bottom: 6px;
+}
+
+.zone h3 {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.7;
+  margin: 10px 0 4px;
+}
+
+.dice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.die-chip {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(127, 127, 127, 0.4);
+  background: rgba(127, 127, 127, 0.08);
+  cursor: pointer;
+}
+
+.die-chip.selected {
+  border-color: #6ea8ff;
+  background: rgba(110, 168, 255, 0.25);
+}

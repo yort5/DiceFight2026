@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/DiceFight.Api/DiceFight.Api.csproj" />
     <Project Path="src/DiceFight.Engine/DiceFight.Engine.csproj" />
   </Folder>
   <Folder Name="/tests/">
