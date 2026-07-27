@@ -7,7 +7,8 @@ actions, combat, the ability queue, the legal-target system),
 `DiceFight.Api` (ASP.NET Core wrapper, one controller action per engine
 action, in-memory game store, no persistence), `web/` (React + Vite - a
 functional "dev console" board: click dice, contextual action tray, real
-zone layout - not a polished game UI yet). 47 xUnit tests, all passing.
+zone layout, a "How to Play" dialog explaining the controls - not a
+polished game UI yet). 47 xUnit tests, all passing.
 `Data/SampleCards.cs` has 26 real cards (20 characters + 6 Basic Actions,
 two 10-card teams) with real names/subtitles/ability text pulled from
 Teambuilder's data; only 6 have a scripted `AbilityDef` (see the
@@ -373,3 +374,17 @@ Still not built: legal-target exclusions for captured dice and per-die
 restrictions aren't modeled yet), and Global ability UX in the web client
 (needs two distinct kinds of secondary selection - energy, then targets -
 that don't fit the current single-secondary-selection Action Tray).
+
+## Status update — How to Play dialog
+
+Added a "How to Play" button/modal (`web/src/HowToPlay.tsx`) to the web
+client - no engine or API changes. Deliberately scoped as operating
+instructions for this specific UI (the Primary/Secondary selection model,
+what each turn-control button does and does not do yet, the zone layout),
+not a Dice Masters rules primer - assumes the reader already knows the
+physical game. Also calls out the known UI gaps (no real blocker
+assignment, no Global ability targeting) inline so a new player doesn't
+mistake an unimplemented feature for a bug. Verified in both light and
+dark rendering via the headless-Chromium/Playwright setup (screenshots,
+not just a type-check). `dotnet build` + `dotnet test` (47/47) and
+`npm run build` both still pass - this pass touched only the web client.
