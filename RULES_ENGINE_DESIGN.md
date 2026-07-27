@@ -550,3 +550,44 @@ position/disabled-state behaves correctly through a full
 ClearAndDraw → Roll → Reroll → Advance → Main sequence. `dotnet
 build`/`test` (50/50, tests updated for the `Reroll` rename and the
 straight-to-Reserve-Pool behavior) and `npm run build` both pass.
+
+## Status update — corrected Sidekick die faces: 5 energy faces, not all Wild
+
+User correction: a Sidekick die has six faces total - one Level 1
+character face, and *five* distinct energy faces (Wild, Fist, Bolt, Mask,
+Shield), not five copies of a single "Energy → always Wild" face. The
+engine had this wrong: `TurnEngine.ApplyRoll` hardcoded `die.CardId is
+null` (a Sidekick) to always produce `EnergyKind.Wild` on any Energy-
+status roll, regardless of what was actually rolled - collapsing five
+physically distinct faces into one.
+
+Fix required moving where "what kind of energy did this face provide"
+gets decided. It used to be inferred downstream in `ApplyRoll` from the
+die's card/type; now it's part of the roll result itself; `RolledFace`
+(`TurnEngine.cs`) gained `EnergyKind`/`EnergyType?` fields, and
+`ApplyRoll` just copies them from whatever `IDiceRoller.Roll` returns
+instead of re-deriving them. `PlaceholderDiceRoller` now rolls a Sidekick
+as a uniform 1-in-6 across `SidekickCharacter` + the four specific types +
+Wild, instead of a fixed 1-in-3 chance of an Energy face that was always
+Wild. Non-Sidekick character/Basic Action dice are unaffected - they
+still produce their card's own fixed type / Generic energy respectively,
+just expressed through the same `RolledFace` fields now instead of
+`ApplyRoll`'s own if/else.
+
+No web client changes needed: `ActionTray`/`dieHelpers.dieStatusText`
+already rendered whatever `EnergyKind`/`ProvidedEnergyType` a die actually
+had rather than assuming Wild, so Fist/Bolt/Mask/Shield faces just started
+showing up once the engine could produce them. Verified two ways: a
+60,000-roll standalone sanity check against `PlaceholderDiceRoller`
+directly (all six Sidekick faces landed within ~16.5-16.9%, consistent
+with a fair d6), and visually in the browser - the very first `New
+Game` → `Clear & Draw` → `Roll` in a fresh headless-Chromium session
+already showed a Sidekick Reserve Pool with `Shield`, `Bolt`, and the
+character face side by side. Added `TurnEngineTests.
+Roll_TrustsTheRollersEnergyKindAndType_ForEnergyFaces` to lock in that
+`ApplyRoll` trusts the roller's `EnergyKind`/`ProvidedEnergyType` rather
+than re-deriving them (`PlaceholderDiceRoller` itself still has no
+dedicated test - it lives in `DiceFight.Api`, which the test project
+doesn't reference, and remains explicitly a rough placeholder pending
+real face-table data). 51 tests total; `dotnet build`/`test` and `npm
+run build` all still pass.

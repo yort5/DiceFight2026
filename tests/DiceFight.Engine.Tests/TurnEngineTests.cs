@@ -6,9 +6,11 @@ namespace DiceFight.Engine.Tests;
 
 // A fake roller lets step tests be deterministic without modeling real
 // physical die face tables yet (see TurnEngine.RolledFace remarks).
-file sealed class FixedRoller(DieStatus status, int level) : IDiceRoller
+file sealed class FixedRoller(
+    DieStatus status, int level, EnergyKind energyKind = EnergyKind.None, EnergyType? providedEnergyType = null)
+    : IDiceRoller
 {
-    public RolledFace Roll(DieInstance die, CardDef? card) => new(status, level);
+    public RolledFace Roll(DieInstance die, CardDef? card) => new(status, level, energyKind, providedEnergyType);
 }
 
 // Distinguishes "rerolled" from "kept as originally rolled" by giving each
@@ -126,6 +128,26 @@ public class TurnEngineTests
         Assert.All(reserve, d => Assert.Equal(DieStatus.SidekickCharacter, d.Status));
         Assert.Empty(state.DiceIn("p1", Zone.DiceFromBag));
         Assert.Empty(state.DiceIn("p1", Zone.DiceFromPrep));
+    }
+
+    [Fact]
+    public void Roll_TrustsTheRollersEnergyKindAndType_ForEnergyFaces()
+    {
+        // A Sidekick rolling a specific-type energy face (not Wild) is
+        // exactly the case ApplyRoll used to get wrong - it used to
+        // hardcode every Sidekick energy face as Wild regardless of what
+        // the roller actually rolled. Now it just trusts the roller.
+        var state = CreateNewGame();
+        state.IsFirstTurn = false;
+        TurnEngine.ClearAndDraw(state, new Random(1));
+        TurnEngine.AdvanceStep(state);
+        state.CurrentStep = TurnStep.RollAndReroll;
+
+        TurnEngine.Roll(state, new FixedRoller(DieStatus.Energy, 0, EnergyKind.Specific, EnergyType.Bolt));
+
+        var reserve = state.DiceIn("p1", Zone.ReservePool).ToList();
+        Assert.All(reserve, d => Assert.Equal(EnergyKind.Specific, d.EnergyKind));
+        Assert.All(reserve, d => Assert.Equal(EnergyType.Bolt, d.ProvidedEnergyType));
     }
 
     [Fact]

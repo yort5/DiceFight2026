@@ -10,7 +10,12 @@ namespace DiceFight.Engine;
 // tracked as a follow-up. IDiceRoller exists so the turn engine's zone/step
 // mechanics can be built and tested now, independent of where face results
 // come from (a real weighted roll, a human reporting a physical die, etc.).
-public readonly record struct RolledFace(DieStatus Status, int Level);
+// EnergyKind/ProvidedEnergyType only matter when Status is Energy - the
+// roller decides them as part of the face itself (which specific energy
+// face was rolled is a physical fact about the die, same as Status/Level),
+// rather than TurnEngine inferring them from the die's card afterward.
+public readonly record struct RolledFace(
+    DieStatus Status, int Level, EnergyKind EnergyKind = EnergyKind.None, EnergyType? ProvidedEnergyType = null);
 
 public interface IDiceRoller
 {
@@ -164,33 +169,21 @@ public static class TurnEngine
             return;
         }
 
-        // Rule 1.3.10/1.4.2 - what an energy face provides depends on the
-        // die's type, not a free choice: Sidekicks provide Wild energy,
-        // Basic Action dice provide generic energy, and Character/Action
-        // dice produce their card's own energy type(s).
-        if (die.CardId is null)
-        {
-            die.EnergyKind = EnergyKind.Wild;
-            die.ProvidedEnergyType = null;
-        }
-        else if (card is { Type: CardType.BasicAction or CardType.EpicBasicAction })
-        {
-            die.EnergyKind = EnergyKind.Generic;
-            die.ProvidedEnergyType = null;
-        }
-        else
-        {
-            die.EnergyKind = EnergyKind.Specific;
-            die.ProvidedEnergyType = card?.EnergyTypes.FirstOrDefault();
-        }
+        // Rule 1.3.10/1.4.2 - what an energy face provides is a property of
+        // which specific face got rolled, decided by the roller (see
+        // RolledFace remarks), not inferred here from the die's card.
+        die.EnergyKind = result.EnergyKind;
+        die.ProvidedEnergyType = result.ProvidedEnergyType;
     }
 
     // Rule 2.6.2 - Purchase Dice, one of the four Main Step game actions.
     // Unlike fielding, purchasing requires at least one spent energy die
-    // per distinct type the card requires (2.6.2.3) - Wild energy (Sidekick
-    // faces) satisfies any type; Generic energy (Basic Action dice) never
-    // does. Always purchases for the Active player - the Inactive player's
-    // only Main Step actions are Global abilities (rule 2.6.6.3).
+    // per distinct type the card requires (2.6.2.3) - Wild energy (one of a
+    // Sidekick die's five energy faces - the other four are Fist/Bolt/
+    // Mask/Shield, same as any specific-type energy) satisfies any type;
+    // Generic energy (Basic Action dice) never does. Always purchases for
+    // the Active player - the Inactive player's only Main Step actions are
+    // Global abilities (rule 2.6.6.3).
     public static void Purchase(GameState state, string dieId, IReadOnlyList<string> energyDieIdsToSpend)
     {
         if (state.CurrentStep != TurnStep.Main)
