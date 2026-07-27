@@ -88,7 +88,10 @@ export function HowToPlay(props: { onClose: () => void }) {
             Attack Zone, Field Zone, and Reserve Pool are shown prominently since that's where
             most Main Step and Attack Step actions happen; Bag, Prep Area, Used Pile, and Out of
             Play sit below as reference; the Unpurchased roster is collapsed by default since it's
-            just your remaining buy pool.
+            just your remaining buy pool. Unpurchased dice show their purchase cost and required
+            energy type(s) right on the chip; hover any die (in any zone) for its full subtitle and
+            ability text - useful since the same character name can have several differently-worded
+            printings.
           </p>
 
           <h3>Known gaps</h3>

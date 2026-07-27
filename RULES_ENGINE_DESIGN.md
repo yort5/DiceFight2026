@@ -16,9 +16,11 @@ status updates for why (a Pepper Potts-shaped rules interaction the old
 single-zone model couldn't express) and for the follow-up split of
 `TurnEngine.RollAndReroll` into `Roll` + `FinishRoll` so a player sees the
 roll before deciding what to reroll, instead of committing blind.
-`Data/SampleCards.cs` has 26 real cards (20 characters + 6 Basic Actions,
-two 10-card teams) with real names/subtitles/ability text pulled from
-Teambuilder's data; only 6 have a scripted `AbilityDef` (see the
+`Data/SampleCards.cs` declares 26 real cards; two fixed 10-card teams
+(8 characters + 2 Basic Actions each, per real team construction rules -
+the other 6 cards stay in the catalog, unused by either team) with real
+names/subtitles/ability text pulled from
+Teambuilder's data; only 7 have a scripted `AbilityDef` (see the
 "Scripting policy" note near the top of that file) - the rest are
 intentionally vanilla rather than simulating a partial/wrong subset of a
 more complex card. Numeric stats (cost/energy/attack/defense) are mostly
@@ -273,12 +275,15 @@ against every Basic Action card sharing the same value, matching rule
 1.2.11's fixed "Use 3"). A real stats source is still needed before numbers
 mean anything competitively.
 
-Only 6 of the 26 cards got a scripted `AbilityDef` (Dazzler, God Emperor
-Doom, Groot, Cosmic Cube, Shocking Grasp, Casket of Ancient Winters) — the
-rest are intentionally left vanilla (empty `Abilities`, real `RawText` +
-`Keywords` retained) rather than simulating a partial/incorrect subset of
-a more complex card's text. The scripting bar was: the *entire* ability
-text maps onto existing primitives, nothing dropped.
+Only 7 of the 26 cards got a scripted `AbilityDef` (Dazzler, God Emperor
+Doom, Groot, Cosmic Cube, Shocking Grasp, Casket of Ancient Winters,
+and Distraction's Global half only - its non-Global clause needs
+multi-die opponent choice and a persistent "can't block" flag the engine
+doesn't model yet) — the rest are intentionally left vanilla (empty
+`Abilities`, real `RawText` + `Keywords` retained) rather than simulating
+a partial/incorrect subset of a more complex card's text. The scripting
+bar was: the *entire* ability text maps onto existing primitives, nothing
+dropped.
 
 Still not built: any keyword *behavior* (Overcrush/Regenerate are tagged
 as data on cards but not simulated by CombatEngine yet), and the real
@@ -637,3 +642,40 @@ None of the four replaced cards were referenced by name in any existing
 test (confirmed by grep before swapping). 51 tests still pass unchanged;
 verified the new cost/energy badges visually in the browser, and the
 real API response for all four new cards, before committing.
+
+## Status update — ability-text tooltips; fixed team size to 8 characters + 2 Basic Actions
+
+Two more small fixes from user feedback.
+
+**Hover tooltip for ability text.** Die chips only ever showed a card's
+name, which doesn't disambiguate different printings of the same
+character (real Dice Masters commonly reprints a name with a different
+subtitle/cost/stats/text). Added `dieHelpers.dieTooltip` - a native
+`title` attribute on every die-chip button showing `Name — Subtitle` plus
+the full `rawText` (or `"(blank text box)"` for the real cards, like
+Colossus, that genuinely have none) - computed once per `DieGroup` since
+a group is already guaranteed to share one `cardId`. Works in every zone,
+not just Unpurchased, since any die might need disambiguating. No new
+component - a browser-native tooltip was enough for this.
+
+**Team size was wrong.** `TeamACharacterIds`/`TeamBCharacterIds` had 10
+characters + 3 Basic Actions each (13 cards); a real team is 8 characters
++ 2 Basic Actions (10 cards) - a plain factual error, not a rules
+interpretation call. Trimmed both rosters down, choosing which to cut by
+grepping every test for `SampleCards.<Name>` first: anything a test reads
+via `FindUnpurchased` (which requires the card to actually be on that
+player's roster, or the lookup throws) had to stay - Dazzler, Apocalypse,
+CaptainMarvel, CosmicCube, ShockingGrasp, Falcon, and
+CasketOfAncientWinters. `TurnEngine.UseGlobalAbility` and
+`EffectInterpreterTests`'s direct `SampleCards.CasketOfAncientWinters.
+Abilities.Single()` read `state.CardCatalog` instead (populated by
+`BuildCatalog()`'s full card list regardless of team roster), so
+Distraction's Global-ability test kept passing even after dropping
+Distraction from Team A's roster - team membership and catalog membership
+turned out to be genuinely independent, which is also why the cut cards
+(Colossus, Corvus Glaive, Distraction, Kang, King Hyperion, Escape!) were
+left declared rather than deleted: still real, sourced card data, still
+in `BuildCatalog()`/`/api/cards`, just not on either fixed demo team -
+useful inventory for a future team-builder rather than dead code. Verified
+post-fix via the live API: both teams now show exactly 10 distinct
+Unpurchased card ids. 51 tests unaffected (none referenced a cut card).

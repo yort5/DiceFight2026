@@ -41,10 +41,24 @@ export function dieStatusText(die: Die, cardsById: Map<string, CardDef>): string
   return "";
 }
 
+// Multiple cards can share a name across printings/reprints (different
+// subtitle, cost, stats, and ability text) - the chip label alone can't
+// tell them apart, so the hover tooltip leads with the subtitle and
+// includes the full ability text (falls back to "(blank text box)" for
+// the handful of real cards, like Colossus, that genuinely have none).
+export function dieTooltip(die: Die, cardsById: Map<string, CardDef>): string | undefined {
+  if (!die.cardId) return undefined;
+  const card = cardsById.get(die.cardId);
+  if (!card) return undefined;
+  const header = card.subtitle ? `${card.name} — ${card.subtitle}` : card.name;
+  return `${header}\n\n${card.rawText || "(blank text box)"}`;
+}
+
 export interface DieGroup {
   key: string;
   label: string;
   statusText: string;
+  tooltip?: string;
   count: number;
   ids: string[];
 }
@@ -66,6 +80,7 @@ export function groupDice(dice: Die[], cardsById: Map<string, CardDef>): DieGrou
         key,
         label: dieLabel(die, cardsById),
         statusText: dieStatusText(die, cardsById),
+        tooltip: dieTooltip(die, cardsById),
         count: 1,
         ids: [die.id],
       });

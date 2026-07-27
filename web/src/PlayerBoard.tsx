@@ -112,6 +112,7 @@ function ZoneSection(props: {
             key={group.key}
             className={`die-chip${selectedCount > 0 ? " selected" : ""}${isPrimary ? " primary" : ""}`}
             onClick={() => props.onGroupClick(group.ids)}
+            title={group.tooltip}
           >
             <span className="chip-label">
               {group.label}

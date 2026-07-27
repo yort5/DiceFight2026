@@ -261,23 +261,31 @@ public static class SampleCards
         "escape", "Escape!",
         "Choose one: Target character die can't be targeted this turn. Or: Prep a die from your Used Pile.");
 
+    // A team is 8 character cards + 2 Basic Action cards (10 total), not
+    // the 10 characters + 3 Basic Actions used here previously - that was
+    // simply wrong. Colossus, Corvus Glaive, Distraction, Kang, King
+    // Hyperion, and Escape! stay declared above (and in BuildCatalog's
+    // full card list, so /api/cards still returns them) but aren't on
+    // either team's roster below - real cards with nowhere to play them
+    // yet, not deleted, since a future team-builder feature would want a
+    // catalog bigger than exactly two 10-card teams.
     public static readonly IReadOnlyList<string> TeamACharacterIds =
     [
-        BigBarda.Id, Apocalypse.Id, Beast.Id, BlackPanther.Id, HarleyQuinn.Id,
-        Robin.Id, CaptainMarvel.Id, Colossus.Id, CorvusGlaive.Id, Dazzler.Id
+        BigBarda.Id, Apocalypse.Id, Beast.Id, BlackPanther.Id,
+        HarleyQuinn.Id, Robin.Id, CaptainMarvel.Id, Dazzler.Id
     ];
 
     public static readonly IReadOnlyList<string> TeamABasicActionIds =
-        [CosmicCube.Id, ShockingGrasp.Id, Distraction.Id];
+        [CosmicCube.Id, ShockingGrasp.Id];
 
     public static readonly IReadOnlyList<string> TeamBCharacterIds =
     [
-        Falcon.Id, FranklinsGalactus.Id, GodEmperorDoom.Id, GoddessOfThunder.Id, Groot.Id,
-        InvisibleWoman.Id, JaneFoster.Id, Starfire.Id, Kang.Id, KingHyperion.Id
+        Falcon.Id, FranklinsGalactus.Id, GodEmperorDoom.Id, GoddessOfThunder.Id,
+        Groot.Id, InvisibleWoman.Id, JaneFoster.Id, Starfire.Id
     ];
 
     public static readonly IReadOnlyList<string> TeamBBasicActionIds =
-        [CasketOfAncientWinters.Id, DailyBugle.Id, Escape.Id];
+        [CasketOfAncientWinters.Id, DailyBugle.Id];
 
     public static IReadOnlyDictionary<string, CardDef> BuildCatalog()
     {
