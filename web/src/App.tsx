@@ -1,19 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "./api";
-import type { CardDef, Die, GameState } from "./types";
-import { ZONES } from "./types";
+import { ActionTray } from "./ActionTray";
+import { PlayerBoard, type Selection } from "./PlayerBoard";
+import type { CardDef, GameState } from "./types";
 import "./App.css";
 
-// First-pass "dev console" UI: proves the whole stack (React -> API ->
-// DiceFight.Engine) works end to end with the real sample teams. Die
-// selection is a flat click-to-toggle list, reused across actions
-// (Purchase/Field treat the first selected die as "the die" and the rest
-// as energy/targets) rather than a polished board - a real game board
-// comes later.
 function App() {
   const [cards, setCards] = useState<CardDef[] | null>(null);
   const [game, setGame] = useState<GameState | null>(null);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selection, setSelection] = useState<Selection>({ primary: null, secondary: [] });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -27,17 +22,23 @@ function App() {
     return map;
   }, [cards]);
 
-  function dieLabel(die: Die): string {
-    if (!die.cardId) return "Sidekick";
-    return cardsById.get(die.cardId)?.name ?? die.cardId;
+  function clearSelection() {
+    setSelection({ primary: null, secondary: [] });
   }
 
-  function toggleSelect(dieId: string) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(dieId)) next.delete(dieId);
-      else next.add(dieId);
-      return next;
+  // Clicking a group cycles through picking successive instances from it:
+  // first click sets/adds one, repeated clicks add more (up to the
+  // group's count), and once every instance in the group is selected the
+  // next click removes the most recently added one - lets you pick "2 of
+  // these 3 identical Sidekicks" without the grouping hiding the option.
+  function handleGroupClick(ids: string[]) {
+    setSelection((sel) => {
+      const available = ids.filter((id) => id !== sel.primary && !sel.secondary.includes(id));
+      if (sel.primary === null) return { primary: ids[0], secondary: [] };
+      if (ids.includes(sel.primary) && available.length === 0) return { primary: null, secondary: [] };
+      if (available.length > 0) return { ...sel, secondary: [...sel.secondary, available[0]] };
+      const toRemove = [...sel.secondary].reverse().find((id) => ids.includes(id));
+      return toRemove ? { ...sel, secondary: sel.secondary.filter((id) => id !== toRemove) } : sel;
     });
   }
 
@@ -47,7 +48,7 @@ function App() {
     try {
       const next = await action();
       setGame(next);
-      setSelected(new Set());
+      clearSelection();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -55,8 +56,8 @@ function App() {
     }
   }
 
-  const selectedIds = Array.from(selected);
   const gameId = game?.gameId;
+  const allSelectedIds = selection.primary ? [selection.primary, ...selection.secondary] : [];
 
   return (
     <div className="app">
@@ -78,134 +79,71 @@ function App() {
             <div>
               <strong>Active:</strong> {game.activePlayerId}
             </div>
-            <div>
-              <strong>{game.playerOne.name}:</strong> {game.playerOne.life} life
-            </div>
-            <div>
-              <strong>{game.playerTwo.name}:</strong> {game.playerTwo.life} life
-            </div>
+            {game.isFirstTurn && <div className="badge">First turn</div>}
           </section>
 
-          <section className="actions">
-            <ActionButton busy={busy} onClick={() => run(() => api.clearAndDraw(gameId))}>
+          <section className="turn-controls">
+            <span className="turn-controls-label">Turn controls:</span>
+            <button disabled={busy} onClick={() => run(() => api.clearAndDraw(gameId))}>
               Clear &amp; Draw
-            </ActionButton>
-            <ActionButton busy={busy} onClick={() => run(() => api.advanceStep(gameId))}>
+            </button>
+            <button disabled={busy} onClick={() => run(() => api.advanceStep(gameId))}>
               Advance Step
-            </ActionButton>
-            <ActionButton busy={busy} onClick={() => run(() => api.rollAndReroll(gameId, selectedIds))}>
+            </button>
+            <button disabled={busy} onClick={() => run(() => api.rollAndReroll(gameId, allSelectedIds))}>
               Roll &amp; Reroll (selected = reroll)
-            </ActionButton>
-            <ActionButton
-              busy={busy}
-              onClick={() => run(() => api.purchase(gameId, selectedIds[0], selectedIds.slice(1)))}
-            >
-              Purchase (1st selected, rest = energy)
-            </ActionButton>
-            <ActionButton
-              busy={busy}
-              onClick={() => run(() => api.field(gameId, selectedIds[0], selectedIds.slice(1)))}
-            >
-              Field (1st selected, rest = energy)
-            </ActionButton>
-            <ActionButton
-              busy={busy}
-              onClick={() => run(() => api.useActionDie(gameId, selectedIds[0], selectedIds.slice(1)))}
-            >
-              Use Action Die (1st selected, rest = targets)
-            </ActionButton>
-            <ActionButton busy={busy} onClick={() => run(() => api.enterAttackStep(gameId))}>
+            </button>
+            <button disabled={busy} onClick={() => run(() => api.enterAttackStep(gameId))}>
               Enter Attack Step
-            </ActionButton>
-            <ActionButton busy={busy} onClick={() => run(() => api.skipAttackStep(gameId))}>
+            </button>
+            <button disabled={busy} onClick={() => run(() => api.skipAttackStep(gameId))}>
               Skip Attack Step
-            </ActionButton>
-            <ActionButton
-              busy={busy}
-              onClick={() => run(() => api.declareAttackers(gameId, selectedIds))}
-            >
-              Declare Attackers (selected)
-            </ActionButton>
-            <ActionButton busy={busy} onClick={() => run(() => api.declareBlockers(gameId, []))}>
+            </button>
+            <button disabled={busy} onClick={() => run(() => api.declareBlockers(gameId, []))}>
               Declare Blockers (none)
-            </ActionButton>
-            <ActionButton
-              busy={busy}
-              onClick={() => run(() => api.assignCombatDamage(gameId, [], []))}
-            >
+            </button>
+            <button disabled={busy} onClick={() => run(() => api.assignCombatDamage(gameId, [], []))}>
               Assign Combat Damage (no blocks)
-            </ActionButton>
-            <ActionButton busy={busy} onClick={() => run(() => api.cleanUp(gameId))}>
+            </button>
+            <button disabled={busy} onClick={() => run(() => api.cleanUp(gameId))}>
               Clean Up
-            </ActionButton>
+            </button>
           </section>
+
+          <ActionTray
+            game={game}
+            dice={game.dice}
+            cardsById={cardsById}
+            selection={selection}
+            busy={busy}
+            onRun={run}
+            onClear={clearSelection}
+          />
 
           <section className="boards">
             <PlayerBoard
               title={`${game.playerOne.name} (${game.playerOne.id})`}
+              isActive={game.activePlayerId === game.playerOne.id}
+              life={game.playerOne.life}
+              virtualGenericEnergy={game.playerOne.virtualGenericEnergy}
               dice={game.dice.filter((d) => d.ownerId === game.playerOne.id)}
-              dieLabel={dieLabel}
-              selected={selected}
-              onToggle={toggleSelect}
+              cardsById={cardsById}
+              selection={selection}
+              onGroupClick={handleGroupClick}
             />
             <PlayerBoard
               title={`${game.playerTwo.name} (${game.playerTwo.id})`}
+              isActive={game.activePlayerId === game.playerTwo.id}
+              life={game.playerTwo.life}
+              virtualGenericEnergy={game.playerTwo.virtualGenericEnergy}
               dice={game.dice.filter((d) => d.ownerId === game.playerTwo.id)}
-              dieLabel={dieLabel}
-              selected={selected}
-              onToggle={toggleSelect}
+              cardsById={cardsById}
+              selection={selection}
+              onGroupClick={handleGroupClick}
             />
           </section>
         </>
       )}
-    </div>
-  );
-}
-
-function ActionButton(props: { busy: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button disabled={props.busy} onClick={props.onClick}>
-      {props.children}
-    </button>
-  );
-}
-
-function PlayerBoard(props: {
-  title: string;
-  dice: Die[];
-  dieLabel: (die: Die) => string;
-  selected: Set<string>;
-  onToggle: (dieId: string) => void;
-}) {
-  return (
-    <div className="board">
-      <h2>{props.title}</h2>
-      {ZONES.map((zone) => {
-        const inZone = props.dice.filter((d) => d.zone === zone);
-        if (inZone.length === 0) return null;
-        return (
-          <div key={zone} className="zone">
-            <h3>
-              {zone} ({inZone.length})
-            </h3>
-            <div className="dice">
-              {inZone.map((die) => (
-                <button
-                  key={die.id}
-                  className={`die-chip${props.selected.has(die.id) ? " selected" : ""}`}
-                  onClick={() => props.onToggle(die.id)}
-                  title={die.id}
-                >
-                  {props.dieLabel(die)}
-                  {die.status === "Energy" && ` (${die.energyKind})`}
-                  {(die.status === "Character" || die.status === "SidekickCharacter") &&
-                    ` L${die.level}${die.damage > 0 ? ` -${die.damage}dmg` : ""}`}
-                </button>
-              ))}
-            </div>
-          </div>
-        );
-      })}
     </div>
   );
 }

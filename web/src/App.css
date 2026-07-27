@@ -1,5 +1,5 @@
 .app {
-  max-width: 1200px;
+  max-width: 1300px;
   margin: 0 auto;
   padding: 24px;
   text-align: left;
@@ -25,21 +25,42 @@
 .status-bar {
   display: flex;
   gap: 24px;
+  align-items: center;
   padding: 10px 14px;
   border-radius: 8px;
   background: rgba(127, 127, 127, 0.12);
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   flex-wrap: wrap;
 }
 
-.actions {
+.badge {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(110, 168, 255, 0.25);
+  border: 1px solid #6ea8ff;
+}
+
+.turn-controls {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 20px;
+  align-items: center;
+  margin-bottom: 12px;
+  padding: 10px;
+  border: 1px dashed rgba(127, 127, 127, 0.35);
+  border-radius: 8px;
 }
 
-.actions button,
+.turn-controls-label {
+  font-size: 12px;
+  opacity: 0.65;
+  margin-right: 4px;
+}
+
+.turn-controls button,
 .app-header button {
   font-size: 13px;
   padding: 6px 10px;
@@ -47,30 +68,171 @@
   cursor: pointer;
 }
 
+/* ---- Action tray ---- */
+
+.action-tray {
+  border-radius: 8px;
+  background: rgba(110, 168, 255, 0.08);
+  border: 1px solid rgba(110, 168, 255, 0.35);
+  padding: 10px 14px;
+  margin-bottom: 20px;
+}
+
+.action-tray.empty p {
+  margin: 0;
+  font-size: 13px;
+  opacity: 0.75;
+}
+
+.selection-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.primary-chip {
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid #6ea8ff;
+  background: rgba(110, 168, 255, 0.25);
+}
+
+.secondary-chips {
+  opacity: 0.85;
+}
+
+.clear-btn {
+  margin-left: auto;
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.no-actions {
+  margin: 0;
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+.tray-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tray-action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tray-action button {
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  background: #6ea8ff;
+  color: #06122b;
+  border: none;
+  font-weight: 600;
+}
+
+.tray-action .hint {
+  font-size: 12px;
+  opacity: 0.65;
+}
+
+/* ---- Boards ---- */
+
 .boards {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 24px;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 950px) {
   .boards {
     grid-template-columns: 1fr;
   }
 }
 
-.board h2 {
-  font-size: 16px;
+.board {
+  border: 1px solid rgba(127, 127, 127, 0.25);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.board.active {
+  border-color: #6ea8ff;
+  box-shadow: 0 0 0 1px rgba(110, 168, 255, 0.4);
+}
+
+.board-header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
   border-bottom: 1px solid rgba(127, 127, 127, 0.3);
   padding-bottom: 6px;
+  margin-bottom: 8px;
+}
+
+.board-header h2 {
+  font-size: 16px;
+  margin: 0;
+  flex: 1;
+}
+
+.board-header .life {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.board-header .virtual-energy {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.zone {
+  margin-bottom: 8px;
+}
+
+.zone.prominent {
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(127, 127, 127, 0.06);
 }
 
 .zone h3 {
-  font-size: 12px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  opacity: 0.7;
-  margin: 10px 0 4px;
+  opacity: 0.65;
+  margin: 4px 0;
+}
+
+.empty-hint {
+  font-size: 12px;
+  font-style: italic;
+  opacity: 0.4;
+}
+
+.side-zones {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px 12px;
+  margin-bottom: 8px;
+}
+
+.roster summary {
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0.75;
+  margin-top: 6px;
 }
 
 .dice {
@@ -80,15 +242,48 @@
 }
 
 .die-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
   font-size: 12px;
   padding: 4px 8px;
-  border-radius: 999px;
+  border-radius: 8px;
   border: 1px solid rgba(127, 127, 127, 0.4);
   background: rgba(127, 127, 127, 0.08);
   cursor: pointer;
+  position: relative;
+}
+
+.die-chip .chip-label {
+  font-weight: 600;
+}
+
+.die-chip .chip-status {
+  font-size: 10px;
+  opacity: 0.65;
 }
 
 .die-chip.selected {
   border-color: #6ea8ff;
-  background: rgba(110, 168, 255, 0.25);
+  background: rgba(110, 168, 255, 0.2);
+}
+
+.die-chip.primary {
+  border-color: #ffb347;
+  background: rgba(255, 179, 71, 0.22);
+}
+
+.chip-selected-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  font-size: 10px;
+  min-width: 14px;
+  text-align: center;
+  border-radius: 999px;
+  background: #6ea8ff;
+  color: #06122b;
+  font-weight: 700;
+  line-height: 14px;
 }
