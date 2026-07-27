@@ -7,20 +7,30 @@ namespace DiceFight.Engine.Data;
 // ability text taken verbatim from ~/DiceMasters/Teambuilder/cards.php
 // (the "msw" set array), used here to exercise the engine end-to-end.
 //
-// IMPORTANT - numeric stats are placeholders. None of the six cloned
-// DiceCoalition repos (Teambuilder, DiceMastersCompanion, cardservice,
-// DiceBot, DM-OBS-Source, Homepage) contain real per-level attack/defense
-// numbers - every community tool represents combat stats via card-face
-// images, not structured data. Teambuilder's compact per-card prefix (e.g.
-// "133J4") only reliably decodes to a die limit (last character; confirmed
-// against rule 1.2.11's fixed "Use 3" for every Basic Action card sampled)
-// - purchase cost, energy type, and full 3-level fielding/attack/defense
-// are not recoverable from it. So every card below shares one placeholder
-// PurchaseCost/EnergyType/Levels progression (a few characters are bumped
-// to a higher placeholder cost just to exercise Epic Basic Action's
-// cost-4+ gate, rule 1.2.3(4)); only Name/Subtitle/RawText/DieLimit are
-// real. Replace PlaceholderLevels etc. once a real stats source is
-// available.
+// IMPORTANT - most numeric stats below are still placeholders. None of the
+// six cloned DiceCoalition repos (Teambuilder, DiceMastersCompanion,
+// cardservice, DiceBot, DM-OBS-Source, Homepage) contain real per-level
+// attack/defense numbers for the "msw" set specifically (the most recent
+// release at the time it was sampled) - every community tool represents
+// combat stats via card-face images, not structured data. Teambuilder's
+// compact per-card prefix (e.g. "133J4") only reliably decodes to a die
+// limit (last character; confirmed against rule 1.2.11's fixed "Use 3"
+// for every Basic Action card sampled) - purchase cost, energy type, and
+// full 3-level fielding/attack/defense are not recoverable from it. So
+// most cards below still share one placeholder PurchaseCost/EnergyType/
+// Levels progression (a few are bumped to a higher placeholder cost just
+// to exercise Epic Basic Action's cost-4+ gate, rule 1.2.3(4)); only
+// Name/Subtitle/RawText/DieLimit are real for those.
+//
+// Four characters (Big Barda, Harley Quinn, Robin, Starfire - see below)
+// are sourced instead from the user's reference spreadsheet, which covers
+// an older set that *does* record real cost/energy/per-level stats
+// (fielding cost/attack/defense, encoded as "CAD" triplets per level,
+// e.g. "133 244 255" = L1 cost1/atk3/def3, L2 cost2/atk4/def4, L3
+// cost2/atk5/def5). Their die limit still isn't in that source, so it's
+// a reasonable guess (4, typical for Common rarity), not sourced fact -
+// flagged here rather than presented as real. Replace PlaceholderLevels
+// for the rest once a real stats source for the "msw" set is available.
 //
 // Scripting policy: a card only gets an AbilityDef when its FULL ability
 // text (not just part of it) maps onto EffectNode primitives with nothing
@@ -43,16 +53,18 @@ public static class SampleCards
         string id, string name, string subtitle, int dieLimit, string rawText,
         IReadOnlyList<KeywordInstance>? keywords = null,
         IReadOnlyList<AbilityDef>? abilities = null,
-        int purchaseCost = PlaceholderCost) => new()
+        int purchaseCost = PlaceholderCost,
+        EnergyType energyType = PlaceholderEnergy,
+        IReadOnlyList<CharacterFace>? levels = null) => new()
     {
         Id = id,
         Name = name,
         Subtitle = subtitle,
         Type = CardType.Character,
         PurchaseCost = purchaseCost,
-        EnergyTypes = [PlaceholderEnergy],
+        EnergyTypes = [energyType],
         DieLimit = dieLimit,
-        Levels = PlaceholderLevels,
+        Levels = levels ?? PlaceholderLevels,
         RawText = rawText,
         Keywords = keywords ?? [],
         Abilities = abilities ?? []
@@ -75,9 +87,18 @@ public static class SampleCards
 
     // ---- Team A: 10 characters + 3 Basic Actions ----
 
-    public static readonly CardDef AgentBrand = Character(
-        "agent-brand", "Agent Brand", "Alpha Flight", dieLimit: 3,
-        "While Agent Brand is active, your character dice get +1 defense.");
+    // Real cost/energy/stats sourced from the user's reference spreadsheet
+    // (see class remarks) - dieLimit is a guess (4, typical Common rarity),
+    // not sourced.
+    public static readonly CardDef BigBarda = Character(
+        "big-barda", "Big Barda", "Formerly of Apokolips", dieLimit: 4,
+        "Ignore all non-combat damage dealt to Big Barda.",
+        purchaseCost: 3, energyType: EnergyType.Fist,
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3),
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 4),
+            new CharacterFace(FieldingCost: 2, Attack: 6, Defense: 6)
+        ]);
 
     public static readonly CardDef Apocalypse = Character(
         "apocalypse", "Apocalypse", "Obsessive", dieLimit: 4,
@@ -94,13 +115,26 @@ public static class SampleCards
         "Energize - Roll 2 dice from your bag. When fielded, roll a die from your bag.",
         keywords: [new KeywordInstance("Energize")]);
 
-    public static readonly CardDef BlackSwan = Character(
-        "black-swan", "Black Swan", "Serving Rabum Alal", dieLimit: 3,
-        "When fielded, the next [S] character die you purchase costs [2] less (to a minimum of 1).");
+    public static readonly CardDef HarleyQuinn = Character(
+        "harley-quinn", "Harley Quinn", "Bright Lights Big City", dieLimit: 4,
+        "", // real card, genuinely blank text box
+        purchaseCost: 1, energyType: EnergyType.Mask,
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3),
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 4)
+        ]);
 
-    public static readonly CardDef CaptainBritain = Character(
-        "captain-britain", "Captain Britain", "Baron of Higher Avalon", dieLimit: 4,
-        "While Captain Britain is active, your opponent can't field character dice at level 3.");
+    public static readonly CardDef Robin = Character(
+        "robin", "Robin", "Team Leader", dieLimit: 4,
+        "Energize - The first Teen Titans die you purchase this turn costs 1 less (to a minimum of 1).",
+        purchaseCost: 2, energyType: EnergyType.Shield,
+        keywords: [new KeywordInstance("Energize")],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3),
+            new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 3)
+        ]);
 
     public static readonly CardDef CaptainMarvel = Character(
         "captain-marvel", "Captain Marvel", "Alpha Flight", dieLimit: 4,
@@ -186,9 +220,16 @@ public static class SampleCards
         "When fielded, gain 2 life, and gain an extra 2 life for each of your other active characters " +
         "with Thor in their name or subtitle, or the [TCS] affiliation.");
 
-    public static readonly CardDef JimmyWoo = Character(
-        "jimmy-woo", "Jimmy Woo", "Agent of S.H.I.E.L.D.", dieLimit: 3,
-        "Jimmy Woo can't be targeted by opposing effects.");
+    public static readonly CardDef Starfire = Character(
+        "starfire", "Starfire", "No-Nonsense Warrior", dieLimit: 4,
+        "Recruit - a Teen Titans character die.\n" +
+        "Global: Pay Shield. Once per turn, if you purchased a die this turn, Prep a die from your bag.",
+        purchaseCost: 3, energyType: EnergyType.Bolt,
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3),
+            new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 4),
+            new CharacterFace(FieldingCost: 2, Attack: 5, Defense: 5)
+        ]);
 
     public static readonly CardDef Kang = Character(
         "kang", "Kang", "Prophetic Revelation", dieLimit: 3,
@@ -222,8 +263,8 @@ public static class SampleCards
 
     public static readonly IReadOnlyList<string> TeamACharacterIds =
     [
-        AgentBrand.Id, Apocalypse.Id, Beast.Id, BlackPanther.Id, BlackSwan.Id,
-        CaptainBritain.Id, CaptainMarvel.Id, Colossus.Id, CorvusGlaive.Id, Dazzler.Id
+        BigBarda.Id, Apocalypse.Id, Beast.Id, BlackPanther.Id, HarleyQuinn.Id,
+        Robin.Id, CaptainMarvel.Id, Colossus.Id, CorvusGlaive.Id, Dazzler.Id
     ];
 
     public static readonly IReadOnlyList<string> TeamABasicActionIds =
@@ -232,7 +273,7 @@ public static class SampleCards
     public static readonly IReadOnlyList<string> TeamBCharacterIds =
     [
         Falcon.Id, FranklinsGalactus.Id, GodEmperorDoom.Id, GoddessOfThunder.Id, Groot.Id,
-        InvisibleWoman.Id, JaneFoster.Id, JimmyWoo.Id, Kang.Id, KingHyperion.Id
+        InvisibleWoman.Id, JaneFoster.Id, Starfire.Id, Kang.Id, KingHyperion.Id
     ];
 
     public static readonly IReadOnlyList<string> TeamBBasicActionIds =
@@ -242,10 +283,10 @@ public static class SampleCards
     {
         CardDef[] all =
         [
-            AgentBrand, Apocalypse, Beast, BlackPanther, BlackSwan, CaptainBritain, CaptainMarvel,
+            BigBarda, Apocalypse, Beast, BlackPanther, HarleyQuinn, Robin, CaptainMarvel,
             Colossus, CorvusGlaive, Dazzler, CosmicCube, ShockingGrasp, Distraction,
             Falcon, FranklinsGalactus, GodEmperorDoom, GoddessOfThunder, Groot, InvisibleWoman,
-            JaneFoster, JimmyWoo, Kang, KingHyperion, CasketOfAncientWinters, DailyBugle, Escape
+            JaneFoster, Starfire, Kang, KingHyperion, CasketOfAncientWinters, DailyBugle, Escape
         ];
         return all.ToDictionary(c => c.Id);
     }

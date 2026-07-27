@@ -28,6 +28,16 @@ export function dieStatusText(die: Die, cardsById: Map<string, CardDef>): string
     return `L${die.level} · ${face.attack}A/${face.defense}D${dmg}`;
   }
   if (die.status === "Action") return "Action";
+  if (die.status === "Unrolled" && die.cardId) {
+    // Unpurchased dice: what it costs to buy, and which energy type(s)
+    // that cost requires at least one of each of (rule 2.6.2.3) - Basic
+    // Actions have no type requirement (rule 1.2.4/1.3.10), just a cost.
+    const card = cardsById.get(die.cardId);
+    if (card) {
+      const energy = card.energyTypes.length > 0 ? ` · ${card.energyTypes.join("/")}` : "";
+      return `Cost ${card.purchaseCost}${energy}`;
+    }
+  }
   return "";
 }
 

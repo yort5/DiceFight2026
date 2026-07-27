@@ -21,8 +21,11 @@ two 10-card teams) with real names/subtitles/ability text pulled from
 Teambuilder's data; only 6 have a scripted `AbilityDef` (see the
 "Scripting policy" note near the top of that file) - the rest are
 intentionally vanilla rather than simulating a partial/wrong subset of a
-more complex card. Numeric stats (cost/energy/attack/defense) are all
-placeholder values - see next paragraph.
+more complex card. Numeric stats (cost/energy/attack/defense) are mostly
+still placeholder values (see next paragraph) - Big Barda, Harley Quinn,
+Robin, and Starfire are the exception, with real cost/energy/per-level
+stats pulled from the user's reference spreadsheet (see the bottom-most
+status update).
 
 **Deployed**: live on GCP Cloud Run with continuous deployment already
 configured - every push to `main` on GitHub auto-builds the repo-root
@@ -591,3 +594,46 @@ dedicated test - it lives in `DiceFight.Api`, which the test project
 doesn't reference, and remains explicitly a rough placeholder pending
 real face-table data). 51 tests total; `dotnet build`/`test` and `npm
 run build` all still pass.
+
+## Status update — show purchase cost/energy on Unpurchased dice; 4 sample cards now use real stats
+
+Two connected fixes. First, a real gap: the Unpurchased roster showed a
+card's name but never its purchase cost or required energy type(s) -
+`web/src/dieHelpers.ts`'s `dieStatusText` returned `""` for any die with
+`status: "Unrolled"`, which is every die still sitting on its card. Added
+a case for `Unrolled` dice with a `cardId`: renders `"Cost {N}"`, plus
+`" · {type1}/{type2}"` for however many distinct energy types the card's
+`EnergyTypes` lists (Basic Actions have none - rule 1.2.4/1.3.10 - so
+they just show the cost). Confirmed `TurnEngine.Purchase` already
+enforces the multi-type case correctly (one energy die per *distinct*
+required type, Wild substituting for any - `TurnEngine.cs` around line
+227) - rule 2.6.2.3's Fist+Shield example was already right, just never
+surfaced in the UI. Not addressed: a card that excludes Wild from
+satisfying its requirement entirely (user's "White Lantern" example, one
+of each type with no Wild substitution) - `Purchase` has no such
+exclusion flag today; noted here as a real gap for if/when such a card
+gets added, not implemented speculatively.
+
+Second: since that display is only as useful as the underlying data, and
+`SampleCards.cs`'s existing "msw"-set cards all share one placeholder
+cost/energy/stat-line (see the top-of-file remarks - none of the cloned
+community tools have real numbers for that specific, newest set), swapped
+four of them for cards pulled from the user's reference spreadsheet
+(an older set that *does* record real cost/energy/per-level stats,
+encoded as compact "CAD" triplets per level - e.g. "133 244 255" decodes
+to L1 cost1/atk3/def3, L2 cost2/atk4/def4, L3 cost2/atk5/def5). Replaced
+Agent Brand → **Big Barda** (Fist, cost 3), Black Swan → **Harley Quinn**
+(Mask, cost 1), Captain Britain → **Robin** (Shield, cost 2), and Jimmy
+Woo → **Starfire** (Bolt, cost 3) - all four picked for having short or
+blank ability text (stay vanilla, no scripting needed) and each a
+different energy type, so all four Unpurchased-cost badges could be
+demonstrated at once. Only pulled this small slice into context, not the
+whole spreadsheet. Die limit still isn't in that source, so it's a
+labeled guess (4, typical Common rarity) rather than presented as real -
+same transparency policy as the rest of the file. `Character()`'s
+signature grew optional `energyType`/`levels` params (defaulting to the
+existing placeholders) so every other card's declaration is untouched.
+None of the four replaced cards were referenced by name in any existing
+test (confirmed by grep before swapping). 51 tests still pass unchanged;
+verified the new cost/energy badges visually in the browser, and the
+real API response for all four new cards, before committing.
