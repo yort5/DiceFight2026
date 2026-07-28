@@ -83,14 +83,15 @@ export function HowToPlay(props: { onClose: () => void }) {
 
           <h3>The board</h3>
           <p>
-            Each player's zones are laid out top-to-bottom roughly by how often you touch them:
-            Attack Zone, Field Zone, and Reserve Pool are shown prominently since that's where
-            most Main Step and Attack Step actions happen; Bag, Prep Area, Used Pile, and Out of
-            Play sit below as reference; the Unpurchased roster is collapsed by default since it's
-            just your remaining buy pool. Unpurchased dice show their purchase cost and required
-            energy type(s) right on the chip; hover any die (in any zone) for its full subtitle and
-            ability text - useful since the same character name can have several differently-worded
-            printings.
+            Each player's zones follow the shape of the physical playmat: Attack Zone across the
+            top, Used Pile/Field Zone/Prep Area side by side below it, Reserve Pool across the
+            middle (where dice actually land when rolled), and the Bag at the bottom - color-tinted
+            the same way the mat is. Out of Play and the Unpurchased roster sit underneath as
+            low-traffic reference zones, with the roster collapsed by default since it's just your
+            remaining buy pool. Unpurchased dice show their purchase cost and required energy
+            type(s) right on the chip; energy and character-face dice show a small icon for what
+            they're showing; hover any die (in any zone) for its full subtitle and ability text -
+            useful since the same character name can have several differently-worded printings.
           </p>
 
           <h3>Global Abilities</h3>

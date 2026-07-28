@@ -1,3 +1,4 @@
+import { DieIcon } from "./DieIcon";
 import type { CardDef, Die } from "./types";
 import { groupDice } from "./dieHelpers";
 
@@ -6,14 +7,17 @@ export interface Selection {
   secondary: string[];
 }
 
-// Spatial layout loosely following the physical playmat (rule 1.5):
-// Attack Zone and Field Zone are the "active" area shown prominently,
-// Reserve Pool below them, then the quieter side zones, with the
-// Unpurchased roster (the biggest, least-active zone - up to 4 dice per
-// card) collapsed by default.
-const PROMINENT_ZONES = ["AttackZone", "FieldZone", "ReservePool"] as const;
-const SIDE_ZONES = ["Bag", "PrepArea", "DiceFromBag", "DiceFromPrep", "UsedPile", "OutOfPlay"] as const;
-
+// Spatial layout follows the physical playmat's cross shape (see the mat
+// reference image): Attack Zone spans the top, Used Pile/Field Zone/Prep
+// Area sit side by side below it, Reserve Pool spans the middle ("roll
+// dice here"), and the Bag sits at the bottom - matching where dice
+// physically move to/from on the real mat rather than a flat stacked
+// list. DiceFromBag/DiceFromPrep (this engine's transient pre-Roll
+// staging zones - see the Zone enum remarks) aren't on the physical mat
+// at all, so they're shown as a nested sub-zone right next to the
+// physical zone they're about to join (Bag / Prep Area respectively).
+// Out of Play and the Unpurchased roster stay off the mat grid, as
+// low-traffic reference zones underneath it.
 export function PlayerBoard(props: {
   title: string;
   isActive: boolean;
@@ -25,6 +29,8 @@ export function PlayerBoard(props: {
   onGroupClick: (ids: string[]) => void;
 }) {
   const { dice, cardsById, selection, onGroupClick } = props;
+  const zoneProps = { cardsById, selection, onGroupClick };
+  const dicein = (zone: string) => dice.filter((d) => d.zone === zone);
 
   return (
     <div className={`board${props.isActive ? " active" : ""}`}>
@@ -36,41 +42,36 @@ export function PlayerBoard(props: {
         )}
       </div>
 
-      {PROMINENT_ZONES.map((zone) => (
-        <ZoneSection
-          key={zone}
-          zone={zone}
-          prominent
-          dice={dice.filter((d) => d.zone === zone)}
-          cardsById={cardsById}
-          selection={selection}
-          onGroupClick={onGroupClick}
-        />
-      ))}
+      <div className="mat">
+        <div className="mat-slot mat-attack">
+          <ZoneSection zone="AttackZone" prominent dice={dicein("AttackZone")} {...zoneProps} />
+        </div>
+        <div className="mat-slot mat-used">
+          <ZoneSection zone="UsedPile" dice={dicein("UsedPile")} {...zoneProps} />
+        </div>
+        <div className="mat-slot mat-field">
+          <ZoneSection zone="FieldZone" prominent dice={dicein("FieldZone")} {...zoneProps} />
+        </div>
+        <div className="mat-slot mat-prep">
+          <ZoneSection zone="PrepArea" dice={dicein("PrepArea")} {...zoneProps} />
+          <ZoneSection zone="DiceFromPrep" dice={dicein("DiceFromPrep")} {...zoneProps} />
+        </div>
+        <div className="mat-slot mat-reserve">
+          <ZoneSection zone="ReservePool" prominent dice={dicein("ReservePool")} {...zoneProps} />
+        </div>
+        <div className="mat-slot mat-bag">
+          <ZoneSection zone="Bag" dice={dicein("Bag")} {...zoneProps} />
+          <ZoneSection zone="DiceFromBag" dice={dicein("DiceFromBag")} {...zoneProps} />
+        </div>
+      </div>
 
       <div className="side-zones">
-        {SIDE_ZONES.map((zone) => (
-          <ZoneSection
-            key={zone}
-            zone={zone}
-            dice={dice.filter((d) => d.zone === zone)}
-            cardsById={cardsById}
-            selection={selection}
-            onGroupClick={onGroupClick}
-          />
-        ))}
+        <ZoneSection zone="OutOfPlay" dice={dicein("OutOfPlay")} {...zoneProps} />
       </div>
 
       <details className="roster">
-        <summary>Unpurchased roster ({dice.filter((d) => d.zone === "Unpurchased").length})</summary>
-        <ZoneSection
-          zone="Unpurchased"
-          bare
-          dice={dice.filter((d) => d.zone === "Unpurchased")}
-          cardsById={cardsById}
-          selection={selection}
-          onGroupClick={onGroupClick}
-        />
+        <summary>Unpurchased roster ({dicein("Unpurchased").length})</summary>
+        <ZoneSection zone="Unpurchased" bare dice={dicein("Unpurchased")} {...zoneProps} />
       </details>
     </div>
   );
@@ -87,6 +88,19 @@ const ZONE_DISPLAY_NAMES: Record<string, string> = {
   UsedPile: "Used Pile",
   OutOfPlay: "Out of Play",
   Unpurchased: "Unpurchased",
+};
+
+// Loosely matches the physical mat's color-coded zones, so the shape of
+// this layout reads the same way the printed mat does.
+const ZONE_TINTS: Record<string, string> = {
+  AttackZone: "attack",
+  FieldZone: "field",
+  ReservePool: "reserve",
+  UsedPile: "used",
+  PrepArea: "prep",
+  DiceFromPrep: "prep",
+  Bag: "bag",
+  DiceFromBag: "bag",
 };
 
 function ZoneSection(props: {
@@ -115,6 +129,7 @@ function ZoneSection(props: {
             title={group.tooltip}
           >
             <span className="chip-label">
+              <DieIcon kind={group.iconKind} />
               {group.label}
               {group.count > 1 ? ` ×${group.count}` : ""}
             </span>
@@ -129,7 +144,7 @@ function ZoneSection(props: {
   if (props.bare) return content;
 
   return (
-    <div className={`zone${props.prominent ? " prominent" : ""}`}>
+    <div className={`zone${props.prominent ? " prominent" : ""} zone-${ZONE_TINTS[props.zone] ?? "plain"}`}>
       <h3>
         {ZONE_DISPLAY_NAMES[props.zone] ?? props.zone} ({props.dice.length})
       </h3>

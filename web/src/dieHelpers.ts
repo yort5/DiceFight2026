@@ -1,6 +1,25 @@
+import type { IconKind } from "./DieIcon";
 import type { CardDef, Die } from "./types";
 
 const SIDEKICK_FACE = { fieldingCost: 0, attack: 1, defense: 1 };
+
+// Which face icon a die is currently showing, if any (rule 1.6.8's
+// Sidekick face set, plus energy/Action faces generally) - a plain
+// Character face (non-Sidekick) has no icon here since real character
+// dice show card art, not a symbol, and we don't have card art.
+export function dieIconKind(die: Die): IconKind | null {
+  if (die.status === "Energy") {
+    if (die.energyKind === "Wild") return "Wild";
+    if (die.energyKind === "Generic") return "Generic";
+    if (die.energyKind === "Specific" && die.providedEnergyType) {
+      return die.providedEnergyType as IconKind;
+    }
+    return null;
+  }
+  if (die.status === "SidekickCharacter") return "Pawn";
+  if (die.status === "Action") return "Action";
+  return null;
+}
 
 // Mirrors DieStats.GetFace on the engine side (rule 1.3 key / 1.6.8).
 export function getDieFace(die: Die, cardsById: Map<string, CardDef>) {
@@ -59,6 +78,7 @@ export interface DieGroup {
   label: string;
   statusText: string;
   tooltip?: string;
+  iconKind: IconKind | null;
   count: number;
   ids: string[];
 }
@@ -81,6 +101,7 @@ export function groupDice(dice: Die[], cardsById: Map<string, CardDef>): DieGrou
         label: dieLabel(die, cardsById),
         statusText: dieStatusText(die, cardsById),
         tooltip: dieTooltip(die, cardsById),
+        iconKind: dieIconKind(die),
         count: 1,
         ids: [die.id],
       });

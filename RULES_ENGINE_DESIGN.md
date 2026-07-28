@@ -65,9 +65,12 @@ here rather than assuming which approach they'd want.
    full die limit regardless of team size (see `TeamSetup.cs`'s remarks).
 6. Auth/login in front of the API - currently wide open, matches the
    deployment note above.
-7. A visual pass matching the physical mat's zone layout and real die-face
-   icons, using the reference photos/cards the user provided (see the
-   latest status update) - explicitly queued for after the above.
+
+Also done, out of order (the user asked for it explicitly once the above
+was clear): a visual pass matching the physical mat's zone layout and
+simple die-face icons - see the latest status update. Big Barda's
+placeholder stats (and any other data cleanup like it) are still
+deliberately deferred to a later batch, per the user's own call.
 
 The chronological "Status update" sections below explain the reasoning
 and bugs found behind each already-built piece - worth reading before
@@ -995,3 +998,46 @@ against the same endpoints (a live Chromium crash on the final screenshot
 shell` build - cut the browser run short, but the server-side outcome was
 already captured and matched). 56 tests passing (engine/API untouched, so
 no new ones needed); `dotnet build`/`test` and `npm run build` both clean.
+
+## Status update — a visual pass: mat-shaped zone layout, simple die-face icons
+
+The user shared reference material (a photo of real Sidekick dice, the
+game's own zone-flow diagram, and two card photos for die-face stat
+layout) explicitly to redo the board's visual fidelity, with the ask
+scoped down to two pieces (Big Barda's placeholder stats are real data
+cleanup, deliberately deferred to a later batch per the user's own call).
+Pure frontend change - no engine/API/DTO touched.
+
+**Mat-shaped zone layout** (`PlayerBoard.tsx`/`App.css`, new `.mat` CSS
+grid). Previously every zone was a flat stacked list; now it follows the
+reference diagram's cross shape - Attack Zone across the top, Used
+Pile/Field Zone/Prep Area side by side below it, Reserve Pool across the
+middle (where rolled dice actually land), Bag at the bottom - with each
+zone loosely color-tinted the way the physical mat is (red/green/blue/
+orange/gray). `DiceFromBag`/`DiceFromPrep` - this engine's own transient
+pre-Roll staging zones (see the `Zone` enum remarks; not real physical
+zones) - are nested right under Bag/Prep Area respectively rather than
+merged into them, so the "hasn't been rolled yet" distinction stays
+visible. Out of Play and the Unpurchased roster stay off the grid, as
+before, since neither is really part of the mat. Collapses to a single
+column under 640px.
+
+**Simple die-face icons** (new `DieIcon.tsx`, `dieHelpers.dieIconKind`).
+One glyph per face - the four specific energy types, Wild, Generic,
+a chess pawn for a Sidekick's Level 1 character face, "!" for an Action
+face - rendered next to the existing text label rather than replacing it.
+First pass used emoji glyphs (quick to write), but this sandbox's
+headless-Chromium build has no color-emoji font and rendered tofu boxes
+for several of them - switched to small inline SVG shapes instead
+(polygon/path/ellipse primitives, sized to the chip), which render
+identically regardless of what fonts happen to be installed. A plain
+Character face (non-Sidekick) intentionally gets no icon - real
+character dice show card art there, which this project doesn't have, so
+text (level + stats) stays the only representation for those.
+
+Verified live via headless Chromium at both a normal and a 480px-wide
+viewport: the mat grid renders in the intended cross shape with visible
+zone tints, collapses cleanly to one column at the narrow width, and the
+new icons render correctly (confirmed switching away from emoji fixed
+the tofu-box problem). 56 tests unaffected; `dotnet build`/`test` and
+`npm run build` both clean.
