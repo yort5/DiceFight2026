@@ -1062,3 +1062,9 @@ for solo zones below the mat) is gone - everything's in the grid now.
 Verified live the same way as the previous pass (normal + 480px-wide
 headless Chromium screenshots, both teams). 56 tests unaffected (pure
 markup/CSS); `dotnet build`/`test` and `npm run build` both clean.
+
+One-line follow-up: Reserve Pool and Prep Area now span both the
+Used Pile row and the Out of Play row in `.mat`'s grid-template-areas
+(just repeating their area name across both rows), so their boxes
+stretch down to align with Out of Play's bottom edge instead of stopping
+level with Used Pile alone.
