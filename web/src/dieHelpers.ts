@@ -103,11 +103,33 @@ export interface DieGroup {
   ids: string[];
 }
 
+function buildDieGroup(key: string, die: Die, cardsById: Map<string, CardDef>): DieGroup {
+  return {
+    key,
+    label: dieLabel(die, cardsById),
+    statusText: dieStatusText(die, cardsById),
+    tooltip: dieTooltip(die, cardsById),
+    iconKind: dieIconKind(die),
+    characterFace: characterFaceInfo(die, cardsById),
+    damage: die.damage,
+    count: 1,
+    ids: [die.id],
+  };
+}
+
 // Collapses dice that are truly interchangeable right now (same card,
 // level, damage, and face) into one chip with a count - mainly to keep
 // the Unpurchased roster (up to 4 dice per card) and the Sidekick-heavy
 // Bag/Used Pile zones from turning into a wall of identical chips.
-export function groupDice(dice: Die[], cardsById: Map<string, CardDef>): DieGroup[] {
+// `collapse: false` (used for the rolled zones - Reserve Pool/Field
+// Zone/Attack Zone - where each die gets its own visible face badge) skips
+// this entirely, so e.g. two Sidekicks both showing a Bolt face render as
+// two separate badges rather than one "Sidekick ×2" chip.
+export function groupDice(dice: Die[], cardsById: Map<string, CardDef>, collapse: boolean = true): DieGroup[] {
+  if (!collapse) {
+    return dice.map((die) => buildDieGroup(die.id, die, cardsById));
+  }
+
   const groups = new Map<string, DieGroup>();
   for (const die of dice) {
     const key = [die.cardId ?? "sidekick", die.level, die.damage, die.status, die.energyKind, die.providedEnergyType ?? ""].join("|");
@@ -116,17 +138,7 @@ export function groupDice(dice: Die[], cardsById: Map<string, CardDef>): DieGrou
       existing.count += 1;
       existing.ids.push(die.id);
     } else {
-      groups.set(key, {
-        key,
-        label: dieLabel(die, cardsById),
-        statusText: dieStatusText(die, cardsById),
-        tooltip: dieTooltip(die, cardsById),
-        iconKind: dieIconKind(die),
-        characterFace: characterFaceInfo(die, cardsById),
-        damage: die.damage,
-        count: 1,
-        ids: [die.id],
-      });
+      groups.set(key, buildDieGroup(key, die, cardsById));
     }
   }
   return Array.from(groups.values());

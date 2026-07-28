@@ -107,6 +107,13 @@ const ZONE_TINTS: Record<string, string> = {
   DiceFromPrep: "staging",
 };
 
+// The only zones where a die is actually showing a rolled face (rule 1.5)
+// - everywhere else (Bag, Used Pile, Prep Area, Out of Play, Unpurchased,
+// the transient staging zones) a die is unrolled, spent, or just sitting
+// on its card, so the enlarged face-badge treatment doesn't apply there
+// and stacks of identical dice can still collapse to a "×N" chip.
+const ROLLED_ZONES = new Set(["ReservePool", "FieldZone", "AttackZone"]);
+
 function ZoneSection(props: {
   zone: string;
   dice: Die[];
@@ -116,7 +123,8 @@ function ZoneSection(props: {
   prominent?: boolean;
   bare?: boolean;
 }) {
-  const groups = groupDice(props.dice, props.cardsById);
+  const rolled = ROLLED_ZONES.has(props.zone);
+  const groups = groupDice(props.dice, props.cardsById, !rolled);
   const content = (
     <div className="dice">
       {groups.length === 0 && props.prominent && <span className="empty-hint">empty</span>}
@@ -126,20 +134,32 @@ function ZoneSection(props: {
         ).length;
         const isPrimary = group.ids.includes(props.selection.primary ?? "");
         const countSuffix = group.count > 1 ? ` ×${group.count}` : "";
+        const showCharacterFace = rolled && group.characterFace;
+        const showIconFace = rolled && !showCharacterFace && group.iconKind;
         return (
           <button
             key={group.key}
-            className={`die-chip${selectedCount > 0 ? " selected" : ""}${isPrimary ? " primary" : ""}${group.characterFace ? " has-face" : ""}`}
+            className={`die-chip${selectedCount > 0 ? " selected" : ""}${isPrimary ? " primary" : ""}${showCharacterFace || showIconFace ? " has-face" : ""}`}
             onClick={() => props.onGroupClick(group.ids)}
             title={group.tooltip}
           >
-            {group.characterFace ? (
+            {showCharacterFace ? (
               <>
                 <div className="die-face">
-                  <span className="face-cost">{group.characterFace.fieldingCost}</span>
-                  <span className="face-attack">{group.characterFace.attack}</span>
+                  <span className="face-cost">{group.characterFace!.fieldingCost}</span>
+                  <span className="face-attack">{group.characterFace!.attack}</span>
                   {group.damage > 0 && <span className="face-damage">-{group.damage}</span>}
-                  <span className="face-defense">{group.characterFace.defense}</span>
+                  <span className="face-defense">{group.characterFace!.defense}</span>
+                </div>
+                <span className="chip-label">
+                  {group.label}
+                  {countSuffix}
+                </span>
+              </>
+            ) : showIconFace ? (
+              <>
+                <div className="die-face energy-face">
+                  <DieIcon kind={group.iconKind} size={22} />
                 </div>
                 <span className="chip-label">
                   {group.label}

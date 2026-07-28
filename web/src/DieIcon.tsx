@@ -8,9 +8,9 @@ import type { ReactNode } from "react";
 // everywhere regardless of what fonts happen to be installed.
 export type IconKind = "Fist" | "Bolt" | "Shield" | "Mask" | "Wild" | "Generic" | "Pawn" | "Action";
 
-function IconSvg(props: { children: ReactNode }) {
+function IconSvg(props: { children: ReactNode; size: number }) {
   return (
-    <svg className="die-icon" viewBox="0 0 24 24" width="12" height="12" aria-hidden="true">
+    <svg className="die-icon" viewBox="0 0 24 24" width={props.size} height={props.size} aria-hidden="true">
       {props.children}
     </svg>
   );
@@ -61,7 +61,7 @@ const ICON_SHAPES: Record<IconKind, ReactNode> = {
   ),
 };
 
-export function DieIcon(props: { kind: IconKind | null }) {
+export function DieIcon(props: { kind: IconKind | null; size?: number }) {
   if (!props.kind) return null;
-  return <IconSvg>{ICON_SHAPES[props.kind]}</IconSvg>;
+  return <IconSvg size={props.size ?? 12}>{ICON_SHAPES[props.kind]}</IconSvg>;
 }

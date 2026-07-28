@@ -589,6 +589,16 @@
   border: 1px solid rgba(127, 127, 127, 0.5);
 }
 
+.energy-face {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.energy-face .die-icon {
+  margin: 0;
+}
+
 .face-cost {
   position: absolute;
   top: 2px;

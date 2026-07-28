@@ -1102,3 +1102,51 @@ face, confirmed the badge (`0` / `1` / `1`) renders correctly in the
 Reserve Pool, then Fielded it and confirmed the same badge renders in the
 Field Zone too. 56 tests unaffected (pure frontend); `dotnet build`/
 `test` and `npm run build` both clean.
+
+## Status update — energy faces get the same badge treatment, zone-gated, no more collapsing when rolled
+
+Follow-up feedback on the die-face badge: make energy symbols equally
+prominent (bigger, name underneath, matching the character badge's
+structure), only show *any* face badge in a zone where a die is actually
+showing a rolled face, and stop collapsing identical dice in those zones
+since each one now has its own visible badge.
+
+**Energy/Action badges.** New `.energy-face` (reuses `.die-face`'s square
+frame) just centers an enlarged `DieIcon` - `DieIcon` gained an optional
+`size` prop (default 12, used at 22 here) rather than hardcoding pixel
+dimensions. No separate "Bolt"/"Mask" text anymore - the enlarged symbol
+is the whole point, so a redundant label would just be clutter. Card
+name (or "Sidekick") still shows underneath, exactly like the character
+badge.
+
+**Zone-gating, for both badge kinds.** Turns out Character/
+SidekickCharacter status isn't actually confined to the Reserve Pool/
+Field Zone/Attack Zone the way I'd assumed when I first built the
+character badge - an unfielded character-status die left in the Reserve
+Pool at end of turn moves to the Used Pile at the *start* of the owner's
+next Clear & Draw (rule 2.3.1) without its status resetting, so it can
+sit in the Used Pile still reading "Character." Same idea for spent
+energy dice, which move to Out of Play/Used Pile without their status
+resetting from "Energy." Badges are only meaningful where a rolled face
+actually matters, so `PlayerBoard.ZoneSection` now checks a new
+`ROLLED_ZONES` set (`ReservePool`/`FieldZone`/`AttackZone`) before ever
+choosing the badge branch - everywhere else falls through to the
+original small-icon-or-nothing + text + count-collapsed rendering,
+regardless of what status a die happens to still be carrying.
+
+**No more collapsing in rolled zones.** `groupDice` gained a `collapse`
+parameter (default `true`, preserving every existing call site); rolled
+zones now call it with `collapse: false`, so two Sidekicks that both
+rolled Bolt render as two separate badge chips instead of one "Sidekick
+×2" - each visible die now carries its own badge, so hiding that behind
+a count would undo the whole point of making faces prominent. Refactored
+the per-die group-building logic into a shared `buildDieGroup` helper so
+the collapsing and non-collapsing paths in `groupDice` don't duplicate
+field construction.
+
+Verified live via headless Chromium: three Sidekicks rolled to Mask/Mask/
+Wild in Team A's Reserve Pool rendered as three separate enlarged-icon
+badges (not "Sidekick ×2" + "Sidekick") with no redundant type text, and
+a Sidekick sitting in Out of Play (not a rolled zone) correctly stayed
+in the old compact style. 56 tests unaffected (pure frontend); `dotnet
+build`/`test` and `npm run build` both clean.

@@ -89,12 +89,17 @@ export function HowToPlay(props: { onClose: () => void }) {
             Pile, and the Bag at the bottom - color-tinted the same way the mat is. The Unpurchased
             roster sits underneath as a low-traffic reference zone, collapsed by default since it's
             just your remaining buy pool. Unpurchased dice show their purchase cost and required
-            energy type(s) right on the chip; energy dice show a small icon for their type. A die
-            currently showing a character face gets a small die-face badge instead of plain text -
-            fielding cost upper-left, attack upper-right, defense lower-right, damage taken (if
-            any) lower-left, mirroring where those stats sit on a real character die/card. Hover
-            any die (in any zone) for its full subtitle and ability text - useful since the same
-            character name can have several differently-worded printings.
+            energy type(s) right on the chip. A die actually showing a rolled face - anything in
+            the Reserve Pool, Field Zone, or Attack Zone, the only zones where that's meaningful -
+            gets a face badge instead of plain text: a character face shows fielding cost
+            upper-left/attack upper-right/defense lower-right/damage taken (if any) lower-left,
+            mirroring a real character die/card, while an energy or Action face just shows its
+            symbol enlarged. Those zones also stop collapsing identical dice into a "×N" chip, so
+            e.g. two Sidekicks that both rolled Bolt show as two separate badges. Everywhere else
+            dice stay compact (small icon + text, collapsed by count) since nothing there is
+            showing a face that matters. Hover any die (in any zone) for its full subtitle and
+            ability text - useful since the same character name can have several
+            differently-worded printings.
           </p>
 
           <h3>Global Abilities</h3>
