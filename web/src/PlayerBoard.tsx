@@ -7,17 +7,17 @@ export interface Selection {
   secondary: string[];
 }
 
-// Spatial layout follows the physical playmat's cross shape (see the mat
-// reference image): Attack Zone spans the top, Used Pile/Field Zone/Prep
-// Area sit side by side below it, Reserve Pool spans the middle ("roll
-// dice here"), and the Bag sits at the bottom - matching where dice
-// physically move to/from on the real mat rather than a flat stacked
-// list. DiceFromBag/DiceFromPrep (this engine's transient pre-Roll
-// staging zones - see the Zone enum remarks) aren't on the physical mat
-// at all, so they're shown as a nested sub-zone right next to the
-// physical zone they're about to join (Bag / Prep Area respectively).
-// Out of Play and the Unpurchased roster stay off the mat grid, as
-// low-traffic reference zones underneath it.
+// Spatial layout follows the physical playmat's cross shape (per user
+// feedback on the first pass): Attack Zone spans the top, Field Zone
+// spans below it, then Used Pile/Reserve Pool/Prep Area sit side by side
+// ("roll dice here" is the middle one) - Used Pile and Prep Area flank
+// the Reserve Pool, not the Field Zone. Out of Play sits directly under
+// Used Pile (familiar pairing), and the Bag spans the bottom. DiceFromBag/
+// DiceFromPrep (this engine's transient pre-Roll staging zones - see the
+// Zone enum remarks - not real physical zones) are paired with each
+// other in their own row under the Bag, rather than nested under Bag/Prep
+// Area individually. The Unpurchased roster stays off the mat grid, as a
+// low-traffic reference zone underneath it.
 export function PlayerBoard(props: {
   title: string;
   isActive: boolean;
@@ -46,27 +46,30 @@ export function PlayerBoard(props: {
         <div className="mat-slot mat-attack">
           <ZoneSection zone="AttackZone" prominent dice={dicein("AttackZone")} {...zoneProps} />
         </div>
-        <div className="mat-slot mat-used">
-          <ZoneSection zone="UsedPile" dice={dicein("UsedPile")} {...zoneProps} />
-        </div>
         <div className="mat-slot mat-field">
           <ZoneSection zone="FieldZone" prominent dice={dicein("FieldZone")} {...zoneProps} />
         </div>
-        <div className="mat-slot mat-prep">
-          <ZoneSection zone="PrepArea" dice={dicein("PrepArea")} {...zoneProps} />
-          <ZoneSection zone="DiceFromPrep" dice={dicein("DiceFromPrep")} {...zoneProps} />
+        <div className="mat-slot mat-used">
+          <ZoneSection zone="UsedPile" dice={dicein("UsedPile")} {...zoneProps} />
         </div>
         <div className="mat-slot mat-reserve">
           <ZoneSection zone="ReservePool" prominent dice={dicein("ReservePool")} {...zoneProps} />
         </div>
+        <div className="mat-slot mat-prep">
+          <ZoneSection zone="PrepArea" dice={dicein("PrepArea")} {...zoneProps} />
+        </div>
+        <div className="mat-slot mat-outofplay">
+          <ZoneSection zone="OutOfPlay" dice={dicein("OutOfPlay")} {...zoneProps} />
+        </div>
         <div className="mat-slot mat-bag">
           <ZoneSection zone="Bag" dice={dicein("Bag")} {...zoneProps} />
+        </div>
+        <div className="mat-slot mat-drawn">
           <ZoneSection zone="DiceFromBag" dice={dicein("DiceFromBag")} {...zoneProps} />
         </div>
-      </div>
-
-      <div className="side-zones">
-        <ZoneSection zone="OutOfPlay" dice={dicein("OutOfPlay")} {...zoneProps} />
+        <div className="mat-slot mat-carried">
+          <ZoneSection zone="DiceFromPrep" dice={dicein("DiceFromPrep")} {...zoneProps} />
+        </div>
       </div>
 
       <details className="roster">
@@ -97,10 +100,11 @@ const ZONE_TINTS: Record<string, string> = {
   FieldZone: "field",
   ReservePool: "reserve",
   UsedPile: "used",
+  OutOfPlay: "used",
   PrepArea: "prep",
-  DiceFromPrep: "prep",
   Bag: "bag",
-  DiceFromBag: "bag",
+  DiceFromBag: "staging",
+  DiceFromPrep: "staging",
 };
 
 function ZoneSection(props: {

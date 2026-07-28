@@ -448,10 +448,12 @@
   display: grid;
   grid-template-columns: 1fr 2fr 1fr;
   grid-template-areas:
-    "attack attack attack"
-    "used field prep"
-    "reserve reserve reserve"
-    "bag bag bag";
+    "attack    attack  attack"
+    "field     field   field"
+    "used      reserve prep"
+    "outofplay .       ."
+    "bag       bag     bag"
+    "drawn     drawn   carried";
   gap: 8px;
   margin-bottom: 10px;
 }
@@ -462,36 +464,42 @@
     grid-template-areas:
       "attack"
       "field"
+      "reserve"
       "used"
       "prep"
-      "reserve"
-      "bag";
+      "outofplay"
+      "bag"
+      "drawn"
+      "carried";
   }
 }
 
 .mat-attack {
   grid-area: attack;
 }
-.mat-used {
-  grid-area: used;
-}
 .mat-field {
   grid-area: field;
 }
-.mat-prep {
-  grid-area: prep;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.mat-used {
+  grid-area: used;
 }
 .mat-reserve {
   grid-area: reserve;
 }
+.mat-prep {
+  grid-area: prep;
+}
+.mat-outofplay {
+  grid-area: outofplay;
+}
 .mat-bag {
   grid-area: bag;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+}
+.mat-drawn {
+  grid-area: drawn;
+}
+.mat-carried {
+  grid-area: carried;
 }
 
 .mat-slot .zone {
@@ -517,12 +525,8 @@
 .zone-bag {
   background: rgba(127, 127, 127, 0.08);
 }
-
-.side-zones {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 4px 12px;
-  margin-bottom: 8px;
+.zone-staging {
+  background: rgba(160, 130, 255, 0.1);
 }
 
 .roster summary {

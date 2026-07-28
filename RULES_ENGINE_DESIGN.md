@@ -1041,3 +1041,24 @@ zone tints, collapses cleanly to one column at the narrow width, and the
 new icons render correctly (confirmed switching away from emoji fixed
 the tofu-box problem). 56 tests unaffected; `dotnet build`/`test` and
 `npm run build` both clean.
+
+## Status update — mat layout corrected per user feedback: flank Reserve Pool, not Field Zone
+
+The first mat pass (previous entry) put Used Pile/Prep Area on either
+side of Field Zone, mirroring the reference diagram literally. Real
+play habit disagreed: the user wanted Used Pile and Prep Area flanking
+the *Reserve Pool* instead (Field Zone gets its own full-width row above
+it), Out of Play moved directly under Used Pile (the pairing players are
+already used to), and `DiceFromBag`/`DiceFromPrep` un-nested from
+Bag/Prep Area into their own paired row underneath (rather than stacked
+individually under the zone each is about to join). New grid, top to
+bottom: Attack Zone, Field Zone, [Used Pile | Reserve Pool | Prep Area],
+Out of Play (under Used Pile), Bag, [Drawn This Turn | Carried From
+Prep]. Out of Play now shares Used Pile's blue tint (visually pairs
+them); Drawn This Turn/Carried From Prep got their own new tint
+(`zone-staging`, light purple) since they're no longer visually
+subordinate to Bag/Prep Area. `side-zones` (the old leftover CSS/markup
+for solo zones below the mat) is gone - everything's in the grid now.
+Verified live the same way as the previous pass (normal + 480px-wide
+headless Chromium screenshots, both teams). 56 tests unaffected (pure
+markup/CSS); `dotnet build`/`test` and `npm run build` both clean.
