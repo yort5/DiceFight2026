@@ -55,6 +55,24 @@ public class TwoTeamsDemoTests
     private static DieInstance FindUnpurchased(GameState state, string playerId, string cardId) =>
         state.DiceIn(playerId, Zone.Unpurchased).First(d => d.CardId == cardId);
 
+    // A "double" energy face (rulebook's Doubles rule) - worth 2 when
+    // spent, either wholesale or partially ("spun down" - see
+    // TurnEngine.SpendEnergy) depending how much of it a payment needs.
+    private static List<DieInstance> GiveDoubleEnergy(
+        GameState state, string playerId, int count, EnergyKind kind, EnergyType? providedType = null)
+    {
+        var dice = state.DiceIn(playerId, Zone.Bag).Take(count).ToList();
+        foreach (var die in dice)
+        {
+            die.Zone = Zone.ReservePool;
+            die.Status = DieStatus.Energy;
+            die.EnergyKind = kind;
+            die.ProvidedEnergyType = providedType;
+            die.EnergyAmount = 2;
+        }
+        return dice;
+    }
+
     [Fact]
     public void PurchasingAndFieldingDazzler_TriggersWhenFieldedAbility_ThroughTheRealQueueAndInterpreter()
     {
@@ -339,5 +357,67 @@ public class TwoTeamsDemoTests
         var ex = Assert.Throws<InvalidOperationException>(() =>
             TurnEngine.UseGlobalAbility(state, queue, SampleCards.Starfire.Id, "teamB", [energy[1].Id]));
         Assert.Contains("once per turn", ex.Message);
+    }
+
+    [Fact]
+    public void Fielding_WithATypedDoubleEnergyDie_SpinsDownTheLeftoverInsteadOfSpendingTheWholeDie()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamA";
+        var bigBardaDie = FindUnpurchased(state, "teamA", SampleCards.BigBarda.Id);
+        bigBardaDie.Zone = Zone.ReservePool;
+        bigBardaDie.Status = DieStatus.Character;
+        bigBardaDie.Level = 1; // fielding cost 1
+
+        var doubleFist = GiveDoubleEnergy(state, "teamA", 1, EnergyKind.Specific, EnergyType.Fist)[0];
+
+        TurnEngine.Field(state, new AbilityQueue(), bigBardaDie.Id, [doubleFist.Id]);
+
+        Assert.Equal(Zone.FieldZone, bigBardaDie.Zone);
+        Assert.Equal(Zone.ReservePool, doubleFist.Zone); // only half was needed - stays, doesn't move out
+        Assert.Equal(1, doubleFist.EnergyAmount); // "spun down" to its single-energy face
+        Assert.Equal(EnergyKind.Specific, doubleFist.EnergyKind);
+        Assert.Equal(EnergyType.Fist, doubleFist.ProvidedEnergyType);
+    }
+
+    [Fact]
+    public void Fielding_WithATypedDoubleEnergyDie_SpendsTheWholeDieWhenExactlyEnoughIsNeeded()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamA";
+        var bigBardaDie = FindUnpurchased(state, "teamA", SampleCards.BigBarda.Id);
+        bigBardaDie.Zone = Zone.ReservePool;
+        bigBardaDie.Status = DieStatus.Character;
+        bigBardaDie.Level = 3; // fielding cost 2 - exactly what a double provides
+
+        var doubleFist = GiveDoubleEnergy(state, "teamA", 1, EnergyKind.Specific, EnergyType.Fist)[0];
+
+        TurnEngine.Field(state, new AbilityQueue(), bigBardaDie.Id, [doubleFist.Id]);
+
+        Assert.Equal(Zone.FieldZone, bigBardaDie.Zone);
+        Assert.Equal(Zone.OutOfPlay, doubleFist.Zone); // fully spent - no leftover to spin down
+        Assert.Equal(2, doubleFist.EnergyAmount); // untouched
+    }
+
+    [Fact]
+    public void Fielding_WithAGenericDoubleEnergyDie_SpendsTheWholeDieAndBanksTheLeftoverAsVirtualEnergy()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamA";
+        var bigBardaDie = FindUnpurchased(state, "teamA", SampleCards.BigBarda.Id);
+        bigBardaDie.Zone = Zone.ReservePool;
+        bigBardaDie.Status = DieStatus.Character;
+        bigBardaDie.Level = 1; // fielding cost 1
+
+        // A Generic double (e.g. a Basic Action die) has no single-energy
+        // face to "spin down" to - unlike a typed double, so it moves out
+        // fully and the unspent half becomes tracked virtual energy.
+        var doubleGeneric = GiveDoubleEnergy(state, "teamA", 1, EnergyKind.Generic)[0];
+
+        TurnEngine.Field(state, new AbilityQueue(), bigBardaDie.Id, [doubleGeneric.Id]);
+
+        Assert.Equal(Zone.FieldZone, bigBardaDie.Zone);
+        Assert.Equal(Zone.OutOfPlay, doubleGeneric.Zone);
+        Assert.Equal(1, state.GetPlayer("teamA").VirtualGenericEnergy);
     }
 }

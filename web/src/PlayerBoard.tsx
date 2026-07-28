@@ -160,6 +160,7 @@ function ZoneSection(props: {
               <>
                 <div className="die-face energy-face">
                   <DieIcon kind={group.iconKind} size={22} />
+                  {group.energyAmount > 1 && <span className="face-amount">{group.energyAmount}</span>}
                 </div>
                 <span className="chip-label">
                   {group.label}

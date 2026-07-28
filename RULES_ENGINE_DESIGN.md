@@ -58,12 +58,10 @@ here rather than assuming which approach they'd want.
    no filtering which dice are valid energy.
 3. Legal-target exclusions for captured dice / per-die "cannot be
    targeted" abilities - blocked on Capturing (rule 3.8) not being built.
-4. A real `IDiceRoller` with actual face-table data, replacing the
-   rough-guess placeholder roller (`DiceFight.Api/PlaceholderDiceRoller.cs`).
-5. Team-construction legality (die-limit-sum-to-20, unique-card-name
+4. Team-construction legality (die-limit-sum-to-20, unique-card-name
    checks, rule 2.1.1/2.1.3) - currently unenforced; every card gets its
    full die limit regardless of team size (see `TeamSetup.cs`'s remarks).
-6. Auth/login in front of the API - currently wide open, matches the
+5. Auth/login in front of the API - currently wide open, matches the
    deployment note above.
 
 Also done, out of order (the user asked for it explicitly once the above
@@ -1150,3 +1148,109 @@ badges (not "Sidekick ×2" + "Sidekick") with no redundant type text, and
 a Sidekick sitting in Out of Play (not a rolled zone) correctly stayed
 in the old compact style. 56 tests unaffected (pure frontend); `dotnet
 build`/`test` and `npm run build` both clean.
+
+## Status update — a real IDiceRoller: rules-accurate face composition, plus wiring double-energy spending all the way through
+
+Before touching code, read the rulebook PDF the user uploaded (extracted
+text via `pdftotext`, after pulling `poppler-utils` + its dependency
+chain the same `apt-get download` + `dpkg-deb -x` way as every other
+sandbox library this session) rather than guess at what "real" should
+mean. That surfaced something the old placeholder got wrong in a way
+that mattered beyond just rolling: **"Doubles"** are a real, named rule
+- some energy faces are worth 2, not 1 - and the rulebook's own
+canonical example of one is "a die with a double generic energy face
+(such as a Basic Action Die)", which matches the reference "Front Line"
+card exactly (three faces printed with a "2"). The user then supplied
+the missing piece needed to make this useful rather than just
+decorative: **character dice generally have 3 character-level faces + 3
+energy faces of the card's own type, with 2 of those 3 as doubles and 1
+single** (e.g. a Fist character: two double-Fist faces, one single-Fist
+face) - confirmed exceptions (a double split across two types, a double
+Wild/Generic) exist but are rare and deliberately not modeled without
+real per-card data. This is still a *rules-accurate default*, not real
+per-card face tables (no source for those exists) - `PlaceholderDiceRoller`
+keeps its name and its doc comment now says exactly that distinction.
+
+**Rolling** (`PlaceholderDiceRoller.cs`): Basic Action dice are now 3x
+double-Generic + 3x Action (was a rough "half energy, half action"
+guess with no double). Character dice are now 3x character-level (levels
+1..min(slot,maxLevel), so a <3-level card just repeats its top level) +
+2x double of the card's own energy type + 1x single of that type (was a
+rough "1-in-3 energy, uniformly random level" guess with no double,
+using the card's type but always single-value). Sidekick dice are
+unchanged - already confirmed correct (no doubles, matches a reference
+photo of real Sidekick dice).
+
+**The part that made this more than a rolling change**: a die's face can
+now be worth 2, so `RolledFace`/`DieInstance` both gained `EnergyAmount`
+(default 1). But per the rulebook (confirmed against the user's own
+clarification), *spending* a double is its own rule, not just "counts as
+2 dice": partially spending a **typed** double (e.g. double Fist) "spins
+it down" to its single-energy face of the same type - the physical die
+stays in the Reserve Pool, still spendable later, exactly like a player
+spinning the physical die to its other face. A **Generic** double (a
+Basic Action die, which has no single-Generic face to spin to - its
+other faces are Action, not energy) instead moves out fully and banks
+the unspent half as the payer's tracked virtual generic energy
+(`Player.VirtualGenericEnergy` - already existed, already reset at Clean
+Up, but until now nothing ever populated it from a partial spend, only
+from the "couldn't draw enough dice" shortfall case rule 2.3.10). New
+shared `TurnEngine.SpendEnergy`, used by `Purchase`/`Field`/
+`UseGlobalAbility` (previously each just did `energyDice.Count` /
+`.Take(amount)`, silently treating every die as worth exactly 1):
+walks the caller-ordered chosen dice, accumulating `EnergyAmount` until
+the target is met (so extra dice offered beyond what's needed are still
+left untouched, same as before), checks the existing one-die-per-
+required-type rule against the resulting consumed set, then only the
+*last* die consumed can ever be the partial one (every die before it was
+necessarily needed in full to reach the target) - spun down if typed,
+banked-and-moved-out if Generic, fully moved out otherwise. Spending
+*from* the virtual-energy bank isn't wired up yet (there's no UI for it,
+and no current card needs it) - deliberately out of scope, noted here
+rather than silently missing.
+
+**Known simplification, not hit by any current card**: the "stop once
+the target amount is reached" ordering means a card requiring 2+
+*distinct* energy types could, in principle, fail to find a die for a
+type that was offered but never needed for the amount (if the amount was
+satisfied first by other dice earlier in the list). Every card in the
+current catalog has at most one required type, so this never triggers
+today - not worth a full constraint-solving allocator for a
+0-occurrence case, but worth knowing about if a dual-type card is ever
+added.
+
+**Frontend**: `Die`/`DieDto` gained `energyAmount`; the enlarged
+rolled-zone energy badge (see the previous status update) now shows a
+small "2" in its unused corner when a face is a double, and the
+non-badge fallback text (`dieStatusText`) prefixes the amount too (e.g.
+"2 Fist") so a partially-spent double sitting outside a rolled zone
+still reads correctly. No other UI changes needed - the existing
+selection-based Purchase/Field/Global flows already just forward
+whichever dice were clicked to the API, so a player can pay a cost of 1
+by clicking a single double-energy die without the client needing to
+know anything about amounts.
+
+Verified three ways: (1) a 60,000-roll statistical check (scratch
+console app, not a committed test, matching this project's established
+pattern for probability sanity checks) confirmed exact expected
+percentages - Basic Action ~50/50 double-Generic/Action, Big Barda
+(Fist) ~16.7% each of 3 character levels + ~16.7% single-Fist + ~33.6%
+double-Fist ×2; (2) three new deterministic unit tests in
+`TwoTeamsDemoTests.cs` exercise `SpendEnergy` through the real
+`TurnEngine.Field` path - a typed double spinning down when only partly
+needed, a typed double fully spent with no leftover when exactly enough
+is needed, and a Generic double banking virtual energy; (3) a live
+end-to-end check via raw API calls against a real running game (not just
+the isolated scratch roller) confirmed a genuine double-Generic die
+(`energyAmount: 2`) actually appears through real play - purchase a
+Basic Action die turn 1, cycle turns until the player's Bag empties and
+recycles the Used Pile (confirming that this cycle really does take a
+few of a player's own turns, not something to casually rely on for
+future test scenarios), draw and roll it, and see the double in the
+Reserve Pool via `GET /games/{id}`. The frontend's new "2" badge itself
+was verified by code review and reuse of the exact corner-badge pattern
+already proven live in the previous status update, rather than a fresh
+screenshot - reaching a live double through the browser's own bag-cycle
+timing wasn't worth the wall-clock cost given the other three
+verification angles already covering the same ground. 59 tests passing
+(56 + 3 new); `dotnet build`/`test` and `npm run build` both clean.

@@ -31,6 +31,13 @@ public sealed class DieInstance
     public EnergyKind EnergyKind { get; set; } = EnergyKind.None;
     public EnergyType? ProvidedEnergyType { get; set; }
 
+    // How much energy this face is worth (1, or 2 for a "double" face -
+    // see the rulebook's Doubles rule). Only meaningful when Status ==
+    // Energy. A double that's only partially spent "spins down" to a
+    // single-energy face of the same kind/type by reducing this to 1 in
+    // place, rather than moving zones - see TurnEngine's SpendEnergy.
+    public int EnergyAmount { get; set; } = 1;
+
     public List<Modifier> AppliedModifiers { get; } = [];
     public List<DieInstance> AttachedGear { get; } = [];
 

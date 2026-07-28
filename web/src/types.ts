@@ -38,6 +38,7 @@ export interface Die {
   damage: number;
   energyKind: string;
   providedEnergyType: string | null;
+  energyAmount: number;
 }
 
 export interface PlayerState {

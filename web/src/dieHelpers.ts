@@ -53,9 +53,12 @@ export function dieLabel(die: Die, cardsById: Map<string, CardDef>): string {
 // A short description of what a die is currently showing, for the chip.
 export function dieStatusText(die: Die, cardsById: Map<string, CardDef>): string {
   if (die.status === "Energy") {
-    return die.energyKind === "Specific" && die.providedEnergyType
-      ? die.providedEnergyType
-      : die.energyKind;
+    const kind = die.energyKind === "Specific" && die.providedEnergyType ? die.providedEnergyType : die.energyKind;
+    // A "double" face (rulebook's Doubles rule) is worth 2 - worth calling
+    // out in the fallback text too, not just the enlarged rolled-zone
+    // badge, since e.g. a partially-spent double still shows this way
+    // once it's left the Reserve Pool.
+    return die.energyAmount > 1 ? `${die.energyAmount} ${kind}` : kind;
   }
   if (die.status === "Character" || die.status === "SidekickCharacter") {
     // Attack/defense are drawn on the die-face badge itself (see
@@ -99,6 +102,7 @@ export interface DieGroup {
   iconKind: IconKind | null;
   characterFace: CharacterFaceInfo | null;
   damage: number;
+  energyAmount: number;
   count: number;
   ids: string[];
 }
@@ -112,6 +116,7 @@ function buildDieGroup(key: string, die: Die, cardsById: Map<string, CardDef>): 
     iconKind: dieIconKind(die),
     characterFace: characterFaceInfo(die, cardsById),
     damage: die.damage,
+    energyAmount: die.energyAmount,
     count: 1,
     ids: [die.id],
   };
@@ -132,7 +137,7 @@ export function groupDice(dice: Die[], cardsById: Map<string, CardDef>, collapse
 
   const groups = new Map<string, DieGroup>();
   for (const die of dice) {
-    const key = [die.cardId ?? "sidekick", die.level, die.damage, die.status, die.energyKind, die.providedEnergyType ?? ""].join("|");
+    const key = [die.cardId ?? "sidekick", die.level, die.damage, die.status, die.energyKind, die.providedEnergyType ?? "", die.energyAmount].join("|");
     const existing = groups.get(key);
     if (existing) {
       existing.count += 1;

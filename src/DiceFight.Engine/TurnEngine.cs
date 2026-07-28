@@ -4,18 +4,22 @@ using DiceFight.Engine.Queueing;
 namespace DiceFight.Engine;
 
 // The result of rolling a single die (rule 1.6 - Rolled vs. Unrolled Dice).
-// NOTE: real Dice Masters dice have a fixed, card-specific face layout
-// (typically a mix of energy and character faces) that isn't captured by
-// CardDef yet - that's physical-component data, not rules logic, and is
-// tracked as a follow-up. IDiceRoller exists so the turn engine's zone/step
-// mechanics can be built and tested now, independent of where face results
-// come from (a real weighted roll, a human reporting a physical die, etc.).
-// EnergyKind/ProvidedEnergyType only matter when Status is Energy - the
+// IDiceRoller exists so the turn engine's zone/step mechanics can be built
+// and tested independent of where face results come from (a weighted roll
+// against a rules-accurate default face composition - see
+// DiceFight.Api.PlaceholderDiceRoller - a real per-card face table if one
+// is ever sourced, or a human reporting a physical die). EnergyKind/
+// ProvidedEnergyType/EnergyAmount only matter when Status is Energy - the
 // roller decides them as part of the face itself (which specific energy
-// face was rolled is a physical fact about the die, same as Status/Level),
-// rather than TurnEngine inferring them from the die's card afterward.
+// face was rolled, and how much it's worth, is a physical fact about the
+// die, same as Status/Level), rather than TurnEngine inferring them from
+// the die's card afterward.
 public readonly record struct RolledFace(
-    DieStatus Status, int Level, EnergyKind EnergyKind = EnergyKind.None, EnergyType? ProvidedEnergyType = null);
+    DieStatus Status,
+    int Level,
+    EnergyKind EnergyKind = EnergyKind.None,
+    EnergyType? ProvidedEnergyType = null,
+    int EnergyAmount = 1);
 
 public interface IDiceRoller
 {
@@ -172,6 +176,7 @@ public static class TurnEngine
         {
             die.EnergyKind = EnergyKind.None;
             die.ProvidedEnergyType = null;
+            die.EnergyAmount = 1;
             return;
         }
 
@@ -180,6 +185,7 @@ public static class TurnEngine
         // RolledFace remarks), not inferred here from the die's card.
         die.EnergyKind = result.EnergyKind;
         die.ProvidedEnergyType = result.ProvidedEnergyType;
+        die.EnergyAmount = result.EnergyAmount;
     }
 
     // Rule 2.6.2 - Purchase Dice, one of the four Main Step game actions.
@@ -225,23 +231,10 @@ public static class TurnEngine
         }
 
         var energyDice = energyDieIdsToSpend.Select(id => FindEnergyDie(state, id)).ToList();
-        if (energyDice.Count < card.PurchaseCost)
-            throw new InvalidOperationException($"Not enough energy offered to purchase {card.Name} (needs {card.PurchaseCost}).");
-
-        var spent = energyDice.Take(card.PurchaseCost).ToList();
-        var unclaimed = new List<DieInstance>(spent);
-        foreach (var requiredType in card.EnergyTypes.Distinct())
-        {
-            var match = unclaimed.FirstOrDefault(e =>
-                e.EnergyKind == EnergyKind.Wild ||
-                (e.EnergyKind == EnergyKind.Specific && e.ProvidedEnergyType == requiredType));
-            if (match is null)
-                throw new InvalidOperationException($"Purchasing {card.Name} requires at least one {requiredType} energy.");
-            unclaimed.Remove(match); // rule 2.6.2.3's example - one energy per required type, not reused
-        }
-
-        foreach (var energyDie in spent)
-            energyDie.Zone = Zone.OutOfPlay; // rule 2.6.2.6
+        SpendEnergy(
+            state, state.ActivePlayerId, energyDice, card.PurchaseCost, card.EnergyTypes, Zone.OutOfPlay,
+            () => $"Not enough energy offered to purchase {card.Name} (needs {card.PurchaseCost}).",
+            requiredType => $"Purchasing {card.Name} requires at least one {requiredType} energy.");
 
         // Rule 1.1.4 - the purchaser becomes controller; OwnerId (whoever
         // brought the card) is untouched, which matters for community
@@ -269,11 +262,9 @@ public static class TurnEngine
 
         var fieldingCost = DieStats.GetFace(state, die).FieldingCost;
         var energyDice = energyDieIdsToSpend.Select(id => FindEnergyDie(state, id)).ToList();
-        if (energyDice.Count < fieldingCost)
-            throw new InvalidOperationException($"Not enough energy offered to field {DisplayName(state, die)} (needs {fieldingCost}).");
-
-        foreach (var energyDie in energyDice.Take(fieldingCost))
-            energyDie.Zone = Zone.OutOfPlay; // rule 2.6.3.2
+        SpendEnergy(
+            state, state.ActivePlayerId, energyDice, fieldingCost, [], Zone.OutOfPlay,
+            () => $"Not enough energy offered to field {DisplayName(state, die)} (needs {fieldingCost}).");
 
         die.Zone = Zone.FieldZone;
 
@@ -332,33 +323,103 @@ public static class TurnEngine
         var cost = ability.EnergyCost
             ?? throw new InvalidOperationException($"{card.Name}'s Global ability has no defined energy cost.");
 
-        var energyDice = energyDieIdsToSpend.Select(id => FindPlayerEnergyDie(state, playerId, id)).ToList();
-        if (energyDice.Count < cost.Amount)
-            throw new InvalidOperationException($"Not enough energy offered to pay for {card.Name}'s Global ability (needs {cost.Amount}).");
-
-        var spent = energyDice.Take(cost.Amount).ToList();
-        if (cost.RequiredType is { } requiredType &&
-            !spent.Any(e => e.EnergyKind == EnergyKind.Wild || (e.EnergyKind == EnergyKind.Specific && e.ProvidedEnergyType == requiredType)))
-        {
-            throw new InvalidOperationException($"{card.Name}'s Global ability requires at least one {requiredType} energy.");
-        }
-
         // Card-text once-per-turn limiter (e.g. Falcon's "Once during your
-        // turn") - checked after payment is validated but before it's
-        // actually spent, so a rejected attempt doesn't burn the use.
-        if (ability.OncePerTurn && !state.GlobalsUsedThisTurn.Add(cardId))
+        // turn") - checked before payment is even validated, so a rejected
+        // attempt (wrong energy, etc.) after this point doesn't burn the
+        // use, but a plain "already used it" attempt fails fast too.
+        if (ability.OncePerTurn && state.GlobalsUsedThisTurn.Contains(cardId))
             throw new InvalidOperationException($"{card.Name}'s Global ability can only be used once per turn.");
 
+        var energyDice = energyDieIdsToSpend.Select(id => FindPlayerEnergyDie(state, playerId, id)).ToList();
         // Rule 2.6.1.1/2.6.1.2 - the Active player's spent energy goes Out
         // of Play; the Inactive player's goes straight to the Used Pile,
         // since Out of Play doesn't exist on their turn (rule 1.5.8.5).
         var destination = playerId == state.ActivePlayerId ? Zone.OutOfPlay : Zone.UsedPile;
-        foreach (var energyDie in spent)
-            energyDie.Zone = destination;
+        SpendEnergy(
+            state, playerId, energyDice, cost.Amount, cost.RequiredType is { } t ? [t] : [], destination,
+            () => $"Not enough energy offered to pay for {card.Name}'s Global ability (needs {cost.Amount}).",
+            requiredType => $"{card.Name}'s Global ability requires at least one {requiredType} energy.");
+
+        if (ability.OncePerTurn) state.GlobalsUsedThisTurn.Add(cardId);
 
         // Rule 3.1.5 - the source of a non-damage Global ability is the
         // player who paid for it, not a specific die.
         queue.Enqueue(sourceDieId: null, playerId, TriggerType.Global, ability.Effect);
+    }
+
+    // Shared by Purchase/Field/UseGlobalAbility - spends `chosenDice` (in
+    // the order given) to cover `amountNeeded` total energy, honoring at
+    // least one die per distinct required type (Wild substitutes for any -
+    // rule 2.6.2.3; Generic never does). Stops consuming as soon as the
+    // amount is met, so any dice offered beyond what's needed are left
+    // untouched - same as the old "just count dice" version, generalized
+    // from counting dice to summing their EnergyAmount.
+    //
+    // The rulebook's "Doubles" rule matters once a die's face is worth 2
+    // and only part of it is needed: a typed double (e.g. double Fist, the
+    // usual case on a character die - see PlaceholderDiceRoller) "spins
+    // down" to its single-energy face of the same type and stays in the
+    // Reserve Pool, still spendable later this turn. A Generic double
+    // (e.g. a Basic Action die, which has no single-energy face to spin
+    // to) instead moves out fully right away, banking the unspent half as
+    // the payer's tracked virtual generic energy (Player.
+    // VirtualGenericEnergy, already reset at Clean Up) rather than
+    // "spinning" a face that doesn't exist on that die. Only the very last
+    // die needed can ever be partially spent, by construction - every die
+    // consumed before it was necessary in full to reach the target.
+    //
+    // missingTypeMessage is only ever needed when requiredTypes is
+    // non-empty (Field has none - fielding cost has no type requirement,
+    // rule 2.6.3.2), so it's optional.
+    private static void SpendEnergy(
+        GameState state, string payerId, IReadOnlyList<DieInstance> chosenDice, int amountNeeded,
+        IReadOnlyList<EnergyType> requiredTypes, Zone destinationZone,
+        Func<string> insufficientMessage, Func<EnergyType, string>? missingTypeMessage = null)
+    {
+        var consumed = new List<DieInstance>();
+        var used = 0;
+        foreach (var die in chosenDice)
+        {
+            if (used >= amountNeeded) break;
+            consumed.Add(die);
+            used += die.EnergyAmount;
+        }
+
+        if (used < amountNeeded)
+            throw new InvalidOperationException(insufficientMessage());
+
+        var unclaimed = new List<DieInstance>(consumed);
+        foreach (var requiredType in requiredTypes.Distinct())
+        {
+            var match = unclaimed.FirstOrDefault(d =>
+                d.EnergyKind == EnergyKind.Wild ||
+                (d.EnergyKind == EnergyKind.Specific && d.ProvidedEnergyType == requiredType));
+            if (match is null)
+                throw new InvalidOperationException(missingTypeMessage!(requiredType));
+            unclaimed.Remove(match); // rule 2.6.2.3's example - one energy per required type, not reused
+        }
+
+        var overspend = used - amountNeeded;
+        for (var i = 0; i < consumed.Count; i++)
+        {
+            var die = consumed[i];
+            if (i == consumed.Count - 1 && overspend > 0)
+            {
+                if (die.EnergyKind == EnergyKind.Generic)
+                {
+                    die.Zone = destinationZone;
+                    state.GetPlayer(payerId).VirtualGenericEnergy += overspend;
+                }
+                else
+                {
+                    die.EnergyAmount = overspend; // "spin down" to the single-energy face
+                }
+            }
+            else
+            {
+                die.Zone = destinationZone;
+            }
+        }
     }
 
     private static bool InMainOrAttackActionWindow(GameState state) =>

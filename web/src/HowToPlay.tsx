@@ -94,7 +94,9 @@ export function HowToPlay(props: { onClose: () => void }) {
             gets a face badge instead of plain text: a character face shows fielding cost
             upper-left/attack upper-right/defense lower-right/damage taken (if any) lower-left,
             mirroring a real character die/card, while an energy or Action face just shows its
-            symbol enlarged. Those zones also stop collapsing identical dice into a "×N" chip, so
+            symbol enlarged - with a small "2" if it's a "double" face (some energy faces are
+            worth two, most commonly on Basic Action dice). Those zones also stop collapsing
+            identical dice into a "×N" chip, so
             e.g. two Sidekicks that both rolled Bolt show as two separate badges. Everywhere else
             dice stay compact (small icon + text, collapsed by count) since nothing there is
             showing a face that matters. Hover any die (in any zone) for its full subtitle and

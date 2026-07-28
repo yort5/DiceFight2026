@@ -599,6 +599,15 @@
   margin: 0;
 }
 
+.face-amount {
+  position: absolute;
+  bottom: 1px;
+  right: 3px;
+  font-size: 11px;
+  font-weight: 800;
+  opacity: 0.8;
+}
+
 .face-cost {
   position: absolute;
   top: 2px;
