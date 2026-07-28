@@ -16,6 +16,15 @@ function costLabel(cost: CardDef["globalAbilityCost"]): string {
   return cost.requiredType ? `Pay ${cost.amount} ${cost.requiredType}` : `Pay ${cost.amount}`;
 }
 
+// rawText holds the card's full text box, which for cards like Falcon
+// ("Teamwatch - ... Global: Pay [F]. ...") includes a non-Global clause
+// too - this panel is about the Global specifically, so trim to just the
+// "Global: ..." sentence(s) when that marker is present.
+function globalAbilityText(card: CardDef): string {
+  const idx = card.rawText.indexOf("Global:");
+  return idx >= 0 ? card.rawText.slice(idx) : card.rawText;
+}
+
 function selectedIds(selection: Selection): string[] {
   return selection.primary ? [selection.primary, ...selection.secondary] : [];
 }
@@ -58,6 +67,7 @@ export function GlobalAbilitiesPanel(props: {
             <div>
               <div className="global-card-name">{c.name}</div>
               <div className="global-card-cost">{costLabel(c.globalAbilityCost)}</div>
+              <div className="global-card-text">{globalAbilityText(c)}</div>
             </div>
             <button disabled={busy || flow !== null} onClick={() => props.onStart(c.id)}>
               Use

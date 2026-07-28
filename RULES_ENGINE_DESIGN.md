@@ -891,3 +891,45 @@ Chromium: the sidebar now lists all four Globals with their correct
 costs, and Starfire's flow (paid, no purchase yet, correctly a no-op)
 completed with no error. 55 tests passing; `dotnet build`/`test` and
 `npm run build` both clean.
+
+## Status update — the reroll decision is now genuinely one-shot; Global sidebar shows ability text
+
+Two small fixes, both from a user playtest pass:
+
+**Reroll is a single decision, not a repeatable action.** Rule 2.4.3/
+2.4.4's "you may reroll any of your rolled dice" is one choice made once
+after seeing Roll's results (which can legally be "reroll nothing"), not
+something you can do in multiple passes. `TurnEngine.Reroll` now calls
+`AdvanceStep` at the end of every successful call - since nothing else is
+legal in Roll & Reroll after the decision is made, this both prevents a
+second reroll (a second call now fails with the ordinary "Expected
+RollAndReroll step, was Main" guard - no new state needed) and removes a
+redundant click, matching a specific ask: "you could auto-advance to the
+Main step at that point." Two new unit tests: rerolling auto-advances to
+Main, and a second `Reroll` call (even with an empty selection) throws.
+Updated the "Reroll Selected" hint text and the How to Play modal's Roll
+& Reroll description to match. Verified live: rerolling one die away
+lands the status bar on `Step: Main` with no extra click.
+
+**Global Abilities sidebar now shows each ability's text, not just its
+cost.** Trimmed to the `"Global: ..."` clause of `rawText` when that
+marker is present (so Falcon's Teamwatch clause doesn't clutter its
+sidebar entry) via a new `globalAbilityText` helper in
+`GlobalAbilitiesPanel.tsx`; falls back to the full `rawText` if the
+marker's ever absent. No backend change - `CardDefDto` already sends the
+full `rawText`.
+
+Also answered two playtest questions without a code change: **Franklin's
+Galactus's cost of 3** is `SampleCards.cs`'s `PlaceholderCost` fallback,
+not real sheet data - only Big Barda, Harley Quinn, Robin, and Starfire
+have been swapped for real Google Sheet stats so far; every other card
+(Franklin's Galactus included) still uses `PlaceholderCost = 3` /
+`PlaceholderEnergy = Mask`. **Whether there's a "no attacking on the
+first turn" rule** - not modeled, and not confirmed either way; nothing
+in this repo encodes it (`IsFirstTurn` only affects Clear & Draw's draw
+count, rule 2.3.3), and there's no bundled rulebook text to check against
+- needs the user to confirm the exact wording before it's worth adding.
+
+Nothing engine-breaking here: 56 tests passing (55 + the 2 new reroll
+tests, net +1 after a pre-existing test's expectations were folded into
+the updated one); `dotnet build`/`test` and `npm run build` both clean.

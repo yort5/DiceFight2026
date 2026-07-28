@@ -171,6 +171,28 @@ public class TurnEngineTests
         foreach (var die in reserve.Where(d => d.Id != toReroll.Id))
             Assert.Equal(levelsAfterRoll[die.Id], die.Level); // everyone else kept as originally rolled
         Assert.All(reserve, d => Assert.Equal(Zone.ReservePool, d.Zone)); // reroll doesn't move anyone
+
+        // Rule 2.4.3/2.4.4 - the reroll decision is made once; nothing else
+        // is legal in Roll & Reroll afterward, so it auto-advances to Main.
+        Assert.Equal(TurnStep.Main, state.CurrentStep);
+    }
+
+    [Fact]
+    public void Reroll_CanOnlyBeUsedOnce_EvenWithNoDiceSelected()
+    {
+        var state = CreateNewGame();
+        state.IsFirstTurn = false;
+        TurnEngine.ClearAndDraw(state, new Random(1));
+        TurnEngine.AdvanceStep(state);
+        state.CurrentStep = TurnStep.RollAndReroll;
+
+        var roller = new SequentialRoller();
+        TurnEngine.Roll(state, roller);
+        TurnEngine.Reroll(state, roller, []); // "I don't want to reroll anything" is still the one decision
+        Assert.Equal(TurnStep.Main, state.CurrentStep);
+
+        var ex = Assert.Throws<InvalidOperationException>(() => TurnEngine.Reroll(state, roller, []));
+        Assert.Contains("RollAndReroll", ex.Message);
     }
 
     [Fact]

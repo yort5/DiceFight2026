@@ -48,9 +48,11 @@ export function HowToPlay(props: { onClose: () => void }) {
             <li>
               <strong>Roll &amp; Reroll step</strong> - first "Roll (N dice)" (rolls this turn's
               draw straight into the Reserve Pool - no need to select anything, it's always all of
-              them), then once rolled, "Main ▶". Before advancing, you can select any dice you want
-              to reroll and use the Action Tray's "Reroll Selected" - advancing without doing that
-              just keeps everything as rolled (rule 2.4.3 lets you reroll none).
+              them). Once rolled, you get exactly one reroll decision (rule 2.4.3/2.4.4): either
+              select any dice you want to reroll and use the Action Tray's "Reroll Selected", or
+              select none and click "Main ▶" directly if you're happy with the roll. Either way you
+              land in Main immediately after - "Reroll Selected" advances the step for you the
+              moment it resolves, since nothing else is legal here afterward.
             </li>
             <li>
               <strong>Main step</strong> - two options, since this is a real fork: "Attack ▶" or

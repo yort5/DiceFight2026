@@ -152,6 +152,12 @@ public static class TurnEngine
         var rerollSet = rerollDieIds.ToHashSet();
         foreach (var die in state.DiceIn(state.ActivePlayerId, Zone.ReservePool).Where(d => rerollSet.Contains(d.Id)))
             ApplyRoll(state, roller, die);
+
+        // Rule 2.4.3/2.4.4 - the reroll decision (any/some/none of the
+        // rolled dice) is made once, after seeing Roll's results; once
+        // it's made there's nothing else legal in this step, so this
+        // advances straight to Main rather than leaving a redundant click.
+        AdvanceStep(state);
     }
 
     private static void ApplyRoll(GameState state, IDiceRoller roller, DieInstance die)

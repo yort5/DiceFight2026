@@ -87,7 +87,7 @@ export function ActionTray(props: {
     actions.push({
       key: "reroll-selected",
       label: "Reroll Selected",
-      hint: "Rerolls the selected dice; everything else already rolled this step is left as-is",
+      hint: "One-time decision - rerolls just the selected dice and immediately advances to Main",
       run: () => api.reroll(game.gameId, [primaryDie.id, ...secondaryIds]),
     });
   }
