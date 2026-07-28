@@ -37,6 +37,15 @@ public static class EffectInterpreter
         Execute(node, ctx, cache);
     }
 
+    // Whether this effect tree has any real (non-Self) target for a
+    // caller to choose - reuses the same tree walk Execute itself relies
+    // on to find them, so this can never drift out of sync with what
+    // Execute actually needs. Used by the API to tell the client upfront
+    // whether a Global ability's "targets" stage is meaningful at all,
+    // rather than always showing a "click a target, or Skip" prompt
+    // regardless (e.g. Falcon's Global genuinely has none).
+    public static bool NeedsTarget(EffectNode node) => CollectTargetSpecs(node).Any();
+
     private static IEnumerable<TargetSpec> CollectTargetSpecs(EffectNode node)
     {
         switch (node)

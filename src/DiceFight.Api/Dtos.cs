@@ -1,4 +1,5 @@
 using DiceFight.Engine;
+using DiceFight.Engine.Effects;
 using DiceFight.Engine.Model;
 
 namespace DiceFight.Api;
@@ -15,7 +16,7 @@ public sealed record CardDefDto(
     IReadOnlyList<string> EnergyTypes, IReadOnlyList<string> Affiliations, string? Alignment,
     int DieLimit, IReadOnlyList<CharacterFaceDto> Levels, string RawText,
     IReadOnlyList<string> Keywords, IReadOnlyList<string> AbilityTriggers,
-    GlobalAbilityCostDto? GlobalAbilityCost)
+    GlobalAbilityCostDto? GlobalAbilityCost, bool GlobalAbilityNeedsTarget)
 {
     public static CardDefDto From(CardDef card)
     {
@@ -29,7 +30,8 @@ public sealed record CardDefDto(
             card.Abilities.Select(a => a.Trigger.ToString()).Distinct().ToList(),
             globalAbility?.EnergyCost is { } cost
                 ? new GlobalAbilityCostDto(cost.Amount, cost.RequiredType?.ToString())
-                : null);
+                : null,
+            globalAbility is not null && EffectInterpreter.NeedsTarget(globalAbility.Effect));
     }
 }
 

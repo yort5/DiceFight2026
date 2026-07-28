@@ -87,11 +87,17 @@ function App() {
   }
 
   function confirmGlobalAbilityEnergy() {
-    setGlobalFlow((f) =>
-      f
-        ? { ...f, stage: "targets", energyIds: selection.primary ? [selection.primary, ...selection.secondary] : [] }
-        : f,
-    );
+    if (!globalFlow) return;
+    const energyIds = selection.primary ? [selection.primary, ...selection.secondary] : [];
+    // Skip the targets stage entirely for a Global that doesn't have one
+    // (e.g. Falcon's) instead of showing a "click a target, or Skip"
+    // prompt that would only ever be answered with Skip.
+    const needsTarget = cardsById.get(globalFlow.cardId)?.globalAbilityNeedsTarget ?? true;
+    if (!needsTarget) {
+      submitGlobalAbility(energyIds, []);
+      return;
+    }
+    setGlobalFlow((f) => (f ? { ...f, stage: "targets", energyIds } : f));
     clearSelection();
   }
 
@@ -100,18 +106,12 @@ function App() {
     clearSelection();
   }
 
-  async function submitGlobalAbility(targetIds: string[]) {
+  async function submitGlobalAbility(energyIds: string[], targetIds: string[]) {
     if (!globalFlow || !gameId) return;
     setError(null);
     setBusy(true);
     try {
-      const next = await api.useGlobalAbility(
-        gameId,
-        globalFlow.cardId,
-        globalFlow.playerId,
-        globalFlow.energyIds,
-        targetIds,
-      );
+      const next = await api.useGlobalAbility(gameId, globalFlow.cardId, globalFlow.playerId, energyIds, targetIds);
       setGame(next);
       clearSelection();
       setGlobalFlow(null);
@@ -152,6 +152,21 @@ function App() {
   }
 
   const gameId = game?.gameId;
+
+  // While a Global ability flow is collecting payment, only the chosen
+  // payer's own Reserve Pool energy dice are legal to click - everything
+  // else gets dimmed and made unclickable in the Reserve Pool (see
+  // PlayerBoard) instead of letting the player pick something invalid and
+  // find out from a server error. Null means "no restriction" (every
+  // other flow/step already only offers legal actions its own way).
+  const globalEnergySelectableIds = useMemo(() => {
+    if (!game || !globalFlow || globalFlow.stage !== "energy") return null;
+    return new Set(
+      game.dice
+        .filter((d) => d.controllerId === globalFlow.playerId && d.zone === "ReservePool" && d.status === "Energy")
+        .map((d) => d.id),
+    );
+  }, [game, globalFlow]);
 
   // The Roll & Reroll step's not-yet-rolled dice: this turn's fresh draw
   // plus whatever Clear & Draw carried over from the Prep Area. Rolling
@@ -348,6 +363,7 @@ function App() {
                 cardsById={cardsById}
                 selection={selection}
                 onGroupClick={handleGroupClick}
+                selectableEnergyIds={globalEnergySelectableIds}
               />
               <PlayerBoard
                 title={`${game.playerTwo.name} (${game.playerTwo.id})`}
@@ -357,6 +373,7 @@ function App() {
                 cardsById={cardsById}
                 selection={selection}
                 onGroupClick={handleGroupClick}
+                selectableEnergyIds={globalEnergySelectableIds}
               />
             </section>
           </div>
@@ -373,9 +390,13 @@ function App() {
             onChoosePlayer={chooseGlobalAbilityPlayer}
             onConfirmEnergy={confirmGlobalAbilityEnergy}
             onConfirmTargets={() =>
-              submitGlobalAbility(selection.primary ? [selection.primary, ...selection.secondary] : [])
+              globalFlow &&
+              submitGlobalAbility(
+                globalFlow.energyIds,
+                selection.primary ? [selection.primary, ...selection.secondary] : [],
+              )
             }
-            onSkipTargets={() => submitGlobalAbility([])}
+            onSkipTargets={() => globalFlow && submitGlobalAbility(globalFlow.energyIds, [])}
             onCancel={cancelGlobalAbility}
           />
         </div>

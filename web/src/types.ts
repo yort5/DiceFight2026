@@ -25,6 +25,7 @@ export interface CardDef {
   keywords: string[];
   abilityTriggers: string[];
   globalAbilityCost: GlobalAbilityCost | null;
+  globalAbilityNeedsTarget: boolean;
 }
 
 export interface Die {

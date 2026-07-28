@@ -26,9 +26,14 @@ export function PlayerBoard(props: {
   cardsById: Map<string, CardDef>;
   selection: Selection;
   onGroupClick: (ids: string[]) => void;
+  // While set, only these die ids are clickable in the Reserve Pool -
+  // used during a Global ability's energy stage so a player can't select
+  // a die that isn't legal payment (see App.tsx). Null/undefined means no
+  // restriction, the normal case everywhere else.
+  selectableEnergyIds?: Set<string> | null;
 }) {
-  const { dice, cardsById, selection, onGroupClick } = props;
-  const zoneProps = { cardsById, selection, onGroupClick };
+  const { dice, cardsById, selection, onGroupClick, selectableEnergyIds } = props;
+  const zoneProps = { cardsById, selection, onGroupClick, selectableEnergyIds };
   const dicein = (zone: string) => dice.filter((d) => d.zone === zone);
 
   return (
@@ -116,11 +121,16 @@ function ZoneSection(props: {
   cardsById: Map<string, CardDef>;
   selection: Selection;
   onGroupClick: (ids: string[]) => void;
+  selectableEnergyIds?: Set<string> | null;
   prominent?: boolean;
   bare?: boolean;
 }) {
   const rolled = ROLLED_ZONES.has(props.zone);
   const groups = groupDice(props.dice, props.cardsById, !rolled);
+  // Only the Reserve Pool is ever a source of energy to pay a cost with,
+  // so that's the only zone where selectableEnergyIds narrows anything -
+  // every other zone ignores it and behaves as it always has.
+  const restrictToSelectable = props.zone === "ReservePool" && props.selectableEnergyIds != null;
   const content = (
     <div className="dice">
       {groups.length === 0 && props.prominent && <span className="empty-hint">empty</span>}
@@ -132,12 +142,15 @@ function ZoneSection(props: {
         const countSuffix = group.count > 1 ? ` ×${group.count}` : "";
         const showCharacterFace = rolled && group.characterFace;
         const showIconFace = rolled && !showCharacterFace && group.iconKind;
+        const isSelectable = !restrictToSelectable || group.ids.every((id) => props.selectableEnergyIds!.has(id));
         return (
           <button
             key={group.key}
-            className={`die-chip${selectedCount > 0 ? " selected" : ""}${isPrimary ? " primary" : ""}${showCharacterFace || showIconFace ? " has-face" : ""}`}
+            className={`die-chip${selectedCount > 0 ? " selected" : ""}${isPrimary ? " primary" : ""}${showCharacterFace || showIconFace ? " has-face" : ""}${isSelectable ? "" : " ineligible"}`}
             onClick={() => props.onGroupClick(group.ids)}
-            title={group.tooltip}
+            disabled={!isSelectable}
+            title={isSelectable ? group.tooltip : "Not eligible for what you're currently doing"}
+            data-die-ids={group.ids.join(",")}
           >
             {showCharacterFace ? (
               <>

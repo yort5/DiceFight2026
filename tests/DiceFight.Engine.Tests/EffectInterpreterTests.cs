@@ -156,4 +156,18 @@ public class EffectInterpreterTests
         Assert.All(reserveTargets, d => Assert.Equal(Zone.Bag, d.Zone));
         Assert.All(prepTargets, d => Assert.Equal(Zone.UsedPile, d.Zone));
     }
+
+    [Fact]
+    public void NeedsTarget_IsTrueForAGlobalWithARealTarget_FalseForOneWithout()
+    {
+        // Distraction's Global picks a specific attacking character die -
+        // a real target the caller has to choose.
+        var distractionGlobal = SampleCards.Distraction.Abilities.Single(a => a.Trigger == TriggerType.Global);
+        Assert.True(EffectInterpreter.NeedsTarget(distractionGlobal.Effect));
+
+        // Falcon's Global ("each player must field a Sidekick... if able")
+        // has no chooser-selected target at all - see FieldSidekickForEachPlayer.
+        var falconGlobal = SampleCards.Falcon.Abilities.Single(a => a.Trigger == TriggerType.Global);
+        Assert.False(EffectInterpreter.NeedsTarget(falconGlobal.Effect));
+    }
 }

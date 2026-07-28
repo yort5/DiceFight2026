@@ -2,6 +2,21 @@ import { dieLabel } from "./dieHelpers";
 import type { Selection } from "./PlayerBoard";
 import type { CardDef, Die, GameState } from "./types";
 
+// A rough client-side affordability check - not a strict guarantee (the
+// server's real SpendEnergy is the authority, e.g. for the rare
+// multi-required-type ordering edge case noted in the design doc), just
+// enough to grey out a Global a player plainly can't pay for right now
+// rather than making them click "Use" to find out.
+function canAffordGlobal(dice: Die[], playerId: string, cost: NonNullable<CardDef["globalAbilityCost"]>): boolean {
+  const energy = dice.filter((d) => d.controllerId === playerId && d.zone === "ReservePool" && d.status === "Energy");
+  const total = energy.reduce((sum, d) => sum + d.energyAmount, 0);
+  if (total < cost.amount) return false;
+  if (!cost.requiredType) return true;
+  return energy.some(
+    (d) => d.energyKind === "Wild" || (d.energyKind === "Specific" && d.providedEnergyType === cost.requiredType),
+  );
+}
+
 export type GlobalAbilityStage = "energy" | "targets";
 
 export interface GlobalAbilityFlow {
@@ -62,18 +77,28 @@ export function GlobalAbilitiesPanel(props: {
       <h3>Global Abilities</h3>
       {globals.length === 0 && <p className="empty-hint">No cards with a scripted Global ability yet.</p>}
       <ul className="global-list">
-        {globals.map((c) => (
-          <li key={c.id} className="global-list-item">
-            <div>
-              <div className="global-card-name">{c.name}</div>
-              <div className="global-card-cost">{costLabel(c.globalAbilityCost)}</div>
-              <div className="global-card-text">{globalAbilityText(c)}</div>
-            </div>
-            <button disabled={busy || flow !== null} onClick={() => props.onStart(c.id)}>
-              Use
-            </button>
-          </li>
-        ))}
+        {globals.map((c) => {
+          const affordable =
+            !c.globalAbilityCost ||
+            canAffordGlobal(dice, game.playerOne.id, c.globalAbilityCost) ||
+            canAffordGlobal(dice, game.playerTwo.id, c.globalAbilityCost);
+          return (
+            <li key={c.id} className={`global-list-item${affordable ? "" : " unaffordable"}`}>
+              <div>
+                <div className="global-card-name">{c.name}</div>
+                <div className="global-card-cost">{costLabel(c.globalAbilityCost)}</div>
+                <div className="global-card-text">{globalAbilityText(c)}</div>
+              </div>
+              <button
+                disabled={busy || flow !== null || !affordable}
+                title={affordable ? undefined : "Neither player has enough matching Reserve Pool energy right now"}
+                onClick={() => props.onStart(c.id)}
+              >
+                Use
+              </button>
+            </li>
+          );
+        })}
       </ul>
 
       {flow && activeCard && (
@@ -99,7 +124,8 @@ export function GlobalAbilitiesPanel(props: {
           {flow.stage === "energy" && (
             <>
               <p className="hint">
-                Click {flow.playerId}'s Reserve Pool energy dice on the board to select payment.
+                Click {flow.playerId}'s Reserve Pool energy dice on the board to select payment - other dice are
+                dimmed while you're paying for this.
               </p>
               <div className="global-flow-selection">
                 {chosenIds.length === 0 && <span className="empty-hint">none selected</span>}
@@ -120,9 +146,7 @@ export function GlobalAbilitiesPanel(props: {
 
           {flow.stage === "targets" && (
             <>
-              <p className="hint">
-                If this ability needs a target, click it on the board - otherwise just skip.
-              </p>
+              <p className="hint">This ability needs a target - click it on the board.</p>
               <div className="global-flow-selection">
                 {chosenIds.length === 0 && <span className="empty-hint">none selected</span>}
                 {chosenIds.map((id) => {

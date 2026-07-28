@@ -649,6 +649,11 @@
   background: rgba(255, 179, 71, 0.22);
 }
 
+.die-chip.ineligible {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 .chip-selected-badge {
   position: absolute;
   top: -6px;
@@ -699,6 +704,10 @@
   padding: 6px 8px;
   border-radius: 8px;
   background: rgba(127, 127, 127, 0.08);
+}
+
+.global-list-item.unaffordable {
+  opacity: 0.55;
 }
 
 .global-card-name {

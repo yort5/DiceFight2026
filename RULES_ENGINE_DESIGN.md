@@ -51,11 +51,13 @@ here rather than assuming which approach they'd want.
 **Actionable next steps, roughly high to low value**:
 1. Keyword *behavior* (Overcrush, Regenerate, etc.) - currently just
    tagged as data on `CardDef.Keywords`, not simulated by `CombatEngine`.
-2. Global ability UX - done as a standing sidebar (`GlobalAbilitiesPanel`)
+2. ~~Global ability UX~~ - done as a standing sidebar (`GlobalAbilitiesPanel`)
    with its own energy-then-targets flow; every Global on both rosters
-   (Distraction, Falcon, Invisible Woman, Starfire) is now scripted -
-   still rough - no "does this need a target" hint, no affordability cue,
-   no filtering which dice are valid energy.
+   (Distraction, Falcon, Invisible Woman, Starfire) is scripted, and the
+   three rough edges called out here are now addressed (see the status
+   update) - still no legal-target filtering on the *targets* stage
+   specifically (would need the server to expose real legal-target
+   queries, not just whether a target exists at all).
 3. Legal-target exclusions for captured dice / per-die "cannot be
    targeted" abilities - blocked on Capturing (rule 3.8) not being built.
 4. Team-construction legality (die-limit-sum-to-20, unique-card-name
@@ -1407,3 +1409,64 @@ what lets the web client's existing grouping logic (unchanged - it
 already worked correctly given correct data) collapse them into one
 chip. 64 tests passing (61 + 3 new); `dotnet build`/`test` and `npm run
 build` both clean.
+
+## Status update — Global ability UX: the three noted rough edges, all addressed
+
+Closed out item #2 on the next-steps list - the sidebar's three
+explicitly-called-out gaps (no target-needed hint, no affordability cue,
+no energy filtering).
+
+**"Does this need a target" hint.** New `EffectInterpreter.NeedsTarget`
+reuses `Execute`'s own tree walk (`CollectTargetSpecs(node).Any()`) so it
+can never drift from what `Execute` actually needs a target for, exposed
+as `CardDefDto.GlobalAbilityNeedsTarget`. When false (Falcon's, Starfire's
+- neither has anything for a caller to choose), `App.tsx` skips the
+"targets" stage entirely and submits right after Confirm Energy, instead
+of showing a "click a target, or Skip" prompt that could only ever be
+answered with Skip. `submitGlobalAbility` took an explicit `energyIds`
+parameter for this (previously always read from `globalFlow.energyIds`,
+which wasn't set yet for the direct-submit path).
+
+**Affordability cue.** New client-side `canAffordGlobal` (sums a
+player's Reserve Pool `energyAmount`, checks for at least one Wild/
+matching-type die if the cost requires one) - a card in the sidebar list
+greys out and its Use button disables when *neither* player can
+currently pay, computed independently for both players since the payer
+isn't chosen until the flow starts. Deliberately approximate (doesn't
+replicate `SpendEnergy`'s exact greedy-allocation edge case around
+multi-type costs) - a hint to skip obviously-dead entries, not a
+guarantee; the server stays the real authority.
+
+**Filtering which dice are valid energy.** New `PlayerBoard`/
+`ZoneSection` prop `selectableEnergyIds` - while a Global flow's energy
+stage is active, every Reserve Pool die that isn't the chosen payer's own
+Energy-status die gets `disabled` and a dimmed `.ineligible` style,
+computed once in `App.tsx` (`globalEnergySelectableIds`, a `useMemo` off
+`globalFlow`/`game`) and passed to both boards. Only the Reserve Pool is
+restricted - every other zone was already only ever a wrong click away
+from a clear server error, and dimming the entire board for one flow
+seemed like more noise than help. Doesn't filter by the cost's *required
+type* specifically (a Bolt die is still clickable for a Mask-cost
+Global) since a valid payment can mix types as long as one die matches -
+only true non-starters (wrong player, wrong zone, not on an energy face)
+are excluded.
+
+Also added `data-die-ids` to every die chip - a small, permanent,
+low-cost addition (not just a test hack) for reliably targeting a
+specific die in future automated verification, since rolled-zone chips
+carry their info in an SVG icon and a `title` tooltip rather than text
+`grep`-able by a script.
+
+Verified live via headless Chromium end-to-end: all four Globals show
+dimmed/disabled at game start (nobody has energy yet); Falcon's card
+un-dims once Team A rolls Fist energy; starting its flow dims the
+non-eligible... which in this run turned out to be none, since every
+rolled die happened to be on an energy face - confirmed separately that
+a `SidekickCharacter`-status die *does* get marked ineligible, matching
+the "Energy status only" rule; and using the correct Fist die then
+clicking Confirm Energy resolved immediately with no error and no
+lingering flow - the sidebar returned to its normal list view with
+Falcon's Use button re-enabled, confirming the no-target auto-skip path
+end-to-end. New test `NeedsTarget_IsTrueForAGlobalWithARealTarget_
+FalseForOneWithout` (Distraction vs. Falcon). 65 tests passing (64 + 1
+new); `dotnet build`/`test` and `npm run build` both clean.

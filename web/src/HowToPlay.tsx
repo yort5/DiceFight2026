@@ -109,13 +109,17 @@ export function HowToPlay(props: { onClose: () => void }) {
             The sidebar on the right lists every card with a scripted Global ability and its energy
             cost - Global abilities aren't tied to a die selection the way everything else is
             (either player can trigger any card's Global, whether or not they own or control a die
-            of it), so they get their own flow instead of a spot in the Action Tray. Click{" "}
-            <strong>Use</strong>, pick who's paying, click that player's Reserve Pool energy on the
-            board and <strong>Confirm Energy</strong>, then click a target on the board and{" "}
-            <strong>Confirm Target(s)</strong> (or <strong>Skip</strong> if the ability doesn't need
-            one) - the Action Tray is replaced by a status line while this is in progress.{" "}
-            <strong>Cancel</strong> backs out entirely. Only cards with a fully scripted Global show
-            up here; a card's plain-text Global ability (not yet wired into the engine) won't.
+            of it), so they get their own flow instead of a spot in the Action Tray. A card greys
+            out (and its <strong>Use</strong> button disables) if neither player currently has
+            enough matching Reserve Pool energy to pay for it. Click <strong>Use</strong>, pick
+            who's paying, then click that player's Reserve Pool energy on the board - everything
+            else on the board dims while you do, so it's not possible to select a die that isn't
+            legal payment - and <strong>Confirm Energy</strong>. If the ability actually needs a
+            target you'll be asked to click one next; abilities that don't (like Falcon's) skip
+            straight to resolving instead of showing an empty "or Skip" prompt.{" "}
+            <strong>Cancel</strong> backs out entirely at any point. Only cards with a fully
+            scripted Global show up here; a card's plain-text Global ability (not yet wired into
+            the engine) won't.
           </p>
 
           <h3>Known gaps</h3>
