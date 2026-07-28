@@ -91,10 +91,7 @@ public static class EffectInterpreter
                 {
                     var die = FindDie(ctx, id);
                     die.Zone = Zone.PrepArea; // rule 1.5.3.2
-                    die.Damage = 0;
-                    die.Level = 1;
-                    die.Status = DieStatus.Unrolled;
-                    die.AppliedModifiers.Clear();
+                    die.ResetToUnrolled();
                 }
                 break;
 
@@ -122,7 +119,11 @@ public static class EffectInterpreter
 
             case PrepDie prep:
                 foreach (var id in Resolve(ctx, prep.Source, cache))
-                    FindDie(ctx, id).Zone = Zone.PrepArea;
+                {
+                    var die = FindDie(ctx, id);
+                    die.Zone = Zone.PrepArea;
+                    die.ResetToUnrolled();
+                }
                 break;
 
             case FieldDie field:
@@ -182,10 +183,16 @@ public static class EffectInterpreter
             case FieldSidekickForEachPlayer:
                 foreach (var playerId in new[] { ctx.ControllerId, ctx.State.OpponentOf(ctx.ControllerId) })
                 {
-                    var sidekick = ctx.State.DiceIn(playerId, Zone.UsedPile)
-                        .FirstOrDefault(d => d.Status == DieStatus.SidekickCharacter);
+                    // Rule 1.6.8 - a Sidekick sitting in the Used Pile is
+                    // unrolled (not "considered a character die"), so any
+                    // one of them is fair game - there's no stale rolled
+                    // face to match against once dormant-zone dice are
+                    // correctly reset (see DieInstance.ResetToUnrolled).
+                    var sidekick = ctx.State.DiceIn(playerId, Zone.UsedPile).FirstOrDefault(d => d.IsSidekick);
                     if (sidekick is null) continue; // rule text's "if able"
                     sidekick.Zone = Zone.FieldZone;
+                    sidekick.Status = DieStatus.SidekickCharacter;
+                    sidekick.Level = 1;
                 }
                 break;
 

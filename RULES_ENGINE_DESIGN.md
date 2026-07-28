@@ -63,6 +63,17 @@ here rather than assuming which approach they'd want.
    full die limit regardless of team size (see `TeamSetup.cs`'s remarks).
 5. Auth/login in front of the API - currently wide open, matches the
    deployment note above.
+6. Real priority-passing (turn player acts, passes to the non-turn
+   player for one window, who may act-or-pass, turn ends when the
+   non-turn player passes and the turn player then passes with nothing in
+   between) - this engine currently just has an open, un-timed action
+   window per step instead. A concrete symptom: `OncePerTurn` Global
+   limiters like Falcon's "Once during your turn" are enforced as a flat
+   once-per-turn-cycle limit usable by *either* player, not scoped to
+   whoever's turn it actually reads as - see the status update where this
+   was found. A real, separate architectural piece (new state, a "pass"
+   action, every Main Step action needing to reason about whose window it
+   is), not a one-line fix - deferred pending the user's prioritization.
 
 Also done, out of order (the user asked for it explicitly once the above
 was clear): a visual pass matching the physical mat's zone layout and
@@ -1315,3 +1326,84 @@ path already covered by the previous entry's live check plus this
 entry's new unit tests, so the residual risk from skipping a fresh
 screenshot is low. 61 tests passing (59 + 2 new); `dotnet build`/`test`
 and `npm run build` both clean.
+
+## Status update — dice landing in a dormant zone now actually go "unrolled"; fixed a real bug this exposed in Falcon's Global
+
+Started from a UI ask ("could the Used Pile's identical Sidekicks
+coalesce into one chip?") that turned out to be a real state bug, not a
+display one. The rulebook confirms it directly (a section I hadn't
+needed to read closely before now): "Dice are considered to either be
+'rolled dice' or 'unrolled dice,' depending on their location... Dice in
+the Prep Area, Used Pile, and bag are considered 'unrolled dice,' and it
+doesn't matter what face happens to be showing." This engine was never
+actually resetting a die's rolled-face fields when it returned to one of
+those zones - `SpendEnergy` (and the various Clean Up/Clear & Draw
+sweeps) only ever changed `Zone`, leaving `Status`/`Level`/`EnergyKind`/
+etc. exactly as they were the moment the die was last rolled. Two Used
+Pile Sidekicks that had rolled Mask and Shield respectively stayed
+visibly different (blocking the client's own grouping logic, which keys
+on all of those fields) essentially forever, or until they happened to
+get rolled again.
+
+**New `DieInstance.IsRolled`** - a computed property, not a stored flag
+(`Zone is ReservePool or FieldZone or AttackZone`), matching the
+rulebook's own framing verbatim: rolled-ness is entirely zone-derived,
+so tracking it separately would just invite the two to drift apart.
+**New `DieInstance.ResetToUnrolled()`** - `Status = Unrolled`, `Level =
+1`, `Damage = 0`, clears `EnergyKind`/`ProvidedEnergyType`/
+`AppliedModifiers`, `EnergyAmount = 1`. Called at every point a die
+actually lands in a dormant zone: `ClearAndDraw`'s Reserve-Pool-to-Used-
+Pile sweep (rule 2.3.1), both of Clean Up's sweeps (rule 2.8.3's unused
+Action dice, rule 2.8.6's Out of Play), an Epic Basic Action returning to
+its card, `SpendEnergy`'s Inactive-player payments (which land straight
+in the Used Pile, skipping Out of Play entirely - rule 1.5.8.5), and the
+`PrepDie` effect (e.g. Shocking Grasp's own "you may Prep this die").
+Deliberately *not* called for Out of Play itself, even though it's
+heading for the Used Pile at Clean Up regardless - what a die was just
+spent as is genuinely useful information while priority is still live
+this turn, and `Ko`'s existing reset (already correct, just duplicated
+inline in two places) now calls the shared method too.
+
+**The bug this exposed**: `FieldSidekickForEachPlayer` (Falcon's Global)
+searched a player's Used Pile for a die with `Status ==
+SidekickCharacter` - which only ever matched because Used Pile dice
+were staying stuck on whatever face they'd last shown, exactly the bug
+above. Once dormant-zone dice are correctly reset, that condition would
+never match anything, ever, silently turning Falcon's Global into a
+permanent no-op. Rule 1.6.8 already says the right check: a Sidekick
+sitting in the Used Pile is a Sidekick, full stop, whatever it once
+rolled - fixed to `d.IsSidekick`, and the effect now explicitly sets
+`Status`/`Level` when fielding it (previously implicit and, again, only
+correct by accident).
+
+Also answered a related question about Falcon's Global without a code
+change: it currently reads "Once during your turn" as a flat once-per-
+turn-cycle limiter enforceable by *either* player (`GlobalsUsedThisTurn`,
+unscoped to whoever's turn it actually is) - which is how the user
+found it could be activated by the non-turn player at all. Properly
+scoping "your turn" needs this engine to actually model priority passing
+(the user's own description: the turn player acts, passes to the
+non-turn player for one window, who may act-or-pass, turn ends when the
+non-turn player passes and the turn player then passes with nothing in
+between) - a real, separate architectural piece, not a one-line fix.
+Recommended treating it as a deferred gap rather than tackling it now,
+given the size of what it would actually touch (new state, a "pass"
+action, and rework of how every Main Step action reasons about whose
+window it is) versus the two concrete, scoped fixes this entry already
+made. Left for the user to confirm/prioritize separately.
+
+New tests: `ClearAndDraw`'s sweep resets a rolled die and makes two
+differently-rolled dice state-identical afterward (the direct
+"coalescing" precondition), Clean Up's two sweeps reset correctly, and
+the existing Shocking Grasp/Falcon tests were tightened - Shocking
+Grasp's own test now asserts its Prepped die is `Unrolled`, and Falcon's
+test was rewritten to *not* pre-set `SidekickCharacter` status on its
+Used Pile Sidekick (the old version was quietly relying on the very bug
+this entry fixes). Verified live via the real API too: rolled three
+Sidekicks to genuinely different faces (character/Mask/Shield), left
+them unspent through a full turn cycle, and confirmed all of Team A's
+Used Pile Sidekicks come out byte-for-byte identical afterward - exactly
+what lets the web client's existing grouping logic (unchanged - it
+already worked correctly given correct data) collapse them into one
+chip. 64 tests passing (61 + 3 new); `dotnet build`/`test` and `npm run
+build` both clean.

@@ -174,6 +174,11 @@ public class TwoTeamsDemoTests
 
         Assert.Equal(Zone.PrepArea, target.Zone); // KO'd
         Assert.Equal(Zone.PrepArea, shockingGraspDie.Zone); // its own Conditional Prepped it
+
+        // Prep Area is a dormant zone (rulebook's "unrolled dice" -
+        // doesn't matter what face was showing) - the die's own Action
+        // status from being used shouldn't linger now that it's Prepped.
+        Assert.Equal(DieStatus.Unrolled, shockingGraspDie.Status);
     }
 
     [Fact]
@@ -260,9 +265,12 @@ public class TwoTeamsDemoTests
 
         // Team B has a Sidekick sitting in their Used Pile to be fielded;
         // Team A has none, exercising the "if able" no-op half at once.
+        // Rule 1.6.8 - a Sidekick in the Used Pile is unrolled, not on any
+        // particular face (matches DieInstance.ResetToUnrolled's default),
+        // so this deliberately does NOT set a rolled Status - finding it
+        // has to work off IsSidekick alone.
         var teamBSidekick = state.DiceIn("teamB", Zone.Bag).First();
         teamBSidekick.Zone = Zone.UsedPile;
-        teamBSidekick.Status = DieStatus.SidekickCharacter;
 
         var energy = GiveWildEnergy(state, "teamB", 1);
         var queue = new AbilityQueue();

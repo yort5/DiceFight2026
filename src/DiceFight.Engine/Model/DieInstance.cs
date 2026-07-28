@@ -53,4 +53,40 @@ public sealed class DieInstance
     public List<DieInstance> AttachedGear { get; } = [];
 
     public bool IsSidekick => CardId is null && !IsVirtualEnergy;
+
+    // The rulebook's own "rolled dice" vs. "unrolled dice" distinction
+    // ("More About Dice"): it's entirely zone-derived, not a separate
+    // tracked state - "Dice in the Reserve Pool or the Field Zone
+    // (including the Attack Zone) are considered to be whatever their
+    // face is... Dice in the Prep Area, Used Pile, and bag are considered
+    // 'unrolled dice,' and it doesn't matter what face happens to be
+    // showing." Kept as a computed property for exactly that reason,
+    // rather than a stored flag that could drift out of sync with Zone.
+    public bool IsRolled => Zone is Zone.ReservePool or Zone.FieldZone or Zone.AttackZone;
+
+    // Rule 1.6.8 - "when they are unrolled (in the Prep Area, Used Pile,
+    // or the bag) they are not considered to be character dice, but just
+    // Sidekick dice" - the same idea applies to any die, not just
+    // Sidekicks: once it leaves a zone where its rolled face actually
+    // matters (Reserve Pool/Field Zone/Attack Zone - see IsRolled), that
+    // face is meaningless until the die is drawn and rolled fresh again.
+    // Call this whenever a die lands in a genuinely dormant zone (Used
+    // Pile, Bag, Prep Area, or back on its own Unpurchased card) so
+    // nothing downstream has to guess whether a stale Status/Level/
+    // EnergyKind is still real - grouping identical dice for display, or
+    // an ability like Falcon's Global looking for "a Sidekick in the Used
+    // Pile", both depend on this actually happening. Not called for the
+    // transient Out of Play zone - what a die was just spent as is still
+    // useful information mid-turn, so that staleness only gets cleaned up
+    // once Out of Play is swept to the Used Pile at Clean Up.
+    public void ResetToUnrolled()
+    {
+        Status = DieStatus.Unrolled;
+        Level = 1;
+        Damage = 0;
+        EnergyKind = EnergyKind.None;
+        ProvidedEnergyType = null;
+        EnergyAmount = 1;
+        AppliedModifiers.Clear();
+    }
 }

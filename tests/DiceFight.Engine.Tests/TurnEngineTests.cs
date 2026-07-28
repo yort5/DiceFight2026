@@ -254,4 +254,84 @@ public class TurnEngineTests
 
         Assert.Throws<InvalidOperationException>(() => TurnEngine.AdvanceStep(state));
     }
+
+    [Fact]
+    public void ClearAndDraw_SweepsUnspentReservePoolDice_ResetsThemToUnrolled()
+    {
+        var state = CreateNewGame();
+        state.IsFirstTurn = false;
+        TurnEngine.ClearAndDraw(state, new Random(1));
+        TurnEngine.AdvanceStep(state);
+        TurnEngine.Roll(state, new FixedRoller(DieStatus.Energy, 0, EnergyKind.Specific, EnergyType.Mask));
+        var rolled = state.DiceIn("p1", Zone.ReservePool).ToList();
+        Assert.All(rolled, d => Assert.Equal(DieStatus.Energy, d.Status)); // sanity - actually rolled
+
+        // Nothing gets spent; the turn passes and it's p1's Clear & Draw again.
+        state.CurrentStep = TurnStep.ClearAndDraw;
+        TurnEngine.ClearAndDraw(state, new Random(2));
+
+        // Rulebook's "More About Dice" - the Used Pile holds "unrolled
+        // dice," and it doesn't matter what face happened to be showing.
+        Assert.All(rolled, d => Assert.Equal(Zone.UsedPile, d.Zone));
+        Assert.All(rolled, d => Assert.False(d.IsRolled));
+        Assert.All(rolled, d => Assert.Equal(DieStatus.Unrolled, d.Status));
+        Assert.All(rolled, d => Assert.Equal(EnergyKind.None, d.EnergyKind));
+        Assert.All(rolled, d => Assert.Null(d.ProvidedEnergyType));
+        Assert.All(rolled, d => Assert.Equal(1, d.EnergyAmount));
+    }
+
+    [Fact]
+    public void ClearAndDraw_SweepsUnspentReservePoolDice_TwoDifferentRolledFacesBecomeIndistinguishable()
+    {
+        var state = CreateNewGame();
+        state.IsFirstTurn = false;
+        TurnEngine.ClearAndDraw(state, new Random(1));
+        TurnEngine.AdvanceStep(state);
+        TurnEngine.Roll(state, new SequentialRoller()); // each die gets a different Level
+        var rolled = state.DiceIn("p1", Zone.ReservePool).ToList();
+        Assert.True(rolled.Select(d => d.Level).Distinct().Count() > 1); // sanity - genuinely different faces
+
+        state.CurrentStep = TurnStep.ClearAndDraw;
+        TurnEngine.ClearAndDraw(state, new Random(2));
+
+        // Once dormant, dice that were on different faces are - correctly,
+        // per the rulebook - indistinguishable from each other, which is
+        // exactly what lets the web client collapse them into one "×N"
+        // chip instead of listing each separately.
+        var distinctStates = rolled
+            .Select(d => (d.Status, d.Level, d.Damage, d.EnergyKind, d.ProvidedEnergyType, d.EnergyAmount))
+            .Distinct()
+            .Count();
+        Assert.Equal(1, distinctStates);
+    }
+
+    [Fact]
+    public void CleanUp_SweepsOutOfPlayAndUnusedActionDice_ResetsThemToUnrolled()
+    {
+        var state = CreateNewGame();
+        state.IsFirstTurn = false;
+        TurnEngine.ClearAndDraw(state, new Random(1));
+        TurnEngine.AdvanceStep(state);
+        TurnEngine.Roll(state, new FixedRoller(DieStatus.Energy, 0, EnergyKind.Wild));
+        TurnEngine.AdvanceStep(state); // Main
+
+        // One energy die spent (-> Out of Play), one Action die rolled but
+        // never used (-> stays in the Reserve Pool on its Action face).
+        var reserve = state.DiceIn("p1", Zone.ReservePool).ToList();
+        var spent = reserve[0];
+        spent.Zone = Zone.OutOfPlay;
+        var unusedAction = reserve[1];
+        unusedAction.Status = DieStatus.Action;
+
+        state.CurrentStep = TurnStep.CleanUp;
+        TurnEngine.CleanUp(state);
+
+        foreach (var die in new[] { spent, unusedAction })
+        {
+            Assert.Equal(Zone.UsedPile, die.Zone);
+            Assert.False(die.IsRolled);
+            Assert.Equal(DieStatus.Unrolled, die.Status);
+            Assert.Equal(EnergyKind.None, die.EnergyKind);
+        }
+    }
 }

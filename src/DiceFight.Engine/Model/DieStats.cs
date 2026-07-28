@@ -43,10 +43,7 @@ public static class DieStats
         if (die.Damage < EffectiveDefense(state, die)) return false;
 
         die.Zone = Zone.PrepArea; // rule 1.5.3.2
-        die.Damage = 0;
-        die.Level = 1;
-        die.Status = DieStatus.Unrolled;
-        die.AppliedModifiers.Clear(); // rule 3.4.5.4 lifetime ends when the die leaves the Field Zone
+        die.ResetToUnrolled(); // also covers rule 3.4.5.4 - modifier lifetime ends when the die leaves the Field Zone
         return true;
     }
 }

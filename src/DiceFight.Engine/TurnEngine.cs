@@ -53,7 +53,10 @@ public static class TurnEngine
         // Rule 2.3.1 - clear the Reserve Pool (unspent energy from the
         // opponent's turn) to the Used Pile.
         foreach (var die in state.DiceIn(activeId, Zone.ReservePool).ToList())
+        {
             die.Zone = Zone.UsedPile;
+            die.ResetToUnrolled();
+        }
 
         // Carry over anything a KO or a Prep effect left sitting in the
         // Prep Area since this player's last Roll & Reroll - it rolls
@@ -298,6 +301,7 @@ public static class TurnEngine
                 throw new InvalidOperationException("Only one Epic Basic Action die may be used per turn.");
             state.EpicBasicActionUsedThisTurn = true;
             die.Zone = Zone.Unpurchased;
+            die.ResetToUnrolled();
         }
         else
         {
@@ -422,6 +426,7 @@ public static class TurnEngine
                 if (die.EnergyKind == EnergyKind.Generic)
                 {
                     die.Zone = destinationZone;
+                    if (destinationZone == Zone.UsedPile) die.ResetToUnrolled();
                     AddVirtualGenericEnergy(state, payerId, overspend);
                 }
                 else
@@ -432,6 +437,12 @@ public static class TurnEngine
             else
             {
                 die.Zone = destinationZone;
+                // Out of Play is transient (swept - and reset - at Clean
+                // Up); a die landing straight in the Used Pile (the
+                // Inactive player's Global payments skip Out of Play
+                // entirely - rule 1.5.8.5) is already dormant, so reset
+                // now rather than leaving a stale face to linger.
+                if (destinationZone == Zone.UsedPile) die.ResetToUnrolled();
             }
         }
     }
@@ -539,11 +550,17 @@ public static class TurnEngine
         // Rule 2.8.3 - Action dice left on their action face in the Reserve
         // Pool move to the Used Pile.
         foreach (var die in state.DiceIn(activeId, Zone.ReservePool).Where(d => d.Status == DieStatus.Action).ToList())
+        {
             die.Zone = Zone.UsedPile;
+            die.ResetToUnrolled();
+        }
 
         // Rule 2.8.6 - Out of Play empties to the Used Pile and the turn passes.
         foreach (var die in state.DiceIn(activeId, Zone.OutOfPlay).ToList())
+        {
             die.Zone = Zone.UsedPile;
+            die.ResetToUnrolled();
+        }
 
         // Unspent virtual generic energy does not carry over (rule 1.4.5/
         // 2.6.7.1(2)) - removed outright rather than swept to the Used
