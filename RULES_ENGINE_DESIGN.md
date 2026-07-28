@@ -52,11 +52,10 @@ here rather than assuming which approach they'd want.
 1. Keyword *behavior* (Overcrush, Regenerate, etc.) - currently just
    tagged as data on `CardDef.Keywords`, not simulated by `CombatEngine`.
 2. Global ability UX - done as a standing sidebar (`GlobalAbilitiesPanel`)
-   with its own energy-then-targets flow; two Globals now actually work
-   (Distraction, Falcon) - still rough - no "does this need a target"
-   hint, no affordability cue, no filtering which dice are valid energy.
-   Every other Global on the two rosters (Invisible Woman, Starfire) is
-   still unscripted text only.
+   with its own energy-then-targets flow; every Global on both rosters
+   (Distraction, Falcon, Invisible Woman, Starfire) is now scripted -
+   still rough - no "does this need a target" hint, no affordability cue,
+   no filtering which dice are valid energy.
 3. Real per-attacker blocker assignment in the web client - only "no
    blockers" is wired up today.
 4. Legal-target exclusions for captured dice / per-die "cannot be
@@ -852,3 +851,43 @@ die, paid Falcon's cost through the sidebar, and the flow completed with
 no error and the Fist die correctly leaving the Reserve Pool. 52 tests
 passing (51 + the new one); `dotnet build`/`test` and `npm run build`
 both clean.
+
+## Status update — Invisible Woman's and Starfire's Globals scripted; every Global on both rosters now works
+
+Rounding out the sidebar - all four cards across both rosters with a
+Global ability (Distraction, Falcon, Invisible Woman, Starfire) are now
+scripted, not just data. Two more small additions to the effect DSL:
+
+- **`ForceBlock(TargetSpec Target)`** - Invisible Woman's "target
+  character die must block this turn." Adds the resolved die id(s) to a
+  new `GameState.MustBlockThisTurn` set (reset in `CleanUp`).
+  `CombatEngine.DeclareBlockers` now checks that set before moving any
+  dice: if a forced die is still an eligible blocker (inactive player,
+  Field Zone) and wasn't included in `blockerDieIds`, it throws before
+  mutating anything, rather than partially declaring blockers and then
+  failing partway through.
+- **`PrepFromBagIfPurchasedThisTurn`** - Starfire's "if you purchased a
+  die this turn, Prep a die from your bag." The "if you..." clause reads
+  a new `Player.PurchasedDieThisTurn` flag (set in `TurnEngine.Purchase`,
+  reset in `CleanUp`) rather than going through `Conditional` - that node
+  only checks a target's post-effect state (rule 3.1.17's "if you do"),
+  not turn-scoped history, so this reads game state directly instead,
+  same reasoning as Falcon's `FieldSidekickForEachPlayer`. Also, like
+  `DrawDice`, the bag pick itself is fungible so there's nothing for a
+  caller to choose.
+
+Both cards' non-Global clauses stay unscripted on purpose, same
+independent-ability-slots reasoning as Distraction/Falcon: Invisible
+Woman's static "+1 attack for each active [F4]..." needs a
+count-matching-dice stat modifier that doesn't exist yet, and Starfire's
+"Recruit" needs an off-team-recruitment mechanic that doesn't exist yet.
+
+Three new unit tests: Invisible Woman's forced block actually blocks a
+declared attacker and rejects an empty blocker list first (via
+`CombatEngine.DeclareBlockers`); Starfire preps a bag die after a real
+`Purchase` call sets the flag; Starfire is a no-op without a purchase and
+still enforces its own once-per-turn limit. Verified live via headless
+Chromium: the sidebar now lists all four Globals with their correct
+costs, and Starfire's flow (paid, no purchase yet, correctly a no-op)
+completed with no error. 55 tests passing; `dotnet build`/`test` and
+`npm run build` both clean.

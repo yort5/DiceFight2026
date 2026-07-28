@@ -28,6 +28,10 @@ public sealed class GameState
     // during your turn"), keyed by cardId; reset in CleanUp.
     public HashSet<string> GlobalsUsedThisTurn { get; } = [];
 
+    // Die ids forced to block this turn (e.g. Invisible Woman's Global),
+    // enforced by CombatEngine.DeclareBlockers; reset in CleanUp.
+    public HashSet<string> MustBlockThisTurn { get; } = [];
+
     public Player GetPlayer(string playerId) =>
         playerId == PlayerOne.Id ? PlayerOne
         : playerId == PlayerTwo.Id ? PlayerTwo

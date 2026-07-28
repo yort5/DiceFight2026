@@ -48,6 +48,7 @@ public static class EffectInterpreter
                 break;
             case DealDamage n: if (!n.Target.IsSelf) yield return n.Target; break;
             case Ko n: if (!n.Target.IsSelf) yield return n.Target; break;
+            case ForceBlock n: if (!n.Target.IsSelf) yield return n.Target; break;
             case MoveDie n: if (!n.Target.IsSelf) yield return n.Target; break;
             case ModifyStat n: if (!n.Target.IsSelf) yield return n.Target; break;
             case Reroll n: if (!n.Target.IsSelf) yield return n.Target; break;
@@ -185,6 +186,21 @@ public static class EffectInterpreter
                         .FirstOrDefault(d => d.Status == DieStatus.SidekickCharacter);
                     if (sidekick is null) continue; // rule text's "if able"
                     sidekick.Zone = Zone.FieldZone;
+                }
+                break;
+
+            case ForceBlock forceBlock:
+                foreach (var id in Resolve(ctx, forceBlock.Target, cache))
+                    ctx.State.MustBlockThisTurn.Add(id);
+                break;
+
+            case PrepFromBagIfPurchasedThisTurn:
+                if (ctx.State.GetPlayer(ctx.ControllerId).PurchasedDieThisTurn)
+                {
+                    var bag = ctx.State.DiceIn(ctx.ControllerId, Zone.Bag).ToList();
+                    var picked = ctx.Random is not null ? bag.ElementAtOrDefault(ctx.Random.Next(bag.Count)) : bag.FirstOrDefault();
+                    if (picked is not null)
+                        picked.Zone = Zone.PrepArea;
                 }
                 break;
 

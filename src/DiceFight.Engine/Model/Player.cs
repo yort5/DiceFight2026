@@ -17,4 +17,8 @@ public sealed class Player
     // Team is up to 8 unique Character/Action cards + 2 Basic Action cards
     // (rule 2.1.1), referenced by CardDef.Id.
     public List<string> TeamCardIds { get; } = [];
+
+    // Backs Starfire's Global ("if you purchased a die this turn..."); set
+    // in TurnEngine.Purchase, reset in CleanUp.
+    public bool PurchasedDieThisTurn { get; set; }
 }

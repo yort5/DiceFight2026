@@ -37,6 +37,24 @@ public static class CombatEngine
         RequireSubStep(state, AttackSubStep.DeclareBlockers);
 
         var inactiveId = state.OpponentOf(state.ActivePlayerId);
+
+        // Rule-text "must block" (e.g. Invisible Woman's Global) - checked
+        // before any zone changes below, so a missing forced blocker
+        // aborts cleanly instead of leaving other chosen blockers already
+        // moved. Only enforced against dice still actually eligible to
+        // block (controlled by the inactive player, still in the Field
+        // Zone) - a forced die that got KO'd or moved elsewhere is just
+        // skipped, matching the rule text's "if able" spirit even though
+        // this ability's own printed text doesn't say "if able".
+        var forcedButOmitted = state.DiceIn(inactiveId, Zone.FieldZone)
+            .Where(d => state.MustBlockThisTurn.Contains(d.Id) && !blockerDieIds.Contains(d.Id))
+            .ToList();
+        if (forcedButOmitted.Count > 0)
+        {
+            var names = string.Join(", ", forcedButOmitted.Select(d => DisplayName(state, d)));
+            throw new InvalidOperationException($"{names} must block this turn.");
+        }
+
         foreach (var id in blockerDieIds)
         {
             var die = FindDie(state, id);
@@ -138,4 +156,7 @@ public static class CombatEngine
     private static DieInstance FindDie(GameState state, string id) =>
         state.Dice.SingleOrDefault(d => d.Id == id)
         ?? throw new InvalidOperationException($"No die with id '{id}'.");
+
+    private static string DisplayName(GameState state, DieInstance die) =>
+        die.CardId is { } cardId && state.CardCatalog.TryGetValue(cardId, out var card) ? card.Name : die.Id;
 }

@@ -61,6 +61,10 @@ public sealed record TargetSpec(
 
 public sealed record DealDamage(int Amount, TargetSpec Target) : EffectNode;
 public sealed record Ko(TargetSpec Target) : EffectNode;
+// Invisible Woman's Global ("target character die must block this turn") -
+// flags the target in GameState.MustBlockThisTurn; enforced by
+// CombatEngine.DeclareBlockers, cleared at Clean Up.
+public sealed record ForceBlock(TargetSpec Target) : EffectNode;
 public sealed record MoveDie(TargetSpec Target, Model.Zone ToZone) : EffectNode;
 public sealed record ModifyStat(TargetSpec Target, int? AttackDelta, int? DefenseDelta) : EffectNode;
 public sealed record Reroll(TargetSpec Target) : EffectNode;
@@ -97,3 +101,11 @@ public sealed record Conditional(TargetSpec CheckTarget, EffectCondition When, E
 // TargetSpec/ResolveTargets choice pipeline entirely rather than stretch
 // TargetSpec to express "both players, no chooser, silently skip if none."
 public sealed record FieldSidekickForEachPlayer : EffectNode;
+
+// Starfire's Global ("if you purchased a die this turn, Prep a die from
+// your bag") - the "if you..." check is against turn-scoped state
+// (Player.PurchasedDieThisTurn), not a die's condition, so like
+// FieldSidekickForEachPlayer this reads game state directly rather than
+// going through Conditional/TargetSpec; the bag pick is fungible, same
+// reasoning as DrawDice's.
+public sealed record PrepFromBagIfPurchasedThisTurn : EffectNode;

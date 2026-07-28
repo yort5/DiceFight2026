@@ -242,6 +242,7 @@ public static class TurnEngine
         // Basic Actions bought by the non-bringing player.
         die.ControllerId = state.ActivePlayerId;
         die.Zone = Zone.UsedPile; // rule 2.6.2.6
+        state.GetPlayer(state.ActivePlayerId).PurchasedDieThisTurn = true;
     }
 
     // Rule 2.6.3 - Field Character Dice, one of the four Main Step game
@@ -439,6 +440,11 @@ public static class TurnEngine
 
         // Card-text once-per-turn Global limiters (e.g. Falcon) reset too.
         state.GlobalsUsedThisTurn.Clear();
+
+        // Rule-text turn-scoped flags reset (Invisible Woman's forced
+        // blockers, Starfire's "purchased a die this turn" check).
+        state.MustBlockThisTurn.Clear();
+        state.GetPlayer(activeId).PurchasedDieThisTurn = false;
 
         state.IsFirstTurn = false;
         state.ActivePlayerId = state.OpponentOf(activeId);

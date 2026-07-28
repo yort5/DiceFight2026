@@ -219,16 +219,26 @@ public static class SampleCards
         "When fielded, roll 2 dice from your bag.",
         abilities: [new AbilityDef(TriggerType.WhenFielded, Cost: null, Effect: new DrawDice(2))]);
 
+    // The static "+1 attack for each other active [F4]..." clause is left
+    // unscripted (no "count active dice matching X" stat-modifier
+    // primitive exists yet); its Global stands on its own, same
+    // independent-ability-slots reasoning as Distraction/Falcon above.
     public static readonly CardDef InvisibleWoman = Character(
         "invisible-woman", "Invisible Woman", "Also Dr. Richards", dieLimit: 4,
         "Invisible Woman gets +1 attack for each of your other active [F4] character dice. " +
-        "Global: Pay [M]. Target character die must block this turn.");
+        "Global: Pay [M]. Target character die must block this turn.",
+        abilities: [new AbilityDef(TriggerType.Global, Cost: null,
+            Effect: new ForceBlock(TargetSpec.CharacterDie("target character die")),
+            EnergyCost: new EnergyCost(Amount: 1, RequiredType: EnergyType.Mask))]);
 
     public static readonly CardDef JaneFoster = Character(
         "jane-foster", "Jane Foster", "Doctor", dieLimit: 4,
         "When fielded, gain 2 life, and gain an extra 2 life for each of your other active characters " +
         "with Thor in their name or subtitle, or the [TCS] affiliation.");
 
+    // "Recruit" (bring in an off-team Teen Titans die) is left unscripted -
+    // no off-team-recruitment mechanic exists yet; its Global stands on
+    // its own, same independent-ability-slots reasoning as above.
     public static readonly CardDef Starfire = Character(
         "starfire", "Starfire", "No-Nonsense Warrior", dieLimit: 4,
         "Recruit - a Teen Titans character die.\n" +
@@ -238,7 +248,11 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3),
             new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 4),
             new CharacterFace(FieldingCost: 2, Attack: 5, Defense: 5)
-        ]);
+        ],
+        abilities: [new AbilityDef(TriggerType.Global, Cost: null,
+            Effect: new PrepFromBagIfPurchasedThisTurn(),
+            EnergyCost: new EnergyCost(Amount: 1, RequiredType: EnergyType.Shield),
+            OncePerTurn: true)]);
 
     public static readonly CardDef Kang = Character(
         "kang", "Kang", "Prophetic Revelation", dieLimit: 3,

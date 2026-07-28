@@ -261,4 +261,83 @@ public class TwoTeamsDemoTests
             TurnEngine.UseGlobalAbility(state, queue, SampleCards.Falcon.Id, "teamB", moreEnergy.Select(d => d.Id).ToList()));
         Assert.Contains("once per turn", ex.Message);
     }
+
+    [Fact]
+    public void UsingInvisibleWomanGlobalAbility_ForcesTargetToBlock_EnforcedAtDeclareBlockers()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamA";
+
+        var teamBBlocker = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        teamBBlocker.Zone = Zone.FieldZone;
+        teamBBlocker.Status = DieStatus.Character;
+        teamBBlocker.Level = 1;
+
+        var energy = GiveWildEnergy(state, "teamA", 1);
+        var queue = new AbilityQueue();
+        TurnEngine.UseGlobalAbility(
+            state, queue, SampleCards.InvisibleWoman.Id, "teamA", energy.Select(d => d.Id).ToList());
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [teamBBlocker.Id])));
+
+        Assert.Contains(teamBBlocker.Id, state.MustBlockThisTurn);
+
+        var attacker = FindUnpurchased(state, "teamA", SampleCards.BigBarda.Id);
+        attacker.Zone = Zone.FieldZone;
+        attacker.Status = DieStatus.Character;
+        attacker.Level = 1;
+
+        state.CurrentStep = TurnStep.Attack;
+        state.AttackSubStep = AttackSubStep.DeclareAttackers;
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            CombatEngine.DeclareBlockers(state, new CombatAssignment(), blockerDieIds: []));
+        Assert.Contains("must block", ex.Message);
+
+        CombatEngine.DeclareBlockers(state, new CombatAssignment(), blockerDieIds: [teamBBlocker.Id]);
+        Assert.Equal(Zone.AttackZone, teamBBlocker.Zone);
+    }
+
+    [Fact]
+    public void UsingStarfireGlobalAbility_PrepsADieFromBag_IfYouPurchasedADieThisTurn()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamB";
+
+        var purchaseEnergy = GiveWildEnergy(state, "teamB", 3);
+        var toBuy = FindUnpurchased(state, "teamB", SampleCards.GodEmperorDoom.Id);
+        TurnEngine.Purchase(state, toBuy.Id, purchaseEnergy.Select(d => d.Id).ToList());
+        Assert.True(state.PlayerTwo.PurchasedDieThisTurn);
+
+        var globalEnergy = GiveWildEnergy(state, "teamB", 1);
+        var bagCountBefore = state.DiceIn("teamB", Zone.Bag).Count();
+        var queue = new AbilityQueue();
+        TurnEngine.UseGlobalAbility(
+            state, queue, SampleCards.Starfire.Id, "teamB", globalEnergy.Select(d => d.Id).ToList());
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [])));
+
+        Assert.Single(state.DiceIn("teamB", Zone.PrepArea));
+        Assert.Equal(bagCountBefore - 1, state.DiceIn("teamB", Zone.Bag).Count());
+    }
+
+    [Fact]
+    public void UsingStarfireGlobalAbility_IsANoOp_WithoutAPurchaseThisTurn_AndOnlyOncePerTurn()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamB";
+
+        var energy = GiveWildEnergy(state, "teamB", 2);
+        var queue = new AbilityQueue();
+        TurnEngine.UseGlobalAbility(state, queue, SampleCards.Starfire.Id, "teamB", [energy[0].Id]);
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [])));
+
+        Assert.Empty(state.DiceIn("teamB", Zone.PrepArea));
+
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            TurnEngine.UseGlobalAbility(state, queue, SampleCards.Starfire.Id, "teamB", [energy[1].Id]));
+        Assert.Contains("once per turn", ex.Message);
+    }
 }
