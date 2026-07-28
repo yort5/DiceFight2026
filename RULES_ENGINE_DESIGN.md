@@ -52,9 +52,11 @@ here rather than assuming which approach they'd want.
 1. Keyword *behavior* (Overcrush, Regenerate, etc.) - currently just
    tagged as data on `CardDef.Keywords`, not simulated by `CombatEngine`.
 2. Global ability UX - done as a standing sidebar (`GlobalAbilitiesPanel`)
-   with its own energy-then-targets flow (see the bottom-most status
-   update); still rough - no "does this need a target" hint, no
-   affordability cue, no filtering which dice are valid energy.
+   with its own energy-then-targets flow; two Globals now actually work
+   (Distraction, Falcon) - still rough - no "does this need a target"
+   hint, no affordability cue, no filtering which dice are valid energy.
+   Every other Global on the two rosters (Invisible Woman, Starfire) is
+   still unscripted text only.
 3. Real per-attacker blocker assignment in the web client - only "no
    blockers" is wired up today.
 4. Legal-target exclusions for captured dice / per-die "cannot be
@@ -804,3 +806,49 @@ and the flow closed cleanly. Also reconfirmed via the live API that
 "Mask"}` for Distraction, `null` for everything else). 51 tests
 unaffected (no engine changes); `dotnet build`/`test` and `npm run build`
 both pass.
+
+## Status update — Falcon's Global ability scripted; two new engine primitives
+
+Falcon (Team B, in the sidebar since the previous update but inert - no
+`AbilityDef`) is now a real second working Global, alongside Distraction.
+Its text ("Global: Pay [F]. Once during your turn, each player must
+field a [PAWN] from their Used Pile if able.") needed two things
+Distraction's single-target single-player effect didn't:
+
+- **`FieldSidekickForEachPlayer`** (new `EffectNode`) - a forced action on
+  *both* players at once. Sidekick dice are fungible, so "if able" is
+  just "does one exist in that player's Used Pile" - no real choice to
+  make, so (like `DrawDice`) it bypasses the `TargetSpec`/
+  `ResolveTargets` choice pipeline entirely rather than stretch
+  `TargetSpec` to express "both players, no chooser, silently skip if
+  none." `EffectInterpreter` iterates `[ctx.ControllerId, opponent]` and
+  fields the first Used Pile die with `Status == SidekickCharacter` for
+  each, if any.
+- **`AbilityDef.OncePerTurn`** - a card-text limiter ("Once during your
+  turn"), tracked in a new `GameState.GlobalsUsedThisTurn` hash set
+  (keyed by cardId, reset in `CleanUp`, same pattern as the existing
+  single-flag `EpicBasicActionUsedThisTurn`). Checked in
+  `TurnEngine.UseGlobalAbility` after payment is validated but before
+  it's actually spent, so a rejected attempt (wrong energy type, etc.)
+  doesn't burn the once-per-turn use.
+
+Falcon's other half - the Teamwatch keyword's own effect ("Prep a
+Sidekick from your Used Pile") - is left unscripted on purpose: Teamwatch
+isn't a `TriggerType` this engine models yet (it fires on being engaged
+in combat, like a `WhenEngaged` variant), and Non-global/Global are
+independent ability slots (rule 3.1.3, same reasoning as Distraction's
+unscripted non-Global half). No UI changes were needed - the sidebar's
+existing energy-then-targets flow already handles an ability with no
+real target: `FieldSidekickForEachPlayer` contributes no `TargetSpec`,
+so the "targets" stage's Skip button submits an empty target list and
+nothing tries to resolve one.
+
+Added a new unit test exercising the real `TurnEngine`/`EffectInterpreter`
+path: fields a pre-seeded Used Pile Sidekick for the paying player,
+confirms nothing happens for the opponent (no Used Pile Sidekick to find
+- the "if able" no-op case), and confirms a second activation the same
+turn throws. Verified live via headless Chromium too: rolled into a Fist
+die, paid Falcon's cost through the sidebar, and the flow completed with
+no error and the Fist die correctly leaving the Reserve Pool. 52 tests
+passing (51 + the new one); `dotnet build`/`test` and `npm run build`
+both clean.

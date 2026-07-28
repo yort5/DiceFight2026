@@ -233,4 +233,32 @@ public class TwoTeamsDemoTests
         Assert.Equal(Player.StartingLife, state.PlayerTwo.Life); // no damage - attacker never made it to the Attack Zone at resolution time
         Assert.Empty(result.KOdDieIds);
     }
+
+    [Fact]
+    public void UsingFalconGlobalAbility_FieldsASidekickForEachPlayer_IfAble_AndOnlyOncePerTurn()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamB";
+
+        // Team B has a Sidekick sitting in their Used Pile to be fielded;
+        // Team A has none, exercising the "if able" no-op half at once.
+        var teamBSidekick = state.DiceIn("teamB", Zone.Bag).First();
+        teamBSidekick.Zone = Zone.UsedPile;
+        teamBSidekick.Status = DieStatus.SidekickCharacter;
+
+        var energy = GiveWildEnergy(state, "teamB", 1);
+        var queue = new AbilityQueue();
+        TurnEngine.UseGlobalAbility(state, queue, SampleCards.Falcon.Id, "teamB", energy.Select(d => d.Id).ToList());
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [])));
+
+        Assert.Equal(Zone.FieldZone, teamBSidekick.Zone);
+        Assert.DoesNotContain(state.DiceIn("teamA", Zone.FieldZone), d => d.Status == DieStatus.SidekickCharacter);
+
+        // Once during your turn - a second activation this turn fails even with fresh energy.
+        var moreEnergy = GiveWildEnergy(state, "teamB", 1);
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            TurnEngine.UseGlobalAbility(state, queue, SampleCards.Falcon.Id, "teamB", moreEnergy.Select(d => d.Id).ToList()));
+        Assert.Contains("once per turn", ex.Message);
+    }
 }

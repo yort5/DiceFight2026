@@ -89,3 +89,11 @@ public enum EffectCondition
 }
 
 public sealed record Conditional(TargetSpec CheckTarget, EffectCondition When, EffectNode Then) : EffectNode;
+
+// Falcon's Global ("each player must field a Sidekick from their Used Pile
+// if able") - a forced action on both players at once, not a chosen
+// target. Sidekick dice are fungible, so "if able" is just "does one
+// exist" - no real choice to make, so (like DrawDice) this bypasses the
+// TargetSpec/ResolveTargets choice pipeline entirely rather than stretch
+// TargetSpec to express "both players, no chooser, silently skip if none."
+public sealed record FieldSidekickForEachPlayer : EffectNode;

@@ -24,6 +24,10 @@ public sealed class GameState
     // obtained per turn; reset in CleanUp.
     public bool EpicBasicActionUsedThisTurn { get; set; }
 
+    // Card-text-driven once-per-turn Global limiters (e.g. Falcon's "Once
+    // during your turn"), keyed by cardId; reset in CleanUp.
+    public HashSet<string> GlobalsUsedThisTurn { get; } = [];
+
     public Player GetPlayer(string playerId) =>
         playerId == PlayerOne.Id ? PlayerOne
         : playerId == PlayerTwo.Id ? PlayerTwo

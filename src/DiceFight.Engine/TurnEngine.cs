@@ -336,6 +336,12 @@ public static class TurnEngine
             throw new InvalidOperationException($"{card.Name}'s Global ability requires at least one {requiredType} energy.");
         }
 
+        // Card-text once-per-turn limiter (e.g. Falcon's "Once during your
+        // turn") - checked after payment is validated but before it's
+        // actually spent, so a rejected attempt doesn't burn the use.
+        if (ability.OncePerTurn && !state.GlobalsUsedThisTurn.Add(cardId))
+            throw new InvalidOperationException($"{card.Name}'s Global ability can only be used once per turn.");
+
         // Rule 2.6.1.1/2.6.1.2 - the Active player's spent energy goes Out
         // of Play; the Inactive player's goes straight to the Used Pile,
         // since Out of Play doesn't exist on their turn (rule 1.5.8.5).
@@ -430,6 +436,9 @@ public static class TurnEngine
 
         // Rule 1.2.3(3) - the once-per-turn Epic Basic Action limit resets.
         state.EpicBasicActionUsedThisTurn = false;
+
+        // Card-text once-per-turn Global limiters (e.g. Falcon) reset too.
+        state.GlobalsUsedThisTurn.Clear();
 
         state.IsFirstTurn = false;
         state.ActivePlayerId = state.OpponentOf(activeId);

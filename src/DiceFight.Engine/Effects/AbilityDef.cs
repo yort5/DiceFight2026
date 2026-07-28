@@ -19,4 +19,8 @@ public sealed record AbilityDef(
     TriggerType Trigger,
     IReadOnlyList<EffectNode>? Cost,
     EffectNode Effect,
-    EnergyCost? EnergyCost = null);
+    EnergyCost? EnergyCost = null,
+    // Card-text limiters like Falcon's "Once during your turn" (Global) -
+    // only meaningful for Trigger == Global today. Tracked per-cardId in
+    // GameState.GlobalsUsedThisTurn, reset every Clean Up.
+    bool OncePerTurn = false);

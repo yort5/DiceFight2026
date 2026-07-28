@@ -184,11 +184,20 @@ public static class SampleCards
 
     // ---- Team B: 10 characters + 3 Basic Actions ----
 
+    // Teamwatch (the non-Global half - "Prep a Sidekick from your Used
+    // Pile") is left unscripted: Teamwatch isn't a TriggerType this engine
+    // models yet (it fires on being engaged in combat, like WhenEngaged),
+    // same "Non-global and Global are independent ability slots" situation
+    // as Distraction above. The Global half stands on its own.
     public static readonly CardDef Falcon = Character(
         "falcon", "Falcon", "Take Flight", dieLimit: 4,
         "Teamwatch - Prep a [PAWN] from your Used Pile. Global: Pay [F]. Once during your turn, " +
         "each player must field a [PAWN] from their Used Pile if able.",
-        keywords: [new KeywordInstance("Teamwatch")]);
+        keywords: [new KeywordInstance("Teamwatch")],
+        abilities: [new AbilityDef(TriggerType.Global, Cost: null,
+            Effect: new FieldSidekickForEachPlayer(),
+            EnergyCost: new EnergyCost(Amount: 1, RequiredType: EnergyType.Fist),
+            OncePerTurn: true)]);
 
     public static readonly CardDef FranklinsGalactus = Character(
         "franklins-galactus", "Franklin's Galactus", "Earth Shatterer", dieLimit: 4, ""); // genuinely blank

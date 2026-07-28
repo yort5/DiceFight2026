@@ -178,6 +178,16 @@ public static class EffectInterpreter
                     Execute(conditional.Then, ctx, cache);
                 break;
 
+            case FieldSidekickForEachPlayer:
+                foreach (var playerId in new[] { ctx.ControllerId, ctx.State.OpponentOf(ctx.ControllerId) })
+                {
+                    var sidekick = ctx.State.DiceIn(playerId, Zone.UsedPile)
+                        .FirstOrDefault(d => d.Status == DieStatus.SidekickCharacter);
+                    if (sidekick is null) continue; // rule text's "if able"
+                    sidekick.Zone = Zone.FieldZone;
+                }
+                break;
+
             default:
                 throw new NotSupportedException($"Unhandled effect node: {node.GetType().Name}");
         }
