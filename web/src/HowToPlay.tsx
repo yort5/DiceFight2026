@@ -60,11 +60,15 @@ export function HowToPlay(props: { onClose: () => void }) {
               "advancing" - select the die you want to act on and use the Action Tray instead.
             </li>
             <li>
-              <strong>Attack step</strong> - "Declare Blockers (none) ▶" once attackers are
-              declared, then "Assign Combat Damage (no blocks) ▶". Declaring attackers themselves
-              isn't a step-advance button - select the attacking die/dice on the board and use the
-              Action Tray's "Declare Attackers." Real blocker assignment isn't wired up in the UI
-              yet (see the design doc's next-steps list) - only "no blockers" is supported today.
+              <strong>Attack step</strong> - declaring attackers isn't a step-advance button:
+              select the attacking die/dice on the board and use the Action Tray's "Declare
+              Attackers." Once they're declared, the tray is replaced by the blocker builder:
+              click an attacker, then the blocker(s) for it, then "Assign Selected Blocker(s)" -
+              repeat per attacker (an attacker left with nothing assigned is unblocked), then
+              "Confirm Blockers ▶". If anything was actually blocked, a damage-split form appears
+              alongside the Action Tray - split each blocked attacker's full attack value across
+              its blocker(s), then "Confirm Damage ▶"; an all-unblocked attack skips straight to
+              the one-click "Assign Combat Damage (no blocks) ▶" instead.
             </li>
             <li>
               <strong>Clean Up step</strong> - "End Turn ▶".
@@ -105,9 +109,10 @@ export function HowToPlay(props: { onClose: () => void }) {
 
           <h3>Known gaps</h3>
           <p>
-            This is a work-in-progress dev console more than a polished game client. Real
-            per-attacker blocker assignment and keyword behavior (Overcrush, Regenerate, etc.)
-            aren't fully wired up yet - if an action you expect isn't available, that's likely why.
+            This is a work-in-progress dev console more than a polished game client. Keyword
+            behavior (Overcrush, Regenerate, etc.) isn't simulated yet - it's tracked as data on a
+            card but has no effect on combat - if an action you expect isn't available, that's
+            likely why.
           </p>
         </div>
       </div>

@@ -59,6 +59,21 @@ export interface GameState {
   dice: Die[];
 }
 
+// Rule 2.7.2.2 - one pair per (attacker, blocker); a given attacker can
+// have several of these (multiple blockers), a given blocker at most one
+// (it can't block two attackers at once).
+export interface BlockAssignment {
+  attackerDieId: string;
+  blockerDieId: string;
+}
+
+// Rule 2.7.4.3.4/2.7.4.3.5 - how much of a blocked attacker's full attack
+// value lands on each of its blockers; the active player's choice, but
+// must sum to exactly the attacker's attack value.
+export interface DamageSplit extends BlockAssignment {
+  amount: number;
+}
+
 export const ZONES = [
   "Unpurchased",
   "Bag",

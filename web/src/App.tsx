@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "./api";
 import { ActionTray } from "./ActionTray";
+import { DamageSplitPanel, DeclareBlockersPanel } from "./CombatPanel";
 import { GlobalAbilitiesPanel, type GlobalAbilityFlow } from "./GlobalAbilitiesPanel";
 import { HowToPlay } from "./HowToPlay";
 import { PlayerBoard, type Selection } from "./PlayerBoard";
-import type { CardDef, GameState } from "./types";
+import type { BlockAssignment, CardDef, DamageSplit, GameState } from "./types";
 import "./App.css";
 
 function App() {
@@ -15,6 +16,12 @@ function App() {
   const [busy, setBusy] = useState(false);
   const [showHowToPlay, setShowHowToPlay] = useState(false);
   const [globalFlow, setGlobalFlow] = useState<GlobalAbilityFlow | null>(null);
+  // Carries the Declare Blockers decision forward into Assign Combat
+  // Damage - the server doesn't remember it between those two calls (see
+  // CombatPanel.tsx), and the Action/Global window in between means this
+  // can't just be chained automatically. Reset to [] any time we leave
+  // the Attack Step (see run()), so it never leaks into a later turn.
+  const [combatAssignments, setCombatAssignments] = useState<BlockAssignment[]>([]);
 
   useEffect(() => {
     api.getCards().then(setCards).catch((e) => setError(String(e)));
@@ -53,6 +60,7 @@ function App() {
       const next = await action();
       setGame(next);
       clearSelection();
+      if (next.currentStep !== "Attack") setCombatAssignments([]);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -114,6 +122,35 @@ function App() {
     }
   }
 
+  // Rule 2.7.2.2 - building up the attacker->blocker(s) map one attacker
+  // at a time, reusing the same board-click selection (primary = attacker,
+  // secondary = blocker(s) for it) as everywhere else. A blocker die can
+  // only block one attacker, so it's dropped from any earlier assignment
+  // before being added to this one.
+  function addBlockerAssignments() {
+    if (!selection.primary || selection.secondary.length === 0) return;
+    const attackerDieId = selection.primary;
+    setCombatAssignments((prev) => [
+      ...prev.filter((a) => !selection.secondary.includes(a.blockerDieId)),
+      ...selection.secondary.map((blockerDieId) => ({ attackerDieId, blockerDieId })),
+    ]);
+    clearSelection();
+  }
+
+  function removeBlockerAssignment(blockerDieId: string) {
+    setCombatAssignments((prev) => prev.filter((a) => a.blockerDieId !== blockerDieId));
+  }
+
+  function confirmBlockers() {
+    if (!gameId) return;
+    run(() => api.declareBlockers(gameId, combatAssignments));
+  }
+
+  async function confirmDamageSplits(splits: DamageSplit[]) {
+    if (!gameId) return;
+    await run(() => api.assignCombatDamage(gameId, combatAssignments, splits));
+  }
+
   const gameId = game?.gameId;
 
   // The Roll & Reroll step's not-yet-rolled dice: this turn's fresh draw
@@ -171,14 +208,12 @@ function App() {
       run: () => api.skipAttackStep(gameId),
     });
   }
-  if (gameId && canDeclareBlockers) {
-    advanceOptions.push({
-      key: "declare-blockers",
-      label: "Declare Blockers (none) ▶",
-      run: () => api.declareBlockers(gameId, []),
-    });
-  }
-  if (gameId && canAssignDamage) {
+  // Declare Blockers always goes through the DeclareBlockersPanel now (see
+  // render below) - even "no blocks" is just confirming an empty list
+  // there, so there's no separate quick action for it. Assign Combat
+  // Damage keeps its quick "no blocks" shortcut, since that trivial case
+  // (nothing was blocked) has nothing worth building a form for.
+  if (gameId && canAssignDamage && combatAssignments.length === 0) {
     advanceOptions.push({
       key: "assign-damage",
       label: "Assign Combat Damage (no blocks) ▶",
@@ -247,11 +282,8 @@ function App() {
                 <button disabled={busy || !canSkipAttack} onClick={() => run(() => api.skipAttackStep(gameId))}>
                   Skip Attack Step
                 </button>
-                <button
-                  disabled={busy || !canDeclareBlockers}
-                  onClick={() => run(() => api.declareBlockers(gameId, []))}
-                >
-                  Declare Blockers (none)
+                <button disabled={busy || !canDeclareBlockers} onClick={confirmBlockers}>
+                  Declare Blockers ({combatAssignments.length === 0 ? "none" : `${combatAssignments.length} assigned`})
                 </button>
                 <button
                   disabled={busy || !canAssignDamage}
@@ -272,6 +304,19 @@ function App() {
                   Global Abilities panel.
                 </p>
               </div>
+            ) : canDeclareBlockers ? (
+              <DeclareBlockersPanel
+                game={game}
+                dice={game.dice}
+                cardsById={cardsById}
+                selection={selection}
+                assignments={combatAssignments}
+                busy={busy}
+                onAddAssignments={addBlockerAssignments}
+                onRemoveAssignment={removeBlockerAssignment}
+                onClearSelection={clearSelection}
+                onConfirm={confirmBlockers}
+              />
             ) : (
               <ActionTray
                 game={game}
@@ -281,6 +326,16 @@ function App() {
                 busy={busy}
                 onRun={run}
                 onClear={clearSelection}
+              />
+            )}
+
+            {canAssignDamage && combatAssignments.length > 0 && (
+              <DamageSplitPanel
+                dice={game.dice}
+                cardsById={cardsById}
+                assignments={combatAssignments}
+                busy={busy}
+                onConfirm={confirmDamageSplits}
               />
             )}
 

@@ -56,17 +56,18 @@ here rather than assuming which approach they'd want.
    (Distraction, Falcon, Invisible Woman, Starfire) is now scripted -
    still rough - no "does this need a target" hint, no affordability cue,
    no filtering which dice are valid energy.
-3. Real per-attacker blocker assignment in the web client - only "no
-   blockers" is wired up today.
-4. Legal-target exclusions for captured dice / per-die "cannot be
+3. Legal-target exclusions for captured dice / per-die "cannot be
    targeted" abilities - blocked on Capturing (rule 3.8) not being built.
-5. A real `IDiceRoller` with actual face-table data, replacing the
+4. A real `IDiceRoller` with actual face-table data, replacing the
    rough-guess placeholder roller (`DiceFight.Api/PlaceholderDiceRoller.cs`).
-6. Team-construction legality (die-limit-sum-to-20, unique-card-name
+5. Team-construction legality (die-limit-sum-to-20, unique-card-name
    checks, rule 2.1.1/2.1.3) - currently unenforced; every card gets its
    full die limit regardless of team size (see `TeamSetup.cs`'s remarks).
-7. Auth/login in front of the API - currently wide open, matches the
+6. Auth/login in front of the API - currently wide open, matches the
    deployment note above.
+7. A visual pass matching the physical mat's zone layout and real die-face
+   icons, using the reference photos/cards the user provided (see the
+   latest status update) - explicitly queued for after the above.
 
 The chronological "Status update" sections below explain the reasoning
 and bugs found behind each already-built piece - worth reading before
@@ -933,3 +934,64 @@ stays scoped to what it already does (Clear & Draw's draw count, rule
 Nothing engine-breaking here: 56 tests passing (55 + the 2 new reroll
 tests, net +1 after a pre-existing test's expectations were folded into
 the updated one); `dotnet build`/`test` and `npm run build` both clean.
+
+## Status update — real per-attacker blocker assignment and damage splitting in the web client
+
+Turns out `CombatEngine.DeclareBlockers`/`AssignCombatDamage` and their
+API endpoints already fully supported real attacker->blocker(s) mapping
+and per-blocker damage splits (rule 2.7.2.2/2.7.4.3.4/2.7.4.3.5) - the web
+client was the only thing hardcoding empty assignments (`declareBlockers
+(gameId, [])`, `assignCombatDamage(gameId, [], [])`). This was purely a
+client-side gap, closed with no engine or API changes.
+
+**The catch**: the assignment (which blocker goes to which attacker)
+isn't state - `DeclareBlockers` takes it as a parameter and doesn't
+persist it, so `AssignCombatDamage` needs the *same* mapping handed back
+to it later, across the Action/Global window sub-step where other
+actions (Action dice, Globals) can legitimately happen in between. So
+`App.tsx` now holds `combatAssignments: BlockAssignment[]` as ordinary
+component state - built up during Declare Blockers, carried forward
+untouched through Assign Combat Damage, and reset to `[]` any time an
+action's result leaves the Attack Step entirely (a general one-line rule
+in `run()` - `if (next.currentStep !== "Attack") setCombatAssignments([])`
+- rather than special-casing every place that could exit combat).
+
+**New `CombatPanel.tsx`** (two components, both reusing the existing
+board click-to-select `selection` the rest of the UI already uses, same
+precedent as the Global Abilities flow):
+- `DeclareBlockersPanel` replaces the Action Tray during the
+  `DeclareBlockers` sub-step (nothing else is legal there anyway - the
+  Action Tray would already show "no actions available" for every die).
+  Click an attacker (primary), click its blocker(s) (secondary), "Assign
+  Selected Blocker(s)" appends the pairs to a running list (shown
+  per-attacker, each blocker removable); repeat per attacker; "Confirm
+  Blockers ▶" submits the whole list (empty is a legal "no blocks",
+  replacing the old always-empty quick action - there's no longer a
+  separate hardcoded shortcut for it in the status bar, just this one
+  path with nothing built up).
+- `DamageSplitPanel` renders *alongside* the Action Tray/Global sidebar
+  (not replacing them - Action dice and Globals are still legal in this
+  window) whenever `combatAssignments` is non-empty. Local-only React
+  state (`amounts`) until Confirm - a number input per blocker, live
+  "(assigned/required) attack" validation per attacker, Confirm disabled
+  until every blocked attacker's inputs sum to exactly its attack value
+  (reads attack via the existing client-side `getDieFace` helper, same
+  one `dieStatusText` already uses - no new DTO fields needed since no
+  currently-scripted ability modifies stats yet). An all-unblocked attack
+  never shows this panel - the original "Assign Combat Damage (no
+  blocks) ▶" quick action still handles that trivial case alone.
+
+Verified live end-to-end via headless Chromium, using two Sidekicks that
+happened to roll their Level 1 character face (free to field, no
+purchase/bag-cycle wait, unlike a real card) as attacker and blocker:
+declared the attacker, built a real blocker assignment through
+`DeclareBlockersPanel`, confirmed it, watched `DamageSplitPanel` correctly
+block "Confirm Damage" at "0/1 assigned" and enable it at "1/1", and
+confirmed via the API afterward that both dice landed in the Prep Area
+(mutual KO, since both had 1 attack / 1 defense) with the turn correctly
+advanced to Clean Up - also independently confirmed via raw `curl` calls
+against the same endpoints (a live Chromium crash on the final screenshot
+- unrelated to the app, likely this sandbox's patched `chrome-headless-
+shell` build - cut the browser run short, but the server-side outcome was
+already captured and matched). 56 tests passing (engine/API untouched, so
+no new ones needed); `dotnet build`/`test` and `npm run build` both clean.

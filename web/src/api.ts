@@ -1,4 +1,4 @@
-import type { CardDef, GameState } from "./types";
+import type { BlockAssignment, CardDef, DamageSplit, GameState } from "./types";
 
 // Relative on purpose: in production the API and built app share one
 // origin (combined container), and in dev the Vite proxy (vite.config.ts)
@@ -15,15 +15,6 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     throw new Error(body.error ?? `Request failed: ${res.status}`);
   }
   return res.json() as Promise<T>;
-}
-
-interface BlockAssignment {
-  attackerDieId: string;
-  blockerDieId: string;
-}
-
-interface DamageSplit extends BlockAssignment {
-  amount: number;
 }
 
 export const api = {
