@@ -83,9 +83,8 @@ public static class TurnEngine
         var shortfall = drawCount - drawn.Count;
         if (shortfall > 0)
         {
-            var player = state.GetPlayer(activeId);
-            player.Life -= shortfall;
-            player.VirtualGenericEnergy += shortfall;
+            state.GetPlayer(activeId).Life -= shortfall;
+            AddVirtualGenericEnergy(state, activeId, shortfall);
         }
     }
 
@@ -362,11 +361,11 @@ public static class TurnEngine
     // Reserve Pool, still spendable later this turn. A Generic double
     // (e.g. a Basic Action die, which has no single-energy face to spin
     // to) instead moves out fully right away, banking the unspent half as
-    // the payer's tracked virtual generic energy (Player.
-    // VirtualGenericEnergy, already reset at Clean Up) rather than
-    // "spinning" a face that doesn't exist on that die. Only the very last
-    // die needed can ever be partially spent, by construction - every die
-    // consumed before it was necessary in full to reach the target.
+    // a real virtual-energy die (see AddVirtualGenericEnergy) rather than
+    // "spinning" a face that doesn't exist on that physical die. Only the
+    // very last die needed can ever be partially spent, by construction -
+    // every die consumed before it was necessary in full to reach the
+    // target.
     //
     // missingTypeMessage is only ever needed when requiredTypes is
     // non-empty (Field has none - fielding cost has no type requirement,
@@ -403,12 +402,27 @@ public static class TurnEngine
         for (var i = 0; i < consumed.Count; i++)
         {
             var die = consumed[i];
-            if (i == consumed.Count - 1 && overspend > 0)
+            var isPartial = i == consumed.Count - 1 && overspend > 0;
+
+            // A virtual energy die (see AddVirtualGenericEnergy) isn't a
+            // real physical die, so there's nothing to move to
+            // destinationZone - fully spending it just makes it vanish
+            // (same as it would at Clean Up if left unspent), and
+            // partially spending it just lowers its tracked amount in
+            // place, same shape as a typed double's spin-down.
+            if (die.IsVirtualEnergy)
+            {
+                if (isPartial) die.EnergyAmount = overspend;
+                else state.Dice.Remove(die);
+                continue;
+            }
+
+            if (isPartial)
             {
                 if (die.EnergyKind == EnergyKind.Generic)
                 {
                     die.Zone = destinationZone;
-                    state.GetPlayer(payerId).VirtualGenericEnergy += overspend;
+                    AddVirtualGenericEnergy(state, payerId, overspend);
                 }
                 else
                 {
@@ -420,6 +434,38 @@ public static class TurnEngine
                 die.Zone = destinationZone;
             }
         }
+    }
+
+    // Rule 1.4.4/1.4.5 - "virtual" generic energy (from a draw shortfall,
+    // or from partially spending a Generic double that has no
+    // single-energy face to spin down to) represented as a real spendable
+    // die in the Reserve Pool rather than a separate counter, so it goes
+    // through the exact same selection/SpendEnergy path as any other
+    // energy die - a player can just click it like any other energy chip.
+    // One die per player, found-or-created by a deterministic id so
+    // multiple grants in the same turn accumulate onto it rather than
+    // cluttering the Reserve Pool with several tiny virtual chips.
+    private static void AddVirtualGenericEnergy(GameState state, string playerId, int amount)
+    {
+        var id = $"{playerId}-virtual-generic";
+        var existing = state.Dice.FirstOrDefault(d => d.Id == id);
+        if (existing is not null)
+        {
+            existing.EnergyAmount += amount;
+            return;
+        }
+
+        state.Dice.Add(new DieInstance
+        {
+            Id = id,
+            OwnerId = playerId,
+            ControllerId = playerId,
+            Zone = Zone.ReservePool,
+            Status = DieStatus.Energy,
+            EnergyKind = EnergyKind.Generic,
+            EnergyAmount = amount,
+            IsVirtualEnergy = true,
+        });
     }
 
     private static bool InMainOrAttackActionWindow(GameState state) =>
@@ -499,8 +545,14 @@ public static class TurnEngine
         foreach (var die in state.DiceIn(activeId, Zone.OutOfPlay).ToList())
             die.Zone = Zone.UsedPile;
 
-        // Unspent virtual generic energy does not carry over (rule 1.4.5/2.6.7.1(2)).
-        state.GetPlayer(activeId).VirtualGenericEnergy = 0;
+        // Unspent virtual generic energy does not carry over (rule 1.4.5/
+        // 2.6.7.1(2)) - removed outright rather than swept to the Used
+        // Pile like a real die, since it was never a physical one. Covers
+        // both players, not just the one whose turn is ending - the
+        // inactive player can bank virtual energy too (e.g. partially
+        // spending a Generic double to pay for a Global on the active
+        // player's turn), and it's just as fictional.
+        state.Dice.RemoveAll(d => d.IsVirtualEnergy);
 
         // Rule 1.2.3(3) - the once-per-turn Epic Basic Action limit resets.
         state.EpicBasicActionUsedThisTurn = false;

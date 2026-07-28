@@ -344,7 +344,6 @@ function App() {
                 title={`${game.playerOne.name} (${game.playerOne.id})`}
                 isActive={game.activePlayerId === game.playerOne.id}
                 life={game.playerOne.life}
-                virtualGenericEnergy={game.playerOne.virtualGenericEnergy}
                 dice={game.dice.filter((d) => d.ownerId === game.playerOne.id)}
                 cardsById={cardsById}
                 selection={selection}
@@ -354,7 +353,6 @@ function App() {
                 title={`${game.playerTwo.name} (${game.playerTwo.id})`}
                 isActive={game.activePlayerId === game.playerTwo.id}
                 life={game.playerTwo.life}
-                virtualGenericEnergy={game.playerTwo.virtualGenericEnergy}
                 dice={game.dice.filter((d) => d.ownerId === game.playerTwo.id)}
                 cardsById={cardsById}
                 selection={selection}

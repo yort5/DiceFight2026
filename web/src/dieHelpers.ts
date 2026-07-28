@@ -46,6 +46,7 @@ export function characterFaceInfo(die: Die, cardsById: Map<string, CardDef>): Ch
 }
 
 export function dieLabel(die: Die, cardsById: Map<string, CardDef>): string {
+  if (die.isVirtualEnergy) return "Virtual Energy";
   if (!die.cardId) return "Sidekick";
   return cardsById.get(die.cardId)?.name ?? die.cardId;
 }
@@ -87,6 +88,9 @@ export function dieStatusText(die: Die, cardsById: Map<string, CardDef>): string
 // includes the full ability text (falls back to "(blank text box)" for
 // the handful of real cards, like Colossus, that genuinely have none).
 export function dieTooltip(die: Die, cardsById: Map<string, CardDef>): string | undefined {
+  if (die.isVirtualEnergy) {
+    return "Virtual generic energy - a stand-in for a physical die (from a draw shortfall, or the unspent half of a double). Lost at Clean Up if unspent.";
+  }
   if (!die.cardId) return undefined;
   const card = cardsById.get(die.cardId);
   if (!card) return undefined;

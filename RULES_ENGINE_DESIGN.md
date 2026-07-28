@@ -1254,3 +1254,64 @@ screenshot - reaching a live double through the browser's own bag-cycle
 timing wasn't worth the wall-clock cost given the other three
 verification angles already covering the same ground. 59 tests passing
 (56 + 3 new); `dotnet build`/`test` and `npm run build` both clean.
+
+## Status update — virtual generic energy is now a real spendable die, not a separate counter
+
+Direct follow-up to the previous entry's explicitly-noted gap ("spending
+*from* the virtual-energy bank isn't wired up yet"). The user's fix:
+represent it as an actual die sitting in the Reserve Pool instead of a
+`Player.VirtualGenericEnergy` int, so it flows through the exact same
+selection/`SpendEnergy` path as any other energy die - no bank, no
+special "spend from savings" UI ever needed, since a player just clicks
+it like anything else in the Reserve Pool.
+
+**`DieInstance` gained `IsVirtualEnergy`** (also tightened `IsSidekick`
+to `CardId is null && !IsVirtualEnergy`, since a virtual die also has a
+null `CardId` and isn't one). New `TurnEngine.AddVirtualGenericEnergy`
+finds-or-creates one such die per player (deterministic id
+`"{playerId}-virtual-generic"`, so repeated grants in a turn accumulate
+onto the same chip instead of cluttering the Reserve Pool) with
+`EnergyKind.Generic`, `Zone.ReservePool`, `IsVirtualEnergy: true`. Both
+existing producers - the Clear & Draw draw-shortfall (rule 2.3.10) and
+`SpendEnergy`'s Generic-double-partial-spend branch - now call this
+instead of incrementing the old counter. `Player.VirtualGenericEnergy`
+is deleted outright, along with its DTO field and the web client's
+separate "+N virtual" board-header display - the die just shows up in
+the Reserve Pool like any other energy chip now (complete with the
+enlarged rolled-zone badge from two updates ago), which is strictly less
+UI, not more.
+
+**The interesting bit was `SpendEnergy` itself**: a virtual die isn't a
+real physical one, so it can't be "moved to Out of Play" the way a
+Generic double normally would when only partially spent - there's no die
+to move. Partially spending a virtual die instead just lowers its
+`EnergyAmount` in place (mirroring a typed double's spin-down, but for a
+different reason - a typed double still has a real single-energy face to
+show; a virtual die is just a number with a chip around it). Fully
+spending one removes it from `state.Dice` outright rather than moving
+its zone. This is also exactly what makes disappearing at Clean Up work
+correctly instead of getting swept to the Used Pile like a real
+leftover Reserve Pool die would (rule 2.3.1 only moves zones, it doesn't
+know this one's fake) - Clean Up now does `state.Dice.RemoveAll(d =>
+d.IsVirtualEnergy)` for both players (a small scope-widening beyond what
+was strictly asked - the original counter-based version only ever reset
+the *active* player's value, silently leaking an inactive player's
+banked virtual energy from paying for a Global on someone else's turn;
+same-shaped fix, essentially free to include here).
+
+Three tests updated (checking for the die instead of the deleted field)
+and two new ones added: banking virtual energy via a real Field payment
+then actually spending it toward a second Field (proving it's usable,
+not just tracked, including the self-referential partial-spend case
+above), and confirming it's gone after Clean Up rather than carried into
+the next Clear & Draw's Reserve Pool sweep. Verified live against the
+running API too - confirmed `isVirtualEnergy: false` serializes
+correctly on ordinary dice and `PlayerDto` no longer carries the deleted
+field; didn't chase a live *virtual* die through the browser specifically
+(reaching one needs the same bag-cycle timing as the previous entry's
+double-Generic check, compounded with a second card needing to cycle
+too) - the die-based mechanism is exactly the same `SpendEnergy` code
+path already covered by the previous entry's live check plus this
+entry's new unit tests, so the residual risk from skipping a fresh
+screenshot is low. 61 tests passing (59 + 2 new); `dotnet build`/`test`
+and `npm run build` both clean.

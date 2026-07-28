@@ -22,7 +22,6 @@ export function PlayerBoard(props: {
   title: string;
   isActive: boolean;
   life: number;
-  virtualGenericEnergy: number;
   dice: Die[];
   cardsById: Map<string, CardDef>;
   selection: Selection;
@@ -37,9 +36,6 @@ export function PlayerBoard(props: {
       <div className="board-header">
         <h2>{props.title}</h2>
         <div className="life">{props.life} life</div>
-        {props.virtualGenericEnergy > 0 && (
-          <div className="virtual-energy">+{props.virtualGenericEnergy} virtual</div>
-        )}
       </div>
 
       <div className="mat">

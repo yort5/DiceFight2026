@@ -38,8 +38,19 @@ public sealed class DieInstance
     // place, rather than moving zones - see TurnEngine's SpendEnergy.
     public int EnergyAmount { get; set; } = 1;
 
+    // A bookkeeping stand-in for "virtual" generic energy (rule 1.4.4/
+    // 1.4.5 - from a draw shortfall, or from partially spending a Generic
+    // double that has no single-energy face to spin down to), represented
+    // as a real spendable die in the Reserve Pool rather than a separate
+    // counter, so it goes through the exact same selection/SpendEnergy
+    // path as any other energy die. Not a physical die - see
+    // TurnEngine.AddVirtualGenericEnergy/SpendEnergy for how it's created,
+    // spent, and (unlike a real die) removed outright rather than moved to
+    // a zone when it's used up, and never carried past Clean Up.
+    public bool IsVirtualEnergy { get; set; }
+
     public List<Modifier> AppliedModifiers { get; } = [];
     public List<DieInstance> AttachedGear { get; } = [];
 
-    public bool IsSidekick => CardId is null;
+    public bool IsSidekick => CardId is null && !IsVirtualEnergy;
 }

@@ -418,6 +418,64 @@ public class TwoTeamsDemoTests
 
         Assert.Equal(Zone.FieldZone, bigBardaDie.Zone);
         Assert.Equal(Zone.OutOfPlay, doubleGeneric.Zone);
-        Assert.Equal(1, state.GetPlayer("teamA").VirtualGenericEnergy);
+
+        // Rule 1.4.4 - banked as a real spendable die in the Reserve Pool,
+        // not a separate counter (see TurnEngine.AddVirtualGenericEnergy).
+        var virtualDie = Assert.Single(state.DiceIn("teamA", Zone.ReservePool));
+        Assert.True(virtualDie.IsVirtualEnergy);
+        Assert.Equal(1, virtualDie.EnergyAmount);
+    }
+
+    [Fact]
+    public void VirtualGenericEnergy_IsActuallySpendable_LikeAnyOtherEnergyDie()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamA";
+
+        // Bank 1 virtual energy: field a cost-1 Big Barda using a Generic
+        // double - only 1 of its 2 is actually needed.
+        var firstBigBarda = FindUnpurchased(state, "teamA", SampleCards.BigBarda.Id);
+        firstBigBarda.Zone = Zone.ReservePool;
+        firstBigBarda.Status = DieStatus.Character;
+        firstBigBarda.Level = 1; // fielding cost 1
+        var doubleGeneric = GiveDoubleEnergy(state, "teamA", 1, EnergyKind.Generic)[0];
+        TurnEngine.Field(state, new AbilityQueue(), firstBigBarda.Id, [doubleGeneric.Id]);
+        var virtualDie = Assert.Single(state.Dice, d => d.IsVirtualEnergy);
+        Assert.Equal(1, virtualDie.EnergyAmount);
+
+        // Now spend it, same as any other energy die, to field a second
+        // Big Barda (dieLimit 4, so a second unpurchased copy exists).
+        var secondBigBarda = state.DiceIn("teamA", Zone.Unpurchased).First(d => d.CardId == SampleCards.BigBarda.Id);
+        secondBigBarda.Zone = Zone.ReservePool;
+        secondBigBarda.Status = DieStatus.Character;
+        secondBigBarda.Level = 1; // fielding cost 1
+
+        TurnEngine.Field(state, new AbilityQueue(), secondBigBarda.Id, [virtualDie.Id]);
+
+        Assert.Equal(Zone.FieldZone, secondBigBarda.Zone);
+        // Fully consumed - it isn't a real die, so instead of moving to a
+        // zone it just vanishes once used up.
+        Assert.DoesNotContain(virtualDie, state.Dice);
+    }
+
+    [Fact]
+    public void VirtualGenericEnergy_DoesNotCarryPastCleanUp()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamA";
+        var bigBardaDie = FindUnpurchased(state, "teamA", SampleCards.BigBarda.Id);
+        bigBardaDie.Zone = Zone.ReservePool;
+        bigBardaDie.Status = DieStatus.Character;
+        bigBardaDie.Level = 1; // fielding cost 1
+        var doubleGeneric = GiveDoubleEnergy(state, "teamA", 1, EnergyKind.Generic)[0];
+        TurnEngine.Field(state, new AbilityQueue(), bigBardaDie.Id, [doubleGeneric.Id]);
+        Assert.Single(state.Dice, d => d.IsVirtualEnergy);
+
+        state.CurrentStep = TurnStep.CleanUp;
+        TurnEngine.CleanUp(state);
+
+        // Gone outright, unlike a real Reserve Pool die - it never gets
+        // carried to the Used Pile for a future Clear & Draw to sweep.
+        Assert.DoesNotContain(state.Dice, d => d.IsVirtualEnergy);
     }
 }

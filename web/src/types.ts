@@ -39,13 +39,13 @@ export interface Die {
   energyKind: string;
   providedEnergyType: string | null;
   energyAmount: number;
+  isVirtualEnergy: boolean;
 }
 
 export interface PlayerState {
   id: string;
   name: string;
   life: number;
-  virtualGenericEnergy: number;
 }
 
 export interface GameState {

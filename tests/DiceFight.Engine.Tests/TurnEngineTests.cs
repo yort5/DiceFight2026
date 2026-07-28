@@ -89,7 +89,13 @@ public class TurnEngineTests
 
         Assert.Equal(2, state.DiceIn("p1", Zone.DiceFromBag).Count());
         Assert.Equal(18, state.PlayerOne.Life); // 20 - 2 short
-        Assert.Equal(2, state.PlayerOne.VirtualGenericEnergy);
+
+        // Rule 1.4.4 - represented as a real spendable die in the Reserve
+        // Pool, not a separate counter (see TurnEngine.AddVirtualGenericEnergy).
+        var virtualDie = Assert.Single(state.DiceIn("p1", Zone.ReservePool));
+        Assert.True(virtualDie.IsVirtualEnergy);
+        Assert.Equal(EnergyKind.Generic, virtualDie.EnergyKind);
+        Assert.Equal(2, virtualDie.EnergyAmount);
     }
 
     [Fact]

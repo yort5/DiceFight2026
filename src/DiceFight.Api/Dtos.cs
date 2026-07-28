@@ -35,17 +35,17 @@ public sealed record CardDefDto(
 
 public sealed record DieDto(
     string Id, string? CardId, string OwnerId, string ControllerId, string Zone, string Status,
-    int Level, int Damage, string EnergyKind, string? ProvidedEnergyType, int EnergyAmount)
+    int Level, int Damage, string EnergyKind, string? ProvidedEnergyType, int EnergyAmount, bool IsVirtualEnergy)
 {
     public static DieDto From(DieInstance die) => new(
         die.Id, die.VirtualCardId ?? die.CardId, die.OwnerId, die.ControllerId,
         die.Zone.ToString(), die.Status.ToString(), die.Level, die.Damage,
-        die.EnergyKind.ToString(), die.ProvidedEnergyType?.ToString(), die.EnergyAmount);
+        die.EnergyKind.ToString(), die.ProvidedEnergyType?.ToString(), die.EnergyAmount, die.IsVirtualEnergy);
 }
 
-public sealed record PlayerDto(string Id, string Name, int Life, int VirtualGenericEnergy)
+public sealed record PlayerDto(string Id, string Name, int Life)
 {
-    public static PlayerDto From(Player player) => new(player.Id, player.Name, player.Life, player.VirtualGenericEnergy);
+    public static PlayerDto From(Player player) => new(player.Id, player.Name, player.Life);
 }
 
 public sealed record GameStateDto(
