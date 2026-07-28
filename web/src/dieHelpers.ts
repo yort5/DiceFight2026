@@ -29,6 +29,22 @@ export function getDieFace(die: Die, cardsById: Map<string, CardDef>) {
   return face ?? SIDEKICK_FACE;
 }
 
+// Only meaningful for a die currently showing a character face - the
+// three stats printed on a real character die (fielding cost upper-left,
+// attack upper-right, defense lower-right - see the reference card
+// photos), used to draw a small die-face badge instead of plain text.
+export interface CharacterFaceInfo {
+  fieldingCost: number;
+  attack: number;
+  defense: number;
+}
+
+export function characterFaceInfo(die: Die, cardsById: Map<string, CardDef>): CharacterFaceInfo | null {
+  if (die.status !== "Character" && die.status !== "SidekickCharacter") return null;
+  const { fieldingCost, attack, defense } = getDieFace(die, cardsById);
+  return { fieldingCost, attack, defense };
+}
+
 export function dieLabel(die: Die, cardsById: Map<string, CardDef>): string {
   if (!die.cardId) return "Sidekick";
   return cardsById.get(die.cardId)?.name ?? die.cardId;
@@ -42,9 +58,11 @@ export function dieStatusText(die: Die, cardsById: Map<string, CardDef>): string
       : die.energyKind;
   }
   if (die.status === "Character" || die.status === "SidekickCharacter") {
-    const face = getDieFace(die, cardsById);
+    // Attack/defense are drawn on the die-face badge itself (see
+    // PlayerBoard's character-face chip rendering) - this stays as the
+    // plain-text fallback description (used in the hover tooltip context).
     const dmg = die.damage > 0 ? `, ${die.damage} dmg` : "";
-    return `L${die.level} · ${face.attack}A/${face.defense}D${dmg}`;
+    return `L${die.level}${dmg}`;
   }
   if (die.status === "Action") return "Action";
   if (die.status === "Unrolled" && die.cardId) {
@@ -79,6 +97,8 @@ export interface DieGroup {
   statusText: string;
   tooltip?: string;
   iconKind: IconKind | null;
+  characterFace: CharacterFaceInfo | null;
+  damage: number;
   count: number;
   ids: string[];
 }
@@ -102,6 +122,8 @@ export function groupDice(dice: Die[], cardsById: Map<string, CardDef>): DieGrou
         statusText: dieStatusText(die, cardsById),
         tooltip: dieTooltip(die, cardsById),
         iconKind: dieIconKind(die),
+        characterFace: characterFaceInfo(die, cardsById),
+        damage: die.damage,
         count: 1,
         ids: [die.id],
       });

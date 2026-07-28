@@ -125,19 +125,37 @@ function ZoneSection(props: {
           (id) => id === props.selection.primary || props.selection.secondary.includes(id),
         ).length;
         const isPrimary = group.ids.includes(props.selection.primary ?? "");
+        const countSuffix = group.count > 1 ? ` ×${group.count}` : "";
         return (
           <button
             key={group.key}
-            className={`die-chip${selectedCount > 0 ? " selected" : ""}${isPrimary ? " primary" : ""}`}
+            className={`die-chip${selectedCount > 0 ? " selected" : ""}${isPrimary ? " primary" : ""}${group.characterFace ? " has-face" : ""}`}
             onClick={() => props.onGroupClick(group.ids)}
             title={group.tooltip}
           >
-            <span className="chip-label">
-              <DieIcon kind={group.iconKind} />
-              {group.label}
-              {group.count > 1 ? ` ×${group.count}` : ""}
-            </span>
-            {group.statusText && <span className="chip-status">{group.statusText}</span>}
+            {group.characterFace ? (
+              <>
+                <div className="die-face">
+                  <span className="face-cost">{group.characterFace.fieldingCost}</span>
+                  <span className="face-attack">{group.characterFace.attack}</span>
+                  {group.damage > 0 && <span className="face-damage">-{group.damage}</span>}
+                  <span className="face-defense">{group.characterFace.defense}</span>
+                </div>
+                <span className="chip-label">
+                  {group.label}
+                  {countSuffix}
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="chip-label">
+                  <DieIcon kind={group.iconKind} />
+                  {group.label}
+                  {countSuffix}
+                </span>
+                {group.statusText && <span className="chip-status">{group.statusText}</span>}
+              </>
+            )}
             {selectedCount > 0 && <span className="chip-selected-badge">{selectedCount}</span>}
           </button>
         );

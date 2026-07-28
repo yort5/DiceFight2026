@@ -571,6 +571,60 @@
   opacity: 0.65;
 }
 
+/* ---- Character die-face badge (fielding cost upper-left, attack
+   upper-right, defense lower-right - matching the reference card
+   photos; damage taken fills the otherwise-unused lower-left corner) ---- */
+
+.die-chip.has-face {
+  align-items: center;
+}
+
+.die-face {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 3px;
+  border-radius: 5px;
+  background: rgba(127, 127, 127, 0.15);
+  border: 1px solid rgba(127, 127, 127, 0.5);
+}
+
+.face-cost {
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  opacity: 0.7;
+}
+
+.face-attack {
+  position: absolute;
+  top: 0;
+  right: 3px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #e8703a;
+}
+
+.face-defense {
+  position: absolute;
+  bottom: -1px;
+  right: 3px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #4a8fd6;
+}
+
+.face-damage {
+  position: absolute;
+  bottom: 1px;
+  left: 2px;
+  font-size: 9px;
+  font-weight: 700;
+  color: #ff6b6b;
+}
+
 .die-chip.selected {
   border-color: #6ea8ff;
   background: rgba(110, 168, 255, 0.2);

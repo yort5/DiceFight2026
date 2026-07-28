@@ -1068,3 +1068,37 @@ Used Pile row and the Out of Play row in `.mat`'s grid-template-areas
 (just repeating their area name across both rows), so their boxes
 stretch down to align with Out of Play's bottom edge instead of stopping
 level with Used Pile alone.
+
+## Status update — character die faces styled as small badges, matching the reference card photos
+
+Last piece of the visual pass: a die currently showing a character face
+(Character or SidekickCharacter status) now renders as a small square
+die-face badge instead of plain "L2 · 4A/4D" text - fielding cost
+upper-left, attack upper-right, defense lower-right, matching where
+those numbers sit on the reference card photos (Big Barda / The Front
+Line) the user described. Damage taken fills the badge's otherwise-empty
+fourth corner (lower-left) - not something the physical die shows (damage
+is tracked off-die in the real game), but a natural reuse of the last
+corner and useful information this engine already tracks per-die.
+
+**New**: `dieHelpers.characterFaceInfo(die, cardsById)` - null for
+anything not currently on a character face, otherwise
+`{fieldingCost, attack, defense}` via the existing `getDieFace` helper.
+Added to `DieGroup` alongside a `damage` field (grouping already keys on
+damage, so it's free to expose). `PlayerBoard`'s chip renderer branches
+on `group.characterFace`: present means draw the `.die-face` badge (four
+absolutely-positioned corner labels inside a small bordered square) plus
+just the card name below it; absent means the existing icon+label+status
+text path, unchanged. `dieStatusText`'s Character/SidekickCharacter case
+dropped the now-redundant "4A/3D" text (attack/defense live on the badge
+instead), keeping just `L{level}` and damage for the parts still shown as
+plain text elsewhere. Sidekick dice go through the exact same badge path
+as real character cards when they roll their Level 1 character face
+(rule 1.6.8) - no special-casing, since a Sidekick is a character die
+too, just always Level 1.
+
+Verified live via headless Chromium: rolled a Sidekick to its character
+face, confirmed the badge (`0` / `1` / `1`) renders correctly in the
+Reserve Pool, then Fielded it and confirmed the same badge renders in the
+Field Zone too. 56 tests unaffected (pure frontend); `dotnet build`/
+`test` and `npm run build` both clean.

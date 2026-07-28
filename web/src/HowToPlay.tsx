@@ -84,14 +84,17 @@ export function HowToPlay(props: { onClose: () => void }) {
           <h3>The board</h3>
           <p>
             Each player's zones follow the shape of the physical playmat: Attack Zone across the
-            top, Used Pile/Field Zone/Prep Area side by side below it, Reserve Pool across the
-            middle (where dice actually land when rolled), and the Bag at the bottom - color-tinted
-            the same way the mat is. Out of Play and the Unpurchased roster sit underneath as
-            low-traffic reference zones, with the roster collapsed by default since it's just your
-            remaining buy pool. Unpurchased dice show their purchase cost and required energy
-            type(s) right on the chip; energy and character-face dice show a small icon for what
-            they're showing; hover any die (in any zone) for its full subtitle and ability text -
-            useful since the same character name can have several differently-worded printings.
+            top, Field Zone below it, then Used Pile/Reserve Pool/Prep Area side by side (Reserve
+            Pool is the middle one - where dice actually land when rolled), Out of Play under Used
+            Pile, and the Bag at the bottom - color-tinted the same way the mat is. The Unpurchased
+            roster sits underneath as a low-traffic reference zone, collapsed by default since it's
+            just your remaining buy pool. Unpurchased dice show their purchase cost and required
+            energy type(s) right on the chip; energy dice show a small icon for their type. A die
+            currently showing a character face gets a small die-face badge instead of plain text -
+            fielding cost upper-left, attack upper-right, defense lower-right, damage taken (if
+            any) lower-left, mirroring where those stats sit on a real character die/card. Hover
+            any die (in any zone) for its full subtitle and ability text - useful since the same
+            character name can have several differently-worded printings.
           </p>
 
           <h3>Global Abilities</h3>
