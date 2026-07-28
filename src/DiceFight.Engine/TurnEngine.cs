@@ -191,7 +191,7 @@ public static class TurnEngine
 
         var die = FindDie(state, dieId);
         if (die.Zone != Zone.Unpurchased)
-            throw new InvalidOperationException($"Die {dieId} is not available to purchase.");
+            throw new InvalidOperationException($"{DisplayName(state, die)} is not available to purchase.");
 
         var card = state.CardCatalog[die.CardId!];
 
@@ -220,7 +220,7 @@ public static class TurnEngine
 
         var energyDice = energyDieIdsToSpend.Select(id => FindEnergyDie(state, id)).ToList();
         if (energyDice.Count < card.PurchaseCost)
-            throw new InvalidOperationException($"Not enough energy offered to purchase {dieId} (needs {card.PurchaseCost}).");
+            throw new InvalidOperationException($"Not enough energy offered to purchase {card.Name} (needs {card.PurchaseCost}).");
 
         var spent = energyDice.Take(card.PurchaseCost).ToList();
         var unclaimed = new List<DieInstance>(spent);
@@ -230,7 +230,7 @@ public static class TurnEngine
                 e.EnergyKind == EnergyKind.Wild ||
                 (e.EnergyKind == EnergyKind.Specific && e.ProvidedEnergyType == requiredType));
             if (match is null)
-                throw new InvalidOperationException($"Purchasing {dieId} requires at least one {requiredType} energy.");
+                throw new InvalidOperationException($"Purchasing {card.Name} requires at least one {requiredType} energy.");
             unclaimed.Remove(match); // rule 2.6.2.3's example - one energy per required type, not reused
         }
 
@@ -256,14 +256,14 @@ public static class TurnEngine
 
         var die = FindDie(state, dieId);
         if (die.ControllerId != state.ActivePlayerId || die.Zone != Zone.ReservePool)
-            throw new InvalidOperationException($"Die {dieId} cannot be fielded from its current state.");
+            throw new InvalidOperationException($"{DisplayName(state, die)} cannot be fielded from its current state.");
         if (die.Status is not (DieStatus.Character or DieStatus.SidekickCharacter))
-            throw new InvalidOperationException($"Die {dieId} is not on a character face.");
+            throw new InvalidOperationException($"{DisplayName(state, die)} is not on a character face.");
 
         var fieldingCost = DieStats.GetFace(state, die).FieldingCost;
         var energyDice = energyDieIdsToSpend.Select(id => FindEnergyDie(state, id)).ToList();
         if (energyDice.Count < fieldingCost)
-            throw new InvalidOperationException($"Not enough energy offered to field {dieId} (needs {fieldingCost}).");
+            throw new InvalidOperationException($"Not enough energy offered to field {DisplayName(state, die)} (needs {fieldingCost}).");
 
         foreach (var energyDie in energyDice.Take(fieldingCost))
             energyDie.Zone = Zone.OutOfPlay; // rule 2.6.3.2
@@ -284,7 +284,7 @@ public static class TurnEngine
 
         var die = FindDie(state, dieId);
         if (die.ControllerId != state.ActivePlayerId || die.Zone != Zone.ReservePool || die.Status != DieStatus.Action)
-            throw new InvalidOperationException($"Die {dieId} is not an eligible Action die.");
+            throw new InvalidOperationException($"{DisplayName(state, die)} is not an eligible Action die.");
 
         // Rule 2.6.4.1 - the ability is initiated (queued) before the die's
         // post-use zone move; Shocking Grasp's own "you may Prep this die"
@@ -321,19 +321,19 @@ public static class TurnEngine
         if (!state.CardCatalog.TryGetValue(cardId, out var card))
             throw new InvalidOperationException($"Unknown card '{cardId}'.");
         var ability = card.Abilities.FirstOrDefault(a => a.Trigger == TriggerType.Global)
-            ?? throw new InvalidOperationException($"Card '{cardId}' has no Global ability.");
+            ?? throw new InvalidOperationException($"{card.Name} has no Global ability.");
         var cost = ability.EnergyCost
-            ?? throw new InvalidOperationException($"Card '{cardId}''s Global ability has no defined energy cost.");
+            ?? throw new InvalidOperationException($"{card.Name}'s Global ability has no defined energy cost.");
 
         var energyDice = energyDieIdsToSpend.Select(id => FindPlayerEnergyDie(state, playerId, id)).ToList();
         if (energyDice.Count < cost.Amount)
-            throw new InvalidOperationException($"Not enough energy offered to pay for {cardId}'s Global ability (needs {cost.Amount}).");
+            throw new InvalidOperationException($"Not enough energy offered to pay for {card.Name}'s Global ability (needs {cost.Amount}).");
 
         var spent = energyDice.Take(cost.Amount).ToList();
         if (cost.RequiredType is { } requiredType &&
             !spent.Any(e => e.EnergyKind == EnergyKind.Wild || (e.EnergyKind == EnergyKind.Specific && e.ProvidedEnergyType == requiredType)))
         {
-            throw new InvalidOperationException($"{cardId}'s Global ability requires at least one {requiredType} energy.");
+            throw new InvalidOperationException($"{card.Name}'s Global ability requires at least one {requiredType} energy.");
         }
 
         // Rule 2.6.1.1/2.6.1.2 - the Active player's spent energy goes Out
@@ -365,6 +365,12 @@ public static class TurnEngine
     private static DieInstance FindDie(GameState state, string id) =>
         state.Dice.SingleOrDefault(d => d.Id == id)
         ?? throw new InvalidOperationException($"No die with id '{id}'.");
+
+    // For user-facing error messages - a card's name reads far better than
+    // its raw die id (e.g. "teamB-falcon-1"), and which team it belongs to
+    // is already visible elsewhere in the UI, not worth repeating here.
+    private static string DisplayName(GameState state, DieInstance die) =>
+        die.CardId is { } cardId && state.CardCatalog.TryGetValue(cardId, out var card) ? card.Name : die.Id;
 
     // Shared by TurnEngine.Field and CombatEngine - enqueues every ability
     // on a die's card matching the given trigger. Internal so CombatEngine

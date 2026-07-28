@@ -43,21 +43,36 @@
   border: 1px solid #6ea8ff;
 }
 
+.advance-label {
+  font-size: 12px;
+  opacity: 0.65;
+}
+
+.status-bar .hint {
+  font-size: 12px;
+  font-style: italic;
+  opacity: 0.7;
+}
+
 .turn-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
   margin-bottom: 12px;
-  padding: 10px;
+  padding: 8px 10px;
   border: 1px dashed rgba(127, 127, 127, 0.35);
   border-radius: 8px;
 }
 
-.turn-controls-label {
+.turn-controls summary {
   font-size: 12px;
   opacity: 0.65;
-  margin-right: 4px;
+  cursor: pointer;
+}
+
+.turn-controls-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
 }
 
 .turn-controls button,
@@ -69,14 +84,19 @@
   cursor: pointer;
 }
 
-.advance-step-btn {
+.turn-controls button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.advance-btn {
   font-weight: 700;
   background: #6ea8ff;
   color: #06122b;
   border: none;
 }
 
-.advance-step-btn:disabled {
+.advance-btn:disabled {
   background: rgba(127, 127, 127, 0.25);
   color: inherit;
   opacity: 0.6;

@@ -65,7 +65,9 @@ function App() {
   // always acts on all of them at once - there's no reason to make the
   // player select them individually just to roll. Once Roll runs, these
   // zones empty out (the dice land straight in the Reserve Pool), so
-  // finding any die here at all means they're still unrolled.
+  // finding any die here at all means they're still unrolled - and, while
+  // still in the Clear & Draw step, means Clear & Draw hasn't been run
+  // yet either (it's the same zones, just one step earlier).
   const unrolledStepDice = game
     ? game.dice.filter(
         (d) =>
@@ -73,6 +75,33 @@ function App() {
           (d.zone === "DiceFromBag" || d.zone === "DiceFromPrep"),
       )
     : [];
+
+  // What's actually legal to click right now, mirroring TurnEngine's own
+  // step/sub-step guards - so the UI doesn't hand out buttons that just
+  // bounce off the server with an error.
+  const canClearAndDraw = game?.currentStep === "ClearAndDraw" && unrolledStepDice.length === 0;
+  const canRoll = game?.currentStep === "RollAndReroll" && unrolledStepDice.length > 0;
+  const canAdvanceToRollAndReroll = game?.currentStep === "ClearAndDraw" && unrolledStepDice.length > 0;
+  const canAdvanceToMain = game?.currentStep === "RollAndReroll" && unrolledStepDice.length === 0;
+  const canEnterAttack = game?.currentStep === "Main";
+  const canSkipAttack = game?.currentStep === "Main";
+  const canDeclareBlockers = game?.currentStep === "Attack" && game.attackSubStep === "DeclareBlockers";
+  const canAssignDamage = game?.currentStep === "Attack" && game.attackSubStep === "ActionAndGlobalWindow";
+  const canCleanUp = game?.currentStep === "CleanUp";
+
+  // The one or two buttons worth putting front and center: whatever
+  // actually moves the turn forward from exactly where it is right now.
+  type AdvanceOption = { key: string; label: string; run: () => Promise<GameState> };
+  const advanceOptions: AdvanceOption[] = [];
+  if (gameId && canClearAndDraw) advanceOptions.push({ key: "clear-and-draw", label: "Clear & Draw", run: () => api.clearAndDraw(gameId) });
+  if (gameId && canAdvanceToRollAndReroll) advanceOptions.push({ key: "to-roll", label: "Roll & Reroll ▶", run: () => api.advanceStep(gameId) });
+  if (gameId && canRoll) advanceOptions.push({ key: "roll", label: `Roll (${unrolledStepDice.length} dice)`, run: () => api.roll(gameId) });
+  if (gameId && canAdvanceToMain) advanceOptions.push({ key: "to-main", label: "Main ▶", run: () => api.advanceStep(gameId) });
+  if (gameId && canEnterAttack) advanceOptions.push({ key: "enter-attack", label: "Attack ▶", run: () => api.enterAttackStep(gameId) });
+  if (gameId && canSkipAttack) advanceOptions.push({ key: "skip-attack", label: "Clean Up (skip attack) ▶", run: () => api.skipAttackStep(gameId) });
+  if (gameId && canDeclareBlockers) advanceOptions.push({ key: "declare-blockers", label: "Declare Blockers (none) ▶", run: () => api.declareBlockers(gameId, []) });
+  if (gameId && canAssignDamage) advanceOptions.push({ key: "assign-damage", label: "Assign Combat Damage (no blocks) ▶", run: () => api.assignCombatDamage(gameId, [], []) });
+  if (gameId && canCleanUp) advanceOptions.push({ key: "clean-up", label: "End Turn ▶", run: () => api.cleanUp(gameId) });
 
   return (
     <div className="app">
@@ -90,13 +119,6 @@ function App() {
       {game && gameId && (
         <>
           <section className="status-bar">
-            <button
-              className="advance-step-btn"
-              disabled={busy || (game.currentStep === "RollAndReroll" && unrolledStepDice.length > 0)}
-              onClick={() => run(() => api.advanceStep(gameId))}
-            >
-              Advance Step ▶
-            </button>
             <div>
               <strong>Step:</strong> {game.currentStep}
               {game.currentStep === "Attack" && <> / {game.attackSubStep}</>}
@@ -105,34 +127,53 @@ function App() {
               <strong>Active:</strong> {game.activePlayerId}
             </div>
             {game.isFirstTurn && <div className="badge">First turn</div>}
+
+            <span className="advance-label">Advance to:</span>
+            {advanceOptions.map((opt) => (
+              <button key={opt.key} className="advance-btn" disabled={busy} onClick={() => run(opt.run)}>
+                {opt.label}
+              </button>
+            ))}
+            {game.currentStep === "Attack" && game.attackSubStep === "DeclareAttackers" && (
+              <span className="hint">Select attacker(s) on the board, then use the Action Tray.</span>
+            )}
           </section>
 
-          <section className="turn-controls">
-            <span className="turn-controls-label">Step actions:</span>
-            <button disabled={busy} onClick={() => run(() => api.clearAndDraw(gameId))}>
-              Clear &amp; Draw
-            </button>
-            {game.currentStep === "RollAndReroll" && unrolledStepDice.length > 0 && (
-              <button disabled={busy} onClick={() => run(() => api.roll(gameId))}>
-                Roll ({unrolledStepDice.length} dice)
+          <details className="turn-controls">
+            <summary>Manual step actions (advanced)</summary>
+            <div className="turn-controls-buttons">
+              <button disabled={busy || !canClearAndDraw} onClick={() => run(() => api.clearAndDraw(gameId))}>
+                Clear &amp; Draw
               </button>
-            )}
-            <button disabled={busy} onClick={() => run(() => api.enterAttackStep(gameId))}>
-              Enter Attack Step
-            </button>
-            <button disabled={busy} onClick={() => run(() => api.skipAttackStep(gameId))}>
-              Skip Attack Step
-            </button>
-            <button disabled={busy} onClick={() => run(() => api.declareBlockers(gameId, []))}>
-              Declare Blockers (none)
-            </button>
-            <button disabled={busy} onClick={() => run(() => api.assignCombatDamage(gameId, [], []))}>
-              Assign Combat Damage (no blocks)
-            </button>
-            <button disabled={busy} onClick={() => run(() => api.cleanUp(gameId))}>
-              Clean Up
-            </button>
-          </section>
+              <button
+                disabled={busy || !(canAdvanceToRollAndReroll || canAdvanceToMain)}
+                onClick={() => run(() => api.advanceStep(gameId))}
+              >
+                Advance Step
+              </button>
+              <button disabled={busy || !canRoll} onClick={() => run(() => api.roll(gameId))}>
+                Roll {canRoll ? `(${unrolledStepDice.length} dice)` : ""}
+              </button>
+              <button disabled={busy || !canEnterAttack} onClick={() => run(() => api.enterAttackStep(gameId))}>
+                Enter Attack Step
+              </button>
+              <button disabled={busy || !canSkipAttack} onClick={() => run(() => api.skipAttackStep(gameId))}>
+                Skip Attack Step
+              </button>
+              <button disabled={busy || !canDeclareBlockers} onClick={() => run(() => api.declareBlockers(gameId, []))}>
+                Declare Blockers (none)
+              </button>
+              <button
+                disabled={busy || !canAssignDamage}
+                onClick={() => run(() => api.assignCombatDamage(gameId, [], []))}
+              >
+                Assign Combat Damage (no blocks)
+              </button>
+              <button disabled={busy || !canCleanUp} onClick={() => run(() => api.cleanUp(gameId))}>
+                End Turn (Clean up)
+              </button>
+            </div>
+          </details>
 
           <ActionTray
             game={game}

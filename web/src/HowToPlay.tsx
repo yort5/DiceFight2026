@@ -32,54 +32,47 @@ export function HowToPlay(props: { onClose: () => void }) {
             Sidekicks."
           </p>
 
-          <h3>Advance Step</h3>
+          <h3>Advance to:</h3>
           <p>
-            The blue <strong>Advance Step ▶</strong> button next to the step/active-player readout
-            is the one control you use every step, in every turn - it moves you to the next step.
-            While you're in Roll &amp; Reroll it's disabled until you've rolled at least once; after
-            that, clicking it keeps everything as currently rolled and moves on (rule 2.4.3 lets you
-            reroll none).
-          </p>
-
-          <h3>Step actions</h3>
-          <p>
-            The dashed row below that holds the raw per-step engine actions - closer to admin/debug
-            controls than a polished turn flow, since most of them only make sense (and only do
-            something) during their own step:
+            The status bar's "Advance to:" buttons are always exactly whatever's legal to click
+            right now, in plain-language order - so it's never a guessing game between "click a
+            named action" and "click a generic Advance Step." Concretely, per step:
           </p>
           <ul>
             <li>
-              <strong>Clear &amp; Draw</strong> - start of turn: unspent Reserve Pool energy goes to
-              the Used Pile, any dice already sitting in the Prep Area (from a KO or a Prep effect
-              since your last Roll &amp; Reroll) move out to wait alongside this turn's draw, then
-              you draw new dice from the Bag. The Prep Area itself stays empty afterward - it's
-              reserved for whatever a card Preps from here on, which won't roll until next turn.
+              <strong>Clear &amp; Draw step</strong> - first "Clear &amp; Draw" (unspent Reserve
+              Pool energy goes to the Used Pile, any dice already sitting in the Prep Area from a
+              KO or a Prep effect move out to wait alongside this turn's draw, then you draw new
+              dice from the Bag), then once that's done, "Roll &amp; Reroll ▶".
             </li>
             <li>
-              <strong>Roll</strong> - only shows up during Roll &amp; Reroll, while there's still
-              something unrolled. Rolls this turn's draw plus whatever carried over from the Prep
-              Area at Clear &amp; Draw straight into the Reserve Pool - no need to select anything
-              first, it's always all of them. After rolling, select any dice you want to reroll and
-              use the Action Tray's "Reroll Selected," or just click Advance Step to keep everything
-              as rolled. Anything a card Preps after this point sits in the Prep Area untouched
-              until next turn's Clear &amp; Draw.
+              <strong>Roll &amp; Reroll step</strong> - first "Roll (N dice)" (rolls this turn's
+              draw straight into the Reserve Pool - no need to select anything, it's always all of
+              them), then once rolled, "Main ▶". Before advancing, you can select any dice you want
+              to reroll and use the Action Tray's "Reroll Selected" - advancing without doing that
+              just keeps everything as rolled (rule 2.4.3 lets you reroll none).
             </li>
             <li>
-              <strong>Enter Attack Step</strong> / <strong>Skip Attack Step</strong> - choose
-              whether to attack this turn.
+              <strong>Main step</strong> - two options, since this is a real fork: "Attack ▶" or
+              "Clean Up (skip attack) ▶". Purchase/Field/Use Action Die/Global abilities aren't
+              "advancing" - select the die you want to act on and use the Action Tray instead.
             </li>
             <li>
-              <strong>Declare Blockers</strong> / <strong>Assign Combat Damage</strong> - currently
-              only support declaring no blockers; real blocker assignment isn't wired up in the UI
-              yet (see the design doc's next-steps list).
+              <strong>Attack step</strong> - "Declare Blockers (none) ▶" once attackers are
+              declared, then "Assign Combat Damage (no blocks) ▶". Declaring attackers themselves
+              isn't a step-advance button - select the attacking die/dice on the board and use the
+              Action Tray's "Declare Attackers." Real blocker assignment isn't wired up in the UI
+              yet (see the design doc's next-steps list) - only "no blockers" is supported today.
             </li>
             <li>
-              <strong>Clean Up</strong> - ends the turn.
+              <strong>Clean Up step</strong> - "End Turn ▶".
             </li>
           </ul>
           <p>
-            Most Main Step actions (Purchase, Field, Use Action Die) don't live in this row -
-            select the die you want to act on and use the Action Tray instead.
+            The collapsed "Manual step actions (advanced)" panel underneath has the same actions
+            spelled out individually and always visible, each disabled unless it's actually legal
+            right now - only worth opening if you want the raw controls rather than the guided
+            "Advance to:" flow.
           </p>
 
           <h3>The board</h3>

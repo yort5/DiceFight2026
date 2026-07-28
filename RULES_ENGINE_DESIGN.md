@@ -679,3 +679,73 @@ in `BuildCatalog()`/`/api/cards`, just not on either fixed demo team -
 useful inventory for a future team-builder rather than dead code. Verified
 post-fix via the live API: both teams now show exactly 10 distinct
 Unpurchased card ids. 51 tests unaffected (none referenced a cut card).
+
+## Status update — clearer error messages, and a guided step-navigation redesign
+
+Three more fixes from user feedback, roughly small to large.
+
+**"Clean Up" → "End Turn (Clean up)."** Just the button label, in both
+the new primary control and the advanced panel below - it wasn't obvious
+this was the turn-ending action.
+
+**Error messages named the raw die id instead of the card.** Purchasing
+Falcon with the wrong energy said `Purchasing teamB-falcon-1 requires at
+least one Mask energy` - which team it belongs to is already visible
+elsewhere in the UI, and a raw id isn't something a player should ever
+need to read. Added `TurnEngine.DisplayName(state, die)` (card name via
+`CardCatalog`, falling back to the raw id only if no card resolves) and
+used it in every `Purchase`/`Field`/`UseActionDie`/`UseGlobalAbility`
+error that used to interpolate a die id or raw card id - now reads
+`Purchasing Falcon requires at least one Mask energy`. Verified with a
+throwaway console script constructing the exact reported scenario (2
+Fist + 1 Mask against a Mask-requiring card) rather than trying to force
+a specific bad roll through the UI.
+
+**Step navigation redesign.** The real complaint: "I thought I'd need to
+Advance Step to get into the Attack step, but apparently I needed to
+click Enter Attack Step" - because the old flat "Turn controls" row
+showed every raw engine action unconditionally (Clear & Draw, Advance
+Step, Roll, Enter/Skip Attack Step, Declare Blockers, Assign Combat
+Damage, Clean Up) regardless of whether it was legal right now, with no
+visual distinction between "the thing that moves the turn forward" and
+"a specific step's job." `AdvanceStep` itself only ever covers two of the
+turn's transitions (Clear&Draw→Roll&Reroll, Roll&Reroll→Main) - Main's
+exit is a genuine fork (Enter Attack Step vs. Skip Attack Step, not a
+linear "next"), which the uniform "Advance Step" button masked entirely.
+
+Replaced it with a computed `advanceOptions` list in `App.tsx` - the
+literal set of legal next actions for `game.currentStep`/`attackSubStep`
+right now, mirrored from `TurnEngine`'s own guards (`canClearAndDraw`,
+`canRoll`, `canAdvanceToRollAndReroll`, `canAdvanceToMain`,
+`canEnterAttack`, `canSkipAttack`, `canDeclareBlockers`,
+`canAssignDamage`, `canCleanUp`), rendered as one or two prominent blue
+buttons next to "Step:"/"Active:" in the status bar, labeled with the
+destination step (`"Roll & Reroll ▶"`, `"Main ▶"`) or the still-needed
+action (`"Clear & Draw"`, `"Roll (N dice)"`) - Main step correctly shows
+*two* buttons side by side ("Attack ▶" and "Clean Up (skip attack) ▶")
+since both are legal simultaneously. During the Attack step's
+DeclareAttackers sub-step, where there's no blanket "advance" action at
+all (you have to select attacker(s) and use the Action Tray), a plain
+hint string renders instead of a button.
+
+The old flat button row still exists, moved into a collapsed-by-default
+`<details className="turn-controls">` ("Manual step actions (advanced)")
+- same buttons, but every one is now `disabled` unless it's genuinely
+legal for the current step/sub-step (reusing the same `can*` booleans),
+addressing the "if trying to Clear and Draw from the Main step would
+cause chaos, let's not even allow it" request directly - the server was
+always rejecting illegal calls, but the client no longer even offers
+them. No "go back to a previous step" mechanism exists (rule 2.2.4
+forbids it and nothing in the engine implements an undo), so the
+collapsed panel is really "the same guided actions, spelled out
+individually," not a distinct manual/back-step affordance - flagged here
+in case that's ever revisited (an undo feature was floated as a
+longer-term alternative for fixing misclicks).
+
+Verified the whole redesign end-to-end via headless Chromium: a full
+ClearAndDraw → RollAndReroll → Main (both fork buttons visible) → Attack
+(DeclareAttackers hint, no button) → skip-to-CleanUp → End Turn →
+next-player's-ClearAndDraw sequence, screenshotted at each step, plus the
+Manual step actions panel's disabled states at the first two steps. 51
+tests still pass (none touch UI); `dotnet build`/`test` and `npm run
+build` both pass.
