@@ -451,7 +451,7 @@
     "attack    attack  attack"
     "field     field   field"
     "used      reserve prep"
-    "outofplay .       ."
+    "outofplay reserve prep"
     "bag       bag     bag"
     "drawn     drawn   carried";
   gap: 8px;
