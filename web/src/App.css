@@ -1,8 +1,25 @@
 .app {
-  max-width: 1300px;
+  max-width: 1580px;
   margin: 0 auto;
   padding: 24px;
   text-align: left;
+}
+
+.app-layout {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .app-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.main-column {
+  min-width: 0;
 }
 
 .app-header {
@@ -413,4 +430,148 @@
   color: #06122b;
   font-weight: 700;
   line-height: 14px;
+}
+
+/* ---- Global Abilities sidebar ---- */
+
+.global-sidebar {
+  border: 1px solid rgba(127, 127, 127, 0.3);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 13px;
+  position: sticky;
+  top: 24px;
+}
+
+.global-sidebar h3 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.65;
+  margin: 0 0 10px;
+}
+
+.global-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.global-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(127, 127, 127, 0.08);
+}
+
+.global-card-name {
+  font-weight: 600;
+}
+
+.global-card-cost {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.global-list-item button {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  background: #6ea8ff;
+  color: #06122b;
+  border: none;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.global-list-item button:disabled {
+  background: rgba(127, 127, 127, 0.25);
+  color: inherit;
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.global-flow {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(127, 127, 127, 0.35);
+}
+
+.global-flow-title {
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.global-flow-cost {
+  font-size: 11px;
+  opacity: 0.7;
+  margin-bottom: 8px;
+}
+
+.global-flow-player {
+  border: none;
+  padding: 0;
+  margin: 0 0 8px;
+  display: flex;
+  gap: 12px;
+}
+
+.global-flow-player legend {
+  font-size: 11px;
+  opacity: 0.65;
+  padding: 0;
+  margin-bottom: 4px;
+  width: 100%;
+}
+
+.global-flow-player label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.global-flow-selection {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+  min-height: 24px;
+}
+
+.global-flow button {
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-right: 6px;
+  margin-bottom: 6px;
+}
+
+.global-flow-cancel {
+  opacity: 0.75;
+}
+
+.global-flow button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.global-flow-notice {
+  display: flex;
+  align-items: center;
+}
+
+.global-flow-notice p {
+  margin: 0;
+  font-size: 13px;
+  opacity: 0.8;
 }

@@ -51,9 +51,10 @@ here rather than assuming which approach they'd want.
 **Actionable next steps, roughly high to low value**:
 1. Keyword *behavior* (Overcrush, Regenerate, etc.) - currently just
    tagged as data on `CardDef.Keywords`, not simulated by `CombatEngine`.
-2. Global ability UX in the web client - needs a two-phase secondary
-   selection (energy, then targets) the current single-secondary-selection
-   Action Tray can't express yet.
+2. Global ability UX - done as a standing sidebar (`GlobalAbilitiesPanel`)
+   with its own energy-then-targets flow (see the bottom-most status
+   update); still rough - no "does this need a target" hint, no
+   affordability cue, no filtering which dice are valid energy.
 3. Real per-attacker blocker assignment in the web client - only "no
    blockers" is wired up today.
 4. Legal-target exclusions for captured dice / per-die "cannot be
@@ -749,3 +750,57 @@ next-player's-ClearAndDraw sequence, screenshotted at each step, plus the
 Manual step actions panel's disabled states at the first two steps. 51
 tests still pass (none touch UI); `dotnet build`/`test` and `npm run
 build` both pass.
+
+## Status update — a Global Abilities sidebar, first working Global-ability UI
+
+First actual UI for Global abilities (previously API-only - see the
+"Actionable next steps" #2 entry and the exchange earlier in this log
+about Falcon). Went with a standing sidebar rather than folding it into
+the Action Tray, for a real rules reason: rule 2.6.5.2 means using a
+Global ability isn't tied to selecting a specific die the way every other
+Action Tray entry is - either player can trigger any card's Global from
+the shared catalog, regardless of who owns or controls a die of it. A
+sidebar listing the catalog directly matches that model instead of
+implying "click a die of this card first."
+
+**Backend**: `CardDefDto` gained `GlobalAbilityCost` (amount + required
+type, null if the card has no scripted Global) so the client can show a
+price before the player commits - `TurnEngine`/`GameStore` untouched,
+this is pure DTO surface.
+
+**Frontend**: new `GlobalAbilitiesPanel.tsx`, filtering the full card
+list to `abilityTriggers.includes("Global")`. Clicking "Use" starts a
+small local state machine in `App.tsx` (`GlobalAbilityFlow`: cardId,
+playerId, stage `"energy" | "targets"`, chosen energyIds) rather than
+building a second selection model - board clicks keep populating the
+exact same `selection` state (`primary`/`secondary`) the rest of the UI
+already uses; the flow just reads it at each stage and clears it between
+stages, and the normal `ActionTray` is swapped for a one-line status
+notice while a flow is active so the two don't both try to interpret the
+same click. "Confirm Energy" locks in stage 1's selection and moves to
+stage 2; "Confirm Target(s)" or "Skip (no target)" submits
+`api.useGlobalAbility(cardId, playerId, energyIds, targetIds)` in one
+call, matching the API's existing single-request shape. "Cancel" is
+available at every stage.
+
+Deliberately left for iteration rather than solved now: no client-side
+"does this ability actually need a target" signal (the target stage
+always shows, with the skip button as the escape hatch - not worth
+walking the `EffectNode` tree client-side for exactly one live example
+right now), no filtering of *which* energy dice are shown by the chosen
+payer (you can select any die on the board; the server still enforces
+`ControllerId` correctly, you just find out via the error banner rather
+than the UI narrowing the choices upfront), and no visual cue for "this
+ability's cost is unaffordable right now." All noted as real next steps,
+not oversights.
+
+Verified via headless Chromium end-to-end, both outcomes: submitting with
+the wrong energy type surfaced the exact server error ("Distraction's
+Global ability requires at least one Mask energy") without breaking the
+flow (stays open for retry), and submitting with a genuine Mask die
+succeeded - the spent die correctly landed in Out of Play (rule 2.6.1.1)
+and the flow closed cleanly. Also reconfirmed via the live API that
+`GlobalAbilityCost` serializes correctly (`{"amount":1,"requiredType":
+"Mask"}` for Distraction, `null` for everything else). 51 tests
+unaffected (no engine changes); `dotnet build`/`test` and `npm run build`
+both pass.

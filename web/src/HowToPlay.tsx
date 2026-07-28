@@ -87,12 +87,25 @@ export function HowToPlay(props: { onClose: () => void }) {
             printings.
           </p>
 
+          <h3>Global Abilities</h3>
+          <p>
+            The sidebar on the right lists every card with a scripted Global ability and its energy
+            cost - Global abilities aren't tied to a die selection the way everything else is
+            (either player can trigger any card's Global, whether or not they own or control a die
+            of it), so they get their own flow instead of a spot in the Action Tray. Click{" "}
+            <strong>Use</strong>, pick who's paying, click that player's Reserve Pool energy on the
+            board and <strong>Confirm Energy</strong>, then click a target on the board and{" "}
+            <strong>Confirm Target(s)</strong> (or <strong>Skip</strong> if the ability doesn't need
+            one) - the Action Tray is replaced by a status line while this is in progress.{" "}
+            <strong>Cancel</strong> backs out entirely. Only cards with a fully scripted Global show
+            up here; a card's plain-text Global ability (not yet wired into the engine) won't.
+          </p>
+
           <h3>Known gaps</h3>
           <p>
-            This is a work-in-progress dev console more than a polished game client. Global
-            ability targeting, real per-attacker blocker assignment, and keyword behavior
-            (Overcrush, Regenerate, etc.) aren't fully wired up yet - if an action you expect isn't
-            available, that's likely why.
+            This is a work-in-progress dev console more than a polished game client. Real
+            per-attacker blocker assignment and keyword behavior (Overcrush, Regenerate, etc.)
+            aren't fully wired up yet - if an action you expect isn't available, that's likely why.
           </p>
         </div>
       </div>

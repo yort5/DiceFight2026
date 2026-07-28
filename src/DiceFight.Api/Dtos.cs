@@ -5,19 +5,32 @@ namespace DiceFight.Api;
 
 public sealed record CharacterFaceDto(int FieldingCost, int Attack, int Defense, int? BurstStars);
 
+// Only meaningful when AbilityTriggers includes "Global" - lets the web
+// client show a Global ability's price before the player commits energy
+// dice to it, without needing the full AbilityDef/effect tree.
+public sealed record GlobalAbilityCostDto(int Amount, string? RequiredType);
+
 public sealed record CardDefDto(
     string Id, string Name, string? Subtitle, string Type, int PurchaseCost,
     IReadOnlyList<string> EnergyTypes, IReadOnlyList<string> Affiliations, string? Alignment,
     int DieLimit, IReadOnlyList<CharacterFaceDto> Levels, string RawText,
-    IReadOnlyList<string> Keywords, IReadOnlyList<string> AbilityTriggers)
+    IReadOnlyList<string> Keywords, IReadOnlyList<string> AbilityTriggers,
+    GlobalAbilityCostDto? GlobalAbilityCost)
 {
-    public static CardDefDto From(CardDef card) => new(
-        card.Id, card.Name, card.Subtitle, card.Type.ToString(), card.PurchaseCost,
-        card.EnergyTypes.Select(e => e.ToString()).ToList(),
-        card.Affiliations, card.Alignment?.ToString(), card.DieLimit,
-        card.Levels.Select(l => new CharacterFaceDto(l.FieldingCost, l.Attack, l.Defense, l.BurstStars)).ToList(),
-        card.RawText, card.Keywords.Select(k => k.Name).ToList(),
-        card.Abilities.Select(a => a.Trigger.ToString()).Distinct().ToList());
+    public static CardDefDto From(CardDef card)
+    {
+        var globalAbility = card.Abilities.FirstOrDefault(a => a.Trigger == TriggerType.Global);
+        return new(
+            card.Id, card.Name, card.Subtitle, card.Type.ToString(), card.PurchaseCost,
+            card.EnergyTypes.Select(e => e.ToString()).ToList(),
+            card.Affiliations, card.Alignment?.ToString(), card.DieLimit,
+            card.Levels.Select(l => new CharacterFaceDto(l.FieldingCost, l.Attack, l.Defense, l.BurstStars)).ToList(),
+            card.RawText, card.Keywords.Select(k => k.Name).ToList(),
+            card.Abilities.Select(a => a.Trigger.ToString()).Distinct().ToList(),
+            globalAbility?.EnergyCost is { } cost
+                ? new GlobalAbilityCostDto(cost.Amount, cost.RequiredType?.ToString())
+                : null);
+    }
 }
 
 public sealed record DieDto(

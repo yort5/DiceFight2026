@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "./api";
 import { ActionTray } from "./ActionTray";
+import { GlobalAbilitiesPanel, type GlobalAbilityFlow } from "./GlobalAbilitiesPanel";
 import { HowToPlay } from "./HowToPlay";
 import { PlayerBoard, type Selection } from "./PlayerBoard";
 import type { CardDef, GameState } from "./types";
@@ -13,6 +14,7 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [showHowToPlay, setShowHowToPlay] = useState(false);
+  const [globalFlow, setGlobalFlow] = useState<GlobalAbilityFlow | null>(null);
 
   useEffect(() => {
     api.getCards().then(setCards).catch((e) => setError(String(e)));
@@ -58,6 +60,60 @@ function App() {
     }
   }
 
+  // A Global ability isn't tied to a die selection the way everything
+  // else is (rule 2.6.5.2 - either player, any card) - it gets its own
+  // little energy-then-targets flow instead of a contextual Action Tray
+  // entry. Board clicks keep populating the same `selection` state used
+  // everywhere else; this flow just reads it at each stage instead of the
+  // Action Tray reading it, and the Action Tray is hidden meanwhile (see
+  // render) so the two don't fight over what a click means.
+  function startGlobalAbility(cardId: string) {
+    if (!game) return;
+    setGlobalFlow({ cardId, playerId: game.activePlayerId, stage: "energy", energyIds: [] });
+    clearSelection();
+  }
+
+  function chooseGlobalAbilityPlayer(playerId: string) {
+    setGlobalFlow((f) => (f ? { ...f, playerId } : f));
+    clearSelection();
+  }
+
+  function confirmGlobalAbilityEnergy() {
+    setGlobalFlow((f) =>
+      f
+        ? { ...f, stage: "targets", energyIds: selection.primary ? [selection.primary, ...selection.secondary] : [] }
+        : f,
+    );
+    clearSelection();
+  }
+
+  function cancelGlobalAbility() {
+    setGlobalFlow(null);
+    clearSelection();
+  }
+
+  async function submitGlobalAbility(targetIds: string[]) {
+    if (!globalFlow || !gameId) return;
+    setError(null);
+    setBusy(true);
+    try {
+      const next = await api.useGlobalAbility(
+        gameId,
+        globalFlow.cardId,
+        globalFlow.playerId,
+        globalFlow.energyIds,
+        targetIds,
+      );
+      setGame(next);
+      clearSelection();
+      setGlobalFlow(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const gameId = game?.gameId;
 
   // The Roll & Reroll step's not-yet-rolled dice: this turn's fresh draw
@@ -93,15 +149,45 @@ function App() {
   // actually moves the turn forward from exactly where it is right now.
   type AdvanceOption = { key: string; label: string; run: () => Promise<GameState> };
   const advanceOptions: AdvanceOption[] = [];
-  if (gameId && canClearAndDraw) advanceOptions.push({ key: "clear-and-draw", label: "Clear & Draw", run: () => api.clearAndDraw(gameId) });
-  if (gameId && canAdvanceToRollAndReroll) advanceOptions.push({ key: "to-roll", label: "Roll & Reroll ▶", run: () => api.advanceStep(gameId) });
-  if (gameId && canRoll) advanceOptions.push({ key: "roll", label: `Roll (${unrolledStepDice.length} dice)`, run: () => api.roll(gameId) });
-  if (gameId && canAdvanceToMain) advanceOptions.push({ key: "to-main", label: "Main ▶", run: () => api.advanceStep(gameId) });
-  if (gameId && canEnterAttack) advanceOptions.push({ key: "enter-attack", label: "Attack ▶", run: () => api.enterAttackStep(gameId) });
-  if (gameId && canSkipAttack) advanceOptions.push({ key: "skip-attack", label: "Clean Up (skip attack) ▶", run: () => api.skipAttackStep(gameId) });
-  if (gameId && canDeclareBlockers) advanceOptions.push({ key: "declare-blockers", label: "Declare Blockers (none) ▶", run: () => api.declareBlockers(gameId, []) });
-  if (gameId && canAssignDamage) advanceOptions.push({ key: "assign-damage", label: "Assign Combat Damage (no blocks) ▶", run: () => api.assignCombatDamage(gameId, [], []) });
-  if (gameId && canCleanUp) advanceOptions.push({ key: "clean-up", label: "End Turn ▶", run: () => api.cleanUp(gameId) });
+  if (gameId && canClearAndDraw) {
+    advanceOptions.push({ key: "clear-and-draw", label: "Clear & Draw", run: () => api.clearAndDraw(gameId) });
+  }
+  if (gameId && canAdvanceToRollAndReroll) {
+    advanceOptions.push({ key: "to-roll", label: "Roll & Reroll ▶", run: () => api.advanceStep(gameId) });
+  }
+  if (gameId && canRoll) {
+    advanceOptions.push({ key: "roll", label: `Roll (${unrolledStepDice.length} dice)`, run: () => api.roll(gameId) });
+  }
+  if (gameId && canAdvanceToMain) {
+    advanceOptions.push({ key: "to-main", label: "Main ▶", run: () => api.advanceStep(gameId) });
+  }
+  if (gameId && canEnterAttack) {
+    advanceOptions.push({ key: "enter-attack", label: "Attack ▶", run: () => api.enterAttackStep(gameId) });
+  }
+  if (gameId && canSkipAttack) {
+    advanceOptions.push({
+      key: "skip-attack",
+      label: "Clean Up (skip attack) ▶",
+      run: () => api.skipAttackStep(gameId),
+    });
+  }
+  if (gameId && canDeclareBlockers) {
+    advanceOptions.push({
+      key: "declare-blockers",
+      label: "Declare Blockers (none) ▶",
+      run: () => api.declareBlockers(gameId, []),
+    });
+  }
+  if (gameId && canAssignDamage) {
+    advanceOptions.push({
+      key: "assign-damage",
+      label: "Assign Combat Damage (no blocks) ▶",
+      run: () => api.assignCombatDamage(gameId, [], []),
+    });
+  }
+  if (gameId && canCleanUp) {
+    advanceOptions.push({ key: "clean-up", label: "End Turn ▶", run: () => api.cleanUp(gameId) });
+  }
 
   return (
     <div className="app">
@@ -117,97 +203,129 @@ function App() {
       {showHowToPlay && <HowToPlay onClose={() => setShowHowToPlay(false)} />}
 
       {game && gameId && (
-        <>
-          <section className="status-bar">
-            <div>
-              <strong>Step:</strong> {game.currentStep}
-              {game.currentStep === "Attack" && <> / {game.attackSubStep}</>}
-            </div>
-            <div>
-              <strong>Active:</strong> {game.activePlayerId}
-            </div>
-            {game.isFirstTurn && <div className="badge">First turn</div>}
+        <div className="app-layout">
+          <div className="main-column">
+            <section className="status-bar">
+              <div>
+                <strong>Step:</strong> {game.currentStep}
+                {game.currentStep === "Attack" && <> / {game.attackSubStep}</>}
+              </div>
+              <div>
+                <strong>Active:</strong> {game.activePlayerId}
+              </div>
+              {game.isFirstTurn && <div className="badge">First turn</div>}
 
-            <span className="advance-label">Advance to:</span>
-            {advanceOptions.map((opt) => (
-              <button key={opt.key} className="advance-btn" disabled={busy} onClick={() => run(opt.run)}>
-                {opt.label}
-              </button>
-            ))}
-            {game.currentStep === "Attack" && game.attackSubStep === "DeclareAttackers" && (
-              <span className="hint">Select attacker(s) on the board, then use the Action Tray.</span>
+              <span className="advance-label">Advance to:</span>
+              {advanceOptions.map((opt) => (
+                <button key={opt.key} className="advance-btn" disabled={busy} onClick={() => run(opt.run)}>
+                  {opt.label}
+                </button>
+              ))}
+              {game.currentStep === "Attack" && game.attackSubStep === "DeclareAttackers" && (
+                <span className="hint">Select attacker(s) on the board, then use the Action Tray.</span>
+              )}
+            </section>
+
+            <details className="turn-controls">
+              <summary>Manual step actions (advanced)</summary>
+              <div className="turn-controls-buttons">
+                <button disabled={busy || !canClearAndDraw} onClick={() => run(() => api.clearAndDraw(gameId))}>
+                  Clear &amp; Draw
+                </button>
+                <button
+                  disabled={busy || !(canAdvanceToRollAndReroll || canAdvanceToMain)}
+                  onClick={() => run(() => api.advanceStep(gameId))}
+                >
+                  Advance Step
+                </button>
+                <button disabled={busy || !canRoll} onClick={() => run(() => api.roll(gameId))}>
+                  Roll {canRoll ? `(${unrolledStepDice.length} dice)` : ""}
+                </button>
+                <button disabled={busy || !canEnterAttack} onClick={() => run(() => api.enterAttackStep(gameId))}>
+                  Enter Attack Step
+                </button>
+                <button disabled={busy || !canSkipAttack} onClick={() => run(() => api.skipAttackStep(gameId))}>
+                  Skip Attack Step
+                </button>
+                <button
+                  disabled={busy || !canDeclareBlockers}
+                  onClick={() => run(() => api.declareBlockers(gameId, []))}
+                >
+                  Declare Blockers (none)
+                </button>
+                <button
+                  disabled={busy || !canAssignDamage}
+                  onClick={() => run(() => api.assignCombatDamage(gameId, [], []))}
+                >
+                  Assign Combat Damage (no blocks)
+                </button>
+                <button disabled={busy || !canCleanUp} onClick={() => run(() => api.cleanUp(gameId))}>
+                  End Turn (Clean up)
+                </button>
+              </div>
+            </details>
+
+            {globalFlow ? (
+              <div className="action-tray global-flow-notice">
+                <p>
+                  Selecting {globalFlow.stage === "energy" ? "energy" : "target(s)"} for a Global ability - see the
+                  Global Abilities panel.
+                </p>
+              </div>
+            ) : (
+              <ActionTray
+                game={game}
+                dice={game.dice}
+                cardsById={cardsById}
+                selection={selection}
+                busy={busy}
+                onRun={run}
+                onClear={clearSelection}
+              />
             )}
-          </section>
 
-          <details className="turn-controls">
-            <summary>Manual step actions (advanced)</summary>
-            <div className="turn-controls-buttons">
-              <button disabled={busy || !canClearAndDraw} onClick={() => run(() => api.clearAndDraw(gameId))}>
-                Clear &amp; Draw
-              </button>
-              <button
-                disabled={busy || !(canAdvanceToRollAndReroll || canAdvanceToMain)}
-                onClick={() => run(() => api.advanceStep(gameId))}
-              >
-                Advance Step
-              </button>
-              <button disabled={busy || !canRoll} onClick={() => run(() => api.roll(gameId))}>
-                Roll {canRoll ? `(${unrolledStepDice.length} dice)` : ""}
-              </button>
-              <button disabled={busy || !canEnterAttack} onClick={() => run(() => api.enterAttackStep(gameId))}>
-                Enter Attack Step
-              </button>
-              <button disabled={busy || !canSkipAttack} onClick={() => run(() => api.skipAttackStep(gameId))}>
-                Skip Attack Step
-              </button>
-              <button disabled={busy || !canDeclareBlockers} onClick={() => run(() => api.declareBlockers(gameId, []))}>
-                Declare Blockers (none)
-              </button>
-              <button
-                disabled={busy || !canAssignDamage}
-                onClick={() => run(() => api.assignCombatDamage(gameId, [], []))}
-              >
-                Assign Combat Damage (no blocks)
-              </button>
-              <button disabled={busy || !canCleanUp} onClick={() => run(() => api.cleanUp(gameId))}>
-                End Turn (Clean up)
-              </button>
-            </div>
-          </details>
+            <section className="boards">
+              <PlayerBoard
+                title={`${game.playerOne.name} (${game.playerOne.id})`}
+                isActive={game.activePlayerId === game.playerOne.id}
+                life={game.playerOne.life}
+                virtualGenericEnergy={game.playerOne.virtualGenericEnergy}
+                dice={game.dice.filter((d) => d.ownerId === game.playerOne.id)}
+                cardsById={cardsById}
+                selection={selection}
+                onGroupClick={handleGroupClick}
+              />
+              <PlayerBoard
+                title={`${game.playerTwo.name} (${game.playerTwo.id})`}
+                isActive={game.activePlayerId === game.playerTwo.id}
+                life={game.playerTwo.life}
+                virtualGenericEnergy={game.playerTwo.virtualGenericEnergy}
+                dice={game.dice.filter((d) => d.ownerId === game.playerTwo.id)}
+                cardsById={cardsById}
+                selection={selection}
+                onGroupClick={handleGroupClick}
+              />
+            </section>
+          </div>
 
-          <ActionTray
+          <GlobalAbilitiesPanel
             game={game}
             dice={game.dice}
             cardsById={cardsById}
-            selection={selection}
+            cards={cards ?? []}
             busy={busy}
-            onRun={run}
-            onClear={clearSelection}
+            flow={globalFlow}
+            selection={selection}
+            onStart={startGlobalAbility}
+            onChoosePlayer={chooseGlobalAbilityPlayer}
+            onConfirmEnergy={confirmGlobalAbilityEnergy}
+            onConfirmTargets={() =>
+              submitGlobalAbility(selection.primary ? [selection.primary, ...selection.secondary] : [])
+            }
+            onSkipTargets={() => submitGlobalAbility([])}
+            onCancel={cancelGlobalAbility}
           />
-
-          <section className="boards">
-            <PlayerBoard
-              title={`${game.playerOne.name} (${game.playerOne.id})`}
-              isActive={game.activePlayerId === game.playerOne.id}
-              life={game.playerOne.life}
-              virtualGenericEnergy={game.playerOne.virtualGenericEnergy}
-              dice={game.dice.filter((d) => d.ownerId === game.playerOne.id)}
-              cardsById={cardsById}
-              selection={selection}
-              onGroupClick={handleGroupClick}
-            />
-            <PlayerBoard
-              title={`${game.playerTwo.name} (${game.playerTwo.id})`}
-              isActive={game.activePlayerId === game.playerTwo.id}
-              life={game.playerTwo.life}
-              virtualGenericEnergy={game.playerTwo.virtualGenericEnergy}
-              dice={game.dice.filter((d) => d.ownerId === game.playerTwo.id)}
-              cardsById={cardsById}
-              selection={selection}
-              onGroupClick={handleGroupClick}
-            />
-          </section>
-        </>
+        </div>
       )}
     </div>
   );

@@ -5,6 +5,11 @@ export interface CharacterFace {
   burstStars: number | null;
 }
 
+export interface GlobalAbilityCost {
+  amount: number;
+  requiredType: string | null;
+}
+
 export interface CardDef {
   id: string;
   name: string;
@@ -19,6 +24,7 @@ export interface CardDef {
   rawText: string;
   keywords: string[];
   abilityTriggers: string[];
+  globalAbilityCost: GlobalAbilityCost | null;
 }
 
 export interface Die {
