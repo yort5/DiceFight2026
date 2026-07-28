@@ -925,10 +925,10 @@ not real sheet data - only Big Barda, Harley Quinn, Robin, and Starfire
 have been swapped for real Google Sheet stats so far; every other card
 (Franklin's Galactus included) still uses `PlaceholderCost = 3` /
 `PlaceholderEnergy = Mask`. **Whether there's a "no attacking on the
-first turn" rule** - not modeled, and not confirmed either way; nothing
-in this repo encodes it (`IsFirstTurn` only affects Clear & Draw's draw
-count, rule 2.3.3), and there's no bundled rulebook text to check against
-- needs the user to confirm the exact wording before it's worth adding.
+first turn" rule** - resolved by the user checking: that's a tournament
+rule, not a core rule, so it's correctly *not* modeled here. `IsFirstTurn`
+stays scoped to what it already does (Clear & Draw's draw count, rule
+2.3.3) - nothing to add.
 
 Nothing engine-breaking here: 56 tests passing (55 + the 2 new reroll
 tests, net +1 after a pre-existing test's expectations were folded into
