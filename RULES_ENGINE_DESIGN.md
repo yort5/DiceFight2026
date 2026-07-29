@@ -52,13 +52,27 @@ here rather than assuming which approach they'd want.
 1. ~~Keyword *behavior*~~ - Overcrush and Regenerate, the two keywords
    that need real `CombatEngine`/`DieStats` simulation, are now
    implemented (see the status update). Still open: **Energize**
-   (BlackPanther, Robin) - blocked on not knowing which specific
-   double-energy face a real physical die marks Energize on, since
-   `PlaceholderDiceRoller` only has a rules-accurate *default* face
-   composition, not real per-card face tables; and **Teamwatch**
+   (BlackPanther, Robin) - previously thought blocked on not knowing
+   which specific double-energy face a real physical die marks Energize
+   on, but the user corrected this: it triggers on *any* double-energy
+   face of that die, checked once against the die's final state after
+   Roll & Reroll completes (not the initial roll - reroll it off double
+   energy and it doesn't trigger; leave a double-energy roll alone and it
+   fires once Roll & Reroll ends). That unblocks it - what's actually
+   needed is a new trigger point at the end of `TurnEngine.Reroll`
+   (checking every Energize-keyword die that ended up on a double-energy
+   face) plus per-card scripting of the actual Energize effect for
+   BlackPanther/Robin (their `RawText` already states it, just not
+   wired to an `AbilityDef` yet - see the status update). **Teamwatch**
    (Falcon) - not a combat-math keyword at all, it's an ability-trigger
    wiring problem (firing `WhenEngaged` when a Teamwatch character is
-   engaged), already separately tracked.
+   engaged), already separately tracked. **Infiltrate** - a newer
+   keyword the user flagged: an unblocked-after-Declare-Blockers
+   attacker can choose to deal 1 damage to the opponent and return to
+   the Field Zone, in a sub-window that sits *between* Declare Blockers'
+   effect resolution and the Action/Global window - i.e. it needs a new
+   `AttackSubStep` value, not just a keyword check inside an existing
+   one (see the status update).
 2. ~~Global ability UX~~ - done as a standing sidebar (`GlobalAbilitiesPanel`)
    with its own energy-then-targets flow; every Global on both rosters
    (Distraction, Falcon, Invisible Woman, Starfire) is scripted, and the
@@ -1708,3 +1722,67 @@ every scripted sample Global requires a specific energy type and a
 Generic double die can never satisfy one (rule 2.6.2.3-style matching
 applies the same way to Globals). 76 tests passing (75 + 1 new); `dotnet
 build`/`test` and `npm run build` both clean.
+
+## Status update — three notes from the user for future planning (no code changes this pass)
+
+The user gave three pieces of domain knowledge explicitly flagged as "for
+future planning or fixing," not a request to implement now. Recorded
+here plus in the next-steps list (item #1) so they aren't lost before
+whenever this gets picked up.
+
+**1. Energize's real trigger condition.** Corrected in item #1 above -
+not blocked on missing per-die face data after all, since the condition
+is "any double-energy face, checked after Roll & Reroll finalizes,"
+which is already fully knowable from `DieInstance.EnergyAmount`/
+`Status` at that point. Domino was the example given for why the
+reroll-timing matters (her flavor being about luck/chance fits neatly
+with "you don't know if Energize fires until you've committed to your
+reroll decision").
+
+**2. Infiltrate needs a new sub-step, not just a keyword check.** An
+attacker with Infiltrate that ends up unblocked after Declare Blockers'
+effects resolve can choose to deal 1 damage to the opponent and return
+to the Field Zone - before the Action/Global window even opens. This is
+architecturally different from Overcrush/Regenerate (which hook into
+existing sub-steps' *math*) - it's a genuine new decision point the
+`AttackSubStep` enum doesn't have a slot for yet, sitting between
+`DeclareBlockers` and `ActionAndGlobalWindow`. Also notable as a pattern
+in its own right: the user's framing ("sub-windows within windows") is a
+real signal that future keywords may keep needing new sub-steps rather
+than fitting inside the six the comprehensive rules currently define -
+worth designing `AttackSubStep` handling so adding one doesn't require
+touching every call site.
+
+**3. Simultaneous-trigger queue ordering, and KO'd-source-die abilities
+still resolving - already matches, verified by reading the code, not
+just asserted.** The user's example: two "when attacks" abilities both
+enter the queue in the active player's chosen order before either
+resolves; if the first ability's effect KO's the second ability's source
+die, the second ability still executes anyway. Checked
+`AbilityQueue`/`EffectInterpreter` against this directly:
+- `CombatEngine.DeclareAttackers` enqueues every attacker's `WhenAttacks`
+  ability in one loop, in the order the caller's `attackerDieIds` list
+  was given (the player's chosen order, rule 2.7.1.3) - entirely before
+  anything is drained, since `Drain` is only called by the API layer
+  after `DeclareAttackers` itself returns.
+- `AbilityQueue.Drain` (`AbilityQueue.cs:51-58`) is a plain FIFO loop
+  with no liveness check on `QueuedAbility.SourceDieId` - every enqueued
+  ability runs via `EffectInterpreter.Execute` unconditionally, whether
+  or not its source die is still on the field. A KO'd source die doesn't
+  cancel or skip its own already-queued ability.
+- Confirmed this isn't accidental: the class-level comment already cites
+  rule 3.2.2's own worked example and states `AbilityQueueTests`
+  replicates it directly.
+
+So no code change was needed for #3 - it's a genuine confirmation, the
+same shape as validating "once blocked, always blocked" against the
+rules text a few updates ago. One real, separate, already-known
+limitation worth remembering alongside it though: `GamesController`'s
+`Drain` helper resolves every `TargetSpec` in a whole `Drain()` call
+against one flat caller-supplied target list (`_ => targets`), so today
+two *simultaneously queued* abilities can't be given two *different*
+targets in one drain call - relevant the day a real multi-target queue
+UX gets built (this is the same gap the item #2 next-steps note already
+flags, not a new one).
+
+No test/build changes this pass - a documentation-only update.
