@@ -364,12 +364,15 @@ public static class TurnEngine
     // down" to its single-energy face of the same type and stays in the
     // Reserve Pool, still spendable later this turn. A Generic double
     // (e.g. a Basic Action die, which has no single-energy face to spin
-    // to) instead moves out fully right away, banking the unspent half as
-    // a real virtual-energy die (see AddVirtualGenericEnergy) rather than
-    // "spinning" a face that doesn't exist on that physical die. Only the
-    // very last die needed can ever be partially spent, by construction -
-    // every die consumed before it was necessary in full to reach the
-    // target.
+    // to) instead moves out fully right away; if the Active player is
+    // paying, the unspent half is banked as a real virtual-energy die (see
+    // AddVirtualGenericEnergy) rather than "spinning" a face that doesn't
+    // exist on that physical die - but per rule 2.6.1.6, only the Active
+    // player gets this banking. The Inactive player's unspent half is just
+    // lost (rule 2.6.1.5's reasoning for a double-only die applies the same
+    // way here). Only the very last die needed can ever be partially
+    // spent, by construction - every die consumed before it was necessary
+    // in full to reach the target.
     //
     // missingTypeMessage is only ever needed when requiredTypes is
     // non-empty (Field has none - fielding cost has no type requirement,
@@ -427,7 +430,17 @@ public static class TurnEngine
                 {
                     die.Zone = destinationZone;
                     if (destinationZone == Zone.UsedPile) die.ResetToUnrolled();
-                    AddVirtualGenericEnergy(state, payerId, overspend);
+
+                    // Rule 2.6.1.6 only grants the "keep the other as
+                    // virtual generic energy" banking to the Active player.
+                    // Rule 2.6.1.5's framing for the Inactive player (a
+                    // double-only die "cannot be spun to a single energy
+                    // face," so the unused half is simply lost) implies the
+                    // same for a Generic double - the Inactive player has no
+                    // Main Step of their own to spend banked energy in
+                    // anyway.
+                    if (payerId == state.ActivePlayerId)
+                        AddVirtualGenericEnergy(state, payerId, overspend);
                 }
                 else
                 {

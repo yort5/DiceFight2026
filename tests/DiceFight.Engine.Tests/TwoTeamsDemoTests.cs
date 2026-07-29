@@ -486,4 +486,44 @@ public class TwoTeamsDemoTests
         // carried to the Used Pile for a future Clear & Draw to sweep.
         Assert.DoesNotContain(state.Dice, d => d.IsVirtualEnergy);
     }
+
+    [Fact]
+    public void UseGlobalAbility_InactivePlayerSpendingAGenericDouble_LosesTheLeftoverInsteadOfBankingIt()
+    {
+        // None of the scripted sample Globals accept plain generic energy
+        // (they all require a specific type) - inject one that does, since
+        // that's the only way a Generic double die can pay for a Global at
+        // all (rule 2.6.2.3-style type matching applies the same way here).
+        // Has to go in before GameState.NewGame - CardCatalog is read-only
+        // once the game exists.
+        var anyEnergyGlobal = new CardDef
+        {
+            Id = "test-any-energy-global", Name = "Test Any-Energy Global",
+            Type = CardType.BasicAction, PurchaseCost = 1, DieLimit = 3,
+            Abilities = [new AbilityDef(TriggerType.Global, Cost: null, Effect: new GainLife(0),
+                EnergyCost: new EnergyCost(Amount: 1, RequiredType: null))],
+        };
+        var catalog = new Dictionary<string, CardDef>(SampleCards.BuildCatalog()) { [anyEnergyGlobal.Id] = anyEnergyGlobal };
+        var teamA = new Player { Id = "teamA", Name = "Team A" };
+        teamA.TeamCardIds.AddRange(SampleCards.TeamACharacterIds);
+        teamA.TeamCardIds.AddRange(SampleCards.TeamABasicActionIds);
+        var teamB = new Player { Id = "teamB", Name = "Team B" };
+        teamB.TeamCardIds.AddRange(SampleCards.TeamBCharacterIds);
+        teamB.TeamCardIds.AddRange(SampleCards.TeamBBasicActionIds);
+        var state = GameState.NewGame(catalog, teamA, teamB);
+        state.CurrentStep = TurnStep.Main;
+        state.ActivePlayerId = "teamA"; // teamB is the Inactive player here
+
+        var doubleGeneric = GiveDoubleEnergy(state, "teamB", 1, EnergyKind.Generic)[0];
+
+        var queue = new AbilityQueue();
+        TurnEngine.UseGlobalAbility(state, queue, anyEnergyGlobal.Id, "teamB", [doubleGeneric.Id]);
+
+        // Rule 2.6.1.2 - the Inactive player's spent energy goes straight
+        // to the Used Pile. Rule 2.6.1.6 only grants virtual-energy banking
+        // to the Active player, so the unspent half of teamB's Generic
+        // double is simply lost here, not tracked as virtual energy.
+        Assert.Equal(Zone.UsedPile, doubleGeneric.Zone);
+        Assert.DoesNotContain(state.Dice, d => d.IsVirtualEnergy);
+    }
 }

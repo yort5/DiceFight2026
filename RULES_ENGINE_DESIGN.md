@@ -84,6 +84,16 @@ here rather than assuming which approach they'd want.
    was found. A real, separate architectural piece (new state, a "pass"
    action, every Main Step action needing to reason about whose window it
    is), not a one-line fix - deferred pending the user's prioritization.
+7. Virtual generic energy currently only expires at Clean Up, not at the
+   end of the Main Step where rule 1.4.5 ("must be spent by the end of
+   the Main Step, or it will be lost") actually puts it - found during
+   the full turn-sequence review (see the status update) and confirmed
+   reachable: a player can bank virtual energy in the Main Step and still
+   spend it on a Global during the Attack Step's Action/Global window
+   today. Deliberately left as a known gap rather than fixed immediately
+   (the user's call) - fix shape when picked up: purge
+   `IsVirtualEnergy` dice for the active player in `EnterAttackStep` and
+   `SkipAttackStep`, not just `CleanUp`.
 
 Also done, out of order (the user asked for it explicitly once the above
 was clear): a visual pass matching the physical mat's zone layout and
@@ -1646,4 +1656,55 @@ Renamed and fixed the test that had locked in the wrong behavior:
 now asserting the opponent takes the leftover 4 damage (5 attack - 1
 blocker defense) even though the blocker itself survives. 75 tests still
 passing (same count - one renamed/re-asserted, none added); `dotnet
+build`/`test` and `npm run build` both clean.
+
+## Status update — full turn-sequence review against the rulebook and comprehensive rules
+
+At the user's request, went through `TurnEngine.cs`/`CombatEngine.cs`
+line-by-line against both source documents: the starter rulebook's
+back-page "TURN SUMMARY" and full Main/Attack Step walkthrough, and the
+comprehensive rules' entire Section 2 (every numbered turn/attack
+sub-rule, 2.1 through 2.9) - see [[dicefight2026-rules-references]] for
+where these live and how to re-extract them (`pdftotext` needs the same
+apt-get-download dance as headless Chromium, redone this session).
+
+**Confirmed correct**, worth recording as a real confidence signal rather
+than just "seems fine": the `TurnStep`/`AttackSubStep` enums already
+mirror the rulebook's own step numbering exactly (2.2.3's 5 steps,
+2.7.0.1's 6 Attack sub-steps); Clear & Draw's first-turn "-1 die, out of
+play" rule (2.3.3), draw-shortfall virtual energy + Life loss (2.3.10),
+and the one-shot group reroll (2.4.3/2.4.4) are all right; Main Step's
+Out-of-Play-vs-Used-Pile zone split for Active vs. Inactive spending
+(2.6.1.1/2.6.1.2/1.5.8.5), typed-double spin-down (2.6.1.4), Epic Basic
+Action gating (1.2.3), and the end-of-Main-Step unfielded-character sweep
+(2.6.7.1(1)) all check out; and - direct validation of the last status
+update's fix - rule 2.7.2.4/2.7.4.3.2 literally is the "once blocked,
+always blocked" mantra the user quoted, word for word, with Overcrush
+named as the explicit exception.
+
+**One real, currently-reachable bug found, deliberately left unfixed for
+now** (the user's call, not a technical blocker): rule 1.4.5 - virtual
+generic energy "must be spent by the end of the Main Step, or it will be
+lost." `TurnEngine.CleanUp()` is currently the only place virtual-energy
+dice get purged, which only runs after the whole Attack Step - so today,
+virtual energy banked during the Main Step is still spendable on a Global
+during the Attack Step's Action/Global window, which the rules forbid.
+Recorded as next-steps item #7 with the fix shape already sketched
+(purge in `EnterAttackStep`/`SkipAttackStep`, not just `CleanUp`).
+
+**One nuance fixed**: rule 2.6.1.6 grants the "keep the other half as
+virtual generic energy" banking specifically to the Active player when
+partially spending a Generic double; rule 2.6.1.5's framing for the
+Inactive player (a double-only die "cannot be spun to a single energy
+face," so the excess is simply lost) implies the Inactive player never
+gets this banking at all. `TurnEngine.SpendEnergy` previously banked
+virtual energy for whichever player was paying, active or inactive -
+narrowed to Active-player-only, gated on `payerId == state.ActivePlayerId`
+right where `AddVirtualGenericEnergy` is called. New test:
+`UseGlobalAbility_InactivePlayerSpendingAGenericDouble_
+LosesTheLeftoverInsteadOfBankingIt` (`TwoTeamsDemoTests`) - had to inject
+a throwaway test-only Global ability with `RequiredType: null`, since
+every scripted sample Global requires a specific energy type and a
+Generic double die can never satisfy one (rule 2.6.2.3-style matching
+applies the same way to Globals). 76 tests passing (75 + 1 new); `dotnet
 build`/`test` and `npm run build` both clean.
