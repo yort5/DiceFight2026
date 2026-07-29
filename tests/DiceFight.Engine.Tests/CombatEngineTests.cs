@@ -748,4 +748,94 @@ public class CombatEngineTests
 
         Assert.Empty(state.DeadlyEngagedDieIds);
     }
+
+    // Clarification: "...even if the Character die with Deadly has been
+    // KO'd or leaves the Field Zone" - the Deadly die dying to combat
+    // damage itself (as the blocker, here) doesn't save the attacker it
+    // was engaged with; the engagement was already locked in at Declare
+    // Blockers, well before either die's fate is decided.
+    [Fact]
+    public void Deadly_BlockerKOdByCombatDamage_AttackerStillKOdAtCleanUpAfterward()
+    {
+        var strongCard = new CardDef
+        {
+            Id = "strong-attacker", Name = "Strong Attacker", Type = CardType.Character,
+            PurchaseCost = 5, DieLimit = 4,
+            Levels = [new CharacterFace(FieldingCost: 1, Attack: 7, Defense: 7)],
+        };
+        var catalog = new Dictionary<string, CardDef> { [DeadlyCard.Id] = DeadlyCard, [strongCard.Id] = strongCard };
+        var state = GameState.NewGame(catalog, new Player { Id = "p1", Name = "Player One" }, new Player { Id = "p2", Name = "Player Two" });
+        state.CurrentStep = TurnStep.Attack;
+        state.AttackSubStep = AttackSubStep.DeclareAttackers;
+
+        var attacker = new DieInstance
+        {
+            Id = "p1-strong-1", CardId = strongCard.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(attacker);
+        var deadlyBlocker = new DieInstance
+        {
+            Id = "p2-deadly-1", CardId = DeadlyCard.Id, OwnerId = "p2", ControllerId = "p2",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1, // 1A/1D
+        };
+        state.Dice.Add(deadlyBlocker);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attacker.Id, deadlyBlocker.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [deadlyBlocker.Id]);
+
+        Assert.Contains(attacker.Id, state.DeadlyEngagedDieIds); // recorded already, before any damage
+
+        var splits = new Dictionary<string, IReadOnlyDictionary<string, int>>
+        {
+            [attacker.Id] = new Dictionary<string, int> { [deadlyBlocker.Id] = 7 }, // full 7A, way over 1D
+        };
+        var result = CombatEngine.AssignCombatDamage(state, queue, assignment, splits);
+
+        // The Deadly blocker dies outright to combat damage...
+        Assert.Contains(deadlyBlocker.Id, result.KOdDieIds);
+        Assert.Equal(Zone.PrepArea, deadlyBlocker.Zone);
+        // ...while the attacker (7D) shrugs off the blocker's paltry 1A
+        // and survives combat cleanly.
+        Assert.DoesNotContain(attacker.Id, result.KOdDieIds);
+        Assert.Equal(Zone.FieldZone, attacker.Zone);
+
+        TurnEngine.CleanUp(state);
+
+        // Even with the Deadly die long gone, the attacker it was once
+        // engaged with still dies at Clean Up.
+        Assert.Equal(Zone.PrepArea, attacker.Zone);
+    }
+
+    // Clarification: an ability that removes the engaged die from combat
+    // (e.g. Distraction's Global: "Remove target attacking character die
+    // from combat," back to the Field Zone) doesn't save it either - the
+    // engagement fact, not the die's current zone, is what Clean Up acts on.
+    [Fact]
+    public void Deadly_AttackerRemovedFromCombatByAnAbility_StillKOdAtCleanUp()
+    {
+        var state = CreateDeadlyGame();
+        var attacker = AddCharacterDie(state, "p1-plain-1", "p1", PlainCharacterCard.Id, Zone.FieldZone);
+        var deadlyBlocker = AddCharacterDie(state, "p2-deadly-1", "p2", DeadlyCard.Id, Zone.FieldZone);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attacker.Id, deadlyBlocker.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [deadlyBlocker.Id]);
+
+        Assert.Contains(attacker.Id, state.DeadlyEngagedDieIds);
+
+        // Simulate some other ability pulling the attacker out of combat
+        // entirely, well before Assign Combat Damage even runs.
+        attacker.Zone = Zone.FieldZone;
+
+        state.CurrentStep = TurnStep.CleanUp; // skip straight to Clean Up for this test
+        TurnEngine.CleanUp(state);
+
+        Assert.Equal(Zone.PrepArea, attacker.Zone); // still dies
+    }
 }

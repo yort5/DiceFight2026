@@ -2434,3 +2434,15 @@ clears the set); `TwoTeamsDemoTests` drives Deathbird's real card
 through the full pipeline - a blocker that easily survives Deathbird's
 combat damage outright is still KO'd once Clean Up runs. `dotnet build`,
 `dotnet test` (143/143), and `npm run build` all clean.
+
+**Follow-up, prompted by the user asking to double-check**: confirmed (by
+tracing the code, then locking it in with two more `CombatEngineTests`)
+that the "even if..." clause holds in both directions it names. (a) A
+Deadly *blocker* that itself dies to ordinary combat damage still gets
+its engaged attacker KO'd afterward at Clean Up - `DeadlyEngagedDieIds`
+is populated once, at Declare Blockers, and `ForceKO` at Clean Up never
+re-checks whether the Deadly die is still around. (b) A die pulled out
+of combat entirely by some other ability (back to the Field Zone, as
+Distraction's Global does) is still KO'd at Clean Up too, since `ForceKO`
+never checks a die's current zone before acting - only whether its id
+was recorded. 145 tests passing.
