@@ -366,6 +366,80 @@ public class EffectInterpreterTests
         Assert.Contains("must be one of", ex.Message);
     }
 
+    // Cosmic Cube "Infinite Possibilities" / Rip Hunter "Navigate the
+    // Sands of Time" - unlike Corrupt (an "outside Clear and Draw" draw,
+    // rule 2.3.13 - rolls immediately), this one replaces dice that were
+    // already part of Clear and Draw's own draw, so its replacements land
+    // unrolled in DiceFromBag rather than rolling right away.
+    [Fact]
+    public void RedrawFromBag_MovesChosenDiceAndDrawsAReplacementForEach()
+    {
+        var state = CreateState();
+        var drawnThisTurn = state.DiceIn("p1", Zone.Bag).Take(3).ToList();
+        foreach (var d in drawnThisTurn) d.Zone = Zone.DiceFromBag;
+        var (keep, discard1, discard2) = (drawnThisTurn[0], drawnThisTurn[1], drawnThisTurn[2]);
+
+        EffectInterpreter.Execute(
+            new RedrawFromBag(
+                TargetSpec.AnyDie(
+                    "dice drawn this turn", TargetOwnership.Own, [Zone.DiceFromBag, Zone.DiceFromPrep], count: 10,
+                    optional: true),
+                Zone.OutOfPlay),
+            new EffectContext(state, "p1", SourceDieId: null, _ => [discard1.Id, discard2.Id], Random: new Random(1)));
+
+        Assert.Equal(Zone.OutOfPlay, discard1.Zone);
+        Assert.Equal(Zone.OutOfPlay, discard2.Zone);
+        Assert.Equal(Zone.DiceFromBag, keep.Zone); // not chosen - untouched
+        // keep, plus one freshly-drawn replacement per die sent Out of Play.
+        Assert.Equal(3, state.DiceIn("p1", Zone.DiceFromBag).Count());
+    }
+
+    [Fact]
+    public void RedrawFromBag_ChoosingNone_DrawsNoReplacements()
+    {
+        var state = CreateState();
+        var drawnThisTurn = state.DiceIn("p1", Zone.Bag).Take(2).ToList();
+        foreach (var d in drawnThisTurn) d.Zone = Zone.DiceFromBag;
+        var bagCountBefore = state.DiceIn("p1", Zone.Bag).Count();
+
+        EffectInterpreter.Execute(
+            new RedrawFromBag(
+                TargetSpec.AnyDie(
+                    "dice drawn this turn", TargetOwnership.Own, [Zone.DiceFromBag, Zone.DiceFromPrep], count: 10,
+                    optional: true),
+                Zone.OutOfPlay),
+            new EffectContext(state, "p1", SourceDieId: null, _ => [], Random: new Random(1)));
+
+        Assert.Equal(2, state.DiceIn("p1", Zone.DiceFromBag).Count()); // both still there, untouched
+        Assert.Equal(bagCountBefore, state.DiceIn("p1", Zone.Bag).Count()); // no draw happened
+    }
+
+    [Fact]
+    public void RedrawFromBag_ToUsedPile_ResetsToUnrolled_ButOutOfPlayDoesNot()
+    {
+        var state = CreateState();
+        var toOutOfPlay = state.DiceIn("p1", Zone.Bag).ElementAt(0);
+        var toUsedPile = state.DiceIn("p1", Zone.Bag).ElementAt(1);
+        toOutOfPlay.Zone = Zone.DiceFromBag;
+        toUsedPile.Zone = Zone.DiceFromBag;
+        // Fake some stale rolled data to prove a reset actually clears it.
+        toOutOfPlay.Status = DieStatus.Character;
+        toOutOfPlay.Level = 3;
+        toUsedPile.Status = DieStatus.Character;
+        toUsedPile.Level = 3;
+
+        var spec = TargetSpec.AnyDie("x", TargetOwnership.Own, [Zone.DiceFromBag, Zone.DiceFromPrep], count: 1);
+        EffectInterpreter.Execute(
+            new RedrawFromBag(spec, Zone.OutOfPlay),
+            new EffectContext(state, "p1", SourceDieId: null, _ => [toOutOfPlay.Id], Random: new Random(1)));
+        EffectInterpreter.Execute(
+            new RedrawFromBag(spec, Zone.UsedPile),
+            new EffectContext(state, "p1", SourceDieId: null, _ => [toUsedPile.Id], Random: new Random(1)));
+
+        Assert.Equal(DieStatus.Character, toOutOfPlay.Status); // Out of Play isn't dormant - left alone
+        Assert.Equal(DieStatus.Unrolled, toUsedPile.Status); // Used Pile is dormant - reset
+    }
+
     [Fact]
     public void NeedsTarget_IsTrueForAGlobalWithARealTarget_FalseForOneWithout()
     {

@@ -100,6 +100,15 @@ public enum TriggerType
     // via direct EffectInterpreter calls in tests.
     WhenUsed,
 
+    // "When you draw this die from your bag" (e.g. Cosmic Cube's
+    // "Infinite Possibilities" printing) - fires once per matching die,
+    // during TurnEngine.ClearAndDraw's own draw, for each die actually
+    // drawn this turn. Distinct from a "draw a die" *effect* elsewhere in
+    // the DSL (DrawDice, Corrupt, RedrawFromBag) - this is the reactive
+    // trigger point on the *receiving end* of Clear and Draw's own draw,
+    // not something that draws anything itself.
+    WhenDrawn,
+
     Global,
     Burst1,
     Burst2,

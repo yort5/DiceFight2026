@@ -1,4 +1,5 @@
 using DiceFight.Engine;
+using DiceFight.Engine.Data;
 using DiceFight.Engine.Effects;
 using DiceFight.Engine.Model;
 using DiceFight.Engine.Queueing;
@@ -99,6 +100,138 @@ public class TurnEngineTests
         Assert.True(virtualDie.IsVirtualEnergy);
         Assert.Equal(EnergyKind.Generic, virtualDie.EnergyKind);
         Assert.Equal(2, virtualDie.EnergyAmount);
+    }
+
+    [Fact]
+    public void ClearAndDraw_TriggersWhenDrawnForADieActuallyDrawnThisTurn()
+    {
+        var card = new CardDef
+        {
+            Id = "test-when-drawn", Name = "Test WhenDrawn", Type = CardType.BasicAction,
+            PurchaseCost = 2, DieLimit = 3,
+            Abilities = [new AbilityDef(TriggerType.WhenDrawn, Cost: null, Effect: new GainLife(1))],
+        };
+        var state = GameState.NewGame(
+            new Dictionary<string, CardDef> { [card.Id] = card },
+            new Player { Id = "p1", Name = "Player One" },
+            new Player { Id = "p2", Name = "Player Two" });
+        state.IsFirstTurn = false;
+
+        // Move every real Sidekick out of reach (neither Bag nor Used
+        // Pile) so the only die left to draw is guaranteed to be this one.
+        foreach (var d in state.DiceIn("p1", Zone.Bag).ToList()) d.Zone = Zone.ReservePool;
+        var whenDrawnDie = new DieInstance
+        {
+            Id = "p1-whendrawn-1", CardId = card.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.Bag,
+        };
+        state.Dice.Add(whenDrawnDie);
+
+        var queue = new AbilityQueue();
+        TurnEngine.ClearAndDraw(state, new Random(1), queue);
+
+        Assert.Contains(whenDrawnDie.Id, state.DiceIn("p1", Zone.DiceFromBag).Select(d => d.Id));
+        Assert.Equal(1, queue.Count);
+        Assert.Equal(TriggerType.WhenDrawn, queue.Pending[0].Trigger);
+        Assert.Equal(whenDrawnDie.Id, queue.Pending[0].SourceDieId);
+    }
+
+    [Fact]
+    public void ClearAndDraw_DoesNotTriggerWhenDrawn_ForADieLeftInTheBag()
+    {
+        var card = new CardDef
+        {
+            Id = "test-when-drawn", Name = "Test WhenDrawn", Type = CardType.BasicAction,
+            PurchaseCost = 2, DieLimit = 3,
+            Abilities = [new AbilityDef(TriggerType.WhenDrawn, Cost: null, Effect: new GainLife(1))],
+        };
+        var state = GameState.NewGame(
+            new Dictionary<string, CardDef> { [card.Id] = card },
+            new Player { Id = "p1", Name = "Player One" },
+            new Player { Id = "p2", Name = "Player Two" });
+        state.IsFirstTurn = false;
+
+        // 9 dice total for p1 (8 real Sidekicks + this one), only 4 get
+        // drawn - not guaranteed to be this one, so just assert the
+        // invariant: this die only ever ends up queued if it was actually
+        // among the ones drawn.
+        var whenDrawnDie = new DieInstance
+        {
+            Id = "p1-whendrawn-1", CardId = card.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.Bag,
+        };
+        state.Dice.Add(whenDrawnDie);
+
+        var queue = new AbilityQueue();
+        TurnEngine.ClearAndDraw(state, new Random(1), queue);
+
+        var wasDrawn = state.DiceIn("p1", Zone.DiceFromBag).Any(d => d.Id == whenDrawnDie.Id);
+        Assert.Equal(wasDrawn, queue.Count == 1);
+    }
+
+    [Fact]
+    public void ClearAndDraw_OmittingTheQueue_StillDrawsNormally()
+    {
+        var card = new CardDef
+        {
+            Id = "test-when-drawn", Name = "Test WhenDrawn", Type = CardType.BasicAction,
+            PurchaseCost = 2, DieLimit = 3,
+            Abilities = [new AbilityDef(TriggerType.WhenDrawn, Cost: null, Effect: new GainLife(1))],
+        };
+        var state = GameState.NewGame(
+            new Dictionary<string, CardDef> { [card.Id] = card },
+            new Player { Id = "p1", Name = "Player One" },
+            new Player { Id = "p2", Name = "Player Two" });
+        state.IsFirstTurn = false;
+        state.Dice.Add(new DieInstance
+        {
+            Id = "p1-whendrawn-1", CardId = card.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.Bag,
+        });
+
+        TurnEngine.ClearAndDraw(state, new Random(1)); // no queue supplied
+
+        Assert.Equal(4, state.DiceIn("p1", Zone.DiceFromBag).Count());
+    }
+
+    [Fact]
+    public void CosmicCubeInfinitePossibilities_WhenDrawn_CanSendDrawnDiceOutOfPlayAndRedraw()
+    {
+        var cube = SampleCards.CosmicCubeInfinitePossibilities;
+        var state = GameState.NewGame(
+            new Dictionary<string, CardDef> { [cube.Id] = cube },
+            new Player { Id = "p1", Name = "Player One" },
+            new Player { Id = "p2", Name = "Player Two" });
+        state.IsFirstTurn = false;
+
+        // Guarantee the Cosmic Cube die is drawn without depending on RNG
+        // order: leave exactly 3 Sidekicks in the bag alongside it (4
+        // total = this turn's draw count, so all 4 get picked regardless
+        // of order), and stash the other 5 in the Used Pile - untouched
+        // for now, but reachable for the replacement draws later.
+        var sidekicks = state.DiceIn("p1", Zone.Bag).ToList();
+        foreach (var d in sidekicks.Skip(3)) d.Zone = Zone.UsedPile;
+        var cubeDie = new DieInstance
+        {
+            Id = "p1-cosmiccube-1", CardId = cube.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.Bag,
+        };
+        state.Dice.Add(cubeDie);
+
+        var queue = new AbilityQueue();
+        TurnEngine.ClearAndDraw(state, new Random(1), queue);
+
+        Assert.Equal(1, queue.Count);
+        var drawnThisTurn = state.DiceIn("p1", Zone.DiceFromBag).ToList();
+
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(
+                state, ability.ControllerId, ability.SourceDieId,
+                _ => drawnThisTurn.Select(d => d.Id).ToList(), // send everything drawn this turn Out of Play
+                Random: new Random(2))));
+
+        Assert.All(drawnThisTurn, d => Assert.Equal(Zone.OutOfPlay, d.Zone));
+        // One replacement per die sent Out of Play, landing unrolled in
+        // DiceFromBag (not immediately rolled - see RedrawFromBag's remarks).
+        Assert.Equal(drawnThisTurn.Count, state.DiceIn("p1", Zone.DiceFromBag).Count());
+        Assert.All(state.DiceIn("p1", Zone.DiceFromBag), d => Assert.Equal(DieStatus.Unrolled, d.Status));
     }
 
     [Fact]

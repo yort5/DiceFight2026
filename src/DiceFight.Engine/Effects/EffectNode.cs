@@ -35,7 +35,8 @@ public sealed record TargetSpec(
     string Description,
     bool IsSelf = false,
     bool SidekicksOnly = false,
-    bool PlayersAllowed = false)
+    bool PlayersAllowed = false,
+    bool Optional = false)
 {
     // Rule 3.3.4/3.3.5 - only dice in the Field Zone (which includes the
     // Attack Zone) may be targeted, unless otherwise stated.
@@ -49,9 +50,17 @@ public sealed record TargetSpec(
         IReadOnlyList<Model.Zone>? zones = null) =>
         new(ownership, CharacterDiceOnly: true, zones ?? DefaultZones, energyType, count, description);
 
+    // optional: true models "you MAY target up to Count" (any number,
+    // including zero, is a legal chosen count) rather than rule 3.3.11's
+    // usual "as many as legally available, capped at Count" (which
+    // requires choosing at least min(Count, legal.Count) - see Resolve).
+    // Needed for card text like Cosmic Cube's "you may send ANY NUMBER of
+    // them" - a voluntary selection, not a mandatory one just capped by
+    // availability.
     public static TargetSpec AnyDie(
-        string description, TargetOwnership ownership, IReadOnlyList<Model.Zone> zones, int count = 1) =>
-        new(ownership, CharacterDiceOnly: false, zones, RequiredEnergyType: null, count, description);
+        string description, TargetOwnership ownership, IReadOnlyList<Model.Zone> zones, int count = 1,
+        bool optional = false) =>
+        new(ownership, CharacterDiceOnly: false, zones, RequiredEnergyType: null, count, description, Optional: optional);
 
     // "target player or Character die" card text (e.g. Attune) - a single
     // choice between the two, not two separate targets. LegalTargets
@@ -121,6 +130,19 @@ public sealed record SetCallOutTarget(TargetSpec Target) : EffectNode;
 // EffectInterpreter calls ctx.ResolveTargets for it directly instead
 // (validating the answer is actually one of the drawn dice).
 public sealed record Corrupt(int Count, TargetSpec PlayerTarget) : EffectNode;
+// A WhenDrawn "mulligan" effect (Cosmic Cube's "Infinite Possibilities"
+// printing, Rip Hunter's "Navigate the Sands of Time" printing) - moves
+// the chosen already-drawn dice (Target's zones should be DiceFromBag/
+// DiceFromPrep, Own ownership) to ToZone (Out of Play for Cosmic Cube,
+// Used Pile for Rip Hunter), then draws one replacement per die actually
+// moved. Unlike DrawDice/Corrupt (both explicitly "outside Clear and
+// Draw," rule 2.3.13 - roll immediately into the Reserve Pool), this
+// happens *during* Clear and Draw itself, replacing dice that were part
+// of that same step's own draw - so the replacements go through
+// TurnEngine.DrawFromBag the same way the original draw did, landing
+// unrolled in DiceFromBag to be rolled later, together with everything
+// else, at Roll and Reroll - not rolled here.
+public sealed record RedrawFromBag(TargetSpec Target, Model.Zone ToZone) : EffectNode;
 public sealed record MoveDie(TargetSpec Target, Model.Zone ToZone) : EffectNode;
 public sealed record ModifyStat(TargetSpec Target, int? AttackDelta, int? DefenseDelta) : EffectNode;
 public sealed record Reroll(TargetSpec Target) : EffectNode;

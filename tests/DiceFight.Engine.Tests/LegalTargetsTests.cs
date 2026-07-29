@@ -138,6 +138,24 @@ public class LegalTargetsTests
         Assert.Contains("needs 2 target(s)", ex.Message);
     }
 
+    // TargetSpec.Optional (e.g. Cosmic Cube's "you may send ANY NUMBER of
+    // them") - unlike the mandatory-up-to-Count case above, choosing
+    // fewer than the legal count (including zero) is never an error.
+    [Fact]
+    public void Interpreter_OptionalSpec_AllowsChoosingNone_EvenWhenLegalTargetsExist()
+    {
+        var state = CreateState();
+        AddDie(state, "p1-a", "p1", Zone.FieldZone, DieStatus.SidekickCharacter);
+        AddDie(state, "p1-b", "p1", Zone.FieldZone, DieStatus.SidekickCharacter);
+
+        EffectInterpreter.Execute(
+            new Ko(TargetSpec.AnyDie("x", TargetOwnership.Any, TargetSpec.DefaultZones, count: 2, optional: true)),
+            new EffectContext(state, "p2", SourceDieId: null, _ => [])); // chose none - no exception
+
+        // Neither die was targeted, so neither was KO'd.
+        Assert.DoesNotContain(state.Dice, d => d.Zone == Zone.PrepArea);
+    }
+
     [Fact]
     public void Interpreter_AllowsFewerThanCount_WhenFewerLegalTargetsExist()
     {

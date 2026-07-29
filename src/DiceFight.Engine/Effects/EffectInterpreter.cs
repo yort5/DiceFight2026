@@ -61,6 +61,7 @@ public static class EffectInterpreter
             case ForceBlock n: if (!n.Target.IsSelf) yield return n.Target; break;
             case SetCallOutTarget n: if (!n.Target.IsSelf) yield return n.Target; break;
             case Corrupt n: yield return n.PlayerTarget; break; // never Self - see TargetSpec.Player
+            case RedrawFromBag n: if (!n.Target.IsSelf) yield return n.Target; break;
             case MoveDie n: if (!n.Target.IsSelf) yield return n.Target; break;
             case ModifyStat n: if (!n.Target.IsSelf) yield return n.Target; break;
             case Reroll n: if (!n.Target.IsSelf) yield return n.Target; break;
@@ -286,6 +287,29 @@ public static class EffectInterpreter
                 break;
             }
 
+            case RedrawFromBag redraw:
+            {
+                var chosen = Resolve(ctx, redraw.Target, cache);
+                foreach (var id in chosen)
+                {
+                    var die = FindDie(ctx, id);
+                    die.Zone = redraw.ToZone;
+                    // Rule - Out of Play is deliberately not treated as a
+                    // dormant zone (see DieInstance.ResetToUnrolled's own
+                    // remarks); everything else this can target (Used
+                    // Pile) is.
+                    if (redraw.ToZone != Zone.OutOfPlay) die.ResetToUnrolled();
+                }
+
+                // "For each die sent [to ToZone], draw a die" - lands in
+                // DiceFromBag (see the record's remarks), to be rolled
+                // together with the rest of this turn's draw once Roll
+                // runs, not immediately.
+                if (chosen.Count > 0)
+                    TurnEngine.DrawFromBag(ctx.State, ctx.ControllerId, chosen.Count, ctx.Random);
+                break;
+            }
+
             case PrepFromBagIfPurchasedThisTurn:
                 if (ctx.State.GetPlayer(ctx.ControllerId).PurchasedDieThisTurn)
                 {
@@ -339,7 +363,7 @@ public static class EffectInterpreter
         }
         else
         {
-            var required = Math.Min(spec.Count, legal.Count);
+            var required = spec.Optional ? 0 : Math.Min(spec.Count, legal.Count);
             if (chosen.Count < required)
             {
                 throw new InvalidOperationException(

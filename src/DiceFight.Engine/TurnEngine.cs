@@ -50,7 +50,14 @@ public static class TurnEngine
     }
 
     // Rule 2.3 - Clear and Draw Step.
-    public static void ClearAndDraw(GameState state, Random random)
+    // queue is optional - most call sites (every test that isn't
+    // exercising a WhenDrawn card) have no use for it and shouldn't have
+    // to construct/drain one just to call this. When supplied, each
+    // successfully-drawn die is checked for a WhenDrawn ability (e.g.
+    // Cosmic Cube's "Infinite Possibilities" printing) - see
+    // EffectNode.RedrawFromBag's remarks for why its own replacement
+    // draws land back in DiceFromBag rather than rolling immediately.
+    public static void ClearAndDraw(GameState state, Random random, AbilityQueue? queue = null)
     {
         if (state.CurrentStep != TurnStep.ClearAndDraw)
             throw new InvalidOperationException($"Expected ClearAndDraw step, was {state.CurrentStep}.");
@@ -80,6 +87,12 @@ public static class TurnEngine
         // the 4th die drawn and set Out of Play instead of into Prep Area.
         var drawCount = state.IsFirstTurn ? 3 : 4;
         var drawn = DrawFromBag(state, activeId, drawCount, random);
+
+        if (queue is not null)
+        {
+            foreach (var die in drawn)
+                EnqueueTriggered(state, queue, die, TriggerType.WhenDrawn);
+        }
 
         if (state.IsFirstTurn)
         {

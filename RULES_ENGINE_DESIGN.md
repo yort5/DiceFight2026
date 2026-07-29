@@ -129,7 +129,19 @@ here rather than assuming which approach they'd want.
    the others already do - and since attackers declare in a batch, this
    probably needs a per-attacker target list eventually, not just one
    flat list (same underlying limitation the AbilityQueue status update
-   already flagged for `Drain` in general).
+   already flagged for `Drain` in general). `/clear-and-draw` now has the
+   identical gap for the same reason (found while wiring Cosmic Cube's
+   `WhenDrawn` ability) - same fix shape applies there too.
+10. Rip Hunter's "Navigate the Sands of Time" (Batman set) - the same
+    `WhenDrawn`/`RedrawFromBag` shape as Cosmic Cube's "Infinite
+    Possibilities" (see the status update), but sends dice to the Used
+    Pile instead of Out of Play and adds two things this engine doesn't
+    model yet: a "while active" gate (the ability should only apply while
+    a Rip Hunter Character die is active) and a "once during your Clear
+    and Draw Step" per-turn limiter (similar shape to `OncePerTurn` on
+    Global abilities, but scoped to Clear and Draw specifically rather
+    than a whole turn). Not started - flagged since the primitives it'd
+    reuse already exist.
 
 Also done, out of order (the user asked for it explicitly once the above
 was clear): a visual pass matching the physical mat's zone layout and
@@ -2176,3 +2188,75 @@ entirely; refilling from the Used Pile mid-draw; nothing anywhere to draw
 is a no-op; an invalid chosen id throws); `TwoTeamsDemoTests` drives
 Polaris's real card through `Field` -> `Drain`. `dotnet build`, `dotnet
 test` (113/113), and `npm run build` all clean.
+
+## Status update — "draw dice mid-Clear-and-Draw" cards (Cosmic Cube, not a keyword); a real Optional-targeting gap found and fixed
+
+Not a keyword this time - the user pointed at Cosmic Cube/Rip Hunter as
+"also draw dice and do stuff," worth comparing against Corrupt. The
+comparison mattered: Corrupt's draw happens from a `WhenFielded`-style
+ability, "outside Clear and Draw" in rule 2.3.13's own phrasing, so it
+rolls immediately into the Reserve Pool (see the Corrupt status update).
+Cosmic Cube/Rip Hunter's draw instead happens *during* Clear and Draw
+itself, reacting to that step's own draw - so their replacement dice
+need to behave like any other Clear-and-Draw-drawn die (land unrolled in
+`DiceFromBag`, roll later at Roll and Reroll), not roll immediately.
+Getting this distinction right was the actual point of picking these two.
+
+Picked Guardians of the Galaxy's Cosmic Cube ("Infinite Possibilities" -
+a different real printing from the MSW "switch life totals" Cosmic Cube
+already in the catalog, different id, unrelated text): "During your
+Clear and Draw Step, when you draw this die from your bag, you may send
+it and any other dice you've drawn this turn Out of Play. For each die
+sent Out of Play, draw a die." Rip Hunter's "Navigate the Sands of Time"
+is the same shape (Used Pile instead of Out of Play as the discard
+zone) but adds a "while active" gate and a "once during your Clear and
+Draw Step" limiter this engine doesn't model yet - left for later, since
+the new primitives below already generalize to it.
+
+- New `TriggerType.WhenDrawn` - fires once per die, during `TurnEngine.
+  ClearAndDraw`'s own draw, for each die actually drawn. `ClearAndDraw`
+  gained an optional `AbilityQueue? queue = null` parameter (default null
+  so the ~17 existing call sites that don't care don't need updating)
+  and now enqueues a `WhenDrawn` check per drawn die when one is supplied.
+- New `RedrawFromBag(TargetSpec Target, Zone ToZone)` `EffectNode` - moves
+  the chosen already-drawn dice (`Target` scoped to `DiceFromBag`/
+  `DiceFromPrep`, `Own` ownership) to `ToZone`, then draws one
+  replacement per die actually moved via `TurnEngine.DrawFromBag` (the
+  same helper Corrupt already reuses) - landing each replacement back in
+  `DiceFromBag`, not rolled.
+- **A real gap found while wiring this, not just Corrupt's leftover**:
+  `TargetSpec.Count` has always meant "as many as legally available,
+  capped at Count" (rule 3.3.11) - a *mandatory* selection just capped by
+  availability, enforced by `Resolve` throwing if the chosen count falls
+  below `min(Count, legal.Count)`. Cosmic Cube's "you may send **any
+  number** of them" is a fundamentally different, voluntary 0-to-N
+  selection, which nothing in the DSL could express before this - every
+  existing scripted ability's targeting has implicitly been mandatory
+  until now. Added `TargetSpec.Optional` (+ an `optional` parameter on
+  `TargetSpec.AnyDie`): when set, `Resolve`'s required-minimum drops to
+  0 unconditionally, so choosing none is never an error regardless of how
+  many legal targets exist. Caught by a test that tried to model Cosmic
+  Cube's "you may" with an ordinary `Count`-based spec and got a hard
+  "needs N target(s)" exception back - the DSL was correct to reject it,
+  the *card* was scripted wrong, and the real fix was a new primitive,
+  not a workaround.
+
+Also wired `GamesController`'s `/clear-and-draw` endpoint to construct a
+queue and `Drain` it (previously didn't even have one) - matches every
+other trigger-producing endpoint's shape now, though it still hits the
+same "flat resolver, no way to pass a real target through this specific
+endpoint" limitation already flagged for `/declare-attackers` - draining
+with no chosen targets is a safe, correct default now that `Optional`
+exists (Cosmic Cube's ability just resolves "choose none").
+
+10 new tests (121 total): `EffectInterpreterTests` covers `RedrawFromBag`
+directly (moves chosen dice and draws replacements; choosing none draws
+nothing; Used Pile resets to unrolled while Out of Play doesn't) and the
+new `Optional` semantics directly (choosing none never throws, even with
+legal targets available); `TurnEngineTests` covers `WhenDrawn` end to end
+through `ClearAndDraw` (a matching die drawn this turn triggers exactly
+once; a die left in the bag never triggers; omitting the queue changes
+nothing) plus Cosmic Cube's real card start to finish (drawn, all of
+this turn's draw sent Out of Play, one unrolled replacement per die
+drawn back into `DiceFromBag`). `dotnet build`, `dotnet test` (121/121),
+and `npm run build` all clean.

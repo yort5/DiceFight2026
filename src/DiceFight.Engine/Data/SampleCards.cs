@@ -442,6 +442,38 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 2, Attack: 5, Defense: 5)
         ]);
 
+    // Guardians of the Galaxy's Cosmic Cube, "Infinite Possibilities"
+    // printing - a distinct real card from the already-present MSW
+    // "Epic Basic Action... switch life totals" Cosmic Cube (different
+    // set, different id, different text entirely; both are genuine real
+    // printings). Its own energy type on the reference spreadsheet reads
+    // "Bolt," but rule 1.3.10 is unambiguous - "Sidekick and Basic Action
+    // dice have no energy type attribute" - so that column is presumably
+    // flavor/die-color metadata rather than an actual purchase
+    // requirement; treated as a plain, typeless Basic Action here, per
+    // the rules text rather than the sheet.
+    //
+    // This is the card that actually exercises TriggerType.WhenDrawn/
+    // RedrawFromBag: "During your Clear and Draw Step, when you draw this
+    // die from your bag, you may send it and any other dice you've drawn
+    // this turn Out of Play. For each die sent Out of Play, draw a die."
+    // Rip Hunter's "Navigate the Sands of Time" (Batman set) has the same
+    // shape (send chosen drawn dice to the Used Pile instead of Out of
+    // Play, draw replacements) but adds a "while active" gate and a
+    // "once during your Clear and Draw Step" limiter this engine doesn't
+    // model yet - left for whenever that specific card gets picked up,
+    // since RedrawFromBag/WhenDrawn already generalize to it.
+    public static readonly CardDef CosmicCubeInfinitePossibilities = BasicAction(
+        "cosmic-cube-infinite-possibilities", "Cosmic Cube",
+        "During your Clear and Draw Step, when you draw this die from your bag, you may send it and any " +
+        "other dice you've drawn this turn Out of Play. For each die sent Out of Play, draw a die.",
+        abilities: [new AbilityDef(TriggerType.WhenDrawn, Cost: null,
+            Effect: new RedrawFromBag(
+                TargetSpec.AnyDie(
+                    "dice drawn this turn", TargetOwnership.Own, [Zone.DiceFromBag, Zone.DiceFromPrep], count: 10,
+                    optional: true), // "you may send ANY NUMBER of them" - zero is a legal choice
+                Zone.OutOfPlay))]);
+
     // A team is 8 character cards + 2 Basic Action cards (10 total), not
     // the 10 characters + 3 Basic Actions used here previously - that was
     // simply wrong. Colossus, Corvus Glaive, Distraction, Kang, King
@@ -477,7 +509,7 @@ public static class SampleCards
             Falcon, FranklinsGalactus, GodEmperorDoom, GoddessOfThunder, Groot, InvisibleWoman,
             JaneFoster, Starfire, Kang, KingHyperion, CasketOfAncientWinters, DailyBugle, Escape,
             AlfredPennyworthCaretaker, AlfredPennyworthMI5, AlfredPennyworthToughAsNails,
-            AntManAmplify, Cyclops, Wasp, BlackWidow, Polaris
+            AntManAmplify, Cyclops, Wasp, BlackWidow, Polaris, CosmicCubeInfinitePossibilities
         ];
         return all.ToDictionary(c => c.Id);
     }

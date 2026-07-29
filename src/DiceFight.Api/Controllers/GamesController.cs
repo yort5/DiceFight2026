@@ -45,7 +45,9 @@ public sealed class GamesController(GameStore store) : ControllerBase
     public ActionResult<GameStateDto> ClearAndDraw(string gameId)
     {
         var state = store.Get(gameId);
-        TurnEngine.ClearAndDraw(state, new Random());
+        var queue = new AbilityQueue();
+        TurnEngine.ClearAndDraw(state, new Random(), queue);
+        Drain(state, queue, null);
         return Ok(GameStateDto.From(gameId, state));
     }
 
