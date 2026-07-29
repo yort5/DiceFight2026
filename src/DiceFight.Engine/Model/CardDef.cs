@@ -31,6 +31,15 @@ public sealed record CardDef
     public string RawText { get; init; } = string.Empty;
     public IReadOnlyList<KeywordInstance> Keywords { get; init; } = [];
     public IReadOnlyList<AbilityDef> Abilities { get; init; } = [];
+
+    // Bespoke text like Darkseid's "While Darkseid is active, your
+    // Sidekicks gain Swarm" - a static, continuously-recomputed grant
+    // (not a discrete triggered ability), scoped to "your Sidekicks,"
+    // which per DieStats.CountsAsSidekick already includes any active
+    // Ally-keyword die too. See DieStats.HasKeyword for how this is
+    // actually applied live; empty for every card that doesn't grant
+    // anything.
+    public IReadOnlyList<string> GrantsToSidekicks { get; init; } = [];
 }
 
 // Rule Appendix 1 - keyword abilities are a finite, engine-known set

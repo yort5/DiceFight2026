@@ -422,6 +422,147 @@ public class TurnEngineTests
         Assert.Equal(5, state.DiceIn("p1", Zone.DiceFromBag).Count());
     }
 
+    // Darkseid ("Force of Entropy"): "While Darkseid is active, your
+    // Sidekicks gain Swarm." Reaches an active Ally die too (Alfred
+    // Pennyworth counts as a Sidekick while fielded - DieStats.
+    // CountsAsSidekick), but Swarm's own match is still on the specific
+    // die's card identity: a granted-Swarm real Sidekick only matches
+    // another real Sidekick (they're mutually fungible - CardId null for
+    // all of them), and a granted-Swarm Alfred only matches another copy
+    // of Alfred specifically. Four tests: the user's two "does NOT
+    // trigger" examples, plus a positive control for each so a
+    // regression that broke the grant entirely wouldn't slip through
+    // silently as "everything correctly doesn't trigger."
+    private static (GameState state, DieInstance darkseid) CreateDarkseidGame()
+    {
+        var state = GameState.NewGame(
+            SampleCards.BuildCatalog(),
+            new Player { Id = "p1", Name = "Player One" },
+            new Player { Id = "p2", Name = "Player Two" });
+        state.IsFirstTurn = false;
+        var darkseid = new DieInstance
+        {
+            Id = "p1-darkseid", CardId = SampleCards.Darkseid.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(darkseid);
+        return (state, darkseid);
+    }
+
+    [Fact]
+    public void ClearAndDraw_DarkseidSwarm_ActiveGrantedSidekick_DrawingAlfred_DoesNotTrigger()
+    {
+        var (state, _) = CreateDarkseidGame();
+        var activeSidekick = state.DiceIn("p1", Zone.Bag).First();
+        activeSidekick.Zone = Zone.FieldZone;
+        activeSidekick.Status = DieStatus.SidekickCharacter;
+
+        // Every other real Sidekick stashed out of reach (neither Bag nor
+        // Used Pile), so the only thing drawable is Alfred - isolates
+        // whether drawing HIM specifically triggers the active plain
+        // Sidekick's granted Swarm. It shouldn't - different card identity.
+        foreach (var d in state.DiceIn("p1", Zone.Bag).ToList()) d.Zone = Zone.OutOfPlay;
+        var alfredInBag = new DieInstance
+        {
+            Id = "p1-alfred-copy", CardId = SampleCards.AlfredPennyworthCaretaker.Id,
+            OwnerId = "p1", ControllerId = "p1", Zone = Zone.Bag,
+        };
+        state.Dice.Add(alfredInBag);
+
+        TurnEngine.ClearAndDraw(state, new Random(1));
+
+        Assert.Single(state.DiceIn("p1", Zone.DiceFromBag)); // just Alfred - no Swarm bonus
+    }
+
+    [Fact]
+    public void ClearAndDraw_DarkseidSwarm_ActiveGrantedSidekick_DrawingAnotherSidekick_Triggers()
+    {
+        var (state, _) = CreateDarkseidGame();
+        var activeSidekick = state.DiceIn("p1", Zone.Bag).First();
+        activeSidekick.Zone = Zone.FieldZone;
+        activeSidekick.Status = DieStatus.SidekickCharacter;
+
+        var remainingSidekicks = state.DiceIn("p1", Zone.Bag).ToList();
+        var copyInBag = remainingSidekicks[0];
+        foreach (var d in remainingSidekicks.Skip(1)) d.Zone = Zone.OutOfPlay;
+
+        // 3 unrelated filler dice (a real Character card, not a Sidekick
+        // and not Alfred) round out this turn's other draw slots without
+        // being eligible to match anything themselves.
+        for (var i = 0; i < 3; i++)
+        {
+            state.Dice.Add(new DieInstance
+            {
+                Id = $"p1-filler-{i}", CardId = SampleCards.Cyclops.Id, OwnerId = "p1", ControllerId = "p1",
+                Zone = Zone.Bag,
+            });
+        }
+        // One more spare, reachable only via the Used Pile, for the
+        // Swarm bonus pull itself to succeed.
+        state.Dice.Add(new DieInstance
+        {
+            Id = "p1-bonus-spare", CardId = SampleCards.Cyclops.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.UsedPile,
+        });
+
+        TurnEngine.ClearAndDraw(state, new Random(1));
+
+        // 4 normal draws (copyInBag + 3 filler) + exactly 1 Swarm bonus.
+        Assert.Equal(5, state.DiceIn("p1", Zone.DiceFromBag).Count());
+    }
+
+    [Fact]
+    public void ClearAndDraw_DarkseidSwarm_ActiveAlfred_DrawingPlainSidekicks_DoesNotTrigger()
+    {
+        var (state, _) = CreateDarkseidGame();
+        var activeAlfred = new DieInstance
+        {
+            Id = "p1-alfred-active", CardId = SampleCards.AlfredPennyworthCaretaker.Id,
+            OwnerId = "p1", ControllerId = "p1", Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(activeAlfred);
+
+        // No isolation needed here: none of the default bag's plain
+        // Sidekicks can ever match Alfred's own card identity, so drawing
+        // several of them alongside is safe, unambiguous filler.
+        TurnEngine.ClearAndDraw(state, new Random(1));
+
+        Assert.Equal(4, state.DiceIn("p1", Zone.DiceFromBag).Count()); // no Swarm bonus
+    }
+
+    [Fact]
+    public void ClearAndDraw_DarkseidSwarm_ActiveAlfred_DrawingAnotherAlfred_Triggers()
+    {
+        var (state, _) = CreateDarkseidGame();
+        var activeAlfred = new DieInstance
+        {
+            Id = "p1-alfred-active", CardId = SampleCards.AlfredPennyworthCaretaker.Id,
+            OwnerId = "p1", ControllerId = "p1", Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(activeAlfred);
+        var alfredCopyInBag = new DieInstance
+        {
+            Id = "p1-alfred-copy", CardId = SampleCards.AlfredPennyworthCaretaker.Id,
+            OwnerId = "p1", ControllerId = "p1", Zone = Zone.Bag,
+        };
+        state.Dice.Add(alfredCopyInBag);
+
+        // Bag: alfredCopyInBag + 3 real Sidekicks = this turn's draw
+        // count exactly, so all 4 are guaranteed drawn regardless of RNG
+        // order; one more Sidekick sits in the Used Pile as the Swarm
+        // bonus pull's own spare, the rest stashed out of reach entirely.
+        var sidekicks = state.DiceIn("p1", Zone.Bag).Where(d => d.Id != alfredCopyInBag.Id).ToList();
+        sidekicks[3].Zone = Zone.UsedPile;
+        foreach (var d in sidekicks.Skip(4)) d.Zone = Zone.OutOfPlay;
+
+        TurnEngine.ClearAndDraw(state, new Random(1));
+
+        // alfredCopyInBag + 3 Sidekicks drawn (4) + 1 Swarm bonus (5) -
+        // the 3 plain Sidekicks are safe filler (can't match Alfred's own
+        // identity), only alfredCopyInBag itself triggers.
+        Assert.Equal(5, state.DiceIn("p1", Zone.DiceFromBag).Count());
+    }
+
     [Fact]
     public void ClearAndDraw_SweepsExistingPrepAreaDiceIntoDiceFromPrep()
     {

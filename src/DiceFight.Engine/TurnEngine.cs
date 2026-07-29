@@ -103,11 +103,20 @@ public static class TurnEngine
         // extra bookkeeping. (3): checked once against this original
         // batch, not re-checked against its own bonus draws below, so
         // Swarm can't chain off itself.
+        //
+        // A real physical Sidekick's "CardId" is null (rule 1.3.9), and
+        // that's deliberately kept as a real set entry here rather than
+        // filtered out: Darkseid-style "your Sidekicks gain Swarm" grants
+        // can reach a real Sidekick (whose identity really is just
+        // "a Sidekick," fungible with every other one) as well as an
+        // active Ally die (which counts as a Sidekick per DieStats.
+        // CountsAsSidekick, but keeps its own real CardId for this
+        // match - an active granted-Swarm Ally does NOT match a drawn
+        // plain Sidekick, or vice versa, only another copy of itself).
         var activeSwarmCardIds = state.DiceIn(activeId, Zone.FieldZone)
             .Concat(state.DiceIn(activeId, Zone.AttackZone))
             .Where(d => DieStats.HasKeyword(state, d, "Swarm"))
             .Select(d => d.VirtualCardId ?? d.CardId)
-            .Where(cardId => cardId is not null)
             .ToHashSet();
 
         var swarmBonusDice = new List<DieInstance>();

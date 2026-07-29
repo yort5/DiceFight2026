@@ -28,11 +28,20 @@ public class LegalTargetsTests
         Levels = [new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 1)]
     };
 
+    // Darkseid-style "while active, your Sidekicks gain [keyword]" granter.
+    private static readonly CardDef GranterCard = new()
+    {
+        Id = "granter-card", Name = "Granter Card", Type = CardType.Character, PurchaseCost = 2,
+        EnergyTypes = [EnergyType.Bolt], DieLimit = 4,
+        GrantsToSidekicks = ["Swarm"],
+        Levels = [new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 1)]
+    };
+
     private static GameState CreateState()
     {
         var catalog = new Dictionary<string, CardDef>
         {
-            [MaskCard.Id] = MaskCard, [BoltCard.Id] = BoltCard, [AllyCard.Id] = AllyCard,
+            [MaskCard.Id] = MaskCard, [BoltCard.Id] = BoltCard, [AllyCard.Id] = AllyCard, [GranterCard.Id] = GranterCard,
         };
         return GameState.NewGame(catalog, new Player { Id = "p1", Name = "P1" }, new Player { Id = "p2", Name = "P2" });
     }
@@ -225,6 +234,59 @@ public class LegalTargetsTests
         Assert.All(
             new[] { allyInBag, allyInReserve, allyInUsedPile, allyInPrep },
             d => Assert.False(DieStats.CountsAsSidekick(state, d)));
+    }
+
+    // Darkseid-style "while active, your Sidekicks gain [keyword]"
+    // (CardDef.GrantsToSidekicks) - a static, live-recomputed grant, not
+    // a discrete triggered ability. These exercise DieStats.HasKeyword's
+    // grant path directly, independent of Swarm or ClearAndDraw.
+    [Fact]
+    public void HasKeyword_GrantedToARealSidekick_WhenGranterIsActive()
+    {
+        var state = CreateState();
+        AddDie(state, "p1-granter", "p1", Zone.FieldZone, DieStatus.Character, GranterCard.Id);
+        var sidekick = AddDie(state, "p1-sidekick", "p1", Zone.FieldZone, DieStatus.SidekickCharacter);
+
+        Assert.True(DieStats.HasKeyword(state, sidekick, "Swarm"));
+    }
+
+    [Fact]
+    public void HasKeyword_NotGranted_WhenGranterIsNotActive()
+    {
+        var state = CreateState();
+        AddDie(state, "p1-granter", "p1", Zone.Bag, DieStatus.Unrolled, GranterCard.Id); // not active
+        var sidekick = AddDie(state, "p1-sidekick", "p1", Zone.FieldZone, DieStatus.SidekickCharacter);
+
+        Assert.False(DieStats.HasKeyword(state, sidekick, "Swarm"));
+    }
+
+    // The interesting case: an Ally die counts as a Sidekick while active
+    // (DieStats.CountsAsSidekick), so a granter's "your Sidekicks gain
+    // [keyword]" reaches it too - but only while it's actually active,
+    // same as any other Sidekick-counting condition.
+    [Fact]
+    public void HasKeyword_GrantedToAnActiveAllyDie_ButNotWhileInTheBag()
+    {
+        var state = CreateState();
+        AddDie(state, "p1-granter", "p1", Zone.FieldZone, DieStatus.Character, GranterCard.Id);
+        var activeAlly = AddDie(state, "p1-ally-active", "p1", Zone.FieldZone, DieStatus.Character, AllyCard.Id);
+        var allyInBag = AddDie(state, "p1-ally-bag", "p1", Zone.Bag, DieStatus.Unrolled, AllyCard.Id);
+
+        Assert.True(DieStats.HasKeyword(state, activeAlly, "Swarm"));
+        Assert.False(DieStats.HasKeyword(state, allyInBag, "Swarm"));
+    }
+
+    // Checking "Ally" itself must never recurse into the grant path
+    // (CountsAsSidekick is how an Ally die reaches the grant path in the
+    // first place) - this would stack-overflow if that guard were missing.
+    [Fact]
+    public void HasKeyword_CheckingAllyItself_DoesNotRecurse()
+    {
+        var state = CreateState();
+        AddDie(state, "p1-granter", "p1", Zone.FieldZone, DieStatus.Character, GranterCard.Id);
+        var activeAlly = AddDie(state, "p1-ally-active", "p1", Zone.FieldZone, DieStatus.Character, AllyCard.Id);
+
+        Assert.True(DieStats.HasKeyword(state, activeAlly, "Ally")); // printed, resolves without recursing
     }
 
     // Keyword Attune's "target player or character die" - a single

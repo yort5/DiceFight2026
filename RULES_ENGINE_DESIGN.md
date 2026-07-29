@@ -50,8 +50,9 @@ here rather than assuming which approach they'd want.
 
 **Actionable next steps, roughly high to low value**:
 1. ~~Keyword *behavior*~~ - Overcrush, Regenerate, Energize, Ally,
-   Amplify/Awaken, Attune, Call Out, Corrupt, and now Swarm are implemented (see the
-   status updates). BlackPanther's Energize is fully scripted; Robin's Energize
+   Amplify/Awaken, Attune, Call Out, Corrupt, Swarm, and Darkseid's
+   keyword grant are implemented (see the status updates).
+   BlackPanther's Energize is fully scripted; Robin's Energize
    (a purchase-cost discount) and all three Alfred Pennyworth printings'
    Ally effects (each a "Batman die OR Sidekick" compound target) are
    deliberately left unscripted - the former needs a purchase-cost-
@@ -2319,3 +2320,68 @@ exercise it against.
 7 new tests (127 total) in `TurnEngineTests`, one per clarification above
 plus the base case and Parademon's real card end to end. `dotnet build`,
 `dotnet test` (127/127), and `npm run build` all clean.
+
+## Status update — Darkseid: keyword *grants*, and why they have to stay separate from a die's own printed text
+
+The user picked Darkseid ("Force of Entropy," Super Rare, as requested)
+specifically to stress-test the Swarm+Ally combination: "While Darkseid
+is active, your Sidekicks gain Swarm" reaches an active Ally die too
+(Alfred Pennyworth counts as a Sidekick while fielded - `DieStats.
+CountsAsSidekick`), but Swarm's own "another copy of that die" check
+still keys off the specific die's card identity, not "is a Sidekick" in
+general. So: an active granted-Swarm plain Sidekick + drawing Alfred
+never triggers (different `CardId`), and an active granted-Swarm Alfred
++ drawing a plain Sidekick never triggers either - only "another copy of
+the exact same card" does, on either side. Two independent keyword
+systems (Ally's Sidekick-counting, Swarm's card-identity match)
+composing correctly without any Ally- or Swarm-specific cross-wiring.
+
+- `CardDef.GrantsToSidekicks` (`IReadOnlyList<string>`) - a static,
+  continuously-recomputed keyword grant, not a discrete triggered
+  ability (there's no queue involvement - "while active" text always has
+  to be re-checked live, the same reason a stat-modifier-while-active
+  card like Captain Marvel's still can't be scripted).
+- `DieStats.HasKeyword` now checks two independent things: the die's own
+  printed `CardDef.Keywords` (factored out into a new private
+  `HasPrintedKeyword`), and - separately - whether any other currently
+  *active* die under the same controller has a matching
+  `GrantsToSidekicks` entry AND this die currently counts as a Sidekick
+  (`CountsAsSidekick`). Guarded against `keyword == "Ally"` specifically,
+  since `CountsAsSidekick` is what puts an Ally die on the grant path in
+  the first place - checking "is Ally granted" would recurse into itself.
+- **Fixed a real bug in `TurnEngine.ClearAndDraw`'s own Swarm-matching
+  set while wiring this**: it filtered out `null` card ids (`.Where(id
+  => id is not null)`) before this pass, on the assumption that only real
+  cards could ever need to match. That's wrong once granted Swarm can
+  land on a *real* Sidekick (`CardId` is `null` for all of them, rule
+  1.3.9) - two real Sidekicks are supposed to match each other (they're
+  mutually fungible), so `null` has to be a legitimate entry in that set,
+  not filtered out. Removed the filter; `HashSet<string?>` handles it fine.
+
+**Forward-looking design note, prompted directly by the user**: "granted"
+abilities need to stay structurally separate from a die's own printed
+text, because some future keyword removes/ignores printed text (Prismatic
+Spray, Magneto, D'Ken were named) *without* touching what was granted to
+it externally - e.g. a Lantern Ring-style "while active, when your
+characters attack, they deal 1 damage per matching energy symbol..."
+granted ability should keep working on a die whose own text was ignored,
+since the granted ability was never that die's own text in the first
+place. `HasPrintedKeyword` vs. the grant-check above are already two
+separate code paths for exactly this reason, so a future "text ignored"
+effect only has to suppress the first one. Lantern Ring itself is a
+bigger, separate feature when it comes up - it grants a full triggered
+*ability* (a real `AbilityDef`, with its own trigger and effect), not
+just a keyword name, so `GrantsToSidekicks` doesn't cover it as-is; the
+natural extension is a `GrantsAbilityToSidekicks`-shaped sibling field
+built the same way (checked live, kept separate from `CardDef.
+Abilities`), not a change to this one.
+
+8 new tests (135 total): `LegalTargetsTests` covers `HasKeyword`'s grant
+path directly (granted when the granter is active; not granted when it
+isn't; reaches an active Ally die but not the same die sitting in the
+bag; checking "Ally" itself doesn't recurse); `TurnEngineTests` covers
+the full Darkseid/Swarm/Ally interaction end to end - the user's two
+"does NOT trigger" cases, plus a positive control for each (without
+those, a regression that broke the grant entirely would look identical
+to "everything correctly doesn't trigger"). `dotnet build`, `dotnet
+test` (135/135), and `npm run build` all clean.

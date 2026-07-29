@@ -6,10 +6,36 @@ namespace DiceFight.Engine.Model;
 // Sidekicks have no card (rule 1.3.9), so this isn't card-driven data.
 public static class DieStats
 {
-    // Whether the die's card has the named keyword (Overcrush, Regenerate,
-    // etc. - see CardDef.Keywords/KeywordInstance). Sidekicks (CardId
-    // null) never have one.
+    // Whether the die currently has the named keyword - either printed on
+    // its own card (Overcrush, Regenerate, etc. - see CardDef.Keywords/
+    // KeywordInstance), or granted live by some other active die's
+    // "while active, your Sidekicks gain [keyword]" text (e.g. Darkseid:
+    // "your Sidekicks gain Swarm" - see CardDef.GrantsToSidekicks). The
+    // grant is re-evaluated every call, not cached, since it depends on
+    // the current board (the granting die must still be active) exactly
+    // like any other "while active" effect. Guarded against `keyword ==
+    // "Ally"` to avoid a cycle: CountsAsSidekick is how an Ally die gets
+    // into the grant-eligible set in the first place, so asking "is Ally
+    // granted" would recurse into itself; granting Ally via "your
+    // Sidekicks gain Ally" isn't a real card pattern anyway.
     public static bool HasKeyword(GameState state, DieInstance die, string keyword)
+    {
+        if (HasPrintedKeyword(state, die, keyword)) return true;
+
+        if (keyword == "Ally" || !CountsAsSidekick(state, die)) return false;
+
+        var granters = state.DiceIn(die.ControllerId, Zone.FieldZone)
+            .Concat(state.DiceIn(die.ControllerId, Zone.AttackZone));
+        return granters.Any(granter =>
+        {
+            var granterCardId = granter.VirtualCardId ?? granter.CardId;
+            return granterCardId is not null
+                && state.CardCatalog.TryGetValue(granterCardId, out var granterCard)
+                && granterCard.GrantsToSidekicks.Contains(keyword);
+        });
+    }
+
+    private static bool HasPrintedKeyword(GameState state, DieInstance die, string keyword)
     {
         var cardId = die.VirtualCardId ?? die.CardId;
         return cardId is not null

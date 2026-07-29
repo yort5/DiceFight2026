@@ -55,7 +55,8 @@ public static class SampleCards
         IReadOnlyList<AbilityDef>? abilities = null,
         int purchaseCost = PlaceholderCost,
         EnergyType energyType = PlaceholderEnergy,
-        IReadOnlyList<CharacterFace>? levels = null) => new()
+        IReadOnlyList<CharacterFace>? levels = null,
+        IReadOnlyList<string>? grantsToSidekicks = null) => new()
     {
         Id = id,
         Name = name,
@@ -67,7 +68,8 @@ public static class SampleCards
         Levels = levels ?? PlaceholderLevels,
         RawText = rawText,
         Keywords = keywords ?? [],
-        Abilities = abilities ?? []
+        Abilities = abilities ?? [],
+        GrantsToSidekicks = grantsToSidekicks ?? []
     };
 
     private static CardDef BasicAction(
@@ -496,6 +498,35 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 2)
         ]);
 
+    // Batman set's Darkseid, "Force of Entropy" printing (Super Rare, as
+    // requested): "While Darkseid is active, your Sidekicks gain Swarm."
+    // Not a triggered ability at all - a static, continuously-recomputed
+    // grant (CardDef.GrantsToSidekicks, applied live by DieStats.
+    // HasKeyword), the first sample card to use that mechanism.
+    //
+    // The interesting case this unlocks: "your Sidekicks" reaches an
+    // active Ally die too (Alfred Pennyworth counts as a Sidekick while
+    // fielded - DieStats.CountsAsSidekick), so Darkseid grants Swarm to
+    // him as well. But Swarm's own match is still on *that specific
+    // die's* card identity (see TurnEngine.ClearAndDraw's remarks) - a
+    // granted-Swarm Alfred only triggers on drawing another Alfred, not
+    // on drawing a plain Sidekick, and a granted-Swarm plain Sidekick
+    // only triggers on drawing another plain Sidekick (they're mutually
+    // fungible - real Sidekicks have no CardId to tell them apart at
+    // all), not on drawing Alfred. Two keyword systems composing
+    // correctly without cross-wiring anything Ally- or Swarm-specific
+    // together - each one only knows its own rule.
+    public static readonly CardDef Darkseid = Character(
+        "darkseid", "Darkseid", "Force of Entropy", dieLimit: 1, // Super Rare
+        "While Darkseid is active, your Sidekicks gain Swarm.",
+        purchaseCost: 6, energyType: EnergyType.Bolt,
+        grantsToSidekicks: ["Swarm"],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 4, Defense: 4),
+            new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 5),
+            new CharacterFace(FieldingCost: 3, Attack: 7, Defense: 7)
+        ]);
+
     // A team is 8 character cards + 2 Basic Action cards (10 total), not
     // the 10 characters + 3 Basic Actions used here previously - that was
     // simply wrong. Colossus, Corvus Glaive, Distraction, Kang, King
@@ -531,7 +562,7 @@ public static class SampleCards
             Falcon, FranklinsGalactus, GodEmperorDoom, GoddessOfThunder, Groot, InvisibleWoman,
             JaneFoster, Starfire, Kang, KingHyperion, CasketOfAncientWinters, DailyBugle, Escape,
             AlfredPennyworthCaretaker, AlfredPennyworthMI5, AlfredPennyworthToughAsNails,
-            AntManAmplify, Cyclops, Wasp, BlackWidow, Polaris, CosmicCubeInfinitePossibilities, Parademon
+            AntManAmplify, Cyclops, Wasp, BlackWidow, Polaris, CosmicCubeInfinitePossibilities, Parademon, Darkseid
         ];
         return all.ToDictionary(c => c.Id);
     }
