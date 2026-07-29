@@ -1,5 +1,6 @@
 using DiceFight.Engine;
 using DiceFight.Engine.Combat;
+using DiceFight.Engine.Effects;
 using DiceFight.Engine.Model;
 using DiceFight.Engine.Queueing;
 using Xunit;
@@ -487,5 +488,154 @@ public class CombatEngineTests
 
         Assert.Contains(liveBlocker.Id, result.KOdDieIds);
         Assert.Equal(13, state.PlayerTwo.Life); // 8 attack - 1 defense (only the live blocker's) = 7 leftover
+    }
+
+    // Keyword Call Out: p1's attacker targets one of two p2 Sidekicks when
+    // it attacks - the target is the only die that may legally block it,
+    // and it may not legally block anything else.
+    private static (GameState state, DieInstance attacker, DieInstance target, DieInstance otherBlocker)
+        CreateCallOutState()
+    {
+        var callOutCard = new CardDef
+        {
+            Id = "call-out-attacker", Name = "Call Out Attacker", Type = CardType.Character,
+            PurchaseCost = 3, DieLimit = 4,
+            Levels = [new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 2)],
+            Keywords = [new KeywordInstance("Call Out")],
+            Abilities = [new AbilityDef(TriggerType.WhenAttacks, Cost: null,
+                Effect: new SetCallOutTarget(TargetSpec.CharacterDie("target character die", TargetOwnership.Opposing)))],
+        };
+        var catalog = new Dictionary<string, CardDef> { [callOutCard.Id] = callOutCard };
+        var p1 = new Player { Id = "p1", Name = "Player One" };
+        var p2 = new Player { Id = "p2", Name = "Player Two" };
+        var state = GameState.NewGame(catalog, p1, p2);
+        state.CurrentStep = TurnStep.Attack;
+        state.AttackSubStep = AttackSubStep.DeclareAttackers;
+
+        var attacker = new DieInstance
+        {
+            Id = "p1-callout-1", CardId = callOutCard.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(attacker);
+
+        var target = state.DiceFor("p2").ElementAt(0);
+        target.Zone = Zone.FieldZone;
+        target.Status = DieStatus.SidekickCharacter;
+
+        var otherBlocker = state.DiceFor("p2").ElementAt(1);
+        otherBlocker.Zone = Zone.FieldZone;
+        otherBlocker.Status = DieStatus.SidekickCharacter;
+
+        return (state, attacker, target, otherBlocker);
+    }
+
+    private static void DeclareAndResolveCallOuts(
+        GameState state, AbilityQueue queue, IReadOnlyList<string> attackerIds, string chosenTargetId)
+    {
+        CombatEngine.DeclareAttackers(state, queue, attackerIds);
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [chosenTargetId])));
+    }
+
+    [Fact]
+    public void CallOut_RejectsABlockerThatIsNotTheChosenTarget()
+    {
+        var (state, attacker, target, otherBlocker) = CreateCallOutState();
+        var queue = new AbilityQueue();
+        DeclareAndResolveCallOuts(state, queue, [attacker.Id], target.Id);
+
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attacker.Id, otherBlocker.Id); // not the Call Out target
+
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            CombatEngine.DeclareBlockers(state, assignment, [otherBlocker.Id]));
+        Assert.Contains("Called Out", ex.Message);
+    }
+
+    [Fact]
+    public void CallOut_TheChosenTargetCanLegallyBlockTheAttacker()
+    {
+        var (state, attacker, target, _) = CreateCallOutState();
+        var queue = new AbilityQueue();
+        DeclareAndResolveCallOuts(state, queue, [attacker.Id], target.Id);
+
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attacker.Id, target.Id);
+
+        CombatEngine.DeclareBlockers(state, assignment, [target.Id]); // does not throw
+        Assert.Equal(Zone.AttackZone, target.Zone);
+    }
+
+    [Fact]
+    public void CallOut_TargetCannotLegallyBlockADifferentAttacker()
+    {
+        var (state, attacker, target, _) = CreateCallOutState();
+        var secondAttacker = state.DiceFor("p1").First(); // plain Sidekick, no Call Out
+        secondAttacker.Zone = Zone.FieldZone;
+        secondAttacker.Status = DieStatus.SidekickCharacter;
+
+        var queue = new AbilityQueue();
+        DeclareAndResolveCallOuts(state, queue, [attacker.Id, secondAttacker.Id], target.Id);
+
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(secondAttacker.Id, target.Id); // the Call Out target tries to block the WRONG attacker
+
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            CombatEngine.DeclareBlockers(state, assignment, [target.Id]));
+        Assert.Contains("Called Out", ex.Message);
+    }
+
+    [Fact]
+    public void CallOut_CancelledWhenTargetLeavesPlayBeforeBlockersAreDeclared()
+    {
+        var (state, attacker, target, otherBlocker) = CreateCallOutState();
+        var queue = new AbilityQueue();
+        DeclareAndResolveCallOuts(state, queue, [attacker.Id], target.Id);
+
+        target.Zone = Zone.PrepArea; // simulates being removed by some other effect mid-window
+
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attacker.Id, otherBlocker.Id); // would be illegal if Call Out were still active
+
+        CombatEngine.DeclareBlockers(state, assignment, [otherBlocker.Id]); // no throw - cancelled, not unblockable
+        Assert.Equal(Zone.AttackZone, otherBlocker.Zone);
+    }
+
+    [Fact]
+    public void CallOut_CancelledWhenTwoAttackersChooseTheSameTarget()
+    {
+        var (state, attacker1, target, otherBlocker) = CreateCallOutState();
+        var attacker2 = new DieInstance
+        {
+            Id = "p1-callout-2", CardId = attacker1.CardId, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(attacker2);
+
+        var queue = new AbilityQueue();
+        DeclareAndResolveCallOuts(state, queue, [attacker1.Id, attacker2.Id], target.Id);
+        Assert.Equal(2, state.CallOutTargets.Count); // both recorded, both pointing at the same target
+
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attacker1.Id, otherBlocker.Id); // would be illegal if attacker1's Call Out still applied
+
+        CombatEngine.DeclareBlockers(state, assignment, [otherBlocker.Id]); // no throw - both cancelled
+        Assert.Equal(Zone.AttackZone, otherBlocker.Zone);
+    }
+
+    [Fact]
+    public void CallOut_NoLegalTargetAvailable_RecordsNothing()
+    {
+        var (state, attacker, target, otherBlocker) = CreateCallOutState();
+        target.Zone = Zone.Bag; // no opposing character die is actually eligible
+        otherBlocker.Zone = Zone.Bag;
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [])));
+
+        Assert.Empty(state.CallOutTargets);
     }
 }

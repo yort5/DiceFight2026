@@ -92,6 +92,15 @@ public sealed record Ko(TargetSpec Target) : EffectNode;
 // flags the target in GameState.MustBlockThisTurn; enforced by
 // CombatEngine.DeclareBlockers, cleared at Clean Up.
 public sealed record ForceBlock(TargetSpec Target) : EffectNode;
+// Keyword Call Out ("when this Character die attacks, target character
+// die is the only character die that may block this character die") -
+// records the choice in GameState.CallOutTargets, keyed by the attacking
+// die (the ability's SourceDieId); enforced by CombatEngine.
+// DeclareBlockers, including the keyword's own cancellation cases
+// (target KO'd, two Call Outs sharing a target, etc. - see
+// CombatEngine.ActiveCallOutTargets). Always a WhenAttacks ability
+// targeting an opposing Character die.
+public sealed record SetCallOutTarget(TargetSpec Target) : EffectNode;
 public sealed record MoveDie(TargetSpec Target, Model.Zone ToZone) : EffectNode;
 public sealed record ModifyStat(TargetSpec Target, int? AttackDelta, int? DefenseDelta) : EffectNode;
 public sealed record Reroll(TargetSpec Target) : EffectNode;

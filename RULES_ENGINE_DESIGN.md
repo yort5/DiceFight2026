@@ -50,8 +50,8 @@ here rather than assuming which approach they'd want.
 
 **Actionable next steps, roughly high to low value**:
 1. ~~Keyword *behavior*~~ - Overcrush, Regenerate, Energize, Ally,
-   Amplify/Awaken, and now Attune are implemented (see the status
-   updates). BlackPanther's Energize is fully scripted; Robin's Energize
+   Amplify/Awaken, Attune, and now Call Out are implemented (see the
+   status updates). BlackPanther's Energize is fully scripted; Robin's Energize
    (a purchase-cost discount) and all three Alfred Pennyworth printings'
    Ally effects (each a "Batman die OR Sidekick" compound target) are
    deliberately left unscripted - the former needs a purchase-cost-
@@ -119,6 +119,17 @@ here rather than assuming which approach they'd want.
    authored yet (no sample card uses `ModifyStat`), so left as a noted
    gap rather than fixed blind - fix shape when picked up: clear every
    die's `AppliedModifiers` in `CleanUp`.
+9. `GamesController`'s `/declare-attackers` endpoint has no `TargetDieIds`
+   on its request and always drains with an empty target list - found
+   while wiring Call Out (Black Widow's `WhenAttacks` ability is the
+   first one that's ever actually needed a real target; nothing before it
+   did). The web client currently has no way to choose a Call Out target
+   through the real API/UI. Fix shape when picked up: add `TargetDieIds`
+   to `DeclareAttackersRequest`, thread it into `Drain` like `/field` and
+   the others already do - and since attackers declare in a batch, this
+   probably needs a per-attacker target list eventually, not just one
+   flat list (same underlying limitation the AbilityQueue status update
+   already flagged for `Drain` in general).
 
 Also done, out of order (the user asked for it explicitly once the above
 was clear): a visual pass matching the physical mat's zone layout and
@@ -2032,3 +2043,81 @@ to legally take a second from the same drain; two active copies of the
 same Character each trigger their own independent instance; an inactive
 or the opponent's Attune die never fires). 98 tests passing, `dotnet
 build`, and `npm run build` all clean.
+
+## Status update — Call Out implemented; the engine's first real blocking-legality check
+
+The user offered a choice of example card (Black Widow, "the simple
+one," or Stick, flagged as trickier wording) - checked both against the
+reference spreadsheet first: their card text is word-for-word identical
+reminder text ("Call Out (When this character die attacks, target
+character die is the only character die that may block this character
+die.)"). The real complexity lives entirely in the keyword's own
+Appendix 1 wording, not in either printing, so this would have scripted
+identically either way - went with Black Widow (cheaper, matches "the
+simple one").
+
+Appendix 1's actual text is two-directional plus a cancellation clause:
+"The targeted die can only legally block the attacking die that applied
+Call Out on it, **and no other die can legally block the die that used
+Call Out**. If the die that applied Call Out cannot legally be blocked
+for any reason (an ability made it unblockable, two different dice chose
+the same target for their Call Out, the die targeted with Call Out was
+KO'd, etc.), then the Call Out ability is cancelled." Worth noting for
+its own sake: `CombatEngine.DeclareBlockers` had **zero** blocker-
+legality enforcement before this - rule 2.7.2.2 leaves blocking mostly
+unrestricted by design ("you may assign multiple Character dice to block
+the same attacking die"), so this is the first case that actually needs
+to reject an illegal assignment.
+
+- `GameState.CallOutTargets: Dictionary<string, string>` (attacker die id
+  -> chosen target die id) - combat-scoped, not turn-scoped (unlike
+  `MustBlockThisTurn`): cleared at the *start* of every
+  `DeclareAttackers` call, not in `CleanUp`.
+- New `SetCallOutTarget(TargetSpec Target)` `EffectNode` - a `WhenAttacks`
+  ability (always `TargetSpec.CharacterDie(..., TargetOwnership.
+  Opposing)`) that records the chosen target rather than applying an
+  effect directly. No legal target at all -> nothing recorded (rule
+  3.1.10), same as any other target-less resolution.
+- `CombatEngine.ActiveCallOutTargets(state)` - filters `CallOutTargets`
+  down to the ones actually still in effect: drops any target no longer
+  in the Field/Attack Zone (covers "was KO'd... or removed"), and drops
+  *both* sides of any target claimed by more than one attacker ("two
+  different dice chose the same target"). A cancelled Call Out imposes
+  no restriction at all - the attacker's blocking legality just reverts
+  to normal, it does NOT become unblockable itself. The "an ability made
+  it unblockable" cancellation case isn't checked - nothing in this
+  engine can make a die unblockable yet, so there's nothing to check
+  against; revisit whenever that mechanic exists.
+- `CombatEngine.ValidateCallOuts(state, assignment)` - called from
+  `DeclareBlockers` before any zone changes (same ordering reasoning as
+  the existing forced-blocker check right above it). One pass over every
+  attacker's declared blockers, checking both directions against the
+  same active-target map: (1) a Call Out attacker's blockers must all be
+  its own target, (2) a die that's *anyone's* active Call Out target may
+  only block the attacker that targeted it, not any other attacker.
+
+**Found, not fixed - a real, separate API-layer gap this exposes for the
+first time**: `GamesController`'s `/declare-attackers` endpoint has no
+`TargetDieIds` on its request DTO and always drains with an empty target
+list, unlike `/field`, `/use-action-die`, and `/use-global-ability`.
+Every `WhenAttacks` ability scripted so far (there were none with a real
+target before Black Widow) never needed one, so this never mattered
+until now - the web client currently has no way to actually choose a
+Call Out target through the real API/UI, only through direct engine
+calls (which is all this pass's tests do). Fix shape when picked up: add
+`TargetDieIds` to `DeclareAttackersRequest` and thread it into `Drain`
+the same way the other endpoints already do - plus, since attackers can
+be declared in a batch, probably needs a *per-attacker* target list
+eventually (same underlying "one flat resolver per drain call" limitation
+already flagged in the AbilityQueue status update), not just one.
+
+9 new tests (107 total): `EffectInterpreterTests` covers
+`SetCallOutTarget` directly (records the pair; no legal target records
+nothing); `CombatEngineTests` covers the actual blocking-legality
+enforcement end to end (target blocks legally; a non-target blocker is
+rejected; the target can't legally block a *different* attacker;
+cancelled when the target leaves play before Declare Blockers; cancelled
+when two attackers pick the same target; no target recorded at all
+imposes no restriction); `TwoTeamsDemoTests` drives Black Widow's real
+card through `DeclareAttackers` -> `Drain` -> `DeclareBlockers`. `dotnet
+build`, `dotnet test` (107/107), and `npm run build` all clean.

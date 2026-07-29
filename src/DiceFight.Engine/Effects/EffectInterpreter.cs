@@ -59,6 +59,7 @@ public static class EffectInterpreter
             case DealDamage n: if (!n.Target.IsSelf) yield return n.Target; break;
             case Ko n: if (!n.Target.IsSelf) yield return n.Target; break;
             case ForceBlock n: if (!n.Target.IsSelf) yield return n.Target; break;
+            case SetCallOutTarget n: if (!n.Target.IsSelf) yield return n.Target; break;
             case MoveDie n: if (!n.Target.IsSelf) yield return n.Target; break;
             case ModifyStat n: if (!n.Target.IsSelf) yield return n.Target; break;
             case Reroll n: if (!n.Target.IsSelf) yield return n.Target; break;
@@ -244,6 +245,16 @@ public static class EffectInterpreter
             case ForceBlock forceBlock:
                 foreach (var id in Resolve(ctx, forceBlock.Target, cache))
                     ctx.State.MustBlockThisTurn.Add(id);
+                break;
+
+            case SetCallOutTarget callOut:
+                // No legal opposing Character die at all (rule 3.1.10) -
+                // nothing recorded, which CombatEngine.ActiveCallOutTargets
+                // then treats the same as any other cancellation case: no
+                // entry, no restriction.
+                var callOutTarget = Resolve(ctx, callOut.Target, cache).FirstOrDefault();
+                if (callOutTarget is not null && ctx.SourceDieId is not null)
+                    ctx.State.CallOutTargets[ctx.SourceDieId] = callOutTarget;
                 break;
 
             case PrepFromBagIfPurchasedThisTurn:

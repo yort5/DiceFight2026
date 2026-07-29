@@ -399,6 +399,30 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 2, Attack: 3, Defense: 4)
         ]);
 
+    // Guardians of the Galaxy's Black Widow, "Red Scare" printing. Stick
+    // ("Nobody Feels Sorry For You," same set) was the other option the
+    // user offered - checked, and its card text turns out to be word-for-
+    // word identical reminder text, not a trickier variant; the actual
+    // complexity lives in the keyword's own rules-appendix wording (the
+    // two-directional block restriction, plus its cancellation clause),
+    // not in either printing's card text, so either would have scripted
+    // identically. Went with Black Widow (cheaper, matches "the simple
+    // one" framing) - see CombatEngine.ValidateCallOuts/
+    // ActiveCallOutTargets for the actual keyword implementation.
+    public static readonly CardDef BlackWidow = Character(
+        "black-widow", "Black Widow", "Red Scare", dieLimit: 4,
+        "Call Out - When this character die attacks, target character die is the only character die that " +
+        "may block this character die.",
+        purchaseCost: 3, energyType: EnergyType.Fist,
+        keywords: [new KeywordInstance("Call Out")],
+        abilities: [new AbilityDef(TriggerType.WhenAttacks, Cost: null,
+            Effect: new SetCallOutTarget(TargetSpec.CharacterDie("target character die", TargetOwnership.Opposing)))],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 3, Defense: 1),
+            new CharacterFace(FieldingCost: 0, Attack: 3, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3)
+        ]);
+
     // A team is 8 character cards + 2 Basic Action cards (10 total), not
     // the 10 characters + 3 Basic Actions used here previously - that was
     // simply wrong. Colossus, Corvus Glaive, Distraction, Kang, King
@@ -434,7 +458,7 @@ public static class SampleCards
             Falcon, FranklinsGalactus, GodEmperorDoom, GoddessOfThunder, Groot, InvisibleWoman,
             JaneFoster, Starfire, Kang, KingHyperion, CasketOfAncientWinters, DailyBugle, Escape,
             AlfredPennyworthCaretaker, AlfredPennyworthMI5, AlfredPennyworthToughAsNails,
-            AntManAmplify, Cyclops, Wasp
+            AntManAmplify, Cyclops, Wasp, BlackWidow
         ];
         return all.ToDictionary(c => c.Id);
     }

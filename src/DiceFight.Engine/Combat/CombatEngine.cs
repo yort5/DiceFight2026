@@ -17,6 +17,11 @@ public static class CombatEngine
     {
         RequireSubStep(state, AttackSubStep.DeclareAttackers);
 
+        // Keyword Call Out - scoped to one combat, not one turn (unlike
+        // MustBlockThisTurn), so it starts fresh every time attackers are
+        // declared rather than waiting for Clean Up.
+        state.CallOutTargets.Clear();
+
         foreach (var id in attackerDieIds)
         {
             var die = FindDie(state, id);
@@ -55,6 +60,8 @@ public static class CombatEngine
             throw new InvalidOperationException($"{names} must block this turn.");
         }
 
+        ValidateCallOuts(state, assignment);
+
         foreach (var id in blockerDieIds)
         {
             var die = FindDie(state, id);
@@ -64,6 +71,67 @@ public static class CombatEngine
         }
 
         state.AttackSubStep = AttackSubStep.ActionAndGlobalWindow;
+    }
+
+    // Keyword Call Out (wizkids.com/dicemasters/keywords) - "the targeted
+    // die can only legally block the attacking die that applied Call Out
+    // on it, and no other die can legally block the die that used Call
+    // Out." Two directions to check, both against the SAME map: a Call
+    // Out attacker may only be blocked by its own target, and a die that
+    // IS someone's Call Out target may only block the attacker that
+    // targeted it (not anyone else). Only ActiveCallOutTargets' entries
+    // apply - anything cancelled imposes no restriction at all.
+    private static void ValidateCallOuts(GameState state, CombatAssignment assignment)
+    {
+        var active = ActiveCallOutTargets(state);
+        if (active.Count == 0) return;
+
+        // Safe to invert 1:1 - ActiveCallOutTargets already excludes any
+        // target claimed by more than one attacker (that pairing cancels
+        // outright, per the keyword's own text).
+        var owningAttackerOfTarget = active.ToDictionary(kvp => kvp.Value, kvp => kvp.Key);
+
+        foreach (var attacker in state.DiceIn(state.ActivePlayerId, Zone.AttackZone))
+        {
+            foreach (var blockerId in assignment.BlockersOf(attacker.Id))
+            {
+                if (active.TryGetValue(attacker.Id, out var requiredTarget) && blockerId != requiredTarget)
+                {
+                    throw new InvalidOperationException(
+                        $"{DisplayName(state, attacker)} was Called Out - only its target may legally block it.");
+                }
+
+                if (owningAttackerOfTarget.TryGetValue(blockerId, out var owningAttackerId) && owningAttackerId != attacker.Id)
+                {
+                    throw new InvalidOperationException(
+                        $"{DisplayName(state, FindDie(state, blockerId))} was Called Out by another attacker and may only legally block that one.");
+                }
+            }
+        }
+    }
+
+    // The keyword's own cancellation clause: "If the die that applied
+    // Call Out cannot legally be blocked for any reason (an ability made
+    // it unblockable, two different dice chose the same target for their
+    // Call Out, the die targeted with Call Out was KO'd, etc.), then the
+    // Call Out ability is cancelled." A cancelled Call Out imposes no
+    // restriction at all - blocking legality for that attacker just
+    // reverts to normal, it does NOT become unblockable itself. Only the
+    // "target was KO'd/removed" and "duplicate target" cases are
+    // modeled - "an ability made [the attacker] unblockable" has nothing
+    // to check against yet, since Unblockable isn't a mechanic this
+    // engine has built (see RULES_ENGINE_DESIGN.md).
+    private static IReadOnlyDictionary<string, string> ActiveCallOutTargets(GameState state)
+    {
+        var duplicateTargets = state.CallOutTargets.Values
+            .GroupBy(targetId => targetId)
+            .Where(g => g.Count() > 1)
+            .Select(g => g.Key)
+            .ToHashSet();
+
+        return state.CallOutTargets
+            .Where(kvp => !duplicateTargets.Contains(kvp.Value) && FindDie(state, kvp.Value).Zone is Zone.FieldZone or Zone.AttackZone)
+            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
     }
 
     // Rule 2.7.4 (assign) and 2.7.6 (resolve KOs, return survivors).

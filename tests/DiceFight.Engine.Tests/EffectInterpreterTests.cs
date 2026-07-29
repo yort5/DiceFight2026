@@ -228,6 +228,47 @@ public class EffectInterpreterTests
         Assert.All(prepTargets, d => Assert.Equal(Zone.UsedPile, d.Zone));
     }
 
+    // Keyword Call Out's targeting choice - CombatEngine.ValidateCallOuts/
+    // ActiveCallOutTargets exercises the actual blocking-legality
+    // enforcement; this just proves the effect itself records the right
+    // (attacker, target) pair.
+    [Fact]
+    public void SetCallOutTarget_RecordsTheAttackerAndChosenTargetInState()
+    {
+        var state = CreateState();
+        var attacker = new DieInstance
+        {
+            Id = "p1-attacker", CardId = null, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.AttackZone, Status = DieStatus.SidekickCharacter,
+        };
+        state.Dice.Add(attacker);
+        var target = FieldSidekickTarget(state, "p2");
+
+        EffectInterpreter.Execute(
+            new SetCallOutTarget(TargetSpec.CharacterDie("t", TargetOwnership.Opposing)),
+            new EffectContext(state, "p1", attacker.Id, _ => [target.Id]));
+
+        Assert.Equal(target.Id, state.CallOutTargets[attacker.Id]);
+    }
+
+    [Fact]
+    public void SetCallOutTarget_NoLegalTarget_RecordsNothing()
+    {
+        var state = CreateState(); // no opposing character die exists
+        var attacker = new DieInstance
+        {
+            Id = "p1-attacker", CardId = null, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.AttackZone, Status = DieStatus.SidekickCharacter,
+        };
+        state.Dice.Add(attacker);
+
+        EffectInterpreter.Execute(
+            new SetCallOutTarget(TargetSpec.CharacterDie("t", TargetOwnership.Opposing)),
+            new EffectContext(state, "p1", attacker.Id, _ => []));
+
+        Assert.Empty(state.CallOutTargets);
+    }
+
     [Fact]
     public void NeedsTarget_IsTrueForAGlobalWithARealTarget_FalseForOneWithout()
     {

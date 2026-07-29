@@ -32,6 +32,14 @@ public sealed class GameState
     // enforced by CombatEngine.DeclareBlockers; reset in CleanUp.
     public HashSet<string> MustBlockThisTurn { get; } = [];
 
+    // Keyword Call Out - attacker die id -> the opposing Character die it
+    // targeted when it attacked (set by the SetCallOutTarget effect,
+    // enforced by CombatEngine.DeclareBlockers). Scoped to one combat:
+    // cleared at the start of every DeclareAttackers call, since Call
+    // Out's targeting choice only exists during the Attack Step it was
+    // declared in - unlike MustBlockThisTurn, this isn't turn-scoped.
+    public Dictionary<string, string> CallOutTargets { get; } = [];
+
     public Player GetPlayer(string playerId) =>
         playerId == PlayerOne.Id ? PlayerOne
         : playerId == PlayerTwo.Id ? PlayerTwo

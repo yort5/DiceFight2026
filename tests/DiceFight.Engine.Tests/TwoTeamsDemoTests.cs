@@ -754,4 +754,41 @@ public class TwoTeamsDemoTests
 
         Assert.DoesNotContain(queue.Pending, a => a.Trigger == TriggerType.Attune);
     }
+
+    [Fact]
+    public void BlackWidowCallOut_RestrictsBlockingToHerChosenTarget()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamA";
+        var blackWidow = new DieInstance
+        {
+            Id = "teamA-blackwidow-1", CardId = SampleCards.BlackWidow.Id, OwnerId = "teamA", ControllerId = "teamA",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(blackWidow);
+
+        var target = state.DiceFor("teamB").First(d => d.Zone == Zone.Bag);
+        target.Zone = Zone.FieldZone;
+        target.Status = DieStatus.SidekickCharacter;
+        var otherBlocker = state.DiceFor("teamB").Skip(1).First(d => d.Zone == Zone.Bag);
+        otherBlocker.Zone = Zone.FieldZone;
+        otherBlocker.Status = DieStatus.SidekickCharacter;
+
+        TurnEngine.EnterAttackStep(state);
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [blackWidow.Id]);
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [target.Id])));
+
+        var illegalAssignment = new CombatAssignment();
+        illegalAssignment.AssignBlocker(blackWidow.Id, otherBlocker.Id); // not her Call Out target
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            CombatEngine.DeclareBlockers(state, illegalAssignment, [otherBlocker.Id]));
+        Assert.Contains("Called Out", ex.Message);
+
+        var legalAssignment = new CombatAssignment();
+        legalAssignment.AssignBlocker(blackWidow.Id, target.Id);
+        CombatEngine.DeclareBlockers(state, legalAssignment, [target.Id]); // her actual target blocks legally
+        Assert.Equal(Zone.AttackZone, target.Zone);
+    }
 }
