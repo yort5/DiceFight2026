@@ -863,4 +863,75 @@ public class TurnEngineTests
             Assert.Equal(EnergyKind.None, die.EnergyKind);
         }
     }
+
+    // Keyword Deadly - "At the end of the turn, character dice that were
+    // engaged with a Character die that has Deadly are KO'd." Recorded
+    // earlier by CombatEngine.DeclareBlockers (see CombatEngineTests);
+    // this just covers CleanUp's own half of resolving it.
+    [Fact]
+    public void CleanUp_KOsDiceRecordedAsDeadlyEngaged()
+    {
+        var state = CreateNewGame();
+        var engaged = state.DiceIn("p1", Zone.Bag).First();
+        engaged.Zone = Zone.FieldZone;
+        engaged.Status = DieStatus.SidekickCharacter;
+        state.DeadlyEngagedDieIds.Add(engaged.Id);
+
+        state.CurrentStep = TurnStep.CleanUp;
+        TurnEngine.CleanUp(state);
+
+        Assert.Equal(Zone.PrepArea, engaged.Zone);
+        Assert.Equal(DieStatus.Unrolled, engaged.Status);
+        Assert.Empty(state.DeadlyEngagedDieIds);
+    }
+
+    // Clarification: "...even if the Character die with Deadly has been
+    // KO'd or leaves the Field Zone" - the engaged die is KO'd
+    // regardless of what happened to the Deadly die in the meantime;
+    // modeled here by simply never even needing the Deadly die itself to
+    // still exist in a meaningful state by Clean Up.
+    [Fact]
+    public void CleanUp_KOsEngagedDie_EvenThoughTheDeadlyDieIsNoLongerTracked()
+    {
+        var state = CreateNewGame();
+        var engaged = state.DiceIn("p1", Zone.Bag).First();
+        engaged.Zone = Zone.FieldZone;
+        engaged.Status = DieStatus.SidekickCharacter;
+        state.DeadlyEngagedDieIds.Add(engaged.Id); // the only bookkeeping Deadly leaves behind
+
+        state.CurrentStep = TurnStep.CleanUp;
+        TurnEngine.CleanUp(state);
+
+        Assert.Equal(Zone.PrepArea, engaged.Zone); // KO'd regardless
+    }
+
+    [Fact]
+    public void CleanUp_DeadlyKO_RespectsRegenerate_WhenRollerSupplied()
+    {
+        var regenCard = new CardDef
+        {
+            Id = "regen-engaged", Name = "Regen Engaged", Type = CardType.Character,
+            PurchaseCost = 2, DieLimit = 4,
+            Levels = [new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 1)],
+            Keywords = [new KeywordInstance("Regenerate")],
+        };
+        var state = GameState.NewGame(
+            new Dictionary<string, CardDef> { [regenCard.Id] = regenCard },
+            new Player { Id = "p1", Name = "Player One" },
+            new Player { Id = "p2", Name = "Player Two" });
+        var engaged = new DieInstance
+        {
+            Id = "p1-regen-1", CardId = regenCard.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(engaged);
+        state.DeadlyEngagedDieIds.Add(engaged.Id);
+
+        state.CurrentStep = TurnStep.CleanUp;
+        TurnEngine.CleanUp(state, new FixedRoller(DieStatus.Character, 2));
+
+        Assert.Equal(Zone.FieldZone, engaged.Zone); // Regenerated, not KO'd
+        Assert.Equal(2, engaged.Level);
+        Assert.Empty(state.DeadlyEngagedDieIds);
+    }
 }

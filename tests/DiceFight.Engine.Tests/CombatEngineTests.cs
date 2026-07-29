@@ -638,4 +638,114 @@ public class CombatEngineTests
 
         Assert.Empty(state.CallOutTargets);
     }
+
+    // Keyword Deadly: a catalog with one Deadly-keyword Character card
+    // and one plain one, so any test can build whichever attacker/blocker
+    // combination it needs. Engagement is recorded at Declare Blockers,
+    // resolved later at Clean Up (see TurnEngineTests' own Deadly
+    // coverage for that half).
+    private static readonly CardDef DeadlyCard = new()
+    {
+        Id = "deadly-character", Name = "Deadly Character", Type = CardType.Character,
+        PurchaseCost = 3, DieLimit = 4,
+        Levels = [new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 1)],
+        Keywords = [new KeywordInstance("Deadly")],
+    };
+
+    private static readonly CardDef PlainCharacterCard = new()
+    {
+        Id = "plain-character", Name = "Plain Character", Type = CardType.Character,
+        PurchaseCost = 3, DieLimit = 4,
+        Levels = [new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 1)],
+    };
+
+    private static GameState CreateDeadlyGame()
+    {
+        var catalog = new Dictionary<string, CardDef> { [DeadlyCard.Id] = DeadlyCard, [PlainCharacterCard.Id] = PlainCharacterCard };
+        var state = GameState.NewGame(catalog, new Player { Id = "p1", Name = "Player One" }, new Player { Id = "p2", Name = "Player Two" });
+        state.CurrentStep = TurnStep.Attack;
+        state.AttackSubStep = AttackSubStep.DeclareAttackers;
+        return state;
+    }
+
+    private static DieInstance AddCharacterDie(GameState state, string id, string playerId, string cardId, Zone zone)
+    {
+        var die = new DieInstance
+        {
+            Id = id, CardId = cardId, OwnerId = playerId, ControllerId = playerId,
+            Zone = zone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(die);
+        return die;
+    }
+
+    [Fact]
+    public void Deadly_AttackerEngagesBlocker_RecordsBlockerForCleanUp()
+    {
+        var state = CreateDeadlyGame();
+        var deadlyAttacker = AddCharacterDie(state, "p1-deadly-1", "p1", DeadlyCard.Id, Zone.FieldZone);
+        var blocker = AddCharacterDie(state, "p2-blocker-1", "p2", PlainCharacterCard.Id, Zone.FieldZone);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [deadlyAttacker.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(deadlyAttacker.Id, blocker.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [blocker.Id]);
+
+        Assert.Contains(blocker.Id, state.DeadlyEngagedDieIds);
+        Assert.DoesNotContain(deadlyAttacker.Id, state.DeadlyEngagedDieIds); // the Deadly die itself isn't engaged with itself
+    }
+
+    [Fact]
+    public void Deadly_BlockerEngagesAttacker_RecordsAttackerForCleanUp()
+    {
+        var state = CreateDeadlyGame();
+        var plainAttacker = AddCharacterDie(state, "p1-plain-1", "p1", PlainCharacterCard.Id, Zone.FieldZone);
+        var deadlyBlocker = AddCharacterDie(state, "p2-deadly-1", "p2", DeadlyCard.Id, Zone.FieldZone);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [plainAttacker.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(plainAttacker.Id, deadlyBlocker.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [deadlyBlocker.Id]);
+
+        Assert.Contains(plainAttacker.Id, state.DeadlyEngagedDieIds);
+        Assert.DoesNotContain(deadlyBlocker.Id, state.DeadlyEngagedDieIds);
+    }
+
+    [Fact]
+    public void Deadly_CoBlockerNotEngagedWithTheDeadlyDie_IsNotRecorded()
+    {
+        var state = CreateDeadlyGame();
+        var plainAttacker = AddCharacterDie(state, "p1-plain-1", "p1", PlainCharacterCard.Id, Zone.FieldZone);
+        var deadlyBlocker = AddCharacterDie(state, "p2-deadly-1", "p2", DeadlyCard.Id, Zone.FieldZone);
+        var plainCoBlocker = AddCharacterDie(state, "p2-plain-1", "p2", PlainCharacterCard.Id, Zone.FieldZone);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [plainAttacker.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(plainAttacker.Id, deadlyBlocker.Id);
+        assignment.AssignBlocker(plainAttacker.Id, plainCoBlocker.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [deadlyBlocker.Id, plainCoBlocker.Id]);
+
+        // The attacker is engaged with both blockers, so it's recorded
+        // (via the Deadly one) - but the two blockers are never engaged
+        // with each other (rule 2.7.2.3 is attacker<->blocker, not
+        // blocker<->blocker), so the plain co-blocker is not.
+        Assert.Contains(plainAttacker.Id, state.DeadlyEngagedDieIds);
+        Assert.DoesNotContain(plainCoBlocker.Id, state.DeadlyEngagedDieIds);
+    }
+
+    [Fact]
+    public void Deadly_UnblockedAttacker_RecordsNothing()
+    {
+        var state = CreateDeadlyGame();
+        var deadlyAttacker = AddCharacterDie(state, "p1-deadly-1", "p1", DeadlyCard.Id, Zone.FieldZone);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [deadlyAttacker.Id]);
+        CombatEngine.DeclareBlockers(state, new CombatAssignment(), []); // no blockers at all
+
+        Assert.Empty(state.DeadlyEngagedDieIds);
+    }
 }

@@ -50,8 +50,8 @@ here rather than assuming which approach they'd want.
 
 **Actionable next steps, roughly high to low value**:
 1. ~~Keyword *behavior*~~ - Overcrush, Regenerate, Energize, Ally,
-   Amplify/Awaken, Attune, Call Out, Corrupt, Swarm, and Darkseid's
-   keyword grant are implemented (see the status updates).
+   Amplify/Awaken, Attune, Call Out, Corrupt, Swarm, Darkseid's
+   keyword grant, and Deadly are implemented (see the status updates).
    BlackPanther's Energize is fully scripted; Robin's Energize
    (a purchase-cost discount) and all three Alfred Pennyworth printings'
    Ally effects (each a "Batman die OR Sidekick" compound target) are
@@ -2385,3 +2385,52 @@ the full Darkseid/Swarm/Ally interaction end to end - the user's two
 those, a regression that broke the grant entirely would look identical
 to "everything correctly doesn't trigger"). `dotnet build`, `dotnet
 test` (135/135), and `npm run build` all clean.
+
+## Status update — Deadly implemented
+
+Appendix 1: "At the end of the turn, character dice that were engaged
+with a Character die that has Deadly are KO'd (even if the Character die
+with Deadly has been KO'd or leaves the Field Zone)." Two clarifications
+that shape the implementation directly:
+- (1) "Deadly triggers the moment of the engagement (when blockers are
+  declared), not at the moment of combat... Damage does not need to
+  occur for Deadly to trigger" - so this has to be **recorded** at
+  Declare Blockers, not (re-)computed later at Clean Up from whatever
+  state happens to still be around then, since the Deadly die (or the
+  engaged die) might not even still reflect that fact by the time Clean
+  Up runs.
+- (2) "Deadly is a Persistent ability. Therefore, it is resolved in the
+  Clean Up Step" - a forced KO at end of turn, not a combat-damage KO.
+
+- `GameState.DeadlyEngagedDieIds` - a turn-scoped `HashSet<string>` (same
+  shape as `MustBlockThisTurn`/`CallOutTargets`), populated by a new
+  `CombatEngine.RecordDeadlyEngagements`, called from `DeclareBlockers`
+  right after blockers move into the Attack Zone. Engagement (rule
+  2.7.2.3) is **pairwise** - attacker paired with *each* blocker
+  individually, not blocker-with-blocker - so a Deadly co-blocker never
+  drags down another co-blocker of the same attacker, only the attacker
+  itself; symmetric the other way if the *attacker* has Deadly.
+- `TurnEngine.CleanUp` now takes an optional `IDiceRoller? roller = null`
+  (same convention as `AssignCombatDamage`'s own roller) and, first
+  thing, force-KOs every die in `DeadlyEngagedDieIds` via `DieStats.
+  ForceKO` - a forced KO, not a damage/defense check, matching Casket of
+  Ancient Winters' own `Ko` node precedent, and correctly respecting
+  Regenerate when a roller is supplied. The set is cleared right after.
+  Deliberately **not** wired through the `AbilityQueue` - a Deadly KO
+  doesn't fire a "when KO'd" trigger yet, since `CleanUp` has nothing to
+  drain into; noted as a gap, not exercised by any sample card.
+
+Example card: Dark Phoenix Saga's Deathbird ("Treacherous" printing) -
+purely the keyword, nothing else to script.
+
+9 new tests (143 total): `CombatEngineTests` covers the engagement
+recording directly (attacker-has-Deadly records the blocker; blocker-
+has-Deadly records the attacker; a co-blocker without Deadly is never
+recorded even though its fellow co-blocker has it; an unblocked attacker
+records nothing); `TurnEngineTests` covers `CleanUp`'s resolution
+(KOs a recorded die; still KOs it even with nothing left to say about
+the Deadly die itself; respects Regenerate when a roller is supplied;
+clears the set); `TwoTeamsDemoTests` drives Deathbird's real card
+through the full pipeline - a blocker that easily survives Deathbird's
+combat damage outright is still KO'd once Clean Up runs. `dotnet build`,
+`dotnet test` (143/143), and `npm run build` all clean.

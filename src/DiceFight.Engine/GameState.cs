@@ -32,6 +32,14 @@ public sealed class GameState
     // enforced by CombatEngine.DeclareBlockers; reset in CleanUp.
     public HashSet<string> MustBlockThisTurn { get; } = [];
 
+    // Keyword Deadly - die ids engaged (rule 2.7.2.3) with a Deadly die
+    // this combat; recorded by CombatEngine.DeclareBlockers at the
+    // moment of engagement (not at combat damage - rule Appendix 1
+    // Deadly, clarification 1), resolved (KO'd) and cleared by
+    // TurnEngine.CleanUp regardless of what happened to either die in
+    // between. Turn-scoped like MustBlockThisTurn/CallOutTargets.
+    public HashSet<string> DeadlyEngagedDieIds { get; } = [];
+
     // Keyword Call Out - attacker die id -> the opposing Character die it
     // targeted when it attacked (set by the SetCallOutTarget effect,
     // enforced by CombatEngine.DeclareBlockers). Scoped to one combat:

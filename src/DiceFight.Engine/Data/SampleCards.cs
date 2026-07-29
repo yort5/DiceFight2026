@@ -527,6 +527,24 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 3, Attack: 7, Defense: 7)
         ]);
 
+    // Dark Phoenix Saga's Deathbird, "Treacherous" printing - purely the
+    // Deadly keyword, no other text. Fully engine-level, like Overcrush/
+    // Amplify/Attune/Swarm: no target or choice at all - see
+    // CombatEngine.RecordDeadlyEngagements/TurnEngine.CleanUp for the
+    // actual mechanics ("engaged" is recorded at Declare Blockers, KO'd
+    // later at Clean Up, regardless of what happens to either die in
+    // between - see the design doc for the full reasoning).
+    public static readonly CardDef Deathbird = Character(
+        "deathbird", "Deathbird", "Treacherous", dieLimit: 4,
+        "Deadly",
+        purchaseCost: 2, energyType: EnergyType.Shield,
+        keywords: [new KeywordInstance("Deadly")],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 1),
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 4)
+        ]);
+
     // A team is 8 character cards + 2 Basic Action cards (10 total), not
     // the 10 characters + 3 Basic Actions used here previously - that was
     // simply wrong. Colossus, Corvus Glaive, Distraction, Kang, King
@@ -562,7 +580,8 @@ public static class SampleCards
             Falcon, FranklinsGalactus, GodEmperorDoom, GoddessOfThunder, Groot, InvisibleWoman,
             JaneFoster, Starfire, Kang, KingHyperion, CasketOfAncientWinters, DailyBugle, Escape,
             AlfredPennyworthCaretaker, AlfredPennyworthMI5, AlfredPennyworthToughAsNails,
-            AntManAmplify, Cyclops, Wasp, BlackWidow, Polaris, CosmicCubeInfinitePossibilities, Parademon, Darkseid
+            AntManAmplify, Cyclops, Wasp, BlackWidow, Polaris, CosmicCubeInfinitePossibilities, Parademon, Darkseid,
+            Deathbird
         ];
         return all.ToDictionary(c => c.Id);
     }

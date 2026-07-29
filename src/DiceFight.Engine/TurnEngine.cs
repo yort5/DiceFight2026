@@ -690,13 +690,26 @@ public static class TurnEngine
     // Rule 2.8 - Clean Up Step, and the turn handoff described in 2.8.6.
     // NOTE: 2.8.2's ordered resolution of Applied-then-Persistent abilities
     // is not implemented here yet - it depends on AbilityQueue being wired
-    // to real card triggers.
-    public static void CleanUp(GameState state)
+    // to real card triggers. roller is optional (null in call sites that
+    // don't care) - it's what lets a Deadly-KO'd die with Regenerate
+    // reroll instead, same convention as AssignCombatDamage's own roller.
+    public static void CleanUp(GameState state, IDiceRoller? roller = null)
     {
         if (state.CurrentStep != TurnStep.CleanUp)
             throw new InvalidOperationException($"Expected CleanUp step, was {state.CurrentStep}.");
 
         var activeId = state.ActivePlayerId;
+
+        // Keyword Deadly (rule Appendix 1 clarification 2 - "Deadly is a
+        // Persistent ability. Therefore, it is resolved in the Clean Up
+        // Step.") - a forced KO, not a damage/defense check, so this goes
+        // through ForceKO directly rather than TryResolveKO. Not
+        // exercised through the AbilityQueue - no "when KO'd" trigger
+        // fires for a Deadly KO yet, since CleanUp has no queue to
+        // enqueue into (a documented gap; no sample card needs it yet).
+        foreach (var id in state.DeadlyEngagedDieIds)
+            DieStats.ForceKO(state, FindDie(state, id), roller);
+        state.DeadlyEngagedDieIds.Clear();
 
         // Rule 2.8.1 - clear damage on Character dice that weren't KO'd.
         foreach (var die in state.Dice.Where(d => d.Zone == Zone.FieldZone))

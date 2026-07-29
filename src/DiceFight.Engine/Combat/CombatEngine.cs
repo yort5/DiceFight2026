@@ -70,7 +70,36 @@ public static class CombatEngine
             die.Zone = Zone.AttackZone;
         }
 
+        RecordDeadlyEngagements(state, assignment);
+
         state.AttackSubStep = AttackSubStep.ActionAndGlobalWindow;
+    }
+
+    // Keyword Deadly - "At the end of the turn, character dice that were
+    // engaged with a Character die that has Deadly are KO'd (even if the
+    // Character die with Deadly has been KO'd or leaves the Field Zone)."
+    // Recorded now, at the moment of engagement, rather than checked
+    // later at Clean Up - clarification (1) is explicit that Deadly
+    // triggers off the engagement itself, not off anything that happens
+    // afterward, so this has to be a snapshot rather than a live query.
+    // Engagement is pairwise (rule 2.7.2.3: attacker<->each blocker
+    // individually) - a Deadly blocker only marks the attacker it's
+    // actually blocking, not that attacker's other co-blockers, and vice
+    // versa; co-blockers of the same attacker are never engaged with
+    // each other.
+    private static void RecordDeadlyEngagements(GameState state, CombatAssignment assignment)
+    {
+        foreach (var attacker in state.DiceIn(state.ActivePlayerId, Zone.AttackZone))
+        {
+            var attackerIsDeadly = DieStats.HasKeyword(state, attacker, "Deadly");
+            foreach (var blockerId in assignment.BlockersOf(attacker.Id))
+            {
+                if (attackerIsDeadly)
+                    state.DeadlyEngagedDieIds.Add(blockerId);
+                if (DieStats.HasKeyword(state, FindDie(state, blockerId), "Deadly"))
+                    state.DeadlyEngagedDieIds.Add(attacker.Id);
+            }
+        }
     }
 
     // Keyword Call Out (wizkids.com/dicemasters/keywords) - "the targeted

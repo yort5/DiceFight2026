@@ -824,4 +824,48 @@ public class TwoTeamsDemoTests
         Assert.Equal(Zone.UsedPile, chosen!.Zone);
         Assert.Single(state.DiceIn("teamB", Zone.UsedPile));
     }
+
+    [Fact]
+    public void DeathbirdDeadly_BlockerSurvivesCombatDamage_ButIsStillKOdAtCleanUp()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamA";
+        var deathbird = new DieInstance
+        {
+            Id = "teamA-deathbird-1", CardId = SampleCards.Deathbird.Id, OwnerId = "teamA", ControllerId = "teamA",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1, // 1A/1D
+        };
+        state.Dice.Add(deathbird);
+
+        // Falcon's own team-setup die (placeholder stats: 1A/2D at level
+        // 1) - reused rather than constructed fresh, to avoid colliding
+        // with the id TeamSetup already gave it.
+        var blocker = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        blocker.Zone = Zone.FieldZone;
+        blocker.Status = DieStatus.Character;
+        blocker.Level = 1;
+
+        TurnEngine.EnterAttackStep(state);
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [deathbird.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(deathbird.Id, blocker.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [blocker.Id]);
+
+        var splits = new Dictionary<string, IReadOnlyDictionary<string, int>>
+        {
+            [deathbird.Id] = new Dictionary<string, int> { [blocker.Id] = 1 }, // Deathbird's full 1A
+        };
+        var result = CombatEngine.AssignCombatDamage(state, queue, assignment, splits);
+
+        // Blocker's 2D easily absorbs 1 damage - survives combat outright.
+        Assert.DoesNotContain(blocker.Id, result.KOdDieIds);
+        Assert.Equal(Zone.FieldZone, blocker.Zone);
+        Assert.Contains(blocker.Id, state.DeadlyEngagedDieIds); // recorded at Declare Blockers regardless
+
+        TurnEngine.CleanUp(state);
+
+        // Deadly still gets it at Clean Up, despite surviving combat outright.
+        Assert.Equal(Zone.PrepArea, blocker.Zone);
+    }
 }
