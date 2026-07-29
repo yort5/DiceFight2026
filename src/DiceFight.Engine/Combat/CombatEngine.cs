@@ -92,7 +92,7 @@ public static class CombatEngine
         // blocker list (to check afterward whether every one of them is
         // gone, however that happened) - captured now, before the KO pass
         // below mutates (or Regenerate-resets) those same dice.
-        var overcrushCandidates = new Dictionary<string, (int Attack, int BlockerDefenseTotal, IReadOnlyList<string> DeclaredBlockerIds, IReadOnlyList<string> LiveBlockerIds)>();
+        var overcrushCandidates = new Dictionary<string, (int Attack, int BlockerDefenseTotal, IReadOnlyList<string> DeclaredBlockerIds)>();
 
         foreach (var attacker in attackers)
         {
@@ -154,7 +154,7 @@ public static class CombatEngine
             // not redirected to the player.
 
             if (DieStats.HasKeyword(state, attacker, "Overcrush"))
-                overcrushCandidates[attacker.Id] = (attack, blockerDefenseTotal, declaredBlockerIds, liveBlockerIds);
+                overcrushCandidates[attacker.Id] = (attack, blockerDefenseTotal, declaredBlockerIds);
         }
 
         state.AttackSubStep = AttackSubStep.ResolveDamageAndWhenKOd;
@@ -175,16 +175,15 @@ public static class CombatEngine
         // all of its blockers, it deals any leftover damage to your
         // opponent" - "removes... for other reasons" as well as KO's via
         // this combat, per the keywords page. A blocker counts as gone if
-        // it was either already removed before this method ran (excluded
-        // from liveBlockerIds above) or got KO'd in the loop above
-        // (koDieIds) - NOT simply "not in the Attack Zone anymore", since a
-        // blocker that regenerated is also no longer in the Attack Zone
-        // (it's back in Zone.FieldZone - see DieStats.ForceKO) despite
-        // still being alive, and must not count as gone.
+        // it's no longer in the Attack Zone - it isn't blocking anymore
+        // either way, whether that's because it was already removed before
+        // this method ran, it was just KO'd above, or it Regenerated:
+        // Regenerate's own text returns the die "to the field (but not the
+        // Attack Zone)" - alive, but no longer a blocker, so it counts as
+        // removed for Overcrush's purposes the same as an outright KO.
         foreach (var (attackerId, info) in overcrushCandidates)
         {
-            var allGone = info.DeclaredBlockerIds.All(id => !info.LiveBlockerIds.Contains(id) || koDieIds.Contains(id));
-            if (!allGone) continue;
+            if (!info.DeclaredBlockerIds.All(id => FindDie(state, id).Zone != Zone.AttackZone)) continue;
             var leftover = info.Attack - info.BlockerDefenseTotal;
             if (leftover > 0) inactivePlayer.Life -= leftover;
         }

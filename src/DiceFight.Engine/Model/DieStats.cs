@@ -69,16 +69,17 @@ public static class DieStats
     // face (but not the Attack Zone). Otherwise, move the die to your
     // Prep Area." That's an interception, not a KO that happens and then
     // gets undone - a die that regenerates was never actually KO'd, so
-    // this doesn't set Zone/Prep Area at all in that case, and callers
-    // that treat "was this die actually removed" as a yes/no (Overcrush's
-    // "if this attacker KO's all its blockers" check, "when KO'd"
-    // triggers) see it as still alive precisely because it never left the
-    // Field Zone.
-    // Returns true if the die was actually KO'd, false if Regenerate
-    // intercepted it back onto the field instead - callers that need to
-    // know whether the die really left play (Overcrush's "all blockers
-    // dead" check, "when KO'd" triggers) key off this, not just off having
-    // called the method.
+    // this doesn't set Zone/Prep Area at all in that case; the return value
+    // (true = really KO'd, false = intercepted by Regenerate) is what lets
+    // callers that care about an actual KO (a "when KO'd" trigger firing)
+    // tell the difference, rather than just having called this method.
+    //
+    // Note this is a narrower question than "is this die still blocking" -
+    // a die that Regenerates is alive (false here), but it also explicitly
+    // does not return to the Attack Zone, so it stops blocking either way.
+    // CombatEngine's Overcrush check is zone-based for exactly this reason
+    // and treats a Regenerated blocker as removed, even though this method
+    // reports it as not-KO'd.
     public static bool ForceKO(GameState state, DieInstance die, IDiceRoller? roller = null)
     {
         if (roller is not null && HasKeyword(state, die, "Regenerate"))

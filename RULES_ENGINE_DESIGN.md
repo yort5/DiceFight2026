@@ -1621,3 +1621,29 @@ OnlyLiveBlockerDefenseCounts` (mixed live/removed blockers - split
 required only across the live one, but the leftover calculation still
 only credits that live blocker's defense). 75 tests passing (72 + 3
 new); `dotnet build`/`test` and `npm run build` both clean.
+
+## Status update — correction: a Regenerated blocker also counts as "removed" for Overcrush
+
+The previous status update explicitly excluded a Regenerated blocker from
+Overcrush's "all blockers removed" check, reasoning that it's still
+alive. The user corrected this: alive isn't the relevant question -
+*blocking* is. Regenerate's own glossary text returns the die "to the
+field... but not the Attack Zone," so a Regenerated blocker has left
+combat exactly like a KO'd one has; Overcrush's "KO's or removes... for
+other reasons" doesn't require the blocker to be dead, just gone.
+
+Reverted the check to what it was before that mistaken "fix": a blocker
+counts as removed if it's no longer in the Attack Zone, full stop - no
+special-casing for *why* it left. This also simplified the code back
+down (no more separately tracking which blockers were "live" just for
+this check - `DieStats.ForceKO`'s return value stays relevant only to
+"was this a real KO for `WhenKOd`-trigger purposes," which is a narrower
+question than "is this die still blocking").
+
+Renamed and fixed the test that had locked in the wrong behavior:
+`Overcrush_InteractsWithRegenerate_NoLeftoverWhenBlockerRegenerates` →
+`Overcrush_InteractsWithRegenerate_LeftoverStillAppliesEvenThoughBlockerSurvives`,
+now asserting the opponent takes the leftover 4 damage (5 attack - 1
+blocker defense) even though the blocker itself survives. 75 tests still
+passing (same count - one renamed/re-asserted, none added); `dotnet
+build`/`test` and `npm run build` both clean.

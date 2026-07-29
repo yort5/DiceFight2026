@@ -287,7 +287,7 @@ public class CombatEngineTests
     }
 
     [Fact]
-    public void Overcrush_InteractsWithRegenerate_NoLeftoverWhenBlockerRegenerates()
+    public void Overcrush_InteractsWithRegenerate_LeftoverStillAppliesEvenThoughBlockerSurvives()
     {
         var (state, bruiser, regenBlocker) = CreateOvercrushVsRegenerateState();
 
@@ -301,14 +301,18 @@ public class CombatEngineTests
         {
             [bruiser.Id] = new Dictionary<string, int> { [regenBlocker.Id] = 5 },
         };
-        // Regenerate rolls a character face - the blocker survives, so
-        // Overcrush's "all blockers dead" condition is never met.
+        // Regenerate rolls a character face - the blocker survives, but it
+        // still ends up back in the Field Zone, not the Attack Zone (its
+        // own glossary text: "return it to the field... but not the Attack
+        // Zone"). It's alive, but no longer blocking - Overcrush's "removes
+        // all of its blockers" condition doesn't require them dead, just
+        // gone from the fight, so the leftover still carries through.
         var roller = new FixedRoller(DieStatus.Character, 1);
         var result = CombatEngine.AssignCombatDamage(state, queue, assignment, splits, roller);
 
-        Assert.DoesNotContain(regenBlocker.Id, result.KOdDieIds);
+        Assert.DoesNotContain(regenBlocker.Id, result.KOdDieIds); // never actually KO'd...
         Assert.Equal(Zone.FieldZone, regenBlocker.Zone);
-        Assert.Equal(20, state.PlayerTwo.Life); // no leftover - the blocker never actually died
+        Assert.Equal(16, state.PlayerTwo.Life); // ...but Overcrush still triggers: 5 attack - 1 defense = 4 leftover
     }
 
     [Fact]
