@@ -234,6 +234,194 @@ public class TurnEngineTests
         Assert.All(state.DiceIn("p1", Zone.DiceFromBag), d => Assert.Equal(DieStatus.Unrolled, d.Status));
     }
 
+    private static (GameState state, CardDef swarmCard) CreateSwarmCatalogState()
+    {
+        var swarmCard = new CardDef
+        {
+            Id = "test-swarm", Name = "Test Swarm", Type = CardType.Character,
+            PurchaseCost = 2, DieLimit = 4,
+            Keywords = [new KeywordInstance("Swarm")],
+            Levels = [new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 1)],
+        };
+        var state = GameState.NewGame(
+            new Dictionary<string, CardDef> { [swarmCard.Id] = swarmCard },
+            new Player { Id = "p1", Name = "Player One" },
+            new Player { Id = "p2", Name = "Player Two" });
+        state.IsFirstTurn = false;
+        return (state, swarmCard);
+    }
+
+    private static DieInstance AddSwarmDie(GameState state, CardDef swarmCard, Zone zone, string suffix)
+    {
+        var die = new DieInstance
+        {
+            Id = $"p1-swarm-{suffix}", CardId = swarmCard.Id, OwnerId = "p1", ControllerId = "p1", Zone = zone,
+            Status = zone is Zone.FieldZone or Zone.AttackZone ? DieStatus.Character : DieStatus.Unrolled,
+            Level = 1,
+        };
+        state.Dice.Add(die);
+        return die;
+    }
+
+    // Rule Appendix 1 - Swarm: "While a Character die with Swarm is
+    // active, and you draw another copy of that die from your bag during
+    // your Clear and Draw Step, draw an extra die." At draw time every
+    // die here is Status=Unrolled with no face at all yet (Roll happens
+    // later, in a separate step) - matchingCopy and the plain Sidekicks
+    // drawn alongside it are otherwise indistinguishable (same Status,
+    // same default Level). The only thing that could possibly be
+    // triggering the bonus draw below is CardId - proof the check is
+    // "which card is this," not anything about a rolled face.
+    [Fact]
+    public void ClearAndDraw_Swarm_DrawingAMatchingCopy_DrawsAnExtraDie()
+    {
+        var (state, swarmCard) = CreateSwarmCatalogState();
+        AddSwarmDie(state, swarmCard, Zone.FieldZone, "active");
+        var matchingCopy = AddSwarmDie(state, swarmCard, Zone.Bag, "copy");
+
+        // Bag: matchingCopy + 3 Sidekicks = exactly this turn's draw
+        // count, so all 4 are guaranteed drawn regardless of RNG order;
+        // the other 5 Sidekicks sit in the Used Pile, reachable for the
+        // Swarm bonus pull's own refill.
+        var sidekicks = state.DiceIn("p1", Zone.Bag).Where(d => d.Id != matchingCopy.Id).ToList();
+        foreach (var d in sidekicks.Skip(3)) d.Zone = Zone.UsedPile;
+
+        var queue = new AbilityQueue();
+        TurnEngine.ClearAndDraw(state, new Random(1), queue);
+
+        Assert.Equal(5, state.DiceIn("p1", Zone.DiceFromBag).Count()); // 4 normal + 1 Swarm bonus
+    }
+
+    // Rule (1) - "Swarm may trigger multiple times if multiple copies of
+    // dice with Swarm are drawn."
+    [Fact]
+    public void ClearAndDraw_Swarm_TwoMatchingCopiesDrawn_TriggersTwice()
+    {
+        var (state, swarmCard) = CreateSwarmCatalogState();
+        AddSwarmDie(state, swarmCard, Zone.FieldZone, "active");
+        var copy1 = AddSwarmDie(state, swarmCard, Zone.Bag, "copy1");
+        var copy2 = AddSwarmDie(state, swarmCard, Zone.Bag, "copy2");
+
+        var sidekicks = state.DiceIn("p1", Zone.Bag).Where(d => d.CardId != swarmCard.Id).ToList();
+        foreach (var d in sidekicks.Skip(2)) d.Zone = Zone.UsedPile;
+        // Bag now: copy1 + copy2 + 2 Sidekicks = 4 = this turn's draw count.
+
+        var queue = new AbilityQueue();
+        TurnEngine.ClearAndDraw(state, new Random(1), queue);
+
+        Assert.Equal(6, state.DiceIn("p1", Zone.DiceFromBag).Count()); // 4 normal + 2 Swarm bonuses
+    }
+
+    // Rule (4) - "You only draw one die no matter how many copies of a
+    // Character die with Swarm are active." Two active copies, but only
+    // one drawn copy - still just one bonus draw, not two.
+    [Fact]
+    public void ClearAndDraw_Swarm_TwoActiveCopiesButOnlyOneDrawn_TriggersOnce()
+    {
+        var (state, swarmCard) = CreateSwarmCatalogState();
+        AddSwarmDie(state, swarmCard, Zone.FieldZone, "active1");
+        AddSwarmDie(state, swarmCard, Zone.AttackZone, "active2");
+        var copyInBag = AddSwarmDie(state, swarmCard, Zone.Bag, "copy");
+
+        var sidekicks = state.DiceIn("p1", Zone.Bag).Where(d => d.Id != copyInBag.Id).ToList();
+        foreach (var d in sidekicks.Skip(3)) d.Zone = Zone.UsedPile;
+
+        var queue = new AbilityQueue();
+        TurnEngine.ClearAndDraw(state, new Random(1), queue);
+
+        Assert.Equal(5, state.DiceIn("p1", Zone.DiceFromBag).Count()); // 4 normal + only 1 bonus
+    }
+
+    // Rule (3) - "All events related to the act of drawing dice during
+    // the Clear and Draw Step (this includes Swarm) occur simultaneously."
+    // Modeled as: Swarm is checked once against the original draw batch,
+    // never re-checked against its own bonus draws - a bonus-drawn copy
+    // must not cause a second bonus draw.
+    [Fact]
+    public void ClearAndDraw_Swarm_BonusDrawnCopyDoesNotChainTrigger()
+    {
+        var (state, swarmCard) = CreateSwarmCatalogState();
+        AddSwarmDie(state, swarmCard, Zone.FieldZone, "active");
+        var copyInBag = AddSwarmDie(state, swarmCard, Zone.Bag, "copy-main");
+        // The only die reachable for the bonus pull once the normal draw
+        // empties the bag - and it happens to be another Swarm copy too.
+        var copyForBonus = AddSwarmDie(state, swarmCard, Zone.UsedPile, "copy-bonus");
+
+        // Out of Play, not Reserve Pool - ClearAndDraw's own opening
+        // sweep (rule 2.3.1) empties the Reserve Pool into the Used Pile
+        // before the draw even starts, which would make these reachable
+        // for the bonus pull's refill too and defeat the point of this test.
+        var sidekicks = state.DiceIn("p1", Zone.Bag).Where(d => d.Id != copyInBag.Id).ToList();
+        foreach (var d in sidekicks.Skip(3)) d.Zone = Zone.OutOfPlay;
+
+        var queue = new AbilityQueue();
+        TurnEngine.ClearAndDraw(state, new Random(1), queue);
+
+        // 4 normal (including copyInBag, triggering 1 bonus) + exactly 1
+        // bonus (copyForBonus) - if it chained, this would be 6, not 5.
+        Assert.Equal(5, state.DiceIn("p1", Zone.DiceFromBag).Count());
+        Assert.Contains(copyForBonus.Id, state.DiceIn("p1", Zone.DiceFromBag).Select(d => d.Id));
+    }
+
+    // Rule (2) - "If Swarm is triggered and there are no dice left in
+    // your bag to pull, or in the Used Pile to refill your bag, you would
+    // not lose one Life and gain one virtual generic energy for being
+    // unable to pull those dice." Unlike the ordinary Clear and Draw
+    // shortfall (rule 2.3.10), a failed Swarm bonus pull is simply a
+    // no-op - it is deliberately kept out of the shortfall calculation.
+    [Fact]
+    public void ClearAndDraw_Swarm_FailedBonusPull_DoesNotCauseAShortfallPenalty()
+    {
+        var (state, swarmCard) = CreateSwarmCatalogState();
+        AddSwarmDie(state, swarmCard, Zone.FieldZone, "active");
+        var copyInBag = AddSwarmDie(state, swarmCard, Zone.Bag, "copy");
+
+        // Bag has exactly this turn's draw count (4) - the normal draw
+        // succeeds in full, no shortfall from that. Nothing is left
+        // anywhere (Bag or Used Pile) for the Swarm bonus pull afterward -
+        // Out of Play rather than Reserve Pool, since ClearAndDraw's own
+        // opening sweep (rule 2.3.1) would otherwise empty the Reserve
+        // Pool into the Used Pile before the draw even starts.
+        var sidekicks = state.DiceIn("p1", Zone.Bag).Where(d => d.Id != copyInBag.Id).ToList();
+        foreach (var d in sidekicks.Skip(3)) d.Zone = Zone.OutOfPlay;
+
+        TurnEngine.ClearAndDraw(state, new Random(1));
+
+        Assert.Equal(4, state.DiceIn("p1", Zone.DiceFromBag).Count()); // normal draw succeeded fully
+        Assert.Equal(Player.StartingLife, state.PlayerOne.Life); // no penalty for the failed bonus pull
+        Assert.DoesNotContain(state.Dice, d => d.IsVirtualEnergy);
+    }
+
+    [Fact]
+    public void ParademonSwarm_RealCard_DrawsAnExtraDieWhenAnotherCopyIsDrawn()
+    {
+        var card = SampleCards.Parademon;
+        var state = GameState.NewGame(
+            new Dictionary<string, CardDef> { [card.Id] = card },
+            new Player { Id = "p1", Name = "Player One" },
+            new Player { Id = "p2", Name = "Player Two" });
+        state.IsFirstTurn = false;
+
+        var active = new DieInstance
+        {
+            Id = "p1-parademon-active", CardId = card.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(active);
+        var copyInBag = new DieInstance
+        {
+            Id = "p1-parademon-copy", CardId = card.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.Bag,
+        };
+        state.Dice.Add(copyInBag);
+
+        var sidekicks = state.DiceIn("p1", Zone.Bag).Where(d => d.Id != copyInBag.Id).ToList();
+        foreach (var d in sidekicks.Skip(3)) d.Zone = Zone.UsedPile;
+
+        TurnEngine.ClearAndDraw(state, new Random(1));
+
+        Assert.Equal(5, state.DiceIn("p1", Zone.DiceFromBag).Count());
+    }
+
     [Fact]
     public void ClearAndDraw_SweepsExistingPrepAreaDiceIntoDiceFromPrep()
     {

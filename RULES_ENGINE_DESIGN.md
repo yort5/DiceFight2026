@@ -50,7 +50,7 @@ here rather than assuming which approach they'd want.
 
 **Actionable next steps, roughly high to low value**:
 1. ~~Keyword *behavior*~~ - Overcrush, Regenerate, Energize, Ally,
-   Amplify/Awaken, Attune, Call Out, and now Corrupt are implemented (see the
+   Amplify/Awaken, Attune, Call Out, Corrupt, and now Swarm are implemented (see the
    status updates). BlackPanther's Energize is fully scripted; Robin's Energize
    (a purchase-cost discount) and all three Alfred Pennyworth printings'
    Ally effects (each a "Batman die OR Sidekick" compound target) are
@@ -2260,3 +2260,62 @@ nothing) plus Cosmic Cube's real card start to finish (drawn, all of
 this turn's draw sent Out of Play, one unrolled replacement per die
 drawn back into `DiceFromBag`). `dotnet build`, `dotnet test` (121/121),
 and `npm run build` all clean.
+
+## Status update — Swarm implemented (still "draw mode" - not a targeted ability like the others)
+
+The user flagged the key point up front: Swarm's "another copy of that
+die" check is about **card identity**, not a rolled face - and that's
+not incidental phrasing, it's structurally necessary. Appendix 1:
+"While a Character die with Swarm is active, and you draw another copy
+of that die from your bag during your Clear and Draw Step, draw an
+extra die from your bag and add it to your Roll and Reroll." Dice sitting
+in `DiceFromBag` the moment they're drawn are still `Status.Unrolled` -
+Roll doesn't happen until the *next* step - so there is no face to
+compare in the first place; the only thing that could possibly
+distinguish "another copy of that die" from any other Sidekick sitting
+right next to it in the same draw is `CardId`. Every test below
+deliberately drew the matching copy alongside plain Sidekicks with
+identical `Status`/`Level` to make that point concrete rather than just
+asserted.
+
+Unlike Cosmic Cube/Corrupt, Swarm has no target or choice at all - fully
+automatic, so (like Overcrush/Amplify/Attune) it's implemented directly
+in `TurnEngine.ClearAndDraw`, not through an `AbilityDef`/`EffectNode`:
+for each die in the *original* draw batch, check whether its `CardId`
+matches any currently-active (`FieldZone`/`AttackZone`) Swarm-keyword
+die's `CardId`; one bonus `DrawFromBag(1)` per matching *drawn* die,
+landing (like everything else in Clear and Draw) unrolled in
+`DiceFromBag` for this turn's Roll and Reroll.
+
+Three numbered clarifications under the keyword each needed their own
+correctness check, not just the main clause:
+- **(4)** "You only draw one die no matter how many copies... are
+  active" - checking per *drawn* die (not per *active* die) gets this
+  right for free, no separate dedup needed: two active copies + one
+  drawn copy is still exactly one trigger.
+- **(1)** "Swarm may trigger multiple times if multiple copies... are
+  drawn" - two drawn copies (matching one or more active dice) is two
+  separate triggers, correctly the opposite axis from (4).
+- **(3)** "All events related to drawing dice... occur simultaneously" -
+  modeled by checking Swarm against a frozen snapshot of the *original*
+  draw batch only, never against its own bonus draws - a bonus-drawn
+  copy cannot chain into a second bonus draw. Caught a real bug in my
+  own test setup while verifying this: dice stashed in the Reserve Pool
+  to keep them "out of reach" for a bonus pull's refill turned out to be
+  reachable anyway, because `ClearAndDraw`'s own opening sweep (rule
+  2.3.1) empties the Reserve Pool into the Used Pile *before* the draw
+  even starts - Out of Play (untouched by either of `ClearAndDraw`'s own
+  sweeps) is the zone that's actually inert here.
+- **(2)** "[a failed Swarm pull] would not lose one Life and gain one
+  virtual generic energy" - kept structurally separate from the ordinary
+  rule 2.3.10 shortfall calculation (which is still based only on the
+  original `drawCount` vs. the original batch's size), so a Swarm bonus
+  pull coming up empty is silently absorbed rather than penalized.
+
+Example card: Batman set's Parademon ("Servant of Apokalips" printing) -
+purely the keyword, no other text, the simplest possible card to
+exercise it against.
+
+7 new tests (127 total) in `TurnEngineTests`, one per clarification above
+plus the base case and Parademon's real card end to end. `dotnet build`,
+`dotnet test` (127/127), and `npm run build` all clean.

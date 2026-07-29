@@ -474,6 +474,28 @@ public static class SampleCards
                     optional: true), // "you may send ANY NUMBER of them" - zero is a legal choice
                 Zone.OutOfPlay))]);
 
+    // Batman set's Parademon, "Servant of Apokalips" printing - purely
+    // the Swarm keyword, no extra text, the simplest possible card to
+    // exercise it against. Appendix 1's real wording ("While a Character
+    // die with Swarm is active, and you draw another copy of that die
+    // from your bag during your Clear and Draw Step, draw an extra die
+    // from your bag and add it to your Roll and Reroll") checks card
+    // identity, not a rolled face - see TurnEngine.ClearAndDraw's remarks
+    // on why that distinction matters here (nothing drawn this early in
+    // the turn has a face to compare yet in the first place). Purely
+    // engine-level keyword behavior, like Overcrush/Amplify/Attune - no
+    // AbilityDef needed, since there's no choice or target involved.
+    public static readonly CardDef Parademon = Character(
+        "parademon", "Parademon", "Servant of Apokalips", dieLimit: 4,
+        "Swarm",
+        purchaseCost: 3, energyType: EnergyType.Bolt,
+        keywords: [new KeywordInstance("Swarm")],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 1),
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 2)
+        ]);
+
     // A team is 8 character cards + 2 Basic Action cards (10 total), not
     // the 10 characters + 3 Basic Actions used here previously - that was
     // simply wrong. Colossus, Corvus Glaive, Distraction, Kang, King
@@ -509,7 +531,7 @@ public static class SampleCards
             Falcon, FranklinsGalactus, GodEmperorDoom, GoddessOfThunder, Groot, InvisibleWoman,
             JaneFoster, Starfire, Kang, KingHyperion, CasketOfAncientWinters, DailyBugle, Escape,
             AlfredPennyworthCaretaker, AlfredPennyworthMI5, AlfredPennyworthToughAsNails,
-            AntManAmplify, Cyclops, Wasp, BlackWidow, Polaris, CosmicCubeInfinitePossibilities
+            AntManAmplify, Cyclops, Wasp, BlackWidow, Polaris, CosmicCubeInfinitePossibilities, Parademon
         ];
         return all.ToDictionary(c => c.Id);
     }

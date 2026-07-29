@@ -88,9 +88,43 @@ public static class TurnEngine
         var drawCount = state.IsFirstTurn ? 3 : 4;
         var drawn = DrawFromBag(state, activeId, drawCount, random);
 
+        // Keyword Swarm - "While a Character die with Swarm is active,
+        // and you draw another copy of that die from your bag during
+        // your Clear and Draw Step, draw an extra die from your bag and
+        // add it to your Roll and Reroll." The match is on card identity
+        // (CardId) - "another copy of that die" - not on any rolled face:
+        // dice sitting in DiceFromBag right now are still unrolled (Roll
+        // happens later), so there's no face to compare in the first
+        // place, and the rule's own wording ("copy of that die") is about
+        // which character it is, not what it shows. (1)/(4): one trigger
+        // per *drawn* die matching some active Swarm die's card, no
+        // matter how many active copies of that card exist - checking
+        // per drawn die rather than per active die gets this right without
+        // extra bookkeeping. (3): checked once against this original
+        // batch, not re-checked against its own bonus draws below, so
+        // Swarm can't chain off itself.
+        var activeSwarmCardIds = state.DiceIn(activeId, Zone.FieldZone)
+            .Concat(state.DiceIn(activeId, Zone.AttackZone))
+            .Where(d => DieStats.HasKeyword(state, d, "Swarm"))
+            .Select(d => d.VirtualCardId ?? d.CardId)
+            .Where(cardId => cardId is not null)
+            .ToHashSet();
+
+        var swarmBonusDice = new List<DieInstance>();
+        if (activeSwarmCardIds.Count > 0)
+        {
+            var swarmTriggerCount = drawn.Count(d => activeSwarmCardIds.Contains(d.VirtualCardId ?? d.CardId));
+            // (2) - a bonus pull that comes up empty is not a shortfall
+            // (no life loss/virtual energy); DrawFromBag already just
+            // stops short rather than throwing, so this needs no special
+            // casing beyond simply not folding it into `drawn` below.
+            for (var i = 0; i < swarmTriggerCount; i++)
+                swarmBonusDice.AddRange(DrawFromBag(state, activeId, 1, random));
+        }
+
         if (queue is not null)
         {
-            foreach (var die in drawn)
+            foreach (var die in drawn.Concat(swarmBonusDice))
                 EnqueueTriggered(state, queue, die, TriggerType.WhenDrawn);
         }
 
