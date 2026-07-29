@@ -91,17 +91,13 @@ public static class EffectInterpreter
                     // Ability damage KOs immediately rather than waiting
                     // for a simultaneous batch check - abilities resolve
                     // one at a time (rule 3.2.2), unlike combat damage.
-                    DieStats.TryResolveKO(ctx.State, die);
+                    DieStats.TryResolveKO(ctx.State, die, ctx.Roller);
                 }
                 break;
 
             case Ko ko:
                 foreach (var id in Resolve(ctx, ko.Target, cache))
-                {
-                    var die = FindDie(ctx, id);
-                    die.Zone = Zone.PrepArea; // rule 1.5.3.2
-                    die.ResetToUnrolled();
-                }
+                    DieStats.ForceKO(ctx.State, FindDie(ctx, id), ctx.Roller);
                 break;
 
             case MoveDie move:

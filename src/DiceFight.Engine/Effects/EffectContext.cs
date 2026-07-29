@@ -1,3 +1,4 @@
+using DiceFight.Engine;
 using DiceFight.Engine.Model;
 
 namespace DiceFight.Engine.Effects;
@@ -7,10 +8,14 @@ namespace DiceFight.Engine.Effects;
 // (see RULES_ENGINE_DESIGN.md open questions) - callers (tests, and
 // eventually a real target-selection UI/AI) decide what a TargetSpec means
 // and hand back concrete die ids; the interpreter only applies effects to
-// whatever ids it's given.
+// whatever ids it's given. Random is the bare RNG DrawDice picks a bag die
+// with; Roller is a full IDiceRoller, needed separately so an ability-driven
+// KO (Ko node, or DealDamage KO'ing its target) can respect Regenerate -
+// null in the handful of test call sites that don't care about it.
 public sealed record EffectContext(
     GameState State,
     string ControllerId,
     string? SourceDieId,
     Func<TargetSpec, IReadOnlyList<string>> ResolveTargets,
-    Random? Random = null);
+    Random? Random = null,
+    IDiceRoller? Roller = null);

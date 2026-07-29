@@ -49,8 +49,16 @@ a different data source - worth asking the user before investing time
 here rather than assuming which approach they'd want.
 
 **Actionable next steps, roughly high to low value**:
-1. Keyword *behavior* (Overcrush, Regenerate, etc.) - currently just
-   tagged as data on `CardDef.Keywords`, not simulated by `CombatEngine`.
+1. ~~Keyword *behavior*~~ - Overcrush and Regenerate, the two keywords
+   that need real `CombatEngine`/`DieStats` simulation, are now
+   implemented (see the status update). Still open: **Energize**
+   (BlackPanther, Robin) - blocked on not knowing which specific
+   double-energy face a real physical die marks Energize on, since
+   `PlaceholderDiceRoller` only has a rules-accurate *default* face
+   composition, not real per-card face tables; and **Teamwatch**
+   (Falcon) - not a combat-math keyword at all, it's an ability-trigger
+   wiring problem (firing `WhenEngaged` when a Teamwatch character is
+   engaged), already separately tracked.
 2. ~~Global ability UX~~ - done as a standing sidebar (`GlobalAbilitiesPanel`)
    with its own energy-then-targets flow; every Global on both rosters
    (Distraction, Falcon, Invisible Woman, Starfire) is scripted, and the
@@ -1470,3 +1478,83 @@ Falcon's Use button re-enabled, confirming the no-target auto-skip path
 end-to-end. New test `NeedsTarget_IsTrueForAGlobalWithARealTarget_
 FalseForOneWithout` (Distraction vs. Falcon). 65 tests passing (64 + 1
 new); `dotnet build`/`test` and `npm run build` both clean.
+
+## Status update — Keyword behavior: Overcrush and Regenerate now actually simulated
+
+Closed out item #1 on the next-steps list, scoped to the two keywords
+that are genuinely combat-math (see the updated list entry for why
+Energize and Teamwatch are still open, and why).
+
+**Unifying every KO path through one place.** Both keywords hinge on "is
+this die actually being KO'd right now," and there were two separate
+places a die could be KO'd: `DieStats.TryResolveKO` (the simultaneous
+end-of-combat-damage check - rule 2.7.6.1) and `EffectInterpreter`'s `Ko`
+effect node (ability-driven, e.g. Casket of Ancient Winters - resolves
+immediately rather than in a batch, per rule 3.2.2). Both now delegate to
+a new `DieStats.ForceKO`, so Regenerate only had to be implemented once
+and applies everywhere a die can leave play, not just in combat.
+
+**Regenerate.** Glossary: "If this character would be KO'd, roll it. If
+you roll a character face, return it to the field on the rolled face (but
+not the Attack Zone). Otherwise, move the die to your Prep Area." This is
+an interception, not an undo - a die that regenerates was never actually
+KO'd, so `ForceKO` doesn't touch `Zone`/`Status` at all in that branch,
+just rerolls the die in place and returns `false` ("not actually KO'd").
+Rolling requires an `IDiceRoller`, which needed threading into two new
+places: `EffectContext.Roller` (so ability-driven KOs can regenerate too)
+and a new `IDiceRoller? roller = null` parameter on
+`CombatEngine.AssignCombatDamage`. Both API call sites
+(`assign-combat-damage` and the shared `Drain` helper used by every other
+ability-triggering endpoint) now construct a real
+`PlaceholderDiceRoller`. The `roller` parameter defaults to `null`
+everywhere (existing test call sites that don't care about Regenerate are
+unaffected) - without one, Regenerate simply can't trigger and the die is
+KO'd normally, which is also the correct fallback for a die that doesn't
+have the keyword at all.
+
+One real bug caught mid-implementation: `TryResolveKO` originally
+returned `true` unconditionally once damage reached the die's defense,
+regardless of what `ForceKO` actually did - so a die that successfully
+regenerated was still reported as KO'd to every caller (wrongly firing
+`WhenKOd`, and wrongly counting as "dead" for Overcrush's own check
+below). Fixed by having `ForceKO` return whether it performed a *real*
+KO (`true`) or intercepted into a regenerate (`false`), and having
+`TryResolveKO` propagate that instead of hardcoding `true`. Caught by the
+new tests themselves failing, not by inspection - worth calling out since
+it's exactly the kind of bug "returns true because we called the KO
+function" masks.
+
+**Overcrush.** Glossary: "When attacking, if this character die KO's or
+removes all of its blockers, it deals any leftover damage to your
+opponent." Deliberately doesn't change the existing "assign the full
+attack value across blockers" contract (rule 2.7.4.3.4) - the player
+still submits a complete split exactly as before. Instead,
+`AssignCombatDamage` captures each Overcrush attacker's `(Attack,
+BlockerDefenseTotal)` *before* the KO-resolution loop runs (since
+`EffectiveDefense`/`EffectiveAttack` read live die fields that KO
+resolution, including a Regenerate reroll, mutates), then after KO
+resolution checks whether every one of that attacker's blockers ended up
+actually KO'd (not just targeted - a blocker that regenerated doesn't
+count). If so, `leftover = Attack - BlockerDefenseTotal` (if positive)
+comes off the opponent's life directly.
+
+`Apocalypse` (Overcrush) and `Beast` (Regenerate) were already tagged
+with these keywords in `SampleCards.cs` from an earlier session, so no
+data changes were needed - tagging the keyword alone now activates real
+behavior.
+
+New tests: `Overcrush_KillingAllBlockers_DealsLeftoverDamageToOpponent`,
+`Overcrush_BlockerSurvives_DealsNoLeftoverDamage`,
+`Overcrush_InteractsWithRegenerate_NoLeftoverWhenBlockerRegenerates`,
+`Regenerate_RollingACharacterFace_ReturnsToFieldInsteadOfBeingKOd`,
+`Regenerate_RollingANonCharacterFace_FallsThroughToANormalKO`,
+`Regenerate_WithNoRollerSupplied_JustGetsKOdNormally` (all
+`CombatEngineTests`), plus
+`DealDamage_RespectsRegenerate_WhenRollerSuppliedAndFaceIsCharacter`
+(`EffectInterpreterTests`, locking in the ability-driven KO path
+independent of `CombatEngine`). 72 tests passing (65 + 7 new); `dotnet
+build`/`test` and `npm run build` both clean. Not verified live in the
+browser this pass - no UI surface exists yet for triggering Overcrush/
+Regenerate specifically (both require a scripted combat scenario with the
+right keyword-tagged cards actually fighting), so this was verified via
+the engine test suite only.

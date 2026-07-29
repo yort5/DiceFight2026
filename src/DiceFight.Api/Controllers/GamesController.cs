@@ -155,7 +155,7 @@ public sealed class GamesController(GameStore store) : ControllerBase
                 g => (IReadOnlyDictionary<string, int>)g.ToDictionary(s => s.BlockerDieId, s => s.Amount));
 
         var queue = new AbilityQueue();
-        CombatEngine.AssignCombatDamage(state, queue, assignment, splits);
+        CombatEngine.AssignCombatDamage(state, queue, assignment, splits, new PlaceholderDiceRoller(new Random()));
         Drain(state, queue, null);
         return Ok(GameStateDto.From(gameId, state));
     }
@@ -178,7 +178,9 @@ public sealed class GamesController(GameStore store) : ControllerBase
     private static void Drain(GameState state, AbilityQueue queue, IReadOnlyList<string>? targetDieIds)
     {
         var targets = targetDieIds ?? [];
+        var roller = new PlaceholderDiceRoller(new Random());
         queue.Drain(ability => EffectInterpreter.Execute(
-            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => targets)));
+            ability.Effect,
+            new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => targets, Roller: roller)));
     }
 }

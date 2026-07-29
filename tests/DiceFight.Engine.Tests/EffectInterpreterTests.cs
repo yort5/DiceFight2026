@@ -1,3 +1,4 @@
+using DiceFight.Engine;
 using DiceFight.Engine.Data;
 using DiceFight.Engine.Effects;
 using DiceFight.Engine.Model;
@@ -10,6 +11,13 @@ namespace DiceFight.Engine.Tests;
 // .CasketOfAncientWinters), independent of the turn/combat engines.
 public class EffectInterpreterTests
 {
+    // Lets a Regenerate test control exactly what a KO'd die rerolls to,
+    // mirroring CombatEngineTests' FixedRoller.
+    private sealed class FixedRoller(DieStatus status, int level) : IDiceRoller
+    {
+        public RolledFace Roll(DieInstance die, CardDef? card) => new(status, level);
+    }
+
     private static GameState CreateState(IReadOnlyDictionary<string, CardDef>? catalog = null) =>
         GameState.NewGame(
             catalog ?? SampleCards.BuildCatalog(),
@@ -40,6 +48,39 @@ public class EffectInterpreterTests
 
         Assert.Equal(Zone.PrepArea, target.Zone);
         Assert.Equal(DieStatus.Unrolled, target.Status);
+    }
+
+    // Ability-driven KOs (DealDamage KO'ing its target, or a direct Ko node
+    // like Casket of Ancient Winters) go through DieStats.ForceKO just like
+    // combat KOs do, so a Regenerate target survives here too - locking in
+    // that behavior independent of CombatEngine.
+    [Fact]
+    public void DealDamage_RespectsRegenerate_WhenRollerSuppliedAndFaceIsCharacter()
+    {
+        var regenCard = new CardDef
+        {
+            Id = "regen-target", Name = "Regen Target", Type = CardType.Character,
+            PurchaseCost = 2, DieLimit = 4,
+            Levels = [new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 1)],
+            Keywords = [new KeywordInstance("Regenerate")],
+        };
+        var catalog = new Dictionary<string, CardDef> { [regenCard.Id] = regenCard };
+        var state = CreateState(catalog);
+        var target = new DieInstance
+        {
+            Id = "p2-regen-target-1", CardId = regenCard.Id, OwnerId = "p2", ControllerId = "p2",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(target);
+
+        var roller = new FixedRoller(DieStatus.Character, 2);
+        EffectInterpreter.Execute(
+            new DealDamage(1, TargetSpec.CharacterDie("t")),
+            new EffectContext(state, "p1", SourceDieId: null, _ => [target.Id], Roller: roller));
+
+        Assert.Equal(Zone.FieldZone, target.Zone); // regenerated, not KO'd
+        Assert.Equal(2, target.Level);
+        Assert.Equal(0, target.Damage);
     }
 
     [Fact]
