@@ -423,6 +423,25 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3)
         ]);
 
+    // Dark X-Men's Polaris, "Lorna Dane" printing - the simplest of a
+    // handful of that set's Corrupt 2 cards (Rogue/Sage/Sunspot/
+    // Thunderbird all read almost identically), picked for a plain
+    // WhenFielded trigger. See EffectNode.Corrupt's remarks for the
+    // keyword's own mechanics.
+    public static readonly CardDef Polaris = Character(
+        "polaris", "Polaris", "Lorna Dane", dieLimit: 4,
+        "When Polaris is fielded, Corrupt 2 (Target player draws 2 dice, places 1 in the Used Pile, and " +
+        "returns the rest).",
+        purchaseCost: 4, energyType: EnergyType.Shield,
+        keywords: [new KeywordInstance("Corrupt", Params: [2])], // the X in "Corrupt X"
+        abilities: [new AbilityDef(TriggerType.WhenFielded, Cost: null,
+            Effect: new Corrupt(2, TargetSpec.Player("target player")))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 2),
+            new CharacterFace(FieldingCost: 2, Attack: 3, Defense: 4),
+            new CharacterFace(FieldingCost: 2, Attack: 5, Defense: 5)
+        ]);
+
     // A team is 8 character cards + 2 Basic Action cards (10 total), not
     // the 10 characters + 3 Basic Actions used here previously - that was
     // simply wrong. Colossus, Corvus Glaive, Distraction, Kang, King
@@ -458,7 +477,7 @@ public static class SampleCards
             Falcon, FranklinsGalactus, GodEmperorDoom, GoddessOfThunder, Groot, InvisibleWoman,
             JaneFoster, Starfire, Kang, KingHyperion, CasketOfAncientWinters, DailyBugle, Escape,
             AlfredPennyworthCaretaker, AlfredPennyworthMI5, AlfredPennyworthToughAsNails,
-            AntManAmplify, Cyclops, Wasp, BlackWidow
+            AntManAmplify, Cyclops, Wasp, BlackWidow, Polaris
         ];
         return all.ToDictionary(c => c.Id);
     }

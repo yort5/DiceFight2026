@@ -269,6 +269,103 @@ public class EffectInterpreterTests
         Assert.Empty(state.CallOutTargets);
     }
 
+    // Keyword Corrupt X - draws X dice from the target player's bag
+    // (random, refilling from the Used Pile if needed), then a real
+    // choice of which ONE goes to the Used Pile; the rest return to the
+    // bag untouched (see EffectNode.Corrupt's remarks on why the "choose"
+    // step bypasses the normal cached Resolve/LegalTargets pipeline).
+    [Fact]
+    public void Corrupt_DrawsDiceAndSendsTheChosenOneToUsedPile_ReturnsTheRestToTheBag()
+    {
+        var state = CreateState();
+        Assert.Equal(8, state.DiceIn("p2", Zone.Bag).Count());
+
+        DieInstance? chosen = null;
+        IReadOnlyList<string> Resolve(TargetSpec spec)
+        {
+            if (spec.PlayersAllowed) return ["p2"];
+            chosen = state.DiceIn("p2", Zone.DiceFromBag).First(); // whichever 2 actually got drawn
+            return [chosen.Id];
+        }
+
+        EffectInterpreter.Execute(
+            new Corrupt(2, TargetSpec.Player("target player")),
+            new EffectContext(state, "p1", SourceDieId: null, Resolve, Random: new Random(1)));
+
+        Assert.NotNull(chosen);
+        Assert.Equal(Zone.UsedPile, chosen!.Zone);
+        Assert.Equal(7, state.DiceIn("p2", Zone.Bag).Count()); // 1 sent to Used Pile, 1 returned
+        Assert.Single(state.DiceIn("p2", Zone.UsedPile));
+        Assert.Empty(state.DiceIn("p2", Zone.DiceFromBag)); // nothing left staged mid-effect
+    }
+
+    [Fact]
+    public void Corrupt_DrawingOnlyOneDie_SkipsTheChoiceAndSendsItDirectlyToUsedPile()
+    {
+        var state = CreateState();
+        // Leave p2 with exactly 1 die reachable at all (bag + Used Pile
+        // combined) - Corrupt 2 can only actually draw 1.
+        foreach (var d in state.DiceIn("p2", Zone.Bag).Skip(1).ToList())
+            d.Zone = Zone.ReservePool;
+
+        EffectInterpreter.Execute(
+            new Corrupt(2, TargetSpec.Player("target player")),
+            new EffectContext(state, "p1", SourceDieId: null, spec => spec.PlayersAllowed ? ["p2"] : [],
+                Random: new Random(1)));
+
+        Assert.Single(state.DiceIn("p2", Zone.UsedPile));
+    }
+
+    [Fact]
+    public void Corrupt_RefillsFromTheUsedPileWhenTheBagRunsOut()
+    {
+        var state = CreateState();
+        foreach (var d in state.DiceIn("p2", Zone.Bag).Skip(1).ToList())
+        {
+            d.Zone = Zone.UsedPile;
+            d.ResetToUnrolled();
+        }
+
+        EffectInterpreter.Execute(
+            new Corrupt(2, TargetSpec.Player("target player")),
+            new EffectContext(state, "p1", SourceDieId: null,
+                spec => spec.PlayersAllowed ? ["p2"] : [state.DiceIn("p2", Zone.DiceFromBag).First().Id],
+                Random: new Random(1)));
+
+        // Drew 1 from the original bag, then refilled all 7 Used Pile dice
+        // into the bag to draw a 2nd - one of the 2 drawn ends up in the
+        // Used Pile, the other (plus the 6 refilled-but-undrawn) sit in the bag.
+        Assert.Single(state.DiceIn("p2", Zone.UsedPile));
+        Assert.Equal(7, state.DiceIn("p2", Zone.Bag).Count());
+    }
+
+    [Fact]
+    public void Corrupt_NoDiceAnywhereToDraw_NoOp()
+    {
+        var state = CreateState();
+        foreach (var d in state.DiceFor("p2").ToList()) d.Zone = Zone.ReservePool; // neither Bag nor Used Pile has anything
+
+        EffectInterpreter.Execute(
+            new Corrupt(2, TargetSpec.Player("target player")),
+            new EffectContext(state, "p1", SourceDieId: null, spec => spec.PlayersAllowed ? ["p2"] : [],
+                Random: new Random(1)));
+
+        Assert.Empty(state.DiceIn("p2", Zone.UsedPile));
+    }
+
+    [Fact]
+    public void Corrupt_RejectsAChosenDieThatWasNotActuallyDrawn()
+    {
+        var state = CreateState();
+
+        var ex = Assert.Throws<InvalidOperationException>(() => EffectInterpreter.Execute(
+            new Corrupt(2, TargetSpec.Player("target player")),
+            new EffectContext(state, "p1", SourceDieId: null,
+                spec => spec.PlayersAllowed ? ["p2"] : ["not-a-real-die-id"], Random: new Random(1))));
+
+        Assert.Contains("must be one of", ex.Message);
+    }
+
     [Fact]
     public void NeedsTarget_IsTrueForAGlobalWithARealTarget_FalseForOneWithout()
     {

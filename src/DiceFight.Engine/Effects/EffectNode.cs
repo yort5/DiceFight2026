@@ -78,6 +78,14 @@ public sealed record TargetSpec(
         new(ownership, CharacterDiceOnly: false, zones ?? DefaultZones, RequiredEnergyType: null, count, description,
             SidekicksOnly: true);
 
+    // "target player" card text (e.g. Corrupt) - no die option at all,
+    // unlike CharacterDieOrPlayer. EligibleZones: [] means the die-side of
+    // LegalTargets.Query never matches anything, so only the matching
+    // player id(s) come back.
+    public static TargetSpec Player(string description, TargetOwnership ownership = TargetOwnership.Any) =>
+        new(ownership, CharacterDiceOnly: false, EligibleZones: [], RequiredEnergyType: null, Count: 1, description,
+            PlayersAllowed: true);
+
     // Rule 3.1.15-style self-reference (e.g. Shocking Grasp's "you may
     // Prep this die"). Bypasses legal-target filtering entirely -
     // EffectInterpreter resolves it straight to the ability's source die.
@@ -101,6 +109,18 @@ public sealed record ForceBlock(TargetSpec Target) : EffectNode;
 // CombatEngine.ActiveCallOutTargets). Always a WhenAttacks ability
 // targeting an opposing Character die.
 public sealed record SetCallOutTarget(TargetSpec Target) : EffectNode;
+// Keyword Corrupt X - "Target player draws X dice from their bag
+// (refilling from the Used Pile if necessary). Choose one die (no matter
+// how many dice are drawn) and place it in that player's Used Pile, and
+// the rest are returned to the bag." The X dice are a random bag draw
+// (TurnEngine.DrawFromBag, same as Clear and Draw's own), not a target
+// choice; which ONE of those specific dice then goes to the Used Pile IS
+// a real choice, but the candidate set doesn't exist until this effect
+// actually runs a draw - it can't be resolved upfront through the normal
+// TargetSpec/LegalTargets pipeline like everything else in the tree, so
+// EffectInterpreter calls ctx.ResolveTargets for it directly instead
+// (validating the answer is actually one of the drawn dice).
+public sealed record Corrupt(int Count, TargetSpec PlayerTarget) : EffectNode;
 public sealed record MoveDie(TargetSpec Target, Model.Zone ToZone) : EffectNode;
 public sealed record ModifyStat(TargetSpec Target, int? AttackDelta, int? DefenseDelta) : EffectNode;
 public sealed record Reroll(TargetSpec Target) : EffectNode;

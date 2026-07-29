@@ -100,8 +100,15 @@ public static class TurnEngine
 
     // Rule 2.3.2/2.3.5-2.3.9 - draw randomly from the bag, refilling once
     // from the Used Pile if the bag runs dry mid-draw; stops short (rather
-    // than throwing) if there is truly nothing left to draw.
-    private static List<DieInstance> DrawFromBag(GameState state, string playerId, int count, Random random)
+    // than throwing) if there is truly nothing left to draw. Internal (not
+    // private) so EffectInterpreter's Corrupt case can reuse the exact
+    // same refill behavior for its own "draws X dice from their bag
+    // (refilling from the Used Pile if necessary)" text rather than
+    // re-implementing it. random is nullable there only because
+    // EffectContext.Random is - always non-null for ClearAndDraw's own
+    // call, which picks the first bag die instead of a random one on the
+    // (never-exercised-in-practice) null path, same fallback DrawDice uses.
+    internal static List<DieInstance> DrawFromBag(GameState state, string playerId, int count, Random? random)
     {
         var drawn = new List<DieInstance>();
         for (var i = 0; i < count; i++)
@@ -115,7 +122,7 @@ public static class TurnEngine
                 bag = state.DiceIn(playerId, Zone.Bag).ToList();
             }
 
-            var picked = bag[random.Next(bag.Count)];
+            var picked = random is not null ? bag[random.Next(bag.Count)] : bag[0];
             picked.Zone = Zone.DiceFromBag; // out of the Bag immediately, so it isn't drawn twice this loop
             drawn.Add(picked);
         }

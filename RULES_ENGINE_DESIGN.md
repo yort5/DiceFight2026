@@ -50,7 +50,7 @@ here rather than assuming which approach they'd want.
 
 **Actionable next steps, roughly high to low value**:
 1. ~~Keyword *behavior*~~ - Overcrush, Regenerate, Energize, Ally,
-   Amplify/Awaken, Attune, and now Call Out are implemented (see the
+   Amplify/Awaken, Attune, Call Out, and now Corrupt are implemented (see the
    status updates). BlackPanther's Energize is fully scripted; Robin's Energize
    (a purchase-cost discount) and all three Alfred Pennyworth printings'
    Ally effects (each a "Batman die OR Sidekick" compound target) are
@@ -2121,3 +2121,58 @@ when two attackers pick the same target; no target recorded at all
 imposes no restriction); `TwoTeamsDemoTests` drives Black Widow's real
 card through `DeclareAttackers` -> `Drain` -> `DeclareBlockers`. `dotnet
 build`, `dotnet test` (107/107), and `npm run build` all clean.
+
+## Status update — Corrupt implemented; a real gap in the target-resolution model, worked around
+
+User said "any [example card] will do" for this one. Picked Dark X-Men's
+Polaris ("Lorna Dane") - the simplest of that set's several near-
+identical Corrupt 2 cards (Rogue/Sage x2/Sunspot/Thunderbird all read
+almost the same), for a plain `WhenFielded` trigger.
+
+Appendix 1: "Corrupt X: Target player draws X dice from their bag
+(refilling from the Used Pile if necessary). Choose one die (no matter
+how many dice are drawn) and place it in that player's Used Pile, and the
+rest are returned to the bag." Two sub-effects, chained: an automatic
+random bag draw (no choice - same mechanic Clear and Draw already uses),
+then a **real** choice of which one specific just-drawn die goes to the
+Used Pile.
+
+That second part doesn't fit the existing target-resolution model at
+all, and it's worth explaining why rather than just noting the
+workaround: every `TargetSpec` in an ability's whole tree is resolved
+*upfront*, against the state as it existed before any of the ability's
+own effects have run (`EffectInterpreter.Execute`'s very first step,
+justified by rule 3.2.5 - see its own remarks). Corrupt's "choose one of
+the dice you just drew" candidate set doesn't exist at that point - the
+dice are still sitting anonymously in the bag pre-execution, and only
+become distinct, choosable candidates *after* the draw itself runs
+partway through this same effect's execution. So it can't be a normal
+entry in `CollectTargetSpecs` like everything else.
+
+Worked around the same way `FieldSidekickForEachPlayer`/
+`PrepFromBagIfPurchasedThisTurn` already bypass the `TargetSpec`/
+`LegalTargets` pipeline for their own picks - except those two need no
+real choice at all (fungible dice, "if able"), while Corrupt's choice is
+real and has to still validate against the actual just-drawn set. The
+new `Corrupt` `EffectNode`'s interpreter case: draws via a newly-
+`internal` `TurnEngine.DrawFromBag` (was `private`; already did exactly
+the "refill from the Used Pile if necessary" behavior Clear and Draw
+needs, reused rather than reimplemented), then calls `ctx.ResolveTargets`
+*directly* with an ad-hoc `TargetSpec` (skipping the cached `Resolve`/
+`LegalTargets.Query` path entirely) and validates the answer is actually
+one of the dice just drawn, throwing the same way `Resolve` throws for
+any other illegal chosen target if not.
+
+Also added `TargetSpec.Player(...)` - "target player" with no die option
+at all (unlike Attune's `CharacterDieOrPlayer`), built by reusing the
+existing `PlayersAllowed` machinery with `EligibleZones: []` so the
+die-side of `LegalTargets.Query` never matches anything. Zero new
+`LegalTargets` code needed.
+
+9 new tests (113 total): `EffectInterpreterTests` covers the draw/choose/
+return-the-rest mechanics directly (chosen die ends up in the Used Pile,
+the rest actually return to the bag; a single-die draw skips the choice
+entirely; refilling from the Used Pile mid-draw; nothing anywhere to draw
+is a no-op; an invalid chosen id throws); `TwoTeamsDemoTests` drives
+Polaris's real card through `Field` -> `Drain`. `dotnet build`, `dotnet
+test` (113/113), and `npm run build` all clean.

@@ -60,6 +60,7 @@ public static class EffectInterpreter
             case Ko n: if (!n.Target.IsSelf) yield return n.Target; break;
             case ForceBlock n: if (!n.Target.IsSelf) yield return n.Target; break;
             case SetCallOutTarget n: if (!n.Target.IsSelf) yield return n.Target; break;
+            case Corrupt n: yield return n.PlayerTarget; break; // never Self - see TargetSpec.Player
             case MoveDie n: if (!n.Target.IsSelf) yield return n.Target; break;
             case ModifyStat n: if (!n.Target.IsSelf) yield return n.Target; break;
             case Reroll n: if (!n.Target.IsSelf) yield return n.Target; break;
@@ -256,6 +257,34 @@ public static class EffectInterpreter
                 if (callOutTarget is not null && ctx.SourceDieId is not null)
                     ctx.State.CallOutTargets[ctx.SourceDieId] = callOutTarget;
                 break;
+
+            case Corrupt corrupt:
+            {
+                var targetPlayerId = Resolve(ctx, corrupt.PlayerTarget, cache).FirstOrDefault();
+                if (targetPlayerId is null) break; // rule 3.1.10 - no legal player target
+
+                var drawn = TurnEngine.DrawFromBag(ctx.State, targetPlayerId, corrupt.Count, ctx.Random);
+                if (drawn.Count == 0) break; // nothing left anywhere, even after refilling
+
+                // The choice only exists among these specific just-drawn
+                // dice - can't go through the normal cached Resolve/
+                // LegalTargets path (see the Corrupt record's remarks), so
+                // this calls ctx.ResolveTargets directly and validates the
+                // answer itself, the same way Resolve validates a normal
+                // chosen target against its legal set.
+                var choiceSpec = TargetSpec.AnyDie(
+                    "choose one drawn die to place in the Used Pile", TargetOwnership.Any, [Zone.DiceFromBag]);
+                var chosenId = drawn.Count == 1 ? drawn[0].Id : ctx.ResolveTargets(choiceSpec).FirstOrDefault();
+                var chosen = drawn.FirstOrDefault(d => d.Id == chosenId)
+                    ?? throw new InvalidOperationException(
+                        $"Corrupt's chosen die must be one of the {drawn.Count} just-drawn dice.");
+
+                chosen.Zone = Zone.UsedPile;
+                chosen.ResetToUnrolled();
+                foreach (var d in drawn.Where(d => d != chosen))
+                    d.Zone = Zone.Bag; // "the rest are returned to the bag"
+                break;
+            }
 
             case PrepFromBagIfPurchasedThisTurn:
                 if (ctx.State.GetPlayer(ctx.ControllerId).PurchasedDieThisTurn)

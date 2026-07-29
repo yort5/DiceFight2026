@@ -791,4 +791,37 @@ public class TwoTeamsDemoTests
         CombatEngine.DeclareBlockers(state, legalAssignment, [target.Id]); // her actual target blocks legally
         Assert.Equal(Zone.AttackZone, target.Zone);
     }
+
+    [Fact]
+    public void PolarisCorrupt_WhenFielded_DrawsFromOpponentsBagAndSendsOneToUsedPile()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamA";
+        var polaris = new DieInstance
+        {
+            Id = "teamA-polaris-1", CardId = SampleCards.Polaris.Id, OwnerId = "teamA", ControllerId = "teamA",
+            Zone = Zone.ReservePool, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(polaris);
+
+        var fieldEnergy = GiveWildEnergy(state, "teamA", 1); // level-1 fielding cost is 1
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, polaris.Id, energyDieIdsToSpend: [fieldEnergy[0].Id]);
+
+        Assert.Equal(1, queue.Count);
+
+        DieInstance? chosen = null;
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(state, ability.ControllerId, ability.SourceDieId, spec =>
+            {
+                if (spec.PlayersAllowed) return ["teamB"];
+                chosen = state.DiceIn("teamB", Zone.DiceFromBag).First();
+                return [chosen.Id];
+            })));
+
+        Assert.NotNull(chosen);
+        Assert.Equal(Zone.UsedPile, chosen!.Zone);
+        Assert.Single(state.DiceIn("teamB", Zone.UsedPile));
+    }
 }
