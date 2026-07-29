@@ -61,7 +61,9 @@ public sealed class GamesController(GameStore store) : ControllerBase
     public ActionResult<GameStateDto> Reroll(string gameId, [FromBody] RerollRequest request)
     {
         var state = store.Get(gameId);
-        TurnEngine.Reroll(state, new PlaceholderDiceRoller(new Random()), request.RerollDieIds);
+        var queue = new AbilityQueue();
+        TurnEngine.Reroll(state, queue, new PlaceholderDiceRoller(new Random()), request.RerollDieIds);
+        Drain(state, queue, null);
         return Ok(GameStateDto.From(gameId, state));
     }
 
@@ -181,6 +183,6 @@ public sealed class GamesController(GameStore store) : ControllerBase
         var roller = new PlaceholderDiceRoller(new Random());
         queue.Drain(ability => EffectInterpreter.Execute(
             ability.Effect,
-            new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => targets, Roller: roller)));
+            new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => targets, Roller: roller, Queue: queue)));
     }
 }

@@ -49,30 +49,25 @@ a different data source - worth asking the user before investing time
 here rather than assuming which approach they'd want.
 
 **Actionable next steps, roughly high to low value**:
-1. ~~Keyword *behavior*~~ - Overcrush and Regenerate, the two keywords
-   that need real `CombatEngine`/`DieStats` simulation, are now
-   implemented (see the status update). Still open: **Energize**
-   (BlackPanther, Robin) - previously thought blocked on not knowing
-   which specific double-energy face a real physical die marks Energize
-   on, but the user corrected this: it triggers on *any* double-energy
-   face of that die, checked once against the die's final state after
-   Roll & Reroll completes (not the initial roll - reroll it off double
-   energy and it doesn't trigger; leave a double-energy roll alone and it
-   fires once Roll & Reroll ends). That unblocks it - what's actually
-   needed is a new trigger point at the end of `TurnEngine.Reroll`
-   (checking every Energize-keyword die that ended up on a double-energy
-   face) plus per-card scripting of the actual Energize effect for
-   BlackPanther/Robin (their `RawText` already states it, just not
-   wired to an `AbilityDef` yet - see the status update). **Teamwatch**
-   (Falcon) - not a combat-math keyword at all, it's an ability-trigger
-   wiring problem (firing `WhenEngaged` when a Teamwatch character is
-   engaged), already separately tracked. **Infiltrate** - a newer
-   keyword the user flagged: an unblocked-after-Declare-Blockers
-   attacker can choose to deal 1 damage to the opponent and return to
-   the Field Zone, in a sub-window that sits *between* Declare Blockers'
-   effect resolution and the Action/Global window - i.e. it needs a new
-   `AttackSubStep` value, not just a keyword check inside an existing
-   one (see the status update).
+1. ~~Keyword *behavior*~~ - Overcrush, Regenerate, and now Energize (the
+   keywords that need real simulation rather than just combat math) are
+   implemented (see the status updates). BlackPanther's Energize is
+   fully scripted; Robin's Energize (a purchase-cost discount) is
+   deliberately left unscripted - needs a new purchase-cost-modifier
+   mechanism, a separate and bigger piece of work not yet scoped. Still
+   open: **Teamwatch** (Falcon) - not a combat-math keyword at all, it's
+   an ability-trigger wiring problem (firing `WhenEngaged` when a
+   Teamwatch character is engaged), already separately tracked.
+   **Infiltrate** - a newer keyword the user flagged: an
+   unblocked-after-Declare-Blockers attacker can choose to deal 1 damage
+   to the opponent and return to the Field Zone, in a sub-window that
+   sits *between* Declare Blockers' effect resolution and the
+   Action/Global window - i.e. it needs a new `AttackSubStep` value, not
+   just a keyword check inside an existing one (see the status update).
+   Next up, per the user's own framing: work through the rest of the
+   Dice Masters keywords on wizkids.com/dicemasters/keywords one at a
+   time, each scripted against a real example card (user- or
+   randomly-picked from the stats sheet).
 2. ~~Global ability UX~~ - done as a standing sidebar (`GlobalAbilitiesPanel`)
    with its own energy-then-targets flow; every Global on both rosters
    (Distraction, Falcon, Invisible Woman, Starfire) is scripted, and the
@@ -1786,3 +1781,56 @@ UX gets built (this is the same gap the item #2 next-steps note already
 flags, not a new one).
 
 No test/build changes this pass - a documentation-only update.
+
+## Status update — Energize implemented
+
+Added `TriggerType.Energize` (`Enums.cs`) and a shared
+`TurnEngine.CheckEnergize(state, queue, die)` helper: fires for any die
+that's `Status == Energy && EnergyAmount >= 2` and carries the Energize
+keyword. Two call sites:
+
+- `TurnEngine.Reroll` now takes an `AbilityQueue` parameter and, right
+  before `AdvanceStep`, checks every die left in the active player's
+  Reserve Pool. This is the Roll & Reroll-specific timing the user
+  clarified: checked once against the step's *final* state, so a die
+  rerolled off double energy never triggers, but one left alone on
+  double energy (whether that was its initial roll or a reroll that
+  landed there again) does.
+- `EffectInterpreter`'s `DrawDice` case, now that it actually rolls each
+  picked bag die via `ctx.Roller` (see below) instead of force-setting
+  `Status = Energy`, checks the newly-rolled die immediately via the same
+  helper (through a new `EffectContext.Queue` field) - correcting the
+  user's fuller point mid-implementation: Energize isn't only a Roll &
+  Reroll-step thing, it fires on *any* roll that lands a die on double
+  energy. The Roll & Reroll carve-out exists only because that step has
+  a reroll decision pending; a roll from an ability like this one has no
+  such window, so it checks right away.
+
+`DrawDice`'s stale simplification (force `Status = Energy`, no real
+roll, justified by a comment claiming "not exercised by any
+currently-authored card") turned out to be factually wrong - Groot's
+`WhenFielded` ability already uses `DrawDice(2)` for identical "roll 2
+dice from your bag" wording, with zero test coverage for either card.
+Fixed properly instead of leaving the comment: now rolls via
+`ctx.Roller` per rule 2.3.13 ("roll the die once and place it into your
+Reserve Pool on the resulting face"), falling back to the old
+force-Energy behavior only if `ctx.Roller` is null (kept for the handful
+of existing tests that construct `EffectContext` without one). This one
+fix correctly implements Groot's `WhenFielded` and gives BlackPanther's
+Energize a real effect for free.
+
+BlackPanther is now fully scripted: `Energize -> DrawDice(2)`,
+`WhenFielded -> DrawDice(1)`, matching its card text exactly. Robin's
+Energize ("first Teen Titans purchase this turn costs 1 less") is
+deliberately left unscripted - it needs a wholly new purchase-cost-
+modifier mechanism that doesn't exist anywhere in `TurnEngine.Purchase`
+or the `EffectNode` DSL, a materially bigger and separate piece of work
+from the trigger mechanism itself. Noted as a gap rather than guessed at.
+
+Added 4 new tests (80 total, all passing): three in `TurnEngineTests`
+covering the Reroll-timing carve-out directly (left alone on double
+energy triggers once; rerolled off it doesn't; rerolled but still double
+energy still triggers once), plus one end-to-end in `TwoTeamsDemoTests`
+driving BlackPanther's real card through `Reroll` -> queue -> `Drain`,
+confirming it actually pulls two fresh dice out of the Bag. `dotnet
+build`, `dotnet test` (80/80), and `npm run build` all clean.

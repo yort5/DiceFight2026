@@ -1,5 +1,6 @@
 using DiceFight.Engine;
 using DiceFight.Engine.Model;
+using DiceFight.Engine.Queueing;
 
 namespace DiceFight.Engine.Effects;
 
@@ -11,11 +12,16 @@ namespace DiceFight.Engine.Effects;
 // whatever ids it's given. Random is the bare RNG DrawDice picks a bag die
 // with; Roller is a full IDiceRoller, needed separately so an ability-driven
 // KO (Ko node, or DealDamage KO'ing its target) can respect Regenerate -
-// null in the handful of test call sites that don't care about it.
+// null in the handful of test call sites that don't care about it. Queue is
+// needed by DrawDice's real roll so a die that lands Energize-eligible can
+// enqueue that trigger too (rolls outside Roll and Reroll check Energize
+// immediately, unlike the Roll and Reroll step itself - see TurnEngine.
+// CheckEnergize's remarks) - also null wherever nothing rolled needs it.
 public sealed record EffectContext(
     GameState State,
     string ControllerId,
     string? SourceDieId,
     Func<TargetSpec, IReadOnlyList<string>> ResolveTargets,
     Random? Random = null,
-    IDiceRoller? Roller = null);
+    IDiceRoller? Roller = null,
+    AbilityQueue? Queue = null);

@@ -113,7 +113,11 @@ public static class SampleCards
     public static readonly CardDef BlackPanther = Character(
         "black-panther", "Black Panther", "Clutching Reality", dieLimit: 4,
         "Energize - Roll 2 dice from your bag. When fielded, roll a die from your bag.",
-        keywords: [new KeywordInstance("Energize")]);
+        keywords: [new KeywordInstance("Energize")],
+        abilities: [
+            new AbilityDef(TriggerType.Energize, Cost: null, Effect: new DrawDice(2)),
+            new AbilityDef(TriggerType.WhenFielded, Cost: null, Effect: new DrawDice(1)),
+        ]);
 
     public static readonly CardDef HarleyQuinn = Character(
         "harley-quinn", "Harley Quinn", "Bright Lights Big City", dieLimit: 4,

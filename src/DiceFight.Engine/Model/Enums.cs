@@ -102,7 +102,14 @@ public enum TriggerType
 
     Global,
     Burst1,
-    Burst2
+    Burst2,
+
+    // Keyword Energize - fires once, after Roll and Reroll completes, for
+    // any Energize-keyword die that ended up on a double-energy face. Not
+    // checked against the initial roll - a die rerolled off double energy
+    // never triggers it, but a die left alone on a double-energy face does,
+    // once the reroll window closes.
+    Energize
 }
 
 // Rule 2.2.3 - the five steps of a turn, in fixed order (2.2.4 - cannot

@@ -145,18 +145,42 @@ public static class EffectInterpreter
                 break;
 
             case DrawDice draw:
-                // Simplification: pulls straight from the Bag to the
-                // Reserve Pool on an energy face, without the bag-refill-
-                // from-Used-Pile behavior TurnEngine's draw implements.
-                // Not exercised by any currently-authored card; revisit
-                // together with a real IDiceRoller-backed draw+roll.
+                // Rule 2.3.13 - an ability that says "draw/roll a die"
+                // outside Clear and Draw rolls the die once (whatever face
+                // it lands on, not necessarily Energy) and places it into
+                // the Reserve Pool on that face. Doesn't refill the Bag
+                // from the Used Pile the way TurnEngine's own Clear and
+                // Draw does - nothing currently authored draws down the Bag
+                // far enough for that to matter here.
                 for (var i = 0; i < draw.Count; i++)
                 {
                     var bag = ctx.State.DiceIn(ctx.ControllerId, Zone.Bag).ToList();
                     if (bag.Count == 0) break;
                     var picked = ctx.Random is not null ? bag[ctx.Random.Next(bag.Count)] : bag[0];
                     picked.Zone = Zone.ReservePool;
-                    picked.Status = DieStatus.Energy;
+
+                    if (ctx.Roller is not null)
+                    {
+                        var cardId = picked.VirtualCardId ?? picked.CardId;
+                        var card = cardId is not null ? ctx.State.CardCatalog.GetValueOrDefault(cardId) : null;
+                        var result = ctx.Roller.Roll(picked, card);
+                        picked.Status = result.Status;
+                        picked.Level = result.Level;
+                        picked.EnergyKind = result.Status == DieStatus.Energy ? result.EnergyKind : EnergyKind.None;
+                        picked.ProvidedEnergyType = result.Status == DieStatus.Energy ? result.ProvidedEnergyType : null;
+                        picked.EnergyAmount = result.Status == DieStatus.Energy ? result.EnergyAmount : 1;
+
+                        // This is a roll outside the Roll and Reroll step
+                        // (there's no reroll decision pending), so an
+                        // Energize die that landed on double energy checks
+                        // right away rather than waiting for anything else.
+                        if (ctx.Queue is not null)
+                            TurnEngine.CheckEnergize(ctx.State, ctx.Queue, picked);
+                    }
+                    else
+                    {
+                        picked.Status = DieStatus.Energy;
+                    }
                 }
                 break;
 

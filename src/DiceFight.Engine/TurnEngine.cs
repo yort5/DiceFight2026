@@ -150,7 +150,7 @@ public static class TurnEngine
     // player's Reserve Pool right now is this turn's roll: Clear and Draw
     // always empties it first (rule 2.3.1), and nothing else can add to it
     // before this step ends.
-    public static void Reroll(GameState state, IDiceRoller roller, IReadOnlyList<string> rerollDieIds)
+    public static void Reroll(GameState state, AbilityQueue queue, IDiceRoller roller, IReadOnlyList<string> rerollDieIds)
     {
         if (state.CurrentStep != TurnStep.RollAndReroll)
             throw new InvalidOperationException($"Expected RollAndReroll step, was {state.CurrentStep}.");
@@ -159,11 +159,33 @@ public static class TurnEngine
         foreach (var die in state.DiceIn(state.ActivePlayerId, Zone.ReservePool).Where(d => rerollSet.Contains(d.Id)))
             ApplyRoll(state, roller, die);
 
+        // Keyword Energize - checked once against the Roll and Reroll
+        // step's *final* state, not the initial roll: a die rerolled off
+        // double energy never triggers it, but a die left alone on double
+        // energy (whether that was its initial roll or this reroll) does,
+        // right as the reroll decision (and so the step) closes.
+        foreach (var die in state.DiceIn(state.ActivePlayerId, Zone.ReservePool))
+            CheckEnergize(state, queue, die);
+
         // Rule 2.4.3/2.4.4 - the reroll decision (any/some/none of the
         // rolled dice) is made once, after seeing Roll's results; once
         // it's made there's nothing else legal in this step, so this
         // advances straight to Main rather than leaving a redundant click.
         AdvanceStep(state);
+    }
+
+    // Keyword Energize - fires whenever an Energize die lands on a
+    // double-energy face from any roll, with one carve-out: the Roll and
+    // Reroll step's own initial roll doesn't check here (see Reroll, which
+    // checks once at the end of that step instead) because the reroll
+    // decision hasn't been made yet - a die that's about to be rerolled off
+    // double energy never actually triggered it. Every other roll (a
+    // DrawDice-style ability rolling a fresh die mid-Main-Step, etc.) checks
+    // immediately, since there's no equivalent "decision pending" window.
+    internal static void CheckEnergize(GameState state, AbilityQueue queue, DieInstance die)
+    {
+        if (die.Status == DieStatus.Energy && die.EnergyAmount >= 2 && DieStats.HasKeyword(state, die, "Energize"))
+            EnqueueTriggered(state, queue, die, TriggerType.Energize);
     }
 
     private static void ApplyRoll(GameState state, IDiceRoller roller, DieInstance die)

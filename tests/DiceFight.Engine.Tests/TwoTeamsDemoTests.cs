@@ -18,6 +18,14 @@ namespace DiceFight.Engine.Tests;
 // here) - everything downstream (Purchase, Field, DeclareAttackers/
 // Blockers, AssignCombatDamage, UseActionDie, UseGlobalAbility,
 // AbilityQueue) is the real engine path.
+// A fake roller lets the Energize/DrawDice tests be deterministic without
+// modeling real physical die face tables (see TurnEngine.RolledFace
+// remarks) - same shape as TurnEngineTests' own file-scoped FixedRoller.
+file sealed class FixedRoller(DieStatus status, int level) : IDiceRoller
+{
+    public RolledFace Roll(DieInstance die, CardDef? card) => new(status, level);
+}
+
 public class TwoTeamsDemoTests
 {
     private static GameState BuildTwoTeamGame()
@@ -525,5 +533,35 @@ public class TwoTeamsDemoTests
         // double is simply lost here, not tracked as virtual energy.
         Assert.Equal(Zone.UsedPile, doubleGeneric.Zone);
         Assert.DoesNotContain(state.Dice, d => d.IsVirtualEnergy);
+    }
+
+    [Fact]
+    public void BlackPantherEnergize_RolledOnDoubleEnergy_TriggersAndRollsTwoFreshDiceFromBag()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamA";
+        state.CurrentStep = TurnStep.RollAndReroll;
+
+        var blackPanther = FindUnpurchased(state, "teamA", SampleCards.BlackPanther.Id);
+        blackPanther.Zone = Zone.ReservePool;
+        blackPanther.Status = DieStatus.Energy;
+        blackPanther.EnergyKind = EnergyKind.Generic;
+        blackPanther.EnergyAmount = 2;
+
+        var bagCountBefore = state.DiceIn("teamA", Zone.Bag).Count();
+
+        var queue = new AbilityQueue();
+        TurnEngine.Reroll(state, queue, new FixedRoller(DieStatus.Energy, 1), []);
+
+        Assert.Equal(1, queue.Count);
+        Assert.Equal(TriggerType.Energize, queue.Pending[0].Trigger);
+
+        var drawRoller = new FixedRoller(DieStatus.SidekickCharacter, 3);
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [], Roller: drawRoller, Queue: queue)));
+
+        Assert.Equal(bagCountBefore - 2, state.DiceIn("teamA", Zone.Bag).Count());
+        Assert.Equal(2, state.DiceIn("teamA", Zone.ReservePool).Count(d => d.Status == DieStatus.SidekickCharacter));
     }
 }

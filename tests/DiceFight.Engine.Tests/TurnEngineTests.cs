@@ -1,5 +1,7 @@
 using DiceFight.Engine;
+using DiceFight.Engine.Effects;
 using DiceFight.Engine.Model;
+using DiceFight.Engine.Queueing;
 using Xunit;
 
 namespace DiceFight.Engine.Tests;
@@ -7,10 +9,11 @@ namespace DiceFight.Engine.Tests;
 // A fake roller lets step tests be deterministic without modeling real
 // physical die face tables yet (see TurnEngine.RolledFace remarks).
 file sealed class FixedRoller(
-    DieStatus status, int level, EnergyKind energyKind = EnergyKind.None, EnergyType? providedEnergyType = null)
+    DieStatus status, int level, EnergyKind energyKind = EnergyKind.None,
+    EnergyType? providedEnergyType = null, int EnergyAmount = 1)
     : IDiceRoller
 {
-    public RolledFace Roll(DieInstance die, CardDef? card) => new(status, level, energyKind, providedEnergyType);
+    public RolledFace Roll(DieInstance die, CardDef? card) => new(status, level, energyKind, providedEnergyType, EnergyAmount);
 }
 
 // Distinguishes "rerolled" from "kept as originally rolled" by giving each
@@ -171,7 +174,7 @@ public class TurnEngineTests
         var toReroll = reserve[0];
         var levelsAfterRoll = reserve.ToDictionary(d => d.Id, d => d.Level);
 
-        TurnEngine.Reroll(state, roller, [toReroll.Id]);
+        TurnEngine.Reroll(state, new AbilityQueue(), roller, [toReroll.Id]);
 
         Assert.NotEqual(levelsAfterRoll[toReroll.Id], toReroll.Level); // rerolled
         foreach (var die in reserve.Where(d => d.Id != toReroll.Id))
@@ -194,11 +197,75 @@ public class TurnEngineTests
 
         var roller = new SequentialRoller();
         TurnEngine.Roll(state, roller);
-        TurnEngine.Reroll(state, roller, []); // "I don't want to reroll anything" is still the one decision
+        TurnEngine.Reroll(state, new AbilityQueue(), roller, []); // "I don't want to reroll anything" is still the one decision
         Assert.Equal(TurnStep.Main, state.CurrentStep);
 
-        var ex = Assert.Throws<InvalidOperationException>(() => TurnEngine.Reroll(state, roller, []));
+        var ex = Assert.Throws<InvalidOperationException>(() => TurnEngine.Reroll(state, new AbilityQueue(), roller, []));
         Assert.Contains("RollAndReroll", ex.Message);
+    }
+
+    private static (GameState State, DieInstance Die) CreateEnergizeGame(int energyAmount)
+    {
+        var card = new CardDef
+        {
+            Id = "test-energize", Name = "Test Energize", Type = CardType.Character,
+            PurchaseCost = 1, DieLimit = 1,
+            Keywords = [new KeywordInstance("Energize")],
+            Abilities = [new AbilityDef(TriggerType.Energize, Cost: null, Effect: new GainLife(1))],
+        };
+        var state = GameState.NewGame(
+            new Dictionary<string, CardDef> { [card.Id] = card },
+            new Player { Id = "p1", Name = "Player One" },
+            new Player { Id = "p2", Name = "Player Two" });
+        state.CurrentStep = TurnStep.RollAndReroll;
+
+        var die = new DieInstance
+        {
+            Id = "energize-die", CardId = card.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.ReservePool, Status = DieStatus.Energy, EnergyKind = EnergyKind.Generic, EnergyAmount = energyAmount,
+        };
+        state.Dice.Add(die);
+        return (state, die);
+    }
+
+    [Fact]
+    public void Reroll_EnergizeDieLeftOnDoubleEnergy_TriggersOnceAtEndOfStep()
+    {
+        var (state, die) = CreateEnergizeGame(energyAmount: 2);
+        var queue = new AbilityQueue();
+
+        // Nothing selected to reroll - the die stays exactly as it was
+        // rolled, so Energize should fire once the step closes.
+        TurnEngine.Reroll(state, queue, new FixedRoller(DieStatus.Energy, 1), []);
+
+        Assert.Equal(1, queue.Count);
+        Assert.Equal(TriggerType.Energize, queue.Pending[0].Trigger);
+        Assert.Equal(die.Id, queue.Pending[0].SourceDieId);
+    }
+
+    [Fact]
+    public void Reroll_EnergizeDieRerolledOffDoubleEnergy_DoesNotTrigger()
+    {
+        var (state, die) = CreateEnergizeGame(energyAmount: 2);
+        var queue = new AbilityQueue();
+
+        // Rerolling it lands on single energy this time - Energize checks
+        // the step's final state, not the initial roll it's replacing.
+        TurnEngine.Reroll(state, queue, new FixedRoller(DieStatus.Energy, 1, EnergyKind.Generic), [die.Id]);
+
+        Assert.Equal(0, queue.Count);
+    }
+
+    [Fact]
+    public void Reroll_EnergizeDieRerolledButStillDoubleEnergy_StillTriggersOnce()
+    {
+        var (state, die) = CreateEnergizeGame(energyAmount: 2);
+        var queue = new AbilityQueue();
+
+        var roller = new FixedRoller(DieStatus.Energy, 1, EnergyKind.Generic, EnergyAmount: 2);
+        TurnEngine.Reroll(state, queue, roller, [die.Id]);
+
+        Assert.Equal(1, queue.Count);
     }
 
     [Fact]
