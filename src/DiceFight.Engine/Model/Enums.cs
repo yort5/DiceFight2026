@@ -117,7 +117,19 @@ public enum TriggerType
     // SpinLevelAndCheckAwaken). "You get to use the ability for each
     // individual die that spins up" - two dice spinning up in the same
     // event enqueue two separate instances.
-    Awaken
+    Awaken,
+
+    // Keyword Attune - "While a Character die you control with Attune is
+    // active, when you use an Action die, that character deals 1 damage
+    // to target player or Character die (no matter how many of that
+    // Character's dice are active)." Fires once per active Attune die
+    // (see TurnEngine.UseActionDie), each instance independently
+    // targeted - the built-in 1-damage effect is injected by the engine
+    // itself (identical across every Attune card, so not authored per
+    // CardDef), while this same trigger also carries any card-specific
+    // follow-up text some printings add (e.g. Wasp: "When you use
+    // Attune, Wasp gets +1A and +1D until end of turn").
+    Attune
 }
 
 // Rule 2.2.3 - the five steps of a turn, in fixed order (2.2.4 - cannot

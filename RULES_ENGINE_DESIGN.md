@@ -49,14 +49,18 @@ a different data source - worth asking the user before investing time
 here rather than assuming which approach they'd want.
 
 **Actionable next steps, roughly high to low value**:
-1. ~~Keyword *behavior*~~ - Overcrush, Regenerate, Energize, Ally, and now
-   Amplify/Awaken are implemented (see the status updates). BlackPanther's
-   Energize is fully scripted; Robin's Energize (a purchase-cost
-   discount) and all three Alfred Pennyworth printings' Ally effects
-   (each a "Batman die OR Sidekick" compound target) are deliberately
-   left unscripted - the former needs a purchase-cost-modifier mechanism,
-   the latter an affiliation-based `TargetSpec` filter plus an
-   either-of-two-specs union, neither built yet. Skipped for now, per the
+1. ~~Keyword *behavior*~~ - Overcrush, Regenerate, Energize, Ally,
+   Amplify/Awaken, and now Attune are implemented (see the status
+   updates). BlackPanther's Energize is fully scripted; Robin's Energize
+   (a purchase-cost discount) and all three Alfred Pennyworth printings'
+   Ally effects (each a "Batman die OR Sidekick" compound target) are
+   deliberately left unscripted - the former needs a purchase-cost-
+   modifier mechanism, the latter an affiliation-based `TargetSpec`
+   filter plus an either-of-two-specs union, neither built yet (note:
+   Attune's own "target player or Character die" union IS now built -
+   `TargetSpec.PlayersAllowed`/`CharacterDieOrPlayer` - but that's a
+   fixed die-or-player choice, not the general N-arbitrary-specs union
+   Alfred's text would need). Skipped for now, per the
    user's explicit steer: **Teamwatch** (Falcon) - not a combat-math
    keyword at all, it's
    an ability-trigger wiring problem (firing `WhenEngaged` when a
@@ -1973,3 +1977,58 @@ Amplify through the real `UseActionDie` path (spins the active player's
 own Amplify die, leaves the opponent's alone, respects "if able" at max
 level). `dotnet build`, `dotnet test` (90/90), and `npm run build` all
 clean.
+
+## Status update — Attune implemented; new "target player or die" targeting primitive
+
+Requested with Wasp named specifically as the example, because her card
+is the first to combine a keyword's own built-in effect with a
+card-specific follow-up that needed `ModifyStat` - previously authored
+but never actually exercised by any sample card.
+
+Appendix 1's Attune: "While a Character die you control with Attune is
+active, when you use an Action die, that character deals 1 damage to
+target player or Character die (no matter how many of that Character's
+dice are active)." Two things needed building:
+
+1. **A real target-type gap**: every existing `TargetSpec` resolves to
+   die ids only - nothing in the DSL could express "target player,"
+   let alone "player or die, single choice." Fixed with `TargetSpec.
+   PlayersAllowed` (+ the `CharacterDieOrPlayer` factory) - `LegalTargets.
+   Query` now appends the matching player id(s) (filtered by the same
+   `Ownership` the die-side filtering already uses) alongside the usual
+   die candidates when set. `DealDamage`'s interpreter case now checks
+   `GameState.IsPlayerId(id)` first and reduces `Player.Life` directly
+   for a player match, falling through to the existing die-damage/KO
+   path otherwise - one shared primitive handles both kinds of target
+   without a second EffectNode. This is reusable beyond Attune - Nebula's
+   Awaken ("deal 1 damage to target character die, and 2 damage to
+   target player") is the next real card this unblocks whenever Awaken's
+   roster gets picked back up.
+2. **The keyword's own trigger**: like Amplify, wired into `TurnEngine.
+   UseActionDie` - for every active Attune die the controller has,
+   `queue.Enqueue(...)` the keyword's built-in 1-damage effect (a shared
+   `AttuneDamage` constant, since the base effect is identical on every
+   printing, not authored per `CardDef`) AND `EnqueueTriggered(...,
+   TriggerType.Attune)` for any card-specific follow-up text layered on
+   top - covers "no matter how many of that Character's dice are active"
+   for free, since each active die runs this loop body independently and
+   enqueues its own pair of abilities.
+
+Wasp ("Flitting About" printing, Avengers Infinity set): Attune keyword
++ `AbilityDef(TriggerType.Attune, Effect: ModifyStat(Self, +1, +1))` for
+her "When you use Attune, Wasp gets +1A and +1D until end of turn"
+follow-up - the first sample card to actually exercise `ModifyStat`.
+Note (not fixed, not exercised by this card either): the pre-existing
+`CleanUp`-never-clears-`AppliedModifiers` gap from the Ally status
+update still applies here too - Wasp's own boost is technically
+permanent in this engine right now, same known issue, same "wait for a
+card that actually needs the fix" reasoning.
+
+4 new tests directly on the new targeting primitive (`LegalTargetsTests`,
+`EffectInterpreterTests`), 4 more end-to-end through Wasp's real card in
+`TwoTeamsDemoTests` (damages a chosen target and boosts her own stats;
+can target a die instead of a player, including a die surviving one hit
+to legally take a second from the same drain; two active copies of the
+same Character each trigger their own independent instance; an inactive
+or the opponent's Attune die never fires). 98 tests passing, `dotnet
+build`, and `npm run build` all clean.

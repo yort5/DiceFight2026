@@ -45,6 +45,19 @@ public static class LegalTargets
             });
         }
 
-        return candidates.Select(d => d.Id).ToList();
+        var ids = candidates.Select(d => d.Id);
+
+        if (spec.PlayersAllowed)
+        {
+            IEnumerable<string> playerIds = spec.Ownership switch
+            {
+                TargetOwnership.Own => [requestingControllerId],
+                TargetOwnership.Opposing => [state.OpponentOf(requestingControllerId)],
+                _ => [requestingControllerId, state.OpponentOf(requestingControllerId)]
+            };
+            ids = ids.Concat(playerIds);
+        }
+
+        return ids.ToList();
     }
 }

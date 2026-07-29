@@ -380,6 +380,25 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 1, Attack: 6, Defense: 4)
         ]);
 
+    // Avengers Infinity's Wasp, "Flitting About" printing - picked because
+    // her card layers a genuine second clause on top of the Attune
+    // keyword's own built-in damage (see TurnEngine.UseActionDie's
+    // AttuneDamage): "When you use Attune, Wasp gets +1A and +1D until
+    // end of turn," the first sample card to actually exercise ModifyStat.
+    public static readonly CardDef Wasp = Character(
+        "wasp", "Wasp", "Flitting About", dieLimit: 4,
+        "Attune - While this character is active, when you use an action die, deal 1 damage to target " +
+        "player or character die. When you use Attune, Wasp gets +1 attack and +1 defense until end of turn.",
+        purchaseCost: 3, energyType: EnergyType.Bolt,
+        keywords: [new KeywordInstance("Attune")],
+        abilities: [new AbilityDef(TriggerType.Attune, Cost: null,
+            Effect: new ModifyStat(TargetSpec.Self, AttackDelta: 1, DefenseDelta: 1))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 3),
+            new CharacterFace(FieldingCost: 2, Attack: 3, Defense: 4)
+        ]);
+
     // A team is 8 character cards + 2 Basic Action cards (10 total), not
     // the 10 characters + 3 Basic Actions used here previously - that was
     // simply wrong. Colossus, Corvus Glaive, Distraction, Kang, King
@@ -415,7 +434,7 @@ public static class SampleCards
             Falcon, FranklinsGalactus, GodEmperorDoom, GoddessOfThunder, Groot, InvisibleWoman,
             JaneFoster, Starfire, Kang, KingHyperion, CasketOfAncientWinters, DailyBugle, Escape,
             AlfredPennyworthCaretaker, AlfredPennyworthMI5, AlfredPennyworthToughAsNails,
-            AntManAmplify, Cyclops
+            AntManAmplify, Cyclops, Wasp
         ];
         return all.ToDictionary(c => c.Id);
     }

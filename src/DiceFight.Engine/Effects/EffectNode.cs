@@ -34,7 +34,8 @@ public sealed record TargetSpec(
     int Count,
     string Description,
     bool IsSelf = false,
-    bool SidekicksOnly = false)
+    bool SidekicksOnly = false,
+    bool PlayersAllowed = false)
 {
     // Rule 3.3.4/3.3.5 - only dice in the Field Zone (which includes the
     // Attack Zone) may be targeted, unless otherwise stated.
@@ -51,6 +52,20 @@ public sealed record TargetSpec(
     public static TargetSpec AnyDie(
         string description, TargetOwnership ownership, IReadOnlyList<Model.Zone> zones, int count = 1) =>
         new(ownership, CharacterDiceOnly: false, zones, RequiredEnergyType: null, count, description);
+
+    // "target player or Character die" card text (e.g. Attune) - a single
+    // choice between the two, not two separate targets. LegalTargets
+    // appends the matching player id(s) alongside the usual die
+    // candidates; DealDamage's interpreter tells them apart by checking
+    // whether the resolved id is a real player id (see GameState.
+    // IsPlayerId) before falling back to treating it as a die id.
+    public static TargetSpec CharacterDieOrPlayer(
+        string description,
+        TargetOwnership ownership = TargetOwnership.Any,
+        int count = 1,
+        IReadOnlyList<Model.Zone>? zones = null) =>
+        new(ownership, CharacterDiceOnly: true, zones ?? DefaultZones, RequiredEnergyType: null, count, description,
+            PlayersAllowed: true);
 
     // "target Sidekick" card text - matches real Sidekick dice, plus any
     // Ally-keyword Character die currently in the Field/Attack Zone (see

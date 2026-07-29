@@ -51,6 +51,35 @@ public class EffectInterpreterTests
         Assert.Equal(DieStatus.Unrolled, target.Status);
     }
 
+    // Keyword Attune's "target player or Character die" - DealDamage has
+    // to tell a resolved player id apart from a die id (see GameState.
+    // IsPlayerId) since TargetSpec.CharacterDieOrPlayer can resolve to either.
+    [Fact]
+    public void DealDamage_ToAPlayerId_ReducesTheirLifeInsteadOfLookingForADie()
+    {
+        var state = CreateState();
+        state.PlayerTwo.Life = 20;
+
+        EffectInterpreter.Execute(
+            new DealDamage(3, TargetSpec.CharacterDieOrPlayer("t")),
+            new EffectContext(state, "p1", SourceDieId: null, _ => ["p2"]));
+
+        Assert.Equal(17, state.PlayerTwo.Life);
+    }
+
+    [Fact]
+    public void DealDamage_CharacterDieOrPlayer_StillDamagesADieChosenInstead()
+    {
+        var state = CreateState();
+        var target = FieldSidekickTarget(state, "p2");
+
+        EffectInterpreter.Execute(
+            new DealDamage(1, TargetSpec.CharacterDieOrPlayer("t")),
+            new EffectContext(state, "p1", SourceDieId: null, _ => [target.Id]));
+
+        Assert.Equal(Zone.PrepArea, target.Zone); // 1 damage vs 1D - KO'd, not misread as a player id
+    }
+
     // Ability-driven KOs (DealDamage KO'ing its target, or a direct Ko node
     // like Casket of Ancient Winters) go through DieStats.ForceKO just like
     // combat KOs do, so a Regenerate target survives here too - locking in

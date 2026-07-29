@@ -209,6 +209,36 @@ public class LegalTargetsTests
             d => Assert.False(DieStats.CountsAsSidekick(state, d)));
     }
 
+    // Keyword Attune's "target player or character die" - a single
+    // choice between the two, not two separate targets (see TargetSpec.
+    // CharacterDieOrPlayer's remarks).
+    [Fact]
+    public void Query_CharacterDieOrPlayer_IncludesBothMatchingDiceAndPlayerIds()
+    {
+        var state = CreateState();
+        var ownDie = AddDie(state, "p1-char", "p1", Zone.FieldZone, DieStatus.SidekickCharacter);
+        var opposingDie = AddDie(state, "p2-char", "p2", Zone.FieldZone, DieStatus.SidekickCharacter);
+        AddDie(state, "p1-energy", "p1", Zone.FieldZone, DieStatus.Energy); // not a character face - excluded
+
+        var any = LegalTargets.Query(state, "p1", TargetSpec.CharacterDieOrPlayer("x"));
+
+        Assert.Equal(
+            new[] { ownDie.Id, opposingDie.Id, "p1", "p2" }.OrderBy(x => x),
+            any.OrderBy(x => x));
+    }
+
+    [Fact]
+    public void Query_CharacterDieOrPlayer_RespectsOwnershipForBothDiceAndThePlayerId()
+    {
+        var state = CreateState();
+        var ownDie = AddDie(state, "p1-char", "p1", Zone.FieldZone, DieStatus.SidekickCharacter);
+        AddDie(state, "p2-char", "p2", Zone.FieldZone, DieStatus.SidekickCharacter);
+
+        var ownOnly = LegalTargets.Query(state, "p1", TargetSpec.CharacterDieOrPlayer("x", TargetOwnership.Own));
+
+        Assert.Equal(new[] { ownDie.Id, "p1" }.OrderBy(x => x), ownOnly.OrderBy(x => x));
+    }
+
     [Fact]
     public void Interpreter_SelfBypassesLegalTargetFiltering()
     {

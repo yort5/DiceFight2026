@@ -630,4 +630,128 @@ public class TwoTeamsDemoTests
         Assert.Equal(bagCountBefore - 2, state.DiceIn("teamA", Zone.Bag).Count());
         Assert.Equal(2, state.DiceIn("teamA", Zone.ReservePool).Count(d => d.Status == DieStatus.SidekickCharacter));
     }
+
+    private static DieInstance AddWasp(GameState state, string playerId, string suffix, Zone zone = Zone.FieldZone)
+    {
+        var die = new DieInstance
+        {
+            Id = $"{playerId}-wasp-{suffix}", CardId = SampleCards.Wasp.Id, OwnerId = playerId, ControllerId = playerId,
+            Zone = zone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(die);
+        return die;
+    }
+
+    [Fact]
+    public void WaspAttune_UsingAnActionDie_DamagesChosenTargetAndBoostsWaspsStats()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamA";
+        var wasp = AddWasp(state, "teamA", "1");
+
+        var shockingGraspDie = FindUnpurchased(state, "teamA", SampleCards.ShockingGrasp.Id);
+        var purchaseEnergy = GiveWildEnergy(state, "teamA", SampleCards.ShockingGrasp.PurchaseCost);
+        TurnEngine.Purchase(state, shockingGraspDie.Id, purchaseEnergy.Select(d => d.Id).ToList());
+        shockingGraspDie.Zone = Zone.ReservePool;
+        shockingGraspDie.Status = DieStatus.Action;
+
+        var queue = new AbilityQueue();
+        TurnEngine.UseActionDie(state, queue, shockingGraspDie.Id);
+
+        // ShockingGrasp's own WhenUsed + Attune's built-in damage + Wasp's
+        // stat-boost follow-up, all queued from the one Action-die use.
+        Assert.Equal(3, queue.Count);
+        Assert.Contains(queue.Pending, a => a.Trigger == TriggerType.Attune && a.SourceDieId == wasp.Id);
+
+        // ShockingGrasp's own spec only allows a character die, not a
+        // player - so unlike Attune's, it needs a real die target here;
+        // this drain's single flat resolver (the same simplification
+        // GamesController.Drain uses) picks one per spec based on shape.
+        IReadOnlyList<string> ResolveTarget(TargetSpec spec) =>
+            spec.PlayersAllowed ? [state.OpponentOf("teamA")] : LegalTargets.Query(state, "teamA", spec).Take(1).ToList();
+
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(state, ability.ControllerId, ability.SourceDieId, ResolveTarget)));
+
+        Assert.Equal(Player.StartingLife - 1, state.PlayerTwo.Life); // Attune's 1 damage, targeted at the opponent
+        Assert.Equal(3, DieStats.EffectiveAttack(state, wasp)); // 2 base + 1 from her own Attune follow-up
+        Assert.Equal(3, DieStats.EffectiveDefense(state, wasp)); // 2 base + 1
+    }
+
+    [Fact]
+    public void WaspAttune_CanTargetACharacterDieInstead()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamA";
+        AddWasp(state, "teamA", "1");
+        // 2D at level 1 (placeholder stats) - survives ShockingGrasp's own
+        // 1 damage so it's still a legal target when Attune's own 1 damage
+        // resolves next, KO'ing it on the combined total.
+        var opposingTarget = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        opposingTarget.Zone = Zone.FieldZone;
+        opposingTarget.Status = DieStatus.Character;
+        opposingTarget.Level = 1;
+
+        var shockingGraspDie = FindUnpurchased(state, "teamA", SampleCards.ShockingGrasp.Id);
+        var purchaseEnergy = GiveWildEnergy(state, "teamA", SampleCards.ShockingGrasp.PurchaseCost);
+        TurnEngine.Purchase(state, shockingGraspDie.Id, purchaseEnergy.Select(d => d.Id).ToList());
+        shockingGraspDie.Zone = Zone.ReservePool;
+        shockingGraspDie.Status = DieStatus.Action;
+
+        var queue = new AbilityQueue();
+        TurnEngine.UseActionDie(state, queue, shockingGraspDie.Id);
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [opposingTarget.Id])));
+
+        // ShockingGrasp's own damage (1) alone isn't lethal (2D); Attune's
+        // follow-up 1 damage on the same die pushes it to exactly 2 and KOs it.
+        Assert.Equal(Zone.PrepArea, opposingTarget.Zone);
+    }
+
+    [Fact]
+    public void WaspAttune_TwoActiveDiceOfTheSameCharacter_EachTriggersItsOwnInstance()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamA";
+        var wasp1 = AddWasp(state, "teamA", "1");
+        var wasp2 = AddWasp(state, "teamA", "2", Zone.AttackZone);
+
+        var shockingGraspDie = FindUnpurchased(state, "teamA", SampleCards.ShockingGrasp.Id);
+        var purchaseEnergy = GiveWildEnergy(state, "teamA", SampleCards.ShockingGrasp.PurchaseCost);
+        TurnEngine.Purchase(state, shockingGraspDie.Id, purchaseEnergy.Select(d => d.Id).ToList());
+        shockingGraspDie.Zone = Zone.ReservePool;
+        shockingGraspDie.Status = DieStatus.Action;
+
+        var queue = new AbilityQueue();
+        TurnEngine.UseActionDie(state, queue, shockingGraspDie.Id);
+
+        // "No matter how many of that Character's dice are active" - two
+        // active Wasps means two Attune damage instances and two of her
+        // own stat-boost follow-ups, plus ShockingGrasp's own WhenUsed.
+        Assert.Equal(5, queue.Count);
+        Assert.Equal(2, queue.Pending.Count(a => a.Trigger == TriggerType.Attune && a.SourceDieId == wasp1.Id));
+        Assert.Equal(2, queue.Pending.Count(a => a.Trigger == TriggerType.Attune && a.SourceDieId == wasp2.Id));
+    }
+
+    [Fact]
+    public void WaspAttune_DoesNotFireForAnInactiveDieOrTheOpponentsDie()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamA";
+        AddWasp(state, "teamA", "reserve", Zone.ReservePool); // not active - Attune requires the Field/Attack Zone
+        AddWasp(state, "teamB", "opponent"); // active, but not this player's turn to trigger it
+
+        var shockingGraspDie = FindUnpurchased(state, "teamA", SampleCards.ShockingGrasp.Id);
+        var purchaseEnergy = GiveWildEnergy(state, "teamA", SampleCards.ShockingGrasp.PurchaseCost);
+        TurnEngine.Purchase(state, shockingGraspDie.Id, purchaseEnergy.Select(d => d.Id).ToList());
+        shockingGraspDie.Zone = Zone.ReservePool;
+        shockingGraspDie.Status = DieStatus.Action;
+
+        var queue = new AbilityQueue();
+        TurnEngine.UseActionDie(state, queue, shockingGraspDie.Id);
+
+        Assert.DoesNotContain(queue.Pending, a => a.Trigger == TriggerType.Attune);
+    }
 }

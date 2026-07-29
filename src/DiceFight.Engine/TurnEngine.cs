@@ -1,3 +1,4 @@
+using DiceFight.Engine.Effects;
 using DiceFight.Engine.Model;
 using DiceFight.Engine.Queueing;
 
@@ -30,6 +31,12 @@ public static class TurnEngine
 {
     private static readonly TurnStep[] StepOrder =
         [TurnStep.ClearAndDraw, TurnStep.RollAndReroll, TurnStep.Main, TurnStep.Attack, TurnStep.CleanUp];
+
+    // Keyword Attune's own built-in effect (Appendix 1) - identical on
+    // every Attune card, so it's one shared constant rather than
+    // per-CardDef authored text. See UseActionDie.
+    private static readonly EffectNode AttuneDamage =
+        new DealDamage(1, TargetSpec.CharacterDieOrPlayer("target player or character die"));
 
     // Rule 2.2.4 - once a step is completed, a player cannot go back to it
     // in the same turn.
@@ -341,6 +348,26 @@ public static class TurnEngine
         {
             var actualDelta = DieStats.SpinLevel(state, amplified, +1);
             CheckAwaken(state, queue, amplified, actualDelta);
+        }
+
+        // Keyword Attune - "While a Character die you control with Attune
+        // is active, when you use an Action die, that character deals 1
+        // damage to target player or Character die (no matter how many of
+        // that Character's dice are active)." Each active Attune die
+        // triggers its OWN instance (rule's example: two active dice from
+        // the same Character means two separate Attune uses, each
+        // independently targeted) - the 1-damage effect is the keyword's
+        // own built-in behavior, identical on every card, so it's injected
+        // here rather than authored per-CardDef; EnqueueTriggered still
+        // runs too, for any card-specific text layered on top of "when you
+        // use Attune" (e.g. Wasp's own stat-boost follow-up).
+        foreach (var attuner in state.DiceIn(state.ActivePlayerId, Zone.FieldZone)
+            .Concat(state.DiceIn(state.ActivePlayerId, Zone.AttackZone))
+            .Where(d => DieStats.HasKeyword(state, d, "Attune"))
+            .ToList())
+        {
+            queue.Enqueue(attuner.Id, attuner.ControllerId, TriggerType.Attune, AttuneDamage);
+            EnqueueTriggered(state, queue, attuner, TriggerType.Attune);
         }
 
         var cardId = die.VirtualCardId ?? die.CardId;

@@ -87,6 +87,16 @@ public static class EffectInterpreter
             case DealDamage dealDamage:
                 foreach (var id in Resolve(ctx, dealDamage.Target, cache))
                 {
+                    // A TargetSpec.CharacterDieOrPlayer resolution can be
+                    // either kind of id (e.g. Attune's "target player or
+                    // Character die") - a real player id means "deal
+                    // damage to that player's life," not a die at all.
+                    if (ctx.State.IsPlayerId(id))
+                    {
+                        ctx.State.GetPlayer(id).Life -= dealDamage.Amount;
+                        continue;
+                    }
+
                     var die = FindDie(ctx, id);
                     die.Damage += dealDamage.Amount;
                     // Ability damage KOs immediately rather than waiting

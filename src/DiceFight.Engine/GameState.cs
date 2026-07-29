@@ -37,6 +37,10 @@ public sealed class GameState
         : playerId == PlayerTwo.Id ? PlayerTwo
         : throw new ArgumentException($"Unknown player id '{playerId}'.", nameof(playerId));
 
+    // Lets a resolved target id (e.g. from TargetSpec.CharacterDieOrPlayer)
+    // be told apart from a die id without a throwing lookup.
+    public bool IsPlayerId(string id) => id == PlayerOne.Id || id == PlayerTwo.Id;
+
     public string OpponentOf(string playerId) =>
         playerId == PlayerOne.Id ? PlayerTwo.Id
         : playerId == PlayerTwo.Id ? PlayerOne.Id
