@@ -33,7 +33,8 @@ public sealed record TargetSpec(
     Model.EnergyType? RequiredEnergyType,
     int Count,
     string Description,
-    bool IsSelf = false)
+    bool IsSelf = false,
+    bool SidekicksOnly = false)
 {
     // Rule 3.3.4/3.3.5 - only dice in the Field Zone (which includes the
     // Attack Zone) may be targeted, unless otherwise stated.
@@ -50,6 +51,17 @@ public sealed record TargetSpec(
     public static TargetSpec AnyDie(
         string description, TargetOwnership ownership, IReadOnlyList<Model.Zone> zones, int count = 1) =>
         new(ownership, CharacterDiceOnly: false, zones, RequiredEnergyType: null, count, description);
+
+    // "target Sidekick" card text - matches real Sidekick dice, plus any
+    // Ally-keyword Character die currently in the Field/Attack Zone (see
+    // DieStats.CountsAsSidekick).
+    public static TargetSpec Sidekick(
+        string description,
+        TargetOwnership ownership = TargetOwnership.Any,
+        int count = 1,
+        IReadOnlyList<Model.Zone>? zones = null) =>
+        new(ownership, CharacterDiceOnly: false, zones ?? DefaultZones, RequiredEnergyType: null, count, description,
+            SidekicksOnly: true);
 
     // Rule 3.1.15-style self-reference (e.g. Shocking Grasp's "you may
     // Prep this die"). Bypasses legal-target filtering entirely -

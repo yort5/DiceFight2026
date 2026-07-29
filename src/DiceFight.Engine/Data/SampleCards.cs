@@ -288,6 +288,57 @@ public static class SampleCards
         "escape", "Escape!",
         "Choose one: Target character die can't be targeted this turn. Or: Prep a die from your Used Pile.");
 
+    // Three real printings of Alfred Pennyworth (World's Finest set, same
+    // reference spreadsheet as Big Barda/Harley Quinn/Robin/Starfire - see
+    // class remarks), added to exercise the Ally keyword: rule Appendix 1
+    // says an Ally Character die counts as a Sidekick Character die while
+    // in the Field Zone (see DieStats.CountsAsSidekick), in addition to its
+    // normal attributes - not just while active. Die limits aren't in the
+    // spreadsheet; guessed from each printing's rarity stripe using the
+    // usual Common/Uncommon/Rare -> 4/3/2 die-limit convention, same
+    // caveat as the other spreadsheet-sourced cards' guessed die limits.
+    //
+    // All three left with an empty Abilities list rather than force-fit:
+    // each one reads "target Batman die OR target Sidekick," a compound
+    // target this engine can't express yet (TargetSpec has no
+    // affiliation-based filter, and no "either of these two specs"
+    // union) - see RULES_ENGINE_DESIGN.md. Real stats/keyword/RawText
+    // still capture everything that maps cleanly, per the usual policy.
+    public static readonly CardDef AlfredPennyworthCaretaker = Character(
+        "alfred-pennyworth-caretaker", "Alfred Pennyworth", "Caretaker of Wayne Manor", dieLimit: 4,
+        "Ally - When fielded, give target Batman character die or another target Sidekick +2 defense until end of turn.",
+        purchaseCost: 2, energyType: EnergyType.Shield,
+        keywords: [new KeywordInstance("Ally")],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 1),
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 2),
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 2)
+        ]);
+
+    public static readonly CardDef AlfredPennyworthMI5 = Character(
+        "alfred-pennyworth-mi5", "Alfred Pennyworth", "MI-5", dieLimit: 3,
+        "Ally - When KO'd, you may roll a Sidekick or Batman die from your Used Pile. If you roll an energy " +
+        "result, return Alfred to the Field Zone at level 1. Either way, return the rolled die to the Used Pile.",
+        purchaseCost: 2, energyType: EnergyType.Shield,
+        keywords: [new KeywordInstance("Ally")],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 1),
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 2),
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 2)
+        ]);
+
+    public static readonly CardDef AlfredPennyworthToughAsNails = Character(
+        "alfred-pennyworth-tough-as-nails", "Alfred Pennyworth", "Tough as Nails", dieLimit: 2,
+        "Ally - When fielded, give target Batman die or target Sidekick +1 attack and +1 defense " +
+        "(besides Alfred Pennyworth) while attacking this turn.",
+        purchaseCost: 2, energyType: EnergyType.Shield,
+        keywords: [new KeywordInstance("Ally")],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 1),
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 2),
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 2)
+        ]);
+
     // A team is 8 character cards + 2 Basic Action cards (10 total), not
     // the 10 characters + 3 Basic Actions used here previously - that was
     // simply wrong. Colossus, Corvus Glaive, Distraction, Kang, King
@@ -321,7 +372,8 @@ public static class SampleCards
             BigBarda, Apocalypse, Beast, BlackPanther, HarleyQuinn, Robin, CaptainMarvel,
             Colossus, CorvusGlaive, Dazzler, CosmicCube, ShockingGrasp, Distraction,
             Falcon, FranklinsGalactus, GodEmperorDoom, GoddessOfThunder, Groot, InvisibleWoman,
-            JaneFoster, Starfire, Kang, KingHyperion, CasketOfAncientWinters, DailyBugle, Escape
+            JaneFoster, Starfire, Kang, KingHyperion, CasketOfAncientWinters, DailyBugle, Escape,
+            AlfredPennyworthCaretaker, AlfredPennyworthMI5, AlfredPennyworthToughAsNails
         ];
         return all.ToDictionary(c => c.Id);
     }

@@ -20,9 +20,20 @@ public class LegalTargetsTests
         Levels = [new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 1)]
     };
 
+    private static readonly CardDef AllyCard = new()
+    {
+        Id = "ally-card", Name = "Ally Card", Type = CardType.Character, PurchaseCost = 2,
+        EnergyTypes = [EnergyType.Shield], DieLimit = 4,
+        Keywords = [new KeywordInstance("Ally")],
+        Levels = [new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 1)]
+    };
+
     private static GameState CreateState()
     {
-        var catalog = new Dictionary<string, CardDef> { [MaskCard.Id] = MaskCard, [BoltCard.Id] = BoltCard };
+        var catalog = new Dictionary<string, CardDef>
+        {
+            [MaskCard.Id] = MaskCard, [BoltCard.Id] = BoltCard, [AllyCard.Id] = AllyCard,
+        };
         return GameState.NewGame(catalog, new Player { Id = "p1", Name = "P1" }, new Player { Id = "p2", Name = "P2" });
     }
 
@@ -151,6 +162,51 @@ public class LegalTargetsTests
             new EffectContext(state, "p2", SourceDieId: null, _ => []));
 
         // No exception, no-op - rule 3.1.10.
+    }
+
+    [Fact]
+    public void Query_SidekicksOnly_IncludesRealSidekicksAndFieldedAllyDice()
+    {
+        var state = CreateState();
+        var realSidekick = AddDie(state, "p1-sidekick", "p1", Zone.FieldZone, DieStatus.SidekickCharacter);
+        var allyFielded = AddDie(state, "p1-ally-fielded", "p1", Zone.FieldZone, DieStatus.Character, AllyCard.Id);
+        var allyAttacking = AddDie(state, "p1-ally-attacking", "p1", Zone.AttackZone, DieStatus.Character, AllyCard.Id);
+        AddDie(state, "p1-nonally-char", "p1", Zone.FieldZone, DieStatus.Character, MaskCard.Id);
+
+        var legal = LegalTargets.Query(state, "p2", TargetSpec.Sidekick("x"));
+
+        Assert.Equal(
+            new[] { realSidekick.Id, allyFielded.Id, allyAttacking.Id }.OrderBy(x => x),
+            legal.OrderBy(x => x));
+    }
+
+    // Rule Appendix 1 Ally note: "They don't count as Sidekick dice while
+    // in the bag, Prep Area, Used Pile, or Reserve Pool" - only the Field
+    // Zone (including the Attack Zone) grants the equivalence.
+    [Fact]
+    public void Query_SidekicksOnly_ExcludesAllyDiceOutsideTheFieldZone()
+    {
+        var state = CreateState();
+        var allyInBag = AddDie(state, "p1-ally-bag", "p1", Zone.Bag, DieStatus.Unrolled, AllyCard.Id);
+        var allyInReserve = AddDie(state, "p1-ally-reserve", "p1", Zone.ReservePool, DieStatus.Character, AllyCard.Id);
+        var allyInUsedPile = AddDie(state, "p1-ally-used", "p1", Zone.UsedPile, DieStatus.Unrolled, AllyCard.Id);
+        var allyInPrep = AddDie(state, "p1-ally-prep", "p1", Zone.PrepArea, DieStatus.Unrolled, AllyCard.Id);
+
+        // GameState.NewGame already seeds each player's Bag with real
+        // physical Sidekick dice (zone-independent per DieInstance.
+        // IsSidekick), so the query isn't expected to come back empty -
+        // just to never include the four Ally dice planted above.
+        var legal = LegalTargets.Query(
+            state, "p2",
+            TargetSpec.Sidekick("x", zones: [Zone.Bag, Zone.ReservePool, Zone.UsedPile, Zone.PrepArea]));
+
+        Assert.DoesNotContain(allyInBag.Id, legal);
+        Assert.DoesNotContain(allyInReserve.Id, legal);
+        Assert.DoesNotContain(allyInUsedPile.Id, legal);
+        Assert.DoesNotContain(allyInPrep.Id, legal);
+        Assert.All(
+            new[] { allyInBag, allyInReserve, allyInUsedPile, allyInPrep },
+            d => Assert.False(DieStats.CountsAsSidekick(state, d)));
     }
 
     [Fact]

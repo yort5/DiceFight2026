@@ -17,6 +17,21 @@ public static class DieStats
             && card.Keywords.Any(k => k.Name == keyword);
     }
 
+    // Keyword Ally - Appendix 1: "Character dice with the Ally keyword
+    // ability are considered Sidekick Character dice while in the Field
+    // Zone... in addition to their other attributes. They don't count as
+    // Sidekick dice while in the bag, Prep Area, Used Pile, or Reserve
+    // Pool." This is the zone-gated superset of DieInstance.IsSidekick
+    // (which only knows about real, cardless physical Sidekicks) - use
+    // this one for any "is this die a legal Sidekick target/effect
+    // subject right now" question; use the raw property only when the
+    // zone-independent physical fact is what's actually being asked (e.g.
+    // "how many physical Sidekick dice does this player own").
+    // AttackZone counts too, since it's a subset of the Field Zone
+    // (rule 1.5.6.1), not a separate play area.
+    public static bool CountsAsSidekick(GameState state, DieInstance die) =>
+        die.IsSidekick || (die.Zone is Zone.FieldZone or Zone.AttackZone && HasKeyword(state, die, "Ally"));
+
     public static readonly CharacterFace SidekickFace = new(FieldingCost: 0, Attack: 1, Defense: 1);
 
     // Rule 1.6.8 - a rolled Sidekick Character die is always level 1.

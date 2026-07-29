@@ -49,13 +49,15 @@ a different data source - worth asking the user before investing time
 here rather than assuming which approach they'd want.
 
 **Actionable next steps, roughly high to low value**:
-1. ~~Keyword *behavior*~~ - Overcrush, Regenerate, and now Energize (the
-   keywords that need real simulation rather than just combat math) are
-   implemented (see the status updates). BlackPanther's Energize is
-   fully scripted; Robin's Energize (a purchase-cost discount) is
-   deliberately left unscripted - needs a new purchase-cost-modifier
-   mechanism, a separate and bigger piece of work not yet scoped. Still
-   open: **Teamwatch** (Falcon) - not a combat-math keyword at all, it's
+1. ~~Keyword *behavior*~~ - Overcrush, Regenerate, Energize, and now Ally
+   are implemented (see the status updates). BlackPanther's Energize is
+   fully scripted; Robin's Energize (a purchase-cost discount) and all
+   three Alfred Pennyworth printings' Ally effects (each a "Batman die OR
+   Sidekick" compound target) are deliberately left unscripted - the
+   former needs a purchase-cost-modifier mechanism, the latter an
+   affiliation-based `TargetSpec` filter plus an either-of-two-specs
+   union, neither built yet. Skipped for now, per the user's explicit
+   steer: **Teamwatch** (Falcon) - not a combat-math keyword at all, it's
    an ability-trigger wiring problem (firing `WhenEngaged` when a
    Teamwatch character is engaged), already separately tracked.
    **Infiltrate** - a newer keyword the user flagged: an
@@ -103,6 +105,15 @@ here rather than assuming which approach they'd want.
    (the user's call) - fix shape when picked up: purge
    `IsVirtualEnergy` dice for the active player in `EnterAttackStep` and
    `SkipAttackStep`, not just `CleanUp`.
+8. `TurnEngine.CleanUp` never clears `AppliedModifiers` - rule 3.4.3.9
+   ("Applied abilities last until the end of turn... an Applied ability
+   is lost if the die leaves the Field Zone") only has its second half
+   implemented; a `ModifyStat`-granted modifier on a die that stays
+   fielded across the turn boundary currently never expires. Found while
+   wiring Ally/Alfred (see the status update); not exercised by anything
+   authored yet (no sample card uses `ModifyStat`), so left as a noted
+   gap rather than fixed blind - fix shape when picked up: clear every
+   die's `AppliedModifiers` in `CleanUp`.
 
 Also done, out of order (the user asked for it explicitly once the above
 was clear): a visual pass matching the physical mat's zone layout and
@@ -1834,3 +1845,70 @@ energy still triggers once), plus one end-to-end in `TwoTeamsDemoTests`
 driving BlackPanther's real card through `Reroll` -> queue -> `Drain`,
 confirming it actually pulls two fresh dice out of the Bag. `dotnet
 build`, `dotnet test` (80/80), and `npm run build` all clean.
+
+## Status update — Ally keyword implemented, plus real Alfred Pennyworth cards
+
+Per the user's steer ("skip Teamwatch/Infiltrate for now, start with
+Ally - Alfred is a good example, one of his cards may exercise edge
+cases"). Appendix 1's Ally text: "Character dice with the Ally keyword
+ability are considered Sidekick Character dice while in the Field Zone
+... in addition to their other attributes. They don't count as Sidekick
+dice while in the bag, Prep Area, Used Pile, or Reserve Pool" - a
+zone-gated equivalence, not a permanent one, with nine numbered
+clarifications underneath about exactly which Sidekick-targeting
+abilities it does/doesn't extend to.
+
+Implementation:
+- `DieStats.CountsAsSidekick(state, die)` - true for a real physical
+  Sidekick (`DieInstance.IsSidekick`, unchanged, zone-independent) OR an
+  Ally-keyword die currently in `FieldZone`/`AttackZone`. Named
+  distinctly from `DieInstance.IsSidekick` on purpose - one raw property
+  and one zone-aware query answering a different question, both
+  documented to cross-reference each other so a future reader picks the
+  right one (e.g. Falcon's Global correctly keeps using the raw
+  `IsSidekick` property, since it only ever looks in the Used Pile, where
+  Ally never applies anyway).
+- `TargetSpec.SidekicksOnly` + `TargetSpec.Sidekick(...)` factory,
+  handled by `LegalTargets.Query` the same way `CharacterDiceOnly`
+  already is - the first real "target Sidekick" card-text primitive this
+  engine can express.
+
+Added all three real World's Finest printings of Alfred Pennyworth
+(sourced from the same reference spreadsheet as Big Barda/Harley
+Quinn/Robin/Starfire - see the class remarks in `SampleCards.cs`) to the
+catalog, with real cost/energy/per-level stats and the Ally keyword.
+Deliberately left with empty `Abilities`: all three read "give/roll
+target Batman die **or** target Sidekick," a compound target this engine
+still can't express (no affiliation-based `TargetSpec` filter, no
+"either of these two specs" union) - flagged rather than force-fit,
+matching the project's existing partial-card policy. Not added to either
+team roster (same treatment as Colossus/Corvus Glaive/Kang/etc. -
+real catalog cards with nowhere to play them yet).
+
+Tested the mechanic directly (not through Alfred's unscripted text) in
+`LegalTargetsTests`: a `TargetSpec.Sidekick` query returns a real
+Sidekick die AND an Ally-keyword die in the Field Zone AND one in the
+Attack Zone, but excludes Ally dice sitting in the Bag/Reserve
+Pool/Used Pile/Prep Area even when queried directly against those zones
+(while correctly still returning the real physical Sidekicks
+`GameState.NewGame` always seeds those zones with, since *those* count
+regardless of zone) - this is the "edge case" the user flagged, now
+pinned down by an actual test rather than just read off the rules page.
+
+Found, but deliberately NOT fixed this pass (nothing currently
+authored exercises it - reusing the same "note it as a gap" precedent
+as the virtual-energy Main-Step-expiry item, next-steps #7): `TurnEngine.
+CleanUp` never clears `AppliedModifiers` at all. Rule 3.4.3.9 - "Applied
+abilities last until the end of turn, unless otherwise stated. However,
+an Applied ability is lost if the die that gained it leaves the Field
+Zone." The engine only implements the second half (via `ResetToUnrolled`
+at the various zone-exit call sites) - a modifier granted by `ModifyStat`
+on a die that stays fielded across the turn boundary would incorrectly
+persist forever. Not exercised by anything today (no sample card
+currently uses `ModifyStat`), which is exactly why Alfred's "+2D until
+end of turn" effect was left unscripted rather than becoming the first
+card to hit this - fix shape when it's picked up: clear every die's
+`AppliedModifiers` in `CleanUp`, guarded so a hypothetical
+permanent-Applied-modifier card (none exist yet) could still opt out.
+
+82 tests passing (2 new), `dotnet build`, and `npm run build` all clean.

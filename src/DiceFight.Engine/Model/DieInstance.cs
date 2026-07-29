@@ -52,6 +52,15 @@ public sealed class DieInstance
     public List<Modifier> AppliedModifiers { get; } = [];
     public List<DieInstance> AttachedGear { get; } = [];
 
+    // The raw, zone-independent physical fact: no card, not virtual
+    // energy. Keyword Ally muddies this - an Ally Character die IS a real
+    // card, so this is always false for one, even while the Field Zone
+    // makes it count as a Sidekick for ability purposes. Use
+    // DieStats.CountsAsSidekick(state, die) for that broader "is this
+    // currently a legal Sidekick target/subject" question instead; this
+    // property is for the narrower "is this a physical Sidekick die at
+    // all" fact (e.g. Falcon's Global picking any physical Sidekick out
+    // of the Used Pile, where Ally never applies anyway).
     public bool IsSidekick => CardId is null && !IsVirtualEnergy;
 
     // The rulebook's own "rolled dice" vs. "unrolled dice" distinction
