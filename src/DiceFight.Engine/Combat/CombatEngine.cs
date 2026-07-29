@@ -87,17 +87,19 @@ public static class CombatEngine
         var inactivePlayer = state.GetPlayer(state.OpponentOf(state.ActivePlayerId));
         var attackers = state.DiceIn(state.ActivePlayerId, Zone.AttackZone).ToList();
 
-        // Overcrush needs, per blocked Overcrush attacker, its attack value
-        // and its blockers' total defense - captured now, before the KO
-        // pass below mutates (or Regenerate-resets) those same dice.
-        var overcrushCandidates = new Dictionary<string, (int Attack, int BlockerDefenseTotal)>();
+        // Overcrush needs, per Overcrush attacker, its attack value, its
+        // still-live blockers' total defense, and the *originally declared*
+        // blocker list (to check afterward whether every one of them is
+        // gone, however that happened) - captured now, before the KO pass
+        // below mutates (or Regenerate-resets) those same dice.
+        var overcrushCandidates = new Dictionary<string, (int Attack, int BlockerDefenseTotal, IReadOnlyList<string> DeclaredBlockerIds, IReadOnlyList<string> LiveBlockerIds)>();
 
         foreach (var attacker in attackers)
         {
-            var blockerIds = assignment.BlockersOf(attacker.Id);
+            var declaredBlockerIds = assignment.BlockersOf(attacker.Id);
             var attack = DieStats.EffectiveAttack(state, attacker);
 
-            if (blockerIds.Count == 0)
+            if (declaredBlockerIds.Count == 0)
             {
                 // Rule 2.7.4.3.1 - unblocked: hits the player directly and
                 // leaves the Attack Zone before anything else can resolve.
@@ -106,29 +108,53 @@ public static class CombatEngine
                 continue;
             }
 
-            if (!attackerDamageSplits.TryGetValue(attacker.Id, out var split) || split.Values.Sum() != attack)
-            {
-                throw new InvalidOperationException(
-                    $"Damage split for attacker {attacker.Id} must assign its full attack value ({attack}).");
-            }
-
-            var totalFromBlockers = 0;
+            // wizkids.com/dicemasters/keywords - a blocker can be removed
+            // from the Attack Zone before damage is assigned (KO'd or
+            // otherwise removed by an ability used during the Action/Global
+            // window, sub-step 3, which this engine already allows - see
+            // TurnEngine.InMainOrAttackActionWindow). A blocker like that
+            // takes no part here: no split entry needed for it, it deals no
+            // damage back, and it contributes zero to Overcrush's "total
+            // defense absorbed" below. The attacker is still *blocked*
+            // though (declaredBlockerIds.Count > 0), so - Overcrush or not -
+            // it does NOT fall into the unblocked branch above and does NOT
+            // go to Zone.OutOfPlay; it stays in the Attack Zone and returns
+            // to the Field Zone via the survivors sweep below, same as any
+            // other blocked attacker.
+            var liveBlockerIds = declaredBlockerIds.Where(id => FindDie(state, id).Zone == Zone.AttackZone).ToList();
             var blockerDefenseTotal = 0;
-            foreach (var blockerId in blockerIds)
+
+            if (liveBlockerIds.Count > 0)
             {
-                var blocker = FindDie(state, blockerId);
-                if (split.TryGetValue(blockerId, out var dealt) && dealt > 0)
-                    blocker.Damage += dealt;
+                if (!attackerDamageSplits.TryGetValue(attacker.Id, out var split) || split.Values.Sum() != attack)
+                {
+                    throw new InvalidOperationException(
+                        $"Damage split for attacker {attacker.Id} must assign its full attack value ({attack}).");
+                }
 
-                // Rule 2.7.4.3.6/2.7.4.3.7 - each blocker deals its full
-                // attack value to the (shared) attacker.
-                totalFromBlockers += DieStats.EffectiveAttack(state, blocker);
-                blockerDefenseTotal += DieStats.EffectiveDefense(state, blocker);
+                var totalFromBlockers = 0;
+                foreach (var blockerId in liveBlockerIds)
+                {
+                    var blocker = FindDie(state, blockerId);
+                    if (split.TryGetValue(blockerId, out var dealt) && dealt > 0)
+                        blocker.Damage += dealt;
+
+                    // Rule 2.7.4.3.6/2.7.4.3.7 - each blocker deals its full
+                    // attack value to the (shared) attacker.
+                    totalFromBlockers += DieStats.EffectiveAttack(state, blocker);
+                    blockerDefenseTotal += DieStats.EffectiveDefense(state, blocker);
+                }
+
+                attacker.Damage += totalFromBlockers;
             }
+            // else: every declared blocker was already gone before this
+            // method ran - nothing to assign a split against (rule
+            // 2.7.4.3.4's "assign in full" has nowhere left to put it), and
+            // without Overcrush that portion of the attack is just wasted,
+            // not redirected to the player.
 
-            attacker.Damage += totalFromBlockers;
             if (DieStats.HasKeyword(state, attacker, "Overcrush"))
-                overcrushCandidates[attacker.Id] = (attack, blockerDefenseTotal);
+                overcrushCandidates[attacker.Id] = (attack, blockerDefenseTotal, declaredBlockerIds, liveBlockerIds);
         }
 
         state.AttackSubStep = AttackSubStep.ResolveDamageAndWhenKOd;
@@ -145,17 +171,20 @@ public static class CombatEngine
             TurnEngine.EnqueueTriggered(state, queue, die, TriggerType.WhenKOd);
         }
 
-        // Glossary - Overcrush: "if this character die KO's or removes all
-        // of its blockers, it deals any leftover damage to your opponent."
-        // The active player already had to assign the attacker's full
-        // value across its blockers (rule 2.7.4.3.4); Overcrush redirects
-        // whatever would otherwise be wasted overkill - but only once
-        // every blocker actually died (a Regenerate'd blocker surviving
-        // means the condition isn't met, so nothing carries through).
+        // Glossary/FAQ - Overcrush: "if this character die KO's or removes
+        // all of its blockers, it deals any leftover damage to your
+        // opponent" - "removes... for other reasons" as well as KO's via
+        // this combat, per the keywords page. A blocker counts as gone if
+        // it was either already removed before this method ran (excluded
+        // from liveBlockerIds above) or got KO'd in the loop above
+        // (koDieIds) - NOT simply "not in the Attack Zone anymore", since a
+        // blocker that regenerated is also no longer in the Attack Zone
+        // (it's back in Zone.FieldZone - see DieStats.ForceKO) despite
+        // still being alive, and must not count as gone.
         foreach (var (attackerId, info) in overcrushCandidates)
         {
-            var blockerIds = assignment.BlockersOf(attackerId);
-            if (!blockerIds.All(koDieIds.Contains)) continue;
+            var allGone = info.DeclaredBlockerIds.All(id => !info.LiveBlockerIds.Contains(id) || koDieIds.Contains(id));
+            if (!allGone) continue;
             var leftover = info.Attack - info.BlockerDefenseTotal;
             if (leftover > 0) inactivePlayer.Life -= leftover;
         }

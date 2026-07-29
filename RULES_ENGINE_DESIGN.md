@@ -1558,3 +1558,66 @@ browser this pass - no UI surface exists yet for triggering Overcrush/
 Regenerate specifically (both require a scripted combat scenario with the
 right keyword-tagged cards actually fighting), so this was verified via
 the engine test suite only.
+
+## Status update — Overcrush: blockers removed by other means, not just this combat's own damage
+
+The user flagged a real gap in the first Overcrush pass, citing
+wizkids.com/dicemasters/keywords: Overcrush triggers "if this character
+die KO's *or removes* all of its blockers" - not only blockers KO'd by
+this attack's own combat damage. Their example: an 8A Overcrush attacker
+blocked by a 5D blocker; if some other ability KOs that blocker before
+damage is assigned, all 8 damage carries to the opponent (not "8 minus
+5"), and - important nuance - the attacker still returns to the Field
+Zone afterward, because it *was* blocked; it must not fall into the
+unblocked-attacker path (which sends the die to `Zone.OutOfPlay`
+instead).
+
+Checked whether this is actually reachable today before treating it as
+hypothetical: it is. `TurnEngine.UseActionDie`/`UseGlobalAbility` gate on
+`InMainOrAttackActionWindow`, which explicitly *allows*
+`AttackSubStep.ActionAndGlobalWindow` - so a player can already use
+`ShockingGrasp` (1 damage) or `CasketOfAncientWinters` (a Ko effect)
+mid-attack, after `DeclareBlockers` but before `AssignCombatDamage`, to
+remove a declared blocker before combat damage is ever assigned. The old
+`AssignCombatDamage` didn't account for this at all: it would still try
+to look up the (now KO'd-and-reset) blocker's `EffectiveAttack`/
+`EffectiveDefense` for its own math, using whatever garbage face an
+unrolled die reports.
+
+Fix: `AssignCombatDamage` now splits each attacker's declared blockers
+into `liveBlockerIds` (still actually in the Attack Zone) vs. everything
+else, computed fresh at the top of that attacker's own processing.
+Pre-removed blockers don't need a damage-split entry, don't deal damage
+back to the attacker, and contribute zero to Overcrush's "total defense
+absorbed" - so `leftover = Attack - BlockerDefenseTotal` naturally comes
+out to the *full* attack value when every blocker was already gone,
+matching the user's "all 8 damage" example. If there's at least one live
+blocker, the full attack value must still be assigned in full (rule
+2.7.4.3.4) - just across the live ones only. Without Overcrush, a
+blocker-free attacker's damage is simply wasted (not redirected to the
+player) - it doesn't retroactively become "unblocked."
+
+The unblocked/`Zone.OutOfPlay` branch is keyed off the *originally
+declared* blocker count, not the live one, so this doesn't disturb it -
+an attacker that was blocked and then had its blocker(s) removed still
+takes the normal "blocked survivor" path and returns to the Field Zone
+via the existing end-of-method sweep, exactly as the user described.
+
+The "all blockers gone" check for Overcrush's trigger also had to stop
+using `Zone != Zone.AttackZone` as its test (that was my first attempt,
+and it broke `Overcrush_InteractsWithRegenerate_...`): a *regenerated*
+blocker is also no longer in the Attack Zone - it's back in
+`Zone.FieldZone` per `DieStats.ForceKO` - despite being very much alive.
+The check now reads: gone if pre-removed (not in `liveBlockerIds`) OR
+KO'd this pass (in `koDieIds`, which `ForceKO` already excludes
+regenerated dice from - see the previous status update).
+
+New tests: `Overcrush_BlockerRemovedBeforeDamageResolves_
+DealsFullAttackToOpponent`,
+`BlockerRemovedBeforeDamageResolves_WithoutOvercrush_WastesTheDamage`
+(confirms the non-Overcrush case doesn't leak damage to the player),
+`Overcrush_OneOfTwoBlockersRemovedBeforeDamageResolves_
+OnlyLiveBlockerDefenseCounts` (mixed live/removed blockers - split
+required only across the live one, but the leftover calculation still
+only credits that live blocker's defense). 75 tests passing (72 + 3
+new); `dotnet build`/`test` and `npm run build` both clean.

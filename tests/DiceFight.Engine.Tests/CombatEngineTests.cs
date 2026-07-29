@@ -381,4 +381,107 @@ public class CombatEngineTests
         Assert.Contains(regenBlocker.Id, result.KOdDieIds);
         Assert.Equal(Zone.PrepArea, regenBlocker.Zone);
     }
+
+    // wizkids.com/dicemasters/keywords - Overcrush also triggers when a
+    // blocker is "removed for other reasons", not just KO'd by this
+    // combat's own damage - e.g. some other ability (a Basic Action used
+    // during the Action/Global window, sub-step 3) KOs the blocker before
+    // AssignCombatDamage is even called. Simulated here by calling
+    // DieStats.ForceKO directly on the blocker after DeclareBlockers,
+    // standing in for that ability resolving.
+    [Fact]
+    public void Overcrush_BlockerRemovedBeforeDamageResolves_DealsFullAttackToOpponent()
+    {
+        var (state, bruiser, blocker) = CreateOvercrushSkirmishState();
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [bruiser.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(bruiser.Id, blocker.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [blocker.Id]);
+
+        DieStats.ForceKO(state, blocker); // stand-in for a mid-combat ability KO'ing it
+
+        // No live blockers left, so no split is needed at all.
+        var splits = new Dictionary<string, IReadOnlyDictionary<string, int>>();
+        var result = CombatEngine.AssignCombatDamage(state, queue, assignment, splits);
+
+        Assert.DoesNotContain(bruiser.Id, result.KOdDieIds);
+        Assert.Equal(Zone.FieldZone, bruiser.Zone); // was blocked - NOT the unblocked/Out of Play path
+        Assert.Equal(15, state.PlayerTwo.Life); // full 5 attack (no live blocker defense to subtract)
+    }
+
+    [Fact]
+    public void BlockerRemovedBeforeDamageResolves_WithoutOvercrush_WastesTheDamage()
+    {
+        var (state, bruiser, _, blocker) = CreateSkirmishState(); // plain 3A/2D bruiser, no Overcrush
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [bruiser.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(bruiser.Id, blocker.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [blocker.Id]);
+
+        DieStats.ForceKO(state, blocker);
+
+        var splits = new Dictionary<string, IReadOnlyDictionary<string, int>>();
+        var result = CombatEngine.AssignCombatDamage(state, queue, assignment, splits);
+
+        Assert.DoesNotContain(bruiser.Id, result.KOdDieIds);
+        Assert.Equal(Zone.FieldZone, bruiser.Zone); // still blocked, still returns to the field
+        Assert.Equal(20, state.PlayerTwo.Life); // no Overcrush - the wasted damage does not carry to the player
+    }
+
+    [Fact]
+    public void Overcrush_OneOfTwoBlockersRemovedBeforeDamageResolves_OnlyLiveBlockerDefenseCounts()
+    {
+        var bruiserCard = new CardDef
+        {
+            Id = "overcrush-bruiser", Name = "Overcrush Bruiser", Type = CardType.Character,
+            PurchaseCost = 3, DieLimit = 4,
+            Levels = [new CharacterFace(FieldingCost: 1, Attack: 8, Defense: 2)],
+            Keywords = [new KeywordInstance("Overcrush")],
+        };
+        var catalog = new Dictionary<string, CardDef> { [bruiserCard.Id] = bruiserCard };
+        var p1 = new Player { Id = "p1", Name = "Player One" };
+        var p2 = new Player { Id = "p2", Name = "Player Two" };
+        var state = GameState.NewGame(catalog, p1, p2);
+        state.CurrentStep = TurnStep.Attack;
+        state.AttackSubStep = AttackSubStep.DeclareAttackers;
+
+        var bruiser = new DieInstance
+        {
+            Id = "p1-overcrush-bruiser-1", CardId = bruiserCard.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(bruiser);
+
+        var sidekicks = state.DiceFor("p2").Take(2).ToList();
+        foreach (var sk in sidekicks)
+        {
+            sk.Zone = Zone.FieldZone;
+            sk.Status = DieStatus.SidekickCharacter;
+        }
+        var (removedBlocker, liveBlocker) = (sidekicks[0], sidekicks[1]);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [bruiser.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(bruiser.Id, removedBlocker.Id);
+        assignment.AssignBlocker(bruiser.Id, liveBlocker.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [removedBlocker.Id, liveBlocker.Id]);
+
+        DieStats.ForceKO(state, removedBlocker); // removed before damage resolves
+
+        // Only the live blocker is left to receive the split - the full
+        // attack value still has to go somewhere (rule 2.7.4.3.4).
+        var splits = new Dictionary<string, IReadOnlyDictionary<string, int>>
+        {
+            [bruiser.Id] = new Dictionary<string, int> { [liveBlocker.Id] = 8 },
+        };
+        var result = CombatEngine.AssignCombatDamage(state, queue, assignment, splits);
+
+        Assert.Contains(liveBlocker.Id, result.KOdDieIds);
+        Assert.Equal(13, state.PlayerTwo.Life); // 8 attack - 1 defense (only the live blocker's) = 7 leftover
+    }
 }
