@@ -1,4 +1,5 @@
 using DiceFight.Engine.Model;
+using DiceFight.Engine;
 
 namespace DiceFight.Engine.Effects;
 
@@ -117,8 +118,13 @@ public static class EffectInterpreter
                 foreach (var id in Resolve(ctx, spin.Target, cache))
                 {
                     var die = FindDie(ctx, id);
-                    var maxLevel = GetMaxLevel(ctx.State, die);
-                    die.Level = Math.Clamp(die.Level + spin.LevelDelta, 1, maxLevel); // rule 3.7.4/3.7.5
+                    var actualDelta = DieStats.SpinLevel(ctx.State, die, spin.LevelDelta);
+
+                    // Keyword Awaken fires for ANY spin-up of 1+ levels,
+                    // whatever caused it - not just Amplify's own trigger
+                    // point in TurnEngine.UseActionDie.
+                    if (ctx.Queue is not null)
+                        TurnEngine.CheckAwaken(ctx.State, ctx.Queue, die, actualDelta);
                 }
                 break;
 
@@ -302,9 +308,6 @@ public static class EffectInterpreter
         EffectCondition.TargetWasKOd => FindDie(ctx, dieId) is { Zone: Zone.PrepArea, Status: DieStatus.Unrolled },
         _ => throw new NotSupportedException($"Unhandled effect condition: {condition}")
     };
-
-    private static int GetMaxLevel(GameState state, DieInstance die) =>
-        die.CardId is null ? 1 : Math.Max(1, state.CardCatalog[die.VirtualCardId ?? die.CardId].Levels.Count);
 
     private static DieInstance FindDie(EffectContext ctx, string id) =>
         ctx.State.Dice.SingleOrDefault(d => d.Id == id)

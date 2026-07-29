@@ -188,6 +188,20 @@ public static class TurnEngine
             EnqueueTriggered(state, queue, die, TriggerType.Energize);
     }
 
+    // Keyword Awaken - "When a Character die with Awaken spins up 1 or
+    // more levels, you may use its Awaken ability." Takes the spin's
+    // *actual* level delta (DieStats.SpinLevel's return value), not the
+    // requested one - a spin "if able" that couldn't actually move a
+    // maxed-out die doesn't count. Fires from every spin-up source alike
+    // (Amplify above, or EffectInterpreter's Spin case for an ability-
+    // driven spin), all funneled through this one check so Awaken can't
+    // silently miss a source some future keyword adds.
+    internal static void CheckAwaken(GameState state, AbilityQueue queue, DieInstance die, int actualLevelDelta)
+    {
+        if (actualLevelDelta > 0 && DieStats.HasKeyword(state, die, "Awaken"))
+            EnqueueTriggered(state, queue, die, TriggerType.Awaken);
+    }
+
     private static void ApplyRoll(GameState state, IDiceRoller roller, DieInstance die)
     {
         var cardId = die.VirtualCardId ?? die.CardId;
@@ -312,6 +326,22 @@ public static class TurnEngine
         // post-use zone move; Shocking Grasp's own "you may Prep this die"
         // effect, for example, overrides the default destination below.
         EnqueueTriggered(state, queue, die, TriggerType.WhenUsed);
+
+        // Keyword Amplify - "When you use an Action die, spin each
+        // Character die with Amplify up one level (if able)." Any Action
+        // die triggers it, not just the Amplify die's own - this is a
+        // keyword reacting to the controller's own Action-die usage in
+        // general, unlike WhenUsed above (which is that specific die's
+        // own ability). "If able" is exactly SpinLevel's clamp behavior:
+        // a die already at max level is silently unaffected.
+        foreach (var amplified in state.DiceIn(state.ActivePlayerId, Zone.FieldZone)
+            .Concat(state.DiceIn(state.ActivePlayerId, Zone.AttackZone))
+            .Where(d => DieStats.HasKeyword(state, d, "Amplify"))
+            .ToList())
+        {
+            var actualDelta = DieStats.SpinLevel(state, amplified, +1);
+            CheckAwaken(state, queue, amplified, actualDelta);
+        }
 
         var cardId = die.VirtualCardId ?? die.CardId;
         var card = cardId is not null ? state.CardCatalog.GetValueOrDefault(cardId) : null;

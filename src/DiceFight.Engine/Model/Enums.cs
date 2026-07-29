@@ -109,7 +109,15 @@ public enum TriggerType
     // checked against the initial roll - a die rerolled off double energy
     // never triggers it, but a die left alone on a double-energy face does,
     // once the reroll window closes.
-    Energize
+    Energize,
+
+    // Keyword Awaken - fires once per die, every time an Awaken-keyword
+    // die spins up 1 or more levels, regardless of what caused the spin
+    // (Amplify, an ability's own Spin effect, etc. - see DieStats.
+    // SpinLevelAndCheckAwaken). "You get to use the ability for each
+    // individual die that spins up" - two dice spinning up in the same
+    // event enqueue two separate instances.
+    Awaken
 }
 
 // Rule 2.2.3 - the five steps of a turn, in fixed order (2.2.4 - cannot

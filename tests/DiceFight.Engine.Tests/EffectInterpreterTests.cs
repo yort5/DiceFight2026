@@ -2,6 +2,7 @@ using DiceFight.Engine;
 using DiceFight.Engine.Data;
 using DiceFight.Engine.Effects;
 using DiceFight.Engine.Model;
+using DiceFight.Engine.Queueing;
 using Xunit;
 
 namespace DiceFight.Engine.Tests;
@@ -210,5 +211,136 @@ public class EffectInterpreterTests
         // has no chooser-selected target at all - see FieldSidekickForEachPlayer.
         var falconGlobal = SampleCards.Falcon.Abilities.Single(a => a.Trigger == TriggerType.Global);
         Assert.False(EffectInterpreter.NeedsTarget(falconGlobal.Effect));
+    }
+
+    private static readonly CardDef AwakenCard = new()
+    {
+        Id = "test-awaken", Name = "Test Awaken", Type = CardType.Character, PurchaseCost = 2, DieLimit = 4,
+        Keywords = [new KeywordInstance("Awaken")],
+        Abilities = [new AbilityDef(TriggerType.Awaken, Cost: null, Effect: new GainLife(1))],
+        Levels = [
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 1),
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 2),
+            new CharacterFace(FieldingCost: 0, Attack: 3, Defense: 3),
+        ],
+    };
+
+    private static DieInstance AddAwakenDie(GameState state, string playerId, int level)
+    {
+        var die = new DieInstance
+        {
+            Id = $"{playerId}-awaken-1", CardId = AwakenCard.Id, OwnerId = playerId, ControllerId = playerId,
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = level,
+        };
+        state.Dice.Add(die);
+        return die;
+    }
+
+    [Fact]
+    public void Spin_UpOneLevel_MovesTheDieUpAndClampsAtCardMax()
+    {
+        var catalog = new Dictionary<string, CardDef>(SampleCards.BuildCatalog()) { [AwakenCard.Id] = AwakenCard };
+        var state = CreateState(catalog);
+        var die = AddAwakenDie(state, "p1", level: 3); // already at the card's max (3 levels)
+
+        EffectInterpreter.Execute(
+            new Spin(TargetSpec.Self, +1),
+            new EffectContext(state, "p1", die.Id, _ => []));
+
+        Assert.Equal(3, die.Level); // "if able" - clamped, not an error
+    }
+
+    // The "character face" edge case: Level is only meaningful once a die
+    // is actually on a character face (rule 1.6.8-adjacent) - spinning a
+    // die that's currently on an energy/action face shouldn't silently
+    // rewrite its stale Level, and can't sensibly trigger Awaken either.
+    [Fact]
+    public void Spin_OnADieNotOnACharacterFace_IsANoOpAndDoesNotTriggerAwaken()
+    {
+        var catalog = new Dictionary<string, CardDef>(SampleCards.BuildCatalog()) { [AwakenCard.Id] = AwakenCard };
+        var state = CreateState(catalog);
+        var die = AddAwakenDie(state, "p1", level: 1);
+        die.Status = DieStatus.Energy; // rolled onto an energy face, not a character face
+
+        var queue = new AbilityQueue();
+        EffectInterpreter.Execute(
+            new Spin(TargetSpec.Self, +1),
+            new EffectContext(state, "p1", die.Id, _ => [], Queue: queue));
+
+        Assert.Equal(1, die.Level); // unchanged
+        Assert.Equal(0, queue.Count); // Awaken never fires for a non-move
+    }
+
+    [Fact]
+    public void Spin_TriggersAwaken_WhenDieActuallyMovesUpAndHasTheKeyword()
+    {
+        var catalog = new Dictionary<string, CardDef>(SampleCards.BuildCatalog()) { [AwakenCard.Id] = AwakenCard };
+        var state = CreateState(catalog);
+        var die = AddAwakenDie(state, "p1", level: 1);
+
+        var queue = new AbilityQueue();
+        EffectInterpreter.Execute(
+            new Spin(TargetSpec.Self, +1),
+            new EffectContext(state, "p1", die.Id, _ => [], Queue: queue));
+
+        Assert.Equal(2, die.Level);
+        Assert.Equal(1, queue.Count);
+        Assert.Equal(TriggerType.Awaken, queue.Pending[0].Trigger);
+        Assert.Equal(die.Id, queue.Pending[0].SourceDieId);
+    }
+
+    [Fact]
+    public void Spin_DoesNotTriggerAwaken_WhenAlreadyAtMaxLevel()
+    {
+        var catalog = new Dictionary<string, CardDef>(SampleCards.BuildCatalog()) { [AwakenCard.Id] = AwakenCard };
+        var state = CreateState(catalog);
+        var die = AddAwakenDie(state, "p1", level: 3); // max level - spin up is a no-op
+
+        var queue = new AbilityQueue();
+        EffectInterpreter.Execute(
+            new Spin(TargetSpec.Self, +1),
+            new EffectContext(state, "p1", die.Id, _ => [], Queue: queue));
+
+        Assert.Equal(0, queue.Count);
+    }
+
+    [Fact]
+    public void Spin_DoesNotTriggerAwaken_WhenSpinningDown()
+    {
+        var catalog = new Dictionary<string, CardDef>(SampleCards.BuildCatalog()) { [AwakenCard.Id] = AwakenCard };
+        var state = CreateState(catalog);
+        var die = AddAwakenDie(state, "p1", level: 3);
+
+        var queue = new AbilityQueue();
+        EffectInterpreter.Execute(
+            new Spin(TargetSpec.Self, -1),
+            new EffectContext(state, "p1", die.Id, _ => [], Queue: queue));
+
+        Assert.Equal(2, die.Level);
+        Assert.Equal(0, queue.Count); // Awaken only reacts to spinning UP
+    }
+
+    [Fact]
+    public void Cyclops_Awaken_DealsThreeDamage_WhenSpunUpAndDrained()
+    {
+        var state = CreateState();
+        var cyclops = new DieInstance
+        {
+            Id = "p1-cyclops-1", CardId = SampleCards.Cyclops.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(cyclops);
+        var target = FieldSidekickTarget(state, "p2"); // 1D - lethal to Cyclops's 3 damage
+
+        var queue = new AbilityQueue();
+        EffectInterpreter.Execute(
+            new Spin(TargetSpec.Self, +1),
+            new EffectContext(state, "p1", cyclops.Id, _ => [], Queue: queue));
+
+        Assert.Equal(1, queue.Count);
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [target.Id])));
+
+        Assert.Equal(Zone.PrepArea, target.Zone); // KO'd by Awaken's 3 damage
     }
 }

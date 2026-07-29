@@ -49,15 +49,16 @@ a different data source - worth asking the user before investing time
 here rather than assuming which approach they'd want.
 
 **Actionable next steps, roughly high to low value**:
-1. ~~Keyword *behavior*~~ - Overcrush, Regenerate, Energize, and now Ally
-   are implemented (see the status updates). BlackPanther's Energize is
-   fully scripted; Robin's Energize (a purchase-cost discount) and all
-   three Alfred Pennyworth printings' Ally effects (each a "Batman die OR
-   Sidekick" compound target) are deliberately left unscripted - the
-   former needs a purchase-cost-modifier mechanism, the latter an
-   affiliation-based `TargetSpec` filter plus an either-of-two-specs
-   union, neither built yet. Skipped for now, per the user's explicit
-   steer: **Teamwatch** (Falcon) - not a combat-math keyword at all, it's
+1. ~~Keyword *behavior*~~ - Overcrush, Regenerate, Energize, Ally, and now
+   Amplify/Awaken are implemented (see the status updates). BlackPanther's
+   Energize is fully scripted; Robin's Energize (a purchase-cost
+   discount) and all three Alfred Pennyworth printings' Ally effects
+   (each a "Batman die OR Sidekick" compound target) are deliberately
+   left unscripted - the former needs a purchase-cost-modifier mechanism,
+   the latter an affiliation-based `TargetSpec` filter plus an
+   either-of-two-specs union, neither built yet. Skipped for now, per the
+   user's explicit steer: **Teamwatch** (Falcon) - not a combat-math
+   keyword at all, it's
    an ability-trigger wiring problem (firing `WhenEngaged` when a
    Teamwatch character is engaged), already separately tracked.
    **Infiltrate** - a newer keyword the user flagged: an
@@ -1912,3 +1913,63 @@ card to hit this - fix shape when it's picked up: clear every die's
 permanent-Applied-modifier card (none exist yet) could still opt out.
 
 82 tests passing (2 new), `dotnet build`, and `npm run build` all clean.
+
+## Status update — Amplify and Awaken implemented, plus a real bug fix in the pre-existing Spin primitive
+
+Requested together deliberately: Amplify's own effect ("When you use an
+Action die, spin each Character die with Amplify up one level (if
+able)") is exactly the event Awaken reacts to ("When a Character die
+with Awaken spins up 1 or more levels, you may use its Awaken ability"),
+regardless of what caused the spin. The user also flagged, correctly,
+that spin mechanics touch character-face bookkeeping this engine hadn't
+exercised yet - see the bug below, found while centralizing this.
+
+- `DieStats.SpinLevel(state, die, delta)` - new shared home for the spin
+  math `EffectInterpreter`'s `Spin` case already had inline, moved here
+  so `TurnEngine.UseActionDie` (Amplify) and `EffectInterpreter` (any
+  ability-driven `Spin`) share one implementation instead of two. Returns
+  the *actual* level delta (0 if the spin couldn't move the die - already
+  at the clamped end), which is what Awaken's condition ("spins up 1 or
+  more levels") actually needs, not the requested delta.
+- **Real bug fixed in the process, not just refactored**: the old inline
+  version in `EffectInterpreter` clamped and wrote `die.Level` for *any*
+  target, without checking `die.Status` first - a `Spin` effect aimed at
+  a die currently on an Energy or Action face (Level is only meaningful
+  on a Character face at all) would have silently rewritten its stale
+  `Level` anyway. `SpinLevel` now guards on `Status is Character or
+  SidekickCharacter` and returns 0 (no-op) otherwise - exactly the
+  "spin mechanics... character faces" edge case the user asked about.
+  Wasn't caught earlier because nothing had ever exercised `Spin` at all
+  (grep confirmed zero uses in `SampleCards.cs` or the tests before this
+  pass) - the same "not exercised by anything" pattern DrawDice and the
+  virtual-energy gaps turned out to hide, worth remembering as a general
+  lesson: an unused primitive in this codebase is not evidence it's
+  correct.
+- `TurnEngine.CheckAwaken(state, queue, die, actualLevelDelta)` -
+  enqueues the die's `TriggerType.Awaken` ability (via the existing
+  `EnqueueTriggered`) when `actualLevelDelta > 0` and the die has the
+  Awaken keyword. Called from two places: `UseActionDie`'s new Amplify
+  loop (spins every Amplify-keyword die the *active* player controls in
+  the Field/Attack Zone, then checks Awaken on each), and
+  `EffectInterpreter`'s `Spin` case (so an ability-driven spin - not just
+  Amplify's - triggers Awaken too, matching the keyword's own "whatever
+  the source" wording).
+
+Two real example cards, both spreadsheet-sourced (Justice Like
+Lightning's Ant-Man and X-Men First Class's Cyclops - see class remarks
+in `SampleCards.cs`): `AntManAmplify` ("Through The Cracks" printing) is
+entirely the built-in keyword, no extra effect to script; `Cyclops`
+("Boy Scout" printing) has its Awaken effect fully scripted
+(`DealDamage(3)`) since its text happens to map cleanly, unlike most of
+XFC's Awaken cards (which lean on Unblockable/Capture-style mechanics
+this engine doesn't have yet - noted for whenever those keywords come
+up).
+
+8 new tests (90 total): `EffectInterpreterTests` covers `Spin` directly
+(clamping at max level, the character-face no-op fix, Awaken firing on a
+real spin-up, NOT firing on a no-op spin or a spin-down, and Cyclops's
+real card end-to-end through the queue); `TwoTeamsDemoTests` covers
+Amplify through the real `UseActionDie` path (spins the active player's
+own Amplify die, leaves the opponent's alone, respects "if able" at max
+level). `dotnet build`, `dotnet test` (90/90), and `npm run build` all
+clean.

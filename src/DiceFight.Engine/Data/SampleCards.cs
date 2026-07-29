@@ -339,6 +339,47 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 2)
         ]);
 
+    // Two more real spreadsheet-sourced printings, this time for Amplify
+    // and Awaken - a paired keyword the user asked for together since
+    // Amplify's own spin ("When you use an Action die, spin each
+    // Character die with Amplify up one level") is exactly the trigger
+    // Awaken reacts to ("When a Character die with Awaken spins up 1 or
+    // more levels..."), whatever the source of the spin. Both keywords
+    // are fully implemented (DieStats.SpinLevel/TurnEngine.CheckAwaken),
+    // not just data - see RULES_ENGINE_DESIGN.md's status update.
+    //
+    // Justice Like Lightning's Ant-Man, "Through The Cracks" printing -
+    // Amplify is entirely the built-in keyword spin, no card-specific
+    // effect to script beyond it.
+    public static readonly CardDef AntManAmplify = Character(
+        "ant-man-amplify", "Ant-Man", "Through The Cracks", dieLimit: 4,
+        "Amplify - When you use an action die, spin this character up 1 level.",
+        purchaseCost: 3, energyType: EnergyType.Fist,
+        keywords: [new KeywordInstance("Amplify")],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 1),
+            new CharacterFace(FieldingCost: 0, Attack: 3, Defense: 1),
+            new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 2)
+        ]);
+
+    // X-Men First Class's Cyclops, "Boy Scout" printing - a single-clause
+    // Awaken effect that maps cleanly onto DealDamage, unlike most of the
+    // set's Awaken text (which leans on mechanics like Unblockable/
+    // Capture this engine doesn't have yet).
+    public static readonly CardDef Cyclops = Character(
+        "cyclops", "Cyclops", "Boy Scout", dieLimit: 4,
+        "Awaken - Deal 3 damage to target character die. (When this die spins up 1 or more levels, " +
+        "you may use this effect.)",
+        purchaseCost: 5, energyType: EnergyType.Bolt,
+        keywords: [new KeywordInstance("Awaken")],
+        abilities: [new AbilityDef(TriggerType.Awaken, Cost: null,
+            Effect: new DealDamage(3, TargetSpec.CharacterDie("target character die")))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 3),
+            new CharacterFace(FieldingCost: 1, Attack: 6, Defense: 4)
+        ]);
+
     // A team is 8 character cards + 2 Basic Action cards (10 total), not
     // the 10 characters + 3 Basic Actions used here previously - that was
     // simply wrong. Colossus, Corvus Glaive, Distraction, Kang, King
@@ -373,7 +414,8 @@ public static class SampleCards
             Colossus, CorvusGlaive, Dazzler, CosmicCube, ShockingGrasp, Distraction,
             Falcon, FranklinsGalactus, GodEmperorDoom, GoddessOfThunder, Groot, InvisibleWoman,
             JaneFoster, Starfire, Kang, KingHyperion, CasketOfAncientWinters, DailyBugle, Escape,
-            AlfredPennyworthCaretaker, AlfredPennyworthMI5, AlfredPennyworthToughAsNails
+            AlfredPennyworthCaretaker, AlfredPennyworthMI5, AlfredPennyworthToughAsNails,
+            AntManAmplify, Cyclops
         ];
         return all.ToDictionary(c => c.Id);
     }

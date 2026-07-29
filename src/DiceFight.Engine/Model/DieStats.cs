@@ -32,6 +32,26 @@ public static class DieStats
     public static bool CountsAsSidekick(GameState state, DieInstance die) =>
         die.IsSidekick || (die.Zone is Zone.FieldZone or Zone.AttackZone && HasKeyword(state, die, "Ally"));
 
+    // Rule 3.7.4/3.7.5 - "spin" a Character die's level, clamped to its
+    // card's real level range ("if able" - spinning past either end is
+    // just absorbed, not an error). Returns how many levels it actually
+    // moved (0 if already at the clamped end, or if the die isn't
+    // currently on a character face at all - Level isn't meaningful
+    // otherwise), so callers that care whether a spin *really* moved the
+    // die up (Awaken) can tell a no-op from a real spin without
+    // re-deriving the before/after levels themselves.
+    public static int SpinLevel(GameState state, DieInstance die, int delta)
+    {
+        if (die.Status is not (DieStatus.Character or DieStatus.SidekickCharacter)) return 0;
+        var maxLevel = GetMaxLevel(state, die);
+        var oldLevel = die.Level;
+        die.Level = Math.Clamp(die.Level + delta, 1, maxLevel);
+        return die.Level - oldLevel;
+    }
+
+    private static int GetMaxLevel(GameState state, DieInstance die) =>
+        die.CardId is null ? 1 : Math.Max(1, state.CardCatalog[die.VirtualCardId ?? die.CardId].Levels.Count);
+
     public static readonly CharacterFace SidekickFace = new(FieldingCost: 0, Attack: 1, Defense: 1);
 
     // Rule 1.6.8 - a rolled Sidekick Character die is always level 1.

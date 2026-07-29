@@ -536,6 +536,72 @@ public class TwoTeamsDemoTests
     }
 
     [Fact]
+    public void AntManAmplify_UsingAnActionDie_SpinsOwnAmplifyDieUpOneLevel_ButNotOpponents()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamA";
+
+        // Real card on both sides - proves Amplify only reacts to its own
+        // controller's Action-die usage, not "any Action die in the game."
+        var ownAmplify = new DieInstance
+        {
+            Id = "teamA-antman-1", CardId = SampleCards.AntManAmplify.Id, OwnerId = "teamA", ControllerId = "teamA",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        var opponentAmplify = new DieInstance
+        {
+            Id = "teamB-antman-1", CardId = SampleCards.AntManAmplify.Id, OwnerId = "teamB", ControllerId = "teamB",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(ownAmplify);
+        state.Dice.Add(opponentAmplify);
+
+        var shockingGraspDie = FindUnpurchased(state, "teamA", SampleCards.ShockingGrasp.Id);
+        var purchaseEnergy = GiveWildEnergy(state, "teamA", SampleCards.ShockingGrasp.PurchaseCost);
+        TurnEngine.Purchase(state, shockingGraspDie.Id, purchaseEnergy.Select(d => d.Id).ToList());
+        shockingGraspDie.Zone = Zone.ReservePool;
+        shockingGraspDie.Status = DieStatus.Action;
+
+        var target = state.DiceFor("teamB").First(d => d.Zone == Zone.Bag);
+        target.Zone = Zone.FieldZone;
+        target.Status = DieStatus.SidekickCharacter;
+
+        var queue = new AbilityQueue();
+        TurnEngine.UseActionDie(state, queue, shockingGraspDie.Id);
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [target.Id])));
+
+        Assert.Equal(2, ownAmplify.Level); // spun up by teamA's own Action-die use
+        Assert.Equal(1, opponentAmplify.Level); // untouched - not teamB's turn to act
+    }
+
+    [Fact]
+    public void AntManAmplify_AtMaxLevel_DoesNotSpinPastIt()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamA";
+
+        var maxedAmplify = new DieInstance
+        {
+            Id = "teamA-antman-1", CardId = SampleCards.AntManAmplify.Id, OwnerId = "teamA", ControllerId = "teamA",
+            Zone = Zone.FieldZone, Status = DieStatus.Character,
+            Level = SampleCards.AntManAmplify.Levels.Count, // already at max
+        };
+        state.Dice.Add(maxedAmplify);
+
+        var shockingGraspDie = FindUnpurchased(state, "teamA", SampleCards.ShockingGrasp.Id);
+        var purchaseEnergy = GiveWildEnergy(state, "teamA", SampleCards.ShockingGrasp.PurchaseCost);
+        TurnEngine.Purchase(state, shockingGraspDie.Id, purchaseEnergy.Select(d => d.Id).ToList());
+        shockingGraspDie.Zone = Zone.ReservePool;
+        shockingGraspDie.Status = DieStatus.Action;
+
+        var queue = new AbilityQueue();
+        TurnEngine.UseActionDie(state, queue, shockingGraspDie.Id); // Amplify's spin happens regardless of draining ShockingGrasp's own queued ability
+
+        Assert.Equal(SampleCards.AntManAmplify.Levels.Count, maxedAmplify.Level); // unchanged - "if able"
+    }
+
+    [Fact]
     public void BlackPantherEnergize_RolledOnDoubleEnergy_TriggersAndRollsTwoFreshDiceFromBag()
     {
         var state = BuildTwoTeamGame();
