@@ -80,3 +80,8 @@ public sealed record AssignCombatDamageRequest(
 // server-side between calls, same as AssignCombatDamageRequest's own copy.
 public sealed record ResolveInfiltrateRequest(
     IReadOnlyList<BlockAssignment> Assignments, IReadOnlyList<string> InfiltratingDieIds);
+public sealed record TagOutUse(string TagOutDieId, string TargetDieId);
+// No Assignments here - unlike ResolveInfiltrate, CombatEngine.ResolveTagOut
+// doesn't need the blocker assignment at all (Tag Out's own eligibility
+// only cares about the Field Zone, not who's blocking whom).
+public sealed record ResolveTagOutRequest(IReadOnlyList<TagOutUse> Uses);

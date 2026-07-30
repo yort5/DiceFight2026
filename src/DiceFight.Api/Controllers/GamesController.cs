@@ -162,6 +162,22 @@ public sealed class GamesController(GameStore store) : ControllerBase
         return Ok(GameStateDto.From(gameId, state));
     }
 
+    // Only reachable when DeclareBlockers/ResolveInfiltrate found a real
+    // Tag Out choice to offer (see CombatEngine.NextSubStepAfterBlockers) -
+    // most combats skip straight past AttackSubStep.TagOutWindow to
+    // ActionAndGlobalWindow and never need this endpoint called at all.
+    [HttpPost("{gameId}/resolve-tag-out")]
+    public ActionResult<GameStateDto> ResolveTagOut(string gameId, [FromBody] ResolveTagOutRequest request)
+    {
+        var state = store.Get(gameId);
+        var uses = request.Uses.Select(u => (u.TagOutDieId, u.TargetDieId)).ToList();
+
+        var queue = new AbilityQueue();
+        CombatEngine.ResolveTagOut(state, queue, uses);
+        Drain(state, queue, null);
+        return Ok(GameStateDto.From(gameId, state));
+    }
+
     [HttpPost("{gameId}/assign-combat-damage")]
     public ActionResult<GameStateDto> AssignCombatDamage(string gameId, [FromBody] AssignCombatDamageRequest request)
     {

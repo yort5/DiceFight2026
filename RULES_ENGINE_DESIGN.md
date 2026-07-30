@@ -52,7 +52,7 @@ here rather than assuming which approach they'd want.
 1. ~~Keyword *behavior*~~ - Overcrush, Regenerate, Energize, Ally,
    Amplify/Awaken, Attune, Call Out, Corrupt, Swarm, Darkseid's
    keyword grant, Deadly, Fast, Energy Drain, Infiltrate, Intimidate,
-   Obscure, Retaliation, Strike, Teamwatch, and Sacrifice are
+   Obscure, Retaliation, Strike, Teamwatch, Sacrifice, and Tag Out are
    implemented (see the status updates).
    BlackPanther's Energize is fully scripted; Robin's Energize
    (a purchase-cost discount) and all three Alfred Pennyworth printings'
@@ -132,16 +132,19 @@ here rather than assuming which approach they'd want.
     than a whole turn). Not started - flagged since the primitives it'd
     reuse already exist.
 11. The web client's Attack Step UI has no case for `AttackSubStep.
-    InfiltrateWindow` - `attackSubStep` is typed as a plain `string` in
-    `types.ts`, so the new value flows through without a build error, but
-    matches none of `App.tsx`'s `canDeclareBlockers`/`canAssignDamage`
-    conditions either. Invisible today (neither curated roster has an
-    Infiltrate card, so `DeclareBlockers` always skips the sub-step - see
-    the status update), but the first Infiltrate-carrying team built
-    would hit a dead end in the web client with no visible way to
-    proceed. Fix shape when that happens: a `canResolveInfiltrate` check
-    plus either a small UI prompt or an auto-pass-through call to the
-    already-wired `POST /resolve-infiltrate` endpoint.
+    InfiltrateWindow` (or, now, `TagOutWindow`) - `attackSubStep` is
+    typed as a plain `string` in `types.ts`, so new values flow through
+    without a build error, but match none of `App.tsx`'s
+    `canDeclareBlockers`/`canAssignDamage` conditions either. Invisible
+    today (neither curated roster has an Infiltrate or Tag Out card, so
+    `DeclareBlockers`/`ResolveInfiltrate` always skip straight past both
+    sub-steps - see the status updates), but the first team built with
+    either keyword would hit a dead end in the web client with no
+    visible way to proceed. Fix shape when that happens: a
+    `canResolveInfiltrate`/`canResolveTagOut` check plus either a small
+    UI prompt or an auto-pass-through call to the already-wired
+    `POST /resolve-infiltrate`/`POST /resolve-tag-out` endpoints (both
+    exist server-side; only the client-side UI case is missing).
 
 Also done, out of order (the user asked for it explicitly once the above
 was clear): a visual pass matching the physical mat's zone layout and
@@ -3055,3 +3058,70 @@ supplied that would otherwise have saved it); one end-to-end
 sacrificing a real Apocalypse die and confirming both the Sacrifice
 destination and the 2 dice actually drawn. `dotnet build`, `dotnet test`
 (220/220), and `npm run build` all clean.
+
+## Status update — Tag Out implemented; chains onto Infiltrate's existing post-blockers window
+
+Appendix 1: "After blockers are declared, you may Prep this die from
+the Field Zone to give target Character die +2A and +2D until end of
+turn." Clarification 1's timing ("triggered immediately after blockers
+are declared before Action dice or Global abilities may be used") is
+*word-for-word identical* to Infiltrate's own clarification - both
+keywords carve out the same real-world moment in the Attack Step.
+
+- **New `AttackSubStep.TagOutWindow`, chained after `InfiltrateWindow`
+  rather than merged with it** - each keyword gets its own independently-
+  skippable window (`DeclareBlockers` → `InfiltrateWindow` if eligible,
+  else straight to whichever of `TagOutWindow`/`ActionAndGlobalWindow`
+  applies; `ResolveInfiltrate` re-checks the same thing once it's done).
+  New shared `CombatEngine.NextSubStepAfterBlockers` helper picks the
+  next stop. Kept as two separate resolution methods rather than one
+  merged "post-blockers window" precisely so neither keyword's presence
+  changes how the other resolves - a team with only Tag Out (no
+  Infiltrate) never has to reason about `ResolveInfiltrate` at all, and
+  vice versa. Confirmed via the full suite passing with zero test
+  changes needed for the reshuffle, same as Infiltrate's own original
+  addition.
+- **No `AbilityDef`/`TriggerType` at all** - the +2A/+2D is fixed and
+  card-invariant (no printed card redefines the amount, unlike
+  Retaliation), so - like Infiltrate's damage-and-return - the whole
+  effect is built directly into `CombatEngine.ResolveTagOut`: move the
+  Tag Out die to the Prep Area, add an ordinary `Modifier` to the
+  target's `AppliedModifiers`. That's a genuine Applied modifier (rule
+  3.4.3 - "until end of turn"), the same shape as Wasp's Attune buff,
+  so it now correctly expires at Clean Up thanks to the `AppliedModifiers`
+  fix from a few keywords ago.
+- **Usable by either player**, unlike Infiltrate (inherently one-sided,
+  since only an unblocked attacker can Infiltrate) - Tag Out's own text
+  never says "the active player may," so each use in `ResolveTagOut`'s
+  batch is validated against its own die's actual controller, not
+  `state.ActivePlayerId`.
+- "Prep this die from the *Field Zone*" is a real restriction, not
+  incidental phrasing - a Tag Out die that's itself attacking or
+  blocking (Attack Zone) isn't eligible, only one that stayed home.
+- Real WWE-branded cards all print "target **Superstar** die," not
+  "target Character die" - treated as this brand's own universal term
+  for a Character die (every printing says it identically; nothing
+  suggests a genuine affiliation-restricting filter the way "Villains"/
+  "Avengers" are), so this uses the ordinary `TargetSpec.CharacterDie`.
+- Added the API layer too, matching Infiltrate's own completeness bar:
+  `ResolveTagOutRequest`/`TagOutUse` DTOs and a new
+  `POST {gameId}/resolve-tag-out` endpoint, mirroring `/resolve-infiltrate`'s
+  shape (minus the blocker `Assignments` payload, which Tag Out's own
+  eligibility never needs). Next-steps item #11 (no web client UI case
+  for either post-blockers window) now explicitly covers both.
+
+Example card: WWE's Big E ("Tag Team Champion" printing) - purely the
+keyword, nothing else to script.
+
+11 new tests (231 total): `CombatEngineTests` covers the window-entry
+logic (opens when an eligible Field Zone die exists, skips when none do
+or the only keyword die is itself attacking/blocking), `ResolveTagOut`
+directly (Preps the die and applies the modifier, declining leaves
+everything untouched, rejects a die without the keyword or not in the
+Field Zone, usable by either player's own die in the same window, and
+the modifier expiring at Clean Up), and one chained-window test proving
+Infiltrate resolving correctly hands off into a Tag Out window that only
+became relevant afterward; one end-to-end `TwoTeamsDemoTests` case
+drives real Big E buffing a real Apocalypse attacker through the whole
+window-open → resolve → Clean Up lifecycle. `dotnet build`, `dotnet
+test` (231/231), and `npm run build` all clean.

@@ -759,6 +759,30 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 2, Attack: 7, Defense: 6)
         ]);
 
+    // WWE's Big E, "Tag Team Champion" printing - purely the Tag Out
+    // keyword, no other text. No AbilityDef at all - like Infiltrate/
+    // Deadly, Tag Out's fixed +2A/+2D is built directly into CombatEngine
+    // (see ResolveTagOut), so any card with the keyword gets full
+    // functionality with zero scripting. Real WWE-branded cards all
+    // print "target Superstar die" rather than "target Character die" -
+    // treated as this brand's own universal term for a Character die
+    // (every printing says it identically; nothing suggests it's an
+    // affiliation-restricting filter the way "Villains"/"Avengers" are),
+    // so this uses the ordinary TargetSpec.CharacterDie, not an
+    // affiliation-scoped one.
+    public static readonly CardDef BigE = Character(
+        "big-e", "Big E", "Tag Team Champion", dieLimit: 4,
+        "Tag Out (After blockers are declared, you may Prep this die from the Field Zone to give target " +
+        "Superstar die +2A and +2D until end of turn.)",
+        purchaseCost: 4, energyType: EnergyType.Mask,
+        keywords: [new KeywordInstance("Tag Out")],
+        affiliations: ["A New Day"],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 4),
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 5),
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 7)
+        ]);
+
     // A team is 8 character cards + 2 Basic Action cards (10 total), not
     // the 10 characters + 3 Basic Actions used here previously - that was
     // simply wrong. Colossus, Corvus Glaive, Distraction, Kang, King
@@ -797,7 +821,7 @@ public static class SampleCards
             AntManAmplify, Cyclops, Wasp, BlackWidow, Polaris, CosmicCubeInfinitePossibilities, Parademon, Darkseid,
             Deathbird, WaspPixie, MadalynePryor, TheSpot, Ricochet, ScarletSpider, DrowMercenary,
             SupermanKalEl, BlackMantaDeepSeaDeviant, BizarroMoreThanAMonster,
-            SpideysLastStand, TheRock
+            SpideysLastStand, TheRock, BigE
         ];
         return all.ToDictionary(c => c.Id);
     }

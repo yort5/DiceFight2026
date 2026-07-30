@@ -77,15 +77,31 @@ public static class CombatEngine
         // Keyword Infiltrate carves out a real sub-window here, strictly
         // before the Action/Global window opens - but only when there's
         // actually a decision to make (rule text: "you may choose" - an
-        // optional choice, not a forced effect). Skipping straight to the
-        // Action/Global window when nothing is eligible means every combat
-        // that never touches Infiltrate proceeds exactly as it did before
-        // this keyword existed - no caller has to learn about (or
-        // explicitly no-op through) a sub-step that has nothing to offer.
+        // optional choice, not a forced effect). Skipping straight past a
+        // window when nothing is eligible means every combat that never
+        // touches Infiltrate (or Tag Out) proceeds exactly as it did
+        // before either keyword existed - no caller has to learn about
+        // (or explicitly no-op through) a sub-step that has nothing to
+        // offer. Tag Out's own window is checked by NextSubStepAfterBlockers
+        // below when Infiltrate's isn't reachable at all.
         var hasInfiltrateChoice = state.DiceIn(state.ActivePlayerId, Zone.AttackZone)
             .Any(d => assignment.BlockersOf(d.Id).Count == 0 && DieStats.HasKeyword(state, d, "Infiltrate"));
 
-        state.AttackSubStep = hasInfiltrateChoice ? AttackSubStep.InfiltrateWindow : AttackSubStep.ActionAndGlobalWindow;
+        state.AttackSubStep = hasInfiltrateChoice ? AttackSubStep.InfiltrateWindow : NextSubStepAfterBlockers(state);
+    }
+
+    // Shared by DeclareBlockers (when Infiltrate's own window isn't
+    // reachable at all) and ResolveInfiltrate (once it's done resolving) -
+    // both keywords carve out the identical "immediately after blockers
+    // are declared... before Action dice or Global abilities may be
+    // used" timing (Appendix 1), so this is where the chain of optional
+    // post-blocker windows continues. Re-checked fresh each time rather
+    // than decided once upfront, so e.g. an Infiltrate die returning to
+    // the Field Zone can make it newly Tag-Out-eligible in the same combat.
+    private static AttackSubStep NextSubStepAfterBlockers(GameState state)
+    {
+        var hasTagOutChoice = state.Dice.Any(d => d.Zone == Zone.FieldZone && DieStats.HasKeyword(state, d, "Tag Out"));
+        return hasTagOutChoice ? AttackSubStep.TagOutWindow : AttackSubStep.ActionAndGlobalWindow;
     }
 
     // Keyword Infiltrate - "When a Character die with Infiltrate attacks
@@ -129,6 +145,49 @@ public static class CombatEngine
             {
                 TurnEngine.EnqueueTriggered(state, queue, reactor, TriggerType.WhenInfiltrates);
             }
+        }
+
+        state.AttackSubStep = NextSubStepAfterBlockers(state);
+    }
+
+    // Keyword Tag Out - "After blockers are declared, you may Prep this
+    // die from the Field Zone to give target Character die +2A and +2D
+    // until end of turn." Appendix 1's own clarification gives it the
+    // exact same timing as Infiltrate ("immediately after blockers are
+    // declared before Action dice or Global abilities may be used") - see
+    // NextSubStepAfterBlockers. Fixed, card-invariant numbers (no card
+    // overrides the +2A/+2D the way Black Manta overrides Retaliation's
+    // base amount), so - like Infiltrate - this is built directly into
+    // CombatEngine rather than via an AbilityDef/TriggerType; the target
+    // buff is a genuine Applied modifier (rule 3.4.3 - "until end of
+    // turn," cleared at Clean Up), not a Static one, so it goes through
+    // the die's own AppliedModifiers exactly like Wasp's Attune buff does.
+    // Usable by either player's own dice (the ability doesn't say "the
+    // active player may," unlike Infiltrate which is inherently one-sided
+    // since only an attacker can Infiltrate) - each use is validated
+    // against its own Tag Out die's controller, not state.ActivePlayerId.
+    // "Prep this die from the Field Zone" - a die currently attacking or
+    // blocking (Attack Zone) isn't eligible; only one sitting at home.
+    public static void ResolveTagOut(
+        GameState state, AbilityQueue queue, IReadOnlyList<(string TagOutDieId, string TargetDieId)> uses)
+    {
+        RequireSubStep(state, AttackSubStep.TagOutWindow);
+
+        foreach (var (tagOutDieId, targetDieId) in uses)
+        {
+            var tagOutDie = FindDie(state, tagOutDieId);
+            if (tagOutDie.Zone != Zone.FieldZone)
+                throw new InvalidOperationException($"{DisplayName(state, tagOutDie)} is not an eligible Tag Out candidate.");
+            if (!DieStats.HasKeyword(state, tagOutDie, "Tag Out"))
+                throw new InvalidOperationException($"{DisplayName(state, tagOutDie)} does not have Tag Out.");
+
+            var target = FindDie(state, targetDieId);
+            if (target.Zone is not (Zone.FieldZone or Zone.AttackZone) || target.Status is not (DieStatus.Character or DieStatus.SidekickCharacter))
+                throw new InvalidOperationException($"{DisplayName(state, target)} is not a legal Tag Out target.");
+
+            tagOutDie.Zone = Zone.PrepArea; // rule 1.5.3.2 - Prepped, not KO'd
+            tagOutDie.ResetToUnrolled();
+            target.AppliedModifiers.Add(new Modifier(AttackDelta: 2, DefenseDelta: 2, Source: tagOutDie.Id));
         }
 
         state.AttackSubStep = AttackSubStep.ActionAndGlobalWindow;

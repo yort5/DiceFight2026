@@ -202,17 +202,23 @@ public enum TurnStep
 // Rule 2.7.0.1 - the six sub-steps of the Attack Step, stricter and
 // one-way (2.7.0.3) even relative to the outer TurnStep sequence.
 // NotInAttack/Done are engine bookkeeping states, not rulebook sub-steps.
-// InfiltrateWindow isn't one of the rulebook's six either - it's a real
-// sub-window keyword Infiltrate carves out for itself ("immediately
-// after blockers are declared... before Action dice or Global abilities
-// may be used"), sitting strictly between DeclareBlockers and
-// ActionAndGlobalWindow. See CombatEngine.ResolveInfiltrate.
+// InfiltrateWindow/TagOutWindow aren't among the rulebook's six either -
+// both keywords carve out the exact same real-world timing for
+// themselves ("immediately after blockers are declared... before Action
+// dice or Global abilities may be used" - Appendix 1's wording for each
+// is identical), sitting strictly between DeclareBlockers and
+// ActionAndGlobalWindow. Modeled as two separate, independently-skippable
+// windows (chained Infiltrate-then-TagOut) rather than merging their
+// resolution into one call, so neither keyword's presence changes
+// anything about how the other resolves. See CombatEngine.
+// ResolveInfiltrate/ResolveTagOut.
 public enum AttackSubStep
 {
     NotInAttack,
     DeclareAttackers,
     DeclareBlockers,
     InfiltrateWindow,
+    TagOutWindow,
     ActionAndGlobalWindow,
     AssignCombatDamage,
     WhenDamagedAbilities,

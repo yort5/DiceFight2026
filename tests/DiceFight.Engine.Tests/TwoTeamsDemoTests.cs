@@ -1341,4 +1341,46 @@ public class TwoTeamsDemoTests
         Assert.Equal(bagCountBefore - 2, state.DiceIn("teamA", Zone.Bag).Count());
         Assert.Equal(2, state.DiceIn("teamA", Zone.ReservePool).Count());
     }
+
+    // WWE's Big E, "Tag Team Champion" printing - pure Tag Out, no
+    // AbilityDef to drain at all. Not on either roster - constructed
+    // directly, same pattern as the other non-roster real cards.
+    [Fact]
+    public void BigETagOut_PrepsItselfToBuffAnAttackerUntilCleanUp()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamA";
+
+        var attacker = FindUnpurchased(state, "teamA", SampleCards.Apocalypse.Id);
+        attacker.Zone = Zone.FieldZone;
+        attacker.Status = DieStatus.Character;
+
+        var bigE = new DieInstance
+        {
+            Id = "teamA-big-e-1", CardId = SampleCards.BigE.Id, OwnerId = "teamA", ControllerId = "teamA",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(bigE);
+
+        var attackerBaseAttack = SampleCards.Apocalypse.Levels[0].Attack;
+        var attackerBaseDefense = SampleCards.Apocalypse.Levels[0].Defense;
+
+        TurnEngine.EnterAttackStep(state);
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        CombatEngine.DeclareBlockers(state, new CombatAssignment(), []);
+
+        Assert.Equal(AttackSubStep.TagOutWindow, state.AttackSubStep);
+        CombatEngine.ResolveTagOut(state, queue, [(bigE.Id, attacker.Id)]);
+
+        Assert.Equal(Zone.PrepArea, bigE.Zone);
+        Assert.Equal(attackerBaseAttack + 2, DieStats.EffectiveAttack(state, attacker));
+        Assert.Equal(attackerBaseDefense + 2, DieStats.EffectiveDefense(state, attacker));
+
+        CombatEngine.AssignCombatDamage(
+            state, queue, new CombatAssignment(), new Dictionary<string, IReadOnlyDictionary<string, int>>());
+        TurnEngine.CleanUp(state);
+
+        Assert.Equal(attackerBaseAttack, DieStats.EffectiveAttack(state, attacker)); // buff expired
+    }
 }

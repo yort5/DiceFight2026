@@ -1940,4 +1940,222 @@ public class CombatEngineTests
         Assert.Equal(4, DieStats.EffectiveAttack(state, ally)); // 1 base + 1 + 2
         Assert.Equal(2, DieStats.EffectiveDefense(state, ally)); // 1 base + 1 + 0
     }
+
+    // Keyword Tag Out - "After blockers are declared, you may Prep this
+    // die from the Field Zone to give target Character die +2A and +2D
+    // until end of turn." Appendix 1 gives it the identical timing to
+    // Infiltrate, so it's the second link in the same optional-window
+    // chain (CombatEngine.NextSubStepAfterBlockers).
+    private static readonly CardDef TagOutCard = new()
+    {
+        Id = "tag-out-character", Name = "Tag Out Character", Type = CardType.Character,
+        PurchaseCost = 3, DieLimit = 4,
+        Levels = [new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 2)],
+        Keywords = [new KeywordInstance("Tag Out")],
+    };
+
+    private static GameState CreateTagOutGame()
+    {
+        var catalog = new Dictionary<string, CardDef> { [TagOutCard.Id] = TagOutCard, [PlainThreeLevelCard.Id] = PlainThreeLevelCard };
+        var state = GameState.NewGame(catalog, new Player { Id = "p1", Name = "Player One" }, new Player { Id = "p2", Name = "Player Two" });
+        state.CurrentStep = TurnStep.Attack;
+        state.AttackSubStep = AttackSubStep.DeclareAttackers;
+        return state;
+    }
+
+    [Fact]
+    public void TagOut_EligibleDieSittingInFieldZone_EntersTagOutWindow()
+    {
+        var state = CreateTagOutGame();
+        var attacker = AddCharacterDie(state, "p1-attacker-1", "p1", PlainThreeLevelCard.Id, Zone.FieldZone);
+        AddCharacterDie(state, "p1-tagout-1", "p1", TagOutCard.Id, Zone.FieldZone); // stayed home
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        CombatEngine.DeclareBlockers(state, new CombatAssignment(), []);
+
+        Assert.Equal(AttackSubStep.TagOutWindow, state.AttackSubStep);
+    }
+
+    [Fact]
+    public void TagOut_NoEligibleDice_SkipsStraightToActionAndGlobalWindow()
+    {
+        var state = CreateTagOutGame();
+        var attacker = AddCharacterDie(state, "p1-attacker-1", "p1", PlainThreeLevelCard.Id, Zone.FieldZone);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        CombatEngine.DeclareBlockers(state, new CombatAssignment(), []);
+
+        Assert.Equal(AttackSubStep.ActionAndGlobalWindow, state.AttackSubStep);
+    }
+
+    // "Prep this die from the Field Zone" - a Tag Out die that's itself
+    // attacking or blocking (Attack Zone) isn't eligible; only one that
+    // stayed home.
+    [Fact]
+    public void TagOut_KeywordDieInAttackZoneInstead_DoesNotOpenTheWindow()
+    {
+        var state = CreateTagOutGame();
+        var attacker = AddCharacterDie(state, "p1-tagout-1", "p1", TagOutCard.Id, Zone.FieldZone);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]); // now in the Attack Zone, not the Field Zone
+        CombatEngine.DeclareBlockers(state, new CombatAssignment(), []);
+
+        Assert.Equal(AttackSubStep.ActionAndGlobalWindow, state.AttackSubStep);
+    }
+
+    [Fact]
+    public void TagOut_ChoosingToUse_PrepsTheDieAndAppliesTheModifier()
+    {
+        var state = CreateTagOutGame();
+        var attacker = AddCharacterDie(state, "p1-attacker-1", "p1", PlainThreeLevelCard.Id, Zone.FieldZone);
+        var tagOutDie = AddCharacterDie(state, "p1-tagout-1", "p1", TagOutCard.Id, Zone.FieldZone);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        CombatEngine.DeclareBlockers(state, new CombatAssignment(), []);
+
+        CombatEngine.ResolveTagOut(state, queue, [(tagOutDie.Id, attacker.Id)]);
+
+        Assert.Equal(Zone.PrepArea, tagOutDie.Zone); // Prepped, not KO'd
+        Assert.Equal(DieStatus.Unrolled, tagOutDie.Status);
+        Assert.Equal(3, DieStats.EffectiveAttack(state, attacker)); // 1 base + 2
+        Assert.Equal(3, DieStats.EffectiveDefense(state, attacker));
+        Assert.Equal(AttackSubStep.ActionAndGlobalWindow, state.AttackSubStep);
+    }
+
+    [Fact]
+    public void TagOut_DecliningToUse_LeavesEverythingUnchanged()
+    {
+        var state = CreateTagOutGame();
+        var attacker = AddCharacterDie(state, "p1-attacker-1", "p1", PlainThreeLevelCard.Id, Zone.FieldZone);
+        var tagOutDie = AddCharacterDie(state, "p1-tagout-1", "p1", TagOutCard.Id, Zone.FieldZone);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        CombatEngine.DeclareBlockers(state, new CombatAssignment(), []);
+
+        CombatEngine.ResolveTagOut(state, queue, []); // declines
+
+        Assert.Equal(Zone.FieldZone, tagOutDie.Zone);
+        Assert.Equal(1, DieStats.EffectiveAttack(state, attacker));
+        Assert.Equal(AttackSubStep.ActionAndGlobalWindow, state.AttackSubStep);
+    }
+
+    [Fact]
+    public void TagOut_RejectsADieWithoutTheKeyword()
+    {
+        var state = CreateTagOutGame();
+        var attacker = AddCharacterDie(state, "p1-attacker-1", "p1", PlainThreeLevelCard.Id, Zone.FieldZone);
+        var tagOutDie = AddCharacterDie(state, "p1-tagout-1", "p1", TagOutCard.Id, Zone.FieldZone);
+        var plain = AddCharacterDie(state, "p1-plain-1", "p1", PlainThreeLevelCard.Id, Zone.FieldZone);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        CombatEngine.DeclareBlockers(state, new CombatAssignment(), []); // tagOutDie keeps the window open
+
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            CombatEngine.ResolveTagOut(state, queue, [(plain.Id, attacker.Id)]));
+        Assert.Contains("Tag Out", ex.Message);
+    }
+
+    [Fact]
+    public void TagOut_RejectsADieNotInTheFieldZone()
+    {
+        var state = CreateTagOutGame();
+        var attacker = AddCharacterDie(state, "p1-attacker-1", "p1", PlainThreeLevelCard.Id, Zone.FieldZone);
+        var otherTagOut = AddCharacterDie(state, "p1-tagout-1", "p1", TagOutCard.Id, Zone.FieldZone); // keeps the window open
+        var blockedTagOut = AddCharacterDie(state, "p1-tagout-2", "p1", TagOutCard.Id, Zone.AttackZone); // already attacking
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        CombatEngine.DeclareBlockers(state, new CombatAssignment(), []);
+
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            CombatEngine.ResolveTagOut(state, queue, [(blockedTagOut.Id, attacker.Id)]));
+        Assert.Contains("not an eligible Tag Out candidate", ex.Message);
+    }
+
+    // The ability doesn't say "the active player may" - unlike
+    // Infiltrate (inherently one-sided, since only an attacker can
+    // Infiltrate), either player's own Tag Out die can act in this
+    // shared window.
+    [Fact]
+    public void TagOut_UsableByEitherPlayersOwnDie()
+    {
+        var state = CreateTagOutGame();
+        var attacker = AddCharacterDie(state, "p1-attacker-1", "p1", PlainThreeLevelCard.Id, Zone.FieldZone);
+        var p1TagOut = AddCharacterDie(state, "p1-tagout-1", "p1", TagOutCard.Id, Zone.FieldZone);
+        var p2TagOut = AddCharacterDie(state, "p2-tagout-1", "p2", TagOutCard.Id, Zone.FieldZone);
+        var p2Target = AddCharacterDie(state, "p2-plain-1", "p2", PlainThreeLevelCard.Id, Zone.FieldZone);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        CombatEngine.DeclareBlockers(state, new CombatAssignment(), []);
+
+        CombatEngine.ResolveTagOut(state, queue, [(p1TagOut.Id, attacker.Id), (p2TagOut.Id, p2Target.Id)]);
+
+        Assert.Equal(Zone.PrepArea, p1TagOut.Zone);
+        Assert.Equal(Zone.PrepArea, p2TagOut.Zone);
+        Assert.Equal(3, DieStats.EffectiveAttack(state, attacker));
+        Assert.Equal(3, DieStats.EffectiveAttack(state, p2Target));
+    }
+
+    // Rule 3.4.3.9 - the +2A/+2D is an ordinary Applied modifier (like
+    // Wasp's Attune buff), so it expires at Clean Up.
+    [Fact]
+    public void TagOut_ModifierExpiresAtCleanUp()
+    {
+        var state = CreateTagOutGame();
+        var attacker = AddCharacterDie(state, "p1-attacker-1", "p1", PlainThreeLevelCard.Id, Zone.FieldZone);
+        var tagOutDie = AddCharacterDie(state, "p1-tagout-1", "p1", TagOutCard.Id, Zone.FieldZone);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        CombatEngine.DeclareBlockers(state, new CombatAssignment(), []);
+        CombatEngine.ResolveTagOut(state, queue, [(tagOutDie.Id, attacker.Id)]);
+        CombatEngine.AssignCombatDamage(state, queue, new CombatAssignment(), new Dictionary<string, IReadOnlyDictionary<string, int>>());
+
+        Assert.Equal(3, DieStats.EffectiveAttack(state, attacker));
+
+        TurnEngine.CleanUp(state);
+
+        Assert.Equal(1, DieStats.EffectiveAttack(state, attacker));
+    }
+
+    // Both keywords chain through the same post-blockers timing - proves
+    // Infiltrate resolving doesn't skip past a Tag Out window that only
+    // became relevant afterward.
+    [Fact]
+    public void Infiltrate_ThenTagOut_BothWindowsAreReachableInOneCombat()
+    {
+        var catalog = new Dictionary<string, CardDef>
+        {
+            [InfiltrateCard.Id] = InfiltrateCard, [TagOutCard.Id] = TagOutCard, [PlainThreeLevelCard.Id] = PlainThreeLevelCard,
+        };
+        var state = GameState.NewGame(catalog, new Player { Id = "p1", Name = "Player One" }, new Player { Id = "p2", Name = "Player Two" });
+        state.CurrentStep = TurnStep.Attack;
+        state.AttackSubStep = AttackSubStep.DeclareAttackers;
+
+        var infiltrator = AddCharacterDie(state, "p1-infiltrate-1", "p1", InfiltrateCard.Id, Zone.FieldZone);
+        var tagOutDie = AddCharacterDie(state, "p1-tagout-1", "p1", TagOutCard.Id, Zone.FieldZone);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [infiltrator.Id]);
+        var assignment = new CombatAssignment();
+        CombatEngine.DeclareBlockers(state, assignment, []);
+
+        Assert.Equal(AttackSubStep.InfiltrateWindow, state.AttackSubStep); // Infiltrate's own window comes first
+
+        CombatEngine.ResolveInfiltrate(state, queue, assignment, [infiltrator.Id]);
+
+        Assert.Equal(AttackSubStep.TagOutWindow, state.AttackSubStep); // then Tag Out's
+
+        CombatEngine.ResolveTagOut(state, queue, [(tagOutDie.Id, infiltrator.Id)]);
+
+        Assert.Equal(AttackSubStep.ActionAndGlobalWindow, state.AttackSubStep);
+        Assert.Equal(4, DieStats.EffectiveAttack(state, infiltrator)); // 2 base + 2 from Tag Out
+    }
 }
