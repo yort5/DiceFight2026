@@ -187,8 +187,11 @@ public static class CombatEngine
         // Overcrush needs, per Overcrush attacker, its attack value, its
         // still-live blockers' total defense, and the *originally declared*
         // blocker list (to check afterward whether every one of them is
-        // gone, however that happened) - captured now, before the KO pass
-        // below mutates (or Regenerate-resets) those same dice.
+        // gone, however that happened) - captured now, before either Fast
+        // phase below mutates (or Regenerate-resets) those same dice. This
+        // total is a static fact about who was blocking at the start of
+        // this sub-step - it doesn't depend on which Fast phase actually
+        // lands the killing blow, so it's still computed once, upfront.
         var overcrushCandidates = new Dictionary<string, (int Attack, int BlockerDefenseTotal, IReadOnlyList<string> DeclaredBlockerIds)>();
 
         foreach (var attacker in attackers)
@@ -200,6 +203,9 @@ public static class CombatEngine
             {
                 // Rule 2.7.4.3.1 - unblocked: hits the player directly and
                 // leaves the Attack Zone before anything else can resolve.
+                // Fast doesn't apply here at all - it's only about racing
+                // against an opposing Character die, and an unblocked
+                // attacker has none.
                 inactivePlayer.Life -= attack;
                 attacker.Zone = Zone.OutOfPlay;
                 continue;
@@ -219,54 +225,40 @@ public static class CombatEngine
             // to the Field Zone via the survivors sweep below, same as any
             // other blocked attacker.
             var liveBlockerIds = declaredBlockerIds.Where(id => FindDie(state, id).Zone == Zone.AttackZone).ToList();
-            var blockerDefenseTotal = 0;
 
-            if (liveBlockerIds.Count > 0)
+            if (liveBlockerIds.Count > 0 &&
+                (!attackerDamageSplits.TryGetValue(attacker.Id, out var split) || split.Values.Sum() != attack))
             {
-                if (!attackerDamageSplits.TryGetValue(attacker.Id, out var split) || split.Values.Sum() != attack)
-                {
-                    throw new InvalidOperationException(
-                        $"Damage split for attacker {attacker.Id} must assign its full attack value ({attack}).");
-                }
-
-                var totalFromBlockers = 0;
-                foreach (var blockerId in liveBlockerIds)
-                {
-                    var blocker = FindDie(state, blockerId);
-                    if (split.TryGetValue(blockerId, out var dealt) && dealt > 0)
-                        blocker.Damage += dealt;
-
-                    // Rule 2.7.4.3.6/2.7.4.3.7 - each blocker deals its full
-                    // attack value to the (shared) attacker.
-                    totalFromBlockers += DieStats.EffectiveAttack(state, blocker);
-                    blockerDefenseTotal += DieStats.EffectiveDefense(state, blocker);
-                }
-
-                attacker.Damage += totalFromBlockers;
+                throw new InvalidOperationException(
+                    $"Damage split for attacker {attacker.Id} must assign its full attack value ({attack}).");
             }
-            // else: every declared blocker was already gone before this
-            // method ran - nothing to assign a split against (rule
-            // 2.7.4.3.4's "assign in full" has nowhere left to put it), and
-            // without Overcrush that portion of the attack is just wasted,
-            // not redirected to the player.
+            // else if liveBlockerIds.Count == 0: every declared blocker was
+            // already gone before this method ran - nothing to assign a
+            // split against (rule 2.7.4.3.4's "assign in full" has nowhere
+            // left to put it), and without Overcrush that portion of the
+            // attack is just wasted, not redirected to the player.
 
+            var blockerDefenseTotal = liveBlockerIds.Sum(id => DieStats.EffectiveDefense(state, FindDie(state, id)));
             if (DieStats.HasKeyword(state, attacker, "Overcrush"))
                 overcrushCandidates[attacker.Id] = (attack, blockerDefenseTotal, declaredBlockerIds);
         }
 
         state.AttackSubStep = AttackSubStep.ResolveDamageAndWhenKOd;
 
-        // Rule 2.7.6.1 - simultaneous KO of anything at/over its defense
-        // (Regenerate, if the die has it, intercepts inside TryResolveKO).
+        // Keyword Fast - "Characters with Fast deal combat damage before
+        // other Character dice in the Attack Step. All Character dice
+        // with Fast deal damage at the same time." Two full damage-then-KO
+        // waves rather than rule 2.7.4.3's usual single simultaneous one:
+        // every Fast-keyword die's damage lands (and is checked for KOs)
+        // completely first, so a non-Fast die KO'd this way never gets to
+        // deal its own damage back at all (the rule's own worked example -
+        // a 4A/2D Fast attacker KOs a 5A/3D blocker before that blocker can
+        // ever apply its damage). Dice with neither die in a pairing having
+        // Fast simply resolve in the second wave - identical to the old
+        // single-pass behavior when Fast isn't involved anywhere.
         var koDieIds = new List<string>();
-        foreach (var die in state.Dice.Where(d => d.Zone == Zone.AttackZone).ToList())
-        {
-            if (!DieStats.TryResolveKO(state, die, roller)) continue;
-            koDieIds.Add(die.Id);
-
-            // Rule 2.7.6.5 - "when KO'd" fires for each die KO'd this way.
-            TurnEngine.EnqueueTriggered(state, queue, die, TriggerType.WhenKOd);
-        }
+        koDieIds.AddRange(ResolveFastOrSlowDamage(state, queue, assignment, attackerDamageSplits, fast: true, roller));
+        koDieIds.AddRange(ResolveFastOrSlowDamage(state, queue, assignment, attackerDamageSplits, fast: false, roller));
 
         // Glossary/FAQ - Overcrush: "if this character die KO's or removes
         // all of its blockers, it deals any leftover damage to your
@@ -293,6 +285,67 @@ public static class CombatEngine
         state.CurrentStep = TurnStep.CleanUp;
 
         return new CombatResult(koDieIds);
+    }
+
+    // One wave of Keyword Fast's two-wave damage resolution (see
+    // AssignCombatDamage's remarks). `fast` selects which side of the
+    // Fast/non-Fast split this call resolves - a source die's own Fast
+    // keyword decides which wave *its* damage lands in, independent of
+    // whether the die on the other end of the engagement has Fast too.
+    // Re-queries live attackers/blockers fresh (rather than working off a
+    // snapshot) so the first wave's KOs are already reflected in what the
+    // second wave sees - an attacker or blocker KO'd in the first wave
+    // simply won't be found still in the Attack Zone here, so it never
+    // gets to deal its own (slower) damage back.
+    private static List<string> ResolveFastOrSlowDamage(
+        GameState state,
+        AbilityQueue queue,
+        CombatAssignment assignment,
+        IReadOnlyDictionary<string, IReadOnlyDictionary<string, int>> attackerDamageSplits,
+        bool fast,
+        IDiceRoller? roller)
+    {
+        foreach (var attacker in state.DiceIn(state.ActivePlayerId, Zone.AttackZone).ToList())
+        {
+            var liveBlockerIds = assignment.BlockersOf(attacker.Id)
+                .Where(id => FindDie(state, id).Zone == Zone.AttackZone)
+                .ToList();
+            if (liveBlockerIds.Count == 0) continue;
+
+            if (DieStats.HasKeyword(state, attacker, "Fast") == fast &&
+                attackerDamageSplits.TryGetValue(attacker.Id, out var split))
+            {
+                foreach (var blockerId in liveBlockerIds)
+                {
+                    if (split.TryGetValue(blockerId, out var dealt) && dealt > 0)
+                        FindDie(state, blockerId).Damage += dealt;
+                }
+            }
+
+            // Rule 2.7.4.3.6/2.7.4.3.7 - each blocker deals its full attack
+            // value to the (shared) attacker, timed by the blocker's own
+            // Fast keyword rather than the attacker's.
+            foreach (var blockerId in liveBlockerIds)
+            {
+                var blocker = FindDie(state, blockerId);
+                if (DieStats.HasKeyword(state, blocker, "Fast") == fast)
+                    attacker.Damage += DieStats.EffectiveAttack(state, blocker);
+            }
+        }
+
+        // Rule 2.7.6.1 - simultaneous KO of anything at/over its defense
+        // among whoever just took damage this wave (Regenerate, if the die
+        // has it, intercepts inside TryResolveKO).
+        var koIds = new List<string>();
+        foreach (var die in state.Dice.Where(d => d.Zone == Zone.AttackZone).ToList())
+        {
+            if (!DieStats.TryResolveKO(state, die, roller)) continue;
+            koIds.Add(die.Id);
+
+            // Rule 2.7.6.5 - "when KO'd" fires for each die KO'd this way.
+            TurnEngine.EnqueueTriggered(state, queue, die, TriggerType.WhenKOd);
+        }
+        return koIds;
     }
 
     private static void RequireSubStep(GameState state, AttackSubStep expected)

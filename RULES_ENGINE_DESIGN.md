@@ -51,7 +51,7 @@ here rather than assuming which approach they'd want.
 **Actionable next steps, roughly high to low value**:
 1. ~~Keyword *behavior*~~ - Overcrush, Regenerate, Energize, Ally,
    Amplify/Awaken, Attune, Call Out, Corrupt, Swarm, Darkseid's
-   keyword grant, and Deadly are implemented (see the status updates).
+   keyword grant, Deadly, and Fast are implemented (see the status updates).
    BlackPanther's Energize is fully scripted; Robin's Energize
    (a purchase-cost discount) and all three Alfred Pennyworth printings'
    Ally effects (each a "Batman die OR Sidekick" compound target) are
@@ -2446,3 +2446,64 @@ of combat entirely by some other ability (back to the Field Zone, as
 Distraction's Global does) is still KO'd at Clean Up too, since `ForceKO`
 never checks a die's current zone before acting - only whether its id
 was recorded. 145 tests passing.
+
+## Status update — Fast implemented, the first keyword to reshape Assign Combat Damage's own control flow
+
+Appendix 1: "Characters with Fast deal combat damage before other
+Character dice in the Attack Step. All Character dice with Fast deal
+damage at the same time." The rulebook's own worked example is exact and
+became the first test written: "An attacker with 4A/2D and Fast is
+blocked by a Character die with 5A/3D. The attacker would deal its
+combat damage before the blocker... This KOs the blocker before it can
+apply damage to the attacker. Had the attacker not had the Fast ability,
+the blocker would also KO the attacker."
+
+Every keyword so far either hooked a single new point (Amplify/Attune
+into `UseActionDie`, Swarm/Cosmic Cube into `ClearAndDraw`, Deadly split
+across `DeclareBlockers`/`CleanUp`) or added a math tweak alongside the
+existing single-pass damage loop (Overcrush). Fast is different: rule
+2.7.4.3 is explicit that ordinary combat damage is "one game action...
+almost nothing can resolve within this sub-step" - a single simultaneous
+batch, which is exactly what `AssignCombatDamage` already did in one
+pass. Fast is the *named exception* to that rule, requiring a real
+second wave.
+
+- `CombatEngine.AssignCombatDamage` no longer applies damage inline in
+  its own per-attacker loop. That loop now only does the upfront work
+  that has to happen once regardless of Fast (unblocked-attacker
+  resolution, damage-split validation, and computing Overcrush's
+  `blockerDefenseTotal` - a static fact about who was blocking at the
+  start of the sub-step, independent of which wave actually lands the
+  killing blow, so still computed once upfront).
+- New `CombatEngine.ResolveFastOrSlowDamage(state, queue, assignment,
+  attackerDamageSplits, fast, roller)` - one full damage-then-KO wave.
+  Called twice (`fast: true`, then `fast: false`). Re-queries live
+  attackers/blockers fresh from `state` each call rather than working off
+  a snapshot, so the first wave's KOs are already reflected when the
+  second wave runs - an attacker or blocker KO'd in the first wave simply
+  won't be found still in the Attack Zone, so it never deals its own
+  (slower) damage back. This is what makes the rulebook's example work:
+  a die's *own* Fast keyword decides which wave *its* damage lands in,
+  independent of the other side's.
+- When Fast isn't involved anywhere in a combat, every source die is
+  non-Fast, so the whole first wave (`fast: true`) is a no-op and
+  everything resolves in the second wave exactly as the old single-pass
+  code did - confirmed by the entire existing test suite (145 tests
+  covering Overcrush, Regenerate, multi-blocker splits, Deadly, etc.)
+  passing unchanged against the rewritten method with zero test updates
+  needed.
+
+Example card: Civil War's Wasp ("Pixie" printing) - purely the keyword,
+nothing else to script.
+
+6 new tests (151 total) in `CombatEngineTests`: the rulebook's example
+verbatim (Fast attacker survives untouched, blocker dies before it can
+strike); the same exact matchup with Fast removed from both sides,
+proving the *contrast* (both die instead, matching the rulebook's own
+"had the attacker not had Fast" follow-up); the reverse case (Fast
+blocker KOs a non-Fast attacker first); both sides Fast (simultaneous
+mutual KO, not one side "winning" by going first); a Fast die whose
+damage isn't lethal still lets the survivor deal its own damage back in
+the second wave. Plus one end-to-end test in `TwoTeamsDemoTests` driving
+Wasp's real card. `dotnet build`, `dotnet test` (151/151), and `npm run
+build` all clean.

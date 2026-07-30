@@ -868,4 +868,38 @@ public class TwoTeamsDemoTests
         // Deadly still gets it at Clean Up, despite surviving combat outright.
         Assert.Equal(Zone.PrepArea, blocker.Zone);
     }
+
+    [Fact]
+    public void WaspPixieFast_KOsBlockerBeforeBlockerCanDealDamageBack()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamA";
+        var wasp = new DieInstance
+        {
+            Id = "teamA-wasp-pixie-1", CardId = SampleCards.WaspPixie.Id, OwnerId = "teamA", ControllerId = "teamA",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 3, // 4A/3D
+        };
+        state.Dice.Add(wasp);
+
+        var blocker = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        blocker.Zone = Zone.FieldZone;
+        blocker.Status = DieStatus.Character;
+        blocker.Level = 2; // placeholder stats: 2A/3D
+
+        TurnEngine.EnterAttackStep(state);
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [wasp.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(wasp.Id, blocker.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [blocker.Id]);
+
+        var splits = new Dictionary<string, IReadOnlyDictionary<string, int>>
+        {
+            [wasp.Id] = new Dictionary<string, int> { [blocker.Id] = 4 },
+        };
+        var result = CombatEngine.AssignCombatDamage(state, queue, assignment, splits);
+
+        Assert.Contains(blocker.Id, result.KOdDieIds);
+        Assert.Equal(0, wasp.Damage); // Fast - the blocker never got to strike back
+    }
 }

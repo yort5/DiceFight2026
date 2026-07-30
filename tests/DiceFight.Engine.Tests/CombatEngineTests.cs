@@ -838,4 +838,183 @@ public class CombatEngineTests
 
         Assert.Equal(Zone.PrepArea, attacker.Zone); // still dies
     }
+
+    // Keyword Fast - "Characters with Fast deal combat damage before
+    // other Character dice in the Attack Step. All Character dice with
+    // Fast deal damage at the same time." A fully parametrized 1-on-1
+    // combat so each test can set up exactly the stats/Fast combination
+    // it needs.
+    private static (GameState state, DieInstance attacker, DieInstance blocker) CreateFastCombatState(
+        int attackerAttack, int attackerDefense, bool attackerFast,
+        int blockerAttack, int blockerDefense, bool blockerFast)
+    {
+        var attackerCard = new CardDef
+        {
+            Id = "fast-test-attacker", Name = "Attacker", Type = CardType.Character, PurchaseCost = 3, DieLimit = 4,
+            Levels = [new CharacterFace(FieldingCost: 1, Attack: attackerAttack, Defense: attackerDefense)],
+            Keywords = attackerFast ? [new KeywordInstance("Fast")] : [],
+        };
+        var blockerCard = new CardDef
+        {
+            Id = "fast-test-blocker", Name = "Blocker", Type = CardType.Character, PurchaseCost = 3, DieLimit = 4,
+            Levels = [new CharacterFace(FieldingCost: 1, Attack: blockerAttack, Defense: blockerDefense)],
+            Keywords = blockerFast ? [new KeywordInstance("Fast")] : [],
+        };
+        var catalog = new Dictionary<string, CardDef> { [attackerCard.Id] = attackerCard, [blockerCard.Id] = blockerCard };
+        var state = GameState.NewGame(catalog, new Player { Id = "p1", Name = "Player One" }, new Player { Id = "p2", Name = "Player Two" });
+        state.CurrentStep = TurnStep.Attack;
+        state.AttackSubStep = AttackSubStep.DeclareAttackers;
+
+        var attacker = new DieInstance
+        {
+            Id = "p1-attacker-1", CardId = attackerCard.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        var blocker = new DieInstance
+        {
+            Id = "p2-blocker-1", CardId = blockerCard.Id, OwnerId = "p2", ControllerId = "p2",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(attacker);
+        state.Dice.Add(blocker);
+        return (state, attacker, blocker);
+    }
+
+    // The rulebook's own worked example, verbatim: "An attacker with
+    // 4A/2D and Fast is blocked by a Character die with 5A/3D. The
+    // attacker would deal its combat damage before the blocker because
+    // of the Fast ability. This KOs the blocker before it can apply
+    // damage to the attacker."
+    [Fact]
+    public void Fast_AttackerKOsBlockerBeforeBlockerCanRetaliate_MatchesTheRulebookExample()
+    {
+        var (state, attacker, blocker) = CreateFastCombatState(
+            attackerAttack: 4, attackerDefense: 2, attackerFast: true,
+            blockerAttack: 5, blockerDefense: 3, blockerFast: false);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attacker.Id, blocker.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [blocker.Id]);
+
+        var splits = new Dictionary<string, IReadOnlyDictionary<string, int>>
+        {
+            [attacker.Id] = new Dictionary<string, int> { [blocker.Id] = 4 },
+        };
+        var result = CombatEngine.AssignCombatDamage(state, queue, assignment, splits);
+
+        Assert.Contains(blocker.Id, result.KOdDieIds);
+        Assert.Equal(Zone.PrepArea, blocker.Zone);
+        Assert.DoesNotContain(attacker.Id, result.KOdDieIds);
+        Assert.Equal(0, attacker.Damage); // never took the blocker's 5A - it was already dead
+        Assert.Equal(Zone.FieldZone, attacker.Zone);
+    }
+
+    // The rulebook's own follow-up: "Had the attacker not had the Fast
+    // ability, the blocker would also KO the attacker when combat damage
+    // was resolved." Same stats, no Fast anywhere - ordinary simultaneous
+    // combat, so both sides die together instead of just the blocker.
+    [Fact]
+    public void Fast_NeitherSideHasIt_SameMatchupKillsBothInstead()
+    {
+        var (state, attacker, blocker) = CreateFastCombatState(
+            attackerAttack: 4, attackerDefense: 2, attackerFast: false,
+            blockerAttack: 5, blockerDefense: 3, blockerFast: false);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attacker.Id, blocker.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [blocker.Id]);
+
+        var splits = new Dictionary<string, IReadOnlyDictionary<string, int>>
+        {
+            [attacker.Id] = new Dictionary<string, int> { [blocker.Id] = 4 },
+        };
+        var result = CombatEngine.AssignCombatDamage(state, queue, assignment, splits);
+
+        Assert.Contains(blocker.Id, result.KOdDieIds);
+        Assert.Contains(attacker.Id, result.KOdDieIds); // dies too, unlike the Fast version above
+    }
+
+    [Fact]
+    public void Fast_BlockerKOsAttackerBeforeAttackerCanDealDamage()
+    {
+        var (state, attacker, blocker) = CreateFastCombatState(
+            attackerAttack: 1, attackerDefense: 2, attackerFast: false,
+            blockerAttack: 5, blockerDefense: 3, blockerFast: true);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attacker.Id, blocker.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [blocker.Id]);
+
+        var splits = new Dictionary<string, IReadOnlyDictionary<string, int>>
+        {
+            [attacker.Id] = new Dictionary<string, int> { [blocker.Id] = 1 },
+        };
+        var result = CombatEngine.AssignCombatDamage(state, queue, assignment, splits);
+
+        Assert.Contains(attacker.Id, result.KOdDieIds);
+        Assert.Equal(Zone.PrepArea, attacker.Zone);
+        Assert.DoesNotContain(blocker.Id, result.KOdDieIds);
+        Assert.Equal(0, blocker.Damage); // never took the attacker's 1A - attacker was already dead
+    }
+
+    // "All Character dice with Fast deal damage at the same time" - both
+    // sides here deal exactly enough to KO the other; a sequential model
+    // would let one side "win" by going first, but Fast's own text means
+    // both actually die together.
+    [Fact]
+    public void Fast_BothSidesFast_ExchangeDamageSimultaneously()
+    {
+        var (state, attacker, blocker) = CreateFastCombatState(
+            attackerAttack: 3, attackerDefense: 3, attackerFast: true,
+            blockerAttack: 3, blockerDefense: 3, blockerFast: true);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attacker.Id, blocker.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [blocker.Id]);
+
+        var splits = new Dictionary<string, IReadOnlyDictionary<string, int>>
+        {
+            [attacker.Id] = new Dictionary<string, int> { [blocker.Id] = 3 },
+        };
+        var result = CombatEngine.AssignCombatDamage(state, queue, assignment, splits);
+
+        Assert.Contains(attacker.Id, result.KOdDieIds);
+        Assert.Contains(blocker.Id, result.KOdDieIds);
+    }
+
+    // A Fast die's damage not being lethal doesn't skip the second wave -
+    // a blocker that survives Fast damage still gets to deal its own
+    // damage back afterward, same as it always would have.
+    [Fact]
+    public void Fast_SurvivingTheFastWave_StillDealsDamageBackAfterward()
+    {
+        var (state, attacker, blocker) = CreateFastCombatState(
+            attackerAttack: 1, attackerDefense: 5, attackerFast: true,
+            blockerAttack: 3, blockerDefense: 10, blockerFast: false);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attacker.Id, blocker.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [blocker.Id]);
+
+        var splits = new Dictionary<string, IReadOnlyDictionary<string, int>>
+        {
+            [attacker.Id] = new Dictionary<string, int> { [blocker.Id] = 1 },
+        };
+        CombatEngine.AssignCombatDamage(state, queue, assignment, splits);
+
+        Assert.Equal(1, blocker.Damage); // survives the Fast attacker's puny 1 damage (10D)
+        Assert.Equal(3, attacker.Damage); // still gets its own 3 back afterward
+        Assert.Equal(Zone.FieldZone, blocker.Zone);
+        Assert.Equal(Zone.FieldZone, attacker.Zone); // 5D easily absorbs 3
+    }
 }

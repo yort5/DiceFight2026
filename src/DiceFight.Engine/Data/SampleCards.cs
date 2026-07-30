@@ -545,6 +545,21 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 4)
         ]);
 
+    // Civil War's Wasp, "Pixie" printing - purely the Fast keyword, no
+    // other text. Fully engine-level like Overcrush/Deadly/Swarm: no
+    // target or choice, just a two-wave damage resolution baked into
+    // CombatEngine.AssignCombatDamage/ResolveFastOrSlowDamage.
+    public static readonly CardDef WaspPixie = Character(
+        "wasp-pixie", "Wasp", "Pixie", dieLimit: 4,
+        "Fast",
+        purchaseCost: 3, energyType: EnergyType.Mask,
+        keywords: [new KeywordInstance("Fast")],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 2),
+            new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 3)
+        ]);
+
     // A team is 8 character cards + 2 Basic Action cards (10 total), not
     // the 10 characters + 3 Basic Actions used here previously - that was
     // simply wrong. Colossus, Corvus Glaive, Distraction, Kang, King
@@ -581,7 +596,7 @@ public static class SampleCards
             JaneFoster, Starfire, Kang, KingHyperion, CasketOfAncientWinters, DailyBugle, Escape,
             AlfredPennyworthCaretaker, AlfredPennyworthMI5, AlfredPennyworthToughAsNails,
             AntManAmplify, Cyclops, Wasp, BlackWidow, Polaris, CosmicCubeInfinitePossibilities, Parademon, Darkseid,
-            Deathbird
+            Deathbird, WaspPixie
         ];
         return all.ToDictionary(c => c.Id);
     }
