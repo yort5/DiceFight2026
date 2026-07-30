@@ -144,6 +144,72 @@ here rather than assuming which approach they'd want.
     `POST /resolve-infiltrate`/`POST /resolve-tag-out` endpoints (both
     exist server-side; only the client-side UI case is missing).
 
+## Implemented keywords
+
+Every Appendix 1 keyword built so far, in the order it was built. Each
+has its own "Status update" section below with full rule citations and
+design rationale - this is just the scannable index.
+
+- **Overcrush** (Apocalypse) - if the attacker KOs or otherwise removes
+  all its blockers, any leftover attack damage hits the opponent directly.
+- **Regenerate** (Beast) - a die that would be KO'd rolls instead;
+  landing on a character face saves it (back to the Field Zone, not the
+  Attack Zone), an energy face doesn't.
+- **Energize** (Black Panther, "Clutching Reality") - triggers once a
+  die with this keyword ends Roll and Reroll on a double-energy face.
+- **Ally** (Alfred Pennyworth - all three printings) - a Character die
+  with Ally counts as a Sidekick while in the Field/Attack Zone, in
+  addition to its own attributes.
+- **Amplify** (Ant-Man) - each time you use an Action die, spin every
+  active Amplify die up one level (if able).
+- **Awaken** (Cyclops) - fires once per die, every time an Awaken die
+  spins up one or more levels, whatever caused it.
+- **Attune** (Wasp) - while active, each time you use an Action die,
+  deals 1 damage to a target player or Character die.
+- **Call Out** (Black Widow) - when this die attacks, target an
+  opposing Character die; only that die (or none) may legally block it.
+- **Corrupt** (Polaris) - target player draws X dice from their bag,
+  refilling from the Used Pile if needed.
+- **Swarm** (Parademon) - while active, drawing another copy of that
+  card during Clear and Draw pulls an extra die.
+- **Darkseid's keyword grant** (Darkseid) - "while active, your
+  Sidekicks gain Swarm" - not itself an Appendix 1 keyword, but the
+  first live, continuously-recomputed grant (as opposed to a discrete
+  triggered ability).
+- **Deadly** (Deathbird) - a die engaged with a Deadly die is KO'd at
+  Clean Up, regardless of what happened to either die in between.
+- **Fast** (Wasp Pixie) - deals its combat damage in an earlier wave
+  than non-Fast dice, so a KO'd non-Fast target never gets to hit back.
+- **Energy Drain** (Madalyne Pryor) - after blockers are assigned,
+  spins every Character die engaged with an Energy Drain die down a level.
+- **Infiltrate** (The Spot; Ricochet reacts to it) - an unblocked
+  attacker may remove itself from combat to deal 1 damage directly and
+  return to the Field Zone.
+- **Intimidate** (Scarlet Spider) - when fielded, removes a target
+  opposing Character die from the Field Zone until end of turn.
+- **Obscure** (Drow Mercenary) - using any Action die makes every die
+  of this card unblockable until end of turn.
+- **Retaliation** (Superman "Kal-El"; Black Manta "Deep Sea Deviant"
+  scales the amount) - if an active Retaliation character shares an
+  affiliation with one of your Character dice that's KO'd, deal damage
+  to your opponent.
+- **Strike** (Bizarro) - the sole Character die you field this turn
+  gets +2A/+2D and Overcrush for the rest of the turn.
+- **Teamwatch** (Falcon; Black Panther shares his real "Avengers"
+  affiliation) - fielding a different, affiliation-matching Character
+  die while a Teamwatch die is active triggers its ability.
+- **Sacrifice** (Spidey's Last Stand; The Rock is cataloged but left
+  vanilla) - moves a Character die from the Field Zone to Out of Play
+  (owner's turn) or the Used Pile (otherwise), never counting as a KO.
+- **Tag Out** (Big E) - after blockers are declared, you may Prep a die
+  sitting in the Field Zone to give a target Character die +2A/+2D
+  until end of turn.
+
+Not Appendix 1 keywords, but bespoke card text built alongside this
+work using the same infrastructure: Cosmic Cube's mid-Clear-and-Draw
+redraw and Rip Hunter's "while active" Clear and Draw reaction (see
+their own status updates).
+
 Also done, out of order (the user asked for it explicitly once the above
 was clear): a visual pass matching the physical mat's zone layout and
 simple die-face icons - see the latest status update. Big Barda's
