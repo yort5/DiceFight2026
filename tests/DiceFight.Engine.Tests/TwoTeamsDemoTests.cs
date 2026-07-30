@@ -970,4 +970,54 @@ public class TwoTeamsDemoTests
         // Ricochet's own reactive follow-up drew a die into the Prep Area.
         Assert.Equal(prepAreaCountBefore + 1, state.DiceIn("teamA", Zone.PrepArea).Count());
     }
+
+    [Fact]
+    public void ScarletSpiderIntimidate_RemovesOpposingDieUntilCleanUp()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamA";
+
+        var scarletSpider = new DieInstance
+        {
+            Id = "teamA-scarletspider-1", CardId = SampleCards.ScarletSpider.Id, OwnerId = "teamA", ControllerId = "teamA",
+            Zone = Zone.ReservePool, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(scarletSpider);
+
+        var opposingTarget = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        opposingTarget.Zone = Zone.FieldZone;
+        opposingTarget.Status = DieStatus.Character;
+        opposingTarget.Level = 1;
+
+        var fieldEnergy = GiveWildEnergy(state, "teamA", 1); // level-1 fielding cost is 1
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, scarletSpider.Id, energyDieIdsToSpend: [fieldEnergy[0].Id]);
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [opposingTarget.Id])));
+
+        Assert.Equal(Zone.Intimidated, opposingTarget.Zone);
+
+        // While Intimidated, it's simply not in the Field Zone - not a
+        // legal blocker for this combat at all.
+        TurnEngine.EnterAttackStep(state);
+        var attacker = FindUnpurchased(state, "teamA", SampleCards.Apocalypse.Id);
+        attacker.Zone = Zone.FieldZone;
+        attacker.Status = DieStatus.Character;
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        var illegalAssignment = new CombatAssignment();
+        illegalAssignment.AssignBlocker(attacker.Id, opposingTarget.Id);
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            CombatEngine.DeclareBlockers(state, illegalAssignment, [opposingTarget.Id]));
+        Assert.Contains("not an eligible blocker", ex.Message);
+
+        // Combat proceeds normally otherwise; Clean Up returns it.
+        var noBlockAssignment = new CombatAssignment();
+        CombatEngine.DeclareBlockers(state, noBlockAssignment, []);
+        CombatEngine.AssignCombatDamage(
+            state, queue, noBlockAssignment, new Dictionary<string, IReadOnlyDictionary<string, int>>());
+        TurnEngine.CleanUp(state);
+
+        Assert.Equal(Zone.FieldZone, opposingTarget.Zone);
+    }
 }

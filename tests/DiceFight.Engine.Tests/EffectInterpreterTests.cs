@@ -440,6 +440,22 @@ public class EffectInterpreterTests
         Assert.Equal(DieStatus.Unrolled, toUsedPile.Status); // Used Pile is dormant - reset
     }
 
+    // Keyword Intimidate - "remove target opposing Character die from the
+    // Field Zone until end of turn." Just MoveDie targeting the new
+    // Zone.Intimidated - see TurnEngine.CleanUp for the return half.
+    [Fact]
+    public void ScarletSpider_WhenFielded_MovesTheOpposingTargetToIntimidated()
+    {
+        var state = CreateState();
+        var target = FieldSidekickTarget(state, "p2");
+
+        var ability = SampleCards.ScarletSpider.Abilities.Single();
+        EffectInterpreter.Execute(ability.Effect, new EffectContext(state, "p1", "p1-scarletspider-1", _ => [target.Id]));
+
+        Assert.Equal(Zone.Intimidated, target.Zone);
+        Assert.Equal(DieStatus.SidekickCharacter, target.Status); // untouched - not a dormant zone
+    }
+
     [Fact]
     public void NeedsTarget_IsTrueForAGlobalWithARealTarget_FalseForOneWithout()
     {

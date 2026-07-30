@@ -27,7 +27,22 @@ public enum Zone
     FieldZone,
     AttackZone,
     UsedPile,
-    OutOfPlay
+    OutOfPlay,
+
+    // Keyword Intimidate - "remove target opposing Character die from the
+    // Field Zone until end of turn" (real card text: "place it next to
+    // your character cards"). Deliberately its own zone rather than
+    // reusing Out of Play: unlike Out of Play (swept to the Used Pile
+    // every Clean Up, rule 2.8.6), a die here returns to the Field Zone
+    // instead, on its same face/level - and unlike Capture (rule 3.8,
+    // which Appendix 1's own Intimidate entry explicitly distinguishes
+    // itself from), there's no "stack it under the capturing die"
+    // relationship to model, just a plain temporary removal. Being absent
+    // from TargetSpec.DefaultZones already makes a die here untargetable
+    // by anything else without any extra flag needed - same reasoning as
+    // every other zone-gated "can this be targeted" question in this
+    // engine (see DieStats.CountsAsSidekick's own remarks for the pattern).
+    Intimidated
 }
 
 // Rule 1.4.2 / 1.4.3. Wild and Generic are resolved at spend-time, not

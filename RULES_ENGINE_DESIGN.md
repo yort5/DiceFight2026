@@ -51,8 +51,8 @@ here rather than assuming which approach they'd want.
 **Actionable next steps, roughly high to low value**:
 1. ~~Keyword *behavior*~~ - Overcrush, Regenerate, Energize, Ally,
    Amplify/Awaken, Attune, Call Out, Corrupt, Swarm, Darkseid's
-   keyword grant, Deadly, Fast, Energy Drain, and Infiltrate are
-   implemented (see the status updates).
+   keyword grant, Deadly, Fast, Energy Drain, Infiltrate, and Intimidate
+   are implemented (see the status updates).
    BlackPanther's Energize is fully scripted; Robin's Energize
    (a purchase-cost discount) and all three Alfred Pennyworth printings'
    Ally effects (each a "Batman die OR Sidekick" compound target) are
@@ -2629,3 +2629,54 @@ candidate; Ricochet's reactive trigger firing for every active reactor
 die, proven with both a synthetic card and the real Ricochet/The Spot
 pairing end to end. `dotnet build`, `dotnet test` (167/167), and `npm
 run build` all clean.
+
+## Status update — Intimidate implemented: a new Zone, no new GameState tracking needed
+
+Appendix 1: "When fielded, remove target opposing Character die from the
+Field Zone until end of turn." Clarification 1 explicitly distinguishes
+this from Capturing (rule 3.8, still unbuilt - next-steps item #3):
+"If the Capturing die is removed, the Capture ends, whereas if the
+Intimidating die is removed, the Intimidate effect is not canceled" -
+Intimidate is deliberately simpler than full Capture (no "stack the
+capturing die on top" relationship, no "capture ends if the capturer
+leaves" conditionality), so it doesn't need Capture's machinery at all.
+
+- New `Zone.Intimidated` - a die "removed... until end of turn" needed
+  somewhere to actually sit that (a) isn't swept to the Used Pile at
+  Clean Up like Out of Play is (rule 2.8.6 - wrong destination entirely),
+  (b) isn't treated as a dormant/unrolled zone (rule 1.6.8 only lists
+  Prep Area/Used Pile/Bag - a die here keeps its face/level exactly as
+  it was), and (c) is naturally untargetable by anything else purely by
+  not being in `TargetSpec.DefaultZones` - no separate "cannot be
+  targeted" flag needed, same pattern `DieStats.CountsAsSidekick`/every
+  other zone-gated targeting question in this engine already uses.
+- **No new `GameState` tracking field, unlike Deadly/Call Out** - since
+  `Zone.Intimidated` is itself a unique, distinguishing marker, `TurnEngine.
+  CleanUp` just sweeps `state.Dice.Where(d => d.Zone == Zone.Intimidated)`
+  back to `Zone.FieldZone` directly. No recorded set to keep in sync,
+  clear, or reason about staleness for - the zone *is* the record.
+- **No new `EffectNode` either** - Intimidate's own `WhenFielded` effect
+  is just the already-existing `MoveDie(TargetSpec.CharacterDie(...,
+  Opposing), Zone.Intimidated)`, reusing the exact same generic node
+  Distraction's Global already uses to move a die to a different zone.
+  Between this and the zone-based tracking above, Intimidate ended up
+  needing *less* new machinery than almost any other keyword this
+  session - Deadly/Call Out/Energy Drain/Infiltrate all needed a
+  bespoke `CombatEngine` method; this one is a new enum value plus one
+  `foreach` in `CleanUp`.
+
+Example card: Civil War's Scarlet Spider ("Former Villain" printing) -
+purely the keyword, nothing else to script.
+
+7 new tests (172 total): `EffectInterpreterTests`/`LegalTargetsTests`
+cover the mechanics directly (`MoveDie` lands the target in `Zone.
+Intimidated` with its face/level untouched; a die there is excluded from
+`LegalTargets.Query`'s default zones, so nothing else can target it
+either); `TurnEngineTests` covers `CleanUp`'s return sweep (comes back to
+the Field Zone unchanged; happens regardless of which player controls
+the die, since Intimidate always targets an *opposing* die relative to
+whoever fielded it); one end-to-end test in `TwoTeamsDemoTests` drives
+Scarlet Spider's real card - fielding her removes the target, the
+removed die is rejected as an illegal blocker for the rest of that
+combat, and it's back in the Field Zone once Clean Up runs. `dotnet
+build`, `dotnet test` (172/172), and `npm run build` all clean.

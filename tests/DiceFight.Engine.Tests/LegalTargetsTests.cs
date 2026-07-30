@@ -83,6 +83,22 @@ public class LegalTargetsTests
         Assert.Equal(new[] { field.Id, attack.Id }.OrderBy(x => x), legal.OrderBy(x => x));
     }
 
+    // Keyword Intimidate - a die sitting in Zone.Intimidated is untargetable
+    // by anything else, purely because that zone isn't in DefaultZones - no
+    // separate "cannot be targeted" flag needed, same pattern as every
+    // other zone-gated targeting question in this engine.
+    [Fact]
+    public void Query_DefaultZones_ExcludesIntimidatedDice()
+    {
+        var state = CreateState();
+        AddDie(state, "p1-intimidated", "p1", Zone.Intimidated, DieStatus.SidekickCharacter);
+        var field = AddDie(state, "p1-field", "p1", Zone.FieldZone, DieStatus.SidekickCharacter);
+
+        var legal = LegalTargets.Query(state, "p2", TargetSpec.CharacterDie("x"));
+
+        Assert.Equal([field.Id], legal);
+    }
+
     [Fact]
     public void Query_CharacterDiceOnly_ExcludesEnergyAndActionFaces()
     {

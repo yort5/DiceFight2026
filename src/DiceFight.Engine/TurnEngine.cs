@@ -711,6 +711,21 @@ public static class TurnEngine
             DieStats.ForceKO(state, FindDie(state, id), roller);
         state.DeadlyEngagedDieIds.Clear();
 
+        // Keyword Intimidate - "remove target opposing Character die from
+        // the Field Zone until end of turn." No tracked set needed (unlike
+        // Deadly) - Zone.Intimidated is itself the marker, and clarification
+        // 1 ("if the Intimidating die is removed, the Intimidate effect is
+        // not canceled") means this always resolves on a fixed timer, not
+        // conditionally on anything else. Not scoped to the active player -
+        // Intimidate always targets an *opposing* die relative to whoever
+        // fielded it, so the die sitting in Zone.Intimidated could belong to
+        // either player. Returns on its same face/level, not reset - this
+        // isn't a dormant zone (rule 1.6.8 only lists Prep Area/Used
+        // Pile/Bag), matching Capture's own "original level" precedent
+        // (rule 3.8.4) for the same kind of temporary removal.
+        foreach (var die in state.Dice.Where(d => d.Zone == Zone.Intimidated).ToList())
+            die.Zone = Zone.FieldZone;
+
         // Rule 2.8.1 - clear damage on Character dice that weren't KO'd.
         foreach (var die in state.Dice.Where(d => d.Zone == Zone.FieldZone))
             die.Damage = 0;

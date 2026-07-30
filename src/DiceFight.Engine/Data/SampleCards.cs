@@ -613,6 +613,25 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 3)
         ]);
 
+    // Civil War's Scarlet Spider, "Former Villain" printing - purely the
+    // Intimidate keyword, no other text. WhenFielded, matching the
+    // keyword's own trigger, targeting an opposing Character die and
+    // moving it to Zone.Intimidated (see TurnEngine.CleanUp's remarks for
+    // the return-at-end-of-turn half).
+    public static readonly CardDef ScarletSpider = Character(
+        "scarlet-spider", "Scarlet Spider", "Former Villain", dieLimit: 4,
+        "Intimidate (When fielded, remove target opposing character die from the Field Zone until end of " +
+        "turn - place it next to your character cards.)",
+        purchaseCost: 4, energyType: EnergyType.Mask,
+        keywords: [new KeywordInstance("Intimidate")],
+        abilities: [new AbilityDef(TriggerType.WhenFielded, Cost: null,
+            Effect: new MoveDie(TargetSpec.CharacterDie("target opposing character die", TargetOwnership.Opposing), Zone.Intimidated))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3),
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 3),
+            new CharacterFace(FieldingCost: 2, Attack: 6, Defense: 3)
+        ]);
+
     // A team is 8 character cards + 2 Basic Action cards (10 total), not
     // the 10 characters + 3 Basic Actions used here previously - that was
     // simply wrong. Colossus, Corvus Glaive, Distraction, Kang, King
@@ -649,7 +668,7 @@ public static class SampleCards
             JaneFoster, Starfire, Kang, KingHyperion, CasketOfAncientWinters, DailyBugle, Escape,
             AlfredPennyworthCaretaker, AlfredPennyworthMI5, AlfredPennyworthToughAsNails,
             AntManAmplify, Cyclops, Wasp, BlackWidow, Polaris, CosmicCubeInfinitePossibilities, Parademon, Darkseid,
-            Deathbird, WaspPixie, MadalynePryor, TheSpot, Ricochet
+            Deathbird, WaspPixie, MadalynePryor, TheSpot, Ricochet, ScarletSpider
         ];
         return all.ToDictionary(c => c.Id);
     }

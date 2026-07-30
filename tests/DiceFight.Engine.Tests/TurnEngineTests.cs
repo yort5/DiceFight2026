@@ -934,4 +934,40 @@ public class TurnEngineTests
         Assert.Equal(2, engaged.Level);
         Assert.Empty(state.DeadlyEngagedDieIds);
     }
+
+    // Keyword Intimidate - "remove target opposing Character die from the
+    // Field Zone until end of turn." No tracked set (unlike Deadly) -
+    // Zone.Intimidated is itself the marker CleanUp sweeps back.
+    [Fact]
+    public void CleanUp_ReturnsIntimidatedDiceToFieldZone_PreservingLevelAndStatus()
+    {
+        var state = CreateNewGame();
+        var intimidated = state.DiceIn("p1", Zone.Bag).First();
+        intimidated.Zone = Zone.Intimidated;
+        intimidated.Status = DieStatus.SidekickCharacter;
+        intimidated.Level = 1;
+
+        state.CurrentStep = TurnStep.CleanUp;
+        TurnEngine.CleanUp(state);
+
+        Assert.Equal(Zone.FieldZone, intimidated.Zone);
+        Assert.Equal(DieStatus.SidekickCharacter, intimidated.Status); // not reset - not a dormant zone
+    }
+
+    // Intimidate always targets an *opposing* die relative to whoever
+    // fielded it - the die sitting in Zone.Intimidated could belong to
+    // either player, so the return sweep isn't scoped to the active player.
+    [Fact]
+    public void CleanUp_ReturnsIntimidatedDice_RegardlessOfWhichPlayerControlsThem()
+    {
+        var state = CreateNewGame();
+        var p2Intimidated = state.DiceIn("p2", Zone.Bag).First();
+        p2Intimidated.Zone = Zone.Intimidated;
+        p2Intimidated.Status = DieStatus.SidekickCharacter;
+
+        state.CurrentStep = TurnStep.CleanUp; // p1 is still ActivePlayerId
+        TurnEngine.CleanUp(state);
+
+        Assert.Equal(Zone.FieldZone, p2Intimidated.Zone);
+    }
 }
