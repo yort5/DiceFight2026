@@ -145,6 +145,23 @@ public sealed class GamesController(GameStore store) : ControllerBase
         return Ok(GameStateDto.From(gameId, state));
     }
 
+    // Only reachable when DeclareBlockers found a real Infiltrate choice
+    // to offer (see its own remarks) - most combats skip straight past
+    // AttackSubStep.InfiltrateWindow to ActionAndGlobalWindow and never
+    // need this endpoint called at all.
+    [HttpPost("{gameId}/resolve-infiltrate")]
+    public ActionResult<GameStateDto> ResolveInfiltrate(string gameId, [FromBody] ResolveInfiltrateRequest request)
+    {
+        var state = store.Get(gameId);
+        var assignment = new CombatAssignment();
+        foreach (var a in request.Assignments) assignment.AssignBlocker(a.AttackerDieId, a.BlockerDieId);
+
+        var queue = new AbilityQueue();
+        CombatEngine.ResolveInfiltrate(state, queue, assignment, request.InfiltratingDieIds);
+        Drain(state, queue, null);
+        return Ok(GameStateDto.From(gameId, state));
+    }
+
     [HttpPost("{gameId}/assign-combat-damage")]
     public ActionResult<GameStateDto> AssignCombatDamage(string gameId, [FromBody] AssignCombatDamageRequest request)
     {

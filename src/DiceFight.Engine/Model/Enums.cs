@@ -138,7 +138,15 @@ public enum TriggerType
     // CardDef), while this same trigger also carries any card-specific
     // follow-up text some printings add (e.g. Wasp: "When you use
     // Attune, Wasp gets +1A and +1D until end of turn").
-    Attune
+    Attune,
+
+    // Keyword Infiltrate - "each time one of your character dice uses
+    // Infiltrate" (e.g. Ricochet's "Slinger" printing). Not the
+    // infiltrating die's own ability - a reactive "while active" check
+    // against every one of the controller's active dice, fired once per
+    // successful Infiltrate use (see CombatEngine.ResolveInfiltrate),
+    // the same shape as Attune reacting to "you use an Action die."
+    WhenInfiltrates
 }
 
 // Rule 2.2.3 - the five steps of a turn, in fixed order (2.2.4 - cannot
@@ -155,11 +163,17 @@ public enum TurnStep
 // Rule 2.7.0.1 - the six sub-steps of the Attack Step, stricter and
 // one-way (2.7.0.3) even relative to the outer TurnStep sequence.
 // NotInAttack/Done are engine bookkeeping states, not rulebook sub-steps.
+// InfiltrateWindow isn't one of the rulebook's six either - it's a real
+// sub-window keyword Infiltrate carves out for itself ("immediately
+// after blockers are declared... before Action dice or Global abilities
+// may be used"), sitting strictly between DeclareBlockers and
+// ActionAndGlobalWindow. See CombatEngine.ResolveInfiltrate.
 public enum AttackSubStep
 {
     NotInAttack,
     DeclareAttackers,
     DeclareBlockers,
+    InfiltrateWindow,
     ActionAndGlobalWindow,
     AssignCombatDamage,
     WhenDamagedAbilities,

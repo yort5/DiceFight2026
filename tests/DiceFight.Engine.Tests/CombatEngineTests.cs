@@ -1170,4 +1170,192 @@ public class CombatEngineTests
 
         Assert.Equal(1, attacker.Level); // 3 -> 2 -> 1, one spin-down per engaged Energy Drain blocker
     }
+
+    // Keyword Infiltrate - "When a Character die with Infiltrate attacks
+    // and is not blocked, you may choose to remove that die from combat
+    // immediately after blockers are declared before Action dice or
+    // Global abilities may be used. If you do, that die deals 1 damage
+    // to your opponent, and the die remains in your Field Zone."
+    private static readonly CardDef InfiltrateCard = new()
+    {
+        Id = "infiltrate-attacker", Name = "Infiltrate Attacker", Type = CardType.Character,
+        PurchaseCost = 3, DieLimit = 4,
+        Levels = [new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 2)],
+        Keywords = [new KeywordInstance("Infiltrate")],
+    };
+
+    private static GameState CreateInfiltrateGame()
+    {
+        var catalog = new Dictionary<string, CardDef> { [InfiltrateCard.Id] = InfiltrateCard, [PlainThreeLevelCard.Id] = PlainThreeLevelCard };
+        var state = GameState.NewGame(catalog, new Player { Id = "p1", Name = "Player One" }, new Player { Id = "p2", Name = "Player Two" });
+        state.CurrentStep = TurnStep.Attack;
+        state.AttackSubStep = AttackSubStep.DeclareAttackers;
+        return state;
+    }
+
+    private static DieInstance AddInfiltrateAttacker(GameState state, string id = "p1-infiltrate-1") =>
+        AddCharacterDie(state, id, "p1", InfiltrateCard.Id, Zone.FieldZone);
+
+    [Fact]
+    public void Infiltrate_UnblockedEligibleDie_EntersInfiltrateWindow()
+    {
+        var state = CreateInfiltrateGame();
+        var attacker = AddInfiltrateAttacker(state);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        CombatEngine.DeclareBlockers(state, new CombatAssignment(), []);
+
+        Assert.Equal(AttackSubStep.InfiltrateWindow, state.AttackSubStep);
+    }
+
+    // No Infiltrate-eligible dice at all - existing combats (the entire
+    // rest of this test file) never touch the new sub-step.
+    [Fact]
+    public void Infiltrate_NoEligibleDice_SkipsStraightToActionAndGlobalWindow()
+    {
+        var state = CreateInfiltrateGame();
+        var attacker = AddCharacterDie(state, "p1-plain-1", "p1", PlainThreeLevelCard.Id, Zone.FieldZone);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        CombatEngine.DeclareBlockers(state, new CombatAssignment(), []);
+
+        Assert.Equal(AttackSubStep.ActionAndGlobalWindow, state.AttackSubStep);
+    }
+
+    // A blocked Infiltrate attacker isn't eligible ("attacks and is not
+    // blocked") - no choice to offer, so the window is skipped even
+    // though an Infiltrate die is present in the combat.
+    [Fact]
+    public void Infiltrate_BlockedInfiltrateAttacker_SkipsWindow()
+    {
+        var state = CreateInfiltrateGame();
+        var attacker = AddInfiltrateAttacker(state);
+        var blocker = AddCharacterDie(state, "p2-plain-1", "p2", PlainThreeLevelCard.Id, Zone.FieldZone);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attacker.Id, blocker.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [blocker.Id]);
+
+        Assert.Equal(AttackSubStep.ActionAndGlobalWindow, state.AttackSubStep);
+    }
+
+    [Fact]
+    public void Infiltrate_ChoosingToInfiltrate_DealsDamageAndReturnsToFieldZone()
+    {
+        var state = CreateInfiltrateGame();
+        var attacker = AddInfiltrateAttacker(state);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        var assignment = new CombatAssignment();
+        CombatEngine.DeclareBlockers(state, assignment, []);
+
+        CombatEngine.ResolveInfiltrate(state, queue, assignment, [attacker.Id]);
+
+        Assert.Equal(Zone.FieldZone, attacker.Zone); // removed from combat, not Out of Play
+        Assert.Equal(Player.StartingLife - 1, state.PlayerTwo.Life);
+        Assert.Equal(AttackSubStep.ActionAndGlobalWindow, state.AttackSubStep);
+    }
+
+    // Choosing NOT to Infiltrate (empty list) leaves the die to resolve
+    // as a perfectly ordinary unblocked attacker at Assign Combat Damage -
+    // full attack value to the opponent, Out of Play afterward.
+    [Fact]
+    public void Infiltrate_DecliningToUseIt_ResolvesAsAnOrdinaryUnblockedAttacker()
+    {
+        var state = CreateInfiltrateGame();
+        var attacker = AddInfiltrateAttacker(state);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        var assignment = new CombatAssignment();
+        CombatEngine.DeclareBlockers(state, assignment, []);
+        CombatEngine.ResolveInfiltrate(state, queue, assignment, []); // declines
+
+        CombatEngine.AssignCombatDamage(state, queue, assignment, new Dictionary<string, IReadOnlyDictionary<string, int>>());
+
+        Assert.Equal(Player.StartingLife - 2, state.PlayerTwo.Life); // full 2A, not just Infiltrate's 1
+        Assert.Equal(Zone.OutOfPlay, attacker.Zone);
+    }
+
+    [Fact]
+    public void Infiltrate_RejectsABlockedDieAsACandidate()
+    {
+        var state = CreateInfiltrateGame();
+        var attacker = AddInfiltrateAttacker(state);
+        var other = AddCharacterDie(state, "p1-other-1", "p1", InfiltrateCard.Id, Zone.FieldZone);
+        var blocker = AddCharacterDie(state, "p2-plain-1", "p2", PlainThreeLevelCard.Id, Zone.FieldZone);
+
+        var queue = new AbilityQueue();
+        // `other` stays unblocked so the window is actually reachable;
+        // `attacker` gets blocked and is the one we try (illegally) to Infiltrate with.
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id, other.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attacker.Id, blocker.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [blocker.Id]);
+
+        Assert.Equal(AttackSubStep.InfiltrateWindow, state.AttackSubStep); // `other` keeps the window open
+
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            CombatEngine.ResolveInfiltrate(state, queue, assignment, [attacker.Id]));
+        Assert.Contains("blocked", ex.Message);
+    }
+
+    [Fact]
+    public void Infiltrate_RejectsADieWithoutTheKeyword()
+    {
+        var state = CreateInfiltrateGame();
+        var infiltrator = AddInfiltrateAttacker(state);
+        var plain = AddCharacterDie(state, "p1-plain-1", "p1", PlainThreeLevelCard.Id, Zone.FieldZone);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [infiltrator.Id, plain.Id]);
+        var assignment = new CombatAssignment();
+        CombatEngine.DeclareBlockers(state, assignment, []);
+
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            CombatEngine.ResolveInfiltrate(state, queue, assignment, [plain.Id]));
+        Assert.Contains("Infiltrate", ex.Message);
+    }
+
+    // Ricochet's own follow-up ("while active, each time one of your
+    // character dice uses Infiltrate...") isn't the infiltrating die's
+    // own ability - it's a reactive check against every active die the
+    // controller has, same shape as Attune. A synthetic reactor card
+    // proves the trigger fires independent of Infiltrate's own base card.
+    [Fact]
+    public void Infiltrate_TriggersWhenInfiltratesForEveryActiveReactorDie()
+    {
+        var reactorCard = new CardDef
+        {
+            Id = "infiltrate-reactor", Name = "Infiltrate Reactor", Type = CardType.Character,
+            PurchaseCost = 2, DieLimit = 4,
+            Levels = [new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 1)],
+            Abilities = [new AbilityDef(TriggerType.WhenInfiltrates, Cost: null, Effect: new GainLife(1))],
+        };
+        var catalog = new Dictionary<string, CardDef>
+        {
+            [InfiltrateCard.Id] = InfiltrateCard, [reactorCard.Id] = reactorCard,
+        };
+        var state = GameState.NewGame(catalog, new Player { Id = "p1", Name = "Player One" }, new Player { Id = "p2", Name = "Player Two" });
+        state.CurrentStep = TurnStep.Attack;
+        state.AttackSubStep = AttackSubStep.DeclareAttackers;
+
+        var attacker = AddCharacterDie(state, "p1-infiltrate-1", "p1", InfiltrateCard.Id, Zone.FieldZone);
+        var reactor = AddCharacterDie(state, "p1-reactor-1", "p1", reactorCard.Id, Zone.FieldZone);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]); // reactor doesn't attack, just sits active in the Field Zone
+        var assignment = new CombatAssignment();
+        CombatEngine.DeclareBlockers(state, assignment, []);
+        CombatEngine.ResolveInfiltrate(state, queue, assignment, [attacker.Id]);
+
+        Assert.Equal(1, queue.Count);
+        Assert.Equal(TriggerType.WhenInfiltrates, queue.Pending[0].Trigger);
+        Assert.Equal(reactor.Id, queue.Pending[0].SourceDieId);
+    }
 }

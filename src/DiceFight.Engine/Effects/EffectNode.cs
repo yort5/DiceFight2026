@@ -187,3 +187,8 @@ public sealed record FieldSidekickForEachPlayer : EffectNode;
 // going through Conditional/TargetSpec; the bag pick is fungible, same
 // reasoning as DrawDice's.
 public sealed record PrepFromBagIfPurchasedThisTurn : EffectNode;
+
+// Ricochet's own Infiltrate follow-up ("draw a die from your bag and add
+// it to your Prep Area") - the same bag-pick-to-Prep-Area mechanic as
+// PrepFromBagIfPurchasedThisTurn, just unconditional.
+public sealed record PrepFromBag : EffectNode;

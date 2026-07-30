@@ -931,4 +931,43 @@ public class TwoTeamsDemoTests
         Assert.Equal(2, attacker.Level); // spun down 1 the moment blockers were assigned
         Assert.Equal(1, madalyne.Level); // Madalyne herself is untouched by her own keyword
     }
+
+    [Fact]
+    public void TheSpotInfiltrates_WithRicochetActive_DamagesOpponentAndDrawsRicochetADie()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamA";
+
+        var theSpot = new DieInstance
+        {
+            Id = "teamA-thespot-1", CardId = SampleCards.TheSpot.Id, OwnerId = "teamA", ControllerId = "teamA",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        var ricochet = new DieInstance
+        {
+            Id = "teamA-ricochet-1", CardId = SampleCards.Ricochet.Id, OwnerId = "teamA", ControllerId = "teamA",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(theSpot);
+        state.Dice.Add(ricochet);
+        var prepAreaCountBefore = state.DiceIn("teamA", Zone.PrepArea).Count();
+
+        TurnEngine.EnterAttackStep(state);
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [theSpot.Id]);
+        var assignment = new CombatAssignment();
+        CombatEngine.DeclareBlockers(state, assignment, []); // teamB chooses not to block
+
+        Assert.Equal(AttackSubStep.InfiltrateWindow, state.AttackSubStep);
+        CombatEngine.ResolveInfiltrate(state, queue, assignment, [theSpot.Id]);
+
+        Assert.Equal(Player.StartingLife - 1, state.PlayerTwo.Life);
+        Assert.Equal(Zone.FieldZone, theSpot.Zone);
+
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [])));
+
+        // Ricochet's own reactive follow-up drew a die into the Prep Area.
+        Assert.Equal(prepAreaCountBefore + 1, state.DiceIn("teamA", Zone.PrepArea).Count());
+    }
 }

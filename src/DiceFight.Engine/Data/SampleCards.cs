@@ -575,6 +575,44 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 4)
         ]);
 
+    // Guardians of the Galaxy's The Spot, "Dr. Johnathan Ohnn" printing -
+    // purely the Infiltrate keyword, no other text. Fully engine-level:
+    // no AbilityDef needed for the base keyword itself (the choice and
+    // effect are baked into CombatEngine.ResolveInfiltrate), matching
+    // Deadly/Overcrush precedent.
+    public static readonly CardDef TheSpot = Character(
+        "the-spot", "The Spot", "Dr. Johnathan Ohnn", dieLimit: 4,
+        "Infiltrate (When this character die is unblocked, you may return this die to the Field Zone and " +
+        "it deals your opponent 1 damage.)",
+        purchaseCost: 2, energyType: EnergyType.Shield,
+        keywords: [new KeywordInstance("Infiltrate")],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 1),
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 3)
+        ]);
+
+    // Guardians of the Galaxy's Ricochet, "Slinger" printing - has
+    // Infiltrate itself, plus a reactive follow-up: "While Ricochet is
+    // active, each time one of your character dice uses Infiltrate, draw
+    // a die from your bag and add it to your Prep Area." Not Ricochet's
+    // own ability triggering off its own Infiltrate use specifically -
+    // any of the controller's character dice using Infiltrate (including
+    // Ricochet itself) triggers it, same shape as Attune reacting to
+    // "you use an Action die." See TriggerType.WhenInfiltrates.
+    public static readonly CardDef Ricochet = Character(
+        "ricochet", "Ricochet", "Slinger", dieLimit: 2,
+        "Infiltrate. While Ricochet is active, each time one of your character dice uses Infiltrate, draw a " +
+        "die from your bag and add it to your Prep Area.",
+        purchaseCost: 3, energyType: EnergyType.Bolt,
+        keywords: [new KeywordInstance("Infiltrate")],
+        abilities: [new AbilityDef(TriggerType.WhenInfiltrates, Cost: null, Effect: new PrepFromBag())],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 1),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 2),
+            new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 3)
+        ]);
+
     // A team is 8 character cards + 2 Basic Action cards (10 total), not
     // the 10 characters + 3 Basic Actions used here previously - that was
     // simply wrong. Colossus, Corvus Glaive, Distraction, Kang, King
@@ -611,7 +649,7 @@ public static class SampleCards
             JaneFoster, Starfire, Kang, KingHyperion, CasketOfAncientWinters, DailyBugle, Escape,
             AlfredPennyworthCaretaker, AlfredPennyworthMI5, AlfredPennyworthToughAsNails,
             AntManAmplify, Cyclops, Wasp, BlackWidow, Polaris, CosmicCubeInfinitePossibilities, Parademon, Darkseid,
-            Deathbird, WaspPixie, MadalynePryor
+            Deathbird, WaspPixie, MadalynePryor, TheSpot, Ricochet
         ];
         return all.ToDictionary(c => c.Id);
     }

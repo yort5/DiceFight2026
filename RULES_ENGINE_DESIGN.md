@@ -51,8 +51,8 @@ here rather than assuming which approach they'd want.
 **Actionable next steps, roughly high to low value**:
 1. ~~Keyword *behavior*~~ - Overcrush, Regenerate, Energize, Ally,
    Amplify/Awaken, Attune, Call Out, Corrupt, Swarm, Darkseid's
-   keyword grant, Deadly, Fast, and Energy Drain are implemented (see the
-   status updates).
+   keyword grant, Deadly, Fast, Energy Drain, and Infiltrate are
+   implemented (see the status updates).
    BlackPanther's Energize is fully scripted; Robin's Energize
    (a purchase-cost discount) and all three Alfred Pennyworth printings'
    Ally effects (each a "Batman die OR Sidekick" compound target) are
@@ -67,12 +67,6 @@ here rather than assuming which approach they'd want.
    keyword at all, it's
    an ability-trigger wiring problem (firing `WhenEngaged` when a
    Teamwatch character is engaged), already separately tracked.
-   **Infiltrate** - a newer keyword the user flagged: an
-   unblocked-after-Declare-Blockers attacker can choose to deal 1 damage
-   to the opponent and return to the Field Zone, in a sub-window that
-   sits *between* Declare Blockers' effect resolution and the
-   Action/Global window - i.e. it needs a new `AttackSubStep` value, not
-   just a keyword check inside an existing one (see the status update).
    Next up, per the user's own framing: work through the rest of the
    Dice Masters keywords on wizkids.com/dicemasters/keywords one at a
    time, each scripted against a real example card (user- or
@@ -144,6 +138,17 @@ here rather than assuming which approach they'd want.
     Global abilities, but scoped to Clear and Draw specifically rather
     than a whole turn). Not started - flagged since the primitives it'd
     reuse already exist.
+11. The web client's Attack Step UI has no case for `AttackSubStep.
+    InfiltrateWindow` - `attackSubStep` is typed as a plain `string` in
+    `types.ts`, so the new value flows through without a build error, but
+    matches none of `App.tsx`'s `canDeclareBlockers`/`canAssignDamage`
+    conditions either. Invisible today (neither curated roster has an
+    Infiltrate card, so `DeclareBlockers` always skips the sub-step - see
+    the status update), but the first Infiltrate-carrying team built
+    would hit a dead end in the web client with no visible way to
+    proceed. Fix shape when that happens: a `canResolveInfiltrate` check
+    plus either a small UI prompt or an auto-pass-through call to the
+    already-wired `POST /resolve-infiltrate` endpoint.
 
 Also done, out of order (the user asked for it explicitly once the above
 was clear): a visual pass matching the physical mat's zone layout and
@@ -2551,3 +2556,76 @@ two independent Energy Drain blockers on the same attacker compound.
 Plus one end-to-end test in `TwoTeamsDemoTests` driving Madalyne Pryor's
 real card. `dotnet build`, `dotnet test` (158/158), and `npm run build`
 all clean.
+
+## Status update — Infiltrate implemented: the first keyword needing a real new `AttackSubStep`
+
+Flagged back when the user first raised it (three-notes status update,
+much earlier): "As the game progresses, you end up with sub-windows
+within windows... Infiltrate technically slides in between 'Resolve
+effects due to blocking' and 'Action/Global' window." Confirmed exactly
+right against the actual rule text: "When a Character die with
+Infiltrate attacks and is not blocked, you may choose to remove that die
+from combat immediately after blockers are declared before Action dice
+or Global abilities may be used. If you do, that die deals 1 damage to
+your opponent, and the die remains in your Field Zone."
+
+- New `AttackSubStep.InfiltrateWindow`, sitting between `DeclareBlockers`
+  and `ActionAndGlobalWindow`. **Conditionally entered, not always** -
+  `DeclareBlockers` only transitions into it when at least one unblocked
+  attacker actually has Infiltrate; otherwise it skips straight to
+  `ActionAndGlobalWindow`, exactly as before this keyword existed. This
+  was the key design decision: the naive version (always transition into
+  a new mandatory sub-step) would have required updating essentially
+  every existing combat test and the `/declare-blockers` ->
+  `/assign-combat-damage` API sequence, since `AssignCombatDamage`
+  requires `ActionAndGlobalWindow` specifically and would otherwise throw
+  for *every* combat, Infiltrate or not. The conditional-skip version
+  needed zero existing test changes - confirmed by the full suite passing
+  unchanged the moment it was written.
+- New `CombatEngine.ResolveInfiltrate(state, queue, assignment,
+  infiltratingDieIds)` - a real choice (unlike Deadly/Energy Drain),
+  validated per die (must be the active player's, still in the Attack
+  Zone, actually have Infiltrate, and actually unblocked) before moving
+  it back to the Field Zone and dealing 1 damage to the opponent. Only
+  callable when `DeclareBlockers` actually opened the window.
+- New `TriggerType.WhenInfiltrates`, for reactive "while active, each
+  time one of your character dice uses Infiltrate" text (Ricochet's own
+  follow-up) - not the infiltrating die's own ability, a check against
+  *every* active die the controller has, the same shape Attune already
+  established for "you use an Action die." New `PrepFromBag` `EffectNode`
+  for Ricochet's actual effect ("draw a die from your bag and add it to
+  your Prep Area") - the unconditional sibling of the existing
+  `PrepFromBagIfPurchasedThisTurn` (Starfire's Global).
+
+Example cards: Guardians of the Galaxy's The Spot ("Dr. Johnathan Ohnn"
+printing, vanilla keyword) and Ricochet ("Slinger" printing, has
+Infiltrate itself plus the reactive draw).
+
+**Found, not fully closed - a real, documented API/UI gap**: wired
+`POST /games/{id}/resolve-infiltrate` (needs the same `Assignments`
+resent as `/assign-combat-damage` does, since `CombatAssignment` isn't
+persisted server-side between calls) so the engine capability is
+actually reachable - but the web client's `attackSubStep` is a plain
+`string` (not a strict union), so `"InfiltrateWindow"` flows through
+without a type error while matching **none** of the UI's existing
+`canDeclareBlockers`/`canAssignDamage` conditions. Today this is
+invisible: neither curated team roster has an Infiltrate card, so
+`DeclareBlockers` always skips straight past the new sub-step and the
+gap is never reached. The moment a real Infiltrate-carrying team exists,
+though, a player would hit a dead end with no visible way to proceed -
+fix shape when that happens: a `canResolveInfiltrate` check plus a small
+UI prompt (or an auto-pass-through calling the new endpoint with an
+empty list, matching how little there currently is to decide for either
+roster) needs to land in `App.tsx` before that team is playable through
+the web client.
+
+12 new tests (167 total) in `CombatEngineTests`/`TwoTeamsDemoTests`:
+entering vs. skipping the window (eligible unblocked die; nothing
+eligible at all; an eligible die that's blocked instead); choosing to
+Infiltrate (damage + Field Zone return) vs. declining (resolves as an
+ordinary unblocked attacker at Assign Combat Damage - full attack value,
+not just 1); rejecting a blocked die or one without the keyword as a
+candidate; Ricochet's reactive trigger firing for every active reactor
+die, proven with both a synthetic card and the real Ricochet/The Spot
+pairing end to end. `dotnet build`, `dotnet test` (167/167), and `npm
+run build` all clean.

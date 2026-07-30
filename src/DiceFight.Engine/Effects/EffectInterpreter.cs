@@ -320,6 +320,15 @@ public static class EffectInterpreter
                 }
                 break;
 
+            case PrepFromBag:
+            {
+                var bag = ctx.State.DiceIn(ctx.ControllerId, Zone.Bag).ToList();
+                var picked = ctx.Random is not null ? bag.ElementAtOrDefault(ctx.Random.Next(bag.Count)) : bag.FirstOrDefault();
+                if (picked is not null)
+                    picked.Zone = Zone.PrepArea;
+                break;
+            }
+
             default:
                 throw new NotSupportedException($"Unhandled effect node: {node.GetType().Name}");
         }

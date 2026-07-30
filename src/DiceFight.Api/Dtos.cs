@@ -76,3 +76,7 @@ public sealed record DeclareBlockersRequest(IReadOnlyList<BlockAssignment> Assig
 public sealed record DamageSplit(string AttackerDieId, string BlockerDieId, int Amount);
 public sealed record AssignCombatDamageRequest(
     IReadOnlyList<BlockAssignment> Assignments, IReadOnlyList<DamageSplit> DamageSplits);
+// Assignments has to be resent here too - CombatAssignment isn't persisted
+// server-side between calls, same as AssignCombatDamageRequest's own copy.
+public sealed record ResolveInfiltrateRequest(
+    IReadOnlyList<BlockAssignment> Assignments, IReadOnlyList<string> InfiltratingDieIds);

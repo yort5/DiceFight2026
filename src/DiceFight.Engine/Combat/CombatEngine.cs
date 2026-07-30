@@ -73,6 +73,63 @@ public static class CombatEngine
         RecordDeadlyEngagements(state, assignment);
         ResolveEnergyDrain(state, assignment);
 
+        // Keyword Infiltrate carves out a real sub-window here, strictly
+        // before the Action/Global window opens - but only when there's
+        // actually a decision to make (rule text: "you may choose" - an
+        // optional choice, not a forced effect). Skipping straight to the
+        // Action/Global window when nothing is eligible means every combat
+        // that never touches Infiltrate proceeds exactly as it did before
+        // this keyword existed - no caller has to learn about (or
+        // explicitly no-op through) a sub-step that has nothing to offer.
+        var hasInfiltrateChoice = state.DiceIn(state.ActivePlayerId, Zone.AttackZone)
+            .Any(d => assignment.BlockersOf(d.Id).Count == 0 && DieStats.HasKeyword(state, d, "Infiltrate"));
+
+        state.AttackSubStep = hasInfiltrateChoice ? AttackSubStep.InfiltrateWindow : AttackSubStep.ActionAndGlobalWindow;
+    }
+
+    // Keyword Infiltrate - "When a Character die with Infiltrate attacks
+    // and is not blocked, you may choose to remove that die from combat
+    // immediately after blockers are declared before Action dice or
+    // Global abilities may be used. If you do, that die deals 1 damage to
+    // your opponent, and the die remains in your Field Zone." A real
+    // choice (unlike Deadly/Energy Drain, which are fully automatic), so
+    // - like Declare Attackers/Blockers - it's the caller's job to say
+    // which eligible dice actually use it. Only reachable when
+    // DeclareBlockers found at least one real choice to offer - see its
+    // own remarks; infiltratingDieIds may still be empty here (choosing
+    // to use none of them is a legal choice too).
+    public static void ResolveInfiltrate(
+        GameState state, AbilityQueue queue, CombatAssignment assignment, IReadOnlyList<string> infiltratingDieIds)
+    {
+        RequireSubStep(state, AttackSubStep.InfiltrateWindow);
+
+        foreach (var id in infiltratingDieIds)
+        {
+            var die = FindDie(state, id);
+            if (die.ControllerId != state.ActivePlayerId || die.Zone != Zone.AttackZone)
+                throw new InvalidOperationException($"Die {id} is not an eligible Infiltrate candidate.");
+            if (!DieStats.HasKeyword(state, die, "Infiltrate"))
+                throw new InvalidOperationException($"{DisplayName(state, die)} does not have Infiltrate.");
+            if (assignment.BlockersOf(id).Count > 0)
+                throw new InvalidOperationException($"{DisplayName(state, die)} was blocked and cannot Infiltrate.");
+
+            die.Zone = Zone.FieldZone; // "remains in your Field Zone" - removed from combat, not Out of Play
+            state.GetPlayer(state.OpponentOf(state.ActivePlayerId)).Life -= 1;
+
+            // Reactive "while active, each time one of your character dice
+            // uses Infiltrate" abilities (e.g. Ricochet) aren't the
+            // infiltrating die's own ability - they belong to whichever of
+            // the controller's dice are active right now, same shape as
+            // Attune reacting to "you use an Action die." The die that
+            // just infiltrated is itself active again by this point (it's
+            // back in the Field Zone above), so it's included here too.
+            foreach (var reactor in state.DiceIn(die.ControllerId, Zone.FieldZone)
+                .Concat(state.DiceIn(die.ControllerId, Zone.AttackZone)))
+            {
+                TurnEngine.EnqueueTriggered(state, queue, reactor, TriggerType.WhenInfiltrates);
+            }
+        }
+
         state.AttackSubStep = AttackSubStep.ActionAndGlobalWindow;
     }
 
