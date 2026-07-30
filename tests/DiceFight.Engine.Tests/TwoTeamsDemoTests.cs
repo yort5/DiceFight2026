@@ -1302,4 +1302,43 @@ public class TwoTeamsDemoTests
 
         Assert.Equal(Zone.PrepArea, usedPileSidekick.Zone); // Prepped from the Used Pile by Falcon's Teamwatch
     }
+
+    // Real "Spidey's Last Stand" Basic Action - Sacrifice paired with an
+    // already-buildable effect, no optional "if you do" branching (using
+    // the Action die at all is the opt-in moment).
+    [Fact]
+    public void UsingSpideysLastStandActionDie_SacrificesACharacterAndDrawsTwoDice_ThroughTheRealQueue()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamA";
+
+        // Not on either team roster - constructed directly, same pattern
+        // used for other non-roster cards' end-to-end tests.
+        var spideysLastStandDie = new DieInstance
+        {
+            Id = "teamA-spideys-last-stand-1", CardId = SampleCards.SpideysLastStand.Id,
+            OwnerId = "teamA", ControllerId = "teamA", Zone = Zone.ReservePool, Status = DieStatus.Action,
+        };
+        state.Dice.Add(spideysLastStandDie);
+
+        var sacrificeTarget = FindUnpurchased(state, "teamA", SampleCards.Apocalypse.Id);
+        sacrificeTarget.Zone = Zone.FieldZone;
+        sacrificeTarget.Status = DieStatus.Character;
+
+        var bagCountBefore = state.DiceIn("teamA", Zone.Bag).Count();
+
+        var queue = new AbilityQueue();
+        TurnEngine.UseActionDie(state, queue, spideysLastStandDie.Id);
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [sacrificeTarget.Id])));
+
+        // Sacrificed on its own owner's turn - Out of Play, not Prep Area
+        // (not a KO at all - never went through ForceKO/Regenerate).
+        Assert.Equal(Zone.OutOfPlay, sacrificeTarget.Zone);
+        Assert.Equal(DieStatus.Unrolled, sacrificeTarget.Status);
+
+        Assert.Equal(bagCountBefore - 2, state.DiceIn("teamA", Zone.Bag).Count());
+        Assert.Equal(2, state.DiceIn("teamA", Zone.ReservePool).Count());
+    }
 }

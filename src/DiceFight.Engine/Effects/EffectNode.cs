@@ -116,6 +116,14 @@ public sealed record DealDamage(int Amount, TargetSpec Target) : EffectNode;
 // yet.
 public sealed record DealDamagePerActiveAffiliate(TargetSpec Target) : EffectNode;
 public sealed record Ko(TargetSpec Target) : EffectNode;
+// Keyword Sacrifice - "Sacrificed Character dice are moved from the
+// Field Zone to Out of Play or the Used Pile, as applicable." Distinct
+// from Ko: not a KO at all (Appendix 1 clarification 3 - "will not
+// trigger 'when KO'd' abilities"), so this bypasses DieStats.
+// TryResolveKO/ForceKO entirely - no defense check, no Regenerate
+// interception, just a direct zone move. See EffectInterpreter's own
+// remarks on which zone it lands in.
+public sealed record Sacrifice(TargetSpec Target) : EffectNode;
 // Invisible Woman's Global ("target character die must block this turn") -
 // flags the target in GameState.MustBlockThisTurn; enforced by
 // CombatEngine.DeclareBlockers, cleared at Clean Up.

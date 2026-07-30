@@ -720,6 +720,45 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 2, Attack: 8, Defense: 7)
         ]);
 
+    // Amazing Spider-Man's "Spidey's Last Stand" Basic Action - purely
+    // the Sacrifice mechanic paired with an already-buildable effect, no
+    // "you may... if you do" optional-choice branching (the Action die's
+    // own use is the opt-in moment - see Sacrifice's own remarks).
+    // Sacrifice, not Ko: the sacrificed die bypasses TryResolveKO/
+    // ForceKO/Regenerate entirely and never fires "when KO'd."
+    public static readonly CardDef SpideysLastStand = BasicAction(
+        "spideys-last-stand", "Spidey's Last Stand",
+        "Sacrifice a character to draw and roll 2 dice (sacrificed characters are placed in the Used Pile).",
+        abilities: [new AbilityDef(TriggerType.WhenUsed, Cost: null, Effect: new Sequence([
+            new Sacrifice(TargetSpec.CharacterDie("a character die you control", TargetOwnership.Own)),
+            new DrawDice(2)
+        ]))]);
+
+    // WWE's The Rock, "Know Your Role" printing - the user's own
+    // suggested Sacrifice example (Global: "Pay Mask, and Sacrifice one
+    // of your Superstar dice. Reduce the cost of the next die you
+    // purchase by 2."). Left fully vanilla rather than partially
+    // scripted: the Global needs a purchase-cost-modifier mechanism
+    // (same gap already noted for Robin's Energize) that doesn't exist,
+    // and the card's own Intimidate text has a further wrinkle on top
+    // ("You may use Intimidate twice when you field The Rock" - two
+    // independently-chosen targets from one ability, not yet attempted).
+    // RawText/Keywords still capture both real keywords for display.
+    public static readonly CardDef TheRock = Character(
+        "the-rock-know-your-role", "The Rock", "Know Your Role", dieLimit: 4,
+        "Intimidate (When fielded, remove target opposing Superstar die from the Field Zone until end of " +
+        "turn - place it next to your Superstar cards.) You may use Intimidate twice when you field The " +
+        "Rock. Global: Pay [M], and Sacrifice one of your Superstar dice. Reduce the cost of the next die " +
+        "you purchase by 2.",
+        purchaseCost: 6, energyType: EnergyType.Mask,
+        keywords: [new KeywordInstance("Intimidate"), new KeywordInstance("Sacrifice")],
+        affiliations: ["Superstar"],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 4),
+            new CharacterFace(FieldingCost: 1, Attack: 6, Defense: 6),
+            new CharacterFace(FieldingCost: 2, Attack: 7, Defense: 6)
+        ]);
+
     // A team is 8 character cards + 2 Basic Action cards (10 total), not
     // the 10 characters + 3 Basic Actions used here previously - that was
     // simply wrong. Colossus, Corvus Glaive, Distraction, Kang, King
@@ -757,7 +796,8 @@ public static class SampleCards
             AlfredPennyworthCaretaker, AlfredPennyworthMI5, AlfredPennyworthToughAsNails,
             AntManAmplify, Cyclops, Wasp, BlackWidow, Polaris, CosmicCubeInfinitePossibilities, Parademon, Darkseid,
             Deathbird, WaspPixie, MadalynePryor, TheSpot, Ricochet, ScarletSpider, DrowMercenary,
-            SupermanKalEl, BlackMantaDeepSeaDeviant, BizarroMoreThanAMonster
+            SupermanKalEl, BlackMantaDeepSeaDeviant, BizarroMoreThanAMonster,
+            SpideysLastStand, TheRock
         ];
         return all.ToDictionary(c => c.Id);
     }

@@ -52,8 +52,8 @@ here rather than assuming which approach they'd want.
 1. ~~Keyword *behavior*~~ - Overcrush, Regenerate, Energize, Ally,
    Amplify/Awaken, Attune, Call Out, Corrupt, Swarm, Darkseid's
    keyword grant, Deadly, Fast, Energy Drain, Infiltrate, Intimidate,
-   Obscure, Retaliation, Strike, and Teamwatch are implemented (see the
-   status updates).
+   Obscure, Retaliation, Strike, Teamwatch, and Sacrifice are
+   implemented (see the status updates).
    BlackPanther's Energize is fully scripted; Robin's Energize
    (a purchase-cost discount) and all three Alfred Pennyworth printings'
    Ally effects (each a "Batman die OR Sidekick" compound target) are
@@ -63,7 +63,9 @@ here rather than assuming which approach they'd want.
    Attune's own "target player or Character die" union IS now built -
    `TargetSpec.PlayersAllowed`/`CharacterDieOrPlayer` - but that's a
    fixed die-or-player choice, not the general N-arbitrary-specs union
-   Alfred's text would need).
+   Alfred's text would need). The Rock's Global ("Sacrifice a Superstar
+   die, reduce the next purchase by 2") is the same purchase-cost-
+   modifier gap - left vanilla for now, see the Sacrifice status update.
    Next up, per the user's own framing: work through the rest of the
    Dice Masters keywords on wizkids.com/dicemasters/keywords one at a
    time, each scripted against a real example card (user- or
@@ -2987,3 +2989,69 @@ the same controller as real Falcon, confirming Falcon's Teamwatch fires
 and its "Prep a Sidekick from your Used Pile" effect actually moves a
 Used Pile Sidekick to the Prep Area. `dotnet build`,
 `dotnet test` (216/216), and `npm run build` all clean.
+
+## Status update — Sacrifice implemented, deliberately not via the unused `AbilityDef.Cost` field
+
+Appendix 1: "Sacrificed Character dice are moved from the Field Zone to
+Out of Play or the Used Pile, as applicable."
+- (1) On the sacrificed die's own owner's turn, it goes to Out of Play
+  until end of turn; otherwise (paid by/for a die whose owner isn't the
+  active player - only possible via a Global, since those can be used on
+  either turn) it goes straight to the Used Pile, mirroring the exact
+  reasoning `TurnEngine.SpendEnergy` already uses for energy destinations
+  ("Out of Play doesn't meaningfully exist outside the active player's
+  own turn").
+- (2) "Sacrifice is an ability cost."
+- (3) A Sacrificed die never triggers "when KO'd" - it isn't a KO at all.
+
+**Found first**: `AbilityDef.Cost` (`IReadOnlyList<EffectNode>?`) has
+existed in the record since the engine's early days but is read
+*nowhere* - no interpreter path, no caller, ever consumes it. Every
+scripted ability either has `Cost: null` or pays through the separate
+`EnergyCost` field (Global-only). Wiring up a real "pay this cost, and
+only then does the effect resolve" gate - plus the "you may... if you
+do" *optional* branching most printed Sacrifice text actually uses - is
+a genuinely separate, bigger feature than "implement one keyword," so
+it's not attempted here (same reasoning as the Retaliation/Teamwatch
+"no card needs it yet" calls). Instead, Sacrifice is authored the same
+way Shocking Grasp's own "deal damage, then Prep this die" already
+works: as an ordinary step in a `Sequence`, since our interpreter
+resolves ability steps one at a time regardless of whether the card
+text calls a given clause a "cost" or an "effect."
+- New `Sacrifice(TargetSpec Target)` EffectNode - deliberately NOT
+  built on `Ko`/`ForceKO`: it bypasses `DieStats.TryResolveKO`/`ForceKO`
+  entirely (no defense check, no Regenerate interception), matching
+  clarification 3 - it was never a KO to begin with, not a KO that
+  happens to skip the trigger.
+- Destination logic lives directly in `EffectInterpreter`'s own case
+  (`die.OwnerId == ctx.State.ActivePlayerId ? Zone.OutOfPlay :
+  Zone.UsedPile`, then `ResetToUnrolled()`), rather than a shared helper -
+  small enough not to need one.
+- **Deliberately scoped example choice**: most printed Sacrifice cards
+  are phrased "you may sacrifice X to Y" or "...to Y. If you do, Z" -
+  real optional/conditional branching our engine doesn't model yet
+  (`Conditional` only branches on game state like "was the target
+  KO'd," never on a player's own voluntary choice to pay a cost at all).
+  Picked **Spidey's Last Stand** (a Basic Action: "Sacrifice a character
+  to draw and roll 2 dice") specifically because using the Action die at
+  all *is* the opt-in moment - no additional "if you do" branch needed,
+  so nothing is dropped.
+- **The Rock** ("Know Your Role" - the user's own suggested example,
+  "Global: Pay Mask, and Sacrifice one of your Superstar dice. Reduce
+  the cost of the next die you purchase by 2") is cataloged for real
+  (`RawText`, both real keywords - Intimidate and Sacrifice - and its
+  real "Superstar" affiliation) but left fully vanilla: the Global still
+  needs the purchase-cost-modifier mechanism (same gap as Robin's
+  Energize), and the card's own text has a second wrinkle on top ("you
+  may use Intimidate twice when you field The Rock" - two independently-
+  targeted Intimidate uses from one ability, not attempted). Both gaps
+  are individually noted rather than glossed over.
+
+7 new tests (220 total): `EffectInterpreterTests` covers the `Sacrifice`
+node directly (Out of Play on the owner's own turn, straight to the Used
+Pile otherwise, and bypassing Regenerate entirely even with a roller
+supplied that would otherwise have saved it); one end-to-end
+`TwoTeamsDemoTests` case drives Spidey's Last Stand's real Action die,
+sacrificing a real Apocalypse die and confirming both the Sacrifice
+destination and the 2 dice actually drawn. `dotnet build`, `dotnet test`
+(220/220), and `npm run build` all clean.

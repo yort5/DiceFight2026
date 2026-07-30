@@ -59,6 +59,7 @@ public static class EffectInterpreter
             case DealDamage n: if (!n.Target.IsSelf) yield return n.Target; break;
             case DealDamagePerActiveAffiliate n: if (!n.Target.IsSelf) yield return n.Target; break;
             case Ko n: if (!n.Target.IsSelf) yield return n.Target; break;
+            case Sacrifice n: if (!n.Target.IsSelf) yield return n.Target; break;
             case ForceBlock n: if (!n.Target.IsSelf) yield return n.Target; break;
             case SetCallOutTarget n: if (!n.Target.IsSelf) yield return n.Target; break;
             case Corrupt n: yield return n.PlayerTarget; break; // never Self - see TargetSpec.Player
@@ -131,6 +132,21 @@ public static class EffectInterpreter
             case Ko ko:
                 foreach (var id in Resolve(ctx, ko.Target, cache))
                     DieStats.ForceKO(ctx.State, FindDie(ctx, id), ctx.Roller);
+                break;
+
+            case Sacrifice sacrifice:
+                foreach (var id in Resolve(ctx, sacrifice.Target, cache))
+                {
+                    var die = FindDie(ctx, id);
+                    // Appendix 1 clarification 1 - Out of Play only on the
+                    // sacrificed die's own OWNER's turn (until end of
+                    // turn); otherwise straight to the Used Pile, since
+                    // Out of Play doesn't meaningfully exist outside the
+                    // active player's own turn (same reasoning already
+                    // used for Global ability energy payment).
+                    die.Zone = die.OwnerId == ctx.State.ActivePlayerId ? Zone.OutOfPlay : Zone.UsedPile;
+                    die.ResetToUnrolled();
+                }
                 break;
 
             case MoveDie move:

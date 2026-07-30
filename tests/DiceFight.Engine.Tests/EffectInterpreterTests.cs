@@ -167,6 +167,74 @@ public class EffectInterpreterTests
         Assert.Equal(0, target.Damage);
     }
 
+    // Keyword Sacrifice - "Sacrificed Character dice are moved from the
+    // Field Zone to Out of Play or the Used Pile, as applicable."
+    // Clarification 1 - Out of Play only on the sacrificed die's own
+    // OWNER's turn.
+    [Fact]
+    public void Sacrifice_OnOwnersOwnTurn_MovesToOutOfPlay()
+    {
+        var state = CreateState();
+        state.ActivePlayerId = "p1";
+        var target = FieldSidekickTarget(state, "p1"); // owned by p1, sacrificed on p1's own turn
+
+        EffectInterpreter.Execute(
+            new Sacrifice(TargetSpec.CharacterDie("t", TargetOwnership.Own)),
+            new EffectContext(state, "p1", SourceDieId: null, _ => [target.Id]));
+
+        Assert.Equal(Zone.OutOfPlay, target.Zone);
+        Assert.Equal(DieStatus.Unrolled, target.Status);
+    }
+
+    [Fact]
+    public void Sacrifice_NotOnOwnersOwnTurn_MovesStraightToUsedPile()
+    {
+        var state = CreateState();
+        state.ActivePlayerId = "p1"; // p1's turn, but the sacrificed die belongs to p2
+        var target = FieldSidekickTarget(state, "p2");
+
+        EffectInterpreter.Execute(
+            new Sacrifice(TargetSpec.CharacterDie("t")),
+            new EffectContext(state, "p2", SourceDieId: null, _ => [target.Id]));
+
+        Assert.Equal(Zone.UsedPile, target.Zone);
+    }
+
+    // Clarification 3 - "will not trigger 'when KO'd' abilities." Modeled
+    // by bypassing DieStats.ForceKO entirely, which also means a
+    // Regenerate-keyword die never gets a chance to intercept - a
+    // Regenerate check would return the die to the Field Zone even with
+    // a roller supplied, so landing in Out of Play instead proves
+    // Sacrifice never went through ForceKO at all.
+    [Fact]
+    public void Sacrifice_BypassesRegenerateEntirely_EvenWithARollerSupplied()
+    {
+        var regenCard = new CardDef
+        {
+            Id = "regen-sacrifice-target", Name = "Regen Sacrifice Target", Type = CardType.Character,
+            PurchaseCost = 2, DieLimit = 4,
+            Levels = [new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 1)],
+            Keywords = [new KeywordInstance("Regenerate")],
+        };
+        var catalog = new Dictionary<string, CardDef> { [regenCard.Id] = regenCard };
+        var state = CreateState(catalog);
+        state.ActivePlayerId = "p1";
+        var target = new DieInstance
+        {
+            Id = "p1-regen-1", CardId = regenCard.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(target);
+
+        var roller = new FixedRoller(DieStatus.Character, 2); // would regenerate it, if Sacrifice went through ForceKO
+        EffectInterpreter.Execute(
+            new Sacrifice(TargetSpec.CharacterDie("t", TargetOwnership.Own)),
+            new EffectContext(state, "p1", SourceDieId: null, _ => [target.Id], Roller: roller));
+
+        Assert.Equal(Zone.OutOfPlay, target.Zone); // not regenerated back to the Field Zone
+        Assert.Equal(1, target.Level); // reset, not the roller's level 2
+    }
+
     [Fact]
     public void Dazzler_WhenFielded_Deals4DamageToChosenTarget()
     {
