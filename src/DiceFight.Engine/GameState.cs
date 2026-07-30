@@ -54,6 +54,14 @@ public sealed class GameState
     // MustBlockThisTurn, since "until end of turn" is the keyword's own text.
     public HashSet<string> ObscuredCardIds { get; } = [];
 
+    // Die ids fielded this turn (rule 2.6.2's "Field a Character die"
+    // game action, populated by TurnEngine.Field) - keyword Strike's own
+    // "no other Character dice fielded this turn" check reads this live
+    // (see DieStats.HasStrikeBonus). A historical record of what happened
+    // this turn, not current board state - a fielded die that later left
+    // play (KO'd, etc.) still counts. Turn-scoped like MustBlockThisTurn.
+    public HashSet<string> FieldedThisTurn { get; } = [];
+
     public Player GetPlayer(string playerId) =>
         playerId == PlayerOne.Id ? PlayerOne
         : playerId == PlayerTwo.Id ? PlayerTwo

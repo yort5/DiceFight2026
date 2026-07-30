@@ -1134,4 +1134,60 @@ public class TwoTeamsDemoTests
         // 2 active Villains remain on teamA's side (mantaA + mantaB) once mantaC is gone.
         Assert.Equal(opponentLifeBefore - 2, state.GetPlayer("teamB").Life);
     }
+
+    // Justice League's Bizarro, "More Than a Monster" printing - pure
+    // Strike. No AbilityDef to drain here at all - DieStats.HasStrikeBonus
+    // is a live check against GameState.FieldedThisTurn (populated by the
+    // real TurnEngine.Field call below), not a triggered effect.
+    [Fact]
+    public void BizarroStrike_SoleCharacterFieldedThisTurn_GetsOvercrushAndStatBonus()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamA";
+
+        var bizarro = new DieInstance
+        {
+            Id = "teamA-bizarro-1", CardId = SampleCards.BizarroMoreThanAMonster.Id, OwnerId = "teamA", ControllerId = "teamA",
+            Zone = Zone.ReservePool, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(bizarro);
+
+        var fieldEnergy = GiveWildEnergy(state, "teamA", 1); // level-1 fielding cost is 1
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, bizarro.Id, energyDieIdsToSpend: [fieldEnergy[0].Id]);
+
+        Assert.Equal(7, DieStats.EffectiveAttack(state, bizarro)); // base 5 + Strike's +2
+        Assert.Equal(8, DieStats.EffectiveDefense(state, bizarro)); // base 6 + Strike's +2
+        Assert.True(DieStats.HasKeyword(state, bizarro, "Overcrush"));
+    }
+
+    [Fact]
+    public void BizarroStrike_AnotherCharacterAlsoFieldedThisTurn_BonusDoesNotApply()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamA";
+
+        var bizarro = new DieInstance
+        {
+            Id = "teamA-bizarro-1", CardId = SampleCards.BizarroMoreThanAMonster.Id, OwnerId = "teamA", ControllerId = "teamA",
+            Zone = Zone.ReservePool, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(bizarro);
+
+        var bizarroEnergy = GiveWildEnergy(state, "teamA", 1);
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, bizarro.Id, energyDieIdsToSpend: [bizarroEnergy[0].Id]);
+
+        // A second, unrelated character die fielded later in the same turn.
+        var apocalypseDie = FindUnpurchased(state, "teamA", SampleCards.Apocalypse.Id);
+        var purchaseEnergy = GiveWildEnergy(state, "teamA", SampleCards.Apocalypse.PurchaseCost);
+        TurnEngine.Purchase(state, apocalypseDie.Id, purchaseEnergy.Select(d => d.Id).ToList());
+        apocalypseDie.Zone = Zone.ReservePool;
+        apocalypseDie.Status = DieStatus.Character;
+        apocalypseDie.Level = 1; // placeholder level-1 face: fielding cost 0
+        TurnEngine.Field(state, queue, apocalypseDie.Id, energyDieIdsToSpend: []);
+
+        Assert.Equal(5, DieStats.EffectiveAttack(state, bizarro)); // unmodified base - no longer the sole fielded die
+        Assert.False(DieStats.HasKeyword(state, bizarro, "Overcrush"));
+    }
 }

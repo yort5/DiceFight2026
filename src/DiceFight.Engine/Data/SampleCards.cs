@@ -691,6 +691,24 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 5)
         ]);
 
+    // Justice League's Bizarro, "More Than a Monster" printing - purely
+    // the Strike keyword, no other text. No AbilityDef needed at all - the
+    // bonus is a live, continuously-recomputed check (DieStats.
+    // HasStrikeBonus), not a triggered effect, same shape as Loyalty
+    // counters or Darkseid's keyword grant.
+    public static readonly CardDef BizarroMoreThanAMonster = Character(
+        "bizarro-more-than-a-monster", "Bizarro", "More Than a Monster", dieLimit: 4,
+        "Strike (This character gets +2A, +2D, and Overcrush so long as it is the only character die you " +
+        "fielded this turn.)",
+        purchaseCost: 7, energyType: EnergyType.Shield,
+        keywords: [new KeywordInstance("Strike")],
+        affiliations: ["Legion of Doom", "Villains"],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 6),
+            new CharacterFace(FieldingCost: 2, Attack: 7, Defense: 6),
+            new CharacterFace(FieldingCost: 2, Attack: 8, Defense: 7)
+        ]);
+
     // A team is 8 character cards + 2 Basic Action cards (10 total), not
     // the 10 characters + 3 Basic Actions used here previously - that was
     // simply wrong. Colossus, Corvus Glaive, Distraction, Kang, King
@@ -728,7 +746,7 @@ public static class SampleCards
             AlfredPennyworthCaretaker, AlfredPennyworthMI5, AlfredPennyworthToughAsNails,
             AntManAmplify, Cyclops, Wasp, BlackWidow, Polaris, CosmicCubeInfinitePossibilities, Parademon, Darkseid,
             Deathbird, WaspPixie, MadalynePryor, TheSpot, Ricochet, ScarletSpider, DrowMercenary,
-            SupermanKalEl, BlackMantaDeepSeaDeviant
+            SupermanKalEl, BlackMantaDeepSeaDeviant, BizarroMoreThanAMonster
         ];
         return all.ToDictionary(c => c.Id);
     }

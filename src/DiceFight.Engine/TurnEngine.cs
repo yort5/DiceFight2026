@@ -375,6 +375,7 @@ public static class TurnEngine
             () => $"Not enough energy offered to field {DisplayName(state, die)} (needs {fieldingCost}).");
 
         die.Zone = Zone.FieldZone;
+        state.FieldedThisTurn.Add(die.Id); // keyword Strike's own "fielded this turn" check
 
         // Rule 2.6.3.6 - "when fielded" fires immediately upon entering the Field Zone.
         EnqueueTriggered(state, queue, die, TriggerType.WhenFielded);
@@ -783,6 +784,9 @@ public static class TurnEngine
 
         // Keyword Obscure - "unblockable until end of turn" expires here.
         state.ObscuredCardIds.Clear();
+
+        // Keyword Strike's own "this turn" window resets too.
+        state.FieldedThisTurn.Clear();
 
         state.IsFirstTurn = false;
         state.ActivePlayerId = state.OpponentOf(activeId);

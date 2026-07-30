@@ -52,7 +52,8 @@ here rather than assuming which approach they'd want.
 1. ~~Keyword *behavior*~~ - Overcrush, Regenerate, Energize, Ally,
    Amplify/Awaken, Attune, Call Out, Corrupt, Swarm, Darkseid's
    keyword grant, Deadly, Fast, Energy Drain, Infiltrate, Intimidate,
-   Obscure, and Retaliation are implemented (see the status updates).
+   Obscure, Retaliation, and Strike are implemented (see the status
+   updates).
    BlackPanther's Energize is fully scripted; Robin's Energize
    (a purchase-cost discount) and all three Alfred Pennyworth printings'
    Ally effects (each a "Batman die OR Sidekick" compound target) are
@@ -2802,3 +2803,62 @@ drives three real Black Manta dice - one is KO'd in combat, and the
 survivor's Retaliation deals damage scaled to the two Villains still
 active afterward. `dotnet build`, `dotnet test` (187/187), and
 `npm run build` all clean.
+
+## Status update — Strike implemented; the first keyword needing no `AbilityDef`/trigger at all
+
+Appendix 1: "On the turn you field a Character die with Strike, at the
+end of the Main Step, if you fielded no other Character dice this turn,
+this Character die gets +2A, +2D, and Overcrush." The printed reminder
+text (Bizarro: "...so long as it is the only character die you fielded
+this turn") phrases this as a live "so long as" condition rather than a
+one-time snapshot taken at a fixed instant, so that's how it's modeled:
+a continuously-recomputed check, same shape as Loyalty counters or
+Darkseid's keyword grant, not a triggered ability - the Appendix's own
+"at the end of the Main Step" phrasing reads as describing the
+canonical point this stabilizes (nothing un-fields a die once fielded),
+not a hard gate; the two readings never produce a different observable
+outcome, since Overcrush's only real use is during the Attack Step,
+which is always later anyway.
+
+- **New `GameState.FieldedThisTurn`** (turn-scoped like
+  `MustBlockThisTurn`) - every die id that went through `TurnEngine.
+  Field`'s rule 2.6.2 "Field a Character die" action this turn,
+  including Sidekicks fielded onto a character face (that method
+  already treats `Character`/`SidekickCharacter` identically, so this
+  does too). A historical record of what happened this turn, not
+  current board state - a fielded die that was later KO'd still counts
+  against a *different* Strike die's own check, since you can't un-field
+  it.
+- **New `DieStats.HasStrikeBonus`** - true iff the die is active
+  (Field/Attack Zone), has the printed keyword, is itself in
+  `FieldedThisTurn`, and is the *only* one of its controller's dice in
+  `FieldedThisTurn` (i.e. nothing else, including a second copy of the
+  same character, was fielded this turn either). Wired into
+  `EffectiveAttack`/`EffectiveDefense` (+2/+2) and into `HasKeyword`
+  itself (`keyword == "Overcrush" && HasStrikeBonus` - the same shape as
+  Darkseid's `GrantsToSidekicks` branch, just keyed off a live board
+  condition instead of another die's printed text), so `CombatEngine`'s
+  existing Overcrush check picks it up with no combat-code changes at
+  all.
+- **No `AbilityDef`, no `TriggerType`, nothing to drain** - the first
+  keyword this session with zero triggered-ability machinery. Every
+  other keyword so far has needed at least an `AbilityDef` (even
+  Intimidate's `WhenFielded`); Strike is purely a computed property,
+  closer in shape to `DieStats.CountsAsSidekick` than to any reactive
+  trigger.
+
+Example card: Justice League's Bizarro ("More Than a Monster" printing) -
+purely the keyword, nothing else to script.
+
+9 new tests (198 total): `TurnEngineTests` covers `Field` populating
+`FieldedThisTurn` and `CleanUp` clearing it; `CombatEngineTests` covers
+`HasStrikeBonus` directly (grants the stat bonus and Overcrush when sole
+this turn; withheld when another die - even one that already left play -
+was also fielded this turn, when the Strike die itself wasn't fielded
+this turn at all, when it's not currently active; unaffected by an
+*opponent's* fielding) plus one full combat resolving real Overcrush
+leftover damage off the granted keyword; two end-to-end tests in
+`TwoTeamsDemoTests` drive real Bizarro through the actual `TurnEngine.
+Field` call, both alone (bonus applies) and with a second real character
+fielded the same turn (bonus withheld). `dotnet build`, `dotnet test`
+(198/198), and `npm run build` all clean.

@@ -986,4 +986,33 @@ public class TurnEngineTests
 
         Assert.Empty(state.ObscuredCardIds);
     }
+
+    // Keyword Strike's own "fielded this turn" record - see DieStats.
+    // HasStrikeBonus for how it's actually consumed (a live check, not a
+    // triggered ability, so there's nothing to drain here).
+    [Fact]
+    public void Field_AddsTheFieldedDieToFieldedThisTurn()
+    {
+        var state = CreateNewGame();
+        state.CurrentStep = TurnStep.Main;
+        var die = state.DiceIn("p1", Zone.Bag).First();
+        die.Zone = Zone.ReservePool;
+        die.Status = DieStatus.SidekickCharacter;
+
+        TurnEngine.Field(state, new AbilityQueue(), die.Id, energyDieIdsToSpend: []);
+
+        Assert.Contains(die.Id, state.FieldedThisTurn);
+    }
+
+    [Fact]
+    public void CleanUp_ClearsFieldedThisTurn()
+    {
+        var state = CreateNewGame();
+        state.FieldedThisTurn.Add("some-die");
+
+        state.CurrentStep = TurnStep.CleanUp;
+        TurnEngine.CleanUp(state);
+
+        Assert.Empty(state.FieldedThisTurn);
+    }
 }

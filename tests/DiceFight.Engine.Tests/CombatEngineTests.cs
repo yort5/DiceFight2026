@@ -1713,4 +1713,138 @@ public class CombatEngineTests
         Assert.Equal(Zone.PrepArea, opposingAlly.Zone); // KO'd (1 dmg vs 1D, blocker's 2A vs its 1D)
         Assert.Empty(queue.Pending); // p1's Retaliator doesn't control the KO'd die
     }
+
+    // Keyword Strike - "On the turn you field a Character die with
+    // Strike, at the end of the Main Step, if you fielded no other
+    // Character dice this turn, this Character die gets +2A, +2D, and
+    // Overcrush." No AbilityDef/trigger at all - DieStats.HasStrikeBonus
+    // is a live, continuously-recomputed check against GameState.
+    // FieldedThisTurn, so these tests seed that set directly (same
+    // pattern as Deadly/Call Out's turn-scoped sets) rather than driving
+    // the full Purchase/Field flow.
+    private static readonly CardDef StrikeCard = new()
+    {
+        Id = "strike-character", Name = "Strike Character", Type = CardType.Character,
+        PurchaseCost = 3, DieLimit = 4,
+        Levels = [new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 2)],
+        Keywords = [new KeywordInstance("Strike")],
+    };
+
+    private static GameState CreateStrikeGame()
+    {
+        var catalog = new Dictionary<string, CardDef> { [StrikeCard.Id] = StrikeCard, [PlainThreeLevelCard.Id] = PlainThreeLevelCard };
+        return GameState.NewGame(catalog, new Player { Id = "p1", Name = "Player One" }, new Player { Id = "p2", Name = "Player Two" });
+    }
+
+    [Fact]
+    public void Strike_SoleFieldedDieThisTurn_GetsPlusTwoAttackAndDefenseAndOvercrush()
+    {
+        var state = CreateStrikeGame();
+        var die = AddCharacterDie(state, "p1-strike-1", "p1", StrikeCard.Id, Zone.FieldZone);
+        state.FieldedThisTurn.Add(die.Id);
+
+        Assert.Equal(4, DieStats.EffectiveAttack(state, die)); // base 2 + 2
+        Assert.Equal(4, DieStats.EffectiveDefense(state, die)); // base 2 + 2
+        Assert.True(DieStats.HasKeyword(state, die, "Overcrush"));
+    }
+
+    [Fact]
+    public void Strike_AnotherCharacterDieAlsoFieldedThisTurn_BonusDoesNotApply()
+    {
+        var state = CreateStrikeGame();
+        var die = AddCharacterDie(state, "p1-strike-1", "p1", StrikeCard.Id, Zone.FieldZone);
+        var other = AddCharacterDie(state, "p1-other-1", "p1", PlainThreeLevelCard.Id, Zone.FieldZone);
+        state.FieldedThisTurn.Add(die.Id);
+        state.FieldedThisTurn.Add(other.Id);
+
+        Assert.Equal(2, DieStats.EffectiveAttack(state, die)); // unmodified base
+        Assert.Equal(2, DieStats.EffectiveDefense(state, die));
+        Assert.False(DieStats.HasKeyword(state, die, "Overcrush"));
+    }
+
+    // "Fielded" is a historical fact about the turn, not current board
+    // state - a die fielded this turn that already left play still
+    // disqualifies a different Strike die's own check.
+    [Fact]
+    public void Strike_OtherFieldedDieAlreadyLeftPlay_StillDisqualifies()
+    {
+        var state = CreateStrikeGame();
+        var die = AddCharacterDie(state, "p1-strike-1", "p1", StrikeCard.Id, Zone.FieldZone);
+        var other = AddCharacterDie(state, "p1-other-1", "p1", PlainThreeLevelCard.Id, Zone.PrepArea); // already KO'd/left play
+        state.FieldedThisTurn.Add(die.Id);
+        state.FieldedThisTurn.Add(other.Id);
+
+        Assert.False(DieStats.HasKeyword(state, die, "Overcrush"));
+    }
+
+    // The die itself must have been fielded THIS turn - active since an
+    // earlier turn, with nothing else fielded this turn either, still
+    // doesn't qualify (it's not "the" die you fielded this turn at all).
+    [Fact]
+    public void Strike_DieNotFieldedThisTurn_NoBonusEvenWithNoOtherFieldingThisTurn()
+    {
+        var state = CreateStrikeGame();
+        var die = AddCharacterDie(state, "p1-strike-1", "p1", StrikeCard.Id, Zone.FieldZone);
+        // state.FieldedThisTurn deliberately left empty.
+
+        Assert.Equal(2, DieStats.EffectiveAttack(state, die));
+        Assert.False(DieStats.HasKeyword(state, die, "Overcrush"));
+    }
+
+    // Only the SAME controller's fielding counts - an opponent fielding a
+    // pile of characters this turn doesn't touch your own Strike die.
+    [Fact]
+    public void Strike_OpposingControllersDieFieldedThisTurn_DoesNotDisqualify()
+    {
+        var state = CreateStrikeGame();
+        var die = AddCharacterDie(state, "p1-strike-1", "p1", StrikeCard.Id, Zone.FieldZone);
+        var opposing = AddCharacterDie(state, "p2-other-1", "p2", PlainThreeLevelCard.Id, Zone.FieldZone);
+        state.FieldedThisTurn.Add(die.Id);
+        state.FieldedThisTurn.Add(opposing.Id);
+
+        Assert.True(DieStats.HasKeyword(state, die, "Overcrush"));
+    }
+
+    [Fact]
+    public void Strike_DieNotActive_NoBonus()
+    {
+        var state = CreateStrikeGame();
+        var die = AddCharacterDie(state, "p1-strike-1", "p1", StrikeCard.Id, Zone.ReservePool);
+        state.FieldedThisTurn.Add(die.Id);
+
+        Assert.Equal(2, DieStats.EffectiveAttack(state, die)); // unmodified - not in the Field/Attack Zone
+    }
+
+    // End-to-end within combat: the granted Overcrush actually flows
+    // through CombatEngine's real check, not just DieStats.HasKeyword in
+    // isolation.
+    [Fact]
+    public void Strike_GrantedOvercrush_DealsLeftoverDamageToOpponent()
+    {
+        var state = CreateStrikeGame();
+        state.CurrentStep = TurnStep.Attack;
+        state.AttackSubStep = AttackSubStep.DeclareAttackers;
+        var striker = AddCharacterDie(state, "p1-strike-1", "p1", StrikeCard.Id, Zone.FieldZone);
+        state.FieldedThisTurn.Add(striker.Id);
+        var blocker = state.DiceFor("p2").First(); // Sidekick, 1D
+        blocker.Zone = Zone.FieldZone;
+        blocker.Status = DieStatus.SidekickCharacter;
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [striker.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(striker.Id, blocker.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [blocker.Id]);
+
+        // Effective attack is 4 (2 base + Strike's +2); all of it has to
+        // be assigned, and the blocker only needs 1 to die.
+        var splits = new Dictionary<string, IReadOnlyDictionary<string, int>>
+        {
+            [striker.Id] = new Dictionary<string, int> { [blocker.Id] = 4 },
+        };
+        var result = CombatEngine.AssignCombatDamage(state, queue, assignment, splits);
+
+        Assert.Contains(blocker.Id, result.KOdDieIds);
+        Assert.Equal(17, state.PlayerTwo.Life); // 4 attack - 1 defense (what was needed) = 3 leftover
+    }
 }

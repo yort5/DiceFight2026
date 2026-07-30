@@ -21,6 +21,7 @@ public static class DieStats
     public static bool HasKeyword(GameState state, DieInstance die, string keyword)
     {
         if (HasPrintedKeyword(state, die, keyword)) return true;
+        if (keyword == "Overcrush" && HasStrikeBonus(state, die)) return true;
 
         if (keyword == "Ally" || !CountsAsSidekick(state, die)) return false;
 
@@ -41,6 +42,32 @@ public static class DieStats
         return cardId is not null
             && state.CardCatalog.TryGetValue(cardId, out var card)
             && card.Keywords.Any(k => k.Name == keyword);
+    }
+
+    // Keyword Strike - "On the turn you field a Character die with
+    // Strike, at the end of the Main Step, if you fielded no other
+    // Character dice this turn, this Character die gets +2A, +2D, and
+    // Overcrush." The printed reminder text (Bizarro: "...so long as it
+    // is the only character die you fielded this turn") phrases this as
+    // a live, continuously-true condition rather than a one-time
+    // snapshot, so it's recomputed on demand from GameState.
+    // FieldedThisTurn (populated by TurnEngine.Field, cleared each turn
+    // in CleanUp) instead of being applied once at a fixed instant - the
+    // two only differ if something inspects this die's stats mid-Main-
+    // Step before any other die could possibly have been fielded yet,
+    // which changes nothing observable either way. "Fielded," not
+    // "purchased" or "active" - a die fielded this turn that was later
+    // KO'd still counts against a DIFFERENT Strike die's own check
+    // (fielding is a historical fact about the turn, not current board
+    // state), and Sidekicks fielded onto a character face count too,
+    // same as TurnEngine.Field's own validation already treats them.
+    public static bool HasStrikeBonus(GameState state, DieInstance die)
+    {
+        if (die.Zone is not (Zone.FieldZone or Zone.AttackZone)) return false;
+        if (!HasPrintedKeyword(state, die, "Strike")) return false;
+        if (!state.FieldedThisTurn.Contains(die.Id)) return false;
+
+        return state.Dice.Count(d => state.FieldedThisTurn.Contains(d.Id) && d.ControllerId == die.ControllerId) == 1;
     }
 
     // Keyword Energy Drain X - "spin each Character die engaged with a
@@ -112,6 +139,7 @@ public static class DieStats
     {
         var face = GetFace(state, die);
         var total = face.Attack + die.AppliedModifiers.Sum(m => m.AttackDelta);
+        if (HasStrikeBonus(state, die)) total += 2;
         return Math.Max(0, total);
     }
 
@@ -119,6 +147,7 @@ public static class DieStats
     {
         var face = GetFace(state, die);
         var total = face.Defense + die.AppliedModifiers.Sum(m => m.DefenseDelta);
+        if (HasStrikeBonus(state, die)) total += 2;
         return Math.Max(0, total);
     }
 
