@@ -2948,31 +2948,42 @@ wired for Strike's `FieldedThisTurn` tracking.
   Teamwatch cards define their own effect text (Falcon: "Prep a Sidekick
   from your Used Pile"), so every Teamwatch card carries its own
   `AbilityDef(TriggerType.Teamwatch, ...)`.
-- **Simplification, flagged rather than silently assumed**:
-  clarification 1's second sentence ("doesn't change if additional
-  identical Character dice are fielded after the ability is initiated")
-  could be read as "a given different character only ever triggers this
-  once, ever" rather than just "once per unique character per fielding
-  event" - but with no worked numeric example in the rulebook and no
-  currently cataloged card whose effect would even behave differently
-  either way (Falcon's own effect is a fixed one-shot, not something
-  that scales with a running count), this narrower historical-tracking
-  reading isn't modeled - every qualifying fielding event re-triggers
-  Teamwatch fresh, with no memory of what's been fielded before.
+- **Correction (user-clarified) on clarification 1's second sentence**:
+  the previous write-up here treated "doesn't change if additional
+  identical Character dice are fielded after the ability is initiated"
+  as an open question about whether a repeat fielding should re-trigger
+  Teamwatch at all - it shouldn't have been in doubt. The "counts
+  characters, not dice" rule is specifically about "while active"/
+  character-referencing abilities not stacking (how many *Teamwatch
+  holders* react to one event, which the CardId dedup above already
+  covers) - it has nothing to do with the *fielding* side. Teamwatch is
+  a triggered ability shaped like `WhenFielded`/`WhenAttacks`/
+  `WhenBlocked` (rule 3.4.3.2 - each qualifying event triggers it, "even
+  if that is more than once per turn," rule 3.4.3.6), not a Static
+  count - so fielding a second, identical Black Panther die (after a
+  first one already triggered Falcon's Teamwatch) triggers it again,
+  same as `WhenFielded` firing again for a second copy of any card. The
+  implementation already had this right without realizing it (each
+  `TurnEngine.Field` call independently re-evaluates the condition, with
+  no historical "already triggered for this CardId" tracking) - only the
+  write-up was wrong; a test now locks in the correct behavior
+  explicitly rather than leaving it an implicit accident.
 - Falcon's real affiliation ("Avengers," from MSW027) and Black
   Panther's ("Avengers/Infinity Watch," MSW020, the Energize printing
   already scripted) are both populated now, letting the end-to-end test
   use two real cards that actually share an affiliation instead of a
   synthetic pairing.
 
-8 new tests (215 total): `TurnEngineTests` covers the reactive scan
+9 new tests (216 total): `TurnEngineTests` covers the reactive scan
 directly with synthetic fixture cards (triggers on an affiliated
 fielding, doesn't on an unaffiliated one, doesn't trigger off a second
-copy of its own card, dedups multiple copies of the same Teamwatch
-character, fires separately for different Teamwatch characters, ignored
-for a fielded Sidekick, and doesn't react to an opposing controller's
-own fielding); one end-to-end `TwoTeamsDemoTests` case fields real Black
-Panther under the same controller as real Falcon, confirming Falcon's
-Teamwatch fires and its "Prep a Sidekick from your Used Pile" effect
-actually moves a Used Pile Sidekick to the Prep Area. `dotnet build`,
-`dotnet test` (215/215), and `npm run build` all clean.
+copy of its own card, dedups multiple *Teamwatch holders* of the same
+character, re-triggers on a second identical *fielded* die instead of
+being suppressed by the first (the corrected point above), fires
+separately for different Teamwatch characters, ignored for a fielded
+Sidekick, and doesn't react to an opposing controller's own fielding);
+one end-to-end `TwoTeamsDemoTests` case fields real Black Panther under
+the same controller as real Falcon, confirming Falcon's Teamwatch fires
+and its "Prep a Sidekick from your Used Pile" effect actually moves a
+Used Pile Sidekick to the Prep Area. `dotnet build`,
+`dotnet test` (216/216), and `npm run build` all clean.

@@ -1184,6 +1184,34 @@ public class TurnEngineTests
         Assert.Equal(1, queue.Count);
     }
 
+    // The "counts characters, not dice" dedup above is about how many
+    // *Teamwatch holders* react to one event - it says nothing about the
+    // *fielded* side. Teamwatch is a triggered ability shaped like
+    // WhenFielded/WhenAttacks (rule 3.4.3.2/3.4.3.6 - fires "even if that
+    // is more than once per turn"), not a Static "while active" count, so
+    // fielding a second, identical affiliated die re-triggers it again,
+    // with no memory of the first fielding.
+    [Fact]
+    public void Field_FieldingASecondIdenticalAffiliatedCharacter_TriggersTeamwatchAgain()
+    {
+        var state = CreateTeamwatchGame();
+        var teamwatcher = AddActiveDie(state, "p1-teamwatch-1", "p1", TeamwatchCard.Id);
+        var firstFielded = AddReadyToFieldDie(state, "p1-affiliated-1", "p1", AffiliatedCharacterCard.Id);
+        var secondFielded = AddReadyToFieldDie(state, "p1-affiliated-2", "p1", AffiliatedCharacterCard.Id); // identical card, second die
+
+        var firstQueue = new AbilityQueue();
+        TurnEngine.Field(state, firstQueue, firstFielded.Id, energyDieIdsToSpend: []);
+        Assert.Equal(1, firstQueue.Count);
+        Assert.Equal(TriggerType.Teamwatch, firstQueue.Pending[0].Trigger);
+
+        var secondQueue = new AbilityQueue();
+        TurnEngine.Field(state, secondQueue, secondFielded.Id, energyDieIdsToSpend: []);
+
+        Assert.Equal(1, secondQueue.Count); // not suppressed just because an identical die was fielded earlier
+        Assert.Equal(TriggerType.Teamwatch, secondQueue.Pending[0].Trigger);
+        Assert.Equal(teamwatcher.Id, secondQueue.Pending[0].SourceDieId);
+    }
+
     [Fact]
     public void Field_TwoDifferentTeamwatchCharactersActive_EachTriggersSeparately()
     {
