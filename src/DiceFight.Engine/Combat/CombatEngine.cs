@@ -61,6 +61,7 @@ public static class CombatEngine
         }
 
         ValidateCallOuts(state, assignment);
+        ValidateObscure(state, assignment);
 
         foreach (var id in blockerDieIds)
         {
@@ -237,11 +238,9 @@ public static class CombatEngine
     // Call Out, the die targeted with Call Out was KO'd, etc.), then the
     // Call Out ability is cancelled." A cancelled Call Out imposes no
     // restriction at all - blocking legality for that attacker just
-    // reverts to normal, it does NOT become unblockable itself. Only the
-    // "target was KO'd/removed" and "duplicate target" cases are
-    // modeled - "an ability made [the attacker] unblockable" has nothing
-    // to check against yet, since Unblockable isn't a mechanic this
-    // engine has built (see RULES_ENGINE_DESIGN.md).
+    // reverts to normal, it does NOT become unblockable itself. The
+    // "target was KO'd/removed", "duplicate target", and (now that Obscure
+    // exists) "an ability made it unblockable" cases are all modeled.
     private static IReadOnlyDictionary<string, string> ActiveCallOutTargets(GameState state)
     {
         var duplicateTargets = state.CallOutTargets.Values
@@ -251,8 +250,30 @@ public static class CombatEngine
             .ToHashSet();
 
         return state.CallOutTargets
-            .Where(kvp => !duplicateTargets.Contains(kvp.Value) && FindDie(state, kvp.Value).Zone is Zone.FieldZone or Zone.AttackZone)
+            .Where(kvp =>
+                !duplicateTargets.Contains(kvp.Value)
+                && FindDie(state, kvp.Value).Zone is Zone.FieldZone or Zone.AttackZone
+                && !IsObscured(state, FindDie(state, kvp.Key)))
             .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+    }
+
+    // Keyword Obscure - "all dice from the applicable Character card are
+    // unblockable until end of turn." Checked up front against the whole
+    // assignment, same shape as ValidateCallOuts, so a rejected attempt
+    // fails cleanly before any zone changes happen below.
+    private static void ValidateObscure(GameState state, CombatAssignment assignment)
+    {
+        foreach (var attacker in state.DiceIn(state.ActivePlayerId, Zone.AttackZone))
+        {
+            if (IsObscured(state, attacker) && assignment.BlockersOf(attacker.Id).Count > 0)
+                throw new InvalidOperationException($"{DisplayName(state, attacker)} is unblockable this turn (Obscure).");
+        }
+    }
+
+    private static bool IsObscured(GameState state, DieInstance die)
+    {
+        var cardId = die.VirtualCardId ?? die.CardId;
+        return cardId is not null && state.ObscuredCardIds.Contains(cardId);
     }
 
     // Rule 2.7.4 (assign) and 2.7.6 (resolve KOs, return survivors).

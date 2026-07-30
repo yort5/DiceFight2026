@@ -51,8 +51,8 @@ here rather than assuming which approach they'd want.
 **Actionable next steps, roughly high to low value**:
 1. ~~Keyword *behavior*~~ - Overcrush, Regenerate, Energize, Ally,
    Amplify/Awaken, Attune, Call Out, Corrupt, Swarm, Darkseid's
-   keyword grant, Deadly, Fast, Energy Drain, Infiltrate, and Intimidate
-   are implemented (see the status updates).
+   keyword grant, Deadly, Fast, Energy Drain, Infiltrate, Intimidate,
+   and Obscure are implemented (see the status updates).
    BlackPanther's Energize is fully scripted; Robin's Energize
    (a purchase-cost discount) and all three Alfred Pennyworth printings'
    Ally effects (each a "Batman die OR Sidekick" compound target) are
@@ -2680,3 +2680,49 @@ Scarlet Spider's real card - fielding her removes the target, the
 removed die is rejected as an illegal blocker for the rest of that
 combat, and it's back in the Field Zone once Clean Up runs. `dotnet
 build`, `dotnet test` (172/172), and `npm run build` all clean.
+
+## Status update — Obscure implemented; also fixed Call Out's own long-documented "unblockable" gap
+
+Appendix 1: "When you use an Action die, all dice from the applicable
+Character card are unblockable until end of turn." Same "any Action die
+you use triggers it, not just this card's own" shape as Amplify/Attune -
+built into `TurnEngine.UseActionDie` alongside those two, not authored
+per-`CardDef`.
+
+- New `GameState.ObscuredCardIds` (a `HashSet<string>`, turn-scoped like
+  `MustBlockThisTurn` - cleared in `CleanUp`) - recorded by CardId, not
+  die id, since the effect covers *every* die from that card, including
+  ones not currently active. `UseActionDie` adds the CardId of every
+  active (Field/Attack Zone) die the controller has with the Obscure
+  keyword, mirroring the Amplify loop right above it.
+- Enforcement lives in `CombatEngine.DeclareBlockers`, as a new
+  `ValidateObscure` check run alongside `ValidateCallOuts` - rejects any
+  assignment that tries to put a blocker on an attacker whose CardId is
+  in `ObscuredCardIds`, before any zone changes happen. Leaving such an
+  attacker unblocked is always fine (that's not a restriction Obscure
+  imposes - it's just the normal "no blockers assigned" case).
+- **This also closes a gap flagged since the Call Out implementation**:
+  Call Out's own clarification 1 lists "an ability made it unblockable"
+  as one of the ways a Call Out gets cancelled, but the old comment on
+  `ActiveCallOutTargets` said outright that nothing could be checked
+  there yet, since Unblockable wasn't a mechanic this engine had built.
+  Now that it is, `ActiveCallOutTargets` excludes any attacker whose
+  CardId is Obscured - without this, a die that Call Out reserved as
+  "only legal blocker of X" would stay stuck reserved for X even after X
+  became permanently unblockable, meaning it could never legally block
+  *anything* for the rest of that combat. A dedicated test
+  (`CallOut_CancelledByObscure_FreesTheTargetToBlockAnotherAttacker`)
+  proves the freed die can go block a different attacker instead.
+
+Example card: Icons: Tomb of Annihilation's Drow Mercenary ("Hired
+Blade" printing) - purely the keyword, nothing else to script.
+
+6 new tests (178 total): `CombatEngineTests` covers the enforcement
+directly (an Obscured attacker can't be blocked but can still attack
+unblocked normally; a non-Obscured attacker is unaffected; the Call Out
+cancellation interaction above); `TurnEngineTests` covers `CleanUp`
+clearing `ObscuredCardIds`; one end-to-end test in `TwoTeamsDemoTests`
+drives Drow Mercenary's real card - using an unrelated Action die
+(Shocking Grasp) marks it, blocking it then throws, and Clean Up expires
+the effect. `dotnet build`, `dotnet test` (178/178), and `npm run build`
+all clean.

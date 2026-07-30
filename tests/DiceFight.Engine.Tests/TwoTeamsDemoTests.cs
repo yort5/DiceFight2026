@@ -1020,4 +1020,56 @@ public class TwoTeamsDemoTests
 
         Assert.Equal(Zone.FieldZone, opposingTarget.Zone);
     }
+
+    // Icons' Drow Mercenary, "Hired Blade" printing - pure Obscure. "When
+    // you use an Action die" fires from ANY Action die (same shape as
+    // AntManAmplify above), not just a Drow Mercenary die's own use, and
+    // affects every die from that CardId until Clean Up.
+    [Fact]
+    public void DrowMercenaryObscure_UsingAnyActionDie_MakesItUnblockableUntilCleanUp()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamA";
+
+        var drow = new DieInstance
+        {
+            Id = "teamA-drow-1", CardId = SampleCards.DrowMercenary.Id, OwnerId = "teamA", ControllerId = "teamA",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(drow);
+
+        var opposingBlocker = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        opposingBlocker.Zone = Zone.FieldZone;
+        opposingBlocker.Status = DieStatus.Character;
+
+        var shockingGraspDie = FindUnpurchased(state, "teamA", SampleCards.ShockingGrasp.Id);
+        var purchaseEnergy = GiveWildEnergy(state, "teamA", SampleCards.ShockingGrasp.PurchaseCost);
+        TurnEngine.Purchase(state, shockingGraspDie.Id, purchaseEnergy.Select(d => d.Id).ToList());
+        shockingGraspDie.Zone = Zone.ReservePool;
+        shockingGraspDie.Status = DieStatus.Action;
+
+        var queue = new AbilityQueue();
+        TurnEngine.UseActionDie(state, queue, shockingGraspDie.Id); // an unrelated Action die - not Drow Mercenary's own
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [opposingBlocker.Id])));
+
+        Assert.Contains(SampleCards.DrowMercenary.Id, state.ObscuredCardIds);
+
+        TurnEngine.EnterAttackStep(state);
+        CombatEngine.DeclareAttackers(state, queue, [drow.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(drow.Id, opposingBlocker.Id);
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            CombatEngine.DeclareBlockers(state, assignment, [opposingBlocker.Id]));
+        Assert.Contains("unblockable", ex.Message);
+
+        // Unblocked, it resolves as an ordinary attacker; Clean Up expires the effect.
+        var noBlockAssignment = new CombatAssignment();
+        CombatEngine.DeclareBlockers(state, noBlockAssignment, []);
+        CombatEngine.AssignCombatDamage(
+            state, queue, noBlockAssignment, new Dictionary<string, IReadOnlyDictionary<string, int>>());
+        TurnEngine.CleanUp(state);
+
+        Assert.Empty(state.ObscuredCardIds);
+    }
 }

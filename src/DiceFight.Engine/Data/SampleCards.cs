@@ -632,6 +632,24 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 2, Attack: 6, Defense: 3)
         ]);
 
+    // Icons: Tomb of Annihilation's Drow Mercenary, "Hired Blade" printing -
+    // purely the Obscure keyword, no other text. Unlike Intimidate/Deadly
+    // (which needed a new zone or a tracked die-id set), Obscure's "when you
+    // use an Action die" trigger and "unblockable" effect are both handled
+    // generically in TurnEngine.UseActionDie and CombatEngine.DeclareBlockers
+    // /ActiveCallOutTargets - this card contributes nothing but the printed
+    // keyword itself, same as TheSpot's Infiltrate.
+    public static readonly CardDef DrowMercenary = Character(
+        "drow-mercenary", "Drow Mercenary", "Hired Blade", dieLimit: 4,
+        "Obscure (When you use an Action die, this character is unblockable until end of turn.)",
+        purchaseCost: 3, energyType: EnergyType.Bolt,
+        keywords: [new KeywordInstance("Obscure")],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 3, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 4)
+        ]);
+
     // A team is 8 character cards + 2 Basic Action cards (10 total), not
     // the 10 characters + 3 Basic Actions used here previously - that was
     // simply wrong. Colossus, Corvus Glaive, Distraction, Kang, King
@@ -668,7 +686,7 @@ public static class SampleCards
             JaneFoster, Starfire, Kang, KingHyperion, CasketOfAncientWinters, DailyBugle, Escape,
             AlfredPennyworthCaretaker, AlfredPennyworthMI5, AlfredPennyworthToughAsNails,
             AntManAmplify, Cyclops, Wasp, BlackWidow, Polaris, CosmicCubeInfinitePossibilities, Parademon, Darkseid,
-            Deathbird, WaspPixie, MadalynePryor, TheSpot, Ricochet, ScarletSpider
+            Deathbird, WaspPixie, MadalynePryor, TheSpot, Ricochet, ScarletSpider, DrowMercenary
         ];
         return all.ToDictionary(c => c.Id);
     }

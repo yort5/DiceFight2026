@@ -48,6 +48,12 @@ public sealed class GameState
     // declared in - unlike MustBlockThisTurn, this isn't turn-scoped.
     public Dictionary<string, string> CallOutTargets { get; } = [];
 
+    // Keyword Obscure - CardIds whose dice are all unblockable for the rest
+    // of this turn (set by TurnEngine.UseActionDie, enforced by
+    // CombatEngine.DeclareBlockers/ActiveCallOutTargets). Turn-scoped like
+    // MustBlockThisTurn, since "until end of turn" is the keyword's own text.
+    public HashSet<string> ObscuredCardIds { get; } = [];
+
     public Player GetPlayer(string playerId) =>
         playerId == PlayerOne.Id ? PlayerOne
         : playerId == PlayerTwo.Id ? PlayerTwo

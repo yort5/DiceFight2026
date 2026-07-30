@@ -1358,4 +1358,106 @@ public class CombatEngineTests
         Assert.Equal(TriggerType.WhenInfiltrates, queue.Pending[0].Trigger);
         Assert.Equal(reactor.Id, queue.Pending[0].SourceDieId);
     }
+
+    // Keyword Obscure - "When you use an Action die, all dice from the
+    // applicable Character card are unblockable until end of turn." The
+    // trigger itself (TurnEngine.UseActionDie populating GameState.
+    // ObscuredCardIds) is covered end-to-end in TwoTeamsDemoTests; these
+    // tests seed ObscuredCardIds directly, same as the Deadly CleanUp tests
+    // seed DeadlyEngagedDieIds directly, to isolate the enforcement side
+    // (CombatEngine.DeclareBlockers/ActiveCallOutTargets) from the trigger.
+    private static readonly CardDef ObscureCard = new()
+    {
+        Id = "obscure-attacker", Name = "Obscure Attacker", Type = CardType.Character,
+        PurchaseCost = 3, DieLimit = 4,
+        Levels = [new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 2)],
+        Keywords = [new KeywordInstance("Obscure")],
+    };
+
+    private static GameState CreateObscureGame()
+    {
+        var catalog = new Dictionary<string, CardDef> { [ObscureCard.Id] = ObscureCard, [PlainThreeLevelCard.Id] = PlainThreeLevelCard };
+        var state = GameState.NewGame(catalog, new Player { Id = "p1", Name = "Player One" }, new Player { Id = "p2", Name = "Player Two" });
+        state.CurrentStep = TurnStep.Attack;
+        state.AttackSubStep = AttackSubStep.DeclareAttackers;
+        return state;
+    }
+
+    [Fact]
+    public void Obscure_MarkedCardId_CannotLegallyBeBlocked()
+    {
+        var state = CreateObscureGame();
+        var attacker = AddCharacterDie(state, "p1-obscure-1", "p1", ObscureCard.Id, Zone.FieldZone);
+        var blocker = AddCharacterDie(state, "p2-plain-1", "p2", PlainThreeLevelCard.Id, Zone.FieldZone);
+        state.ObscuredCardIds.Add(ObscureCard.Id);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attacker.Id, blocker.Id);
+
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            CombatEngine.DeclareBlockers(state, assignment, [blocker.Id]));
+        Assert.Contains("unblockable", ex.Message);
+    }
+
+    [Fact]
+    public void Obscure_MarkedCardId_LeftUnblocked_CombatProceedsNormally()
+    {
+        var state = CreateObscureGame();
+        var attacker = AddCharacterDie(state, "p1-obscure-1", "p1", ObscureCard.Id, Zone.FieldZone);
+        state.ObscuredCardIds.Add(ObscureCard.Id);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        var assignment = new CombatAssignment();
+        CombatEngine.DeclareBlockers(state, assignment, []); // no throw - unblocked is always legal
+
+        CombatEngine.AssignCombatDamage(state, queue, assignment, new Dictionary<string, IReadOnlyDictionary<string, int>>());
+
+        Assert.Equal(Player.StartingLife - 2, state.PlayerTwo.Life); // full 2A, unblocked
+    }
+
+    [Fact]
+    public void Obscure_UnmarkedCardId_CanStillBeBlockedNormally()
+    {
+        var state = CreateObscureGame();
+        var attacker = AddCharacterDie(state, "p1-obscure-1", "p1", ObscureCard.Id, Zone.FieldZone);
+        var blocker = AddCharacterDie(state, "p2-plain-1", "p2", PlainThreeLevelCard.Id, Zone.FieldZone);
+        // ObscuredCardIds deliberately left empty - printed Obscure alone
+        // (never actually triggered by an Action-die use) imposes no restriction.
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attacker.Id, blocker.Id);
+
+        CombatEngine.DeclareBlockers(state, assignment, [blocker.Id]); // does not throw
+        Assert.Equal(Zone.AttackZone, blocker.Zone);
+    }
+
+    // Appendix 1's own Call Out clarification: "If the die that applied
+    // Call Out cannot legally be blocked for any reason (an ability made
+    // it unblockable, ...), then the Call Out ability is cancelled." Proves
+    // the cancellation actually frees the reserved target die to block a
+    // *different* attacker, rather than leaving it stuck reserved for an
+    // attacker that can never legally be blocked by anyone.
+    [Fact]
+    public void CallOut_CancelledByObscure_FreesTheTargetToBlockAnotherAttacker()
+    {
+        var (state, attacker, target, _) = CreateCallOutState();
+        var secondAttacker = state.DiceFor("p1").First(); // plain Sidekick, no Call Out
+        secondAttacker.Zone = Zone.FieldZone;
+        secondAttacker.Status = DieStatus.SidekickCharacter;
+
+        var queue = new AbilityQueue();
+        DeclareAndResolveCallOuts(state, queue, [attacker.Id, secondAttacker.Id], target.Id);
+        state.ObscuredCardIds.Add(attacker.CardId!); // attacker becomes unblockable after declaring its Call Out
+
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(secondAttacker.Id, target.Id); // would be illegal if attacker's Call Out still reserved this die
+
+        CombatEngine.DeclareBlockers(state, assignment, [target.Id]); // no throw - Call Out cancelled, target freed
+        Assert.Equal(Zone.AttackZone, target.Zone);
+    }
 }

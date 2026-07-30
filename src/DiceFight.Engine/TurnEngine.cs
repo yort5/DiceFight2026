@@ -433,6 +433,22 @@ public static class TurnEngine
             EnqueueTriggered(state, queue, attuner, TriggerType.Attune);
         }
 
+        // Keyword Obscure - "When you use an Action die, all dice from the
+        // applicable Character card are unblockable until end of turn."
+        // Same "any Action die triggers it" shape as Amplify above (not
+        // just the Obscure die's own use). The effect is recorded by
+        // CardId, not die id, since it covers every die from that card -
+        // including ones not currently active - and is consumed by
+        // CombatEngine.DeclareBlockers/ActiveCallOutTargets; cleared each
+        // turn in CleanUp.
+        foreach (var obscurer in state.DiceIn(state.ActivePlayerId, Zone.FieldZone)
+            .Concat(state.DiceIn(state.ActivePlayerId, Zone.AttackZone))
+            .Where(d => DieStats.HasKeyword(state, d, "Obscure")))
+        {
+            var obscuredCardId = obscurer.VirtualCardId ?? obscurer.CardId;
+            if (obscuredCardId is not null) state.ObscuredCardIds.Add(obscuredCardId);
+        }
+
         var cardId = die.VirtualCardId ?? die.CardId;
         var card = cardId is not null ? state.CardCatalog.GetValueOrDefault(cardId) : null;
         if (card?.Type == CardType.EpicBasicAction)
@@ -764,6 +780,9 @@ public static class TurnEngine
         // blockers, Starfire's "purchased a die this turn" check).
         state.MustBlockThisTurn.Clear();
         state.GetPlayer(activeId).PurchasedDieThisTurn = false;
+
+        // Keyword Obscure - "unblockable until end of turn" expires here.
+        state.ObscuredCardIds.Clear();
 
         state.IsFirstTurn = false;
         state.ActivePlayerId = state.OpponentOf(activeId);

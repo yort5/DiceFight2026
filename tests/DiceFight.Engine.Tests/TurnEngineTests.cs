@@ -970,4 +970,20 @@ public class TurnEngineTests
 
         Assert.Equal(Zone.FieldZone, p2Intimidated.Zone);
     }
+
+    // Keyword Obscure - "unblockable until end of turn" expires at Clean
+    // Up, same lifetime shape as MustBlockThisTurn. Enforcement itself
+    // (CombatEngine.DeclareBlockers/ActiveCallOutTargets) is covered in
+    // CombatEngineTests; this just covers the turn-scoped expiry.
+    [Fact]
+    public void CleanUp_ClearsObscuredCardIds()
+    {
+        var state = CreateNewGame();
+        state.ObscuredCardIds.Add("some-card");
+
+        state.CurrentStep = TurnStep.CleanUp;
+        TurnEngine.CleanUp(state);
+
+        Assert.Empty(state.ObscuredCardIds);
+    }
 }
