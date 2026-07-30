@@ -161,7 +161,20 @@ public enum TriggerType
     // against every one of the controller's active dice, fired once per
     // successful Infiltrate use (see CombatEngine.ResolveInfiltrate),
     // the same shape as Attune reacting to "you use an Action die."
-    WhenInfiltrates
+    WhenInfiltrates,
+
+    // Keyword Retaliation - "If a character you control with Retaliation
+    // is active, and a Character die you control that shares an
+    // affiliation with it is KO'd, deal 1 damage to an opposing player."
+    // Unlike Attune/Infiltrate's reactors (whose built-in effect is a
+    // fixed constant, identical on every card), Retaliation's own printed
+    // amount can be redefined per card (e.g. Black Manta's "for each of
+    // your active Villains"), so - unlike those two - there's no engine-
+    // injected default: every Retaliation card carries its own AbilityDef
+    // with this Trigger (see CombatEngine.ResolveRetaliation for the
+    // reactive scan that fires it, checked AFTER a whole simultaneous KO
+    // batch settles per Appendix 1 clarification 1).
+    Retaliation
 }
 
 // Rule 2.2.3 - the five steps of a turn, in fixed order (2.2.4 - cannot

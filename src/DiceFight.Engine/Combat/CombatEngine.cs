@@ -458,7 +458,52 @@ public static class CombatEngine
             // Rule 2.7.6.5 - "when KO'd" fires for each die KO'd this way.
             TurnEngine.EnqueueTriggered(state, queue, die, TriggerType.WhenKOd);
         }
+
+        // Keyword Retaliation - evaluated only after every KO in this wave
+        // has already been applied above (see ResolveRetaliation's own
+        // remarks for why - Appendix 1 clarification 1's "simultaneous"
+        // requirement).
+        foreach (var koId in koIds)
+            ResolveRetaliation(state, queue, FindDie(state, koId));
+
         return koIds;
+    }
+
+    // Keyword Retaliation - "If a character you control with Retaliation
+    // is active, and a Character die you control that shares an
+    // affiliation with it is KO'd, deal 1 damage to an opposing player."
+    // Scans koDie's OWN controller's currently-active dice for Retaliation
+    // holders sharing an affiliation with koDie's card, deduplicated by
+    // CardId (clarification 2 - multiple copies of the SAME Retaliation
+    // character only trigger once, even though each is independently
+    // active). Called once per KO'd die in a simultaneous wave (see
+    // ResolveFastOrSlowDamage) - crucially, AFTER that whole wave's KOs
+    // have already been applied to `state`, not interleaved with them, so
+    // a Retaliation die that was ALSO KO'd in this same wave is already
+    // gone from the active scan below by the time this runs, regardless
+    // of which order the wave happened to process dice in (clarification
+    // 1's worked example - a Retaliation die and an affiliated ally KO'd
+    // simultaneously by combat damage do not trigger each other).
+    private static void ResolveRetaliation(GameState state, AbilityQueue queue, DieInstance koDie)
+    {
+        var koCardId = koDie.VirtualCardId ?? koDie.CardId;
+        if (koCardId is null || !state.CardCatalog.TryGetValue(koCardId, out var koCard)) return;
+
+        var retaliators = state.DiceIn(koDie.ControllerId, Zone.FieldZone)
+            .Concat(state.DiceIn(koDie.ControllerId, Zone.AttackZone))
+            .Where(d => DieStats.HasKeyword(state, d, "Retaliation"))
+            .GroupBy(d => d.VirtualCardId ?? d.CardId)
+            .Select(g => g.First());
+
+        foreach (var retaliator in retaliators)
+        {
+            var retaliatorCardId = retaliator.VirtualCardId ?? retaliator.CardId;
+            if (retaliatorCardId is null || !state.CardCatalog.TryGetValue(retaliatorCardId, out var retaliatorCard))
+                continue;
+            if (!retaliatorCard.Affiliations.Any(koCard.Affiliations.Contains)) continue;
+
+            TurnEngine.EnqueueTriggered(state, queue, retaliator, TriggerType.Retaliation);
+        }
     }
 
     private static void RequireSubStep(GameState state, AttackSubStep expected)

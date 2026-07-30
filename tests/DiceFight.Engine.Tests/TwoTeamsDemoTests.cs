@@ -1072,4 +1072,66 @@ public class TwoTeamsDemoTests
 
         Assert.Empty(state.ObscuredCardIds);
     }
+
+    // Justice League's Black Manta, "Deep Sea Deviant" printing - Retaliation
+    // with its own base amount entirely redefined by card text ("for each
+    // of your active Villains" instead of the keyword's default 1). Three
+    // Black Manta dice (same CardId - clarification 2's "only once per
+    // unique character" dedup applies even to itself) stand in for a small
+    // Legion of Doom board: one dies in combat, and the other two (still
+    // active afterward) are what the surviving Retaliator counts.
+    [Fact]
+    public void BlackMantaRetaliation_TriggersOnceScaledByActiveVillainsRemainingAfterTheKO()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamB";
+
+        var mantaA = new DieInstance
+        {
+            Id = "teamA-manta-1", CardId = SampleCards.BlackMantaDeepSeaDeviant.Id, OwnerId = "teamA", ControllerId = "teamA",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        var mantaB = new DieInstance
+        {
+            Id = "teamA-manta-2", CardId = SampleCards.BlackMantaDeepSeaDeviant.Id, OwnerId = "teamA", ControllerId = "teamA",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        var mantaC = new DieInstance
+        {
+            Id = "teamA-manta-3", CardId = SampleCards.BlackMantaDeepSeaDeviant.Id, OwnerId = "teamA", ControllerId = "teamA",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.AddRange([mantaA, mantaB, mantaC]);
+
+        var attacker = new DieInstance
+        {
+            Id = "teamB-drow-1", CardId = SampleCards.DrowMercenary.Id, OwnerId = "teamB", ControllerId = "teamB",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(attacker);
+
+        TurnEngine.EnterAttackStep(state);
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attacker.Id, mantaC.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [mantaC.Id]);
+
+        var splits = new Dictionary<string, IReadOnlyDictionary<string, int>>
+        {
+            [attacker.Id] = new Dictionary<string, int> { [mantaC.Id] = 3 }, // Drow's 3A - exactly Black Manta L1's 3D
+        };
+        CombatEngine.AssignCombatDamage(state, queue, assignment, splits);
+
+        Assert.Equal(Zone.PrepArea, mantaC.Zone); // KO'd
+        Assert.Equal(1, queue.Count); // mantaA and mantaB are the same character - one trigger, not two
+        Assert.Equal(TriggerType.Retaliation, queue.Pending[0].Trigger);
+
+        var opponentLifeBefore = state.GetPlayer("teamB").Life;
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => ["teamB"])));
+
+        // 2 active Villains remain on teamA's side (mantaA + mantaB) once mantaC is gone.
+        Assert.Equal(opponentLifeBefore - 2, state.GetPlayer("teamB").Life);
+    }
 }

@@ -104,6 +104,17 @@ public sealed record TargetSpec(
 }
 
 public sealed record DealDamage(int Amount, TargetSpec Target) : EffectNode;
+// Keyword Retaliation's Black Manta ("Deep Sea Deviant") printing:
+// "deal 1 damage to your opponent for each of your active Villains" -
+// amount isn't a fixed number, it's computed at resolution time from the
+// ability's own source die's controller's active dice that share an
+// affiliation with the source's own card (including the source itself,
+// and other copies of it). Kept general rather than Retaliation-specific
+// naming, since this "X for each of your active [affiliation]" idiom
+// shows up on other cards' stat-scaling text too (e.g. Black Manta's own
+// "+1A/+1D for each OTHER active Villain" printing) - just not scripted
+// yet.
+public sealed record DealDamagePerActiveAffiliate(TargetSpec Target) : EffectNode;
 public sealed record Ko(TargetSpec Target) : EffectNode;
 // Invisible Woman's Global ("target character die must block this turn") -
 // flags the target in GameState.MustBlockThisTurn; enforced by

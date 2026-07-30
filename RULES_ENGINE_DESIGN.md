@@ -52,7 +52,7 @@ here rather than assuming which approach they'd want.
 1. ~~Keyword *behavior*~~ - Overcrush, Regenerate, Energize, Ally,
    Amplify/Awaken, Attune, Call Out, Corrupt, Swarm, Darkseid's
    keyword grant, Deadly, Fast, Energy Drain, Infiltrate, Intimidate,
-   and Obscure are implemented (see the status updates).
+   Obscure, and Retaliation are implemented (see the status updates).
    BlackPanther's Energize is fully scripted; Robin's Energize
    (a purchase-cost discount) and all three Alfred Pennyworth printings'
    Ally effects (each a "Batman die OR Sidekick" compound target) are
@@ -2726,3 +2726,79 @@ drives Drow Mercenary's real card - using an unrelated Action die
 (Shocking Grasp) marks it, blocking it then throws, and Clean Up expires
 the effect. `dotnet build`, `dotnet test` (178/178), and `npm run build`
 all clean.
+
+## Status update — Retaliation implemented; the first keyword to consume `CardDef.Affiliations`
+
+Appendix 1: "If a character you control with Retaliation is active, and
+a Character die you control that shares an affiliation with it is
+KO'd, deal 1 damage to an opposing player." Two clarifications shape the
+implementation:
+- (1) "If a Character die with Retaliation is KO'd, and there are no
+  other dice of that character in the Field Zone, it cannot trigger its
+  own Retaliation since it is no longer active" - worked example: a
+  Retaliation die and an affiliated ally KO'd simultaneously by combat
+  damage do NOT trigger each other, "you cannot choose the order of dice
+  to be KO'd by combat damage."
+- (2) Multiple *different* Retaliation characters each trigger once per
+  KO; multiple copies of the *same* Retaliation character trigger only
+  once, not once per active copy.
+
+- **`CardDef.Affiliations`, unused since it was added, is now actually
+  consumed** - Retaliation is the first keyword that needs it. Added an
+  `affiliations` param to the `Character()` sample-card factory; the
+  Superman/Black Manta cards below are the first to populate it for
+  real ("Legion of Doom/Villains" splits into two entries on the "/").
+- **New `TriggerType.Retaliation`, but unlike Attune/Infiltrate's
+  reactors, no engine-injected default effect** - Attune's 1-damage is a
+  fixed constant on every card, so it's built into `TurnEngine.
+  UseActionDie` itself; Retaliation's amount is explicitly redefinable
+  per card (Black Manta's own text replaces "1" with "for each of your
+  active Villains"), so every Retaliation card - vanilla or not -
+  carries its own `AbilityDef(TriggerType.Retaliation, ...)`, same shape
+  as Call Out/Infiltrate's reactor cards.
+- **`CombatEngine.ResolveRetaliation`** - a new reactive scan, called once
+  per KO'd die from `ResolveFastOrSlowDamage`, but only *after* that
+  wave's entire KO loop has already finished and been applied to
+  `state`. That ordering is what correctly implements clarification (1):
+  by the time Retaliation is evaluated, every die KO'd in the same
+  simultaneous wave (including the Retaliation die itself, if it was
+  also among them) is already gone from the active scan, regardless of
+  which order the wave's own KO loop happened to process dice in - no
+  extra "compute the whole batch before touching zones" restructuring
+  needed, since the two loops are already sequential. Scans the KO'd
+  die's own controller's active dice, filters to Retaliation holders
+  whose card affiliations intersect the KO'd die's, and deduplicates by
+  CardId before firing (clarification 2).
+- **New `DealDamagePerActiveAffiliate` EffectNode** for Black Manta's own
+  scaled amount - computed at resolution time from the ability's source
+  die's controller's active dice sharing an affiliation with the
+  source's own card (counts dice, not unique characters - the standard
+  Dice Masters "for each active X" convention, and a deliberately
+  different count than Retaliation's own "once per unique character"
+  trigger rule above; these are two separate rules answering two
+  separate questions). Named generically rather than Retaliation-
+  specific, since this idiom shows up on other cards' text too (e.g.
+  Black Manta's own "+1A/+1D for each OTHER active Villain" printing,
+  not scripted here).
+- **Like other WhenKOd-driven effects, only fires from combat-damage
+  KOs today** - the only path that currently raises a KO through this
+  wave-based batch logic at all; ability-driven KOs (`DealDamage`/`Ko`
+  nodes) and Deadly's own Clean Up KO don't enqueue `WhenKOd` either
+  (a pre-existing, already-documented gap, not new here).
+
+Example cards: Justice League's Superman ("Kal-El" printing, vanilla,
+base 1 damage) and Black Manta ("Deep Sea Deviant" printing, the scaled
+variant).
+
+9 new tests (187 total): `EffectInterpreterTests` covers
+`DealDamagePerActiveAffiliate` directly (counts only the source's own
+controller's affiliated active dice, zero with no source die);
+`CombatEngineTests` covers the reactive scan with synthetic fixture
+cards (triggers on an affiliated KO, doesn't on an unaffiliated one,
+dedups same-character copies, fires separately for different
+characters, the clarification-1 simultaneous-self-KO case, and the
+"you control" restriction); one end-to-end test in `TwoTeamsDemoTests`
+drives three real Black Manta dice - one is KO'd in combat, and the
+survivor's Retaliation deals damage scaled to the two Villains still
+active afterward. `dotnet build`, `dotnet test` (187/187), and
+`npm run build` all clean.

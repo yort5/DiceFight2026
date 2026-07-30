@@ -56,7 +56,8 @@ public static class SampleCards
         int purchaseCost = PlaceholderCost,
         EnergyType energyType = PlaceholderEnergy,
         IReadOnlyList<CharacterFace>? levels = null,
-        IReadOnlyList<string>? grantsToSidekicks = null) => new()
+        IReadOnlyList<string>? grantsToSidekicks = null,
+        IReadOnlyList<string>? affiliations = null) => new()
     {
         Id = id,
         Name = name,
@@ -69,7 +70,8 @@ public static class SampleCards
         RawText = rawText,
         Keywords = keywords ?? [],
         Abilities = abilities ?? [],
-        GrantsToSidekicks = grantsToSidekicks ?? []
+        GrantsToSidekicks = grantsToSidekicks ?? [],
+        Affiliations = affiliations ?? []
     };
 
     private static CardDef BasicAction(
@@ -650,6 +652,45 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 4)
         ]);
 
+    // Justice League's Superman, "Kal-El" printing - purely the
+    // Retaliation keyword at its base amount (1 damage), no other text.
+    // The first sample card to actually populate CardDef.Affiliations -
+    // Retaliation is the first keyword that needs it (see
+    // CombatEngine.ResolveRetaliation).
+    public static readonly CardDef SupermanKalEl = Character(
+        "superman-kal-el", "Superman", "Kal-El", dieLimit: 4,
+        "Retaliation - If an affiliated character is KO'd, deal 1 damage to an opposing player.",
+        purchaseCost: 6, energyType: EnergyType.Shield,
+        keywords: [new KeywordInstance("Retaliation")],
+        abilities: [new AbilityDef(TriggerType.Retaliation, Cost: null,
+            Effect: new DealDamage(1, TargetSpec.Player("an opposing player", TargetOwnership.Opposing)))],
+        affiliations: ["Justice League"],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 5),
+            new CharacterFace(FieldingCost: 2, Attack: 7, Defense: 7),
+            new CharacterFace(FieldingCost: 3, Attack: 8, Defense: 8)
+        ]);
+
+    // Justice League's Black Manta, "Deep Sea Deviant" printing - the
+    // keyword's own base amount (1 damage) is entirely redefined by this
+    // printing's own text ("for each of your active Villains" - a live
+    // count, not a fixed number), so this needs DealDamagePerActiveAffiliate
+    // rather than DealDamage - see that EffectNode's own remarks.
+    public static readonly CardDef BlackMantaDeepSeaDeviant = Character(
+        "black-manta-deep-sea-deviant", "Black Manta", "Deep Sea Deviant", dieLimit: 4,
+        "Retaliation - If one of your Villains is KO'd, deal 1 damage to your opponent for each of your " +
+        "active Villains.",
+        purchaseCost: 3, energyType: EnergyType.Fist,
+        keywords: [new KeywordInstance("Retaliation")],
+        abilities: [new AbilityDef(TriggerType.Retaliation, Cost: null,
+            Effect: new DealDamagePerActiveAffiliate(TargetSpec.Player("your opponent", TargetOwnership.Opposing)))],
+        affiliations: ["Legion of Doom", "Villains"],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 3),
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 4),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 5)
+        ]);
+
     // A team is 8 character cards + 2 Basic Action cards (10 total), not
     // the 10 characters + 3 Basic Actions used here previously - that was
     // simply wrong. Colossus, Corvus Glaive, Distraction, Kang, King
@@ -686,7 +727,8 @@ public static class SampleCards
             JaneFoster, Starfire, Kang, KingHyperion, CasketOfAncientWinters, DailyBugle, Escape,
             AlfredPennyworthCaretaker, AlfredPennyworthMI5, AlfredPennyworthToughAsNails,
             AntManAmplify, Cyclops, Wasp, BlackWidow, Polaris, CosmicCubeInfinitePossibilities, Parademon, Darkseid,
-            Deathbird, WaspPixie, MadalynePryor, TheSpot, Ricochet, ScarletSpider, DrowMercenary
+            Deathbird, WaspPixie, MadalynePryor, TheSpot, Ricochet, ScarletSpider, DrowMercenary,
+            SupermanKalEl, BlackMantaDeepSeaDeviant
         ];
         return all.ToDictionary(c => c.Id);
     }

@@ -1460,4 +1460,257 @@ public class CombatEngineTests
         CombatEngine.DeclareBlockers(state, assignment, [target.Id]); // no throw - Call Out cancelled, target freed
         Assert.Equal(Zone.AttackZone, target.Zone);
     }
+
+    // Keyword Retaliation - "If a character you control with Retaliation
+    // is active, and a Character die you control that shares an
+    // affiliation with it is KO'd, deal 1 damage to an opposing player."
+    // Synthetic fixture cards (a shared "Test Affiliation") isolate the
+    // reactive scan (CombatEngine.ResolveRetaliation) from card-specific
+    // effect text; Black Manta's own scaled amount is covered by
+    // DealDamagePerActiveAffiliate's EffectInterpreterTests and the real
+    // end-to-end TwoTeamsDemoTests case.
+    private static readonly CardDef RetaliationCard = new()
+    {
+        Id = "retaliation-character", Name = "Retaliation Character", Type = CardType.Character,
+        PurchaseCost = 3, DieLimit = 4,
+        Levels = [new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 2)],
+        Keywords = [new KeywordInstance("Retaliation")],
+        Affiliations = ["Test Affiliation"],
+        Abilities = [new AbilityDef(TriggerType.Retaliation, Cost: null,
+            Effect: new DealDamage(1, TargetSpec.Player("an opposing player", TargetOwnership.Opposing)))],
+    };
+
+    // A second, distinct Retaliation character sharing the same
+    // affiliation - clarification 2's "each unique Retaliation character
+    // triggers separately" half.
+    private static readonly CardDef SecondRetaliationCard = new()
+    {
+        Id = "retaliation-character-2", Name = "Second Retaliation Character", Type = CardType.Character,
+        PurchaseCost = 3, DieLimit = 4,
+        Levels = [new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 2)],
+        Keywords = [new KeywordInstance("Retaliation")],
+        Affiliations = ["Test Affiliation"],
+        Abilities = [new AbilityDef(TriggerType.Retaliation, Cost: null,
+            Effect: new DealDamage(1, TargetSpec.Player("an opposing player", TargetOwnership.Opposing)))],
+    };
+
+    private static readonly CardDef AffiliatedAllyCard = new()
+    {
+        Id = "affiliated-ally", Name = "Affiliated Ally", Type = CardType.Character,
+        PurchaseCost = 2, DieLimit = 4,
+        Levels = [new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 1)],
+        Affiliations = ["Test Affiliation"],
+    };
+
+    private static readonly CardDef UnaffiliatedAllyCard = new()
+    {
+        Id = "unaffiliated-ally", Name = "Unaffiliated Ally", Type = CardType.Character,
+        PurchaseCost = 2, DieLimit = 4,
+        Levels = [new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 1)],
+    };
+
+    // Defense 2 - survives AffiliatedAllyCard's 1-damage counter-attack,
+    // so only the blocker dies in these tests, keeping the KO batch
+    // limited to the one die actually under test.
+    private static readonly CardDef PlainAttackerCard = new()
+    {
+        Id = "plain-attacker", Name = "Plain Attacker", Type = CardType.Character,
+        PurchaseCost = 2, DieLimit = 4,
+        Levels = [new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 2)],
+    };
+
+    // Attack 2/Defense 3 - strong enough to KO a RetaliationCard blocker
+    // (2D) while surviving its 2-damage counter-attack.
+    private static readonly CardDef StrongAttackerCard = new()
+    {
+        Id = "strong-attacker", Name = "Strong Attacker", Type = CardType.Character,
+        PurchaseCost = 3, DieLimit = 4,
+        Levels = [new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 3)],
+    };
+
+    private static GameState CreateRetaliationGame()
+    {
+        var catalog = new Dictionary<string, CardDef>
+        {
+            [RetaliationCard.Id] = RetaliationCard,
+            [SecondRetaliationCard.Id] = SecondRetaliationCard,
+            [AffiliatedAllyCard.Id] = AffiliatedAllyCard,
+            [UnaffiliatedAllyCard.Id] = UnaffiliatedAllyCard,
+            [PlainAttackerCard.Id] = PlainAttackerCard,
+            [StrongAttackerCard.Id] = StrongAttackerCard,
+        };
+        var state = GameState.NewGame(catalog, new Player { Id = "p1", Name = "Player One" }, new Player { Id = "p2", Name = "Player Two" });
+        state.CurrentStep = TurnStep.Attack;
+        state.AttackSubStep = AttackSubStep.DeclareAttackers;
+        state.ActivePlayerId = "p2"; // p2 attacks p1's blockers in every test below
+        return state;
+    }
+
+    [Fact]
+    public void Retaliation_AffiliatedAllyKOdByCombatDamage_TriggersOnce()
+    {
+        var state = CreateRetaliationGame();
+        var retaliator = AddCharacterDie(state, "p1-retaliator-1", "p1", RetaliationCard.Id, Zone.FieldZone);
+        var ally = AddCharacterDie(state, "p1-ally-1", "p1", AffiliatedAllyCard.Id, Zone.FieldZone);
+        var attacker = AddCharacterDie(state, "p2-attacker-1", "p2", PlainAttackerCard.Id, Zone.FieldZone);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attacker.Id, ally.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [ally.Id]);
+
+        var splits = new Dictionary<string, IReadOnlyDictionary<string, int>>
+        {
+            [attacker.Id] = new Dictionary<string, int> { [ally.Id] = 1 },
+        };
+        CombatEngine.AssignCombatDamage(state, queue, assignment, splits);
+
+        Assert.Equal(Zone.PrepArea, ally.Zone); // KO'd (1 dmg vs 1D)
+        Assert.Equal(1, queue.Count);
+        Assert.Equal(TriggerType.Retaliation, queue.Pending[0].Trigger);
+        Assert.Equal(retaliator.Id, queue.Pending[0].SourceDieId);
+    }
+
+    [Fact]
+    public void Retaliation_UnaffiliatedDieKOd_DoesNotTrigger()
+    {
+        var state = CreateRetaliationGame();
+        AddCharacterDie(state, "p1-retaliator-1", "p1", RetaliationCard.Id, Zone.FieldZone);
+        var unaffiliated = AddCharacterDie(state, "p1-unaffiliated-1", "p1", UnaffiliatedAllyCard.Id, Zone.FieldZone);
+        var attacker = AddCharacterDie(state, "p2-attacker-1", "p2", PlainAttackerCard.Id, Zone.FieldZone);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attacker.Id, unaffiliated.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [unaffiliated.Id]);
+
+        var splits = new Dictionary<string, IReadOnlyDictionary<string, int>>
+        {
+            [attacker.Id] = new Dictionary<string, int> { [unaffiliated.Id] = 1 },
+        };
+        CombatEngine.AssignCombatDamage(state, queue, assignment, splits);
+
+        Assert.Equal(Zone.PrepArea, unaffiliated.Zone); // KO'd, but shares no affiliation with the Retaliator
+        Assert.Empty(queue.Pending);
+    }
+
+    // Clarification 2, first half: multiple dice of the SAME Retaliation
+    // character only trigger once, not once per active copy.
+    [Fact]
+    public void Retaliation_MultipleCopiesOfSameCharacter_TriggersOnlyOnce()
+    {
+        var state = CreateRetaliationGame();
+        AddCharacterDie(state, "p1-retaliator-1", "p1", RetaliationCard.Id, Zone.FieldZone);
+        AddCharacterDie(state, "p1-retaliator-2", "p1", RetaliationCard.Id, Zone.FieldZone); // second copy, same character
+        var ally = AddCharacterDie(state, "p1-ally-1", "p1", AffiliatedAllyCard.Id, Zone.FieldZone);
+        var attacker = AddCharacterDie(state, "p2-attacker-1", "p2", PlainAttackerCard.Id, Zone.FieldZone);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attacker.Id, ally.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [ally.Id]);
+
+        var splits = new Dictionary<string, IReadOnlyDictionary<string, int>>
+        {
+            [attacker.Id] = new Dictionary<string, int> { [ally.Id] = 1 },
+        };
+        CombatEngine.AssignCombatDamage(state, queue, assignment, splits);
+
+        Assert.Equal(1, queue.Count); // not 2, despite two active copies of the Retaliation character
+    }
+
+    // Clarification 2, second half: different Retaliation characters each
+    // trigger independently off the same KO.
+    [Fact]
+    public void Retaliation_TwoDifferentRetaliationCharactersActive_EachTriggersSeparately()
+    {
+        var state = CreateRetaliationGame();
+        var retaliator1 = AddCharacterDie(state, "p1-retaliator-1", "p1", RetaliationCard.Id, Zone.FieldZone);
+        var retaliator2 = AddCharacterDie(state, "p1-retaliator-2", "p1", SecondRetaliationCard.Id, Zone.FieldZone);
+        var ally = AddCharacterDie(state, "p1-ally-1", "p1", AffiliatedAllyCard.Id, Zone.FieldZone);
+        var attacker = AddCharacterDie(state, "p2-attacker-1", "p2", PlainAttackerCard.Id, Zone.FieldZone);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attacker.Id, ally.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [ally.Id]);
+
+        var splits = new Dictionary<string, IReadOnlyDictionary<string, int>>
+        {
+            [attacker.Id] = new Dictionary<string, int> { [ally.Id] = 1 },
+        };
+        CombatEngine.AssignCombatDamage(state, queue, assignment, splits);
+
+        Assert.Equal(2, queue.Count);
+        Assert.Equal([retaliator1.Id, retaliator2.Id], queue.Pending.Select(a => a.SourceDieId).OrderBy(id => id));
+    }
+
+    // Appendix 1 clarification 1: a Retaliation die KO'd in the very same
+    // simultaneous combat-damage batch as an affiliated ally does not
+    // trigger off that ally's death - it's no longer active by the time
+    // Retaliation is evaluated, "you cannot choose the order of dice to
+    // be KO'd by combat damage." Both blockers here die in the same
+    // ordinary (non-Fast) wave, which resolves as one simultaneous batch
+    // by default (rule 2.7.4.3) - no Fast trickery needed to construct this.
+    [Fact]
+    public void Retaliation_SimultaneousSelfKOWithAffiliatedAlly_DoesNotTrigger()
+    {
+        var state = CreateRetaliationGame();
+        var retaliator = AddCharacterDie(state, "p1-retaliator-1", "p1", RetaliationCard.Id, Zone.FieldZone);
+        var ally = AddCharacterDie(state, "p1-ally-1", "p1", AffiliatedAllyCard.Id, Zone.FieldZone);
+        var retaliatorKiller = AddCharacterDie(state, "p2-attacker-1", "p2", StrongAttackerCard.Id, Zone.FieldZone);
+        var allyKiller = AddCharacterDie(state, "p2-attacker-2", "p2", PlainAttackerCard.Id, Zone.FieldZone);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [retaliatorKiller.Id, allyKiller.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(retaliatorKiller.Id, retaliator.Id);
+        assignment.AssignBlocker(allyKiller.Id, ally.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [retaliator.Id, ally.Id]);
+
+        var splits = new Dictionary<string, IReadOnlyDictionary<string, int>>
+        {
+            [retaliatorKiller.Id] = new Dictionary<string, int> { [retaliator.Id] = 2 },
+            [allyKiller.Id] = new Dictionary<string, int> { [ally.Id] = 1 },
+        };
+        CombatEngine.AssignCombatDamage(state, queue, assignment, splits);
+
+        Assert.Equal(Zone.PrepArea, retaliator.Zone); // both KO'd simultaneously
+        Assert.Equal(Zone.PrepArea, ally.Zone);
+        Assert.Empty(queue.Pending); // Retaliation never fires - already inactive by the time it's checked
+    }
+
+    // Base rule text: "a Character die YOU control" - an opponent's own
+    // affiliated die dying never triggers someone else's Retaliation.
+    [Fact]
+    public void Retaliation_OpposingControllersAffiliatedDieKOd_DoesNotTrigger()
+    {
+        var state = CreateRetaliationGame();
+        AddCharacterDie(state, "p1-retaliator-1", "p1", RetaliationCard.Id, Zone.FieldZone);
+        var opposingAlly = AddCharacterDie(state, "p2-ally-1", "p2", AffiliatedAllyCard.Id, Zone.FieldZone);
+        var attacker = AddCharacterDie(state, "p2-attacker-1", "p2", PlainAttackerCard.Id, Zone.FieldZone);
+        var blocker = AddCharacterDie(state, "p1-blocker-1", "p1", StrongAttackerCard.Id, Zone.FieldZone);
+
+        var queue = new AbilityQueue();
+        // p2's own ally attacks into p1's stronger blocker and dies to it -
+        // KO'd by p1's die, but still p2's OWN character, which is the
+        // point: p1's Retaliator only reacts to dice p1 itself controls.
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id, opposingAlly.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(opposingAlly.Id, blocker.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [blocker.Id]);
+
+        var splits = new Dictionary<string, IReadOnlyDictionary<string, int>>
+        {
+            [opposingAlly.Id] = new Dictionary<string, int> { [blocker.Id] = 1 },
+        };
+        CombatEngine.AssignCombatDamage(state, queue, assignment, splits);
+
+        Assert.Equal(Zone.PrepArea, opposingAlly.Zone); // KO'd (1 dmg vs 1D, blocker's 2A vs its 1D)
+        Assert.Empty(queue.Pending); // p1's Retaliator doesn't control the KO'd die
+    }
 }

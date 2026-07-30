@@ -57,6 +57,7 @@ public static class EffectInterpreter
                     yield return spec;
                 break;
             case DealDamage n: if (!n.Target.IsSelf) yield return n.Target; break;
+            case DealDamagePerActiveAffiliate n: if (!n.Target.IsSelf) yield return n.Target; break;
             case Ko n: if (!n.Target.IsSelf) yield return n.Target; break;
             case ForceBlock n: if (!n.Target.IsSelf) yield return n.Target; break;
             case SetCallOutTarget n: if (!n.Target.IsSelf) yield return n.Target; break;
@@ -108,6 +109,24 @@ public static class EffectInterpreter
                     DieStats.TryResolveKO(ctx.State, die, ctx.Roller);
                 }
                 break;
+
+            case DealDamagePerActiveAffiliate perAffiliate:
+            {
+                var amount = ActiveAffiliateCount(ctx);
+                foreach (var id in Resolve(ctx, perAffiliate.Target, cache))
+                {
+                    if (ctx.State.IsPlayerId(id))
+                    {
+                        ctx.State.GetPlayer(id).Life -= amount;
+                        continue;
+                    }
+
+                    var die = FindDie(ctx, id);
+                    die.Damage += amount;
+                    DieStats.TryResolveKO(ctx.State, die, ctx.Roller);
+                }
+                break;
+            }
 
             case Ko ko:
                 foreach (var id in Resolve(ctx, ko.Target, cache))
@@ -395,4 +414,26 @@ public static class EffectInterpreter
     private static DieInstance FindDie(EffectContext ctx, string id) =>
         ctx.State.Dice.SingleOrDefault(d => d.Id == id)
         ?? throw new InvalidOperationException($"No die with id '{id}'.");
+
+    // Counts the ability's own source die's controller's active
+    // (Field/Attack Zone) dice that share an affiliation with the source
+    // die's own card - Black Manta's "for each of your active Villains"
+    // idiom. Counts dice, not unique characters (the standard Dice
+    // Masters convention for "for each active X" scaling text, distinct
+    // from Retaliation's own "trigger once per unique character" rule -
+    // see CombatEngine.ResolveRetaliation) - and includes the source
+    // die's own other copies, since the card text doesn't say "other."
+    private static int ActiveAffiliateCount(EffectContext ctx)
+    {
+        var source = ctx.SourceDieId is not null ? FindDie(ctx, ctx.SourceDieId) : null;
+        var sourceCardId = source?.VirtualCardId ?? source?.CardId;
+        if (sourceCardId is null || !ctx.State.CardCatalog.TryGetValue(sourceCardId, out var sourceCard)) return 0;
+
+        return ctx.State.DiceIn(source!.ControllerId, Zone.FieldZone)
+            .Concat(ctx.State.DiceIn(source.ControllerId, Zone.AttackZone))
+            .Count(d =>
+                (d.VirtualCardId ?? d.CardId) is { } id
+                && ctx.State.CardCatalog.TryGetValue(id, out var card)
+                && card.Affiliations.Any(sourceCard.Affiliations.Contains));
+    }
 }

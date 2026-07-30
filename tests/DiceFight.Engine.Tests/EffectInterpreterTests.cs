@@ -80,6 +80,60 @@ public class EffectInterpreterTests
         Assert.Equal(Zone.PrepArea, target.Zone); // 1 damage vs 1D - KO'd, not misread as a player id
     }
 
+    // Black Manta's "Deep Sea Deviant" printing of Retaliation - "deal 1
+    // damage to your opponent for each of your active Villains." The
+    // amount is computed from the ability's own source die, not the
+    // target: only the source's own controller's active dice sharing an
+    // affiliation with the source's own card count, and unaffiliated or
+    // opposing-controller dice don't.
+    [Fact]
+    public void DealDamagePerActiveAffiliate_CountsOnlyTheSourceControllersOwnAffiliatedActiveDice()
+    {
+        var state = CreateState();
+        state.PlayerTwo.Life = 20;
+
+        var source = new DieInstance
+        {
+            Id = "p1-manta-1", CardId = SampleCards.BlackMantaDeepSeaDeviant.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        var sameAffiliationAlly = new DieInstance
+        {
+            Id = "p1-manta-2", CardId = SampleCards.BlackMantaDeepSeaDeviant.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        var differentAffiliation = new DieInstance
+        {
+            Id = "p1-superman-1", CardId = SampleCards.SupermanKalEl.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        var opposingControllerSameAffiliation = new DieInstance
+        {
+            Id = "p2-manta-1", CardId = SampleCards.BlackMantaDeepSeaDeviant.Id, OwnerId = "p2", ControllerId = "p2",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.AddRange([source, sameAffiliationAlly, differentAffiliation, opposingControllerSameAffiliation]);
+
+        EffectInterpreter.Execute(
+            new DealDamagePerActiveAffiliate(TargetSpec.Player("t", TargetOwnership.Opposing)),
+            new EffectContext(state, "p1", SourceDieId: source.Id, _ => ["p2"]));
+
+        Assert.Equal(18, state.PlayerTwo.Life); // 2 active Villains on p1's side (source + sameAffiliationAlly)
+    }
+
+    [Fact]
+    public void DealDamagePerActiveAffiliate_NoSourceDie_DealsNoDamage()
+    {
+        var state = CreateState();
+        state.PlayerTwo.Life = 20;
+
+        EffectInterpreter.Execute(
+            new DealDamagePerActiveAffiliate(TargetSpec.Player("t", TargetOwnership.Opposing)),
+            new EffectContext(state, "p1", SourceDieId: null, _ => ["p2"]));
+
+        Assert.Equal(20, state.PlayerTwo.Life);
+    }
+
     // Ability-driven KOs (DealDamage KO'ing its target, or a direct Ko node
     // like Casket of Ancient Winters) go through DieStats.ForceKO just like
     // combat KOs do, so a Regenerate target survives here too - locking in
