@@ -52,8 +52,8 @@ here rather than assuming which approach they'd want.
 1. ~~Keyword *behavior*~~ - Overcrush, Regenerate, Energize, Ally,
    Amplify/Awaken, Attune, Call Out, Corrupt, Swarm, Darkseid's
    keyword grant, Deadly, Fast, Energy Drain, Infiltrate, Intimidate,
-   Obscure, Retaliation, and Strike are implemented (see the status
-   updates).
+   Obscure, Retaliation, Strike, and Teamwatch are implemented (see the
+   status updates).
    BlackPanther's Energize is fully scripted; Robin's Energize
    (a purchase-cost discount) and all three Alfred Pennyworth printings'
    Ally effects (each a "Batman die OR Sidekick" compound target) are
@@ -63,11 +63,7 @@ here rather than assuming which approach they'd want.
    Attune's own "target player or Character die" union IS now built -
    `TargetSpec.PlayersAllowed`/`CharacterDieOrPlayer` - but that's a
    fixed die-or-player choice, not the general N-arbitrary-specs union
-   Alfred's text would need). Skipped for now, per the
-   user's explicit steer: **Teamwatch** (Falcon) - not a combat-math
-   keyword at all, it's
-   an ability-trigger wiring problem (firing `WhenEngaged` when a
-   Teamwatch character is engaged), already separately tracked.
+   Alfred's text would need).
    Next up, per the user's own framing: work through the rest of the
    Dice Masters keywords on wizkids.com/dicemasters/keywords one at a
    time, each scripted against a real example card (user- or
@@ -2926,3 +2922,57 @@ case drives real Captain Marvel and Big Barda, confirming the bonus
 reaches Big Barda but not an opposing Falcon, and disappears the moment
 Captain Marvel leaves the Field Zone. `dotnet build`, `dotnet test`
 (207/207), and `npm run build` all clean.
+
+## Status update — Teamwatch implemented; corrects an earlier wrong assumption about its own trigger
+
+Appendix 1: "When a character with Teamwatch is active and you field a
+different Character die with the same affiliation, use their Teamwatch
+ability." An older status update (and a stale code comment on Falcon's
+own `CardDef`) had guessed this fires off `WhenEngaged` - that guess was
+never checked against the actual keyword text and was wrong. Rereading
+Appendix 1 directly: Teamwatch reacts to *fielding*, not combat
+engagement - same rule 2.6.2 "Field a Character die" action already
+wired for Strike's `FieldedThisTurn` tracking.
+
+- **New `TriggerType.Teamwatch`**, fired from `TurnEngine.Field` right
+  after the fielded die's own `WhenFielded`. Scans the *same* player's
+  own active Teamwatch holders (fielding is always the active player's
+  action), deduplicated by CardId - clarification 1's "counts different
+  active characters, not dice" is the identical "no stacking with
+  multiple copies" shape already used for Retaliation's own dedup and
+  Static team bonuses' rule 3.4.5.3. "Different" excludes both a second
+  copy of the Teamwatch holder's own card and any Sidekick being fielded
+  (Sidekicks have no CardId, hence no affiliations to share with
+  anything at all - falls out for free, no special-casing needed).
+- **No engine-injected default effect** - same reasoning as Retaliation:
+  Teamwatch cards define their own effect text (Falcon: "Prep a Sidekick
+  from your Used Pile"), so every Teamwatch card carries its own
+  `AbilityDef(TriggerType.Teamwatch, ...)`.
+- **Simplification, flagged rather than silently assumed**:
+  clarification 1's second sentence ("doesn't change if additional
+  identical Character dice are fielded after the ability is initiated")
+  could be read as "a given different character only ever triggers this
+  once, ever" rather than just "once per unique character per fielding
+  event" - but with no worked numeric example in the rulebook and no
+  currently cataloged card whose effect would even behave differently
+  either way (Falcon's own effect is a fixed one-shot, not something
+  that scales with a running count), this narrower historical-tracking
+  reading isn't modeled - every qualifying fielding event re-triggers
+  Teamwatch fresh, with no memory of what's been fielded before.
+- Falcon's real affiliation ("Avengers," from MSW027) and Black
+  Panther's ("Avengers/Infinity Watch," MSW020, the Energize printing
+  already scripted) are both populated now, letting the end-to-end test
+  use two real cards that actually share an affiliation instead of a
+  synthetic pairing.
+
+8 new tests (215 total): `TurnEngineTests` covers the reactive scan
+directly with synthetic fixture cards (triggers on an affiliated
+fielding, doesn't on an unaffiliated one, doesn't trigger off a second
+copy of its own card, dedups multiple copies of the same Teamwatch
+character, fires separately for different Teamwatch characters, ignored
+for a fielded Sidekick, and doesn't react to an opposing controller's
+own fielding); one end-to-end `TwoTeamsDemoTests` case fields real Black
+Panther under the same controller as real Falcon, confirming Falcon's
+Teamwatch fires and its "Prep a Sidekick from your Used Pile" effect
+actually moves a Used Pile Sidekick to the Prep Area. `dotnet build`,
+`dotnet test` (215/215), and `npm run build` all clean.

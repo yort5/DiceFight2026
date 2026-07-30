@@ -174,7 +174,18 @@ public enum TriggerType
     // with this Trigger (see CombatEngine.ResolveRetaliation for the
     // reactive scan that fires it, checked AFTER a whole simultaneous KO
     // batch settles per Appendix 1 clarification 1).
-    Retaliation
+    Retaliation,
+
+    // Keyword Teamwatch - "When a character with Teamwatch is active and
+    // you field a different Character die with the same affiliation, use
+    // their Teamwatch ability." A reactive scan against the active
+    // player's own Teamwatch holders, fired from TurnEngine.Field, same
+    // "no stacking with multiple copies of the same character" dedup
+    // shape as Retaliation (Appendix 1 clarification 1). No engine-
+    // injected default effect, same reasoning as Retaliation - Teamwatch
+    // cards define their own effect text (e.g. Falcon: "Prep a Sidekick
+    // from your Used Pile"), there's nothing generic to inject.
+    Teamwatch
 }
 
 // Rule 2.2.3 - the five steps of a turn, in fixed order (2.2.4 - cannot

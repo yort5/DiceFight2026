@@ -1261,4 +1261,45 @@ public class TwoTeamsDemoTests
         captainMarvel.Zone = Zone.PrepArea;
         Assert.Equal(allyBaseAttack, DieStats.EffectiveAttack(state, ally));
     }
+
+    // Real Falcon ("Take Flight," teamB roster) and Black Panther
+    // ("Clutching Reality," teamA roster) share the real "Avengers"
+    // affiliation - constructed under the same controller here since
+    // Teamwatch is a same-controller reaction, regardless of which
+    // roster each card normally belongs to.
+    [Fact]
+    public void FalconTeamwatch_FieldingADifferentAffiliatedCharacter_PrepsASidekickFromUsedPile()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamB";
+
+        var falconDie = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        falconDie.Zone = Zone.FieldZone;
+        falconDie.Status = DieStatus.Character;
+        falconDie.Level = 1;
+
+        var blackPanther = new DieInstance
+        {
+            Id = "teamB-blackpanther-1", CardId = SampleCards.BlackPanther.Id, OwnerId = "teamB", ControllerId = "teamB",
+            Zone = Zone.ReservePool, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(blackPanther);
+
+        var usedPileSidekick = state.DiceIn("teamB", Zone.Bag).First();
+        usedPileSidekick.Zone = Zone.UsedPile;
+
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, blackPanther.Id, energyDieIdsToSpend: []); // placeholder level-1 fielding cost is 0
+
+        // Black Panther's own "when fielded, roll a die from your bag" also
+        // fires from this same Field call - Falcon's Teamwatch is the one
+        // under test here, found alongside it rather than assumed alone.
+        Assert.Contains(queue.Pending, a => a.Trigger == TriggerType.Teamwatch && a.SourceDieId == falconDie.Id);
+
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [usedPileSidekick.Id])));
+
+        Assert.Equal(Zone.PrepArea, usedPileSidekick.Zone); // Prepped from the Used Pile by Falcon's Teamwatch
+    }
 }

@@ -379,6 +379,37 @@ public static class TurnEngine
 
         // Rule 2.6.3.6 - "when fielded" fires immediately upon entering the Field Zone.
         EnqueueTriggered(state, queue, die, TriggerType.WhenFielded);
+
+        // Keyword Teamwatch - "When a character with Teamwatch is active
+        // and you field a different Character die with the same
+        // affiliation, use their Teamwatch ability." Scans the SAME
+        // player's own active Teamwatch holders (fielding is always the
+        // active player's own action), deduplicated by CardId so multiple
+        // copies of the same Teamwatch character only trigger once
+        // (clarification 1 - "counts different active characters, not
+        // dice," the same shape as Retaliation's own dedup). "Different"
+        // excludes both the fielded die matching the Teamwatch holder's
+        // own card and a Sidekick being fielded (CardId is null, so it
+        // has no affiliations to share with anything).
+        var fieldedCardId = die.VirtualCardId ?? die.CardId;
+        if (fieldedCardId is not null && state.CardCatalog.TryGetValue(fieldedCardId, out var fieldedCard))
+        {
+            var teamwatchers = state.DiceIn(state.ActivePlayerId, Zone.FieldZone)
+                .Concat(state.DiceIn(state.ActivePlayerId, Zone.AttackZone))
+                .Where(d => DieStats.HasKeyword(state, d, "Teamwatch"))
+                .GroupBy(d => d.VirtualCardId ?? d.CardId)
+                .Select(g => g.First());
+
+            foreach (var teamwatcher in teamwatchers)
+            {
+                var teamwatcherCardId = teamwatcher.VirtualCardId ?? teamwatcher.CardId;
+                if (teamwatcherCardId is null || teamwatcherCardId == fieldedCardId) continue;
+                if (!state.CardCatalog.TryGetValue(teamwatcherCardId, out var teamwatcherCard)) continue;
+                if (!teamwatcherCard.Affiliations.Any(fieldedCard.Affiliations.Contains)) continue;
+
+                EnqueueTriggered(state, queue, teamwatcher, TriggerType.Teamwatch);
+            }
+        }
     }
 
     // Rule 2.6.4 - Use Action Dice Abilities, one of the four Main Step

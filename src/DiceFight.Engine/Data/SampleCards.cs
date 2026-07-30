@@ -123,7 +123,8 @@ public static class SampleCards
         abilities: [
             new AbilityDef(TriggerType.Energize, Cost: null, Effect: new DrawDice(2)),
             new AbilityDef(TriggerType.WhenFielded, Cost: null, Effect: new DrawDice(1)),
-        ]);
+        ],
+        affiliations: ["Avengers", "Infinity Watch"]);
 
     public static readonly CardDef HarleyQuinn = Character(
         "harley-quinn", "Harley Quinn", "Bright Lights Big City", dieLimit: 4,
@@ -199,20 +200,23 @@ public static class SampleCards
 
     // ---- Team B: 10 characters + 3 Basic Actions ----
 
-    // Teamwatch (the non-Global half - "Prep a Sidekick from your Used
-    // Pile") is left unscripted: Teamwatch isn't a TriggerType this engine
-    // models yet (it fires on being engaged in combat, like WhenEngaged),
-    // same "Non-global and Global are independent ability slots" situation
-    // as Distraction above. The Global half stands on its own.
+    // Teamwatch and Global are independent ability slots (same shape as
+    // Distraction above) - both now scripted. Real affiliation "Avengers"
+    // (MSW027), shared with Black Panther's "Clutching Reality" printing.
     public static readonly CardDef Falcon = Character(
         "falcon", "Falcon", "Take Flight", dieLimit: 4,
         "Teamwatch - Prep a [PAWN] from your Used Pile. Global: Pay [F]. Once during your turn, " +
         "each player must field a [PAWN] from their Used Pile if able.",
         keywords: [new KeywordInstance("Teamwatch")],
-        abilities: [new AbilityDef(TriggerType.Global, Cost: null,
-            Effect: new FieldSidekickForEachPlayer(),
-            EnergyCost: new EnergyCost(Amount: 1, RequiredType: EnergyType.Fist),
-            OncePerTurn: true)]);
+        abilities: [
+            new AbilityDef(TriggerType.Teamwatch, Cost: null,
+                Effect: new PrepDie(TargetSpec.Sidekick("a Sidekick die from your Used Pile", TargetOwnership.Own, zones: [Zone.UsedPile]))),
+            new AbilityDef(TriggerType.Global, Cost: null,
+                Effect: new FieldSidekickForEachPlayer(),
+                EnergyCost: new EnergyCost(Amount: 1, RequiredType: EnergyType.Fist),
+                OncePerTurn: true),
+        ],
+        affiliations: ["Avengers"]);
 
     public static readonly CardDef FranklinsGalactus = Character(
         "franklins-galactus", "Franklin's Galactus", "Earth Shatterer", dieLimit: 4, ""); // genuinely blank

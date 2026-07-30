@@ -1053,4 +1053,184 @@ public class TurnEngineTests
 
         Assert.Empty(state.FieldedThisTurn);
     }
+
+    // Keyword Teamwatch - "When a character with Teamwatch is active and
+    // you field a different Character die with the same affiliation, use
+    // their Teamwatch ability." Synthetic fixture cards (a shared "Test
+    // Affiliation") isolate the reactive scan in TurnEngine.Field from
+    // card-specific effect text; Falcon's own real effect is covered by
+    // the end-to-end TwoTeamsDemoTests case.
+    private static readonly CardDef TeamwatchCard = new()
+    {
+        Id = "teamwatch-character", Name = "Teamwatch Character", Type = CardType.Character,
+        PurchaseCost = 3, DieLimit = 4,
+        Levels = [new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 1)],
+        Keywords = [new KeywordInstance("Teamwatch")],
+        Affiliations = ["Test Affiliation"],
+        Abilities = [new AbilityDef(TriggerType.Teamwatch, Cost: null, Effect: new GainLife(1))],
+    };
+
+    // A second, distinct Teamwatch character sharing the same affiliation -
+    // for the "each unique Teamwatch character triggers separately" case.
+    private static readonly CardDef SecondTeamwatchCard = new()
+    {
+        Id = "teamwatch-character-2", Name = "Second Teamwatch Character", Type = CardType.Character,
+        PurchaseCost = 3, DieLimit = 4,
+        Levels = [new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 1)],
+        Keywords = [new KeywordInstance("Teamwatch")],
+        Affiliations = ["Test Affiliation"],
+        Abilities = [new AbilityDef(TriggerType.Teamwatch, Cost: null, Effect: new GainLife(1))],
+    };
+
+    private static readonly CardDef AffiliatedCharacterCard = new()
+    {
+        Id = "affiliated-character", Name = "Affiliated Character", Type = CardType.Character,
+        PurchaseCost = 2, DieLimit = 4,
+        Levels = [new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 1)],
+        Affiliations = ["Test Affiliation"],
+    };
+
+    private static readonly CardDef UnaffiliatedCharacterCard = new()
+    {
+        Id = "unaffiliated-character", Name = "Unaffiliated Character", Type = CardType.Character,
+        PurchaseCost = 2, DieLimit = 4,
+        Levels = [new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 1)],
+    };
+
+    private static GameState CreateTeamwatchGame()
+    {
+        var catalog = new Dictionary<string, CardDef>
+        {
+            [TeamwatchCard.Id] = TeamwatchCard,
+            [SecondTeamwatchCard.Id] = SecondTeamwatchCard,
+            [AffiliatedCharacterCard.Id] = AffiliatedCharacterCard,
+            [UnaffiliatedCharacterCard.Id] = UnaffiliatedCharacterCard,
+        };
+        var state = GameState.NewGame(catalog, new Player { Id = "p1", Name = "Player One" }, new Player { Id = "p2", Name = "Player Two" });
+        state.CurrentStep = TurnStep.Main;
+        return state;
+    }
+
+    private static DieInstance AddActiveDie(GameState state, string id, string playerId, string cardId) =>
+        AddDie(state, id, playerId, cardId, Zone.FieldZone, DieStatus.Character);
+
+    private static DieInstance AddReadyToFieldDie(GameState state, string id, string playerId, string cardId) =>
+        AddDie(state, id, playerId, cardId, Zone.ReservePool, DieStatus.Character);
+
+    private static DieInstance AddDie(GameState state, string id, string playerId, string cardId, Zone zone, DieStatus status)
+    {
+        var die = new DieInstance { Id = id, CardId = cardId, OwnerId = playerId, ControllerId = playerId, Zone = zone, Status = status, Level = 1 };
+        state.Dice.Add(die);
+        return die;
+    }
+
+    [Fact]
+    public void Field_TeamwatchActiveAndDifferentAffiliatedCharacterFielded_TriggersTeamwatch()
+    {
+        var state = CreateTeamwatchGame();
+        var teamwatcher = AddActiveDie(state, "p1-teamwatch-1", "p1", TeamwatchCard.Id);
+        var fielded = AddReadyToFieldDie(state, "p1-affiliated-1", "p1", AffiliatedCharacterCard.Id);
+
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, fielded.Id, energyDieIdsToSpend: []);
+
+        Assert.Equal(1, queue.Count);
+        Assert.Equal(TriggerType.Teamwatch, queue.Pending[0].Trigger);
+        Assert.Equal(teamwatcher.Id, queue.Pending[0].SourceDieId);
+    }
+
+    [Fact]
+    public void Field_UnaffiliatedCharacterFielded_DoesNotTriggerTeamwatch()
+    {
+        var state = CreateTeamwatchGame();
+        AddActiveDie(state, "p1-teamwatch-1", "p1", TeamwatchCard.Id);
+        var fielded = AddReadyToFieldDie(state, "p1-unaffiliated-1", "p1", UnaffiliatedCharacterCard.Id);
+
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, fielded.Id, energyDieIdsToSpend: []);
+
+        Assert.Empty(queue.Pending);
+    }
+
+    // "A different Character die" - fielding another copy of the
+    // Teamwatch holder's OWN card isn't different.
+    [Fact]
+    public void Field_AnotherCopyOfTheTeamwatchersOwnCard_DoesNotTriggerItself()
+    {
+        var state = CreateTeamwatchGame();
+        AddActiveDie(state, "p1-teamwatch-1", "p1", TeamwatchCard.Id);
+        var secondCopy = AddReadyToFieldDie(state, "p1-teamwatch-2", "p1", TeamwatchCard.Id);
+
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, secondCopy.Id, energyDieIdsToSpend: []);
+
+        Assert.Empty(queue.Pending);
+    }
+
+    // Clarification 1 - "counts different active characters, not dice":
+    // two active copies of the SAME Teamwatch character still only
+    // trigger once.
+    [Fact]
+    public void Field_MultipleCopiesOfSameTeamwatchCharacterActive_TriggersOnlyOnce()
+    {
+        var state = CreateTeamwatchGame();
+        AddActiveDie(state, "p1-teamwatch-1", "p1", TeamwatchCard.Id);
+        AddActiveDie(state, "p1-teamwatch-2", "p1", TeamwatchCard.Id); // second copy
+        var fielded = AddReadyToFieldDie(state, "p1-affiliated-1", "p1", AffiliatedCharacterCard.Id);
+
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, fielded.Id, energyDieIdsToSpend: []);
+
+        Assert.Equal(1, queue.Count);
+    }
+
+    [Fact]
+    public void Field_TwoDifferentTeamwatchCharactersActive_EachTriggersSeparately()
+    {
+        var state = CreateTeamwatchGame();
+        var teamwatcher1 = AddActiveDie(state, "p1-teamwatch-1", "p1", TeamwatchCard.Id);
+        var teamwatcher2 = AddActiveDie(state, "p1-teamwatch-2", "p1", SecondTeamwatchCard.Id);
+        var fielded = AddReadyToFieldDie(state, "p1-affiliated-1", "p1", AffiliatedCharacterCard.Id);
+
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, fielded.Id, energyDieIdsToSpend: []);
+
+        Assert.Equal(2, queue.Count);
+        Assert.Equal(
+            [teamwatcher1.Id, teamwatcher2.Id],
+            queue.Pending.Select(a => a.SourceDieId).OrderBy(id => id));
+    }
+
+    // Sidekicks have no CardId (rule 1.3.9), hence no affiliations to
+    // share with anything - fielding one onto a character face can never
+    // trigger Teamwatch.
+    [Fact]
+    public void Field_SidekickFieldedOntoCharacterFace_DoesNotTriggerTeamwatch()
+    {
+        var state = CreateTeamwatchGame();
+        AddActiveDie(state, "p1-teamwatch-1", "p1", TeamwatchCard.Id);
+        var sidekick = state.DiceIn("p1", Zone.Bag).First();
+        sidekick.Zone = Zone.ReservePool;
+        sidekick.Status = DieStatus.SidekickCharacter;
+
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, sidekick.Id, energyDieIdsToSpend: []);
+
+        Assert.Empty(queue.Pending);
+    }
+
+    // Fielding is always the active player's own action - an opponent's
+    // Teamwatch die never reacts to it.
+    [Fact]
+    public void Field_OpposingControllersTeamwatchDie_DoesNotTrigger()
+    {
+        var state = CreateTeamwatchGame();
+        AddActiveDie(state, "p2-teamwatch-1", "p2", TeamwatchCard.Id); // opponent's Teamwatch die
+        var fielded = AddReadyToFieldDie(state, "p1-affiliated-1", "p1", AffiliatedCharacterCard.Id);
+
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, fielded.Id, energyDieIdsToSpend: []);
+
+        Assert.Empty(queue.Pending);
+    }
 }
