@@ -133,6 +133,23 @@ public sealed class GamesController(GameStore store) : ControllerBase
         return Ok(GameStateDto.From(gameId, state));
     }
 
+    // Only reachable when DeclareAttackers found at least one Range
+    // attacker (see CombatEngine.DeclareAttackers's own remarks) - most
+    // combats skip straight past AttackSubStep.RangeWindow to
+    // DeclareBlockers and never need this endpoint called at all.
+    [HttpPost("{gameId}/resolve-range")]
+    public ActionResult<GameStateDto> ResolveRange(string gameId, [FromBody] ResolveRangeRequest request)
+    {
+        var state = store.Get(gameId);
+        var queue = new AbilityQueue();
+        CombatEngine.ResolveRange(
+            state, queue,
+            request.ActivePlayerAssignments.Select(a => (a.RangeDieId, a.TargetDieId)).ToList(),
+            request.InactivePlayerAssignments.Select(a => (a.RangeDieId, a.TargetDieId)).ToList());
+        Drain(state, queue, null);
+        return Ok(GameStateDto.From(gameId, state));
+    }
+
     [HttpPost("{gameId}/declare-blockers")]
     public ActionResult<GameStateDto> DeclareBlockers(string gameId, [FromBody] DeclareBlockersRequest request)
     {

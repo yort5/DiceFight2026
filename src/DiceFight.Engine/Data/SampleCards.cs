@@ -809,6 +809,25 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 5)
         ]);
 
+    // Justice League set's Starfire, "Starbolts" printing - purely the
+    // Range keyword, no other text. A different printing from the
+    // roster's own "No-Nonsense Warrior" Starfire above (different id -
+    // real Dice Masters cards reuse character names across printings
+    // constantly, same as the three Alfred Pennyworths or four Black
+    // Mantas already in this catalog).
+    public static readonly CardDef StarfireStarbolts = Character(
+        "starfire-starbolts", "Starfire", "Starbolts", dieLimit: 4,
+        "Range 2 (When this character attacks, all active characters with Range deal damage equal to " +
+        "their Range value to target opposing character die.)",
+        purchaseCost: 4, energyType: EnergyType.Bolt,
+        keywords: [new KeywordInstance("Range", Params: [2])],
+        affiliations: ["Teen Titans"],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3),
+            new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 4),
+            new CharacterFace(FieldingCost: 2, Attack: 5, Defense: 5)
+        ]);
+
     // A team is 8 character cards + 2 Basic Action cards (10 total), not
     // the 10 characters + 3 Basic Actions used here previously - that was
     // simply wrong. Colossus, Corvus Glaive, Distraction, Kang, King
@@ -847,7 +866,7 @@ public static class SampleCards
             AntManAmplify, Cyclops, Wasp, BlackWidow, Polaris, CosmicCubeInfinitePossibilities, Parademon, Darkseid,
             Deathbird, WaspPixie, MadalynePryor, TheSpot, Ricochet, ScarletSpider, DrowMercenary,
             SupermanKalEl, BlackMantaDeepSeaDeviant, BizarroMoreThanAMonster,
-            SpideysLastStand, TheRock, BigE, RipHunterNavigateTheSandsOfTime
+            SpideysLastStand, TheRock, BigE, RipHunterNavigateTheSandsOfTime, StarfireStarbolts
         ];
         return all.ToDictionary(c => c.Id);
     }

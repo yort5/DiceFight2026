@@ -33,7 +33,95 @@ public static class CombatEngine
             TurnEngine.EnqueueTriggered(state, queue, die, TriggerType.WhenAttacks);
         }
 
+        // Keyword Range - "When one or more Character dice with Range
+        // attack, each active die with Range (on both sides)
+        // simultaneously deals damage..." Triggered by an attacking die
+        // specifically ("attack" - clarification 5, it doesn't matter
+        // how many, only that at least one did), unlike Infiltrate/Tag
+        // Out's "you may choose" windows this one isn't optional - but
+        // it still needs a real sub-window since which opposing die each
+        // Range die targets is a genuine choice. See ResolveRange.
+        var hasRangeTrigger = attackerDieIds.Any(id => DieStats.HasKeyword(state, FindDie(state, id), "Range"));
+        state.AttackSubStep = hasRangeTrigger ? AttackSubStep.RangeWindow : AttackSubStep.DeclareBlockers;
+    }
+
+    // Keyword Range X - Appendix 1, plus five numbered clarifications:
+    // (1) each Range die may choose a different target, and a side's
+    // Range dice still deal their own damage even if a Range die on
+    // *that* side was KO'd by the other side's Range damage first - so
+    // both sides' assignments are validated against the pre-damage state
+    // up front, before either side's damage is applied, and never
+    // re-validated once damage starts landing. (2) damage is applied
+    // active-player-first, then inactive-player, even though it's
+    // conceptually simultaneous - see ApplyRangeDamageAndResolveKOs.
+    // (3)/(4) "when damaged" reactions aren't interrupted mid-Range and
+    // only fire once all Range damage is resolved - moot today, since
+    // WhenDamaged isn't wired to fire from anywhere yet (a pre-existing,
+    // already-documented gap; no card needs it). (5) - the trigger check
+    // above cares only whether *any* attacker has Range, not how many;
+    // contribution below is every active Range die on a side, attacking
+    // or not (the worked example - a lone Range 1 attacker still adds in
+    // three more active Range 1 dice and two Range 2 dice sitting idle
+    // in the Field Zone). Deliberately not modeled: the engine doesn't
+    // verify every eligible Range die was actually included in a side's
+    // assignment list (matches the trust level already extended to
+    // Infiltrate/Tag Out's own caller-supplied choice lists), so a
+    // caller that omits an eligible die simply doesn't deal its damage
+    // rather than being rejected - flagged rather than silently assumed.
+    public static void ResolveRange(
+        GameState state, AbilityQueue queue,
+        IReadOnlyList<(string RangeDieId, string TargetDieId)> activePlayerAssignments,
+        IReadOnlyList<(string RangeDieId, string TargetDieId)> inactivePlayerAssignments,
+        IDiceRoller? roller = null)
+    {
+        RequireSubStep(state, AttackSubStep.RangeWindow);
+
+        var inactiveId = state.OpponentOf(state.ActivePlayerId);
+        ValidateRangeAssignments(state, state.ActivePlayerId, activePlayerAssignments);
+        ValidateRangeAssignments(state, inactiveId, inactivePlayerAssignments);
+
+        ApplyRangeDamageAndResolveKOs(state, queue, activePlayerAssignments, roller);
+        ApplyRangeDamageAndResolveKOs(state, queue, inactivePlayerAssignments, roller);
+
         state.AttackSubStep = AttackSubStep.DeclareBlockers;
+    }
+
+    private static void ValidateRangeAssignments(
+        GameState state, string controllerId, IReadOnlyList<(string RangeDieId, string TargetDieId)> assignments)
+    {
+        foreach (var (rangeDieId, targetDieId) in assignments)
+        {
+            var rangeDie = FindDie(state, rangeDieId);
+            if (rangeDie.ControllerId != controllerId || rangeDie.Zone is not (Zone.FieldZone or Zone.AttackZone))
+                throw new InvalidOperationException($"{DisplayName(state, rangeDie)} is not an eligible Range die.");
+            if (!DieStats.HasKeyword(state, rangeDie, "Range"))
+                throw new InvalidOperationException($"{DisplayName(state, rangeDie)} does not have Range.");
+
+            var target = FindDie(state, targetDieId);
+            if (target.ControllerId == controllerId)
+                throw new InvalidOperationException($"{DisplayName(state, target)} is not an opposing Character die.");
+            if (target.Zone is not (Zone.FieldZone or Zone.AttackZone) || target.Status is not (DieStatus.Character or DieStatus.SidekickCharacter))
+                throw new InvalidOperationException($"{DisplayName(state, target)} is not a legal Range target.");
+        }
+    }
+
+    // Applies one side's whole batch of Range damage before checking any
+    // KOs from it (clarification 2's "simultaneously" within a side),
+    // then resolves KOs once per distinct target rather than once per
+    // assignment (two Range dice hitting the same target stack their
+    // damage into one KO check, not two).
+    private static void ApplyRangeDamageAndResolveKOs(
+        GameState state, AbilityQueue queue, IReadOnlyList<(string RangeDieId, string TargetDieId)> assignments, IDiceRoller? roller)
+    {
+        foreach (var (rangeDieId, targetDieId) in assignments)
+            FindDie(state, targetDieId).Damage += DieStats.RangeAmount(state, FindDie(state, rangeDieId));
+
+        foreach (var targetDieId in assignments.Select(a => a.TargetDieId).Distinct())
+        {
+            var target = FindDie(state, targetDieId);
+            if (target.Zone is Zone.FieldZone or Zone.AttackZone && DieStats.TryResolveKO(state, target, roller))
+                TurnEngine.EnqueueTriggered(state, queue, target, TriggerType.WhenKOd);
+        }
     }
 
     // Rule 2.7.2 - the Inactive player assigns blockers (if any).

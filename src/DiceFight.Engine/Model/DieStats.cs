@@ -86,6 +86,19 @@ public static class DieStats
         return keyword.Params is { Count: > 0 } ? keyword.Params[0] : 1;
     }
 
+    // Keyword Range X - the X in "Range X" (KeywordInstance.Params[0]).
+    // Every printed instance of this keyword names an explicit X (unlike
+    // Energy Drain's bare wording), but default to 1 anyway for the same
+    // "never throw over missing data" reason EnergyDrainAmount does.
+    public static int RangeAmount(GameState state, DieInstance die)
+    {
+        var cardId = die.VirtualCardId ?? die.CardId;
+        if (cardId is null || !state.CardCatalog.TryGetValue(cardId, out var card)) return 0;
+        var keyword = card.Keywords.FirstOrDefault(k => k.Name == "Range");
+        if (keyword is null) return 0;
+        return keyword.Params is { Count: > 0 } ? keyword.Params[0] : 1;
+    }
+
     // Keyword Ally - Appendix 1: "Character dice with the Ally keyword
     // ability are considered Sidekick Character dice while in the Field
     // Zone... in addition to their other attributes. They don't count as

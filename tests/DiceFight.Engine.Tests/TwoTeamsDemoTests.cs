@@ -1383,4 +1383,36 @@ public class TwoTeamsDemoTests
 
         Assert.Equal(attackerBaseAttack, DieStats.EffectiveAttack(state, attacker)); // buff expired
     }
+
+    // Justice League set's Starfire, "Starbolts" printing - pure Range 2.
+    // Not on either roster - constructed directly, same pattern as the
+    // other non-roster real cards.
+    [Fact]
+    public void StarfireRange_AttackingOpensTheRangeWindowAndDamagesAnOpposingDie()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamA";
+
+        var starfire = new DieInstance
+        {
+            Id = "teamA-starfire-starbolts-1", CardId = SampleCards.StarfireStarbolts.Id,
+            OwnerId = "teamA", ControllerId = "teamA", Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(starfire);
+
+        var opposingTarget = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        opposingTarget.Zone = Zone.FieldZone;
+        opposingTarget.Status = DieStatus.Character;
+        opposingTarget.Level = 1;
+
+        TurnEngine.EnterAttackStep(state);
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [starfire.Id]);
+
+        Assert.Equal(AttackSubStep.RangeWindow, state.AttackSubStep);
+        CombatEngine.ResolveRange(state, queue, [(starfire.Id, opposingTarget.Id)], []);
+
+        Assert.Equal(Zone.PrepArea, opposingTarget.Zone); // Range 2 vs Falcon's placeholder 2D - KO'd
+        Assert.Equal(AttackSubStep.DeclareBlockers, state.AttackSubStep); // Range resolves before blockers exist
+    }
 }

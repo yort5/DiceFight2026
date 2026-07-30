@@ -2158,4 +2158,185 @@ public class CombatEngineTests
         Assert.Equal(AttackSubStep.ActionAndGlobalWindow, state.AttackSubStep);
         Assert.Equal(4, DieStats.EffectiveAttack(state, infiltrator)); // 2 base + 2 from Tag Out
     }
+
+    // Keyword Range X - "When one or more Character dice with Range
+    // attack, each active die with Range (on both sides) simultaneously
+    // deals damage equal to its Range value (X) to a target opposing
+    // Character die." Defense 3 so a single Range-3 hit exactly KOs a
+    // PlainThreeLevelCard target (1D) many times over, or a RangeCard
+    // target exactly - convenient round numbers for these tests.
+    private static readonly CardDef RangeCard = new()
+    {
+        Id = "range-character", Name = "Range Character", Type = CardType.Character,
+        PurchaseCost = 3, DieLimit = 4,
+        Keywords = [new KeywordInstance("Range", Params: [3])],
+        Levels = [new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 3)],
+    };
+
+    private static GameState CreateRangeGame()
+    {
+        var catalog = new Dictionary<string, CardDef> { [RangeCard.Id] = RangeCard, [PlainThreeLevelCard.Id] = PlainThreeLevelCard };
+        var state = GameState.NewGame(catalog, new Player { Id = "p1", Name = "Player One" }, new Player { Id = "p2", Name = "Player Two" });
+        state.CurrentStep = TurnStep.Attack;
+        state.AttackSubStep = AttackSubStep.DeclareAttackers;
+        return state;
+    }
+
+    [Fact]
+    public void Range_AttackerHasRange_EntersRangeWindow()
+    {
+        var state = CreateRangeGame();
+        var attacker = AddCharacterDie(state, "p1-range-1", "p1", RangeCard.Id, Zone.FieldZone);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+
+        Assert.Equal(AttackSubStep.RangeWindow, state.AttackSubStep);
+    }
+
+    [Fact]
+    public void Range_NoAttackerHasRange_SkipsStraightToDeclareBlockers()
+    {
+        var state = CreateRangeGame();
+        var attacker = AddCharacterDie(state, "p1-plain-1", "p1", PlainThreeLevelCard.Id, Zone.FieldZone);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+
+        Assert.Equal(AttackSubStep.DeclareBlockers, state.AttackSubStep);
+    }
+
+    [Fact]
+    public void Range_ResolveDealsDamageToChosenTargetAndTransitionsToDeclareBlockers()
+    {
+        var state = CreateRangeGame();
+        var attacker = AddCharacterDie(state, "p1-range-1", "p1", RangeCard.Id, Zone.FieldZone);
+        var target = AddCharacterDie(state, "p2-plain-1", "p2", PlainThreeLevelCard.Id, Zone.FieldZone); // 1D
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        CombatEngine.ResolveRange(state, queue, [(attacker.Id, target.Id)], []);
+
+        Assert.Equal(Zone.PrepArea, target.Zone); // 3 Range damage vs 1D - KO'd
+        Assert.Equal(AttackSubStep.DeclareBlockers, state.AttackSubStep);
+    }
+
+    // Clarification 5's worked example: an attack containing just one
+    // Range attacker still adds in every other active Range die's own
+    // damage, not just the attacker's - proven here by also stacking two
+    // Range dice's damage onto the same target before the KO check runs.
+    [Fact]
+    public void Range_IdleActiveRangeDieAlsoContributes_NotJustTheAttacker()
+    {
+        var state = CreateRangeGame();
+        var attacker = AddCharacterDie(state, "p1-range-1", "p1", RangeCard.Id, Zone.FieldZone);
+        var idleRangeDie = AddCharacterDie(state, "p1-range-2", "p1", RangeCard.Id, Zone.FieldZone); // never declared as an attacker
+        var target = AddCharacterDie(state, "p2-plain-1", "p2", PlainThreeLevelCard.Id, Zone.FieldZone);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]); // only attacker actually attacks
+        CombatEngine.ResolveRange(state, queue, [(attacker.Id, target.Id), (idleRangeDie.Id, target.Id)], []);
+
+        Assert.Equal(Zone.PrepArea, target.Zone); // 3 + 3 = 6 damage, far past 1D
+    }
+
+    [Fact]
+    public void Range_RejectsADieWithoutTheKeyword()
+    {
+        var state = CreateRangeGame();
+        var attacker = AddCharacterDie(state, "p1-range-1", "p1", RangeCard.Id, Zone.FieldZone);
+        var plain = AddCharacterDie(state, "p1-plain-1", "p1", PlainThreeLevelCard.Id, Zone.FieldZone);
+        var target = AddCharacterDie(state, "p2-plain-1", "p2", PlainThreeLevelCard.Id, Zone.FieldZone);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            CombatEngine.ResolveRange(state, queue, [(plain.Id, target.Id)], []));
+        Assert.Contains("Range", ex.Message);
+    }
+
+    [Fact]
+    public void Range_RejectsATargetControlledBySameSide()
+    {
+        var state = CreateRangeGame();
+        var attacker = AddCharacterDie(state, "p1-range-1", "p1", RangeCard.Id, Zone.FieldZone);
+        var ownDie = AddCharacterDie(state, "p1-plain-1", "p1", PlainThreeLevelCard.Id, Zone.FieldZone);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            CombatEngine.ResolveRange(state, queue, [(attacker.Id, ownDie.Id)], []));
+        Assert.Contains("opposing", ex.Message);
+    }
+
+    [Fact]
+    public void Range_RejectsATargetThatIsNotActive()
+    {
+        var state = CreateRangeGame();
+        var attacker = AddCharacterDie(state, "p1-range-1", "p1", RangeCard.Id, Zone.FieldZone);
+        var target = AddCharacterDie(state, "p2-plain-1", "p2", PlainThreeLevelCard.Id, Zone.PrepArea); // not active
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            CombatEngine.ResolveRange(state, queue, [(attacker.Id, target.Id)], []));
+        Assert.Contains("legal Range target", ex.Message);
+    }
+
+    // Appendix 1 clarification 1, the keyword's central subtlety: "the
+    // defending player still resolves their Range damage even if the
+    // Range die was KO'd by the Active player's Range damage." Both
+    // sides' assignments are locked in and validated up front, before
+    // either side's damage is applied - so the inactive player's Range
+    // die still deals its own damage here even though it's already been
+    // KO'd by the active player's damage moments earlier in this same call.
+    [Fact]
+    public void Range_InactivePlayersRangeDieStillDealsDamage_EvenIfKOdByActivePlayersRangeDamageFirst()
+    {
+        var state = CreateRangeGame();
+        var attacker = AddCharacterDie(state, "p1-range-1", "p1", RangeCard.Id, Zone.FieldZone);
+        var p2RangeDie = AddCharacterDie(state, "p2-range-1", "p2", RangeCard.Id, Zone.FieldZone); // about to be KO'd
+        var p1Target = AddCharacterDie(state, "p1-plain-1", "p1", PlainThreeLevelCard.Id, Zone.FieldZone);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+
+        CombatEngine.ResolveRange(
+            state, queue,
+            activePlayerAssignments: [(attacker.Id, p2RangeDie.Id)], // KOs p2's own Range die (3 dmg vs 3D)
+            inactivePlayerAssignments: [(p2RangeDie.Id, p1Target.Id)]); // that same die still deals its own damage
+
+        Assert.Equal(Zone.PrepArea, p2RangeDie.Zone); // KO'd by the active player's Range damage
+        Assert.Equal(Zone.PrepArea, p1Target.Zone); // but still dealt its own damage anyway
+    }
+
+    [Fact]
+    public void Range_KOdTargetEnqueuesWhenKOd()
+    {
+        var whenKOdCard = new CardDef
+        {
+            Id = "range-when-kod-target", Name = "Range WhenKOd Target", Type = CardType.Character,
+            PurchaseCost = 2, DieLimit = 4,
+            Levels = [new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 1)],
+            Abilities = [new AbilityDef(TriggerType.WhenKOd, Cost: null, Effect: new GainLife(1))],
+        };
+        var catalog = new Dictionary<string, CardDef>
+        {
+            [RangeCard.Id] = RangeCard, [whenKOdCard.Id] = whenKOdCard,
+        };
+        var state = GameState.NewGame(catalog, new Player { Id = "p1", Name = "Player One" }, new Player { Id = "p2", Name = "Player Two" });
+        state.CurrentStep = TurnStep.Attack;
+        state.AttackSubStep = AttackSubStep.DeclareAttackers;
+        var attacker = AddCharacterDie(state, "p1-range-1", "p1", RangeCard.Id, Zone.FieldZone);
+        var target = AddCharacterDie(state, "p2-target-1", "p2", whenKOdCard.Id, Zone.FieldZone);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        CombatEngine.ResolveRange(state, queue, [(attacker.Id, target.Id)], []);
+
+        Assert.Contains(queue.Pending, a => a.Trigger == TriggerType.WhenKOd && a.SourceDieId == target.Id);
+    }
 }

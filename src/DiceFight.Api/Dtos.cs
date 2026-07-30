@@ -85,3 +85,9 @@ public sealed record TagOutUse(string TagOutDieId, string TargetDieId);
 // doesn't need the blocker assignment at all (Tag Out's own eligibility
 // only cares about the Field Zone, not who's blocking whom).
 public sealed record ResolveTagOutRequest(IReadOnlyList<TagOutUse> Uses);
+public sealed record RangeAssignment(string RangeDieId, string TargetDieId);
+// Both sides' assignments in one request, same shape CombatEngine.
+// ResolveRange itself takes - Range resolves before blockers even exist,
+// so there's no BlockAssignment payload to resend here either.
+public sealed record ResolveRangeRequest(
+    IReadOnlyList<RangeAssignment> ActivePlayerAssignments, IReadOnlyList<RangeAssignment> InactivePlayerAssignments);

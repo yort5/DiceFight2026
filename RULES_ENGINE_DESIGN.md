@@ -49,11 +49,10 @@ a different data source - worth asking the user before investing time
 here rather than assuming which approach they'd want.
 
 **Actionable next steps, roughly high to low value**:
-1. ~~Keyword *behavior*~~ - Overcrush, Regenerate, Energize, Ally,
-   Amplify/Awaken, Attune, Call Out, Corrupt, Swarm, Darkseid's
-   keyword grant, Deadly, Fast, Energy Drain, Infiltrate, Intimidate,
-   Obscure, Retaliation, Strike, Teamwatch, Sacrifice, and Tag Out are
-   implemented (see the status updates).
+1. ~~Keyword *behavior*~~ - see "Implemented keywords" below for the
+   full alphabetical list (now including Range) with rule summaries and
+   example cards; full citations and design rationale are in each
+   keyword's own "Status update" section further down.
    BlackPanther's Energize is fully scripted; Robin's Energize
    (a purchase-cost discount) and all three Alfred Pennyworth printings'
    Ally effects (each a "Batman die OR Sidekick" compound target) are
@@ -130,58 +129,54 @@ here rather than assuming which approach they'd want.
     gap (item #9) applies to Rip Hunter's own choice too, same as it
     already does for Cosmic Cube.
 11. The web client's Attack Step UI has no case for `AttackSubStep.
-    InfiltrateWindow` (or, now, `TagOutWindow`) - `attackSubStep` is
-    typed as a plain `string` in `types.ts`, so new values flow through
-    without a build error, but match none of `App.tsx`'s
-    `canDeclareBlockers`/`canAssignDamage` conditions either. Invisible
-    today (neither curated roster has an Infiltrate or Tag Out card, so
-    `DeclareBlockers`/`ResolveInfiltrate` always skip straight past both
-    sub-steps - see the status updates), but the first team built with
-    either keyword would hit a dead end in the web client with no
-    visible way to proceed. Fix shape when that happens: a
-    `canResolveInfiltrate`/`canResolveTagOut` check plus either a small
-    UI prompt or an auto-pass-through call to the already-wired
-    `POST /resolve-infiltrate`/`POST /resolve-tag-out` endpoints (both
-    exist server-side; only the client-side UI case is missing).
+    InfiltrateWindow`, `TagOutWindow`, or (now) `RangeWindow` -
+    `attackSubStep` is typed as a plain `string` in `types.ts`, so new
+    values flow through without a build error, but match none of
+    `App.tsx`'s `canDeclareBlockers`/`canAssignDamage` conditions
+    either. Invisible today (neither curated roster has an Infiltrate,
+    Tag Out, or Range card, so `DeclareAttackers`/`DeclareBlockers`/
+    `ResolveInfiltrate` always skip straight past all three sub-steps -
+    see the status updates), but the first team built with any of the
+    three would hit a dead end in the web client with no visible way to
+    proceed. Fix shape when that happens: a
+    `canResolveInfiltrate`/`canResolveTagOut`/`canResolveRange` check
+    plus either a small UI prompt or an auto-pass-through call to the
+    already-wired
+    `POST /resolve-infiltrate`/`POST /resolve-tag-out`/`POST
+    /resolve-range` endpoints (all three exist server-side; only the
+    client-side UI case is missing).
 
 ## Implemented keywords
 
-Every Appendix 1 keyword built so far, in the order it was built. Each
-has its own "Status update" section below with full rule citations and
-design rationale - this is just the scannable index.
+Every Appendix 1 keyword built so far, alphabetically. Each has its own
+"Status update" section below (in build order) with full rule citations
+and design rationale - this is just the scannable index.
 
-- **Overcrush** (Apocalypse) - if the attacker KOs or otherwise removes
-  all its blockers, any leftover attack damage hits the opponent directly.
-- **Regenerate** (Beast) - a die that would be KO'd rolls instead;
-  landing on a character face saves it (back to the Field Zone, not the
-  Attack Zone), an energy face doesn't.
-- **Energize** (Black Panther, "Clutching Reality") - triggers once a
-  die with this keyword ends Roll and Reroll on a double-energy face.
 - **Ally** (Alfred Pennyworth - all three printings) - a Character die
   with Ally counts as a Sidekick while in the Field/Attack Zone, in
   addition to its own attributes.
 - **Amplify** (Ant-Man) - each time you use an Action die, spin every
   active Amplify die up one level (if able).
-- **Awaken** (Cyclops) - fires once per die, every time an Awaken die
-  spins up one or more levels, whatever caused it.
 - **Attune** (Wasp) - while active, each time you use an Action die,
   deals 1 damage to a target player or Character die.
+- **Awaken** (Cyclops) - fires once per die, every time an Awaken die
+  spins up one or more levels, whatever caused it.
 - **Call Out** (Black Widow) - when this die attacks, target an
   opposing Character die; only that die (or none) may legally block it.
 - **Corrupt** (Polaris) - target player draws X dice from their bag,
   refilling from the Used Pile if needed.
-- **Swarm** (Parademon) - while active, drawing another copy of that
-  card during Clear and Draw pulls an extra die.
 - **Darkseid's keyword grant** (Darkseid) - "while active, your
   Sidekicks gain Swarm" - not itself an Appendix 1 keyword, but the
   first live, continuously-recomputed grant (as opposed to a discrete
   triggered ability).
 - **Deadly** (Deathbird) - a die engaged with a Deadly die is KO'd at
   Clean Up, regardless of what happened to either die in between.
-- **Fast** (Wasp Pixie) - deals its combat damage in an earlier wave
-  than non-Fast dice, so a KO'd non-Fast target never gets to hit back.
+- **Energize** (Black Panther, "Clutching Reality") - triggers once a
+  die with this keyword ends Roll and Reroll on a double-energy face.
 - **Energy Drain** (Madalyne Pryor) - after blockers are assigned,
   spins every Character die engaged with an Energy Drain die down a level.
+- **Fast** (Wasp Pixie) - deals its combat damage in an earlier wave
+  than non-Fast dice, so a KO'd non-Fast target never gets to hit back.
 - **Infiltrate** (The Spot; Ricochet reacts to it) - an unblocked
   attacker may remove itself from combat to deal 1 damage directly and
   return to the Field Zone.
@@ -189,21 +184,31 @@ design rationale - this is just the scannable index.
   opposing Character die from the Field Zone until end of turn.
 - **Obscure** (Drow Mercenary) - using any Action die makes every die
   of this card unblockable until end of turn.
+- **Overcrush** (Apocalypse) - if the attacker KOs or otherwise removes
+  all its blockers, any leftover attack damage hits the opponent directly.
+- **Range** (Starfire "Starbolts") - when a Range attacker attacks,
+  every active Range die on both sides simultaneously deals its own
+  damage to a target opposing Character die.
+- **Regenerate** (Beast) - a die that would be KO'd rolls instead;
+  landing on a character face saves it (back to the Field Zone, not the
+  Attack Zone), an energy face doesn't.
 - **Retaliation** (Superman "Kal-El"; Black Manta "Deep Sea Deviant"
   scales the amount) - if an active Retaliation character shares an
   affiliation with one of your Character dice that's KO'd, deal damage
   to your opponent.
-- **Strike** (Bizarro) - the sole Character die you field this turn
-  gets +2A/+2D and Overcrush for the rest of the turn.
-- **Teamwatch** (Falcon; Black Panther shares his real "Avengers"
-  affiliation) - fielding a different, affiliation-matching Character
-  die while a Teamwatch die is active triggers its ability.
 - **Sacrifice** (Spidey's Last Stand; The Rock is cataloged but left
   vanilla) - moves a Character die from the Field Zone to Out of Play
   (owner's turn) or the Used Pile (otherwise), never counting as a KO.
+- **Strike** (Bizarro) - the sole Character die you field this turn
+  gets +2A/+2D and Overcrush for the rest of the turn.
+- **Swarm** (Parademon) - while active, drawing another copy of that
+  card during Clear and Draw pulls an extra die.
 - **Tag Out** (Big E) - after blockers are declared, you may Prep a die
   sitting in the Field Zone to give a target Character die +2A/+2D
   until end of turn.
+- **Teamwatch** (Falcon; Black Panther shares his real "Avengers"
+  affiliation) - fielding a different, affiliation-matching Character
+  die while a Teamwatch die is active triggers its ability.
 
 Not Appendix 1 keywords, but bespoke card text built alongside this
 work using the same infrastructure: Cosmic Cube's mid-Clear-and-Draw
@@ -3246,3 +3251,79 @@ currently active) plus one end-to-end case driving the real Rip Hunter
 card - confirming dice actually land in the Used Pile (not Out of Play)
 and get replaced one-for-one. `dotnet build`, `dotnet test` (236/236),
 and `npm run build` all clean.
+
+## Status update — Range implemented; the most rule-dense keyword this session
+
+Appendix 1: "When one or more Character dice with Range attack, each
+active die with Range (on both sides) simultaneously deals damage equal
+to its Range value (X) to a target opposing Character die." Five
+numbered clarifications, more than any other keyword built so far:
+(1) each Range die may choose a different target, and a side's Range
+dice still deal their own damage even if one of that side's Range dice
+was KO'd by the *other* side's Range damage first; (2) damage resolves
+active-player-first-then-inactive-player despite being conceptually
+simultaneous; (3)/(4) "when damaged" reactions can't interrupt Range and
+only fire once all of it has resolved; (5) the trigger doesn't care how
+many attackers have Range, only that at least one does - contribution
+is every active Range die on a side, attacking or not (the worked
+example: a lone Range 1 attacker still pulls in three more idle Range 1
+dice and two Range 2 dice sitting in the Field Zone).
+
+- **New `AttackSubStep.RangeWindow`**, entered right after
+  `DeclareAttackers` (before blockers even exist) rather than chained
+  onto Infiltrate/Tag Out's later post-blockers window - Range's own
+  trigger point ("when...dice with Range attack") is earlier than
+  theirs. A real sub-window (not fully automatic like Deadly/Energy
+  Drain) since which opposing die each Range die targets is a genuine
+  choice, but not optional to invoke at all, unlike Infiltrate/Tag Out's
+  "you may" - every eligible Range die is supposed to deal its damage.
+- **`CombatEngine.ResolveRange`** takes both sides' target assignments
+  in one call and validates all of them *before* applying any damage,
+  then applies the active player's batch, then the inactive player's -
+  this ordering is exactly what makes clarification (1) fall out
+  correctly: a die's eligibility is locked in from validation time, not
+  re-checked once the other side's damage starts landing, so a Range die
+  that gets KO'd by the active player's damage still deals its own
+  damage to the inactive player's chosen target afterward. Damage within
+  one side's batch is applied in full before any KO check runs, so two
+  Range dice hitting the same target stack correctly into one check
+  rather than two.
+- **New `DieStats.RangeAmount`** reads the X in "Range X"
+  (`KeywordInstance.Params[0]`), same shape as `EnergyDrainAmount`.
+- **Not modeled, flagged rather than silently assumed**: the engine
+  doesn't verify every eligible active Range die was actually included
+  in a side's assignment list - a caller that omits one just doesn't
+  deal that die's damage, rather than being rejected. Same trust level
+  already extended to Infiltrate/Tag Out's own caller-supplied choice
+  lists, though those are genuinely optional and this isn't; flagged as
+  a real (if narrow) gap rather than assumed correct.
+- Clarifications (3)/(4) (`WhenDamaged` reactions can't interrupt Range)
+  are moot today since `TriggerType.WhenDamaged` isn't wired to fire
+  from anywhere in the engine yet - a pre-existing, already-documented
+  gap (`AttackSubStep.WhenDamagedAbilities` is a marker only), not
+  something Range needed to solve to work correctly for every card
+  currently cataloged.
+- Added the API layer too, matching Infiltrate/Tag Out's own
+  completeness bar: `ResolveRangeRequest`/`RangeAssignment` DTOs and a
+  new `POST {gameId}/resolve-range` endpoint.
+
+Example card: Justice League's Starfire ("Starbolts" printing) - purely
+the keyword (Range 2), nothing else to script. A different id from the
+roster's own Starfire ("No-Nonsense Warrior") - real Dice Masters cards
+reuse character names across printings constantly, same as the three
+Alfred Pennyworths already in this catalog.
+
+10 new tests (246 total): `CombatEngineTests` covers the window-entry
+logic (opens when an attacker has Range, skips otherwise), damage
+resolution (deals damage and transitions to `DeclareBlockers`, an idle
+active Range die contributes alongside the attacker and their damage
+stacks before the KO check, rejects a die without the keyword/a same-
+side target/an inactive target, enqueues `WhenKOd` for a KO'd target),
+and - the keyword's central subtlety - a dedicated test proving the
+inactive player's Range die still deals its own damage even after being
+KO'd by the active player's Range damage earlier in the same call; one
+end-to-end `TwoTeamsDemoTests` case drives real Starfire attacking and
+Range-damaging a real Falcon die, confirming the window opens, the KO
+lands, and the sub-step reaches `DeclareBlockers` (not
+`ActionAndGlobalWindow` - Range resolves well before that). `dotnet
+build`, `dotnet test` (246/246), and `npm run build` all clean.
