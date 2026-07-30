@@ -57,7 +57,8 @@ public static class SampleCards
         EnergyType energyType = PlaceholderEnergy,
         IReadOnlyList<CharacterFace>? levels = null,
         IReadOnlyList<string>? grantsToSidekicks = null,
-        IReadOnlyList<string>? affiliations = null) => new()
+        IReadOnlyList<string>? affiliations = null,
+        StaticTeamBonus? grantsStaticTeamBonus = null) => new()
     {
         Id = id,
         Name = name,
@@ -71,7 +72,8 @@ public static class SampleCards
         Keywords = keywords ?? [],
         Abilities = abilities ?? [],
         GrantsToSidekicks = grantsToSidekicks ?? [],
-        Affiliations = affiliations ?? []
+        Affiliations = affiliations ?? [],
+        GrantsStaticTeamBonus = grantsStaticTeamBonus
     };
 
     private static CardDef BasicAction(
@@ -144,10 +146,15 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 3)
         ]);
 
+    // A live, continuously-recomputed Static team-wide bonus (rule
+    // 3.4.5.7) - see CardDef.GrantsStaticTeamBonus/DieStats.
+    // StaticTeamBonusFor. No AbilityDef needed, same shape as Strike's
+    // "no trigger at all" design.
     public static readonly CardDef CaptainMarvel = Character(
         "captain-marvel", "Captain Marvel", "Alpha Flight", dieLimit: 4,
         "While Captain Marvel is active, your Character dice get +1 attack and +1 defense.",
-        purchaseCost: 4);
+        purchaseCost: 4,
+        grantsStaticTeamBonus: new StaticTeamBonus(AttackDelta: 1, DefenseDelta: 1));
 
     public static readonly CardDef Colossus = Character(
         "colossus", "Colossus", "Inferno", dieLimit: 4, ""); // real card, genuinely blank text box

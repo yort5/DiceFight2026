@@ -1847,4 +1847,97 @@ public class CombatEngineTests
         Assert.Contains(blocker.Id, result.KOdDieIds);
         Assert.Equal(17, state.PlayerTwo.Life); // 4 attack - 1 defense (what was needed) = 3 leftover
     }
+
+    // Rule 3.4.5.7 - "While Captain Marvel is active, your Character dice
+    // get +1 attack and +1 defense" is a Static team-wide bonus: live and
+    // continuously-recomputed (DieStats.StaticTeamBonusFor), not stored
+    // like an AppliedModifiers entry.
+    private static readonly CardDef StaticBuffGranterCard = new()
+    {
+        Id = "static-buff-granter", Name = "Static Buff Granter", Type = CardType.Character,
+        PurchaseCost = 3, DieLimit = 4,
+        Levels = [new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 2)],
+        GrantsStaticTeamBonus = new StaticTeamBonus(AttackDelta: 1, DefenseDelta: 1),
+    };
+
+    // A second, distinct granter (different card, different bonus) - for
+    // the "two different grants stack" case.
+    private static readonly CardDef SecondStaticBuffGranterCard = new()
+    {
+        Id = "static-buff-granter-2", Name = "Second Static Buff Granter", Type = CardType.Character,
+        PurchaseCost = 3, DieLimit = 4,
+        Levels = [new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 2)],
+        GrantsStaticTeamBonus = new StaticTeamBonus(AttackDelta: 2, DefenseDelta: 0),
+    };
+
+    private static GameState CreateStaticTeamBonusGame()
+    {
+        var catalog = new Dictionary<string, CardDef>
+        {
+            [StaticBuffGranterCard.Id] = StaticBuffGranterCard,
+            [SecondStaticBuffGranterCard.Id] = SecondStaticBuffGranterCard,
+            [PlainThreeLevelCard.Id] = PlainThreeLevelCard,
+        };
+        return GameState.NewGame(catalog, new Player { Id = "p1", Name = "Player One" }, new Player { Id = "p2", Name = "Player Two" });
+    }
+
+    [Fact]
+    public void StaticTeamBonus_GrantsBonusToItsOwnAndOtherActiveCharacterDice()
+    {
+        var state = CreateStaticTeamBonusGame();
+        var granter = AddCharacterDie(state, "p1-granter-1", "p1", StaticBuffGranterCard.Id, Zone.FieldZone);
+        var ally = AddCharacterDie(state, "p1-ally-1", "p1", PlainThreeLevelCard.Id, Zone.FieldZone);
+
+        Assert.Equal(3, DieStats.EffectiveAttack(state, granter)); // 2 base + 1 - "your Character dice," no "other" qualifier
+        Assert.Equal(3, DieStats.EffectiveDefense(state, granter));
+        Assert.Equal(2, DieStats.EffectiveAttack(state, ally)); // 1 base + 1
+        Assert.Equal(2, DieStats.EffectiveDefense(state, ally));
+    }
+
+    // Clarification 3.4.5.3 - "regardless of how many copies of that die
+    // are fielded, this ability occurs only one time (i.e. it does not stack)."
+    [Fact]
+    public void StaticTeamBonus_DoesNotStackWithMultipleCopiesOfTheSameGranter()
+    {
+        var state = CreateStaticTeamBonusGame();
+        AddCharacterDie(state, "p1-granter-1", "p1", StaticBuffGranterCard.Id, Zone.FieldZone);
+        AddCharacterDie(state, "p1-granter-2", "p1", StaticBuffGranterCard.Id, Zone.FieldZone); // second copy
+        var ally = AddCharacterDie(state, "p1-ally-1", "p1", PlainThreeLevelCard.Id, Zone.FieldZone);
+
+        Assert.Equal(2, DieStats.EffectiveAttack(state, ally)); // still just +1, not +2
+    }
+
+    // Rule 3.6.6 - "Static ability modifiers will no longer be applied
+    // when any applicable die applying that ability is no longer active."
+    [Fact]
+    public void StaticTeamBonus_GranterNotActive_DoesNotApply()
+    {
+        var state = CreateStaticTeamBonusGame();
+        AddCharacterDie(state, "p1-granter-1", "p1", StaticBuffGranterCard.Id, Zone.PrepArea); // not active
+        var ally = AddCharacterDie(state, "p1-ally-1", "p1", PlainThreeLevelCard.Id, Zone.FieldZone);
+
+        Assert.Equal(1, DieStats.EffectiveAttack(state, ally)); // unmodified base
+    }
+
+    [Fact]
+    public void StaticTeamBonus_DoesNotAffectTheOpposingControllersDice()
+    {
+        var state = CreateStaticTeamBonusGame();
+        AddCharacterDie(state, "p1-granter-1", "p1", StaticBuffGranterCard.Id, Zone.FieldZone);
+        var opposing = AddCharacterDie(state, "p2-other-1", "p2", PlainThreeLevelCard.Id, Zone.FieldZone);
+
+        Assert.Equal(1, DieStats.EffectiveAttack(state, opposing)); // unmodified - not "your" character dice
+    }
+
+    [Fact]
+    public void StaticTeamBonus_TwoDifferentGrantersActive_BonusesAccumulate()
+    {
+        var state = CreateStaticTeamBonusGame();
+        AddCharacterDie(state, "p1-granter-1", "p1", StaticBuffGranterCard.Id, Zone.FieldZone); // +1A/+1D
+        AddCharacterDie(state, "p1-granter-2", "p1", SecondStaticBuffGranterCard.Id, Zone.FieldZone); // +2A/+0D
+        var ally = AddCharacterDie(state, "p1-ally-1", "p1", PlainThreeLevelCard.Id, Zone.FieldZone);
+
+        Assert.Equal(4, DieStats.EffectiveAttack(state, ally)); // 1 base + 1 + 2
+        Assert.Equal(2, DieStats.EffectiveDefense(state, ally)); // 1 base + 1 + 0
+    }
 }

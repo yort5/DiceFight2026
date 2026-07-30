@@ -747,6 +747,20 @@ public static class TurnEngine
         foreach (var die in state.Dice.Where(d => d.Zone == Zone.FieldZone))
             die.Damage = 0;
 
+        // Rule 3.4.3.9 - Applied ability modifiers (e.g. Wasp's Attune
+        // buff) last only until the end of turn, even for a die that
+        // stayed in the Field Zone the whole time and was never KO'd or
+        // rerolled - the "leaves the Field Zone" half of this rule is
+        // already covered by DieInstance.ResetToUnrolled (called from
+        // ForceKO and the Action-die/Out-of-Play sweeps below), but nothing
+        // previously expired a survivor's modifiers at the turn boundary
+        // itself. Applies to every die regardless of controller - an
+        // Applied modifier can be granted to either player's die (e.g. an
+        // opposing Global ability), and it's the turn ending, not whose
+        // turn it was, that matters.
+        foreach (var die in state.Dice)
+            die.AppliedModifiers.Clear();
+
         // Rule 2.8.3 - Action dice left on their action face in the Reserve
         // Pool move to the Used Pile.
         foreach (var die in state.DiceIn(activeId, Zone.ReservePool).Where(d => d.Status == DieStatus.Action).ToList())

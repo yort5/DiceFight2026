@@ -864,6 +864,44 @@ public class TurnEngineTests
         }
     }
 
+    // Rule 3.4.3.9 - Applied ability modifiers (e.g. a ModifyStat effect
+    // like Wasp's Attune buff) last only until the end of turn, even for
+    // a die that stayed in the Field Zone the whole time. The "leaves the
+    // Field Zone" half was already covered (DieInstance.ResetToUnrolled,
+    // called from ForceKO/reroll paths); this covers the survivor half.
+    [Fact]
+    public void CleanUp_ClearsAppliedModifiersOnASurvivingDie()
+    {
+        var state = CreateNewGame();
+        var die = state.DiceIn("p1", Zone.Bag).First();
+        die.Zone = Zone.FieldZone;
+        die.Status = DieStatus.SidekickCharacter;
+        die.AppliedModifiers.Add(new Modifier(AttackDelta: 1, DefenseDelta: 1, Source: "test"));
+
+        state.CurrentStep = TurnStep.CleanUp;
+        TurnEngine.CleanUp(state);
+
+        Assert.Empty(die.AppliedModifiers);
+    }
+
+    // Applies regardless of controller - an Applied modifier can be
+    // granted to either player's die, and it's the turn ending (not whose
+    // turn it was) that expires it.
+    [Fact]
+    public void CleanUp_ClearsAppliedModifiersRegardlessOfWhichPlayerControlsTheDie()
+    {
+        var state = CreateNewGame();
+        var die = state.DiceIn("p2", Zone.Bag).First();
+        die.Zone = Zone.FieldZone;
+        die.Status = DieStatus.SidekickCharacter;
+        die.AppliedModifiers.Add(new Modifier(AttackDelta: 1, DefenseDelta: 0, Source: "test"));
+
+        state.CurrentStep = TurnStep.CleanUp; // p1 is still ActivePlayerId
+        TurnEngine.CleanUp(state);
+
+        Assert.Empty(die.AppliedModifiers);
+    }
+
     // Keyword Deadly - "At the end of the turn, character dice that were
     // engaged with a Character die that has Deadly are KO'd." Recorded
     // earlier by CombatEngine.DeclareBlockers (see CombatEngineTests);

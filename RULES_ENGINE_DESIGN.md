@@ -107,15 +107,9 @@ here rather than assuming which approach they'd want.
    (the user's call) - fix shape when picked up: purge
    `IsVirtualEnergy` dice for the active player in `EnterAttackStep` and
    `SkipAttackStep`, not just `CleanUp`.
-8. `TurnEngine.CleanUp` never clears `AppliedModifiers` - rule 3.4.3.9
-   ("Applied abilities last until the end of turn... an Applied ability
-   is lost if the die leaves the Field Zone") only has its second half
-   implemented; a `ModifyStat`-granted modifier on a die that stays
-   fielded across the turn boundary currently never expires. Found while
-   wiring Ally/Alfred (see the status update); not exercised by anything
-   authored yet (no sample card uses `ModifyStat`), so left as a noted
-   gap rather than fixed blind - fix shape when picked up: clear every
-   die's `AppliedModifiers` in `CleanUp`.
+8. ~~`TurnEngine.CleanUp` never clears `AppliedModifiers`~~ - fixed (see
+   the status update): now demonstrably reachable (Wasp's real Attune
+   buff), not just hypothetical, so no longer deferred.
 9. `GamesController`'s `/declare-attackers` endpoint has no `TargetDieIds`
    on its request and always drains with an empty target list - found
    while wiring Call Out (Black Widow's `WhenAttacks` ability is the
@@ -2862,3 +2856,73 @@ leftover damage off the granted keyword; two end-to-end tests in
 Field` call, both alone (bonus applies) and with a second real character
 fielded the same turn (bonus withheld). `dotnet build`, `dotnet test`
 (198/198), and `npm run build` all clean.
+
+## Status update — Applied vs. Static modifiers: one real bug fixed, one real feature built
+
+Prompted by the user asking to cross-check Strike's own implementation
+against rules 3.4.3 (Applied Abilities), 3.4.5 (Static Abilities), and
+3.6 (Dice Modifiers) before moving to the next keyword. Strike itself
+checked out clean (its +2A/+2D is computed live in `EffectiveAttack`/
+`EffectiveDefense`, never touches `AppliedModifiers` at all - correctly
+distinct from an Applied modifier, matching rule 3.6.8/3.6.9's
+distinction between the two categories). The audit surfaced two real
+findings beyond Strike itself:
+
+**Bug fixed - `TurnEngine.CleanUp` never cleared `AppliedModifiers`.**
+This was already flagged as next-steps item #8 after the Ally/Alfred
+work, but noted then as "not exercised by anything authored yet."
+That's no longer true: Wasp's real Attune buff ("+1 attack and +1
+defense until end of turn") uses `ModifyStat` → `AppliedModifiers`, and
+rule 3.4.3.9's two halves - "lost if the die leaves the Field Zone" (via
+`DieInstance.ResetToUnrolled`, already correct) and "last until the end
+of turn" (nothing enforced this) - only had the first implemented. In
+practice, Wasp's buff would have persisted forever once granted,
+surviving every future turn instead of expiring at Clean Up. Fixed with
+one `foreach (var die in state.Dice) die.AppliedModifiers.Clear();` in
+`CleanUp`, applied to every die regardless of controller (an Applied
+modifier can be granted to an opponent's die too, e.g. by a Global
+ability - it's the turn ending that matters, not whose turn it was).
+
+**Feature built - Static team-wide stat bonuses (rule 3.4.5.7).** "An
+attack and/or defense value modifier provided by a Character die with a
+'while active' ability is a Static ability" - Captain Marvel ("While
+Captain Marvel is active, your Character dice get +1 attack and +1
+defense") is the textbook case, and was sitting fully vanilla in the
+catalog despite having clean, mappable text, since no primitive existed
+for "while I'm active, grant my whole team +A/+D." Modeled the same way
+as every other continuously-recomputed grant this session (Strike,
+Darkseid's `GrantsToSidekicks`):
+- New `CardDef.GrantsStaticTeamBonus` (nullable `StaticTeamBonus
+  (AttackDelta, DefenseDelta)` record) - deliberately narrow in scope to
+  flat "+A/+D to your Character dice while active," not a general
+  Static-ability framework (no debuffs, no affiliation-scoped or
+  "while attacking/blocking"-only variants - rule 3.4.5.6 - since
+  nothing cataloged needs those yet).
+- New `DieStats.StaticTeamBonusFor` - live, per-call computation (no
+  stored modifier object, matching rule 3.6.9's "always applies... to
+  the stat it names" and rule 3.4.5.8's "cannot be manipulated by
+  abilities"), scanning the queried die's own controller's active
+  Field/Attack Zone dice for granting CardIds, deduplicated (rule
+  3.4.5.3 - multiple copies of the same granter don't stack), summed
+  across every *distinct* granting card that's active (so two different
+  granting characters both active accumulate). Applies to the granting
+  die's own stats too - the text says "your Character dice," no "other"
+  qualifier, unlike some similar-looking cards. Wired into
+  `EffectiveAttack`/`EffectiveDefense` alongside `AppliedModifiers` and
+  Strike's bonus.
+- No `AbilityDef`/`TriggerType` at all - same "nothing to trigger, no
+  drain needed" shape as Strike.
+
+15 new tests (207 total): `TurnEngineTests` covers the `CleanUp` fix
+directly (a surviving die's `AppliedModifiers` cleared, regardless of
+controller); one end-to-end `TwoTeamsDemoTests` case drives Wasp's real
+buff through `UseActionDie` then `CleanUp`, proving it now actually
+expires despite her never leaving the Field Zone. `CombatEngineTests`
+covers `StaticTeamBonusFor` with synthetic granter cards (applies to
+self and allies, doesn't stack with a second copy of the same granter,
+stops when the granter isn't active, doesn't touch the opponent's dice,
+two *different* granters accumulate); one end-to-end `TwoTeamsDemoTests`
+case drives real Captain Marvel and Big Barda, confirming the bonus
+reaches Big Barda but not an opposing Falcon, and disappears the moment
+Captain Marvel leaves the Field Zone. `dotnet build`, `dotnet test`
+(207/207), and `npm run build` all clean.

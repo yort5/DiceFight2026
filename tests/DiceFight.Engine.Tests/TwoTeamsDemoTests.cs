@@ -679,6 +679,40 @@ public class TwoTeamsDemoTests
         Assert.Equal(3, DieStats.EffectiveDefense(state, wasp)); // 2 base + 1
     }
 
+    // Rule 3.4.3.9 - "until end of turn" means exactly that: Wasp's own
+    // Attune buff expires at Clean Up even though she never left the
+    // Field Zone (previously a real bug - TurnEngine.CleanUp never
+    // cleared a survivor's AppliedModifiers at all).
+    [Fact]
+    public void WaspAttune_StatBoost_ExpiresAtCleanUpEvenThoughSheNeverLeftTheField()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamA";
+        var wasp = AddWasp(state, "teamA", "1");
+
+        var shockingGraspDie = FindUnpurchased(state, "teamA", SampleCards.ShockingGrasp.Id);
+        var purchaseEnergy = GiveWildEnergy(state, "teamA", SampleCards.ShockingGrasp.PurchaseCost);
+        TurnEngine.Purchase(state, shockingGraspDie.Id, purchaseEnergy.Select(d => d.Id).ToList());
+        shockingGraspDie.Zone = Zone.ReservePool;
+        shockingGraspDie.Status = DieStatus.Action;
+
+        var queue = new AbilityQueue();
+        TurnEngine.UseActionDie(state, queue, shockingGraspDie.Id);
+        IReadOnlyList<string> ResolveTarget(TargetSpec spec) =>
+            spec.PlayersAllowed ? [state.OpponentOf("teamA")] : LegalTargets.Query(state, "teamA", spec).Take(1).ToList();
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, ResolveTarget)));
+
+        Assert.Equal(3, DieStats.EffectiveAttack(state, wasp)); // boosted, same as the test above
+
+        TurnEngine.SkipAttackStep(state);
+        TurnEngine.CleanUp(state);
+
+        Assert.Equal(Zone.FieldZone, wasp.Zone); // never left the field
+        Assert.Equal(2, DieStats.EffectiveAttack(state, wasp)); // back to base - the buff expired
+        Assert.Equal(2, DieStats.EffectiveDefense(state, wasp));
+    }
+
     [Fact]
     public void WaspAttune_CanTargetACharacterDieInstead()
     {
@@ -1189,5 +1223,42 @@ public class TwoTeamsDemoTests
 
         Assert.Equal(5, DieStats.EffectiveAttack(state, bizarro)); // unmodified base - no longer the sole fielded die
         Assert.False(DieStats.HasKeyword(state, bizarro, "Overcrush"));
+    }
+
+    // Real Captain Marvel, already on teamA's roster - "While Captain
+    // Marvel is active, your Character dice get +1 attack and +1
+    // defense." No AbilityDef to drain - DieStats.StaticTeamBonusFor is a
+    // live check, same "no trigger at all" shape as Strike.
+    [Fact]
+    public void CaptainMarvelStaticBonus_BoostsHerOwnTeamsActiveCharacterDice_NotTheOpponents()
+    {
+        var state = BuildTwoTeamGame();
+
+        var captainMarvel = FindUnpurchased(state, "teamA", SampleCards.CaptainMarvel.Id);
+        captainMarvel.Zone = Zone.FieldZone;
+        captainMarvel.Status = DieStatus.Character;
+        captainMarvel.Level = 1;
+
+        var ally = FindUnpurchased(state, "teamA", SampleCards.BigBarda.Id);
+        ally.Zone = Zone.FieldZone;
+        ally.Status = DieStatus.Character;
+        ally.Level = 1;
+
+        var opposing = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        opposing.Zone = Zone.FieldZone;
+        opposing.Status = DieStatus.Character;
+        opposing.Level = 1;
+
+        var captainMarvelBaseAttack = SampleCards.CaptainMarvel.Levels[0].Attack;
+        var allyBaseAttack = SampleCards.BigBarda.Levels[0].Attack;
+        var opposingBaseAttack = SampleCards.Falcon.Levels[0].Attack;
+
+        Assert.Equal(captainMarvelBaseAttack + 1, DieStats.EffectiveAttack(state, captainMarvel)); // her own aura applies to herself too
+        Assert.Equal(allyBaseAttack + 1, DieStats.EffectiveAttack(state, ally));
+        Assert.Equal(opposingBaseAttack, DieStats.EffectiveAttack(state, opposing)); // not "your" character dice
+
+        // Rule 3.6.6 - the bonus disappears the instant she's no longer active.
+        captainMarvel.Zone = Zone.PrepArea;
+        Assert.Equal(allyBaseAttack, DieStats.EffectiveAttack(state, ally));
     }
 }

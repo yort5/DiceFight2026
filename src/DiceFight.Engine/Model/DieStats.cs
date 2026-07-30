@@ -134,12 +134,46 @@ public static class DieStats
         return card.Levels.Count > 0 ? card.Levels[index] : SidekickFace;
     }
 
+    // Rule 3.4.5.7/3.4.5.2/3.4.5.3 - "While Captain Marvel is active, your
+    // Character dice get +1 attack and +1 defense" is the textbook Static
+    // team-wide stat ability: it applies to every one of the controller's
+    // active Character dice (including the granting die itself - the
+    // text says "your Character dice," no "other" qualifier), only while
+    // at least one die of that specific card is active, and only once per
+    // unique granting card even if multiple copies of it are active
+    // (clarification 3.4.5.3 - "does not stack"). Computed fresh on every
+    // call rather than stored, matching rule 3.6.9 - a Static modifier
+    // "always applies" to the stat it names and "cannot be manipulated,"
+    // unlike an AppliedModifiers entry.
+    public static StaticTeamBonus StaticTeamBonusFor(GameState state, DieInstance die)
+    {
+        if (die.Zone is not (Zone.FieldZone or Zone.AttackZone)) return new StaticTeamBonus(0, 0);
+
+        var grantingCardIds = state.DiceIn(die.ControllerId, Zone.FieldZone)
+            .Concat(state.DiceIn(die.ControllerId, Zone.AttackZone))
+            .Select(d => d.VirtualCardId ?? d.CardId)
+            .Where(id => id is not null)
+            .Distinct();
+
+        var attack = 0;
+        var defense = 0;
+        foreach (var cardId in grantingCardIds)
+        {
+            if (!state.CardCatalog.TryGetValue(cardId!, out var card) || card.GrantsStaticTeamBonus is not { } bonus)
+                continue;
+            attack += bonus.AttackDelta;
+            defense += bonus.DefenseDelta;
+        }
+        return new StaticTeamBonus(attack, defense);
+    }
+
     // Rule 3.6.1/3.6.4 - combine all Applied/Static modifiers, clamp at zero.
     public static int EffectiveAttack(GameState state, DieInstance die)
     {
         var face = GetFace(state, die);
         var total = face.Attack + die.AppliedModifiers.Sum(m => m.AttackDelta);
         if (HasStrikeBonus(state, die)) total += 2;
+        total += StaticTeamBonusFor(state, die).AttackDelta;
         return Math.Max(0, total);
     }
 
@@ -148,6 +182,7 @@ public static class DieStats
         var face = GetFace(state, die);
         var total = face.Defense + die.AppliedModifiers.Sum(m => m.DefenseDelta);
         if (HasStrikeBonus(state, die)) total += 2;
+        total += StaticTeamBonusFor(state, die).DefenseDelta;
         return Math.Max(0, total);
     }
 

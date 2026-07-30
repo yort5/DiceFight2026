@@ -40,7 +40,23 @@ public sealed record CardDef
     // actually applied live; empty for every card that doesn't grant
     // anything.
     public IReadOnlyList<string> GrantsToSidekicks { get; init; } = [];
+
+    // Rule 3.4.5.7 - "an attack and/or defense value modifier provided by
+    // a Character die with a 'while active' ability is a Static ability."
+    // Captain Marvel's "While Captain Marvel is active, your Character
+    // dice get +1 attack and +1 defense" is the textbook case: a live,
+    // continuously-recomputed team-wide bonus, not a discrete modifier
+    // object like AppliedModifiers (see DieStats.StaticTeamBonusFor and
+    // its EffectiveAttack/EffectiveDefense callers). Null for every card
+    // that doesn't grant one. Deliberately narrow in scope to "your
+    // Character dice get +A/+D while I'm active" - not a general static-
+    // ability framework (no debuffs, no affiliation-scoped or "while
+    // attacking/blocking"-only variants yet - see rule 3.4.5.6).
+    public StaticTeamBonus? GrantsStaticTeamBonus { get; init; }
 }
+
+// See CardDef.GrantsStaticTeamBonus's remarks.
+public sealed record StaticTeamBonus(int AttackDelta, int DefenseDelta);
 
 // Rule Appendix 1 - keyword abilities are a finite, engine-known set
 // implemented as plugins (see design doc); Params covers e.g. Range X,
