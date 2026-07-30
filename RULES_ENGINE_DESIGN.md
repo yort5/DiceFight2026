@@ -51,7 +51,8 @@ here rather than assuming which approach they'd want.
 **Actionable next steps, roughly high to low value**:
 1. ~~Keyword *behavior*~~ - Overcrush, Regenerate, Energize, Ally,
    Amplify/Awaken, Attune, Call Out, Corrupt, Swarm, Darkseid's
-   keyword grant, Deadly, and Fast are implemented (see the status updates).
+   keyword grant, Deadly, Fast, and Energy Drain are implemented (see the
+   status updates).
    BlackPanther's Energize is fully scripted; Robin's Energize
    (a purchase-cost discount) and all three Alfred Pennyworth printings'
    Ally effects (each a "Batman die OR Sidekick" compound target) are
@@ -2507,3 +2508,46 @@ damage isn't lethal still lets the survivor deal its own damage back in
 the second wave. Plus one end-to-end test in `TwoTeamsDemoTests` driving
 Wasp's real card. `dotnet build`, `dotnet test` (151/151), and `npm run
 build` all clean.
+
+## Status update — Energy Drain implemented
+
+Appendix 1: "After blockers are assigned, spin each Character die
+engaged with a Character die with Energy Drain down one level. Character
+dice at level 1 cannot be spun down." Plus: "(1) If a number appears
+after Energy Drain (e.g. Energy Drain 2)... (2) Energy Drain does not
+target because it spins down any Character die engaged." Same
+engagement model as Deadly/Call Out (pairwise, rule 2.7.2.3), but
+resolved immediately rather than deferred - "after blockers are
+assigned" is this exact moment, not Clean Up, so it's implemented as a
+direct call from `DeclareBlockers` rather than a recorded set.
+
+- `DieStats.EnergyDrainAmount(state, die)` - returns the X in "Energy
+  Drain X" (`KeywordInstance.Params[0]`, defaulting to 1 for the bare
+  keyword), or 0 if the die doesn't have it. Checked against the die's
+  own printed card only - no card grants Energy Drain the way Darkseid
+  grants Swarm yet, so there's no numeric amount to look up on a grant
+  (would need `GrantsToSidekicks`'s shape extended to carry a param if
+  that ever comes up).
+- `CombatEngine.ResolveEnergyDrain(state, assignment)` - called from
+  `DeclareBlockers` right after `RecordDeadlyEngagements`. Pairwise, same
+  shape as Deadly: an Energy Drain attacker spins down each of its
+  blockers; an Energy Drain blocker spins down the attacker it's
+  blocking. The Energy Drain die itself is never spun down by its own
+  keyword - only its engagement partners, matching Deadly's own "the
+  Deadly die doesn't KO itself" precedent. Multiple independent Energy
+  Drain sources engaged with the same die each apply their own
+  spin-down and compound (nothing in the rule text says otherwise, and
+  `DieStats.SpinLevel`'s own level-1 clamp already caps how far this can
+  go regardless).
+
+Example card: X-Men Forever's Madalyne Pryor ("Red Queen" printing) -
+purely the keyword, nothing else to script.
+
+7 new tests (158 total) in `CombatEngineTests`: attacker spins down its
+blocker and vice versa; clamped at level 1; "Energy Drain 2" jumps
+straight to the clamp from level 3 (the rule's own clarification-1
+example); an unblocked attacker has no engagement and nothing spins;
+two independent Energy Drain blockers on the same attacker compound.
+Plus one end-to-end test in `TwoTeamsDemoTests` driving Madalyne Pryor's
+real card. `dotnet build`, `dotnet test` (158/158), and `npm run build`
+all clean.

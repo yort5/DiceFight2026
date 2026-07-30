@@ -1017,4 +1017,157 @@ public class CombatEngineTests
         Assert.Equal(Zone.FieldZone, blocker.Zone);
         Assert.Equal(Zone.FieldZone, attacker.Zone); // 5D easily absorbs 3
     }
+
+    // Keyword Energy Drain X - "After blockers are assigned, spin each
+    // Character die engaged with a Character die with Energy Drain down
+    // [X] level(s)." A 3-level catalog (so both starting level and
+    // clamping-at-1 are exercisable) with a configurable Params amount.
+    private static CardDef EnergyDrainCard(int amount) => new()
+    {
+        Id = "energy-drain-source", Name = "Energy Drain Source", Type = CardType.Character,
+        PurchaseCost = 3, DieLimit = 4,
+        Keywords = [new KeywordInstance("Energy Drain", Params: [amount])],
+        Levels =
+        [
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 1),
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 2),
+            new CharacterFace(FieldingCost: 2, Attack: 3, Defense: 3),
+        ],
+    };
+
+    private static readonly CardDef PlainThreeLevelCard = new()
+    {
+        Id = "plain-three-level", Name = "Plain Three Level", Type = CardType.Character,
+        PurchaseCost = 3, DieLimit = 4,
+        Levels =
+        [
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 1),
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 2),
+            new CharacterFace(FieldingCost: 2, Attack: 3, Defense: 3),
+        ],
+    };
+
+    private static GameState CreateEnergyDrainGame(int drainAmount = 1)
+    {
+        var drainCard = EnergyDrainCard(drainAmount);
+        var catalog = new Dictionary<string, CardDef> { [drainCard.Id] = drainCard, [PlainThreeLevelCard.Id] = PlainThreeLevelCard };
+        var state = GameState.NewGame(catalog, new Player { Id = "p1", Name = "Player One" }, new Player { Id = "p2", Name = "Player Two" });
+        state.CurrentStep = TurnStep.Attack;
+        state.AttackSubStep = AttackSubStep.DeclareAttackers;
+        return state;
+    }
+
+    private static DieInstance AddDrainDie(GameState state, string id, string playerId, string cardId, int level, Zone zone = Zone.FieldZone)
+    {
+        var die = new DieInstance
+        {
+            Id = id, CardId = cardId, OwnerId = playerId, ControllerId = playerId,
+            Zone = zone, Status = DieStatus.Character, Level = level,
+        };
+        state.Dice.Add(die);
+        return die;
+    }
+
+    [Fact]
+    public void EnergyDrain_AttackerSpinsDownItsBlocker()
+    {
+        var state = CreateEnergyDrainGame();
+        var attacker = AddDrainDie(state, "p1-drain-1", "p1", "energy-drain-source", level: 2);
+        var blocker = AddDrainDie(state, "p2-plain-1", "p2", PlainThreeLevelCard.Id, level: 3);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attacker.Id, blocker.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [blocker.Id]);
+
+        Assert.Equal(2, blocker.Level); // spun down 1
+        Assert.Equal(2, attacker.Level); // the Energy Drain die itself is untouched
+    }
+
+    [Fact]
+    public void EnergyDrain_BlockerSpinsDownItsAttacker()
+    {
+        var state = CreateEnergyDrainGame();
+        var attacker = AddDrainDie(state, "p1-plain-1", "p1", PlainThreeLevelCard.Id, level: 3);
+        var blocker = AddDrainDie(state, "p2-drain-1", "p2", "energy-drain-source", level: 2);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attacker.Id, blocker.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [blocker.Id]);
+
+        Assert.Equal(2, attacker.Level); // spun down 1
+        Assert.Equal(2, blocker.Level); // untouched
+    }
+
+    // Rule text: "Character dice at level 1 cannot be spun down."
+    [Fact]
+    public void EnergyDrain_ClampsAtLevel1()
+    {
+        var state = CreateEnergyDrainGame();
+        var attacker = AddDrainDie(state, "p1-drain-1", "p1", "energy-drain-source", level: 1);
+        var blocker = AddDrainDie(state, "p2-plain-1", "p2", PlainThreeLevelCard.Id, level: 1);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attacker.Id, blocker.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [blocker.Id]);
+
+        Assert.Equal(1, blocker.Level);
+    }
+
+    // Clarification (1): "Energy Drain 2... if on level 3 that die will be
+    // spun down to level 1" - straight to the clamp, not just -1.
+    [Fact]
+    public void EnergyDrain_2_SpinsDownTwoLevels()
+    {
+        var state = CreateEnergyDrainGame(drainAmount: 2);
+        var attacker = AddDrainDie(state, "p1-drain-1", "p1", "energy-drain-source", level: 1);
+        var blocker = AddDrainDie(state, "p2-plain-1", "p2", PlainThreeLevelCard.Id, level: 3);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attacker.Id, blocker.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [blocker.Id]);
+
+        Assert.Equal(1, blocker.Level);
+    }
+
+    [Fact]
+    public void EnergyDrain_UnblockedAttacker_NoEngagementNoEffect()
+    {
+        var state = CreateEnergyDrainGame();
+        var attacker = AddDrainDie(state, "p1-drain-1", "p1", "energy-drain-source", level: 2);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        CombatEngine.DeclareBlockers(state, new CombatAssignment(), []); // no blockers at all
+
+        Assert.Equal(2, attacker.Level); // nothing to engage with, nothing spins
+    }
+
+    // Two independent Energy Drain sources engaged with the same
+    // attacker (via co-blocking) each apply their own spin-down - they
+    // compound, same as any other independently-sourced effect would.
+    [Fact]
+    public void EnergyDrain_TwoSourcesEngagedWithTheSameDie_Compound()
+    {
+        var state = CreateEnergyDrainGame();
+        var attacker = AddDrainDie(state, "p1-plain-1", "p1", PlainThreeLevelCard.Id, level: 3);
+        var drainBlocker1 = AddDrainDie(state, "p2-drain-1", "p2", "energy-drain-source", level: 2);
+        var drainBlocker2 = AddDrainDie(state, "p2-drain-2", "p2", "energy-drain-source", level: 2);
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attacker.Id, drainBlocker1.Id);
+        assignment.AssignBlocker(attacker.Id, drainBlocker2.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [drainBlocker1.Id, drainBlocker2.Id]);
+
+        Assert.Equal(1, attacker.Level); // 3 -> 2 -> 1, one spin-down per engaged Energy Drain blocker
+    }
 }

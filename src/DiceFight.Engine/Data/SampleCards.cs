@@ -560,6 +560,21 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 3)
         ]);
 
+    // X-Men Forever's Madalyne Pryor, "Red Queen" printing - purely the
+    // Energy Drain keyword (base X=1), no other text. Fully engine-level
+    // like Deadly/Overcrush: no target or choice - see
+    // CombatEngine.ResolveEnergyDrain/DieStats.EnergyDrainAmount.
+    public static readonly CardDef MadalynePryor = Character(
+        "madalyne-pryor", "Madalyne Pryor", "Red Queen", dieLimit: 4,
+        "Energy Drain (Spin engaged character dice down 1 level.)",
+        purchaseCost: 2, energyType: EnergyType.Mask,
+        keywords: [new KeywordInstance("Energy Drain")],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 3),
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 4),
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 4)
+        ]);
+
     // A team is 8 character cards + 2 Basic Action cards (10 total), not
     // the 10 characters + 3 Basic Actions used here previously - that was
     // simply wrong. Colossus, Corvus Glaive, Distraction, Kang, King
@@ -596,7 +611,7 @@ public static class SampleCards
             JaneFoster, Starfire, Kang, KingHyperion, CasketOfAncientWinters, DailyBugle, Escape,
             AlfredPennyworthCaretaker, AlfredPennyworthMI5, AlfredPennyworthToughAsNails,
             AntManAmplify, Cyclops, Wasp, BlackWidow, Polaris, CosmicCubeInfinitePossibilities, Parademon, Darkseid,
-            Deathbird, WaspPixie
+            Deathbird, WaspPixie, MadalynePryor
         ];
         return all.ToDictionary(c => c.Id);
     }

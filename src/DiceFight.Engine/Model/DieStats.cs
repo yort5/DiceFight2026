@@ -43,6 +43,22 @@ public static class DieStats
             && card.Keywords.Any(k => k.Name == keyword);
     }
 
+    // Keyword Energy Drain X - "spin each Character die engaged with a
+    // Character die with Energy Drain down [X] level(s)." Returns 0 if
+    // this die doesn't have the keyword at all (checked via the printed
+    // card only - no card grants Energy Drain the way Darkseid grants
+    // Swarm yet, so there's no numeric amount to look up on a grant),
+    // otherwise the X in "Energy Drain X" (KeywordInstance.Params[0]),
+    // defaulting to 1 for the bare "Energy Drain" wording.
+    public static int EnergyDrainAmount(GameState state, DieInstance die)
+    {
+        var cardId = die.VirtualCardId ?? die.CardId;
+        if (cardId is null || !state.CardCatalog.TryGetValue(cardId, out var card)) return 0;
+        var keyword = card.Keywords.FirstOrDefault(k => k.Name == "Energy Drain");
+        if (keyword is null) return 0;
+        return keyword.Params is { Count: > 0 } ? keyword.Params[0] : 1;
+    }
+
     // Keyword Ally - Appendix 1: "Character dice with the Ally keyword
     // ability are considered Sidekick Character dice while in the Field
     // Zone... in addition to their other attributes. They don't count as

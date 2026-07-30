@@ -71,8 +71,43 @@ public static class CombatEngine
         }
 
         RecordDeadlyEngagements(state, assignment);
+        ResolveEnergyDrain(state, assignment);
 
         state.AttackSubStep = AttackSubStep.ActionAndGlobalWindow;
+    }
+
+    // Keyword Energy Drain X - "After blockers are assigned, spin each
+    // Character die engaged with a Character die with Energy Drain down
+    // [X] level(s)... Energy Drain does not target because it spins down
+    // any Character die engaged" (clarification 2) - so, like Deadly,
+    // this is fully automatic engine behavior, not something scripted via
+    // AbilityDef/TargetSpec. Unlike Deadly, it resolves immediately here
+    // rather than being deferred - the rule's own "After blockers are
+    // assigned" is this exact moment, not Clean Up. Pairwise (same
+    // engagement model as Deadly/Call Out): an Energy Drain attacker
+    // spins down each of its blockers, and an Energy Drain blocker spins
+    // down the attacker it's blocking. Multiple independent Energy Drain
+    // sources engaged with the same die each apply their own spin-down
+    // (they compound), same as any other independently-sourced effect
+    // would - the rule text doesn't say otherwise, and "Character dice at
+    // level 1 cannot be spun down" (DieStats.SpinLevel's own clamp)
+    // already caps how far any of this can go regardless.
+    private static void ResolveEnergyDrain(GameState state, CombatAssignment assignment)
+    {
+        foreach (var attacker in state.DiceIn(state.ActivePlayerId, Zone.AttackZone).ToList())
+        {
+            var attackerDrainAmount = DieStats.EnergyDrainAmount(state, attacker);
+            foreach (var blockerId in assignment.BlockersOf(attacker.Id))
+            {
+                var blocker = FindDie(state, blockerId);
+                if (attackerDrainAmount > 0)
+                    DieStats.SpinLevel(state, blocker, -attackerDrainAmount);
+
+                var blockerDrainAmount = DieStats.EnergyDrainAmount(state, blocker);
+                if (blockerDrainAmount > 0)
+                    DieStats.SpinLevel(state, attacker, -blockerDrainAmount);
+            }
+        }
     }
 
     // Keyword Deadly - "At the end of the turn, character dice that were

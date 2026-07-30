@@ -902,4 +902,33 @@ public class TwoTeamsDemoTests
         Assert.Contains(blocker.Id, result.KOdDieIds);
         Assert.Equal(0, wasp.Damage); // Fast - the blocker never got to strike back
     }
+
+    [Fact]
+    public void MadalynePryorEnergyDrain_SpinsDownHerEngagedAttacker()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamA";
+
+        var attacker = FindUnpurchased(state, "teamA", SampleCards.Apocalypse.Id);
+        attacker.Zone = Zone.FieldZone;
+        attacker.Status = DieStatus.Character;
+        attacker.Level = 3;
+
+        var madalyne = new DieInstance
+        {
+            Id = "teamB-madalyne-1", CardId = SampleCards.MadalynePryor.Id, OwnerId = "teamB", ControllerId = "teamB",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(madalyne);
+
+        TurnEngine.EnterAttackStep(state);
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attacker.Id, madalyne.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [madalyne.Id]);
+
+        Assert.Equal(2, attacker.Level); // spun down 1 the moment blockers were assigned
+        Assert.Equal(1, madalyne.Level); // Madalyne herself is untouched by her own keyword
+    }
 }
