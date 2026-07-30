@@ -1398,4 +1398,178 @@ public class TurnEngineTests
 
         Assert.Empty(queue.Pending);
     }
+
+    // Keyword Experience - "All Character dice with this keyword that
+    // are active when [an opposing Monster is KO'd] and remain active at
+    // the end of the turn gain one Experience Token." GameState.
+    // OpposingMonsterKOdThisTurn (set by DieStats.ForceKO - see
+    // EffectInterpreterTests) is seeded directly here, same pattern as
+    // Deadly/Call Out's own turn-scoped sets, to isolate CleanUp's
+    // token-granting logic from the KO-flagging half.
+    private static readonly CardDef ExperienceCard = new()
+    {
+        Id = "test-experience-character", Name = "Test Experience Character", Type = CardType.Character,
+        PurchaseCost = 3, DieLimit = 4,
+        Keywords = [new KeywordInstance("Experience")],
+        Levels = [new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 1)],
+    };
+
+    // A second, distinct Experience character - for clarification 3's
+    // "several different cards can each gain a token off a single KO".
+    private static readonly CardDef SecondExperienceCard = new()
+    {
+        Id = "test-experience-character-2", Name = "Second Test Experience Character", Type = CardType.Character,
+        PurchaseCost = 3, DieLimit = 4,
+        Keywords = [new KeywordInstance("Experience")],
+        Levels = [new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 1)],
+    };
+
+    private static GameState CreateExperienceGame()
+    {
+        var catalog = new Dictionary<string, CardDef>
+        {
+            [ExperienceCard.Id] = ExperienceCard, [SecondExperienceCard.Id] = SecondExperienceCard,
+        };
+        var state = GameState.NewGame(catalog, new Player { Id = "p1", Name = "Player One" }, new Player { Id = "p2", Name = "Player Two" });
+        state.IsFirstTurn = false;
+        return state;
+    }
+
+    [Fact]
+    public void CleanUp_GrantsExperienceTokenWhenOpposingMonsterKOdThisTurn()
+    {
+        var state = CreateExperienceGame();
+        state.OpposingMonsterKOdThisTurn = true;
+        state.Dice.Add(new DieInstance
+        {
+            Id = "p1-experience-1", CardId = ExperienceCard.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        });
+
+        state.CurrentStep = TurnStep.CleanUp;
+        TurnEngine.CleanUp(state);
+
+        Assert.Equal(1, state.ExperienceTokens[ExperienceCard.Id]);
+    }
+
+    [Fact]
+    public void CleanUp_NoMonsterKOd_DoesNotGrantToken()
+    {
+        var state = CreateExperienceGame();
+        state.Dice.Add(new DieInstance
+        {
+            Id = "p1-experience-1", CardId = ExperienceCard.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        });
+
+        state.CurrentStep = TurnStep.CleanUp;
+        TurnEngine.CleanUp(state);
+
+        Assert.False(state.ExperienceTokens.ContainsKey(ExperienceCard.Id));
+    }
+
+    // Clarification 2 - "a card can only gain one Experience Token per
+    // turn," even with two active copies.
+    [Fact]
+    public void CleanUp_MultipleActiveCopiesOfSameExperienceCard_GrantsOnlyOneToken()
+    {
+        var state = CreateExperienceGame();
+        state.OpposingMonsterKOdThisTurn = true;
+        state.Dice.Add(new DieInstance
+        {
+            Id = "p1-experience-1", CardId = ExperienceCard.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        });
+        state.Dice.Add(new DieInstance
+        {
+            Id = "p1-experience-2", CardId = ExperienceCard.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        });
+
+        state.CurrentStep = TurnStep.CleanUp;
+        TurnEngine.CleanUp(state);
+
+        Assert.Equal(1, state.ExperienceTokens[ExperienceCard.Id]);
+    }
+
+    // Clarification 3 - "several different cards (each with the
+    // Experience ability) can each gain an Experience Token when only a
+    // single Monster is KO'd."
+    [Fact]
+    public void CleanUp_TwoDifferentExperienceCardsActive_EachGetsOwnToken()
+    {
+        var state = CreateExperienceGame();
+        state.OpposingMonsterKOdThisTurn = true;
+        state.Dice.Add(new DieInstance
+        {
+            Id = "p1-experience-1", CardId = ExperienceCard.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        });
+        state.Dice.Add(new DieInstance
+        {
+            Id = "p1-experience-2", CardId = SecondExperienceCard.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        });
+
+        state.CurrentStep = TurnStep.CleanUp;
+        TurnEngine.CleanUp(state);
+
+        Assert.Equal(1, state.ExperienceTokens[ExperienceCard.Id]);
+        Assert.Equal(1, state.ExperienceTokens[SecondExperienceCard.Id]);
+    }
+
+    [Fact]
+    public void CleanUp_ExperienceCardNotActive_DoesNotGetToken()
+    {
+        var state = CreateExperienceGame();
+        state.OpposingMonsterKOdThisTurn = true;
+        state.Dice.Add(new DieInstance
+        {
+            Id = "p1-experience-1", CardId = ExperienceCard.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.ReservePool, Status = DieStatus.Character, Level = 1, // not active
+        });
+
+        state.CurrentStep = TurnStep.CleanUp;
+        TurnEngine.CleanUp(state);
+
+        Assert.False(state.ExperienceTokens.ContainsKey(ExperienceCard.Id));
+    }
+
+    [Fact]
+    public void CleanUp_ClearsOpposingMonsterKOdThisTurnFlag()
+    {
+        var state = CreateExperienceGame();
+        state.OpposingMonsterKOdThisTurn = true;
+
+        state.CurrentStep = TurnStep.CleanUp;
+        TurnEngine.CleanUp(state);
+
+        Assert.False(state.OpposingMonsterKOdThisTurn);
+    }
+
+    // Tokens are the first counter in this engine that's cross-turn
+    // persistent rather than reset by CleanUp.
+    [Fact]
+    public void CleanUp_TokensAccumulateAcrossMultipleTurns()
+    {
+        var state = CreateExperienceGame();
+        state.Dice.Add(new DieInstance
+        {
+            Id = "p1-experience-1", CardId = ExperienceCard.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        });
+
+        state.OpposingMonsterKOdThisTurn = true;
+        state.CurrentStep = TurnStep.CleanUp;
+        TurnEngine.CleanUp(state); // p1's turn ends (1 token); active player becomes p2
+
+        state.CurrentStep = TurnStep.CleanUp; // p2's turn ends - no Monster KO'd, p1's die isn't p2's own anyway
+        TurnEngine.CleanUp(state);
+
+        state.OpposingMonsterKOdThisTurn = true;
+        state.CurrentStep = TurnStep.CleanUp; // p1's turn again
+        TurnEngine.CleanUp(state);
+
+        Assert.Equal(2, state.ExperienceTokens[ExperienceCard.Id]);
+    }
 }

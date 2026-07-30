@@ -2339,4 +2339,42 @@ public class CombatEngineTests
 
         Assert.Contains(queue.Pending, a => a.Trigger == TriggerType.WhenKOd && a.SourceDieId == target.Id);
     }
+
+    // Keyword Experience Tokens - "Each token grants +1A and +1D to all
+    // Character dice belonging to that card." Unlike Strike/Static team
+    // bonuses (both "while active"), tokens are unconditional permanent
+    // modifiers - DieStats.ExperienceBonus doesn't check zone at all, so
+    // these tests exercise that directly against GameState.
+    // ExperienceTokens without needing any combat/turn machinery.
+    [Fact]
+    public void ExperienceBonus_TokensGrantFlatAttackAndDefenseBonus()
+    {
+        var state = CreateStaticTeamBonusGame(); // reuses its plain catalog/fixtures
+        var die = AddCharacterDie(state, "p1-plain-1", "p1", PlainThreeLevelCard.Id, Zone.FieldZone);
+        state.ExperienceTokens[PlainThreeLevelCard.Id] = 2;
+
+        Assert.Equal(3, DieStats.EffectiveAttack(state, die)); // 1 base + 2 tokens
+        Assert.Equal(3, DieStats.EffectiveDefense(state, die));
+    }
+
+    // "Permanent modifiers" - unlike Strike/Static team bonuses, tokens
+    // apply even to a die that's nowhere near the Field Zone.
+    [Fact]
+    public void ExperienceBonus_AppliesRegardlessOfZone()
+    {
+        var state = CreateStaticTeamBonusGame();
+        var die = AddCharacterDie(state, "p1-plain-1", "p1", PlainThreeLevelCard.Id, Zone.ReservePool);
+        state.ExperienceTokens[PlainThreeLevelCard.Id] = 1;
+
+        Assert.Equal(2, DieStats.EffectiveAttack(state, die)); // 1 base + 1 token, even though not active
+    }
+
+    [Fact]
+    public void ExperienceBonus_NoTokensRecorded_NoBonus()
+    {
+        var state = CreateStaticTeamBonusGame();
+        var die = AddCharacterDie(state, "p1-plain-1", "p1", PlainThreeLevelCard.Id, Zone.FieldZone);
+
+        Assert.Equal(1, DieStats.EffectiveAttack(state, die));
+    }
 }

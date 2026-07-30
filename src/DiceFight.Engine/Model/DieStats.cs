@@ -44,6 +44,17 @@ public static class DieStats
             && card.Keywords.Any(k => k.Name == keyword);
     }
 
+    // Whether this die's own card carries the named affiliation (e.g.
+    // "Monster" for keyword Experience's own earning condition). Printed
+    // only - nothing grants an affiliation the way Darkseid grants Swarm.
+    public static bool HasAffiliation(GameState state, DieInstance die, string affiliation)
+    {
+        var cardId = die.VirtualCardId ?? die.CardId;
+        return cardId is not null
+            && state.CardCatalog.TryGetValue(cardId, out var card)
+            && card.Affiliations.Contains(affiliation);
+    }
+
     // Keyword Strike - "On the turn you field a Character die with
     // Strike, at the end of the Main Step, if you fielded no other
     // Character dice this turn, this Character die gets +2A, +2D, and
@@ -180,6 +191,20 @@ public static class DieStats
         return new StaticTeamBonus(attack, defense);
     }
 
+    // Keyword Experience - "Each token grants +1A and +1D to all
+    // Character dice belonging to that card." Unlike Strike/Static team
+    // bonuses, tokens apply unconditionally - "permanent modifiers,"
+    // not a "while active" effect - so this doesn't check zone at all,
+    // matching every die of the card whether it's on the field, in the
+    // Prep Area, or still sitting unpurchased. Looked up by CardId
+    // directly against GameState.ExperienceTokens (see TurnEngine.
+    // CleanUp for how tokens are actually granted).
+    public static int ExperienceBonus(GameState state, DieInstance die)
+    {
+        var cardId = die.VirtualCardId ?? die.CardId;
+        return cardId is not null ? state.ExperienceTokens.GetValueOrDefault(cardId) : 0;
+    }
+
     // Rule 3.6.1/3.6.4 - combine all Applied/Static modifiers, clamp at zero.
     public static int EffectiveAttack(GameState state, DieInstance die)
     {
@@ -187,6 +212,7 @@ public static class DieStats
         var total = face.Attack + die.AppliedModifiers.Sum(m => m.AttackDelta);
         if (HasStrikeBonus(state, die)) total += 2;
         total += StaticTeamBonusFor(state, die).AttackDelta;
+        total += ExperienceBonus(state, die);
         return Math.Max(0, total);
     }
 
@@ -196,6 +222,7 @@ public static class DieStats
         var total = face.Defense + die.AppliedModifiers.Sum(m => m.DefenseDelta);
         if (HasStrikeBonus(state, die)) total += 2;
         total += StaticTeamBonusFor(state, die).DefenseDelta;
+        total += ExperienceBonus(state, die);
         return Math.Max(0, total);
     }
 
@@ -256,6 +283,18 @@ public static class DieStats
             // Rolled a non-character face - falls through to a normal KO,
             // matching "otherwise, move the die to your Prep Area."
         }
+
+        // Keyword Experience - "if you KO'd an opposing Monster during
+        // your turn" (see GameState.OpposingMonsterKOdThisTurn's own
+        // remarks for why only the controller/affiliation matter here,
+        // not which specific die or Monster). This is the single choke
+        // point every real KO already funnels through - combat, ability
+        // damage, Range, Deadly's Clean Up KO - so it's recorded once
+        // here rather than at each individual call site. Only reached
+        // for a die that's actually being KO'd (not a Regenerate
+        // interception above, which returns before this point).
+        if (die.ControllerId == state.OpponentOf(state.ActivePlayerId) && HasAffiliation(state, die, "Monster"))
+            state.OpposingMonsterKOdThisTurn = true;
 
         die.Zone = Zone.PrepArea; // rule 1.5.3.2
         die.ResetToUnrolled(); // also covers rule 3.4.5.4 - modifier lifetime ends when the die leaves the Field Zone

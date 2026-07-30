@@ -831,6 +831,36 @@ public static class TurnEngine
         // player's turn), and it's just as fictional.
         state.Dice.RemoveAll(d => d.IsVirtualEnergy);
 
+        // Keyword Experience - "All Character dice with this keyword
+        // that are active when [an opposing Monster is KO'd] and remain
+        // active at the end of the turn gain one Experience Token."
+        // Simplified per every printed card's own reminder text (which
+        // drops the mid-turn-snapshot nuance): "opposing Monster KO'd
+        // THIS TURN" (state.OpposingMonsterKOdThisTurn, set by DieStats.
+        // ForceKO) + "card active RIGHT NOW" (this check), not "active
+        // at the instant of the KO." An unblocked attacker naturally
+        // fails this anyway - rule 2.7.4.3.1 already moves it to Out of
+        // Play the moment its combat damage resolves, well before Clean
+        // Up runs - which is exactly clarification 5's "an unblocked
+        // Adventurer cannot gain a token": no separate code needed for
+        // it, it falls out of the same active-zone check for free.
+        // Deduplicated by CardId - clarification 2, "a card can only
+        // gain one Experience Token per turn" - even if multiple active
+        // copies of it qualify.
+        if (state.OpposingMonsterKOdThisTurn)
+        {
+            foreach (var cardId in state.DiceIn(activeId, Zone.FieldZone)
+                .Concat(state.DiceIn(activeId, Zone.AttackZone))
+                .Where(d => DieStats.HasKeyword(state, d, "Experience"))
+                .Select(d => d.VirtualCardId ?? d.CardId)
+                .Where(id => id is not null)
+                .Distinct())
+            {
+                state.ExperienceTokens[cardId!] = state.ExperienceTokens.GetValueOrDefault(cardId!) + 1;
+            }
+        }
+        state.OpposingMonsterKOdThisTurn = false;
+
         // Rule 1.2.3(3) - the once-per-turn Epic Basic Action limit resets.
         state.EpicBasicActionUsedThisTurn = false;
 

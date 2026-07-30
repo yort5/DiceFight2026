@@ -62,6 +62,30 @@ public sealed class GameState
     // play (KO'd, etc.) still counts. Turn-scoped like MustBlockThisTurn.
     public HashSet<string> FieldedThisTurn { get; } = [];
 
+    // Keyword Experience - "if you KO'd an opposing Monster during your
+    // turn" (the printed reminder text's own simplified wording - see
+    // TurnEngine.CleanUp's remarks). Set by DieStats.ForceKO the moment a
+    // real KO (not a Regenerate-intercepted one) lands on a die
+    // controlled by the active player's opponent whose card has the
+    // "Monster" affiliation; only the active player can ever earn a
+    // token off it (Experience's own "on your turn" framing), so this
+    // doesn't need to record *which* Monster or track anything per-die.
+    // Turn-scoped like MustBlockThisTurn - reset in CleanUp, after
+    // CleanUp's own token-granting check reads it.
+    public bool OpposingMonsterKOdThisTurn { get; set; }
+
+    // Keyword Experience Tokens - the first persistent, cross-turn,
+    // per-CARD (not per-die, not per-turn) counter this engine has
+    // needed. CardDef is otherwise static/immutable data ("never
+    // mutates during a game" - see its own remarks), so this lives here
+    // instead, keyed by CardId. Each token is worth +1A/+1D to every die
+    // of that card (see DieStats.ExperienceBonus), forever, until
+    // removed by another ability - nothing removes them yet, matching
+    // "consider these tokens as permanent modifiers until specifically
+    // removed by another ability." Loyalty Counters (Appendix 1) are the
+    // same shape - a natural home for those too, if a card ever needs them.
+    public Dictionary<string, int> ExperienceTokens { get; } = [];
+
     public Player GetPlayer(string playerId) =>
         playerId == PlayerOne.Id ? PlayerOne
         : playerId == PlayerTwo.Id ? PlayerTwo

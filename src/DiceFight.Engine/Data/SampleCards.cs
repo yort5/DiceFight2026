@@ -657,6 +657,11 @@ public static class SampleCards
         "Obscure (When you use an Action die, this character is unblockable until end of turn.)",
         purchaseCost: 3, energyType: EnergyType.Bolt,
         keywords: [new KeywordInstance("Obscure")],
+        // Real Affinity "Neutral Equip Monster" - split into tokens (this
+        // set's alignment/class tags aren't "/"-joined like Marvel/DC's
+        // multi-affiliation cards). "Monster" is the token keyword
+        // Experience's own earning condition checks for.
+        affiliations: ["Neutral", "Equip", "Monster"],
         levels: [
             new CharacterFace(FieldingCost: 0, Attack: 3, Defense: 2),
             new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 2),
@@ -828,6 +833,25 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 2, Attack: 5, Defense: 5)
         ]);
 
+    // Icons: Tomb of Annihilation's Jamilah, "Shipwrecked on Chult"
+    // printing (same set as Drow Mercenary above) - Experience plus
+    // Overcrush, both fully mappable, no
+    // AbilityDef needed for either (Experience is entirely engine-built,
+    // like Deadly/Infiltrate - see DieStats.ForceKO/TurnEngine.CleanUp).
+    public static readonly CardDef JamilahShipwreckedOnChult = Character(
+        "jamilah-shipwrecked-on-chult", "Jamilah", "Shipwrecked on Chult", dieLimit: 4,
+        "Experience (If you KO'd an opposing Monster during your turn, place one Experience Token on " +
+        "this character die's card at the end of your turn.) Overcrush (Damage dealt in excess of " +
+        "blocker's D is dealt to opponent.)",
+        purchaseCost: 4, energyType: EnergyType.Fist,
+        keywords: [new KeywordInstance("Experience"), new KeywordInstance("Overcrush")],
+        affiliations: ["Neutral", "Equip", "Force Grey"],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3),
+            new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 3)
+        ]);
+
     // A team is 8 character cards + 2 Basic Action cards (10 total), not
     // the 10 characters + 3 Basic Actions used here previously - that was
     // simply wrong. Colossus, Corvus Glaive, Distraction, Kang, King
@@ -866,7 +890,8 @@ public static class SampleCards
             AntManAmplify, Cyclops, Wasp, BlackWidow, Polaris, CosmicCubeInfinitePossibilities, Parademon, Darkseid,
             Deathbird, WaspPixie, MadalynePryor, TheSpot, Ricochet, ScarletSpider, DrowMercenary,
             SupermanKalEl, BlackMantaDeepSeaDeviant, BizarroMoreThanAMonster,
-            SpideysLastStand, TheRock, BigE, RipHunterNavigateTheSandsOfTime, StarfireStarbolts
+            SpideysLastStand, TheRock, BigE, RipHunterNavigateTheSandsOfTime, StarfireStarbolts,
+            JamilahShipwreckedOnChult
         ];
         return all.ToDictionary(c => c.Id);
     }

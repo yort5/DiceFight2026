@@ -167,6 +167,119 @@ public class EffectInterpreterTests
         Assert.Equal(0, target.Damage);
     }
 
+    // Keyword Experience's own "opposing Monster KO'd this turn"
+    // condition (GameState.OpposingMonsterKOdThisTurn) - set inside
+    // DieStats.ForceKO, the single choke point every real KO already
+    // funnels through, so these exercise it via the simplest KO path
+    // (DealDamage) rather than needing combat machinery. Token-granting
+    // itself is TurnEngine.CleanUp's job, covered separately there.
+    private static readonly CardDef MonsterCard = new()
+    {
+        Id = "test-monster", Name = "Test Monster", Type = CardType.Character,
+        PurchaseCost = 2, DieLimit = 4,
+        Levels = [new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 1)],
+        Affiliations = ["Monster"],
+    };
+
+    private static readonly CardDef NonMonsterCard = new()
+    {
+        Id = "test-non-monster", Name = "Test Non-Monster", Type = CardType.Character,
+        PurchaseCost = 2, DieLimit = 4,
+        Levels = [new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 1)],
+    };
+
+    [Fact]
+    public void ForceKO_OpposingMonsterKOd_SetsTheTurnFlag()
+    {
+        var catalog = new Dictionary<string, CardDef> { [MonsterCard.Id] = MonsterCard };
+        var state = CreateState(catalog);
+        state.ActivePlayerId = "p1";
+        var target = new DieInstance
+        {
+            Id = "p2-monster-1", CardId = MonsterCard.Id, OwnerId = "p2", ControllerId = "p2",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(target);
+
+        EffectInterpreter.Execute(
+            new DealDamage(1, TargetSpec.CharacterDie("t")),
+            new EffectContext(state, "p1", SourceDieId: null, _ => [target.Id]));
+
+        Assert.True(state.OpposingMonsterKOdThisTurn);
+    }
+
+    [Fact]
+    public void ForceKO_OpposingNonMonsterKOd_DoesNotSetTheFlag()
+    {
+        var catalog = new Dictionary<string, CardDef> { [NonMonsterCard.Id] = NonMonsterCard };
+        var state = CreateState(catalog);
+        state.ActivePlayerId = "p1";
+        var target = new DieInstance
+        {
+            Id = "p2-nonmonster-1", CardId = NonMonsterCard.Id, OwnerId = "p2", ControllerId = "p2",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(target);
+
+        EffectInterpreter.Execute(
+            new DealDamage(1, TargetSpec.CharacterDie("t")),
+            new EffectContext(state, "p1", SourceDieId: null, _ => [target.Id]));
+
+        Assert.False(state.OpposingMonsterKOdThisTurn);
+    }
+
+    // Clarification 4 - "nor can you gain an Experience Token by KO'ing
+    // one of your own Monsters."
+    [Fact]
+    public void ForceKO_OwnMonsterKOd_DoesNotSetTheFlag()
+    {
+        var catalog = new Dictionary<string, CardDef> { [MonsterCard.Id] = MonsterCard };
+        var state = CreateState(catalog);
+        state.ActivePlayerId = "p1";
+        var target = new DieInstance
+        {
+            Id = "p1-monster-1", CardId = MonsterCard.Id, OwnerId = "p1", ControllerId = "p1", // p1's OWN Monster
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(target);
+
+        EffectInterpreter.Execute(
+            new DealDamage(1, TargetSpec.CharacterDie("t", TargetOwnership.Own)),
+            new EffectContext(state, "p1", SourceDieId: null, _ => [target.Id]));
+
+        Assert.False(state.OpposingMonsterKOdThisTurn);
+    }
+
+    [Fact]
+    public void ForceKO_RegenerateInterceptsAnOpposingMonster_DoesNotSetTheFlag()
+    {
+        var regenMonsterCard = new CardDef
+        {
+            Id = "test-regen-monster", Name = "Test Regen Monster", Type = CardType.Character,
+            PurchaseCost = 2, DieLimit = 4,
+            Levels = [new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 1)],
+            Keywords = [new KeywordInstance("Regenerate")],
+            Affiliations = ["Monster"],
+        };
+        var catalog = new Dictionary<string, CardDef> { [regenMonsterCard.Id] = regenMonsterCard };
+        var state = CreateState(catalog);
+        state.ActivePlayerId = "p1";
+        var target = new DieInstance
+        {
+            Id = "p2-regenmonster-1", CardId = regenMonsterCard.Id, OwnerId = "p2", ControllerId = "p2",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(target);
+
+        var roller = new FixedRoller(DieStatus.Character, 2);
+        EffectInterpreter.Execute(
+            new DealDamage(1, TargetSpec.CharacterDie("t")),
+            new EffectContext(state, "p1", SourceDieId: null, _ => [target.Id], Roller: roller));
+
+        Assert.Equal(Zone.FieldZone, target.Zone); // regenerated, not actually KO'd
+        Assert.False(state.OpposingMonsterKOdThisTurn); // so no flag either
+    }
+
     // Keyword Sacrifice - "Sacrificed Character dice are moved from the
     // Field Zone to Out of Play or the Used Pile, as applicable."
     // Clarification 1 - Out of Play only on the sacrificed die's own

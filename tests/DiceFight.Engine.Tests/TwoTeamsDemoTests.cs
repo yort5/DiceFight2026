@@ -1415,4 +1415,48 @@ public class TwoTeamsDemoTests
         Assert.Equal(Zone.PrepArea, opposingTarget.Zone); // Range 2 vs Falcon's placeholder 2D - KO'd
         Assert.Equal(AttackSubStep.DeclareBlockers, state.AttackSubStep); // Range resolves before blockers exist
     }
+
+    // Real Jamilah ("Shipwrecked on Chult") and real Drow Mercenary
+    // ("Hired Blade," already cataloged for Obscure and now carrying the
+    // "Monster" affiliation too) - neither on either roster, constructed
+    // directly under the usual teamA/teamB controllers. KO'ing the Monster
+    // goes through DieStats.ForceKO directly (the same real production
+    // path combat/abilities/Range all funnel through) rather than
+    // needing a full combat sequence, since the point under test is the
+    // Experience token-granting itself, not how the KO happened.
+    [Fact]
+    public void JamilahExperience_KOingAnOpposingMonsterGrantsATokenAtCleanUp()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamA";
+
+        var jamilah = new DieInstance
+        {
+            Id = "teamA-jamilah-1", CardId = SampleCards.JamilahShipwreckedOnChult.Id,
+            OwnerId = "teamA", ControllerId = "teamA", Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(jamilah);
+
+        var drowMercenary = new DieInstance
+        {
+            Id = "teamB-drow-1", CardId = SampleCards.DrowMercenary.Id,
+            OwnerId = "teamB", ControllerId = "teamB", Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(drowMercenary);
+
+        var jamilahBaseAttack = SampleCards.JamilahShipwreckedOnChult.Levels[0].Attack;
+        var jamilahBaseDefense = SampleCards.JamilahShipwreckedOnChult.Levels[0].Defense;
+
+        DieStats.ForceKO(state, drowMercenary);
+
+        Assert.Equal(Zone.PrepArea, drowMercenary.Zone);
+        Assert.True(state.OpposingMonsterKOdThisTurn);
+
+        TurnEngine.SkipAttackStep(state);
+        TurnEngine.CleanUp(state);
+
+        Assert.Equal(1, state.ExperienceTokens[SampleCards.JamilahShipwreckedOnChult.Id]);
+        Assert.Equal(jamilahBaseAttack + 1, DieStats.EffectiveAttack(state, jamilah));
+        Assert.Equal(jamilahBaseDefense + 1, DieStats.EffectiveDefense(state, jamilah));
+    }
 }

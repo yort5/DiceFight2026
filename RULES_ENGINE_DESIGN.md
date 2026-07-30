@@ -175,6 +175,9 @@ and design rationale - this is just the scannable index.
   die with this keyword ends Roll and Reroll on a double-energy face.
 - **Energy Drain** (Madalyne Pryor) - after blockers are assigned,
   spins every Character die engaged with an Energy Drain die down a level.
+- **Experience** (Jamilah "Shipwrecked on Chult," D&D set only) - if you
+  KO'd an opposing Monster-affiliation die this turn, every active
+  Experience card gets a permanent +1A/+1D token at Clean Up.
 - **Fast** (Wasp Pixie) - deals its combat damage in an earlier wave
   than non-Fast dice, so a KO'd non-Fast target never gets to hit back.
 - **Infiltrate** (The Spot; Ricochet reacts to it) - an unblocked
@@ -3327,3 +3330,109 @@ Range-damaging a real Falcon die, confirming the window opens, the KO
 lands, and the sub-step reaches `DeclareBlockers` (not
 `ActionAndGlobalWindow` - Range resolves well before that). `dotnet
 build`, `dotnet test` (246/246), and `npm run build` all clean.
+
+## Status update — Experience implemented; the first persistent, cross-turn, per-card counter
+
+D&D set-only keyword, and per the user's own framing "can get a little
+wild" - it was. Appendix 1 plus its own "Experience Token" sub-
+definition: "All Character dice with this keyword that are active when
+at least one opposing Character die with the Monsters affiliation is
+KO'd on your turn and remain active at the end of the turn gain one
+Experience Token on their cards... Each token grants +1A and +1D to all
+Character dice belonging to that card... consider these tokens as
+permanent modifiers until specifically removed by another ability."
+Five numbered clarifications on top.
+
+Two real design questions came up before writing any code, asked
+directly rather than guessed at:
+
+- **Timing precision**: the Appendix's literal wording ("active *when*
+  KO'd, and remains active at end of turn") would need snapshotting
+  which Experience cards are active at the instant of every qualifying
+  KO, all turn long. But every printed card's own reminder text drops
+  that nuance entirely - Jamilah's: "If you KO'd an opposing Monster
+  during your turn, place one Experience Token on this character die's
+  card at the end of your turn." Just "was a Monster KO'd this turn" +
+  "is the card active right now, at Clean Up." The user confirmed the
+  simpler reading is correct, and explained *why* clarification 5 ("an
+  unblocked Adventurer cannot gain an Experience Token") isn't a
+  separate rule at all: rule 2.7.4.3.1 already moves an unblocked
+  attacker to Out of Play the instant its combat damage resolves, so by
+  Clean Up it's simply no longer active - the same "active right now"
+  check the simple reading already does correctly, no extra code
+  needed. Both open questions resolved to the same answer.
+- Confirmed the engine only needed the simpler check - no per-KO-instant
+  snapshotting was built.
+
+Implementation:
+- **New `GameState.ExperienceTokens` (`Dictionary<CardId, int>`)** - the
+  first persistent, cross-turn, per-*card* (not per-die, not per-turn)
+  counter this engine has needed. `CardDef` is otherwise immutable
+  static data ("never mutates during a game"), so this had to live on
+  `GameState` instead, never cleared by `CleanUp` (every other tracking
+  collection built so far is turn-scoped and reset there - this is the
+  first one that deliberately isn't). Loyalty Counters (Appendix 1,
+  mentioned once, same "+1A/+1D per counter, stays on the card" shape)
+  would be a natural future occupant of the same pattern.
+- **New `GameState.OpposingMonsterKOdThisTurn`** (a plain `bool`, same
+  shape as `EpicBasicActionUsedThisTurn`) - set inside
+  **`DieStats.ForceKO` itself**, not any individual call site. Every
+  other keyword this session that reacted to "a die was KO'd" had to be
+  wired into one specific KO path (Retaliation/Range into combat's own
+  KO loop, Deadly into Clean Up's forced KO). Experience is different:
+  it doesn't care *how* the Monster died, so hooking the single choke
+  point every real KO already funnels through - combat, ability damage,
+  Range, Deadly's Clean Up KO, all of it - was both correct and less
+  code than replicating a check at each call site. Naturally excludes a
+  Regenerate-intercepted "KO" (that code path returns before reaching
+  this point) and clarification 4 (a Monster KO'd by/for its own
+  controller doesn't count - checked via `die.ControllerId ==
+  state.OpponentOf(state.ActivePlayerId)`, since only the active player
+  can ever earn a token this turn regardless of who did the KO'ing).
+- **New `DieStats.HasAffiliation`** - the first keyword to query
+  `CardDef.Affiliations` for a single literal tag rather than an
+  intersection between two cards' affiliation lists (Retaliation/
+  Teamwatch/Static bonuses all compare two sides; Experience just checks
+  "does the KO'd card's own affiliation list contain 'Monster'").
+- **New `DieStats.ExperienceBonus`**, wired into `EffectiveAttack`/
+  `EffectiveDefense` - deliberately *not* zone-gated like Strike/Static
+  team bonuses (both "while active" effects): tokens are unconditional
+  permanent modifiers, so a card's bonus applies to its dice wherever
+  they are, Field Zone or not.
+- **`TurnEngine.CleanUp`** grants the tokens: if
+  `OpposingMonsterKOdThisTurn`, every active-player die with the
+  Experience keyword, deduplicated by CardId (clarification 2 - one
+  token per card per turn even with multiple active copies;
+  clarification 3 - different cards each get their own token off the
+  same single KO), gets `ExperienceTokens[cardId] + 1`. The flag resets
+  right after, same turn-scoped lifetime as every other `bool`/`HashSet`
+  built this session.
+- D&D-set affiliation data doesn't use Marvel/DC's "/"-joined multi-
+  affiliation convention (e.g. "Legion of Doom/Villains") - it's space-
+  joined alignment-plus-class tags (e.g. "Neutral Equip Monster"), split
+  into separate tokens (`["Neutral", "Equip", "Monster"]`) so
+  `HasAffiliation(..., "Monster")` matches correctly. Drow Mercenary
+  (already cataloged for Obscure) picked up its real affiliation data
+  for this reason - the first card in the catalog to need it.
+
+Example card: Icons: Tomb of Annihilation's Jamilah ("Shipwrecked on
+Chult" printing) - Experience plus Overcrush, both fully mappable, no
+`AbilityDef` needed for either (same "purely engine-built keyword" shape
+as Deadly/Infiltrate).
+
+14 new tests (261 total): `CombatEngineTests` covers `ExperienceBonus`
+directly (flat +1A/+1D per token, applies regardless of zone, no bonus
+with no tokens recorded); `EffectInterpreterTests` covers the KO-time
+flagging in `DieStats.ForceKO` (sets the flag for an opposing Monster,
+not for an opposing non-Monster, not for your own Monster - clarification
+4 - and not when Regenerate intercepts the KO); `TurnEngineTests` covers
+`CleanUp`'s token-granting directly (grants a token when a Monster was
+KO'd, doesn't otherwise, dedups multiple active copies of one card,
+grants separate tokens to two different active cards off the same KO,
+withholds it from a card that isn't active, clears the turn flag, and -
+proving the cross-turn persistence claim - tokens actually accumulate
+across multiple real turns); one end-to-end `TwoTeamsDemoTests` case
+KOs a real Drow Mercenary (now carrying its real "Monster" affiliation)
+through the real `DieStats.ForceKO` path and confirms real Jamilah earns
+a token and shows the +1A/+1D at Clean Up. `dotnet build`, `dotnet test`
+(261/261), and `npm run build` all clean.
