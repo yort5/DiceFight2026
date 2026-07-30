@@ -135,6 +135,21 @@ public static class TurnEngine
         {
             foreach (var die in drawn.Concat(swarmBonusDice))
                 EnqueueTriggered(state, queue, die, TriggerType.WhenDrawn);
+
+            // Bespoke text like Rip Hunter's "Navigate the Sands of Time"
+            // printing - see TriggerType.ClearAndDraw's own remarks. Fires
+            // once per unique active card (deduped by CardId, same as
+            // Teamwatch), regardless of whether that card's own dice were
+            // drawn this turn - this is a "while active" condition on the
+            // step itself, not a per-drawn-die reaction like WhenDrawn above.
+            foreach (var reactor in state.DiceIn(activeId, Zone.FieldZone)
+                .Concat(state.DiceIn(activeId, Zone.AttackZone))
+                .Where(d => d.CardId is not null)
+                .GroupBy(d => d.VirtualCardId ?? d.CardId)
+                .Select(g => g.First()))
+            {
+                EnqueueTriggered(state, queue, reactor, TriggerType.ClearAndDraw);
+            }
         }
 
         if (state.IsFirstTurn)

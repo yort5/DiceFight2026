@@ -121,16 +121,14 @@ here rather than assuming which approach they'd want.
    already flagged for `Drain` in general). `/clear-and-draw` now has the
    identical gap for the same reason (found while wiring Cosmic Cube's
    `WhenDrawn` ability) - same fix shape applies there too.
-10. Rip Hunter's "Navigate the Sands of Time" (Batman set) - the same
-    `WhenDrawn`/`RedrawFromBag` shape as Cosmic Cube's "Infinite
-    Possibilities" (see the status update), but sends dice to the Used
-    Pile instead of Out of Play and adds two things this engine doesn't
-    model yet: a "while active" gate (the ability should only apply while
-    a Rip Hunter Character die is active) and a "once during your Clear
-    and Draw Step" per-turn limiter (similar shape to `OncePerTurn` on
-    Global abilities, but scoped to Clear and Draw specifically rather
-    than a whole turn). Not started - flagged since the primitives it'd
-    reuse already exist.
+10. ~~Rip Hunter's "Navigate the Sands of Time"~~ - implemented (see the
+    status update). Turned out to need a new `TriggerType.ClearAndDraw`
+    rather than reusing `WhenDrawn` (the gate is "while active," not
+    "while this specific die is drawn"), and the "once during your Clear
+    and Draw Step" limiter needed no new state at all - the Step itself
+    only runs once per turn. `/clear-and-draw`'s existing `TargetDieIds`
+    gap (item #9) applies to Rip Hunter's own choice too, same as it
+    already does for Cosmic Cube.
 11. The web client's Attack Step UI has no case for `AttackSubStep.
     InfiltrateWindow` (or, now, `TagOutWindow`) - `attackSubStep` is
     typed as a plain `string` in `types.ts`, so new values flow through
@@ -3125,3 +3123,60 @@ became relevant afterward; one end-to-end `TwoTeamsDemoTests` case
 drives real Big E buffing a real Apocalypse attacker through the whole
 window-open → resolve → Clean Up lifecycle. `dotnet build`, `dotnet
 test` (231/231), and `npm run build` all clean.
+
+## Status update — Rip Hunter implemented, closing out next-steps item #10
+
+Prompted by the user asking whether any deferred gaps were now
+addressable given how much had shipped since they were written. Item
+#10 (Rip Hunter's "Navigate the Sands of Time") was the answer: it was
+never actually *blocked*, just flagged as "not started - the primitives
+it'd reuse already exist." Checking that claim before building confirmed
+it, with one correction: the item assumed this would reuse `WhenDrawn`
+the way Cosmic Cube does, but Rip Hunter's own text ("**while Rip Hunter
+is active**, once during your Clear and Draw Step, when you draw dice
+from your bag...") isn't gated on *his own die* being drawn - he could
+already be sitting on the field from a prior turn, reacting to
+completely unrelated dice being drawn this turn. That's a "while
+active" condition on the *step itself*, not a per-drawn-die reaction,
+so it needed its own trigger:
+
+- **New `TriggerType.ClearAndDraw`** - fired once per unique active card
+  (deduped by CardId, same "does not stack" shape as Teamwatch/
+  Retaliation/Static team bonuses - rule 3.4.5.3) at the end of
+  `TurnEngine.ClearAndDraw`'s draw logic, letting `EnqueueTriggered`'s
+  own no-op-if-nothing-matches behavior sort out which active cards
+  actually have a reaction defined. Distinct in both name and meaning
+  from the pre-existing `TurnStep.ClearAndDraw` (a different enum
+  entirely) - this is the reactive trigger fired *during* that step.
+- **The "once during your Clear and Draw Step" limiter needed no new
+  state at all** - unlike Global's `OncePerTurn` (a real `HashSet`
+  cleared every Clean Up, since a Global can be used any time across a
+  whole turn), `ClearAndDraw` itself only ever runs once per turn, so
+  firing the trigger once per call already satisfies "once during the
+  Step" for free. Simpler than the next-steps item predicted.
+- **The "send to the Used Pile instead of Out of Play" half needed
+  nothing new either** - `RedrawFromBag(TargetSpec, Zone ToZone)`
+  already parameterizes its destination; Rip Hunter just passes
+  `Zone.UsedPile` where Cosmic Cube passes `Zone.OutOfPlay`. One real
+  wording difference worth preserving: Cosmic Cube's target is "any
+  dice you've drawn this turn" (broad), Rip Hunter's is "dice **from
+  your bag**" specifically, so its `TargetSpec` is scoped to
+  `Zone.DiceFromBag` only, not `DiceFromPrep` too.
+- No `AbilityDef`-level gate needed for "is Rip Hunter active" beyond
+  the trigger's own dedup scan already only considering Field/Attack
+  Zone dice - a card with no matching `ClearAndDraw`-triggered ability
+  (i.e. every other card in the catalog) is a guaranteed no-op via
+  `EnqueueTriggered`, so nothing had to change for any existing card or
+  test.
+
+Example card: Rip Hunter ("Navigate the Sands of Time" printing) -
+purely this text, nothing else to script.
+
+5 new tests (236 total): `TurnEngineTests` covers the trigger directly
+with a synthetic reactor card (fires regardless of what was drawn that
+turn, doesn't fire with no active reactor, dedups multiple active
+copies of the same card, doesn't fire for a card that's fielded but not
+currently active) plus one end-to-end case driving the real Rip Hunter
+card - confirming dice actually land in the Used Pile (not Out of Play)
+and get replaced one-for-one. `dotnet build`, `dotnet test` (236/236),
+and `npm run build` all clean.

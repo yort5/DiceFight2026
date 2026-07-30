@@ -234,6 +234,143 @@ public class TurnEngineTests
         Assert.All(state.DiceIn("p1", Zone.DiceFromBag), d => Assert.Equal(DieStatus.Unrolled, d.Status));
     }
 
+    // Bespoke text like Rip Hunter's own printing - not itself an
+    // Appendix 1 keyword, so there's no HasKeyword gate; TriggerType.
+    // ClearAndDraw just fires once per unique active card with a
+    // matching AbilityDef, regardless of whether that card's own dice
+    // were drawn this turn (unlike WhenDrawn above, which only fires for
+    // dice actually drawn).
+    private static readonly CardDef ClearAndDrawReactorCard = new()
+    {
+        Id = "test-clear-and-draw-reactor", Name = "Test Clear and Draw Reactor", Type = CardType.Character,
+        PurchaseCost = 3, DieLimit = 4,
+        Levels = [new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 1)],
+        Abilities = [new AbilityDef(TriggerType.ClearAndDraw, Cost: null, Effect: new GainLife(1))],
+    };
+
+    [Fact]
+    public void ClearAndDraw_ActiveReactorCard_TriggersRegardlessOfWhatWasDrawn()
+    {
+        var state = GameState.NewGame(
+            new Dictionary<string, CardDef> { [ClearAndDrawReactorCard.Id] = ClearAndDrawReactorCard },
+            new Player { Id = "p1", Name = "Player One" },
+            new Player { Id = "p2", Name = "Player Two" });
+        state.IsFirstTurn = false;
+        var reactor = new DieInstance
+        {
+            Id = "p1-reactor-1", CardId = ClearAndDrawReactorCard.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(reactor);
+
+        var queue = new AbilityQueue();
+        TurnEngine.ClearAndDraw(state, new Random(1), queue);
+
+        Assert.Contains(queue.Pending, a => a.Trigger == TriggerType.ClearAndDraw && a.SourceDieId == reactor.Id);
+    }
+
+    [Fact]
+    public void ClearAndDraw_NoActiveReactorCard_DoesNotTrigger()
+    {
+        var state = GameState.NewGame(
+            new Dictionary<string, CardDef> { [ClearAndDrawReactorCard.Id] = ClearAndDrawReactorCard },
+            new Player { Id = "p1", Name = "Player One" },
+            new Player { Id = "p2", Name = "Player Two" });
+        state.IsFirstTurn = false;
+
+        var queue = new AbilityQueue();
+        TurnEngine.ClearAndDraw(state, new Random(1), queue);
+
+        Assert.DoesNotContain(queue.Pending, a => a.Trigger == TriggerType.ClearAndDraw);
+    }
+
+    // Rule 3.4.5.3 - "does not stack": two active copies of the same
+    // card only trigger its "while active" text once, same dedup shape
+    // as Teamwatch/Retaliation.
+    [Fact]
+    public void ClearAndDraw_TwoActiveCopiesOfSameReactorCard_TriggersOnlyOnce()
+    {
+        var state = GameState.NewGame(
+            new Dictionary<string, CardDef> { [ClearAndDrawReactorCard.Id] = ClearAndDrawReactorCard },
+            new Player { Id = "p1", Name = "Player One" },
+            new Player { Id = "p2", Name = "Player Two" });
+        state.IsFirstTurn = false;
+        state.Dice.Add(new DieInstance
+        {
+            Id = "p1-reactor-1", CardId = ClearAndDrawReactorCard.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        });
+        state.Dice.Add(new DieInstance
+        {
+            Id = "p1-reactor-2", CardId = ClearAndDrawReactorCard.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        });
+
+        var queue = new AbilityQueue();
+        TurnEngine.ClearAndDraw(state, new Random(1), queue);
+
+        Assert.Equal(1, queue.Pending.Count(a => a.Trigger == TriggerType.ClearAndDraw));
+    }
+
+    [Fact]
+    public void ClearAndDraw_ReactorCardNotCurrentlyActive_DoesNotTrigger()
+    {
+        var state = GameState.NewGame(
+            new Dictionary<string, CardDef> { [ClearAndDrawReactorCard.Id] = ClearAndDrawReactorCard },
+            new Player { Id = "p1", Name = "Player One" },
+            new Player { Id = "p2", Name = "Player Two" });
+        state.IsFirstTurn = false;
+        state.Dice.Add(new DieInstance
+        {
+            Id = "p1-reactor-1", CardId = ClearAndDrawReactorCard.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.ReservePool, Status = DieStatus.Character, Level = 1, // not Field/Attack Zone
+        });
+
+        var queue = new AbilityQueue();
+        TurnEngine.ClearAndDraw(state, new Random(1), queue);
+
+        Assert.DoesNotContain(queue.Pending, a => a.Trigger == TriggerType.ClearAndDraw);
+    }
+
+    // Real Rip Hunter, "Navigate the Sands of Time" printing - same
+    // RedrawFromBag shape as Cosmic Cube above, but to the Used Pile
+    // (not Out of Play), and gated on Rip Hunter being active rather
+    // than on his own die being drawn.
+    [Fact]
+    public void RipHunter_WhenActive_CanSendDiceDrawnThisTurnToUsedPileAndRedraw()
+    {
+        var ripHunter = SampleCards.RipHunterNavigateTheSandsOfTime;
+        var state = GameState.NewGame(
+            new Dictionary<string, CardDef> { [ripHunter.Id] = ripHunter },
+            new Player { Id = "p1", Name = "Player One" },
+            new Player { Id = "p2", Name = "Player Two" });
+        state.IsFirstTurn = false;
+        var ripHunterDie = new DieInstance
+        {
+            Id = "p1-riphunter-1", CardId = ripHunter.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(ripHunterDie);
+
+        var queue = new AbilityQueue();
+        TurnEngine.ClearAndDraw(state, new Random(1), queue);
+
+        Assert.Contains(queue.Pending, a => a.Trigger == TriggerType.ClearAndDraw && a.SourceDieId == ripHunterDie.Id);
+        var drawnThisTurn = state.DiceIn("p1", Zone.DiceFromBag).ToList();
+        Assert.Equal(4, drawnThisTurn.Count); // Rip Hunter himself was already on the field, not drawn
+
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(
+                state, ability.ControllerId, ability.SourceDieId,
+                _ => drawnThisTurn.Select(d => d.Id).ToList(),
+                Random: new Random(2))));
+
+        Assert.All(drawnThisTurn, d => Assert.Equal(Zone.UsedPile, d.Zone)); // not Out of Play
+        Assert.All(drawnThisTurn, d => Assert.Equal(DieStatus.Unrolled, d.Status)); // Used Pile is dormant - reset immediately
+        Assert.Equal(drawnThisTurn.Count, state.DiceIn("p1", Zone.DiceFromBag).Count()); // one replacement per die sent
+    }
+
     private static (GameState state, CardDef swarmCard) CreateSwarmCatalogState()
     {
         var swarmCard = new CardDef

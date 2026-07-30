@@ -783,6 +783,32 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 7)
         ]);
 
+    // Batman set's Rip Hunter, "Navigate the Sands of Time" printing -
+    // previously next-steps item #10: flagged as buildable once its own
+    // primitives existed, and by now they do twice over. Not itself an
+    // Appendix 1 keyword (see TriggerType.ClearAndDraw), and its "send
+    // dice to the Used Pile instead of Out of Play" is exactly Cosmic
+    // Cube's RedrawFromBag shape with a different ToZone - nothing new
+    // needed there either. "when you draw dice from your bag" (not
+    // "you've drawn this turn" like Cosmic Cube's broader wording) -
+    // restricted to Zone.DiceFromBag only, not DiceFromPrep.
+    public static readonly CardDef RipHunterNavigateTheSandsOfTime = Character(
+        "rip-hunter-navigate-the-sands-of-time", "Rip Hunter", "Navigate the Sands of Time", dieLimit: 4,
+        "While Rip Hunter is active, once during your Clear and Draw Step, when you draw dice from your " +
+        "bag you may send any number of them to the Used Pile and draw one new die for each of them.",
+        purchaseCost: 4, energyType: EnergyType.Shield,
+        abilities: [new AbilityDef(TriggerType.ClearAndDraw, Cost: null,
+            Effect: new RedrawFromBag(
+                TargetSpec.AnyDie(
+                    "dice drawn from your bag this turn", TargetOwnership.Own, [Zone.DiceFromBag], count: 10,
+                    optional: true), // "you may send ANY NUMBER of them" - zero is a legal choice
+                Zone.UsedPile))],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 3),
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 4),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 5)
+        ]);
+
     // A team is 8 character cards + 2 Basic Action cards (10 total), not
     // the 10 characters + 3 Basic Actions used here previously - that was
     // simply wrong. Colossus, Corvus Glaive, Distraction, Kang, King
@@ -821,7 +847,7 @@ public static class SampleCards
             AntManAmplify, Cyclops, Wasp, BlackWidow, Polaris, CosmicCubeInfinitePossibilities, Parademon, Darkseid,
             Deathbird, WaspPixie, MadalynePryor, TheSpot, Ricochet, ScarletSpider, DrowMercenary,
             SupermanKalEl, BlackMantaDeepSeaDeviant, BizarroMoreThanAMonster,
-            SpideysLastStand, TheRock, BigE
+            SpideysLastStand, TheRock, BigE, RipHunterNavigateTheSandsOfTime
         ];
         return all.ToDictionary(c => c.Id);
     }

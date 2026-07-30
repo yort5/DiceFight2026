@@ -185,7 +185,24 @@ public enum TriggerType
     // injected default effect, same reasoning as Retaliation - Teamwatch
     // cards define their own effect text (e.g. Falcon: "Prep a Sidekick
     // from your Used Pile"), there's nothing generic to inject.
-    Teamwatch
+    Teamwatch,
+
+    // Bespoke text like Rip Hunter's "Navigate the Sands of Time"
+    // printing - "While Rip Hunter is active, once during your Clear and
+    // Draw Step, when you draw dice from your bag you may send any
+    // number of them to the Used Pile and draw one new die for each of
+    // them." Not itself an Appendix 1 keyword, so there's no HasKeyword
+    // gate - TurnEngine.ClearAndDraw just fires this once per unique
+    // active card (same "does not stack" dedup as Teamwatch/Retaliation,
+    // rule 3.4.5.3), letting EnqueueTriggered's own no-op-if-no-matching-
+    // ability behavior sort out who actually has one. "Once during your
+    // Clear and Draw Step" needs no separate tracked limiter, unlike
+    // Global's OncePerTurn - ClearAndDraw itself only runs once per turn,
+    // so firing this once per call already satisfies it for free. Named
+    // distinctly from (and unrelated in meaning to) TurnStep.ClearAndDraw -
+    // this is the reactive trigger fired *during* that step, not the step
+    // itself.
+    ClearAndDraw
 }
 
 // Rule 2.2.3 - the five steps of a turn, in fixed order (2.2.4 - cannot
