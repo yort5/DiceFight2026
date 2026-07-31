@@ -443,12 +443,13 @@
   display: grid;
   grid-template-columns: 1fr 2fr 1fr;
   grid-template-areas:
-    "attack    attack  attack"
-    "field     field   field"
-    "used      reserve prep"
-    "outofplay reserve prep"
-    "bag       bag     bag"
-    "drawn     drawn   carried";
+    "attack      attack  attack"
+    "field       field   field"
+    "intimidated intimidated intimidated"
+    "used        reserve prep"
+    "outofplay   reserve prep"
+    "bag         bag     bag"
+    "drawn       drawn   carried";
   gap: 8px;
   margin-bottom: 10px;
 }
@@ -459,6 +460,7 @@
     grid-template-areas:
       "attack"
       "field"
+      "intimidated"
       "reserve"
       "used"
       "prep"
@@ -474,6 +476,9 @@
 }
 .mat-field {
   grid-area: field;
+}
+.mat-intimidated {
+  grid-area: intimidated;
 }
 .mat-used {
   grid-area: used;

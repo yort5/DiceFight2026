@@ -4,6 +4,7 @@ import { ActionTray } from "./ActionTray";
 import { InfiltrateWindowPanel, RangeWindowPanel, TagOutWindowPanel } from "./AttackWindowPanels";
 import { DamageSplitPanel, DeclareBlockersPanel } from "./CombatPanel";
 import { DeclareAttackersPanel } from "./DeclareAttackersPanel";
+import { dieLabel } from "./dieHelpers";
 import { GlobalAbilitiesPanel, type GlobalAbilityFlow } from "./GlobalAbilitiesPanel";
 import { HowToPlay } from "./HowToPlay";
 import { PlayerBoard, type Selection } from "./PlayerBoard";
@@ -117,6 +118,45 @@ function App() {
   function cancelGlobalAbility() {
     setGlobalFlow(null);
     clearSelection();
+  }
+
+  // WhenFielded targeting (Intimidate, Dazzler, God Emperor Doom, Polaris)
+  // - same shape as the Global ability flow: board clicks feed the shared
+  // `selection` instead of the Action Tray while this is set (see render),
+  // with its own small Confirm/Cancel panel since (unlike Global) there's
+  // no sidebar for it to live in.
+  interface FieldTargetFlow {
+    dieId: string;
+    energyIds: string[];
+  }
+  const [fieldTargetFlow, setFieldTargetFlow] = useState<FieldTargetFlow | null>(null);
+
+  function startFieldTargetFlow(dieId: string, energyIds: string[]) {
+    setFieldTargetFlow({ dieId, energyIds });
+    clearSelection();
+  }
+
+  function cancelFieldTarget() {
+    setFieldTargetFlow(null);
+    clearSelection();
+  }
+
+  async function submitFieldTarget(targetIds: string[]) {
+    if (!fieldTargetFlow || !gameId || busyRef.current) return;
+    busyRef.current = true;
+    setError(null);
+    setBusy(true);
+    try {
+      const next = await api.field(gameId, fieldTargetFlow.dieId, fieldTargetFlow.energyIds, targetIds);
+      setGame(next);
+      clearSelection();
+      setFieldTargetFlow(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      busyRef.current = false;
+      setBusy(false);
+    }
   }
 
   async function submitGlobalAbility(energyIds: string[], targetIds: string[]) {
@@ -358,6 +398,43 @@ function App() {
                   Global Abilities panel.
                 </p>
               </div>
+            ) : fieldTargetFlow ? (
+              <div className="action-tray combat-panel">
+                <p className="hint">This card needs a target when fielded - click it on the board.</p>
+                <div className="selection-summary">
+                  {selection.primary === null && <span className="empty-hint">no target selected</span>}
+                  {selection.primary && (
+                    <span className="primary-chip">
+                      {dieLabel(game.dice.find((d) => d.id === selection.primary)!, cardsById)}
+                    </span>
+                  )}
+                  {selection.secondary.map((id) => (
+                    <span key={id} className="secondary-chip">
+                      {dieLabel(game.dice.find((d) => d.id === id)!, cardsById)}
+                    </span>
+                  ))}
+                  <button className="clear-btn" onClick={clearSelection}>
+                    Clear selection
+                  </button>
+                </div>
+                <div className="tray-actions">
+                  <div className="tray-action">
+                    <button
+                      disabled={busy || selection.primary === null}
+                      onClick={() =>
+                        submitFieldTarget(selection.primary ? [selection.primary, ...selection.secondary] : [])
+                      }
+                    >
+                      Confirm Target(s) ▶
+                    </button>
+                  </div>
+                  <div className="tray-action">
+                    <button disabled={busy} onClick={cancelFieldTarget}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
             ) : canResolveRange ? (
               <RangeWindowPanel
                 game={game}
@@ -418,6 +495,7 @@ function App() {
                 busy={busy}
                 onRun={run}
                 onClear={clearSelection}
+                onFieldNeedsTarget={startFieldTargetFlow}
               />
             )}
 

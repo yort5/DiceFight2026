@@ -3688,3 +3688,56 @@ damage assignment.
 `dotnet build`, `dotnet test` (262/262), `npm run build` all clean.
 Last remaining increment: WhenFielded targeting (Intimidate/Dazzler/God
 Emperor Doom/Polaris).
+
+## Status update — WhenFielded targeting (Increment 7) - and the last UI-push increment
+
+**Server**: `Dtos.cs` - `FieldRequest` gained an optional `TargetDieIds`,
+threaded through `GamesController.Field`'s existing `Drain` call (was
+hardcoded `null`, same gap `DeclareAttackersRequest` had before
+Increment 6). `CardDefDto` gained `WhenFieldedNeedsTarget`, computed in
+`From` by reusing `EffectInterpreter.NeedsTarget` a second time -
+byte-for-byte the same pattern as `GlobalAbilityNeedsTarget`, so it
+generalizes correctly to every WhenFielded card with no hardcoded
+keyword list (Groot's `DrawDice(2)` correctly reports `false`;
+Intimidate/Dazzler/God Emperor Doom/Polaris correctly report `true`).
+
+**Client**: `ActionTray.tsx`'s `ContextualAction` gained an alternative
+`start?: () => void` to `run` (Field on a targeting card now hands off
+to App's own flow instead of firing the API call directly - checked via
+`card?.whenFieldedNeedsTarget`). `App.tsx` gained a small
+`fieldTargetFlow` state plus its own inline Confirm/Cancel panel, same
+shape as the Global ability flow but with no sidebar to live in.
+
+**Also fixed along the way, not originally scoped**: while verifying
+Intimidate, found that a die moved to `Zone.Intimidated` (rule 1.5.3 -
+"place it next to your character cards") had *nowhere to render at all*
+- `Zone.Intimidated` has existed server-side for a while, but the web
+client's `ZONES` list and `PlayerBoard.tsx`'s zone sections never
+included it, so an Intimidated die would just silently vanish from the
+board with no indication of where it went. This was harmless before
+today (nothing could reach WhenFielded targeting through the UI to
+trigger it), but shipping Increment 7 without fixing it would mean this
+increment's own headline feature produces a confusing "die disappeared"
+result. Added an "Intimidated" zone section to each board (`App.css`
+grid area added right after Field Zone, matching the card text's own
+"next to your character cards" placement), plus the matching display
+name/tint entries.
+
+Verified end-to-end in a real headless-Chromium session: fielded
+Apocalypse (Team A), then fielded Scarlet Spider (Team B, Intimidate)
+targeting it through the new two-stage energy-then-target flow -
+Apocalypse correctly disappeared from Team A's Field Zone and reappeared
+in the new Intimidated zone section, still showing its level (matches
+`TurnEngine.CleanUp`'s "returns on its same face/level" handling).
+Didn't separately re-verify Dazzler/God Emperor Doom/Polaris live - the
+mechanism is fully generic (same `NeedsTarget`/`Drain` plumbing already
+proven for Global abilities and now WhenFielded), and God Emperor Doom's
+own two-targets-in-one-ability shape was already understood to share
+the single submitted target list (same documented `Drain` limitation as
+Casket of Ancient Winters/multi-Call-Out).
+
+`dotnet build`, `dotnet test` (262/262), `npm run build` all clean. This
+closes out the 7-increment UI push: Range/Infiltrate/Tag Out windows,
+Call Out targeting, and WhenFielded targeting are all now reachable and
+working in the live client, plus the `IsImplemented` catalog flag and
+rebuilt rosters that made the whole push possible to actually exercise.

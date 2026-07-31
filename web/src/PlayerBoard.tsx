@@ -50,6 +50,9 @@ export function PlayerBoard(props: {
         <div className="mat-slot mat-field">
           <ZoneSection zone="FieldZone" prominent dice={dicein("FieldZone")} {...zoneProps} />
         </div>
+        <div className="mat-slot mat-intimidated">
+          <ZoneSection zone="Intimidated" dice={dicein("Intimidated")} {...zoneProps} />
+        </div>
         <div className="mat-slot mat-used">
           <ZoneSection zone="UsedPile" dice={dicein("UsedPile")} {...zoneProps} />
         </div>
@@ -92,6 +95,7 @@ const ZONE_DISPLAY_NAMES: Record<string, string> = {
   UsedPile: "Used Pile",
   OutOfPlay: "Out of Play",
   Unpurchased: "Unpurchased",
+  Intimidated: "Intimidated",
 };
 
 // Loosely matches the physical mat's color-coded zones, so the shape of
@@ -106,6 +110,7 @@ const ZONE_TINTS: Record<string, string> = {
   Bag: "bag",
   DiceFromBag: "staging",
   DiceFromPrep: "staging",
+  Intimidated: "prep",
 };
 
 // The only zones where a die is actually showing a rolled face (rule 1.5)

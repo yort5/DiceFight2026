@@ -83,7 +83,7 @@ public sealed class GamesController(GameStore store) : ControllerBase
         var state = store.Get(gameId);
         var queue = new AbilityQueue();
         TurnEngine.Field(state, queue, request.DieId, request.EnergyDieIds);
-        Drain(state, queue, null);
+        Drain(state, queue, request.TargetDieIds);
         return Ok(GameStateDto.From(gameId, state));
     }
 

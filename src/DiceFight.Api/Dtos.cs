@@ -16,11 +16,13 @@ public sealed record CardDefDto(
     IReadOnlyList<string> EnergyTypes, IReadOnlyList<string> Affiliations, string? Alignment,
     int DieLimit, IReadOnlyList<CharacterFaceDto> Levels, string RawText,
     IReadOnlyList<string> Keywords, IReadOnlyList<string> AbilityTriggers,
-    GlobalAbilityCostDto? GlobalAbilityCost, bool GlobalAbilityNeedsTarget, bool IsImplemented)
+    GlobalAbilityCostDto? GlobalAbilityCost, bool GlobalAbilityNeedsTarget, bool IsImplemented,
+    bool WhenFieldedNeedsTarget)
 {
     public static CardDefDto From(CardDef card)
     {
         var globalAbility = card.Abilities.FirstOrDefault(a => a.Trigger == TriggerType.Global);
+        var whenFieldedAbility = card.Abilities.FirstOrDefault(a => a.Trigger == TriggerType.WhenFielded);
         return new(
             card.Id, card.Name, card.Subtitle, card.Type.ToString(), card.PurchaseCost,
             card.EnergyTypes.Select(e => e.ToString()).ToList(),
@@ -32,7 +34,8 @@ public sealed record CardDefDto(
                 ? new GlobalAbilityCostDto(cost.Amount, cost.RequiredType?.ToString())
                 : null,
             globalAbility is not null && EffectInterpreter.NeedsTarget(globalAbility.Effect),
-            card.IsImplemented);
+            card.IsImplemented,
+            whenFieldedAbility is not null && EffectInterpreter.NeedsTarget(whenFieldedAbility.Effect));
     }
 }
 
@@ -66,7 +69,11 @@ public sealed record GameStateDto(
 // ---- Request bodies ----
 
 public sealed record PurchaseRequest(string DieId, IReadOnlyList<string> EnergyDieIds);
-public sealed record FieldRequest(string DieId, IReadOnlyList<string> EnergyDieIds);
+// TargetDieIds feeds a WhenFielded ability that needs one (Intimidate,
+// Dazzler, God Emperor Doom, Polaris) - see GamesController.Field's Drain
+// call. Null/empty is fine for every other Character die.
+public sealed record FieldRequest(
+    string DieId, IReadOnlyList<string> EnergyDieIds, IReadOnlyList<string>? TargetDieIds = null);
 public sealed record UseActionDieRequest(string DieId, IReadOnlyList<string>? TargetDieIds);
 public sealed record UseGlobalAbilityRequest(
     string CardId, string PlayerId, IReadOnlyList<string> EnergyDieIds, IReadOnlyList<string>? TargetDieIds);

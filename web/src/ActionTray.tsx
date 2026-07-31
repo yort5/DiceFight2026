@@ -7,7 +7,11 @@ interface ContextualAction {
   key: string;
   label: string;
   hint: string;
-  run: () => Promise<GameState>;
+  // Most actions fire one API call directly; Field on a WhenFielded-
+  // targeting card instead hands off to App's own energy-then-target flow
+  // (see onFieldNeedsTarget below), same shape as the Global ability flow.
+  run?: () => Promise<GameState>;
+  start?: () => void;
 }
 
 // Global abilities need two logically distinct secondary selections
@@ -24,6 +28,7 @@ export function ActionTray(props: {
   busy: boolean;
   onRun: (action: () => Promise<GameState>) => void;
   onClear: () => void;
+  onFieldNeedsTarget: (dieId: string, energyIds: string[]) => void;
 }) {
   const { game, dice, selection, busy, onRun, onClear } = props;
   const primaryDie = dice.find((d) => d.id === selection.primary) ?? null;
@@ -61,12 +66,22 @@ export function ActionTray(props: {
     isActiveController &&
     (primaryDie.status === "Character" || primaryDie.status === "SidekickCharacter")
   ) {
-    actions.push({
-      key: "field",
-      label: "Field",
-      hint: "Secondary selections = energy to spend",
-      run: () => api.field(game.gameId, primaryDie.id, secondaryIds),
-    });
+    const card = primaryDie.cardId ? props.cardsById.get(primaryDie.cardId) : undefined;
+    if (card?.whenFieldedNeedsTarget) {
+      actions.push({
+        key: "field",
+        label: "Field",
+        hint: "Secondary = energy; you'll pick a target next",
+        start: () => props.onFieldNeedsTarget(primaryDie.id, secondaryIds),
+      });
+    } else {
+      actions.push({
+        key: "field",
+        label: "Field",
+        hint: "Secondary selections = energy to spend",
+        run: () => api.field(game.gameId, primaryDie.id, secondaryIds, []),
+      });
+    }
   }
 
   if (
@@ -109,7 +124,7 @@ export function ActionTray(props: {
       <div className="tray-actions">
         {actions.map((a) => (
           <div key={a.key} className="tray-action">
-            <button disabled={busy} onClick={() => onRun(a.run)}>
+            <button disabled={busy} onClick={() => (a.run ? onRun(a.run) : a.start?.())}>
               {a.label}
             </button>
             <span className="hint">{a.hint}</span>

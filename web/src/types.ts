@@ -27,6 +27,7 @@ export interface CardDef {
   globalAbilityCost: GlobalAbilityCost | null;
   globalAbilityNeedsTarget: boolean;
   isImplemented: boolean;
+  whenFieldedNeedsTarget: boolean;
 }
 
 export interface Die {
@@ -117,4 +118,5 @@ export const ZONES = [
   "AttackZone",
   "UsedPile",
   "OutOfPlay",
+  "Intimidated",
 ] as const;

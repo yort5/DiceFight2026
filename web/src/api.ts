@@ -36,10 +36,10 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ dieId, energyDieIds }),
     }),
-  field: (id: string, dieId: string, energyDieIds: string[]) =>
+  field: (id: string, dieId: string, energyDieIds: string[], targetDieIds: string[] = []) =>
     request<GameState>(`/games/${id}/field`, {
       method: "POST",
-      body: JSON.stringify({ dieId, energyDieIds }),
+      body: JSON.stringify({ dieId, energyDieIds, targetDieIds }),
     }),
   useActionDie: (id: string, dieId: string, targetDieIds: string[]) =>
     request<GameState>(`/games/${id}/use-action-die`, {
