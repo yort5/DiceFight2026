@@ -48,12 +48,24 @@ public sealed class AbilityQueue
     // is responsible for actually applying the effect; if doing so triggers
     // further abilities, `resolve` should call Enqueue/Interrupt on this
     // same queue before returning, which Drain will then pick up.
-    public void Drain(Action<QueuedAbility> resolve)
+    //
+    // `shouldStop` (checked after each ability, not before - so the
+    // ability that raised the stop condition still gets to finish its own
+    // `resolve` call first) lets a caller pause mid-drain instead of
+    // running to completion - see GameState.PendingChoice/PendingQueue's
+    // own remarks for why (a mid-resolution choice, e.g. keyword
+    // Corrupt, that can't be answered in the same call that triggered
+    // it). Anything still left in the queue when this returns early is
+    // simply still there for a later Drain call to pick back up -
+    // AbilityQueue itself doesn't need to do anything special to
+    // preserve it.
+    public void Drain(Action<QueuedAbility> resolve, Func<bool>? shouldStop = null)
     {
         while (_queue.Count > 0)
         {
             var next = _queue.Dequeue();
             resolve(next);
+            if (shouldStop?.Invoke() == true) break;
         }
     }
 }

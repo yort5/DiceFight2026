@@ -1,4 +1,5 @@
 using DiceFight.Engine.Model;
+using DiceFight.Engine.Queueing;
 
 namespace DiceFight.Engine;
 
@@ -85,6 +86,21 @@ public sealed class GameState
     // removed by another ability." Loyalty Counters (Appendix 1) are the
     // same shape - a natural home for those too, if a card ever needs them.
     public Dictionary<string, int> ExperienceTokens { get; } = [];
+
+    // A mid-resolution choice (keyword Corrupt, RedrawFromBag) that
+    // can't be answered in the same request that triggered it - see
+    // PendingChoice's own remarks. Null the rest of the time. Not turn-
+    // scoped like everything else above - it's cleared the moment
+    // GamesController.ResolvePendingChoice answers it, not at CleanUp
+    // (a game should never reach CleanUp with one still outstanding,
+    // since every other action endpoint refuses to run while it's set).
+    public PendingChoice? PendingChoice { get; set; }
+
+    // Whatever was still queued in the Drain call that PendingChoice
+    // paused, preserved so ResolvePendingChoice can pick up exactly
+    // where it left off instead of losing anything still waiting to
+    // resolve. Only non-null while PendingChoice is also set.
+    public AbilityQueue? PendingQueue { get; set; }
 
     public Player GetPlayer(string playerId) =>
         playerId == PlayerOne.Id ? PlayerOne

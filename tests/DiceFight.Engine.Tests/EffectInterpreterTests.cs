@@ -507,28 +507,33 @@ public class EffectInterpreterTests
     // Keyword Corrupt X - draws X dice from the target player's bag
     // (random, refilling from the Used Pile if needed), then a real
     // choice of which ONE goes to the Used Pile; the rest return to the
-    // bag untouched (see EffectNode.Corrupt's remarks on why the "choose"
-    // step bypasses the normal cached Resolve/LegalTargets pipeline).
+    // bag untouched. That choice's candidates don't exist until the draw
+    // actually happens mid-effect, so - unlike every other target in this
+    // engine - there's no legitimate answer a caller could have supplied
+    // upfront; Execute always pauses via GameState.PendingChoice when
+    // there's a real choice (2+ drawn) rather than ever consulting
+    // ctx.ResolveTargets for it (see EffectNode.Corrupt's own remarks).
     [Fact]
     public void Corrupt_DrawsDiceAndSendsTheChosenOneToUsedPile_ReturnsTheRestToTheBag()
     {
         var state = CreateState();
         Assert.Equal(8, state.DiceIn("p2", Zone.Bag).Count());
 
-        DieInstance? chosen = null;
-        IReadOnlyList<string> Resolve(TargetSpec spec)
-        {
-            if (spec.PlayersAllowed) return ["p2"];
-            chosen = state.DiceIn("p2", Zone.DiceFromBag).First(); // whichever 2 actually got drawn
-            return [chosen.Id];
-        }
-
         EffectInterpreter.Execute(
             new Corrupt(2, TargetSpec.Player("target player")),
-            new EffectContext(state, "p1", SourceDieId: null, Resolve, Random: new Random(1)));
+            new EffectContext(state, "p1", SourceDieId: null, spec => spec.PlayersAllowed ? ["p2"] : [],
+                Random: new Random(1)));
 
-        Assert.NotNull(chosen);
-        Assert.Equal(Zone.UsedPile, chosen!.Zone);
+        Assert.NotNull(state.PendingChoice);
+        Assert.False(state.PendingChoice!.AllowMultiple);
+        Assert.Equal(2, state.PendingChoice.CandidateDieIds.Count);
+        Assert.Equal(2, state.DiceIn("p2", Zone.DiceFromBag).Count()); // drawn, but the choice hasn't resolved yet
+
+        var chosenId = state.PendingChoice.CandidateDieIds[0];
+        state.PendingChoice.Resolve([chosenId]);
+
+        var chosen = state.Dice.Single(d => d.Id == chosenId);
+        Assert.Equal(Zone.UsedPile, chosen.Zone);
         Assert.Equal(7, state.DiceIn("p2", Zone.Bag).Count()); // 1 sent to Used Pile, 1 returned
         Assert.Single(state.DiceIn("p2", Zone.UsedPile));
         Assert.Empty(state.DiceIn("p2", Zone.DiceFromBag)); // nothing left staged mid-effect
@@ -563,9 +568,11 @@ public class EffectInterpreterTests
 
         EffectInterpreter.Execute(
             new Corrupt(2, TargetSpec.Player("target player")),
-            new EffectContext(state, "p1", SourceDieId: null,
-                spec => spec.PlayersAllowed ? ["p2"] : [state.DiceIn("p2", Zone.DiceFromBag).First().Id],
+            new EffectContext(state, "p1", SourceDieId: null, spec => spec.PlayersAllowed ? ["p2"] : [],
                 Random: new Random(1)));
+
+        Assert.NotNull(state.PendingChoice);
+        state.PendingChoice!.Resolve([state.PendingChoice.CandidateDieIds[0]]);
 
         // Drew 1 from the original bag, then refilled all 7 Used Pile dice
         // into the bag to draw a 2nd - one of the 2 drawn ends up in the
@@ -593,19 +600,71 @@ public class EffectInterpreterTests
     {
         var state = CreateState();
 
-        var ex = Assert.Throws<InvalidOperationException>(() => EffectInterpreter.Execute(
+        EffectInterpreter.Execute(
             new Corrupt(2, TargetSpec.Player("target player")),
-            new EffectContext(state, "p1", SourceDieId: null,
-                spec => spec.PlayersAllowed ? ["p2"] : ["not-a-real-die-id"], Random: new Random(1))));
+            new EffectContext(state, "p1", SourceDieId: null, spec => spec.PlayersAllowed ? ["p2"] : [],
+                Random: new Random(1)));
 
-        Assert.Contains("must be one of", ex.Message);
+        // The friendly "must be a valid candidate" validation now lives
+        // in GamesController.ResolvePendingChoice - the real trust
+        // boundary, checked before Resolve is ever called. This just
+        // confirms Resolve itself still fails safe (rather than silently
+        // accepting a bogus id) if that guard were ever bypassed.
+        Assert.NotNull(state.PendingChoice);
+        Assert.Throws<InvalidOperationException>(() => state.PendingChoice!.Resolve(["not-a-real-die-id"]));
+    }
+
+    // The property that matters most about GameState.PendingQueue: if two
+    // abilities are queued together and the first one pauses, the second
+    // must NOT run until the pause is answered - and must still run
+    // afterward, in its original order. Mirrors the shape
+    // GamesController.Drain actually uses (a shouldStop check against
+    // state.PendingChoice) rather than testing AbilityQueue in isolation.
+    [Fact]
+    public void TwoQueuedAbilities_WhenTheFirstPauses_TheSecondWaitsThenRunsAfterResolving()
+    {
+        var state = CreateState();
+        var life = state.PlayerOne.Life; // "p1" - both abilities' controller
+        var queue = new AbilityQueue();
+        queue.Enqueue(null, "p1", TriggerType.Global, new Corrupt(2, TargetSpec.Player("target player")));
+        queue.Enqueue(null, "p1", TriggerType.Global, new LoseLife(3));
+
+        void Drain() => queue.Drain(
+            ability => EffectInterpreter.Execute(
+                ability.Effect,
+                new EffectContext(state, ability.ControllerId, ability.SourceDieId,
+                    spec => spec.PlayersAllowed ? ["p2"] : [], Random: new Random(1))),
+            shouldStop: () => state.PendingChoice is not null);
+
+        Drain();
+
+        // Corrupt paused - LoseLife must not have run yet, and is still
+        // sitting in the queue for later.
+        Assert.NotNull(state.PendingChoice);
+        Assert.Equal(life, state.GetPlayer("p1").Life);
+        Assert.Equal(1, queue.Count);
+
+        var pending = state.PendingChoice!;
+        state.PendingChoice = null;
+        pending.Resolve([pending.CandidateDieIds[0]]);
+        Drain();
+
+        Assert.Null(state.PendingChoice);
+        Assert.True(queue.IsEmpty);
+        Assert.Equal(life - 3, state.GetPlayer("p1").Life); // LoseLife finally ran
     }
 
     // Cosmic Cube "Infinite Possibilities" / Rip Hunter "Navigate the
     // Sands of Time" - unlike Corrupt (an "outside Clear and Draw" draw,
     // rule 2.3.13 - rolls immediately), this one replaces dice that were
     // already part of Clear and Draw's own draw, so its replacements land
-    // unrolled in DiceFromBag rather than rolling right away.
+    // unrolled in DiceFromBag rather than rolling right away. Unlike
+    // Corrupt, the candidates here DO already exist in a real zone before
+    // Execute runs - but the player still can't answer this in the same
+    // request as the trigger (no round-trip to see what was drawn first),
+    // so this also always pauses via PendingChoice, ignoring
+    // ctx.ResolveTargets entirely (see EffectNode.RedrawFromBag's case in
+    // EffectInterpreter for why).
     [Fact]
     public void RedrawFromBag_MovesChosenDiceAndDrawsAReplacementForEach()
     {
@@ -620,7 +679,12 @@ public class EffectInterpreterTests
                     "dice drawn this turn", TargetOwnership.Own, [Zone.DiceFromBag, Zone.DiceFromPrep], count: 10,
                     optional: true),
                 Zone.OutOfPlay),
-            new EffectContext(state, "p1", SourceDieId: null, _ => [discard1.Id, discard2.Id], Random: new Random(1)));
+            new EffectContext(state, "p1", SourceDieId: null, _ => [], Random: new Random(1)));
+
+        Assert.NotNull(state.PendingChoice);
+        Assert.True(state.PendingChoice!.AllowMultiple);
+        Assert.Equal(3, state.PendingChoice.CandidateDieIds.Count);
+        state.PendingChoice.Resolve([discard1.Id, discard2.Id]);
 
         Assert.Equal(Zone.OutOfPlay, discard1.Zone);
         Assert.Equal(Zone.OutOfPlay, discard2.Zone);
@@ -645,6 +709,9 @@ public class EffectInterpreterTests
                 Zone.OutOfPlay),
             new EffectContext(state, "p1", SourceDieId: null, _ => [], Random: new Random(1)));
 
+        Assert.NotNull(state.PendingChoice);
+        state.PendingChoice!.Resolve([]); // "you may send any number of them" - zero is a legal choice
+
         Assert.Equal(2, state.DiceIn("p1", Zone.DiceFromBag).Count()); // both still there, untouched
         Assert.Equal(bagCountBefore, state.DiceIn("p1", Zone.Bag).Count()); // no draw happened
     }
@@ -656,20 +723,27 @@ public class EffectInterpreterTests
         var toOutOfPlay = state.DiceIn("p1", Zone.Bag).ElementAt(0);
         var toUsedPile = state.DiceIn("p1", Zone.Bag).ElementAt(1);
         toOutOfPlay.Zone = Zone.DiceFromBag;
-        toUsedPile.Zone = Zone.DiceFromBag;
         // Fake some stale rolled data to prove a reset actually clears it.
         toOutOfPlay.Status = DieStatus.Character;
         toOutOfPlay.Level = 3;
         toUsedPile.Status = DieStatus.Character;
         toUsedPile.Level = 3;
 
-        var spec = TargetSpec.AnyDie("x", TargetOwnership.Own, [Zone.DiceFromBag, Zone.DiceFromPrep], count: 1);
+        // Staged one at a time so each Execute call's candidate set is
+        // exactly the one die under test.
+        var spec = TargetSpec.AnyDie(
+            "x", TargetOwnership.Own, [Zone.DiceFromBag, Zone.DiceFromPrep], count: 10, optional: true);
         EffectInterpreter.Execute(
             new RedrawFromBag(spec, Zone.OutOfPlay),
-            new EffectContext(state, "p1", SourceDieId: null, _ => [toOutOfPlay.Id], Random: new Random(1)));
+            new EffectContext(state, "p1", SourceDieId: null, _ => [], Random: new Random(1)));
+        state.PendingChoice!.Resolve([toOutOfPlay.Id]);
+        state.PendingChoice = null;
+
+        toUsedPile.Zone = Zone.DiceFromBag;
         EffectInterpreter.Execute(
             new RedrawFromBag(spec, Zone.UsedPile),
-            new EffectContext(state, "p1", SourceDieId: null, _ => [toUsedPile.Id], Random: new Random(1)));
+            new EffectContext(state, "p1", SourceDieId: null, _ => [], Random: new Random(1)));
+        state.PendingChoice!.Resolve([toUsedPile.Id]);
 
         Assert.Equal(DieStatus.Character, toOutOfPlay.Status); // Out of Play isn't dormant - left alone
         Assert.Equal(DieStatus.Unrolled, toUsedPile.Status); // Used Pile is dormant - reset

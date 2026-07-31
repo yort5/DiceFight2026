@@ -222,10 +222,12 @@ public class TurnEngineTests
 
         queue.Drain(ability => EffectInterpreter.Execute(
             ability.Effect,
-            new EffectContext(
-                state, ability.ControllerId, ability.SourceDieId,
-                _ => drawnThisTurn.Select(d => d.Id).ToList(), // send everything drawn this turn Out of Play
-                Random: new Random(2))));
+            new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [], Random: new Random(2))));
+
+        // RedrawFromBag always pauses via PendingChoice (see EffectInterpreter) -
+        // ctx.ResolveTargets above is never consulted for it.
+        Assert.NotNull(state.PendingChoice);
+        state.PendingChoice!.Resolve(drawnThisTurn.Select(d => d.Id).ToList()); // send everything drawn this turn Out of Play
 
         Assert.All(drawnThisTurn, d => Assert.Equal(Zone.OutOfPlay, d.Zone));
         // One replacement per die sent Out of Play, landing unrolled in
@@ -361,10 +363,10 @@ public class TurnEngineTests
 
         queue.Drain(ability => EffectInterpreter.Execute(
             ability.Effect,
-            new EffectContext(
-                state, ability.ControllerId, ability.SourceDieId,
-                _ => drawnThisTurn.Select(d => d.Id).ToList(),
-                Random: new Random(2))));
+            new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [], Random: new Random(2))));
+
+        Assert.NotNull(state.PendingChoice);
+        state.PendingChoice!.Resolve(drawnThisTurn.Select(d => d.Id).ToList());
 
         Assert.All(drawnThisTurn, d => Assert.Equal(Zone.UsedPile, d.Zone)); // not Out of Play
         Assert.All(drawnThisTurn, d => Assert.Equal(DieStatus.Unrolled, d.Status)); // Used Pile is dormant - reset immediately

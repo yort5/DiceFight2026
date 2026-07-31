@@ -92,4 +92,10 @@ export const api = {
     }),
 
   cleanUp: (id: string) => request<GameState>(`/games/${id}/clean-up`, { method: "POST" }),
+
+  resolvePendingChoice: (id: string, chosenDieIds: string[]) =>
+    request<GameState>(`/games/${id}/resolve-pending-choice`, {
+      method: "POST",
+      body: JSON.stringify({ chosenDieIds }),
+    }),
 };

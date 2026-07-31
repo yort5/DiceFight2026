@@ -64,6 +64,20 @@ export type AttackSubStep =
   | "ResolveDamageAndWhenKOd"
   | "Done";
 
+// Keyword Corrupt/RedrawFromBag (Cosmic Cube "Infinite Possibilities",
+// Rip Hunter) - a mid-resolution choice the server can't answer in the
+// same request that triggered it, since the candidate dice either don't
+// exist until a random draw happens mid-effect or shouldn't be chosen
+// blind before the player has actually seen what was drawn. Set on
+// GameState whenever one is outstanding - every other action is
+// rejected server-side until it's answered via api.resolvePendingChoice.
+export interface PendingChoice {
+  controllerId: string;
+  description: string;
+  candidateDieIds: string[];
+  allowMultiple: boolean; // false: exactly one (Corrupt); true: any subset incl. none (RedrawFromBag)
+}
+
 export interface GameState {
   gameId: string;
   activePlayerId: string;
@@ -74,6 +88,7 @@ export interface GameState {
   playerOne: PlayerState;
   playerTwo: PlayerState;
   dice: Die[];
+  pendingChoice: PendingChoice | null;
 }
 
 // Rule 2.7.2.2 - one pair per (attacker, blocker); a given attacker can

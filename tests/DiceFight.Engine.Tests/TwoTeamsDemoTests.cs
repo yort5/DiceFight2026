@@ -892,18 +892,18 @@ public class TwoTeamsDemoTests
 
         Assert.Equal(1, queue.Count);
 
-        DieInstance? chosen = null;
         queue.Drain(ability => EffectInterpreter.Execute(
             ability.Effect,
-            new EffectContext(state, ability.ControllerId, ability.SourceDieId, spec =>
-            {
-                if (spec.PlayersAllowed) return ["teamB"];
-                chosen = state.DiceIn("teamB", Zone.DiceFromBag).First();
-                return [chosen.Id];
-            })));
+            new EffectContext(state, ability.ControllerId, ability.SourceDieId, spec => spec.PlayersAllowed ? ["teamB"] : [])));
 
-        Assert.NotNull(chosen);
-        Assert.Equal(Zone.UsedPile, chosen!.Zone);
+        // The post-draw "which one" choice always pauses via
+        // PendingChoice now (see EffectInterpreter's Corrupt case).
+        Assert.NotNull(state.PendingChoice);
+        var chosenId = state.PendingChoice!.CandidateDieIds[0];
+        state.PendingChoice.Resolve([chosenId]);
+
+        var chosen = state.Dice.Single(d => d.Id == chosenId);
+        Assert.Equal(Zone.UsedPile, chosen.Zone);
         Assert.Single(state.DiceIn("teamB", Zone.UsedPile));
     }
 

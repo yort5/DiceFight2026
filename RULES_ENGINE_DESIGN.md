@@ -115,18 +115,23 @@ here rather than assuming which approach they'd want.
    attacker has Call Out. The flat-single-target-list-per-batch
    limitation this item originally flagged is still real (unfixed) - it
    just doesn't matter yet since Black Widow is the only Call Out card
-   on either roster. **Still open**: `/clear-and-draw` has the identical
-   gap - Cosmic Cube's and Rip Hunter's `WhenDrawn`/`ClearAndDraw`
-   abilities still can't receive a real target through the API; same fix
-   shape (add `TargetDieIds`, thread into `Drain`) not yet applied there.
+   on either roster. The `/clear-and-draw` half (Cosmic Cube/Rip
+   Hunter's `WhenDrawn`/`ClearAndDraw` abilities) turned out not to need
+   a `TargetDieIds` field at all - see the "pending mid-resolution
+   choice" status update: the real blocker wasn't a missing request
+   field, it was that the player can't answer this in the same request
+   that triggers it (the candidates don't exist, or can't be seen, until
+   the draw already happened). Closed via a general pause/resume
+   mechanism instead (`GameState.PendingChoice`), not a `TargetDieIds`
+   addition.
 10. ~~Rip Hunter's "Navigate the Sands of Time"~~ - implemented (see the
     status update). Turned out to need a new `TriggerType.ClearAndDraw`
     rather than reusing `WhenDrawn` (the gate is "while active," not
     "while this specific die is drawn"), and the "once during your Clear
     and Draw Step" limiter needed no new state at all - the Step itself
-    only runs once per turn. `/clear-and-draw`'s existing `TargetDieIds`
-    gap (item #9) applies to Rip Hunter's own choice too, same as it
-    already does for Cosmic Cube.
+    only runs once per turn. Its own post-draw choice is now answered
+    through `GameState.PendingChoice` (see item #9 and the "pending
+    mid-resolution choice" status update), same as Cosmic Cube's.
 11. ~~The web client's Attack Step UI has no case for `AttackSubStep.
     InfiltrateWindow`, `TagOutWindow`, or `RangeWindow`~~ - fixed (see
     the Increment 2/3/4/5 status updates): `attackSubStep` is now a real
@@ -154,7 +159,10 @@ and design rationale - this is just the scannable index.
 - **Call Out** (Black Widow) - when this die attacks, target an
   opposing Character die; only that die (or none) may legally block it.
 - **Corrupt** (Polaris) - target player draws X dice from their bag,
-  refilling from the Used Pile if needed.
+  refilling from the Used Pile if needed, then a real choice of which
+  one goes to the Used Pile - answered through `GameState.PendingChoice`
+  (see its own status update), since the candidates don't exist until
+  the draw actually happens mid-effect.
 - **Darkseid's keyword grant** (Darkseid) - "while active, your
   Sidekicks gain Swarm" - not itself an Appendix 1 keyword, but the
   first live, continuously-recomputed grant (as opposed to a discrete
@@ -206,7 +214,20 @@ and design rationale - this is just the scannable index.
 Not Appendix 1 keywords, but bespoke card text built alongside this
 work using the same infrastructure: Cosmic Cube's mid-Clear-and-Draw
 redraw and Rip Hunter's "while active" Clear and Draw reaction (see
-their own status updates).
+their own status updates) - both also answered through `GameState.
+PendingChoice` for the same reason Corrupt is.
+
+Found but deliberately not built: **Heist** (a real Basic Action card -
+"target opponent draws 2 dice from their bag, place one in their Prep
+Area, roll the other and place it in your Reserve Pool, at end of turn
+place it in your opponent's Used Pile"). Same draw-then-choose shape as
+Corrupt/RedrawFromBag (would reuse `PendingChoice`), but also moves a
+die into an *opponent's* Reserve Pool under your control - cross-player
+die placement/control isn't modeled anywhere in this engine yet (see
+the "Not yet designed" note on `Controlling`/`Copying`/`Swapping` up
+top), so this is real, separate, additional work, not a drop-in use of
+what Corrupt/RedrawFromBag already built. Not authored in
+`SampleCards.cs`.
 
 Also done, out of order (the user asked for it explicitly once the above
 was clear): a visual pass matching the physical mat's zone layout and

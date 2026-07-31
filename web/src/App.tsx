@@ -7,6 +7,7 @@ import { DeclareAttackersPanel } from "./DeclareAttackersPanel";
 import { dieLabel } from "./dieHelpers";
 import { GlobalAbilitiesPanel, type GlobalAbilityFlow } from "./GlobalAbilitiesPanel";
 import { HowToPlay } from "./HowToPlay";
+import { PendingChoicePanel } from "./PendingChoicePanel";
 import { PlayerBoard, type Selection } from "./PlayerBoard";
 import type { BlockAssignment, CardDef, DamageSplit, GameState, RangeAssignment, TagOutUse } from "./types";
 import "./App.css";
@@ -346,7 +347,12 @@ function App() {
 
               <span className="advance-label">Advance to:</span>
               {advanceOptions.map((opt) => (
-                <button key={opt.key} className="advance-btn" disabled={busy} onClick={() => run(opt.run)}>
+                <button
+                  key={opt.key}
+                  className="advance-btn"
+                  disabled={busy || !!game.pendingChoice}
+                  onClick={() => run(opt.run)}
+                >
                   {opt.label}
                 </button>
               ))}
@@ -358,40 +364,63 @@ function App() {
             <details className="turn-controls">
               <summary>Manual step actions (advanced)</summary>
               <div className="turn-controls-buttons">
-                <button disabled={busy || !canClearAndDraw} onClick={() => run(() => api.clearAndDraw(gameId))}>
+                <button
+                  disabled={busy || !!game.pendingChoice || !canClearAndDraw}
+                  onClick={() => run(() => api.clearAndDraw(gameId))}
+                >
                   Clear &amp; Draw
                 </button>
                 <button
-                  disabled={busy || !(canAdvanceToRollAndReroll || canAdvanceToMain)}
+                  disabled={busy || !!game.pendingChoice || !(canAdvanceToRollAndReroll || canAdvanceToMain)}
                   onClick={() => run(() => api.advanceStep(gameId))}
                 >
                   Advance Step
                 </button>
-                <button disabled={busy || !canRoll} onClick={() => run(() => api.roll(gameId))}>
+                <button
+                  disabled={busy || !!game.pendingChoice || !canRoll}
+                  onClick={() => run(() => api.roll(gameId))}
+                >
                   Roll {canRoll ? `(${unrolledStepDice.length} dice)` : ""}
                 </button>
-                <button disabled={busy || !canEnterAttack} onClick={() => run(() => api.enterAttackStep(gameId))}>
+                <button
+                  disabled={busy || !!game.pendingChoice || !canEnterAttack}
+                  onClick={() => run(() => api.enterAttackStep(gameId))}
+                >
                   Enter Attack Step
                 </button>
-                <button disabled={busy || !canSkipAttack} onClick={() => run(() => api.skipAttackStep(gameId))}>
+                <button
+                  disabled={busy || !!game.pendingChoice || !canSkipAttack}
+                  onClick={() => run(() => api.skipAttackStep(gameId))}
+                >
                   Skip Attack Step
                 </button>
-                <button disabled={busy || !canDeclareBlockers} onClick={confirmBlockers}>
+                <button disabled={busy || !!game.pendingChoice || !canDeclareBlockers} onClick={confirmBlockers}>
                   Declare Blockers ({combatAssignments.length === 0 ? "none" : `${combatAssignments.length} assigned`})
                 </button>
                 <button
-                  disabled={busy || !canAssignDamage}
+                  disabled={busy || !!game.pendingChoice || !canAssignDamage}
                   onClick={() => run(() => api.assignCombatDamage(gameId, [], []))}
                 >
                   Assign Combat Damage (no blocks)
                 </button>
-                <button disabled={busy || !canCleanUp} onClick={() => run(() => api.cleanUp(gameId))}>
+                <button
+                  disabled={busy || !!game.pendingChoice || !canCleanUp}
+                  onClick={() => run(() => api.cleanUp(gameId))}
+                >
                   End Turn (Clean up)
                 </button>
               </div>
             </details>
 
-            {globalFlow ? (
+            {game.pendingChoice ? (
+              <PendingChoicePanel
+                pendingChoice={game.pendingChoice}
+                dice={game.dice}
+                cardsById={cardsById}
+                busy={busy}
+                onConfirm={(ids) => run(() => api.resolvePendingChoice(gameId, ids))}
+              />
+            ) : globalFlow ? (
               <div className="action-tray global-flow-notice">
                 <p>
                   Selecting {globalFlow.stage === "energy" ? "energy" : "target(s)"} for a Global ability - see the

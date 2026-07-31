@@ -3348,3 +3348,103 @@ closes out the 7-increment UI push: Range/Infiltrate/Tag Out windows,
 Call Out targeting, and WhenFielded targeting are all now reachable and
 working in the live client, plus the `IsImplemented` catalog flag and
 rebuilt rosters that made the whole push possible to actually exercise.
+
+## Status update — a general "pending mid-resolution choice" mechanism (Corrupt, RedrawFromBag)
+
+Closes the `/clear-and-draw` half of next-steps item #9 (Cosmic Cube/Rip
+Hunter's `WhenDrawn`/`ClearAndDraw` abilities never had a way to receive
+a real choice through the API) and Corrupt's own long-standing "worked
+around" caveat from its original implementation. Investigated exposing
+the underlying "draw one die from bag" primitive directly over the API
+first (discussed with the user) - decided against it: the draw itself
+has no player agency (forced, unconditional), so a repeatable
+client-facing draw endpoint would only add attack surface (bag-
+composition probing, half-completed multi-call sequences) with no rules
+benefit, and would break this project's own "one HTTP action per
+rules-level decision" convention (`SpendEnergy`/`DrawFromBag` are
+internal helpers precisely because their sub-steps aren't real player
+decisions). Also checked whether this pattern is rare enough to leave
+bespoke - it isn't: Corrupt (Polaris, WhenFielded), RedrawFromBag
+(Cosmic Cube WhenDrawn, Rip Hunter ClearAndDraw), and a real
+not-yet-built card (Heist - "target opponent draws 2 dice... place one
+in their Prep Area, roll the other into your Reserve Pool...") all
+share the identical "draw randomly mid-effect, then a real choice about
+the results" shape across three different trigger types. Built one
+shared mechanism instead of three bespoke ones.
+
+- **`GameState.PendingChoice`/`PendingQueue`** - a single-slot mid-
+  resolution choice (`ControllerId`, `Description`, `CandidateDieIds`,
+  `AllowMultiple`, and a `Resolve` closure capturing whatever the
+  specific effect needs to finish once answered - same "pass a closure"
+  seam `EffectContext.ResolveTargets` already uses). `PendingQueue`
+  preserves whatever else was still queued when the pause happened, so
+  a second ability enqueued alongside a pausing one doesn't get lost.
+- **`AbilityQueue.Drain`** gained an optional `shouldStop` check
+  (after each ability, not before, so the pausing ability still
+  finishes its own `resolve` call) - fully backward compatible, every
+  existing call site keeps working unchanged.
+- **`EffectInterpreter`**: `Corrupt` and `RedrawFromBag` no longer ever
+  consult `ctx.ResolveTargets` for their post-draw choice - there's
+  never a legitimate answer a caller could supply upfront, since the
+  candidates either don't exist yet (Corrupt) or the player hasn't seen
+  them yet (RedrawFromBag - its candidates technically already sit in a
+  real zone before `Execute` runs, but there's still no round-trip for
+  the player to see them first). Both always pause via `PendingChoice`
+  when a real choice exists (`Corrupt`: 2+ drawn; `RedrawFromBag`: any
+  legal candidate, since "you may send any number of them" makes even
+  one candidate a real yes/no decision). `RedrawFromBag` also came out
+  of the upfront `CollectTargetSpecs` walk entirely - confirmed this
+  doesn't affect `NeedsTarget()`'s existing callers (Cosmic Cube/Rip
+  Hunter's triggers aren't `Global`/`WhenFielded`, the only places that
+  matters). `Sequence`'s mutating loop also gained a one-line early-exit
+  on `PendingChoice` so a future card that puts a pausing effect earlier
+  in a longer `Sequence` doesn't keep running later steps before the
+  choice is answered - not exercised by any current card, but cheap and
+  directly adjacent to what was already being touched.
+- **API**: `GamesController` gained a `RequireNoPendingChoice` helper
+  (replacing the raw `store.Get(gameId)` at the top of every action
+  endpoint except `Create`/`Get`) that throws if a choice is
+  outstanding - rule 3.2's own "finish resolving before anything else"
+  timing means no other game action is legal while one's pending. New
+  `POST /resolve-pending-choice` validates the caller's answer against
+  the real candidate set before ever invoking `PendingChoice.Resolve`
+  (same trust-boundary shape every other endpoint already uses), then
+  resumes draining `PendingQueue` if anything was left in it.
+  `GameStateDto` exposes the pending choice (or null) to the client.
+- **Client**: new `PendingChoicePanel` (radio buttons for `Corrupt`'s
+  exactly-one choice, checkboxes for `RedrawFromBag`'s any-subset
+  choice - same checklist shape as `InfiltrateWindowPanel`). Since
+  `pendingChoice` lives on the fetched `GameState` itself (not local
+  flow state like `globalFlow`/`fieldTargetFlow`), it needed no new
+  `useState` - just the first branch in `App.tsx`'s panel-swap chain,
+  ahead of everything else, plus disabling the "Advance to:" and
+  "Manual step actions" buttons while it's set so nothing offers a
+  guaranteed-to-fail click.
+- Rewrote all 8 existing Corrupt/RedrawFromBag tests for the new
+  two-call shape (`Execute` once, assert `PendingChoice`, call
+  `.Resolve(...)` directly, assert final state) and added 3 new ones:
+  `AbilityQueue`'s `shouldStop` mechanics in isolation, resuming after
+  an early stop, and an end-to-end two-queued-abilities test proving
+  the property that matters most here - a second ability enqueued
+  alongside a pausing one waits, then runs, in original order.
+
+Verified end-to-end in a real headless-Chromium session against Cosmic
+Cube "Infinite Possibilities" (already on Team B's live roster, no
+roster change needed): purchased it, cycled turns until it was drawn
+again from the bag on a real Clear & Draw, confirmed the panel appeared
+showing the actual 4 just-drawn dice, confirmed every "Advance to:"
+button was disabled while it was outstanding, chose one die to send
+away, confirmed it landed in Out of Play and a replacement was drawn
+(Drawn This Turn stayed at 4), and confirmed normal play resumed
+immediately afterward (Roll & Reroll re-enabled). Corrupt (Polaris)
+isn't on either live roster - covered by the rewritten/new engine-level
+tests only, consistent with how off-roster cards are verified elsewhere.
+
+Explicitly did not build Heist this pass (flagged by the user
+mid-session): its own text moves a die into an *opponent's* Reserve
+Pool under your control, which is a real, separate gap (cross-player
+die control isn't modeled anywhere in this engine yet) - not a
+drop-in use of the new mechanism, even though the draw-then-choose
+*half* of it would reuse `PendingChoice` directly.
+
+`dotnet build`, `dotnet test` (265/265), `npm run build` all clean.

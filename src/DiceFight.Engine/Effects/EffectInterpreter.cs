@@ -63,7 +63,10 @@ public static class EffectInterpreter
             case ForceBlock n: if (!n.Target.IsSelf) yield return n.Target; break;
             case SetCallOutTarget n: if (!n.Target.IsSelf) yield return n.Target; break;
             case Corrupt n: yield return n.PlayerTarget; break; // never Self - see TargetSpec.Player
-            case RedrawFromBag n: if (!n.Target.IsSelf) yield return n.Target; break;
+            // RedrawFromBag's own choice is deliberately NOT collected
+            // here - see its case in the mutating Execute below for why
+            // (same "can't be answered upfront" reasoning as Corrupt,
+            // just for a different reason).
             case MoveDie n: if (!n.Target.IsSelf) yield return n.Target; break;
             case ModifyStat n: if (!n.Target.IsSelf) yield return n.Target; break;
             case Reroll n: if (!n.Target.IsSelf) yield return n.Target; break;
@@ -86,7 +89,18 @@ public static class EffectInterpreter
                 // Rule 3.1.7 - multiple effects in one ability resolve
                 // sequentially, in the order the card text lists them.
                 foreach (var step in seq.Steps)
+                {
                     Execute(step, ctx, cache);
+                    // A step that just raised a PendingChoice (Corrupt/
+                    // RedrawFromBag) hasn't actually finished yet - later
+                    // steps must wait for it to be answered, not run
+                    // ahead of a choice that's still open. Not exercised
+                    // by any currently-authored card (Corrupt/
+                    // RedrawFromBag are always a whole ability by
+                    // themselves today, never one step of a longer
+                    // Sequence), but cheap to get right now.
+                    if (ctx.State.PendingChoice is not null) break;
+                }
                 break;
 
             case DealDamage dealDamage:
@@ -303,45 +317,91 @@ public static class EffectInterpreter
                 if (drawn.Count == 0) break; // nothing left anywhere, even after refilling
 
                 // The choice only exists among these specific just-drawn
-                // dice - can't go through the normal cached Resolve/
-                // LegalTargets path (see the Corrupt record's remarks), so
-                // this calls ctx.ResolveTargets directly and validates the
-                // answer itself, the same way Resolve validates a normal
-                // chosen target against its legal set.
-                var choiceSpec = TargetSpec.AnyDie(
-                    "choose one drawn die to place in the Used Pile", TargetOwnership.Any, [Zone.DiceFromBag]);
-                var chosenId = drawn.Count == 1 ? drawn[0].Id : ctx.ResolveTargets(choiceSpec).FirstOrDefault();
-                var chosen = drawn.FirstOrDefault(d => d.Id == chosenId)
-                    ?? throw new InvalidOperationException(
-                        $"Corrupt's chosen die must be one of the {drawn.Count} just-drawn dice.");
+                // dice, which didn't exist in any queryable zone before
+                // this exact call - can't go through the normal cached
+                // Resolve/LegalTargets path (see the Corrupt record's
+                // remarks), and there's no legitimate answer a caller
+                // could have supplied upfront either, since the dice to
+                // choose among didn't exist yet when the request was
+                // made. So this always pauses via PendingChoice - see
+                // its own remarks and GameState.PendingChoice - rather
+                // than ever consulting ctx.ResolveTargets for it.
+                if (drawn.Count == 1)
+                {
+                    // No real choice among which - resolves immediately,
+                    // same as always.
+                    drawn[0].Zone = Zone.UsedPile;
+                    drawn[0].ResetToUnrolled();
+                    break;
+                }
 
-                chosen.Zone = Zone.UsedPile;
-                chosen.ResetToUnrolled();
-                foreach (var d in drawn.Where(d => d != chosen))
-                    d.Zone = Zone.Bag; // "the rest are returned to the bag"
+                ctx.State.PendingChoice = new PendingChoice
+                {
+                    ControllerId = ctx.ControllerId,
+                    Description = "Choose one drawn die to place in the Used Pile - the rest return to the bag.",
+                    CandidateDieIds = drawn.Select(d => d.Id).ToList(),
+                    AllowMultiple = false,
+                    Resolve = chosenIds =>
+                    {
+                        var chosen = drawn.First(d => d.Id == chosenIds[0]);
+                        chosen.Zone = Zone.UsedPile;
+                        chosen.ResetToUnrolled();
+                        foreach (var d in drawn.Where(d => d != chosen))
+                            d.Zone = Zone.Bag; // "the rest are returned to the bag"
+                    }
+                };
                 break;
             }
 
             case RedrawFromBag redraw:
             {
-                var chosen = Resolve(ctx, redraw.Target, cache);
-                foreach (var id in chosen)
-                {
-                    var die = FindDie(ctx, id);
-                    die.Zone = redraw.ToZone;
-                    // Rule - Out of Play is deliberately not treated as a
-                    // dormant zone (see DieInstance.ResetToUnrolled's own
-                    // remarks); everything else this can target (Used
-                    // Pile) is.
-                    if (redraw.ToZone != Zone.OutOfPlay) die.ResetToUnrolled();
-                }
+                // Unlike most targets, this one's candidates DO already
+                // exist in a real, queryable zone before this call even
+                // starts (Cosmic Cube/Rip Hunter's dice were drawn by
+                // TurnEngine.ClearAndDraw itself, earlier, before the
+                // ability queue even began draining) - but the player
+                // still can't answer this in the same request as the
+                // trigger, since there's no round-trip for them to see
+                // what was actually drawn first. So this bypasses the
+                // normal cached Resolve() pipeline too (computing legal
+                // targets directly, the same call Resolve() itself makes
+                // internally) and always pauses via PendingChoice when
+                // there's anything to redraw at all - "you may send any
+                // number of them" means even a single candidate is a
+                // real yes/no decision, not something to skip like
+                // Corrupt's single-candidate case above.
+                var legal = LegalTargets.Query(ctx.State, ctx.ControllerId, redraw.Target);
+                if (legal.Count == 0) break; // nothing eligible to redraw
 
-                // "For each die sent [to ToZone], draw a die" - lands in
-                // DiceFromBag (see the record's remarks), to be rolled
-                // together with the rest of this turn's draw once Roll
-                // runs, not immediately.
-                if (chosen.Count > 0)
-                    TurnEngine.DrawFromBag(ctx.State, ctx.ControllerId, chosen.Count, ctx.Random);
+                ctx.State.PendingChoice = new PendingChoice
+                {
+                    ControllerId = ctx.ControllerId,
+                    Description = redraw.Target.Description,
+                    CandidateDieIds = legal,
+                    AllowMultiple = true,
+                    Resolve = chosenIds =>
+                    {
+                        foreach (var id in chosenIds)
+                        {
+                            var die = FindDie(ctx, id);
+                            die.Zone = redraw.ToZone;
+                            // Rule - Out of Play is deliberately not
+                            // treated as a dormant zone (see
+                            // DieInstance.ResetToUnrolled's own
+                            // remarks); everything else this can target
+                            // (Used Pile) is.
+                            if (redraw.ToZone != Zone.OutOfPlay) die.ResetToUnrolled();
+                        }
+
+                        // "For each die sent [to ToZone], draw a die" -
+                        // lands in DiceFromBag (see the record's
+                        // remarks), to be rolled together with the rest
+                        // of this turn's draw once Roll runs, not
+                        // immediately.
+                        if (chosenIds.Count > 0)
+                            TurnEngine.DrawFromBag(ctx.State, ctx.ControllerId, chosenIds.Count, ctx.Random);
+                    }
+                };
                 break;
             }
 

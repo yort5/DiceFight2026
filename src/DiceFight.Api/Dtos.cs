@@ -54,16 +54,28 @@ public sealed record PlayerDto(string Id, string Name, int Life)
     public static PlayerDto From(Player player) => new(player.Id, player.Name, player.Life);
 }
 
+// Exposed whenever GameState.PendingChoice is set (keyword Corrupt,
+// RedrawFromBag - see PendingChoice's own remarks) - every other action
+// endpoint refuses to run while this is non-null, so the client's only
+// legal move is POST .../resolve-pending-choice.
+public sealed record PendingChoiceDto(
+    string ControllerId, string Description, IReadOnlyList<string> CandidateDieIds, bool AllowMultiple)
+{
+    public static PendingChoiceDto From(PendingChoice pending) =>
+        new(pending.ControllerId, pending.Description, pending.CandidateDieIds, pending.AllowMultiple);
+}
+
 public sealed record GameStateDto(
     string GameId, string ActivePlayerId, string CurrentStep, string AttackSubStep,
     bool IsFirstTurn, bool EpicBasicActionUsedThisTurn,
-    PlayerDto PlayerOne, PlayerDto PlayerTwo, IReadOnlyList<DieDto> Dice)
+    PlayerDto PlayerOne, PlayerDto PlayerTwo, IReadOnlyList<DieDto> Dice, PendingChoiceDto? PendingChoice)
 {
     public static GameStateDto From(string gameId, GameState state) => new(
         gameId, state.ActivePlayerId, state.CurrentStep.ToString(), state.AttackSubStep.ToString(),
         state.IsFirstTurn, state.EpicBasicActionUsedThisTurn,
         PlayerDto.From(state.PlayerOne), PlayerDto.From(state.PlayerTwo),
-        state.Dice.Select(DieDto.From).ToList());
+        state.Dice.Select(DieDto.From).ToList(),
+        state.PendingChoice is { } pending ? PendingChoiceDto.From(pending) : null);
 }
 
 // ---- Request bodies ----
@@ -103,3 +115,4 @@ public sealed record RangeAssignment(string RangeDieId, string TargetDieId);
 // so there's no BlockAssignment payload to resend here either.
 public sealed record ResolveRangeRequest(
     IReadOnlyList<RangeAssignment> ActivePlayerAssignments, IReadOnlyList<RangeAssignment> InactivePlayerAssignments);
+public sealed record ResolvePendingChoiceRequest(IReadOnlyList<string> ChosenDieIds);
