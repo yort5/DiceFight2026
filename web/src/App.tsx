@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "./api";
 import { ActionTray } from "./ActionTray";
 import { InfiltrateWindowPanel } from "./AttackWindowPanels";
@@ -23,6 +23,14 @@ function App() {
   // can't just be chained automatically. Reset to [] any time we leave
   // the Attack Step (see run()), so it never leaks into a later turn.
   const [combatAssignments, setCombatAssignments] = useState<BlockAssignment[]>([]);
+  // `busy` (React state) only disables buttons on the *next* render - a
+  // fast double-click can fire a second action before that render happens
+  // (e.g. two Declare Attackers calls landing back to back, the second
+  // arriving after the sub-step already moved on and bouncing off the
+  // server with a confusing "Expected DeclareAttackers, was
+  // DeclareBlockers" error). This ref is checked synchronously inside the
+  // click handler itself, so it closes that gap regardless of render timing.
+  const busyRef = useRef(false);
 
   useEffect(() => {
     api.getCards().then(setCards).catch((e) => setError(String(e)));
@@ -55,6 +63,8 @@ function App() {
   }
 
   async function run(action: () => Promise<GameState>) {
+    if (busyRef.current) return;
+    busyRef.current = true;
     setError(null);
     setBusy(true);
     try {
@@ -65,6 +75,7 @@ function App() {
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   }
@@ -108,7 +119,8 @@ function App() {
   }
 
   async function submitGlobalAbility(energyIds: string[], targetIds: string[]) {
-    if (!globalFlow || !gameId) return;
+    if (!globalFlow || !gameId || busyRef.current) return;
+    busyRef.current = true;
     setError(null);
     setBusy(true);
     try {
@@ -119,6 +131,7 @@ function App() {
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   }

@@ -388,6 +388,41 @@ public class TwoTeamsDemoTests
         Assert.Contains("once per turn", ex.Message);
     }
 
+    // Regression: PrepFromBagIfPurchasedThisTurn/PrepFromBag used to pick
+    // straight from Zone.Bag without TurnEngine.DrawFromBag's own "refill
+    // from the Used Pile when the Bag is empty" step, so the ability
+    // silently no-op'd (not even an error) whenever the Bag itself was
+    // empty but the Used Pile had dice - exactly what a real game hits
+    // once a player's first lap through their own dice finishes.
+    [Fact]
+    public void UsingStarfireGlobalAbility_RecyclesUsedPileIntoBag_WhenBagIsEmpty()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamB";
+
+        // Pull out the energy this test needs first (GiveWildEnergy sources
+        // from Zone.Bag), then dump whatever's left of the Bag into the
+        // Used Pile - same shape a real game reaches once a player's first
+        // lap through their own dice finishes and the Bag runs dry.
+        var purchaseEnergy = GiveWildEnergy(state, "teamB", 3);
+        var globalEnergy = GiveWildEnergy(state, "teamB", 1);
+        foreach (var die in state.DiceIn("teamB", Zone.Bag).ToList()) die.Zone = Zone.UsedPile;
+        Assert.True(state.DiceIn("teamB", Zone.UsedPile).Count() > 0);
+        Assert.Empty(state.DiceIn("teamB", Zone.Bag));
+
+        var toBuy = FindUnpurchased(state, "teamB", SampleCards.GodEmperorDoom.Id);
+        TurnEngine.Purchase(state, toBuy.Id, purchaseEnergy.Select(d => d.Id).ToList());
+        Assert.True(state.PlayerTwo.PurchasedDieThisTurn);
+
+        var queue = new AbilityQueue();
+        TurnEngine.UseGlobalAbility(
+            state, queue, SampleCards.Starfire.Id, "teamB", globalEnergy.Select(d => d.Id).ToList());
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [])));
+
+        Assert.Single(state.DiceIn("teamB", Zone.PrepArea));
+    }
+
     [Fact]
     public void Fielding_WithATypedDoubleEnergyDie_SpinsDownTheLeftoverInsteadOfSpendingTheWholeDie()
     {

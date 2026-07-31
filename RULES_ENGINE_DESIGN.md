@@ -3533,3 +3533,47 @@ Checking Ricochet and confirming Infiltrate correctly dealt 1 damage
 its own `WhenInfiltrates` reactor (a Sidekick landed in Prep Area), and
 advanced the sub-step to `ActionAndGlobalWindow`. `dotnet test` still
 261/261 (server untouched this increment). Next: the Tag Out window.
+
+## Status update — two bugs found live-testing the just-rebuilt rosters
+
+Paused Attack Step UI work to fix two real bugs the user hit playing the
+newly-refreshed live rosters (not part of any increment above, but worth
+fixing immediately since they affect the deployed game right now).
+
+- **`PrepFromBag`/`PrepFromBagIfPurchasedThisTurn` didn't refill an empty
+  Bag from the Used Pile.** Both effects (Starfire "No-Nonsense Warrior"'s
+  Global, and Ricochet's `WhenInfiltrates` reactor) picked straight from
+  `Zone.Bag`, unlike `TurnEngine.DrawFromBag`'s own explicit "if the Bag's
+  empty, shuffle the Used Pile back in" step - so once a player's first
+  lap through their own dice finished (Bag empty, Used Pile full, the
+  normal state after a few turns), the ability silently no-op'd instead
+  of erroring or working. User repro: purchased Apocalypse, then paid for
+  Starfire's Global with an empty Bag - nothing landed in Prep Area.
+  Fixed both cases in `EffectInterpreter.cs` to go through
+  `TurnEngine.DrawFromBag` (lands in `Zone.DiceFromBag`, same as `Corrupt`
+  already does) and then move the drawn die to `Zone.PrepArea`, instead of
+  duplicating the pick logic without the refill. Added
+  `UsingStarfireGlobalAbility_RecyclesUsedPileIntoBag_WhenBagIsEmpty` to
+  `TwoTeamsDemoTests.cs` as a regression test.
+- **A fast double-click could fire an action twice before React re-rendered
+  to disable the button** - `busy` is React state, so it only takes effect
+  on the *next* render; two clicks landing within that window both went
+  through, and the second bounced off the server with a real but confusing
+  error (user repro: declaring Black Widow + Apocalypse as attackers threw
+  "Expected Attack sub-step DeclareAttackers, was DeclareBlockers" - the
+  first Declare Attackers call had already succeeded and advanced the
+  sub-step by the time the second one landed). Fixed with a `busyRef`
+  (`useRef`) checked synchronously at the top of both `run()` and
+  `submitGlobalAbility()` - the app's only two action-dispatch entry
+  points - so a second call is dropped immediately regardless of render
+  timing, not just discouraged via a disabled attribute.
+
+Also noted but explicitly deferred (user: "we can brainstorm some options
+later") - better attacker/blocker UX so the two sides' dice can be lined
+up against each other spatially (e.g. rotating each side's board to face
+the other, or stacking Team B above Team A) instead of today's two
+side-by-side boards with no visual attacker-to-blocker correspondence.
+Not started.
+
+`dotnet test` 262/262 (261 + the new regression test), `npm run build`
+clean. Resuming the Attack Step UI increments next: the Tag Out window.

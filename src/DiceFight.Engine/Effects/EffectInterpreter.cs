@@ -348,19 +348,21 @@ public static class EffectInterpreter
             case PrepFromBagIfPurchasedThisTurn:
                 if (ctx.State.GetPlayer(ctx.ControllerId).PurchasedDieThisTurn)
                 {
-                    var bag = ctx.State.DiceIn(ctx.ControllerId, Zone.Bag).ToList();
-                    var picked = ctx.Random is not null ? bag.ElementAtOrDefault(ctx.Random.Next(bag.Count)) : bag.FirstOrDefault();
-                    if (picked is not null)
-                        picked.Zone = Zone.PrepArea;
+                    // TurnEngine.DrawFromBag already handles refilling an
+                    // empty Bag from the Used Pile (rule 2.1.8-adjacent
+                    // "when the bag is empty, shuffle the used pile back
+                    // in") - picking straight from Zone.Bag here missed
+                    // that refill entirely, so a die sitting in the Used
+                    // Pile could never be reached by this ability.
+                    var drawn = TurnEngine.DrawFromBag(ctx.State, ctx.ControllerId, 1, ctx.Random);
+                    if (drawn.Count > 0) drawn[0].Zone = Zone.PrepArea;
                 }
                 break;
 
             case PrepFromBag:
             {
-                var bag = ctx.State.DiceIn(ctx.ControllerId, Zone.Bag).ToList();
-                var picked = ctx.Random is not null ? bag.ElementAtOrDefault(ctx.Random.Next(bag.Count)) : bag.FirstOrDefault();
-                if (picked is not null)
-                    picked.Zone = Zone.PrepArea;
+                var drawn = TurnEngine.DrawFromBag(ctx.State, ctx.ControllerId, 1, ctx.Random);
+                if (drawn.Count > 0) drawn[0].Zone = Zone.PrepArea;
                 break;
             }
 
