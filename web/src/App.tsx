@@ -3,6 +3,7 @@ import { api } from "./api";
 import { ActionTray } from "./ActionTray";
 import { InfiltrateWindowPanel, RangeWindowPanel, TagOutWindowPanel } from "./AttackWindowPanels";
 import { DamageSplitPanel, DeclareBlockersPanel } from "./CombatPanel";
+import { DeclareAttackersPanel } from "./DeclareAttackersPanel";
 import { GlobalAbilitiesPanel, type GlobalAbilityFlow } from "./GlobalAbilitiesPanel";
 import { HowToPlay } from "./HowToPlay";
 import { PlayerBoard, type Selection } from "./PlayerBoard";
@@ -175,6 +176,11 @@ function App() {
     run(() => api.resolveRange(gameId, active, inactive));
   }
 
+  function declareAttackers(attackerDieIds: string[], targetDieIds: string[]) {
+    if (!gameId) return;
+    run(() => api.declareAttackers(gameId, attackerDieIds, targetDieIds));
+  }
+
   async function confirmDamageSplits(splits: DamageSplit[]) {
     if (!gameId) return;
     await run(() => api.assignCombatDamage(gameId, combatAssignments, splits));
@@ -222,6 +228,7 @@ function App() {
   const canAdvanceToMain = game?.currentStep === "RollAndReroll" && unrolledStepDice.length === 0;
   const canEnterAttack = game?.currentStep === "Main";
   const canSkipAttack = game?.currentStep === "Main";
+  const canDeclareAttackers = game?.currentStep === "Attack" && game.attackSubStep === "DeclareAttackers";
   const canDeclareBlockers = game?.currentStep === "Attack" && game.attackSubStep === "DeclareBlockers";
   const canResolveInfiltrate = game?.currentStep === "Attack" && game.attackSubStep === "InfiltrateWindow";
   const canResolveTagOut = game?.currentStep === "Attack" && game.attackSubStep === "TagOutWindow";
@@ -303,8 +310,8 @@ function App() {
                   {opt.label}
                 </button>
               ))}
-              {game.currentStep === "Attack" && game.attackSubStep === "DeclareAttackers" && (
-                <span className="hint">Select attacker(s) on the board, then use the Action Tray.</span>
+              {canDeclareAttackers && (
+                <span className="hint">Select attacker(s) on the board, then use the panel below.</span>
               )}
             </section>
 
@@ -360,6 +367,16 @@ function App() {
                 busy={busy}
                 onClearSelection={clearSelection}
                 onConfirm={confirmRange}
+              />
+            ) : canDeclareAttackers ? (
+              <DeclareAttackersPanel
+                game={game}
+                dice={game.dice}
+                cardsById={cardsById}
+                selection={selection}
+                busy={busy}
+                onClearSelection={clearSelection}
+                onSubmit={declareAttackers}
               />
             ) : canDeclareBlockers ? (
               <DeclareBlockersPanel

@@ -71,7 +71,11 @@ public sealed record UseActionDieRequest(string DieId, IReadOnlyList<string>? Ta
 public sealed record UseGlobalAbilityRequest(
     string CardId, string PlayerId, IReadOnlyList<string> EnergyDieIds, IReadOnlyList<string>? TargetDieIds);
 public sealed record RerollRequest(IReadOnlyList<string> RerollDieIds);
-public sealed record DeclareAttackersRequest(IReadOnlyList<string> AttackerDieIds);
+// TargetDieIds feeds Call Out's WhenAttacks-triggered SetCallOutTarget
+// effect (see GamesController.DeclareAttackers's Drain call) - null/empty
+// is fine for every combat that doesn't include a Call Out attacker.
+public sealed record DeclareAttackersRequest(
+    IReadOnlyList<string> AttackerDieIds, IReadOnlyList<string>? TargetDieIds = null);
 public sealed record BlockAssignment(string AttackerDieId, string BlockerDieId);
 public sealed record DeclareBlockersRequest(IReadOnlyList<BlockAssignment> Assignments);
 public sealed record DamageSplit(string AttackerDieId, string BlockerDieId, int Amount);

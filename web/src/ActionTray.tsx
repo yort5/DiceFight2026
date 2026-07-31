@@ -92,20 +92,6 @@ export function ActionTray(props: {
     });
   }
 
-  if (
-    game.currentStep === "Attack" &&
-    game.attackSubStep === "DeclareAttackers" &&
-    primaryDie.zone === "FieldZone" &&
-    isActiveController
-  ) {
-    actions.push({
-      key: "declare-attackers",
-      label: "Declare Attackers",
-      hint: "Primary + secondary selections = every die attacking this turn",
-      run: () => api.declareAttackers(game.gameId, [primaryDie.id, ...secondaryIds]),
-    });
-  }
-
   return (
     <div className="action-tray">
       <div className="selection-summary">

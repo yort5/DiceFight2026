@@ -3646,3 +3646,45 @@ clean. Remaining: Call Out targeting at Declare Attackers, then
 WhenFielded targeting (Intimidate/Dazzler/God Emperor Doom/Polaris) -
 both need small server-side DTO additions, unlike the three windows
 above.
+
+## Status update — Call Out targeting at Declare Attackers (Increment 6)
+
+First of the two remaining gaps that needed a server-side change, not
+just client wiring - `DeclareAttackersRequest` had no way to carry a
+target at all. **Server**: `Dtos.cs` - `DeclareAttackersRequest` gained
+an optional `TargetDieIds` (defaults null, same nullable-optional shape
+as `UseActionDieRequest`/`UseGlobalAbilityRequest` - every existing
+caller keeps compiling/working unchanged); `GamesController.DeclareAttackers`
+now passes `request.TargetDieIds` into `Drain` instead of a hardcoded
+`null`.
+
+**Client**: `api.ts`'s `declareAttackers` gained a `targetDieIds: string[] = []`
+default param. Pulled "Declare Attackers" out of `ActionTray.tsx`
+entirely into new `DeclareAttackersPanel.tsx`, an internal two-stage
+`"attackers" | "call-out-targets"` flow: stage 1 reuses `selection`
+exactly like the old Action Tray button did (primary + secondary =
+every FieldZone die attacking); clicking "Declare Attackers" checks
+whether any chosen attacker has the Call Out keyword - if none do, it
+submits immediately with no targets (byte-for-byte the same request
+shape as before this increment), otherwise it remembers the chosen
+attacker ids in local state and moves to stage 2, which asks for a
+target using the same click-to-select idiom the Global ability
+"targets" stage already uses. Documented, accepted limitation carried
+over from the plan: `Drain`'s single shared target list means two
+*different* Call Out attackers declared in the same batch would both
+resolve against the same target - moot today (Black Widow is the only
+Call Out card on either roster), same class of limitation as the
+existing Casket of Ancient Winters note.
+
+Verified end-to-end in a real headless-Chromium session: declared Black
+Widow (Team A) as a lone attacker, picked Team B's Groot as its Call Out
+target in the new stage-2 panel, then confirmed the restriction is for
+real, not just cosmetic - attempting to block with a *different* Team B
+die (Falcon) was correctly rejected server-side with "Black Widow was
+Called Out - only its target may legally block it," while blocking with
+Groot (the actual target) was accepted and proceeded normally into
+damage assignment.
+
+`dotnet build`, `dotnet test` (262/262), `npm run build` all clean.
+Last remaining increment: WhenFielded targeting (Intimidate/Dazzler/God
+Emperor Doom/Polaris).

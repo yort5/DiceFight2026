@@ -60,10 +60,10 @@ export const api = {
 
   enterAttackStep: (id: string) => request<GameState>(`/games/${id}/enter-attack-step`, { method: "POST" }),
   skipAttackStep: (id: string) => request<GameState>(`/games/${id}/skip-attack-step`, { method: "POST" }),
-  declareAttackers: (id: string, attackerDieIds: string[]) =>
+  declareAttackers: (id: string, attackerDieIds: string[], targetDieIds: string[] = []) =>
     request<GameState>(`/games/${id}/declare-attackers`, {
       method: "POST",
-      body: JSON.stringify({ attackerDieIds }),
+      body: JSON.stringify({ attackerDieIds, targetDieIds }),
     }),
   declareBlockers: (id: string, assignments: BlockAssignment[]) =>
     request<GameState>(`/games/${id}/declare-blockers`, {

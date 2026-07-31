@@ -129,7 +129,7 @@ public sealed class GamesController(GameStore store) : ControllerBase
         var state = store.Get(gameId);
         var queue = new AbilityQueue();
         CombatEngine.DeclareAttackers(state, queue, request.AttackerDieIds);
-        Drain(state, queue, null);
+        Drain(state, queue, request.TargetDieIds);
         return Ok(GameStateDto.From(gameId, state));
     }
 
