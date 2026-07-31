@@ -9,6 +9,7 @@ import { GlobalAbilitiesPanel, type GlobalAbilityFlow } from "./GlobalAbilitiesP
 import { HowToPlay } from "./HowToPlay";
 import { PendingChoicePanel } from "./PendingChoicePanel";
 import { PlayerBoard, type Selection } from "./PlayerBoard";
+import { navigate } from "./router";
 import type { BlockAssignment, CardDef, DamageSplit, GameState, RangeAssignment, TagOutUse } from "./types";
 import "./App.css";
 
@@ -327,6 +328,7 @@ function App() {
           New Game (Team A vs Team B)
         </button>
         <button onClick={() => setShowHowToPlay(true)}>How to Play</button>
+        <button onClick={() => navigate("/teambuilder")}>Team Builder</button>
         {error && <div className="error">{error}</div>}
       </header>
 

@@ -3448,3 +3448,92 @@ drop-in use of the new mechanism, even though the draw-then-choose
 *half* of it would reuse `PendingChoice` directly.
 
 `dotnet build`, `dotnet test` (265/265), `npm run build` all clean.
+
+## Status update — card catalog search/browse, and the client's first real route (`/teambuilder`)
+
+First step toward a real team builder (a user request) - deliberately
+sequenced by the user as search/browse first, team selection later. The
+old community "Teambuilder" tool at `/home/dalinar/DiceMasters/Teambuilder/`
+was the UX reference (a sortable table - Card Name/Purchase Cost/
+per-level Fielding Cost/Attack/Defense as sort columns - with text/
+checkbox filters, and the built team encoded into the URL's query
+string).
+
+**Went through two design revisions before landing, both from direct
+user feedback**:
+1. First draft was a `HowToPlay`-style modal. Rejected: the user pointed
+   out this tool has standalone value to someone who never opens the
+   digital game at all (building a team for real-life physical play),
+   and they want the old tool's "paste a URL, load a team" capability
+   kept - both mean it needs its own URL, not a modal hung off the game
+   view. Saved as a project memory (`dicefight2026-product-direction`)
+   since it's a recurring principle, not a one-off: anything with
+   standalone value outside an active game session should get a real
+   route.
+2. This meant introducing the client's first-ever routing. `web/
+   package.json` has zero dependencies beyond `react`/`react-dom` -
+   confirmed by reading it directly, matching this project's consistent
+   minimal-tooling style elsewhere (`oxlint` instead of eslint+prettier,
+   everything hand-rolled). Hand-rolled a ~30-line router (`router.ts`)
+   with `useSyncExternalStore` (the correct idiomatic React primitive
+   for subscribing to external mutable state like `window.location`)
+   rather than adding `react-router-dom` for what's currently just two
+   flat routes. `Program.cs`'s `MapFallbackToFile("index.html")` already
+   anticipated client-side routing (its own existing comment says so) -
+   confirmed a hard refresh on `/teambuilder` works with zero server
+   changes.
+
+**Also asked directly during scoping**: whether client-side filtering
+still holds up if the catalog grows to the full real card pool
+("thousands" of cards, per this doc's own "Source material reviewed"
+section) - answer: the filter/sort math stays fine at any realistic
+scale (sub-millisecond regardless), the actual risk at that size is
+initial payload weight and unvirtualized DOM rendering of thousands of
+`<tr>` rows. Built two cheap safeguards now rather than waiting for that
+to actually hurt: `useDeferredValue` on the search box (so typing
+doesn't force a full re-render every keystroke) and a 200-row render cap
+with a "narrow your search" hint. Real server-side filtering/pagination
+stays a known, flagged, not-yet-needed seam (next-steps item #12).
+
+- **`web/src/router.ts`**: `Route = "/game" | "/teambuilder"`,
+  `useRoute()` (reads `window.location.pathname`, subscribes to
+  `popstate`), `navigate(path)` (`history.pushState` + a synthetic
+  `popstate` dispatch, since `pushState` doesn't fire one itself).
+- **`web/src/Root.tsx`**: new tiny root component `main.tsx` now mounts
+  instead of `App` directly - picks `<App />` (unchanged - still
+  everything the game view always was) or `<TeamBuilderPage />` based on
+  `useRoute()`. `"/"` and any unrecognized path fall back to `/game`,
+  preserving today's existing bookmarks/behavior.
+- **`web/src/TeamBuilderPage.tsx`**: fetches the catalog itself
+  (`api.getCards()`, same call `App.tsx` already makes independently -
+  no shared state across the route boundary needed for this pass). Text
+  search (name/subtitle/rawText substring match), Type and Energy Type
+  filter checkboxes with options derived dynamically from the loaded
+  catalog (`[...new Set(cards.map(...))]`, not hardcoded - stays correct
+  as more cards/types get added), and an "show not-yet-fully-implemented
+  cards" toggle defaulting to **off** - directly using `CardDef.
+  IsImplemented` for exactly the purpose its own doc comment describes.
+  Real `<table>` (nothing in this codebase rendered one before) with
+  click-to-sort `<th>`s - Level 1 stats only for Fielding Cost/Attack/
+  Defense (not all 3 levels like the old tool - deliberate
+  simplification; full level progression + ability text still reachable
+  via a row tooltip, same "name/subtitle header + rawText body"
+  convention `dieHelpers.ts`'s `dieTooltip` already established).
+- `App.tsx` gained one header button ("Team Builder" -> `navigate("/teambuilder")`) - everything else about it is untouched.
+
+Verified end-to-end in a real headless-Chromium session: navigated
+`/game` -> `/teambuilder` via the new button and confirmed the URL and
+table both updated; hard-refreshed directly on `/teambuilder` and
+confirmed it still rendered (proving the server fallback + router's
+initial-path read both work, not just in-app navigation); used the
+browser back button and confirmed it correctly returned to `/game`;
+confirmed 37 of 53 cards show by default (`IsImplemented`-only) growing
+to all 53 with the toggle checked; searched "Apocalypse" and got exactly
+the one matching card; sorted by Purchase Cost and confirmed both
+ascending and reverse-on-second-click descending order; sorted by Level
+1 Attack and confirmed Action/Basic Action cards (no levels) correctly
+sort to one end; checked the "BasicAction" type filter and confirmed the
+result set narrowed to exactly that type.
+
+`npm run build` clean - no server changes this pass, so no
+`dotnet build`/`dotnet test` needed.

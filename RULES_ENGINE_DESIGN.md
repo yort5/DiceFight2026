@@ -140,6 +140,22 @@ here rather than assuming which approach they'd want.
     `App.tsx`'s panel-swap chain via `canResolveInfiltrate`/
     `canResolveTagOut`/`canResolveRange`. Verified end-to-end in a real
     browser session for all three (Ricochet/Big E/Starfire "Starbolts").
+12. Card catalog search/browse (`/teambuilder`, see its own status
+    update) is client-side filtering/sorting over the full `GET
+    /api/cards` payload - correct and fast at today's 53-card catalog,
+    but a real scaling seam if the full "thousands of cards" pool
+    (mentioned in "Source material reviewed" below) ever gets imported:
+    the fix at that point is either moving filtering server-side (query
+    params on `GET /api/cards`) or paginating properly, not a rewrite of
+    the client-side approach itself. Not urgent - flagged for whenever
+    the catalog actually grows that far.
+13. `/teambuilder` is read-only browse/search/sort only - no team
+    selection UI yet, and no query-string team encoding (the old
+    reference Teambuilder tool's "paste a URL, load a team" capability
+    the user explicitly wants kept). Natural next increment once
+    team-selection UI gets scoped - see the "card catalog" status
+    update's own "next increment" note for the rough shape
+    (`?team=id:count,id:count...`, exact scheme still TBD).
 
 ## Implemented keywords
 

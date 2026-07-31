@@ -827,3 +827,88 @@
   font-size: 13px;
   opacity: 0.8;
 }
+
+/* ---- Team Builder / card catalog (TeamBuilderPage.tsx) ---- */
+
+.hint {
+  font-size: 12px;
+  font-style: italic;
+  opacity: 0.7;
+}
+
+.card-catalog-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: rgba(127, 127, 127, 0.12);
+  margin-bottom: 12px;
+}
+
+.card-catalog-filters input[type="text"] {
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(127, 127, 127, 0.4);
+  min-width: 220px;
+}
+
+.card-catalog-filters fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  border: none;
+  padding: 0;
+  margin: 0;
+  max-width: 320px;
+}
+
+.card-catalog-filters legend {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.65;
+  padding: 0;
+}
+
+.card-catalog-filters label {
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.card-catalog-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.card-catalog-table th,
+.card-catalog-table td {
+  padding: 6px 10px;
+  text-align: left;
+  border-bottom: 1px solid rgba(127, 127, 127, 0.2);
+}
+
+.card-catalog-table th {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  opacity: 0.85;
+}
+
+.card-catalog-table th:hover {
+  opacity: 1;
+}
+
+.sort-arrow {
+  font-size: 10px;
+}
+
+.card-catalog-table tr.unimplemented {
+  opacity: 0.5;
+}
