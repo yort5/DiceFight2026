@@ -107,19 +107,18 @@ here rather than assuming which approach they'd want.
 8. ~~`TurnEngine.CleanUp` never clears `AppliedModifiers`~~ - fixed (see
    the status update): now demonstrably reachable (Wasp's real Attune
    buff), not just hypothetical, so no longer deferred.
-9. `GamesController`'s `/declare-attackers` endpoint has no `TargetDieIds`
-   on its request and always drains with an empty target list - found
-   while wiring Call Out (Black Widow's `WhenAttacks` ability is the
-   first one that's ever actually needed a real target; nothing before it
-   did). The web client currently has no way to choose a Call Out target
-   through the real API/UI. Fix shape when picked up: add `TargetDieIds`
-   to `DeclareAttackersRequest`, thread it into `Drain` like `/field` and
-   the others already do - and since attackers declare in a batch, this
-   probably needs a per-attacker target list eventually, not just one
-   flat list (same underlying limitation the AbilityQueue status update
-   already flagged for `Drain` in general). `/clear-and-draw` now has the
-   identical gap for the same reason (found while wiring Cosmic Cube's
-   `WhenDrawn` ability) - same fix shape applies there too.
+9. ~~`GamesController`'s `/declare-attackers` endpoint has no
+   `TargetDieIds`~~ - fixed for `/declare-attackers` specifically (see
+   the Increment 6 status update): `DeclareAttackersRequest` now carries
+   `TargetDieIds`, threaded into `Drain`, with a real web client flow
+   (`DeclareAttackersPanel`) that asks for a target whenever a declared
+   attacker has Call Out. The flat-single-target-list-per-batch
+   limitation this item originally flagged is still real (unfixed) - it
+   just doesn't matter yet since Black Widow is the only Call Out card
+   on either roster. **Still open**: `/clear-and-draw` has the identical
+   gap - Cosmic Cube's and Rip Hunter's `WhenDrawn`/`ClearAndDraw`
+   abilities still can't receive a real target through the API; same fix
+   shape (add `TargetDieIds`, thread into `Drain`) not yet applied there.
 10. ~~Rip Hunter's "Navigate the Sands of Time"~~ - implemented (see the
     status update). Turned out to need a new `TriggerType.ClearAndDraw`
     rather than reusing `WhenDrawn` (the gate is "while active," not
@@ -128,23 +127,14 @@ here rather than assuming which approach they'd want.
     only runs once per turn. `/clear-and-draw`'s existing `TargetDieIds`
     gap (item #9) applies to Rip Hunter's own choice too, same as it
     already does for Cosmic Cube.
-11. The web client's Attack Step UI has no case for `AttackSubStep.
-    InfiltrateWindow`, `TagOutWindow`, or (now) `RangeWindow` -
-    `attackSubStep` is typed as a plain `string` in `types.ts`, so new
-    values flow through without a build error, but match none of
-    `App.tsx`'s `canDeclareBlockers`/`canAssignDamage` conditions
-    either. Invisible today (neither curated roster has an Infiltrate,
-    Tag Out, or Range card, so `DeclareAttackers`/`DeclareBlockers`/
-    `ResolveInfiltrate` always skip straight past all three sub-steps -
-    see the status updates), but the first team built with any of the
-    three would hit a dead end in the web client with no visible way to
-    proceed. Fix shape when that happens: a
-    `canResolveInfiltrate`/`canResolveTagOut`/`canResolveRange` check
-    plus either a small UI prompt or an auto-pass-through call to the
-    already-wired
-    `POST /resolve-infiltrate`/`POST /resolve-tag-out`/`POST
-    /resolve-range` endpoints (all three exist server-side; only the
-    client-side UI case is missing).
+11. ~~The web client's Attack Step UI has no case for `AttackSubStep.
+    InfiltrateWindow`, `TagOutWindow`, or `RangeWindow`~~ - fixed (see
+    the Increment 2/3/4/5 status updates): `attackSubStep` is now a real
+    `AttackSubStep` union type, and `InfiltrateWindowPanel`/
+    `TagOutWindowPanel`/`RangeWindowPanel` all exist and are wired into
+    `App.tsx`'s panel-swap chain via `canResolveInfiltrate`/
+    `canResolveTagOut`/`canResolveRange`. Verified end-to-end in a real
+    browser session for all three (Ricochet/Big E/Starfire "Starbolts").
 
 ## Implemented keywords
 
