@@ -3436,3 +3436,52 @@ KOs a real Drow Mercenary (now carrying its real "Monster" affiliation)
 through the real `DieStats.ForceKO` path and confirms real Jamilah earns
 a token and shows the +1A/+1D at Clean Up. `dotnet build`, `dotnet test`
 (261/261), and `npm run build` all clean.
+
+## Status update — `CardDef.IsImplemented` added; both team rosters rebuilt around it
+
+Kicking off a multi-increment push (user asked to pause for check-in
+between each) to bring the web client up to date with everything built
+this project - Range/Infiltrate/Tag Out windows, Call Out and
+WhenFielded targeting all have zero UI today. Before touching the
+client, first fixed what it would actually have to work with: the two
+live team rosters were assembled early on and never revisited, and
+currently include several cards with a deliberately dropped clause
+(BigBarda, Robin, GoddessOfThunder, JaneFoster, DailyBugle, etc.), while
+none of the newer keyword-example cards (Black Widow/Call Out, Ricochet/
+Infiltrate, Big E/Tag Out, Starfire "Starbolts"/Range) were on either
+roster - so even a perfect new UI would have nothing to reach in the
+live, deployed game.
+
+- **New `CardDef.IsImplemented`** (default `true`) - audited all 53
+  cataloged cards; 16 have a real, deliberately-dropped clause (each
+  already had a comment explaining what and why) and are now the
+  explicit `isImplemented: false` exceptions: `BigBarda`, `Robin`,
+  `CorvusGlaive`, `Distraction`, `GoddessOfThunder`, `InvisibleWoman`,
+  `JaneFoster`, `Starfire` ("No-Nonsense Warrior"), `Kang`,
+  `KingHyperion`, `DailyBugle`, `Escape!`, all three Alfred Pennyworth
+  printings, and `TheRock`. Exposed via `CardDefDto.IsImplemented`.
+- **Both rosters rebuilt from only `IsImplemented: true` cards**,
+  deliberately including one live example of every keyword the new
+  Attack Step UI needs to exercise: Call Out (Black Widow), Infiltrate
+  (Ricochet), Tag Out (Big E), Range (Starfire "Starbolts"), Intimidate
+  (Scarlet Spider) - plus Dazzler/God Emperor Doom staying on for extra
+  WhenFielded-targeting coverage. This is a real, immediately-live
+  change (the app auto-deploys on push) - deliberately confirmed with
+  the user before doing it, given it changes the public demo's actual
+  team composition, not just its code.
+- Fixed the 9 `TwoTeamsDemoTests` methods that referenced now-off-roster
+  cards (`BigBarda`, mostly) via new optional `extraTeamACardIds`/
+  `extraTeamBCardIds` params on `BuildTwoTeamGame`, so those tests can
+  still pull an off-roster card into their own local game - same
+  "off-roster cards aren't deleted, still reachable" precedent the
+  catalog already established. Found empirically (ran the suite after
+  the roster swap rather than guessing which tests needed the fix) that
+  the two Starfire-Global tests didn't actually need one:
+  `UseGlobalAbility` resolves purely by CardId against the shared
+  catalog (rule 2.6.5.2), with no roster-membership check at all - only
+  tests using `FindUnpurchased` (which reads `Zone.Unpurchased`,
+  populated from `Player.TeamCardIds`) actually needed the fix.
+
+`dotnet build`, `dotnet test` (261/261), and `npm run build` all clean.
+Next: `attackSubStep` as a real client-side union type, then the three
+new sub-step windows one at a time.

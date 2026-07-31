@@ -53,6 +53,20 @@ public sealed record CardDef
     // ability framework (no debuffs, no affiliation-scoped or "while
     // attacking/blocking"-only variants yet - see rule 3.4.5.6).
     public StaticTeamBonus? GrantsStaticTeamBonus { get; init; }
+
+    // Whether this card's FULL printed text is correctly modeled -
+    // scripted via AbilityDef, built entirely into the engine (a pure
+    // keyword like Deadly/Infiltrate needs no AbilityDef at all), or
+    // genuinely has no text to model in the first place. False for a
+    // card whose text has a clause deliberately left out (see
+    // SampleCards.cs's "Scripting policy" note and each such card's own
+    // comment for what's missing and why). Defaults true since most
+    // cards declared via the Character()/BasicAction() factories are -
+    // false is the explicit opt-out, not the default, matching how few
+    // of them there actually are. Lets the web client (or a future
+    // team-builder) offer only cards that behave correctly, without
+    // hiding the rest of the catalog - see CardDefDto.IsImplemented.
+    public bool IsImplemented { get; init; } = true;
 }
 
 // See CardDef.GrantsStaticTeamBonus's remarks.

@@ -28,16 +28,24 @@ file sealed class FixedRoller(DieStatus status, int level) : IDiceRoller
 
 public class TwoTeamsDemoTests
 {
-    private static GameState BuildTwoTeamGame()
+    // extraTeamACardIds/extraTeamBCardIds: lets a test pull a real card
+    // that isn't on the live roster (e.g. because it's IsImplemented:
+    // false and was intentionally left off - see SampleCards.cs's own
+    // remarks) into its own local game, without touching the production
+    // roster the deployed app actually uses.
+    private static GameState BuildTwoTeamGame(
+        IReadOnlyList<string>? extraTeamACardIds = null, IReadOnlyList<string>? extraTeamBCardIds = null)
     {
         var catalog = SampleCards.BuildCatalog();
         var teamA = new Player { Id = "teamA", Name = "Team A" };
         teamA.TeamCardIds.AddRange(SampleCards.TeamACharacterIds);
         teamA.TeamCardIds.AddRange(SampleCards.TeamABasicActionIds);
+        teamA.TeamCardIds.AddRange(extraTeamACardIds ?? []);
 
         var teamB = new Player { Id = "teamB", Name = "Team B" };
         teamB.TeamCardIds.AddRange(SampleCards.TeamBCharacterIds);
         teamB.TeamCardIds.AddRange(SampleCards.TeamBBasicActionIds);
+        teamB.TeamCardIds.AddRange(extraTeamBCardIds ?? []);
 
         var state = GameState.NewGame(catalog, teamA, teamB);
         state.CurrentStep = TurnStep.Main; // bypass Clear/Draw/Roll for this focused scenario
@@ -299,7 +307,12 @@ public class TwoTeamsDemoTests
     [Fact]
     public void UsingInvisibleWomanGlobalAbility_ForcesTargetToBlock_EnforcedAtDeclareBlockers()
     {
-        var state = BuildTwoTeamGame();
+        // BigBarda isn't on the live teamA roster (IsImplemented: false) -
+        // pulled in as an extra card just for this test's attacker.
+        // InvisibleWoman's own Global works by CardId against the shared
+        // catalog regardless of roster membership (rule 2.6.5.2), so it
+        // doesn't need to be added here too.
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.BigBarda.Id]);
         state.ActivePlayerId = "teamA";
 
         var teamBBlocker = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
@@ -378,7 +391,7 @@ public class TwoTeamsDemoTests
     [Fact]
     public void Fielding_WithATypedDoubleEnergyDie_SpinsDownTheLeftoverInsteadOfSpendingTheWholeDie()
     {
-        var state = BuildTwoTeamGame();
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.BigBarda.Id]);
         state.ActivePlayerId = "teamA";
         var bigBardaDie = FindUnpurchased(state, "teamA", SampleCards.BigBarda.Id);
         bigBardaDie.Zone = Zone.ReservePool;
@@ -399,7 +412,7 @@ public class TwoTeamsDemoTests
     [Fact]
     public void Fielding_WithATypedDoubleEnergyDie_SpendsTheWholeDieWhenExactlyEnoughIsNeeded()
     {
-        var state = BuildTwoTeamGame();
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.BigBarda.Id]);
         state.ActivePlayerId = "teamA";
         var bigBardaDie = FindUnpurchased(state, "teamA", SampleCards.BigBarda.Id);
         bigBardaDie.Zone = Zone.ReservePool;
@@ -418,7 +431,7 @@ public class TwoTeamsDemoTests
     [Fact]
     public void Fielding_WithAGenericDoubleEnergyDie_SpendsTheWholeDieAndBanksTheLeftoverAsVirtualEnergy()
     {
-        var state = BuildTwoTeamGame();
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.BigBarda.Id]);
         state.ActivePlayerId = "teamA";
         var bigBardaDie = FindUnpurchased(state, "teamA", SampleCards.BigBarda.Id);
         bigBardaDie.Zone = Zone.ReservePool;
@@ -445,7 +458,7 @@ public class TwoTeamsDemoTests
     [Fact]
     public void VirtualGenericEnergy_IsActuallySpendable_LikeAnyOtherEnergyDie()
     {
-        var state = BuildTwoTeamGame();
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.BigBarda.Id]);
         state.ActivePlayerId = "teamA";
 
         // Bank 1 virtual energy: field a cost-1 Big Barda using a Generic
@@ -477,7 +490,7 @@ public class TwoTeamsDemoTests
     [Fact]
     public void VirtualGenericEnergy_DoesNotCarryPastCleanUp()
     {
-        var state = BuildTwoTeamGame();
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.BigBarda.Id]);
         state.ActivePlayerId = "teamA";
         var bigBardaDie = FindUnpurchased(state, "teamA", SampleCards.BigBarda.Id);
         bigBardaDie.Zone = Zone.ReservePool;
@@ -1232,7 +1245,7 @@ public class TwoTeamsDemoTests
     [Fact]
     public void CaptainMarvelStaticBonus_BoostsHerOwnTeamsActiveCharacterDice_NotTheOpponents()
     {
-        var state = BuildTwoTeamGame();
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.BigBarda.Id]);
 
         var captainMarvel = FindUnpurchased(state, "teamA", SampleCards.CaptainMarvel.Id);
         captainMarvel.Zone = Zone.FieldZone;

@@ -58,7 +58,8 @@ public static class SampleCards
         IReadOnlyList<CharacterFace>? levels = null,
         IReadOnlyList<string>? grantsToSidekicks = null,
         IReadOnlyList<string>? affiliations = null,
-        StaticTeamBonus? grantsStaticTeamBonus = null) => new()
+        StaticTeamBonus? grantsStaticTeamBonus = null,
+        bool isImplemented = true) => new()
     {
         Id = id,
         Name = name,
@@ -73,12 +74,14 @@ public static class SampleCards
         Abilities = abilities ?? [],
         GrantsToSidekicks = grantsToSidekicks ?? [],
         Affiliations = affiliations ?? [],
-        GrantsStaticTeamBonus = grantsStaticTeamBonus
+        GrantsStaticTeamBonus = grantsStaticTeamBonus,
+        IsImplemented = isImplemented
     };
 
     private static CardDef BasicAction(
         string id, string name, string rawText, bool epic = false,
-        IReadOnlyList<AbilityDef>? abilities = null) => new()
+        IReadOnlyList<AbilityDef>? abilities = null,
+        bool isImplemented = true) => new()
     {
         Id = id,
         Name = name,
@@ -88,7 +91,8 @@ public static class SampleCards
         EnergyTypes = [], // rule 1.2.4/1.3.10 - Basic Actions have no energy type
         DieLimit = 3, // rule 1.2.11 - fixed for every Basic Action card
         RawText = rawText,
-        Abilities = abilities ?? []
+        Abilities = abilities ?? [],
+        IsImplemented = isImplemented
     };
 
     // ---- Team A: 10 characters + 3 Basic Actions ----
@@ -96,6 +100,10 @@ public static class SampleCards
     // Real cost/energy/stats sourced from the user's reference spreadsheet
     // (see class remarks) - dieLimit is a guess (4, typical Common rarity),
     // not sourced.
+    // "Ignore all non-combat damage" - no such damage-source-filtering
+    // mechanism exists (only Sacrifice/Range/DealDamage-node damage do,
+    // and none distinguish "combat" from "non-combat" at the point
+    // they'd need to check it) - left vanilla, isImplemented: false.
     public static readonly CardDef BigBarda = Character(
         "big-barda", "Big Barda", "Formerly of Apokolips", dieLimit: 4,
         "Ignore all non-combat damage dealt to Big Barda.",
@@ -104,7 +112,8 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3),
             new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 4),
             new CharacterFace(FieldingCost: 2, Attack: 6, Defense: 6)
-        ]);
+        ],
+        isImplemented: false);
 
     public static readonly CardDef Apocalypse = Character(
         "apocalypse", "Apocalypse", "Obsessive", dieLimit: 4,
@@ -136,6 +145,9 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 4)
         ]);
 
+    // A purchase-cost discount - no purchase-cost-modifier mechanism
+    // exists yet (see RULES_ENGINE_DESIGN.md) - left vanilla,
+    // isImplemented: false.
     public static readonly CardDef Robin = Character(
         "robin", "Robin", "Team Leader", dieLimit: 4,
         "Energize - The first Teen Titans die you purchase this turn costs 1 less (to a minimum of 1).",
@@ -145,7 +157,8 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 2),
             new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3),
             new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 3)
-        ]);
+        ],
+        isImplemented: false);
 
     // A live, continuously-recomputed Static team-wide bonus (rule
     // 3.4.5.7) - see CardDef.GrantsStaticTeamBonus/DieStats.
@@ -160,9 +173,14 @@ public static class SampleCards
     public static readonly CardDef Colossus = Character(
         "colossus", "Colossus", "Inferno", dieLimit: 4, ""); // real card, genuinely blank text box
 
+    // The KO half is buildable (Ko node) but the "next purchase costs 2
+    // less" half needs the same purchase-cost-modifier mechanism Robin's
+    // Energize is missing - left vanilla rather than half-scripted,
+    // isImplemented: false.
     public static readonly CardDef CorvusGlaive = Character(
         "corvus-glaive", "Corvus Glaive", "The Black Order", dieLimit: 3,
-        "When fielded, KO a character die you control. If you do, the next die you purchase this turn costs [2] less (minimum 1).");
+        "When fielded, KO a character die you control. If you do, the next die you purchase this turn costs [2] less (minimum 1).",
+        isImplemented: false);
 
     public static readonly CardDef Dazzler = Character(
         "dazzler", "Dazzler", "Lightbringer", dieLimit: 4,
@@ -188,6 +206,8 @@ public static class SampleCards
     // persistent "cannot block" flag we don't model) but its separate
     // Global ability maps cleanly on its own - Non-global and Global are
     // genuinely independent ability slots (rule 3.1.3), scored separately.
+    // isImplemented is still false, though - it's a whole-card flag (the
+    // Non-global half is real, missing behavior, not just flavor text).
     public static readonly CardDef Distraction = BasicAction(
         "distraction", "Distraction",
         "Target opponent chooses two of their character dice. They cannot block this turn. " +
@@ -196,7 +216,8 @@ public static class SampleCards
             Effect: new MoveDie(
                 TargetSpec.CharacterDie("target attacking character die", zones: [Zone.AttackZone]),
                 Zone.FieldZone),
-            EnergyCost: new EnergyCost(Amount: 1, RequiredType: EnergyType.Mask))]);
+            EnergyCost: new EnergyCost(Amount: 1, RequiredType: EnergyType.Mask))],
+        isImplemented: false);
 
     // ---- Team B: 10 characters + 3 Basic Actions ----
 
@@ -229,9 +250,14 @@ public static class SampleCards
             new Reroll(TargetSpec.CharacterDie("target character die"))
         ]))]);
 
+    // "Another active character die with Thor in the name or subtitle" -
+    // no name/subtitle-substring TargetSpec/Static-bonus filter exists
+    // (GrantsStaticTeamBonus only keys off CardId, not a text match) -
+    // left vanilla, isImplemented: false.
     public static readonly CardDef GoddessOfThunder = Character(
         "goddess-of-thunder", "Goddess of Thunder", "Thor Corps", dieLimit: 2,
-        "Goddess of Thunder gets +5 attack while you have another active character die with Thor in the name or subtitle.");
+        "Goddess of Thunder gets +5 attack while you have another active character die with Thor in the name or subtitle.",
+        isImplemented: false);
 
     public static readonly CardDef Groot = Character(
         "groot", "Groot", "Skilled Investigator", dieLimit: 4,
@@ -242,22 +268,32 @@ public static class SampleCards
     // unscripted (no "count active dice matching X" stat-modifier
     // primitive exists yet); its Global stands on its own, same
     // independent-ability-slots reasoning as Distraction/Falcon above.
+    // isImplemented is still false - same reasoning as Distraction.
     public static readonly CardDef InvisibleWoman = Character(
         "invisible-woman", "Invisible Woman", "Also Dr. Richards", dieLimit: 4,
         "Invisible Woman gets +1 attack for each of your other active [F4] character dice. " +
         "Global: Pay [M]. Target character die must block this turn.",
         abilities: [new AbilityDef(TriggerType.Global, Cost: null,
             Effect: new ForceBlock(TargetSpec.CharacterDie("target character die")),
-            EnergyCost: new EnergyCost(Amount: 1, RequiredType: EnergyType.Mask))]);
+            EnergyCost: new EnergyCost(Amount: 1, RequiredType: EnergyType.Mask))],
+        isImplemented: false);
 
+    // "Gain an extra 2 life for each of your other active characters
+    // with Thor in their name or subtitle, or the [TCS] affiliation" -
+    // same missing name-substring-match primitive as Goddess of Thunder
+    // above (the affiliation half alone would be buildable, but the
+    // "or" makes the whole clause one unit) - left vanilla,
+    // isImplemented: false.
     public static readonly CardDef JaneFoster = Character(
         "jane-foster", "Jane Foster", "Doctor", dieLimit: 4,
         "When fielded, gain 2 life, and gain an extra 2 life for each of your other active characters " +
-        "with Thor in their name or subtitle, or the [TCS] affiliation.");
+        "with Thor in their name or subtitle, or the [TCS] affiliation.",
+        isImplemented: false);
 
     // "Recruit" (bring in an off-team Teen Titans die) is left unscripted -
     // no off-team-recruitment mechanic exists yet; its Global stands on
     // its own, same independent-ability-slots reasoning as above.
+    // isImplemented is still false - same reasoning as Distraction.
     public static readonly CardDef Starfire = Character(
         "starfire", "Starfire", "No-Nonsense Warrior", dieLimit: 4,
         "Recruit - a Teen Titans character die.\n" +
@@ -271,15 +307,24 @@ public static class SampleCards
         abilities: [new AbilityDef(TriggerType.Global, Cost: null,
             Effect: new PrepFromBagIfPurchasedThisTurn(),
             EnergyCost: new EnergyCost(Amount: 1, RequiredType: EnergyType.Shield),
-            OncePerTurn: true)]);
+            OncePerTurn: true)],
+        isImplemented: false);
 
+    // No "pay life to reroll" cost/effect combination is built -
+    // isImplemented: false.
     public static readonly CardDef Kang = Character(
         "kang", "Kang", "Prophetic Revelation", dieLimit: 3,
-        "While Kang is active, once per turn, a player may pay 2 life to reroll a die in their Reserve Pool.");
+        "While Kang is active, once per turn, a player may pay 2 life to reroll a die in their Reserve Pool.",
+        isImplemented: false);
 
+    // A reactive "while active, when an OPPONENT uses an Action die"
+    // trigger - the engine's own Attune/Amplify/Obscure precedent only
+    // reacts to the controller's *own* Action-die use, not the
+    // opponent's - left vanilla, isImplemented: false.
     public static readonly CardDef KingHyperion = Character(
         "king-hyperion", "King Hyperion", "Earth-21195", dieLimit: 4,
-        "While King Hyperion is active, when an opponent uses an action die, deal 2 damage to target character die.");
+        "While King Hyperion is active, when an opponent uses an action die, deal 2 damage to target character die.",
+        isImplemented: false);
 
     public static readonly CardDef CasketOfAncientWinters = BasicAction(
         "casket-of-ancient-winters", "Casket of Ancient Winters",
@@ -296,12 +341,20 @@ public static class SampleCards
                 Zone.UsedPile)
         ]))]);
 
+    // "Prep up to 2 of them, roll the remainder" - a per-die player
+    // choice DrawDice doesn't expose (it either draws-unrolled or the
+    // caller externally rolls all of it) - left vanilla, isImplemented: false.
     public static readonly CardDef DailyBugle = BasicAction(
-        "daily-bugle", "Daily Bugle", "Draw 2 dice. Prep up to 2 of them, roll the remainder.");
+        "daily-bugle", "Daily Bugle", "Draw 2 dice. Prep up to 2 of them, roll the remainder.",
+        isImplemented: false);
 
+    // "Choose one" between two unrelated effects, one of which
+    // ("can't be targeted this turn") needs a per-die targeting
+    // restriction flag that doesn't exist - left vanilla, isImplemented: false.
     public static readonly CardDef Escape = BasicAction(
         "escape", "Escape!",
-        "Choose one: Target character die can't be targeted this turn. Or: Prep a die from your Used Pile.");
+        "Choose one: Target character die can't be targeted this turn. Or: Prep a die from your Used Pile.",
+        isImplemented: false);
 
     // Three real printings of Alfred Pennyworth (World's Finest set, same
     // reference spreadsheet as Big Barda/Harley Quinn/Robin/Starfire - see
@@ -328,7 +381,8 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 1),
             new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 2),
             new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 2)
-        ]);
+        ],
+        isImplemented: false);
 
     public static readonly CardDef AlfredPennyworthMI5 = Character(
         "alfred-pennyworth-mi5", "Alfred Pennyworth", "MI-5", dieLimit: 3,
@@ -340,7 +394,8 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 1),
             new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 2),
             new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 2)
-        ]);
+        ],
+        isImplemented: false);
 
     public static readonly CardDef AlfredPennyworthToughAsNails = Character(
         "alfred-pennyworth-tough-as-nails", "Alfred Pennyworth", "Tough as Nails", dieLimit: 2,
@@ -352,7 +407,8 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 1),
             new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 2),
             new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 2)
-        ]);
+        ],
+        isImplemented: false);
 
     // Two more real spreadsheet-sourced printings, this time for Amplify
     // and Awaken - a paired keyword the user asked for together since
@@ -762,7 +818,8 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 4),
             new CharacterFace(FieldingCost: 1, Attack: 6, Defense: 6),
             new CharacterFace(FieldingCost: 2, Attack: 7, Defense: 6)
-        ]);
+        ],
+        isImplemented: false);
 
     // WWE's Big E, "Tag Team Champion" printing - purely the Tag Out
     // keyword, no other text. No AbilityDef at all - like Infiltrate/
@@ -852,18 +909,27 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 3)
         ]);
 
-    // A team is 8 character cards + 2 Basic Action cards (10 total), not
-    // the 10 characters + 3 Basic Actions used here previously - that was
-    // simply wrong. Colossus, Corvus Glaive, Distraction, Kang, King
-    // Hyperion, and Escape! stay declared above (and in BuildCatalog's
-    // full card list, so /api/cards still returns them) but aren't on
-    // either team's roster below - real cards with nowhere to play them
-    // yet, not deleted, since a future team-builder feature would want a
-    // catalog bigger than exactly two 10-card teams.
+    // A team is 8 character cards + 2 Basic Action cards (10 total). Both
+    // rosters below are drawn exclusively from IsImplemented: true cards
+    // (see CardDef.IsImplemented) - the 16 cards with a deliberately
+    // dropped clause (BigBarda, Robin, CorvusGlaive, Distraction,
+    // GoddessOfThunder, InvisibleWoman, JaneFoster, Starfire "No-Nonsense
+    // Warrior", Kang, KingHyperion, DailyBugle, Escape!, all three Alfred
+    // Pennyworth printings, and The Rock) stay declared above (and in
+    // BuildCatalog's full card list, so /api/cards still returns them)
+    // but aren't on either roster, same as every other off-roster real
+    // card - not deleted, since a future team-builder feature would want
+    // a catalog bigger than exactly two 10-card teams. Deliberately
+    // includes one live example of each keyword the web client's Attack
+    // Step UI now needs to exercise: Call Out (Black Widow), Infiltrate
+    // (Ricochet, also exercises its own WhenInfiltrates reactor), Tag
+    // Out (Big E), Range (Starfire "Starbolts"), and Intimidate (Scarlet
+    // Spider) - plus Dazzler/God Emperor Doom for extra WhenFielded-
+    // targeting coverage.
     public static readonly IReadOnlyList<string> TeamACharacterIds =
     [
-        BigBarda.Id, Apocalypse.Id, Beast.Id, BlackPanther.Id,
-        HarleyQuinn.Id, Robin.Id, CaptainMarvel.Id, Dazzler.Id
+        Apocalypse.Id, Beast.Id, BlackPanther.Id, HarleyQuinn.Id,
+        CaptainMarvel.Id, Dazzler.Id, BlackWidow.Id, AntManAmplify.Id
     ];
 
     public static readonly IReadOnlyList<string> TeamABasicActionIds =
@@ -871,12 +937,12 @@ public static class SampleCards
 
     public static readonly IReadOnlyList<string> TeamBCharacterIds =
     [
-        Falcon.Id, FranklinsGalactus.Id, GodEmperorDoom.Id, GoddessOfThunder.Id,
-        Groot.Id, InvisibleWoman.Id, JaneFoster.Id, Starfire.Id
+        Falcon.Id, FranklinsGalactus.Id, GodEmperorDoom.Id, Groot.Id,
+        Ricochet.Id, BigE.Id, StarfireStarbolts.Id, ScarletSpider.Id
     ];
 
     public static readonly IReadOnlyList<string> TeamBBasicActionIds =
-        [CasketOfAncientWinters.Id, DailyBugle.Id];
+        [CasketOfAncientWinters.Id, CosmicCubeInfinitePossibilities.Id];
 
     public static IReadOnlyDictionary<string, CardDef> BuildCatalog()
     {

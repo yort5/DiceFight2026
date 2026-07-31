@@ -16,7 +16,7 @@ public sealed record CardDefDto(
     IReadOnlyList<string> EnergyTypes, IReadOnlyList<string> Affiliations, string? Alignment,
     int DieLimit, IReadOnlyList<CharacterFaceDto> Levels, string RawText,
     IReadOnlyList<string> Keywords, IReadOnlyList<string> AbilityTriggers,
-    GlobalAbilityCostDto? GlobalAbilityCost, bool GlobalAbilityNeedsTarget)
+    GlobalAbilityCostDto? GlobalAbilityCost, bool GlobalAbilityNeedsTarget, bool IsImplemented)
 {
     public static CardDefDto From(CardDef card)
     {
@@ -31,7 +31,8 @@ public sealed record CardDefDto(
             globalAbility?.EnergyCost is { } cost
                 ? new GlobalAbilityCostDto(cost.Amount, cost.RequiredType?.ToString())
                 : null,
-            globalAbility is not null && EffectInterpreter.NeedsTarget(globalAbility.Effect));
+            globalAbility is not null && EffectInterpreter.NeedsTarget(globalAbility.Effect),
+            card.IsImplemented);
     }
 }
 
