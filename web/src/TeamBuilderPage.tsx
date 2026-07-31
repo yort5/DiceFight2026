@@ -10,7 +10,7 @@ import type { CardDef } from "./types";
 // digital game - e.g. building a team to play with physical dice.
 
 type SortKey =
-  | "name" | "type" | "purchaseCost" | "energyTypes" | "dieLimit"
+  | "name" | "type" | "affiliations" | "purchaseCost" | "energyTypes" | "dieLimit"
   | "fieldingCost" | "attack" | "defense" | "implemented";
 
 interface Level1Face {
@@ -35,6 +35,8 @@ function sortValue(card: CardDef, key: SortKey): string | number {
       return card.name.toLowerCase();
     case "type":
       return card.type;
+    case "affiliations":
+      return card.affiliations.join(",");
     case "purchaseCost":
       return card.purchaseCost;
     case "energyTypes":
@@ -65,6 +67,7 @@ const MAX_ROWS = 200;
 const COLUMNS: { key: SortKey; label: string }[] = [
   { key: "name", label: "Name" },
   { key: "type", label: "Type" },
+  { key: "affiliations", label: "Affiliation" },
   { key: "purchaseCost", label: "Cost" },
   { key: "energyTypes", label: "Energy" },
   { key: "dieLimit", label: "Max" },
@@ -81,6 +84,7 @@ export function TeamBuilderPage() {
   const deferredSearch = useDeferredValue(search);
   const [activeTypes, setActiveTypes] = useState<Set<string>>(new Set());
   const [activeEnergyTypes, setActiveEnergyTypes] = useState<Set<string>>(new Set());
+  const [activeAffiliations, setActiveAffiliations] = useState<Set<string>>(new Set());
   const [showUnimplemented, setShowUnimplemented] = useState(false);
   const [sort, setSort] = useState<{ key: SortKey; direction: "asc" | "desc" }>({
     key: "name",
@@ -94,6 +98,22 @@ export function TeamBuilderPage() {
   const allTypes = useMemo(() => [...new Set((cards ?? []).map((c) => c.type))].sort(), [cards]);
   const allEnergyTypes = useMemo(
     () => [...new Set((cards ?? []).flatMap((c) => c.energyTypes))].sort(),
+    [cards],
+  );
+  // Affiliation is a proper checkbox filter, not folded into free-text
+  // search - real players often recognize an affiliation by its printed
+  // icon rather than its exact name, and this is mainly used to build a
+  // single-affiliation team (e.g. "all X-Men"), which a filter serves
+  // better than fuzzy text matching. No icon assets exist in this repo
+  // (only energy-face icons - see DieIcon.tsx) and recreating trademarked
+  // team logos ourselves isn't something to do casually, so this is
+  // text-only for now. Values are the card data's own affiliation
+  // strings (already deduplicated there - e.g. both Legion of Doom
+  // Villains printings share the plain "Villains" string, not two
+  // separate icon-specific variants), collapsed under a <details> since
+  // the list can get long once more cards are added.
+  const allAffiliations = useMemo(
+    () => [...new Set((cards ?? []).flatMap((c) => c.affiliations))].sort(),
     [cards],
   );
 
@@ -116,14 +136,16 @@ export function TeamBuilderPage() {
       if (!showUnimplemented && !c.isImplemented) return false;
       if (activeTypes.size > 0 && !activeTypes.has(c.type)) return false;
       if (activeEnergyTypes.size > 0 && !c.energyTypes.some((e) => activeEnergyTypes.has(e))) return false;
+      if (activeAffiliations.size > 0 && !c.affiliations.some((a) => activeAffiliations.has(a))) return false;
       if (needle.length === 0) return true;
       return (
         c.name.toLowerCase().includes(needle) ||
         (c.subtitle?.toLowerCase().includes(needle) ?? false) ||
+        c.affiliations.some((a) => a.toLowerCase().includes(needle)) ||
         c.rawText.toLowerCase().includes(needle)
       );
     });
-  }, [cards, deferredSearch, activeTypes, activeEnergyTypes, showUnimplemented]);
+  }, [cards, deferredSearch, activeTypes, activeEnergyTypes, activeAffiliations, showUnimplemented]);
 
   const sorted = useMemo(() => {
     const dir = sort.direction === "asc" ? 1 : -1;
@@ -187,6 +209,23 @@ export function TeamBuilderPage() {
                 </label>
               ))}
             </fieldset>
+            <details className="card-catalog-affiliations">
+              <summary>
+                Affiliation{activeAffiliations.size > 0 ? ` (${activeAffiliations.size} selected)` : ` (${allAffiliations.length})`}
+              </summary>
+              <div className="card-catalog-affiliations-options">
+                {allAffiliations.map((a) => (
+                  <label key={a}>
+                    <input
+                      type="checkbox"
+                      checked={activeAffiliations.has(a)}
+                      onChange={() => toggle(activeAffiliations, setActiveAffiliations, a)}
+                    />
+                    {a}
+                  </label>
+                ))}
+              </div>
+            </details>
             <label>
               <input
                 type="checkbox"
@@ -225,6 +264,7 @@ export function TeamBuilderPage() {
                           {c.subtitle && <span className="hint"> — {c.subtitle}</span>}
                         </td>
                         <td>{c.type}</td>
+                        <td>{c.affiliations.join(", ") || "-"}</td>
                         <td>{c.purchaseCost}</td>
                         <td>{c.energyTypes.join("/")}</td>
                         <td>{c.dieLimit}</td>

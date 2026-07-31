@@ -881,6 +881,28 @@
   white-space: nowrap;
 }
 
+.card-catalog-affiliations {
+  max-width: 320px;
+}
+
+.card-catalog-affiliations summary {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.65;
+  cursor: pointer;
+}
+
+.card-catalog-affiliations[open] summary {
+  margin-bottom: 4px;
+}
+
+.card-catalog-affiliations-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+
 .card-catalog-table {
   width: 100%;
   border-collapse: collapse;
