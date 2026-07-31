@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { dieLabel, hasKeyword } from "./dieHelpers";
 import type { Selection } from "./PlayerBoard";
-import type { BlockAssignment, CardDef, Die, GameState, TagOutUse } from "./types";
+import type { BlockAssignment, CardDef, Die, GameState, RangeAssignment, TagOutUse } from "./types";
 
 // Keyword Infiltrate's own post-blockers window (Appendix 1) - only
 // reachable when DeclareBlockers found at least one unblocked Infiltrate
@@ -170,6 +170,137 @@ export function TagOutWindowPanel(props: {
             Skip ▶
           </button>
           <span className="hint">No one Tags Out this combat</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Keyword Range X - fires as soon as any attacker has Range (before
+// Declare Blockers even runs, unlike the other two windows), and lets
+// *both* sides' active Range dice deal damage, not just the active
+// player's (Appendix 1 clarification 5). Reuses the shared board
+// `selection` the same way TagOutWindowPanel does: primary = a Range
+// die (either side), secondary[0] = its target (must belong to the
+// Range die's own opponent, not necessarily the game's active player).
+// "Add" auto-buckets into the active-vs-inactive assignment list by
+// comparing the Range die's own controller to the active player, so
+// there's no separate side-selector control.
+export function RangeWindowPanel(props: {
+  game: GameState;
+  dice: Die[];
+  cardsById: Map<string, CardDef>;
+  selection: Selection;
+  busy: boolean;
+  onClearSelection: () => void;
+  onConfirm: (active: RangeAssignment[], inactive: RangeAssignment[]) => void;
+}) {
+  const { game, dice, cardsById, selection, busy } = props;
+  const [activeAssignments, setActiveAssignments] = useState<RangeAssignment[]>([]);
+  const [inactiveAssignments, setInactiveAssignments] = useState<RangeAssignment[]>([]);
+
+  const primaryDie = dice.find((d) => d.id === selection.primary) ?? null;
+  const isRangeSelected =
+    primaryDie !== null &&
+    (primaryDie.zone === "FieldZone" || primaryDie.zone === "AttackZone") &&
+    hasKeyword(primaryDie, cardsById, "Range");
+  const targetId = selection.secondary[0];
+  const targetDie = targetId ? (dice.find((d) => d.id === targetId) ?? null) : null;
+  const isTargetSelected =
+    targetDie !== null &&
+    primaryDie !== null &&
+    targetDie.controllerId !== primaryDie.controllerId &&
+    (targetDie.zone === "FieldZone" || targetDie.zone === "AttackZone") &&
+    (targetDie.status === "Character" || targetDie.status === "SidekickCharacter");
+
+  function addAssignment() {
+    if (!isRangeSelected || !isTargetSelected || !primaryDie || !targetDie) return;
+    const assignment = { rangeDieId: primaryDie.id, targetDieId: targetDie.id };
+    if (primaryDie.controllerId === game.activePlayerId) {
+      setActiveAssignments((prev) => [...prev, assignment]);
+    } else {
+      setInactiveAssignments((prev) => [...prev, assignment]);
+    }
+    props.onClearSelection();
+  }
+
+  function removeActive(index: number) {
+    setActiveAssignments((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function removeInactive(index: number) {
+    setInactiveAssignments((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function renderList(label: string, list: RangeAssignment[], onRemove: (index: number) => void) {
+    return (
+      <>
+        <p className="hint">{label}</p>
+        {list.length === 0 && <p className="no-actions">None yet.</p>}
+        <ul className="combat-attacker-list">
+          {list.map((a, i) => {
+            const rangeDie = dice.find((d) => d.id === a.rangeDieId);
+            const target = dice.find((d) => d.id === a.targetDieId);
+            return (
+              <li key={`${a.rangeDieId}-${a.targetDieId}-${i}`}>
+                <span className="combat-attacker-name">{rangeDie ? dieLabel(rangeDie, cardsById) : a.rangeDieId}</span>
+                {" → "}
+                <span className="secondary-chip">
+                  {target ? dieLabel(target, cardsById) : a.targetDieId}
+                  <button className="chip-remove" disabled={busy} onClick={() => onRemove(i)}>
+                    x
+                  </button>
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </>
+    );
+  }
+
+  return (
+    <div className="action-tray combat-panel">
+      <p className="hint">
+        Every active Range die on both sides may deal its Range value to an opposing Character die. Click a Range
+        die, then its target, then "Add Range Damage". Repeat, then confirm.
+      </p>
+
+      {renderList("Your Range assignments", activeAssignments, removeActive)}
+      {renderList("Opponent's Range assignments", inactiveAssignments, removeInactive)}
+
+      <div className="selection-summary">
+        <span className={primaryDie ? "primary-chip" : "empty-hint"}>
+          {primaryDie ? dieLabel(primaryDie, cardsById) : "no Range die selected"}
+        </span>
+        {targetDie && <span className="secondary-chip">{dieLabel(targetDie, cardsById)}</span>}
+        <button className="clear-btn" onClick={props.onClearSelection}>
+          Clear selection
+        </button>
+      </div>
+
+      <div className="tray-actions">
+        <div className="tray-action">
+          <button disabled={busy || !isRangeSelected || !isTargetSelected} onClick={addAssignment}>
+            Add Range Damage
+          </button>
+          <span className="hint">Primary = Range die, secondary = its target</span>
+        </div>
+        <div className="tray-action">
+          <button disabled={busy} onClick={() => props.onConfirm(activeAssignments, inactiveAssignments)}>
+            Confirm Range ▶
+          </button>
+          <span className="hint">
+            {activeAssignments.length + inactiveAssignments.length === 0
+              ? "None queued"
+              : `${activeAssignments.length + inactiveAssignments.length} queued`}
+          </span>
+        </div>
+        <div className="tray-action">
+          <button disabled={busy} onClick={() => props.onConfirm([], [])}>
+            Skip (no Range damage) ▶
+          </button>
+          <span className="hint">Neither side deals Range damage this combat</span>
         </div>
       </div>
     </div>

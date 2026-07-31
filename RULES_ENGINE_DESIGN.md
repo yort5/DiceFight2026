@@ -3611,3 +3611,38 @@ actually selecting that many spare Reserve Pool energy dice first.
 `dotnet test` still 262/262 (server untouched this increment), `npm run
 build` clean. Next: the Range window - the last of the three, and the
 only one that opens *before* Declare Blockers.
+
+## Status update — Range window UI (Increment 5)
+
+Last of the three Attack Step sub-windows. `types.ts` gained
+`RangeAssignment`; `api.ts` gained `resolveRange`; `AttackWindowPanels.tsx`
+gained `RangeWindowPanel`. Reuses the shared board `selection` like Tag
+Out's panel does (primary = a Range die on either side, secondary[0] =
+its target - which must belong to that Range die's own opponent, not
+necessarily the game's active player, since Range explicitly lets both
+sides act). "Add Range Damage" auto-buckets each assignment into a
+"Your Range assignments" / "Opponent's Range assignments" list by
+comparing the Range die's own controller to `game.activePlayerId`, so
+there's no manual side-selector control to get wrong. `App.tsx` gained
+`canResolveRange` and a panel-swap branch - placed ahead of
+`canDeclareBlockers` in the ternary chain to match the sub-step's actual
+server-side ordering (Range resolves *before* blockers are even
+declared), though since the two conditions are mutually-exclusive string
+comparisons the chain order doesn't actually matter functionally.
+
+Verified end-to-end in a real headless-Chromium session: fielded
+Apocalypse (Team A, 2 defense) and Starfire "Starbolts" (Team B, Range
+2), attacked with Starfire - correctly opened the Range window *before*
+Declare Blockers (confirmed via the status bar showing `RangeWindow`
+right after Declare Attackers, with `DeclareBlockers` never appearing in
+between). Assigned Starfire's Range damage at Apocalypse and confirmed -
+the 2 damage exactly KO'd Apocalypse's 2 defense, correctly returning it
+to Prep Area (rule 1.5.3.1 - KO'd, not destroyed), and the sub-step then
+correctly advanced to `DeclareBlockers`.
+
+This closes out all three previously-invisible Attack Step sub-windows
+(Infiltrate/Tag Out/Range). `dotnet test` 262/262, `npm run build`
+clean. Remaining: Call Out targeting at Declare Attackers, then
+WhenFielded targeting (Intimidate/Dazzler/God Emperor Doom/Polaris) -
+both need small server-side DTO additions, unlike the three windows
+above.

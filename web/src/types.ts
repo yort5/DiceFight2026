@@ -98,6 +98,14 @@ export interface TagOutUse {
   targetDieId: string;
 }
 
+// Keyword Range X - either side's active Range dice each deal their own
+// Range value to an opposing Character die of their choice; both sides'
+// assignment lists are submitted together (see CombatEngine.ResolveRange).
+export interface RangeAssignment {
+  rangeDieId: string;
+  targetDieId: string;
+}
+
 export const ZONES = [
   "Unpurchased",
   "Bag",

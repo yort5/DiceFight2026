@@ -1,4 +1,4 @@
-import type { BlockAssignment, CardDef, DamageSplit, GameState, TagOutUse } from "./types";
+import type { BlockAssignment, CardDef, DamageSplit, GameState, RangeAssignment, TagOutUse } from "./types";
 
 // Relative on purpose: in production the API and built app share one
 // origin (combined container), and in dev the Vite proxy (vite.config.ts)
@@ -79,6 +79,11 @@ export const api = {
     request<GameState>(`/games/${id}/resolve-tag-out`, {
       method: "POST",
       body: JSON.stringify({ uses }),
+    }),
+  resolveRange: (id: string, activePlayerAssignments: RangeAssignment[], inactivePlayerAssignments: RangeAssignment[]) =>
+    request<GameState>(`/games/${id}/resolve-range`, {
+      method: "POST",
+      body: JSON.stringify({ activePlayerAssignments, inactivePlayerAssignments }),
     }),
   assignCombatDamage: (id: string, assignments: BlockAssignment[], damageSplits: DamageSplit[]) =>
     request<GameState>(`/games/${id}/assign-combat-damage`, {
