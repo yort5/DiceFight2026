@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "./api";
 import { ActionTray } from "./ActionTray";
-import { InfiltrateWindowPanel } from "./AttackWindowPanels";
+import { InfiltrateWindowPanel, TagOutWindowPanel } from "./AttackWindowPanels";
 import { DamageSplitPanel, DeclareBlockersPanel } from "./CombatPanel";
 import { GlobalAbilitiesPanel, type GlobalAbilityFlow } from "./GlobalAbilitiesPanel";
 import { HowToPlay } from "./HowToPlay";
 import { PlayerBoard, type Selection } from "./PlayerBoard";
-import type { BlockAssignment, CardDef, DamageSplit, GameState } from "./types";
+import type { BlockAssignment, CardDef, DamageSplit, GameState, TagOutUse } from "./types";
 import "./App.css";
 
 function App() {
@@ -165,6 +165,11 @@ function App() {
     run(() => api.resolveInfiltrate(gameId, combatAssignments, infiltratingDieIds));
   }
 
+  function confirmTagOut(uses: TagOutUse[]) {
+    if (!gameId) return;
+    run(() => api.resolveTagOut(gameId, uses));
+  }
+
   async function confirmDamageSplits(splits: DamageSplit[]) {
     if (!gameId) return;
     await run(() => api.assignCombatDamage(gameId, combatAssignments, splits));
@@ -214,6 +219,7 @@ function App() {
   const canSkipAttack = game?.currentStep === "Main";
   const canDeclareBlockers = game?.currentStep === "Attack" && game.attackSubStep === "DeclareBlockers";
   const canResolveInfiltrate = game?.currentStep === "Attack" && game.attackSubStep === "InfiltrateWindow";
+  const canResolveTagOut = game?.currentStep === "Attack" && game.attackSubStep === "TagOutWindow";
   const canAssignDamage = game?.currentStep === "Attack" && game.attackSubStep === "ActionAndGlobalWindow";
   const canCleanUp = game?.currentStep === "CleanUp";
 
@@ -360,6 +366,15 @@ function App() {
                 combatAssignments={combatAssignments}
                 busy={busy}
                 onConfirm={confirmInfiltrate}
+              />
+            ) : canResolveTagOut ? (
+              <TagOutWindowPanel
+                dice={game.dice}
+                cardsById={cardsById}
+                selection={selection}
+                busy={busy}
+                onClearSelection={clearSelection}
+                onConfirm={confirmTagOut}
               />
             ) : (
               <ActionTray

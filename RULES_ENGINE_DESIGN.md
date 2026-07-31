@@ -3577,3 +3577,37 @@ Not started.
 
 `dotnet test` 262/262 (261 + the new regression test), `npm run build`
 clean. Resuming the Attack Step UI increments next: the Tag Out window.
+
+## Status update — Tag Out window UI (Increment 4)
+
+Second of the three Attack Step sub-windows. `web/src/types.ts` gained
+`TagOutUse`; `api.ts` gained `resolveTagOut`; `AttackWindowPanels.tsx`
+gained `TagOutWindowPanel` - unlike Infiltrate's panel, this one *does*
+reuse the shared board `selection` (primary = a Tag Out die, either
+player's own, in either's Field Zone; secondary[0] = its target, any
+Character/SidekickCharacter die in either's Field or Attack Zone),
+matching `DeclareBlockersPanel`'s "click primary, click secondary(s),
+Add, repeat, Confirm" shape, since - unlike Infiltrate's short well-known
+eligible set - Tag Out's target can be anything on the board. `App.tsx`
+gained `canResolveTagOut`, a `confirmTagOut` handler, and a panel-swap
+branch. No top-bar "Skip Tag Out" shortcut, same reasoning as Infiltrate's
+"Decline All" - the panel already has its own "Skip" button.
+
+Verified end-to-end in a real headless-Chromium session: fielded Big E
+(Team B, Tag Out) without attacking with it, then on a later Team A turn
+fielded and attacked with Apocalypse - correctly opened the Tag Out
+window (triggered by Big E sitting in Team B's Field Zone, even though
+Team B wasn't the active player - matches the keyword's "either player"
+text). Selected Big E as the Tag Out die and Apocalypse as its target,
+confirmed, and watched Big E move to Prep Area (rule 1.5.3.2 - Prepped,
+not KO'd) and the sub-step correctly advance to `ActionAndGlobalWindow`.
+Caught and fixed a bug in the *test script itself* along the way (not
+the app): it wasn't checking for a server-side error after clicking
+"Field", so a die that rolled a level needing energy it hadn't offered
+silently "failed" while the script logged a false success - fixed by
+checking the `.error` div and, when a face's fielding cost is nonzero,
+actually selecting that many spare Reserve Pool energy dice first.
+
+`dotnet test` still 262/262 (server untouched this increment), `npm run
+build` clean. Next: the Range window - the last of the three, and the
+only one that opens *before* Declare Blockers.

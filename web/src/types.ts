@@ -90,6 +90,14 @@ export interface DamageSplit extends BlockAssignment {
   amount: number;
 }
 
+// Keyword Tag Out - either player's own Field Zone die with Tag Out,
+// Prepped to give some Character/SidekickCharacter die (either side,
+// Field or Attack Zone) +2A/+2D until end of turn.
+export interface TagOutUse {
+  tagOutDieId: string;
+  targetDieId: string;
+}
+
 export const ZONES = [
   "Unpurchased",
   "Bag",
