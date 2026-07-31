@@ -26,6 +26,7 @@ export interface CardDef {
   abilityTriggers: string[];
   globalAbilityCost: GlobalAbilityCost | null;
   globalAbilityNeedsTarget: boolean;
+  isImplemented: boolean;
 }
 
 export interface Die {
@@ -49,11 +50,24 @@ export interface PlayerState {
   life: number;
 }
 
+export type AttackSubStep =
+  | "NotInAttack"
+  | "DeclareAttackers"
+  | "RangeWindow"
+  | "DeclareBlockers"
+  | "InfiltrateWindow"
+  | "TagOutWindow"
+  | "ActionAndGlobalWindow"
+  | "AssignCombatDamage"
+  | "WhenDamagedAbilities"
+  | "ResolveDamageAndWhenKOd"
+  | "Done";
+
 export interface GameState {
   gameId: string;
   activePlayerId: string;
   currentStep: string;
-  attackSubStep: string;
+  attackSubStep: AttackSubStep;
   isFirstTurn: boolean;
   epicBasicActionUsedThisTurn: boolean;
   playerOne: PlayerState;

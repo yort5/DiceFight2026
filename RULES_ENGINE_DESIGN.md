@@ -3485,3 +3485,18 @@ live, deployed game.
 `dotnet build`, `dotnet test` (261/261), and `npm run build` all clean.
 Next: `attackSubStep` as a real client-side union type, then the three
 new sub-step windows one at a time.
+
+## Status update — client `AttackSubStep` union type + `CardDef.isImplemented`
+
+Small, isolated client-only increment (Increment 2 of the UI push above).
+`web/src/types.ts`'s `GameState.attackSubStep` was a plain `string`, so
+nothing on the client actually enumerated the 11 real sub-step values -
+it now has a matching `AttackSubStep` union (`NotInAttack` through
+`Done`), and `GameState.attackSubStep` is typed against it. Also added
+`isImplemented: boolean` to the client `CardDef` interface, mirroring the
+server's new `CardDefDto.IsImplemented` from the previous increment
+(not yet consumed anywhere in the UI - that's for a later increment, once
+there's a card list/roster view to filter). `npm run build` clean; the
+two existing string comparisons against `attackSubStep`
+(`"DeclareBlockers"`, `"ActionAndGlobalWindow"`) both type-checked as
+valid members with no changes needed. Next: the Infiltrate window panel.
