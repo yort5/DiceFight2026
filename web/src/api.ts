@@ -70,6 +70,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ assignments }),
     }),
+  resolveInfiltrate: (id: string, assignments: BlockAssignment[], infiltratingDieIds: string[]) =>
+    request<GameState>(`/games/${id}/resolve-infiltrate`, {
+      method: "POST",
+      body: JSON.stringify({ assignments, infiltratingDieIds }),
+    }),
   assignCombatDamage: (id: string, assignments: BlockAssignment[], damageSplits: DamageSplit[]) =>
     request<GameState>(`/games/${id}/assign-combat-damage`, {
       method: "POST",

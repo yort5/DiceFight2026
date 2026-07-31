@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "./api";
 import { ActionTray } from "./ActionTray";
+import { InfiltrateWindowPanel } from "./AttackWindowPanels";
 import { DamageSplitPanel, DeclareBlockersPanel } from "./CombatPanel";
 import { GlobalAbilitiesPanel, type GlobalAbilityFlow } from "./GlobalAbilitiesPanel";
 import { HowToPlay } from "./HowToPlay";
@@ -146,6 +147,11 @@ function App() {
     run(() => api.declareBlockers(gameId, combatAssignments));
   }
 
+  function confirmInfiltrate(infiltratingDieIds: string[]) {
+    if (!gameId) return;
+    run(() => api.resolveInfiltrate(gameId, combatAssignments, infiltratingDieIds));
+  }
+
   async function confirmDamageSplits(splits: DamageSplit[]) {
     if (!gameId) return;
     await run(() => api.assignCombatDamage(gameId, combatAssignments, splits));
@@ -194,6 +200,7 @@ function App() {
   const canEnterAttack = game?.currentStep === "Main";
   const canSkipAttack = game?.currentStep === "Main";
   const canDeclareBlockers = game?.currentStep === "Attack" && game.attackSubStep === "DeclareBlockers";
+  const canResolveInfiltrate = game?.currentStep === "Attack" && game.attackSubStep === "InfiltrateWindow";
   const canAssignDamage = game?.currentStep === "Attack" && game.attackSubStep === "ActionAndGlobalWindow";
   const canCleanUp = game?.currentStep === "CleanUp";
 
@@ -331,6 +338,15 @@ function App() {
                 onRemoveAssignment={removeBlockerAssignment}
                 onClearSelection={clearSelection}
                 onConfirm={confirmBlockers}
+              />
+            ) : canResolveInfiltrate ? (
+              <InfiltrateWindowPanel
+                game={game}
+                dice={game.dice}
+                cardsById={cardsById}
+                combatAssignments={combatAssignments}
+                busy={busy}
+                onConfirm={confirmInfiltrate}
               />
             ) : (
               <ActionTray

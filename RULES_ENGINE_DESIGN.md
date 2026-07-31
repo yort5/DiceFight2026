@@ -3500,3 +3500,36 @@ there's a card list/roster view to filter). `npm run build` clean; the
 two existing string comparisons against `attackSubStep`
 (`"DeclareBlockers"`, `"ActionAndGlobalWindow"`) both type-checked as
 valid members with no changes needed. Next: the Infiltrate window panel.
+
+## Status update — Infiltrate window UI (Increment 3)
+
+Added the first of the three previously-invisible Attack Step sub-windows
+to the web client. `web/src/api.ts` gained `resolveInfiltrate`;
+`web/src/dieHelpers.ts` gained `hasKeyword(die, cardsById, keyword)` (a
+die's keywords live on its card, not the die itself, so every new window
+needs this same lookup); new `web/src/AttackWindowPanels.tsx` exports
+`InfiltrateWindowPanel` - unlike `DeclareBlockersPanel` it does *not*
+reuse the shared board `selection` state, since the eligible set (unblocked
+`AttackZone` dice the active player controls with Infiltrate) is always a
+short, well-known list better suited to a local toggle-checklist than a
+click-to-select flow. `App.tsx` gained `canResolveInfiltrate`, a
+`confirmInfiltrate` handler, and a panel-swap branch ahead of the
+`ActionTray` fallback. Deliberately did *not* add a top-bar "Decline
+Infiltrate" advance-option shortcut alongside the panel's own "Decline
+All" button - matches the existing `DeclareBlockersPanel` precedent
+(`App.tsx`'s own comment: "no blocks" already has a one-click answer
+inside its panel, so a duplicate in the status bar is just clutter),
+rather than the `AssignCombatDamage` precedent (which *does* get one,
+since that step has no panel at all in the common all-unblocked case).
+
+Verified end-to-end in a real headless-Chromium browser session (this
+sandbox's proven Playwright + extracted-.deb-shared-libs recipe), not
+just `npm run build`: scripted a full playthrough - Team A passes,
+Team B purchases and fields Ricochet ("Slinger" printing, Infiltrate +
+a `WhenInfiltrates` reactor), declares it as a lone attacker, Team A
+confirms no blockers - which correctly opened the new Infiltrate panel.
+Checking Ricochet and confirming Infiltrate correctly dealt 1 damage
+(Team A: 20 → 19 life), returned Ricochet to Team B's Field Zone, fired
+its own `WhenInfiltrates` reactor (a Sidekick landed in Prep Area), and
+advanced the sub-step to `ActionAndGlobalWindow`. `dotnet test` still
+261/261 (server untouched this increment). Next: the Tag Out window.

@@ -51,6 +51,14 @@ export function dieLabel(die: Die, cardsById: Map<string, CardDef>): string {
   return cardsById.get(die.cardId)?.name ?? die.cardId;
 }
 
+// Whether the die's card carries a given keyword right now - `Die` itself
+// has no keyword field, only `cardId`, so this always has to go through
+// the catalog.
+export function hasKeyword(die: Die, cardsById: Map<string, CardDef>, keyword: string): boolean {
+  if (!die.cardId) return false;
+  return cardsById.get(die.cardId)?.keywords.includes(keyword) ?? false;
+}
+
 // A short description of what a die is currently showing, for the chip.
 export function dieStatusText(die: Die, cardsById: Map<string, CardDef>): string {
   if (die.status === "Energy") {
