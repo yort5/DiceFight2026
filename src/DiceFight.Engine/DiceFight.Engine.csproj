@@ -6,4 +6,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Bulk-imported card catalog (scripts/import_bulk_cards.py) - see BulkCardCatalog.cs -->
+    <EmbeddedResource Include="Data\BulkCards.json" />
+  </ItemGroup>
+
 </Project>

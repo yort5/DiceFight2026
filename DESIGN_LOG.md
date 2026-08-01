@@ -3671,3 +3671,82 @@ and a real headless-Chromium session on `/teambuilder`: confirmed all
 values, and that searching narrows correctly to the 3 Shocking Grasp
 printings, the 3 Alfred Pennyworth printings (all now `WF`), and the
 single Robin row (now `SKC`).
+
+## Status update — bulk-imported the full reference sheet (~3,637 cards) into the searchable catalog
+
+The Team Builder's catalog only ever had the 55 hand-curated cards.
+The user expected the whole reference sheet to already be searchable -
+it wasn't. New `scripts/import_bulk_cards.py` (checked into the repo,
+re-runnable whenever new sets get added) fetches all 49 set tabs
+(~4,088 rows) and writes `src/DiceFight.Engine/Data/BulkCards.json`.
+`BulkCardCatalog.cs` loads it (embedded resource, parsed once via a
+`Lazy<T>` - the first version re-deserialized on every `BuildCatalog()`
+call, which is fine once at API startup but blew test runtime from ~1s
+to ~9s since tests call it repeatedly) and `SampleCards.BuildCatalog()`
+merges it with the 55 hand-curated cards, which win on any id
+collision (none occur in practice - the script already excludes every
+hand-curated id).
+
+**A mid-plan correction from the user caught a real misunderstanding**:
+the `*`/`**` marks in the sheet's "stat line" column aren't formatting
+noise - they mark **burst symbols** on a die face (single/double burst;
+some abilities key off rolling that face, "most times it's ignored").
+`CharacterFace.BurstStars` already existed for exactly this and had
+never been populated by any hand-curated card - now parsed correctly
+(280 Character rows have at least one burst face) instead of being
+stripped. Re-examining the stat-line format properly also surfaced a
+real, previously-unused `CardType.Action` case: a stat line that's
+*entirely* burst marks with no digits (`"- * **"`) marks a non-
+Character die's 3 action faces (blank/single/double burst) - these
+turned out to include both real `BasicAction`/`EpicBasicAction` rows
+*and* 156 plain `Action`-type cards (real single energy type + real
+per-card cost, unlike Basic Actions) that had never had a sample
+before.
+
+Final import: 3,637 of 4,088 rows (3,232 Character/298 BasicAction/
+156 Action/6 EpicBasicAction, after excluding the 55 already hand-
+curated). Skipped and reported (not silently dropped): 127 non-
+standard ids (org-play/promo variants like `1AvXop`), 171 Character
+rows with a genuinely unparseable stat line (dropped digits, literal
+`''` placeholder text - not burst marks), 94 rows with multi-energy or
+unrecognized energy (`EnergyType` only holds one value per card today),
+a handful of unrecognized-rarity/non-numeric-cost one-offs.
+
+`IsImplemented` for bulk cards: a small whitelist of keyword names
+already proven zero-`AbilityDef`-needed by the hand-curated cards'
+own comments (`Overcrush`, `Deadly`, `Regenerate`, `Swarm`, `Fast`,
+`Energy Drain`, `Infiltrate`, `Obscure`, `Tag Out`, `Strike`, `Ally`,
+`Experience`, plus parameterized `Range X`/`Corrupt X`) - a card
+auto-qualifies for `true` only if its entire ability text (whitespace-
+normalized) is one or two of these back to back, each with its own
+optional `(...)` reminder text and nothing else - not a prefix match,
+to avoid false positives on cards with a real extra clause. Yield: 85
+cards (2.5% of the import) - most of the ~3,600 have a real card-
+specific clause beyond their keyword(s) and stay `IsImplemented:
+false`, same meaning as today (browsable/sortable, just not
+simulated) - expected, and fine per the user's own prediction. This
+list is meant to grow: add a keyword's name here whenever it becomes
+fully engine-built, and every matching bulk card picks it up on the
+next `import_bulk_cards.py` re-run with no per-card authoring.
+
+Explicitly not attempted (flagged as a follow-up): a second tier of
+"templates" for common *parameterized* ability shapes that do need an
+`AbilityDef` but are otherwise formulaic (base-amount `Retaliation`,
+plain-wording `Call Out`/`Intimidate`) - riskier to auto-generate
+correctly (e.g. Black Manta's Retaliation reads "for each of your
+active Villains," not the flat base amount) and worth doing once, but
+as its own pass. Also not attempted: modeling burst-triggered bonus
+abilities at all - out of scope, "most times it's ignored" per the
+user.
+
+Verified via `dotnet build && dotnet test` (265/265, back to ~1s after
+the `Lazy<T>` fix), `npm run build`, and a real headless-Chromium
+session on `/teambuilder`: catalog reports 3,692 cards total (3,637
+bulk + 55 hand-curated); default (`IsImplemented`-only) view shows
+124 (39 hand-curated + 85 auto-classified bulk - the exact expected
+sum); "Ace the Bat Hound" (a real pure-`Ally` bulk card) correctly
+shows up in the default filtered view; a plain `Action`-type card
+("Avengers ID Cards") renders correctly with its own energy/cost, the
+first real example of that `CardType` in the catalog; initial load of
+the full ~3,700-row catalog and a full-catalog sort both completed in
+under a second.

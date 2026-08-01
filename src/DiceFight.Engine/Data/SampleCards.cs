@@ -987,6 +987,18 @@ public static class SampleCards
             SpideysLastStand, TheRock, BigE, RipHunterNavigateTheSandsOfTime, StarfireStarbolts,
             JamilahShipwreckedOnChult
         ];
-        return all.ToDictionary(c => c.Id);
+
+        // Hand-curated cards win on id collision - shouldn't happen in
+        // practice (the bulk import script already excludes every id
+        // in this file), but hand-curated data is authoritative either
+        // way, since it has real engine behavior the bulk import can't
+        // match. See BulkCardCatalog's own remarks for what "bulk"
+        // means here (browsable data only, no AbilityDefs).
+        var catalog = all.ToDictionary(c => c.Id);
+        foreach (var bulkCard in BulkCardCatalog.Load())
+        {
+            catalog.TryAdd(bulkCard.Id, bulkCard);
+        }
+        return catalog;
     }
 }
