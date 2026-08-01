@@ -109,7 +109,7 @@ public static class SampleCards
     // and none distinguish "combat" from "non-combat" at the point
     // they'd need to check it) - left vanilla, isImplemented: false.
     public static readonly CardDef BigBarda = Character(
-        "big-barda", "Big Barda", "Formerly of Apokolips", dieLimit: 4,
+        "SKC021", "Big Barda", "Formerly of Apokolips", dieLimit: 4,
         "Ignore all non-combat damage dealt to Big Barda.",
         purchaseCost: 3, energyType: EnergyType.Fist,
         levels: [
@@ -120,17 +120,17 @@ public static class SampleCards
         isImplemented: false, set: "SKC");
 
     public static readonly CardDef Apocalypse = Character(
-        "apocalypse", "Apocalypse", "Obsessive", dieLimit: 4,
+        "MSW018", "Apocalypse", "Obsessive", dieLimit: 4,
         "Overcrush (Character dice with Overcrush deal damage in excess of blocker's defense to opponent.)",
         keywords: [new KeywordInstance("Overcrush")], set: "MSW");
 
     public static readonly CardDef Beast = Character(
-        "beast", "Beast", "Olympic Athleticism", dieLimit: 3,
+        "MSW019", "Beast", "Olympic Athleticism", dieLimit: 3,
         "Regenerate (Reroll when KO'd)",
         keywords: [new KeywordInstance("Regenerate")], set: "MSW");
 
     public static readonly CardDef BlackPanther = Character(
-        "black-panther", "Black Panther", "Clutching Reality", dieLimit: 4,
+        "MSW020", "Black Panther", "Clutching Reality", dieLimit: 4,
         "Energize - Roll 2 dice from your bag. When fielded, roll a die from your bag.",
         keywords: [new KeywordInstance("Energize")],
         abilities: [
@@ -140,7 +140,7 @@ public static class SampleCards
         affiliations: ["Avengers", "Infinity Watch"], set: "MSW");
 
     public static readonly CardDef HarleyQuinn = Character(
-        "harley-quinn", "Harley Quinn", "Bright Lights Big City", dieLimit: 4,
+        "SKC032", "Harley Quinn", "Bright Lights Big City", dieLimit: 4,
         "", // real card, genuinely blank text box
         purchaseCost: 1, energyType: EnergyType.Mask,
         levels: [
@@ -153,7 +153,7 @@ public static class SampleCards
     // exists yet (see RULES_ENGINE_DESIGN.md) - left vanilla,
     // isImplemented: false.
     public static readonly CardDef Robin = Character(
-        "robin", "Robin", "Team Leader", dieLimit: 4,
+        "SKC048", "Robin", "Team Leader", dieLimit: 4,
         "Energize - The first Teen Titans die you purchase this turn costs 1 less (to a minimum of 1).",
         purchaseCost: 2, energyType: EnergyType.Shield,
         keywords: [new KeywordInstance("Energize")],
@@ -162,48 +162,72 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3),
             new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 3)
         ],
-        isImplemented: false, set: "ASM");
+        isImplemented: false, set: "SKC");
 
     // A live, continuously-recomputed Static team-wide bonus (rule
     // 3.4.5.7) - see CardDef.GrantsStaticTeamBonus/DieStats.
     // StaticTeamBonusFor. No AbilityDef needed, same shape as Strike's
     // "no trigger at all" design.
     public static readonly CardDef CaptainMarvel = Character(
-        "captain-marvel", "Captain Marvel", "Alpha Flight", dieLimit: 4,
+        "MSW023", "Captain Marvel", "Alpha Flight", dieLimit: 4,
         "While Captain Marvel is active, your Character dice get +1 attack and +1 defense.",
         purchaseCost: 4,
         grantsStaticTeamBonus: new StaticTeamBonus(AttackDelta: 1, DefenseDelta: 1), set: "MSW");
 
     public static readonly CardDef Colossus = Character(
-        "colossus", "Colossus", "Inferno", dieLimit: 4, "", set: "MSW"); // real card, genuinely blank text box
+        "MSW024", "Colossus", "Inferno", dieLimit: 4, "", set: "MSW"); // real card, genuinely blank text box
 
     // The KO half is buildable (Ko node) but the "next purchase costs 2
     // less" half needs the same purchase-cost-modifier mechanism Robin's
     // Energize is missing - left vanilla rather than half-scripted,
     // isImplemented: false.
     public static readonly CardDef CorvusGlaive = Character(
-        "corvus-glaive", "Corvus Glaive", "The Black Order", dieLimit: 3,
+        "MSW025", "Corvus Glaive", "The Black Order", dieLimit: 3,
         "When fielded, KO a character die you control. If you do, the next die you purchase this turn costs [2] less (minimum 1).",
         isImplemented: false, set: "MSW");
 
     public static readonly CardDef Dazzler = Character(
-        "dazzler", "Dazzler", "Lightbringer", dieLimit: 4,
+        "MSW026", "Dazzler", "Lightbringer", dieLimit: 4,
         "When fielded, deal 4 damage to target [M] character die.",
         abilities: [new AbilityDef(TriggerType.WhenFielded, Cost: null,
             Effect: new DealDamage(4, TargetSpec.CharacterDie("target [M] character die", energyType: EnergyType.Mask)))], set: "MSW");
 
     public static readonly CardDef CosmicCube = BasicAction(
-        "cosmic-cube", "Cosmic Cube", "Switch life totals with your opponent.", epic: true,
+        "MSW002", "Cosmic Cube", "Switch life totals with your opponent.", epic: true,
         abilities: [new AbilityDef(TriggerType.WhenUsed, Cost: null, Effect: new SwapLife())], set: "MSW");
 
     public static readonly CardDef ShockingGrasp = BasicAction(
-        "shocking-grasp", "Shocking Grasp",
+        "MSW011", "Shocking Grasp",
         "Deal 1 damage to target character die. If that character is KO'd by this damage, you may Prep this die.",
         abilities: [new AbilityDef(TriggerType.WhenUsed, Cost: null, Effect: new Sequence([
             new DealDamage(1, TargetSpec.CharacterDie("target character die")),
             new Conditional(TargetSpec.CharacterDie("target character die"), EffectCondition.TargetWasKOd,
                 new PrepDie(TargetSpec.Self))
         ]))], set: "MSW");
+
+    // Shocking Grasp is a genuine cross-set reprint (identical effect,
+    // slightly different printed wording per set) - MSW011 above stays
+    // the one on Team A's roster; these two are declared for the
+    // catalog only, same text as MSW011 for consistency (the sheet's
+    // FUS034/TIW057 rows word it as "...put this die into your Prep
+    // Area" instead - not fixed at the source, see DESIGN_LOG.md).
+    public static readonly CardDef ShockingGraspFus = BasicAction(
+        "FUS034", "Shocking Grasp",
+        "Deal 1 damage to target character die. If that character is KO'd by this damage, you may Prep this die.",
+        abilities: [new AbilityDef(TriggerType.WhenUsed, Cost: null, Effect: new Sequence([
+            new DealDamage(1, TargetSpec.CharacterDie("target character die")),
+            new Conditional(TargetSpec.CharacterDie("target character die"), EffectCondition.TargetWasKOd,
+                new PrepDie(TargetSpec.Self))
+        ]))], set: "FUS");
+
+    public static readonly CardDef ShockingGraspTiw = BasicAction(
+        "TIW057", "Shocking Grasp",
+        "Deal 1 damage to target character die. If that character is KO'd by this damage, you may Prep this die.",
+        abilities: [new AbilityDef(TriggerType.WhenUsed, Cost: null, Effect: new Sequence([
+            new DealDamage(1, TargetSpec.CharacterDie("target character die")),
+            new Conditional(TargetSpec.CharacterDie("target character die"), EffectCondition.TargetWasKOd,
+                new PrepDie(TargetSpec.Self))
+        ]))], set: "TIW");
 
     // Distraction's Non-global ability ("target opponent chooses two...
     // cannot block") is left unscripted (multi-die opponent choice + a
@@ -213,7 +237,7 @@ public static class SampleCards
     // isImplemented is still false, though - it's a whole-card flag (the
     // Non-global half is real, missing behavior, not just flavor text).
     public static readonly CardDef Distraction = BasicAction(
-        "distraction", "Distraction",
+        "MSW005", "Distraction",
         "Target opponent chooses two of their character dice. They cannot block this turn. " +
         "Global: Pay [M]. Remove target attacking character die from combat.",
         abilities: [new AbilityDef(TriggerType.Global, Cost: null,
@@ -229,7 +253,7 @@ public static class SampleCards
     // Distraction above) - both now scripted. Real affiliation "Avengers"
     // (MSW027), shared with Black Panther's "Clutching Reality" printing.
     public static readonly CardDef Falcon = Character(
-        "falcon", "Falcon", "Take Flight", dieLimit: 4,
+        "MSW027", "Falcon", "Take Flight", dieLimit: 4,
         "Teamwatch - Prep a [PAWN] from your Used Pile. Global: Pay [F]. Once during your turn, " +
         "each player must field a [PAWN] from their Used Pile if able.",
         keywords: [new KeywordInstance("Teamwatch")],
@@ -244,10 +268,10 @@ public static class SampleCards
         affiliations: ["Avengers"], set: "MSW");
 
     public static readonly CardDef FranklinsGalactus = Character(
-        "franklins-galactus", "Franklin's Galactus", "Earth Shatterer", dieLimit: 4, "", set: "MSW"); // genuinely blank
+        "MSW028", "Franklin's Galactus", "Earth Shatterer", dieLimit: 4, "", set: "MSW"); // genuinely blank
 
     public static readonly CardDef GodEmperorDoom = Character(
-        "god-emperor-doom", "God Emperor Doom", "Harnessing the Beyonders", dieLimit: 4,
+        "MSW029", "God Emperor Doom", "Harnessing the Beyonders", dieLimit: 4,
         "When fielded, deal 3 damage to target character die and reroll target character die.",
         abilities: [new AbilityDef(TriggerType.WhenFielded, Cost: null, Effect: new Sequence([
             new DealDamage(3, TargetSpec.CharacterDie("target character die")),
@@ -259,12 +283,12 @@ public static class SampleCards
     // (GrantsStaticTeamBonus only keys off CardId, not a text match) -
     // left vanilla, isImplemented: false.
     public static readonly CardDef GoddessOfThunder = Character(
-        "goddess-of-thunder", "Goddess of Thunder", "Thor Corps", dieLimit: 2,
+        "MSW030", "Goddess of Thunder", "Thor Corps", dieLimit: 2,
         "Goddess of Thunder gets +5 attack while you have another active character die with Thor in the name or subtitle.",
         isImplemented: false, set: "MSW");
 
     public static readonly CardDef Groot = Character(
-        "groot", "Groot", "Skilled Investigator", dieLimit: 4,
+        "MSW031", "Groot", "Skilled Investigator", dieLimit: 4,
         "When fielded, roll 2 dice from your bag.",
         abilities: [new AbilityDef(TriggerType.WhenFielded, Cost: null, Effect: new DrawDice(2))], set: "MSW");
 
@@ -274,7 +298,7 @@ public static class SampleCards
     // independent-ability-slots reasoning as Distraction/Falcon above.
     // isImplemented is still false - same reasoning as Distraction.
     public static readonly CardDef InvisibleWoman = Character(
-        "invisible-woman", "Invisible Woman", "Also Dr. Richards", dieLimit: 4,
+        "MSW032", "Invisible Woman", "Also Dr. Richards", dieLimit: 4,
         "Invisible Woman gets +1 attack for each of your other active [F4] character dice. " +
         "Global: Pay [M]. Target character die must block this turn.",
         abilities: [new AbilityDef(TriggerType.Global, Cost: null,
@@ -289,7 +313,7 @@ public static class SampleCards
     // "or" makes the whole clause one unit) - left vanilla,
     // isImplemented: false.
     public static readonly CardDef JaneFoster = Character(
-        "jane-foster", "Jane Foster", "Doctor", dieLimit: 4,
+        "MSW033", "Jane Foster", "Doctor", dieLimit: 4,
         "When fielded, gain 2 life, and gain an extra 2 life for each of your other active characters " +
         "with Thor in their name or subtitle, or the [TCS] affiliation.",
         isImplemented: false, set: "MSW");
@@ -299,7 +323,7 @@ public static class SampleCards
     // its own, same independent-ability-slots reasoning as above.
     // isImplemented is still false - same reasoning as Distraction.
     public static readonly CardDef Starfire = Character(
-        "starfire", "Starfire", "No-Nonsense Warrior", dieLimit: 4,
+        "SKC050", "Starfire", "No-Nonsense Warrior", dieLimit: 4,
         "Recruit - a Teen Titans character die.\n" +
         "Global: Pay Shield. Once per turn, if you purchased a die this turn, Prep a die from your bag.",
         purchaseCost: 3, energyType: EnergyType.Bolt,
@@ -317,7 +341,7 @@ public static class SampleCards
     // No "pay life to reroll" cost/effect combination is built -
     // isImplemented: false.
     public static readonly CardDef Kang = Character(
-        "kang", "Kang", "Prophetic Revelation", dieLimit: 3,
+        "MSW035", "Kang", "Prophetic Revelation", dieLimit: 3,
         "While Kang is active, once per turn, a player may pay 2 life to reroll a die in their Reserve Pool.",
         isImplemented: false, set: "MSW");
 
@@ -326,12 +350,12 @@ public static class SampleCards
     // reacts to the controller's *own* Action-die use, not the
     // opponent's - left vanilla, isImplemented: false.
     public static readonly CardDef KingHyperion = Character(
-        "king-hyperion", "King Hyperion", "Earth-21195", dieLimit: 4,
+        "MSW036", "King Hyperion", "Earth-21195", dieLimit: 4,
         "While King Hyperion is active, when an opponent uses an action die, deal 2 damage to target character die.",
         isImplemented: false, set: "MSW");
 
     public static readonly CardDef CasketOfAncientWinters = BasicAction(
-        "casket-of-ancient-winters", "Casket of Ancient Winters",
+        "MSW001", "Casket of Ancient Winters",
         "Your opponent KOs three of their character dice, moves 3 dice from their Reserve Pool to their bag, " +
         "and moves 3 dice from their Prep Area to their Used Pile.", epic: true,
         abilities: [new AbilityDef(TriggerType.WhenUsed, Cost: null, Effect: new Sequence([
@@ -349,14 +373,14 @@ public static class SampleCards
     // choice DrawDice doesn't expose (it either draws-unrolled or the
     // caller externally rolls all of it) - left vanilla, isImplemented: false.
     public static readonly CardDef DailyBugle = BasicAction(
-        "daily-bugle", "Daily Bugle", "Draw 2 dice. Prep up to 2 of them, roll the remainder.",
+        "MSW004", "Daily Bugle", "Draw 2 dice. Prep up to 2 of them, roll the remainder.",
         isImplemented: false, set: "MSW");
 
     // "Choose one" between two unrelated effects, one of which
     // ("can't be targeted this turn") needs a per-die targeting
     // restriction flag that doesn't exist - left vanilla, isImplemented: false.
     public static readonly CardDef Escape = BasicAction(
-        "escape", "Escape!",
+        "MSW006", "Escape!",
         "Choose one: Target character die can't be targeted this turn. Or: Prep a die from your Used Pile.",
         isImplemented: false, set: "MSW");
 
@@ -377,7 +401,7 @@ public static class SampleCards
     // union) - see RULES_ENGINE_DESIGN.md. Real stats/keyword/RawText
     // still capture everything that maps cleanly, per the usual policy.
     public static readonly CardDef AlfredPennyworthCaretaker = Character(
-        "alfred-pennyworth-caretaker", "Alfred Pennyworth", "Caretaker of Wayne Manor", dieLimit: 4,
+        "WF035", "Alfred Pennyworth", "Caretaker of Wayne Manor", dieLimit: 4,
         "Ally - When fielded, give target Batman character die or another target Sidekick +2 defense until end of turn.",
         purchaseCost: 2, energyType: EnergyType.Shield,
         keywords: [new KeywordInstance("Ally")],
@@ -386,10 +410,10 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 2),
             new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 2)
         ],
-        isImplemented: false, set: "TMNT");
+        isImplemented: false, set: "WF");
 
     public static readonly CardDef AlfredPennyworthMI5 = Character(
-        "alfred-pennyworth-mi5", "Alfred Pennyworth", "MI-5", dieLimit: 3,
+        "WF075", "Alfred Pennyworth", "MI-5", dieLimit: 3,
         "Ally - When KO'd, you may roll a Sidekick or Batman die from your Used Pile. If you roll an energy " +
         "result, return Alfred to the Field Zone at level 1. Either way, return the rolled die to the Used Pile.",
         purchaseCost: 2, energyType: EnergyType.Shield,
@@ -399,10 +423,10 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 2),
             new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 2)
         ],
-        isImplemented: false, set: "TMNT");
+        isImplemented: false, set: "WF");
 
     public static readonly CardDef AlfredPennyworthToughAsNails = Character(
-        "alfred-pennyworth-tough-as-nails", "Alfred Pennyworth", "Tough as Nails", dieLimit: 2,
+        "WF107", "Alfred Pennyworth", "Tough as Nails", dieLimit: 2,
         "Ally - When fielded, give target Batman die or target Sidekick +1 attack and +1 defense " +
         "(besides Alfred Pennyworth) while attacking this turn.",
         purchaseCost: 2, energyType: EnergyType.Shield,
@@ -412,7 +436,7 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 2),
             new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 2)
         ],
-        isImplemented: false, set: "TMNT");
+        isImplemented: false, set: "WF");
 
     // Two more real spreadsheet-sourced printings, this time for Amplify
     // and Awaken - a paired keyword the user asked for together since
@@ -427,7 +451,7 @@ public static class SampleCards
     // Amplify is entirely the built-in keyword spin, no card-specific
     // effect to script beyond it.
     public static readonly CardDef AntManAmplify = Character(
-        "ant-man-amplify", "Ant-Man", "Through The Cracks", dieLimit: 4,
+        "JLL002", "Ant-Man", "Through The Cracks", dieLimit: 4,
         "Amplify - When you use an action die, spin this character up 1 level.",
         purchaseCost: 3, energyType: EnergyType.Fist,
         keywords: [new KeywordInstance("Amplify")],
@@ -442,7 +466,7 @@ public static class SampleCards
     // set's Awaken text (which leans on mechanics like Unblockable/
     // Capture this engine doesn't have yet).
     public static readonly CardDef Cyclops = Character(
-        "cyclops", "Cyclops", "Boy Scout", dieLimit: 4,
+        "XFC010", "Cyclops", "Boy Scout", dieLimit: 4,
         "Awaken - Deal 3 damage to target character die. (When this die spins up 1 or more levels, " +
         "you may use this effect.)",
         purchaseCost: 5, energyType: EnergyType.Bolt,
@@ -461,7 +485,7 @@ public static class SampleCards
     // AttuneDamage): "When you use Attune, Wasp gets +1A and +1D until
     // end of turn," the first sample card to actually exercise ModifyStat.
     public static readonly CardDef Wasp = Character(
-        "wasp", "Wasp", "Flitting About", dieLimit: 4,
+        "AI047", "Wasp", "Flitting About", dieLimit: 4,
         "Attune - While this character is active, when you use an action die, deal 1 damage to target " +
         "player or character die. When you use Attune, Wasp gets +1 attack and +1 defense until end of turn.",
         purchaseCost: 3, energyType: EnergyType.Bolt,
@@ -485,7 +509,7 @@ public static class SampleCards
     // one" framing) - see CombatEngine.ValidateCallOuts/
     // ActiveCallOutTargets for the actual keyword implementation.
     public static readonly CardDef BlackWidow = Character(
-        "black-widow", "Black Widow", "Red Scare", dieLimit: 4,
+        "GOTG005", "Black Widow", "Red Scare", dieLimit: 4,
         "Call Out - When this character die attacks, target character die is the only character die that " +
         "may block this character die.",
         purchaseCost: 3, energyType: EnergyType.Fist,
@@ -504,7 +528,7 @@ public static class SampleCards
     // WhenFielded trigger. See EffectNode.Corrupt's remarks for the
     // keyword's own mechanics.
     public static readonly CardDef Polaris = Character(
-        "polaris", "Polaris", "Lorna Dane", dieLimit: 4,
+        "DXM010", "Polaris", "Lorna Dane", dieLimit: 4,
         "When Polaris is fielded, Corrupt 2 (Target player draws 2 dice, places 1 in the Used Pile, and " +
         "returns the rest).",
         purchaseCost: 4, energyType: EnergyType.Shield,
@@ -539,7 +563,7 @@ public static class SampleCards
     // model yet - left for whenever that specific card gets picked up,
     // since RedrawFromBag/WhenDrawn already generalize to it.
     public static readonly CardDef CosmicCubeInfinitePossibilities = BasicAction(
-        "cosmic-cube-infinite-possibilities", "Cosmic Cube",
+        "GOTG008", "Cosmic Cube",
         "During your Clear and Draw Step, when you draw this die from your bag, you may send it and any " +
         "other dice you've drawn this turn Out of Play. For each die sent Out of Play, draw a die.",
         abilities: [new AbilityDef(TriggerType.WhenDrawn, Cost: null,
@@ -561,7 +585,7 @@ public static class SampleCards
     // engine-level keyword behavior, like Overcrush/Amplify/Attune - no
     // AbilityDef needed, since there's no choice or target involved.
     public static readonly CardDef Parademon = Character(
-        "parademon", "Parademon", "Servant of Apokalips", dieLimit: 4,
+        "BAT027", "Parademon", "Servant of Apokalips", dieLimit: 4,
         "Swarm",
         purchaseCost: 3, energyType: EnergyType.Bolt,
         keywords: [new KeywordInstance("Swarm")],
@@ -590,7 +614,7 @@ public static class SampleCards
     // correctly without cross-wiring anything Ally- or Swarm-specific
     // together - each one only knows its own rule.
     public static readonly CardDef Darkseid = Character(
-        "darkseid", "Darkseid", "Force of Entropy", dieLimit: 1, // Super Rare
+        "BAT117", "Darkseid", "Force of Entropy", dieLimit: 1, // Super Rare
         "While Darkseid is active, your Sidekicks gain Swarm.",
         purchaseCost: 6, energyType: EnergyType.Bolt,
         grantsToSidekicks: ["Swarm"],
@@ -608,7 +632,7 @@ public static class SampleCards
     // later at Clean Up, regardless of what happens to either die in
     // between - see the design doc for the full reasoning).
     public static readonly CardDef Deathbird = Character(
-        "deathbird", "Deathbird", "Treacherous", dieLimit: 4,
+        "DPS029", "Deathbird", "Treacherous", dieLimit: 4,
         "Deadly",
         purchaseCost: 2, energyType: EnergyType.Shield,
         keywords: [new KeywordInstance("Deadly")],
@@ -623,7 +647,7 @@ public static class SampleCards
     // target or choice, just a two-wave damage resolution baked into
     // CombatEngine.AssignCombatDamage/ResolveFastOrSlowDamage.
     public static readonly CardDef WaspPixie = Character(
-        "wasp-pixie", "Wasp", "Pixie", dieLimit: 4,
+        "CW021", "Wasp", "Pixie", dieLimit: 4,
         "Fast",
         purchaseCost: 3, energyType: EnergyType.Mask,
         keywords: [new KeywordInstance("Fast")],
@@ -638,7 +662,7 @@ public static class SampleCards
     // like Deadly/Overcrush: no target or choice - see
     // CombatEngine.ResolveEnergyDrain/DieStats.EnergyDrainAmount.
     public static readonly CardDef MadalynePryor = Character(
-        "madalyne-pryor", "Madalyne Pryor", "Red Queen", dieLimit: 4,
+        "XMF035", "Madalyne Pryor", "Red Queen", dieLimit: 4,
         "Energy Drain (Spin engaged character dice down 1 level.)",
         purchaseCost: 2, energyType: EnergyType.Mask,
         keywords: [new KeywordInstance("Energy Drain")],
@@ -654,7 +678,7 @@ public static class SampleCards
     // effect are baked into CombatEngine.ResolveInfiltrate), matching
     // Deadly/Overcrush precedent.
     public static readonly CardDef TheSpot = Character(
-        "the-spot", "The Spot", "Dr. Johnathan Ohnn", dieLimit: 4,
+        "GOTG038", "The Spot", "Dr. Johnathan Ohnn", dieLimit: 4,
         "Infiltrate (When this character die is unblocked, you may return this die to the Field Zone and " +
         "it deals your opponent 1 damage.)",
         purchaseCost: 2, energyType: EnergyType.Shield,
@@ -674,7 +698,7 @@ public static class SampleCards
     // Ricochet itself) triggers it, same shape as Attune reacting to
     // "you use an Action die." See TriggerType.WhenInfiltrates.
     public static readonly CardDef Ricochet = Character(
-        "ricochet", "Ricochet", "Slinger", dieLimit: 2,
+        "GOTG105", "Ricochet", "Slinger", dieLimit: 2,
         "Infiltrate. While Ricochet is active, each time one of your character dice uses Infiltrate, draw a " +
         "die from your bag and add it to your Prep Area.",
         purchaseCost: 3, energyType: EnergyType.Bolt,
@@ -692,7 +716,7 @@ public static class SampleCards
     // moving it to Zone.Intimidated (see TurnEngine.CleanUp's remarks for
     // the return-at-end-of-turn half).
     public static readonly CardDef ScarletSpider = Character(
-        "scarlet-spider", "Scarlet Spider", "Former Villain", dieLimit: 4,
+        "CW014", "Scarlet Spider", "Former Villain", dieLimit: 4,
         "Intimidate (When fielded, remove target opposing character die from the Field Zone until end of " +
         "turn - place it next to your character cards.)",
         purchaseCost: 4, energyType: EnergyType.Mask,
@@ -713,7 +737,7 @@ public static class SampleCards
     // /ActiveCallOutTargets - this card contributes nothing but the printed
     // keyword itself, same as TheSpot's Infiltrate.
     public static readonly CardDef DrowMercenary = Character(
-        "drow-mercenary", "Drow Mercenary", "Hired Blade", dieLimit: 4,
+        "TIW007", "Drow Mercenary", "Hired Blade", dieLimit: 4,
         "Obscure (When you use an Action die, this character is unblockable until end of turn.)",
         purchaseCost: 3, energyType: EnergyType.Bolt,
         keywords: [new KeywordInstance("Obscure")],
@@ -734,7 +758,7 @@ public static class SampleCards
     // Retaliation is the first keyword that needs it (see
     // CombatEngine.ResolveRetaliation).
     public static readonly CardDef SupermanKalEl = Character(
-        "superman-kal-el", "Superman", "Kal-El", dieLimit: 4,
+        "JL018", "Superman", "Kal-El", dieLimit: 4,
         "Retaliation - If an affiliated character is KO'd, deal 1 damage to an opposing player.",
         purchaseCost: 6, energyType: EnergyType.Shield,
         keywords: [new KeywordInstance("Retaliation")],
@@ -745,7 +769,7 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 5),
             new CharacterFace(FieldingCost: 2, Attack: 7, Defense: 7),
             new CharacterFace(FieldingCost: 3, Attack: 8, Defense: 8)
-        ], set: "AOU");
+        ], set: "JL");
 
     // Justice League's Black Manta, "Deep Sea Deviant" printing - the
     // keyword's own base amount (1 damage) is entirely redefined by this
@@ -753,7 +777,7 @@ public static class SampleCards
     // count, not a fixed number), so this needs DealDamagePerActiveAffiliate
     // rather than DealDamage - see that EffectNode's own remarks.
     public static readonly CardDef BlackMantaDeepSeaDeviant = Character(
-        "black-manta-deep-sea-deviant", "Black Manta", "Deep Sea Deviant", dieLimit: 4,
+        "JL078", "Black Manta", "Deep Sea Deviant", dieLimit: 4,
         "Retaliation - If one of your Villains is KO'd, deal 1 damage to your opponent for each of your " +
         "active Villains.",
         purchaseCost: 3, energyType: EnergyType.Fist,
@@ -765,7 +789,7 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 3),
             new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 4),
             new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 5)
-        ], set: "AOU");
+        ], set: "JL");
 
     // Justice League's Bizarro, "More Than a Monster" printing - purely
     // the Strike keyword, no other text. No AbilityDef needed at all - the
@@ -773,7 +797,7 @@ public static class SampleCards
     // HasStrikeBonus), not a triggered effect, same shape as Loyalty
     // counters or Darkseid's keyword grant.
     public static readonly CardDef BizarroMoreThanAMonster = Character(
-        "bizarro-more-than-a-monster", "Bizarro", "More Than a Monster", dieLimit: 4,
+        "JUS008", "Bizarro", "More Than a Monster", dieLimit: 4,
         "Strike (This character gets +2A, +2D, and Overcrush so long as it is the only character die you " +
         "fielded this turn.)",
         purchaseCost: 7, energyType: EnergyType.Shield,
@@ -792,7 +816,7 @@ public static class SampleCards
     // Sacrifice, not Ko: the sacrificed die bypasses TryResolveKO/
     // ForceKO/Regenerate entirely and never fires "when KO'd."
     public static readonly CardDef SpideysLastStand = BasicAction(
-        "spideys-last-stand", "Spidey's Last Stand",
+        "ASM031", "Spidey's Last Stand",
         "Sacrifice a character to draw and roll 2 dice (sacrificed characters are placed in the Used Pile).",
         abilities: [new AbilityDef(TriggerType.WhenUsed, Cost: null, Effect: new Sequence([
             new Sacrifice(TargetSpec.CharacterDie("a character die you control", TargetOwnership.Own)),
@@ -810,7 +834,7 @@ public static class SampleCards
     // independently-chosen targets from one ability, not yet attempted).
     // RawText/Keywords still capture both real keywords for display.
     public static readonly CardDef TheRock = Character(
-        "the-rock-know-your-role", "The Rock", "Know Your Role", dieLimit: 4,
+        "BIT017", "The Rock", "Know Your Role", dieLimit: 4,
         "Intimidate (When fielded, remove target opposing Superstar die from the Field Zone until end of " +
         "turn - place it next to your Superstar cards.) You may use Intimidate twice when you field The " +
         "Rock. Global: Pay [M], and Sacrifice one of your Superstar dice. Reduce the cost of the next die " +
@@ -837,7 +861,7 @@ public static class SampleCards
     // so this uses the ordinary TargetSpec.CharacterDie, not an
     // affiliation-scoped one.
     public static readonly CardDef BigE = Character(
-        "big-e", "Big E", "Tag Team Champion", dieLimit: 4,
+        "TAG003", "Big E", "Tag Team Champion", dieLimit: 4,
         "Tag Out (After blockers are declared, you may Prep this die from the Field Zone to give target " +
         "Superstar die +2A and +2D until end of turn.)",
         purchaseCost: 4, energyType: EnergyType.Mask,
@@ -859,7 +883,7 @@ public static class SampleCards
     // "you've drawn this turn" like Cosmic Cube's broader wording) -
     // restricted to Zone.DiceFromBag only, not DiceFromPrep.
     public static readonly CardDef RipHunterNavigateTheSandsOfTime = Character(
-        "rip-hunter-navigate-the-sands-of-time", "Rip Hunter", "Navigate the Sands of Time", dieLimit: 4,
+        "BAT030", "Rip Hunter", "Navigate the Sands of Time", dieLimit: 4,
         "While Rip Hunter is active, once during your Clear and Draw Step, when you draw dice from your " +
         "bag you may send any number of them to the Used Pile and draw one new die for each of them.",
         purchaseCost: 4, energyType: EnergyType.Shield,
@@ -882,7 +906,7 @@ public static class SampleCards
     // constantly, same as the three Alfred Pennyworths or four Black
     // Mantas already in this catalog).
     public static readonly CardDef StarfireStarbolts = Character(
-        "starfire-starbolts", "Starfire", "Starbolts", dieLimit: 4,
+        "SKC090", "Starfire", "Starbolts", dieLimit: 4,
         "Range 2 (When this character attacks, all active characters with Range deal damage equal to " +
         "their Range value to target opposing character die.)",
         purchaseCost: 4, energyType: EnergyType.Bolt,
@@ -900,7 +924,7 @@ public static class SampleCards
     // AbilityDef needed for either (Experience is entirely engine-built,
     // like Deadly/Infiltrate - see DieStats.ForceKO/TurnEngine.CleanUp).
     public static readonly CardDef JamilahShipwreckedOnChult = Character(
-        "jamilah-shipwrecked-on-chult", "Jamilah", "Shipwrecked on Chult", dieLimit: 4,
+        "TIW019", "Jamilah", "Shipwrecked on Chult", dieLimit: 4,
         "Experience (If you KO'd an opposing Monster during your turn, place one Experience Token on " +
         "this character die's card at the end of your turn.) Overcrush (Damage dealt in excess of " +
         "blocker's D is dealt to opponent.)",
@@ -953,7 +977,7 @@ public static class SampleCards
         CardDef[] all =
         [
             BigBarda, Apocalypse, Beast, BlackPanther, HarleyQuinn, Robin, CaptainMarvel,
-            Colossus, CorvusGlaive, Dazzler, CosmicCube, ShockingGrasp, Distraction,
+            Colossus, CorvusGlaive, Dazzler, CosmicCube, ShockingGrasp, ShockingGraspFus, ShockingGraspTiw, Distraction,
             Falcon, FranklinsGalactus, GodEmperorDoom, GoddessOfThunder, Groot, InvisibleWoman,
             JaneFoster, Starfire, Kang, KingHyperion, CasketOfAncientWinters, DailyBugle, Escape,
             AlfredPennyworthCaretaker, AlfredPennyworthMI5, AlfredPennyworthToughAsNails,

@@ -3605,3 +3605,69 @@ grouping; searched "kryptonite" (an SKC full-name substring, not a short
 code) and got exactly the two visible SKC cards (Harley Quinn, Starfire
 — Starbolts; Big Barda is the third SKC card but stays hidden since
 it's `IsImplemented: false`).
+
+## Status update — switched `CardDef.Id` from hand-picked slugs to the reference sheet's own IDs
+
+All 53 sample cards used slug IDs we invented (`"big-barda"`,
+`"the-spot"`). Switched to the reference sheet's own per-set-tab IDs
+instead (`SKC021`, `GOTG038`, ...) - each set's tab has the real ID as
+its first column, always `<SET CODE><number>`, and the tab names are
+literally the short set codes (confirmed by fetching
+`.../gviz/tq?tqx=out:csv&sheet=MSW` directly - no separate lookup
+needed to go from set code to tab). A better primary key than a slug we
+made up: it's tied to a specific printing, sourced from the same place
+`Set`/`SET_NAMES` already come from, and (per the investigation below)
+naturally handles genuine cross-set reprints without an arbitrary
+"which one do we keep" tiebreak.
+
+**This time, matched directly against the sheet instead of the local
+Teambuilder source** - fetched all 49 tabs (~4,064 rows total) and
+matched all 53 cards by exact Name+Subtitle (Basic Actions disambiguated
+by an ability-text snippet, e.g. the two differently-worded "Cosmic
+Cube" cards). All 53 resolved with zero ambiguity.
+
+Doing this precisely surfaced that **the `Set` field added in the
+previous change had 6 wrong values** - the local-file cross-referencing
+that produced them was less reliable than assumed. Corrected as part of
+this same change, since both `Id` and `Set` now come from the
+re-verified sheet data:
+- `robin`: `ASM` -> `SKC` (confirmed independently by an explicit
+  `"SKC@Robin"` stat-line key in the Teambuilder source itself)
+- the three Alfred Pennyworth printings: `TMNT` -> `WF`
+- `superman-kal-el`, `black-manta-deep-sea-deviant`: `AOU` -> `JL`
+
+Also surprising: **Robin and The Spot - the two cards the earlier
+session flagged as "true reprints" needing an earliest-release-date
+tiebreak - turn out not to be cross-set duplicates at all** once matched
+by exact subtitle text against the sheet (each has exactly one match).
+The local-file comparison that produced that "reprint" conclusion was
+matching against text that didn't actually match our card's exact
+subtitle (Robin has several very differently-worded printings in the
+source data - only one matches our card's text). **The one genuine
+cross-set duplicate found in our current 53 is `Shocking Grasp`**
+(`FUS034`/`MSW011`/`TIW057` - same effect, two different printed
+wordings). Per the user, split it into 3 separate `CardDef` entries
+(`ShockingGrasp`, `ShockingGraspFus`, `ShockingGraspTiw` in
+`SampleCards.cs`) rather than picking one - `ShockingGrasp` (`MSW011`)
+stays the one on Team A's roster; all three now share its wording
+("...you may Prep this die.") for consistency, since the sheet's
+FUS034/TIW057 rows word it slightly differently ("...put this die into
+your Prep Area") and this is meant to be the same card. Catalog is now
+55 cards. Flagged for the user that I can't write to the reference
+sheet myself (read-only public CSV export, no edit credentials) if they
+want that wording made consistent at the source too.
+
+Confirmed this rename was purely mechanical and safe before touching
+anything: `BuildCatalog()` keys off `c.Id` (works automatically once
+values are unique), the `Team*Ids` lists reference `SomeCard.Id` (the
+C# property, not string literals), and the one test that reads an id
+directly (`TwoTeamsDemoTests.cs`) uses `SampleCards.BigBarda.Id` too -
+grepped the whole repo for the old id strings as literals and found
+zero hits outside `SampleCards.cs`.
+
+Verified via `dotnet build && dotnet test` (265/265), `npm run build`,
+and a real headless-Chromium session on `/teambuilder`: confirmed all
+55 cards load via `/api/cards` with the new ids and corrected `Set`
+values, and that searching narrows correctly to the 3 Shocking Grasp
+printings, the 3 Alfred Pennyworth printings (all now `WF`), and the
+single Robin row (now `SKC`).
