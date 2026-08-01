@@ -17,7 +17,7 @@ public sealed record CardDefDto(
     int DieLimit, IReadOnlyList<CharacterFaceDto> Levels, string RawText,
     IReadOnlyList<string> Keywords, IReadOnlyList<string> AbilityTriggers,
     GlobalAbilityCostDto? GlobalAbilityCost, bool GlobalAbilityNeedsTarget, bool IsImplemented,
-    bool WhenFieldedNeedsTarget)
+    bool WhenFieldedNeedsTarget, string? Set)
 {
     public static CardDefDto From(CardDef card)
     {
@@ -35,7 +35,8 @@ public sealed record CardDefDto(
                 : null,
             globalAbility is not null && EffectInterpreter.NeedsTarget(globalAbility.Effect),
             card.IsImplemented,
-            whenFieldedAbility is not null && EffectInterpreter.NeedsTarget(whenFieldedAbility.Effect));
+            whenFieldedAbility is not null && EffectInterpreter.NeedsTarget(whenFieldedAbility.Effect),
+            card.Set);
     }
 }
 

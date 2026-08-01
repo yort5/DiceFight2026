@@ -1,6 +1,7 @@
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { api } from "./api";
 import { navigate } from "./router";
+import { SET_NAMES } from "./sets";
 import type { CardDef } from "./types";
 
 // First step toward a real team builder (see RULES_ENGINE_DESIGN.md's
@@ -10,7 +11,7 @@ import type { CardDef } from "./types";
 // digital game - e.g. building a team to play with physical dice.
 
 type SortKey =
-  | "name" | "type" | "affiliations" | "purchaseCost" | "energyTypes" | "dieLimit"
+  | "name" | "type" | "affiliations" | "set" | "purchaseCost" | "energyTypes" | "dieLimit"
   | "fieldingCost" | "attack" | "defense" | "implemented";
 
 interface Level1Face {
@@ -37,6 +38,8 @@ function sortValue(card: CardDef, key: SortKey): string | number {
       return card.type;
     case "affiliations":
       return card.affiliations.join(",");
+    case "set":
+      return card.set ?? "";
     case "purchaseCost":
       return card.purchaseCost;
     case "energyTypes":
@@ -68,6 +71,7 @@ const COLUMNS: { key: SortKey; label: string }[] = [
   { key: "name", label: "Name" },
   { key: "type", label: "Type" },
   { key: "affiliations", label: "Affiliation" },
+  { key: "set", label: "Set" },
   { key: "purchaseCost", label: "Cost" },
   { key: "energyTypes", label: "Energy" },
   { key: "dieLimit", label: "Max" },
@@ -85,6 +89,7 @@ export function TeamBuilderPage() {
   const [activeTypes, setActiveTypes] = useState<Set<string>>(new Set());
   const [activeEnergyTypes, setActiveEnergyTypes] = useState<Set<string>>(new Set());
   const [activeAffiliations, setActiveAffiliations] = useState<Set<string>>(new Set());
+  const [activeSets, setActiveSets] = useState<Set<string>>(new Set());
   const [showUnimplemented, setShowUnimplemented] = useState(false);
   const [sort, setSort] = useState<{ key: SortKey; direction: "asc" | "desc" }>({
     key: "name",
@@ -116,6 +121,14 @@ export function TeamBuilderPage() {
     () => [...new Set((cards ?? []).flatMap((c) => c.affiliations))].sort(),
     [cards],
   );
+  // Same collapsible-checkbox treatment as Affiliation, for the same
+  // reason - "just the cards in a set" is a filtering task, not a
+  // free-text search. A card without a known Set never matches an
+  // active filter (same as it'd never match a real value).
+  const allSets = useMemo(
+    () => [...new Set((cards ?? []).map((c) => c.set).filter((s): s is string => s !== null))].sort(),
+    [cards],
+  );
 
   function toggle(set: Set<string>, setSet: (s: Set<string>) => void, value: string) {
     const next = new Set(set);
@@ -137,15 +150,19 @@ export function TeamBuilderPage() {
       if (activeTypes.size > 0 && !activeTypes.has(c.type)) return false;
       if (activeEnergyTypes.size > 0 && !c.energyTypes.some((e) => activeEnergyTypes.has(e))) return false;
       if (activeAffiliations.size > 0 && !c.affiliations.some((a) => activeAffiliations.has(a))) return false;
+      if (activeSets.size > 0 && (!c.set || !activeSets.has(c.set))) return false;
       if (needle.length === 0) return true;
+      const setFullName = c.set ? SET_NAMES[c.set] : undefined;
       return (
         c.name.toLowerCase().includes(needle) ||
         (c.subtitle?.toLowerCase().includes(needle) ?? false) ||
         c.affiliations.some((a) => a.toLowerCase().includes(needle)) ||
+        (c.set?.toLowerCase().includes(needle) ?? false) ||
+        (setFullName?.toLowerCase().includes(needle) ?? false) ||
         c.rawText.toLowerCase().includes(needle)
       );
     });
-  }, [cards, deferredSearch, activeTypes, activeEnergyTypes, activeAffiliations, showUnimplemented]);
+  }, [cards, deferredSearch, activeTypes, activeEnergyTypes, activeAffiliations, activeSets, showUnimplemented]);
 
   const sorted = useMemo(() => {
     const dir = sort.direction === "asc" ? 1 : -1;
@@ -226,6 +243,23 @@ export function TeamBuilderPage() {
                 ))}
               </div>
             </details>
+            <details className="card-catalog-affiliations">
+              <summary>
+                Set{activeSets.size > 0 ? ` (${activeSets.size} selected)` : ` (${allSets.length})`}
+              </summary>
+              <div className="card-catalog-affiliations-options">
+                {allSets.map((s) => (
+                  <label key={s} title={SET_NAMES[s] ?? s}>
+                    <input
+                      type="checkbox"
+                      checked={activeSets.has(s)}
+                      onChange={() => toggle(activeSets, setActiveSets, s)}
+                    />
+                    {s}
+                  </label>
+                ))}
+              </div>
+            </details>
             <label>
               <input
                 type="checkbox"
@@ -265,6 +299,7 @@ export function TeamBuilderPage() {
                         </td>
                         <td>{c.type}</td>
                         <td>{c.affiliations.join(", ") || "-"}</td>
+                        <td title={c.set ? SET_NAMES[c.set] : undefined}>{c.set ?? "-"}</td>
                         <td>{c.purchaseCost}</td>
                         <td>{c.energyTypes.join("/")}</td>
                         <td>{c.dieLimit}</td>

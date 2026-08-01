@@ -3537,3 +3537,71 @@ result set narrowed to exactly that type.
 
 `npm run build` clean - no server changes this pass, so no
 `dotnet build`/`dotnet test` needed.
+
+## Status update — Affiliation filter, and `CardDef.Set` + a matching Set filter
+
+The team builder's Affiliation and Set filters both replaced an earlier
+"fold it into free-text search" plan, per user feedback: these are used
+to build single-affiliation or single-set teams (e.g. "all X-Men," "just
+the MSW set"), not to search by name, and a real player often recognizes
+an affiliation by its printed icon rather than its exact text - a filter
+serves that better than fuzzy matching. Both got the same collapsible
+`<details>` treatment as the pre-existing "Unpurchased roster (N)"
+pattern in `PlayerBoard.tsx`, with option lists derived dynamically from
+the loaded catalog rather than hardcoded.
+
+**Affiliation** needed no new model field - `CardDef.Affiliations`
+already existed - so this was a client-only change
+(`TeamBuilderPage.tsx`/`App.css`).
+
+**Set did need a new field** - nothing previously recorded which Dice
+Masters expansion any of the 53 sample cards came from. Added
+`CardDef.Set` (nullable `string?`, same shape as `Subtitle`/
+`Alignment`), threaded through `Character()`/`BasicAction()`'s factory
+helpers and `CardDefDto`, and backfilled for all 53 existing cards.
+
+The backfill's data source was deliberately **not** the reference
+Google Sheet directly, even though its `SetInfo` tab (short code -> full
+set name -> IP -> release date, fetched via the same
+`gviz/tq?tqx=out:csv&sheet=SetInfo` trick documented in the
+`dicefight2026-stats-spreadsheet` memory) is exactly what
+`web/src/sets.ts`'s new `SET_NAMES` lookup is sourced from. Determining
+*which* set each of the 53 cards belongs to instead meant matching each
+card's name/subtitle/ability text against the local Teambuilder
+reference data (`~/DiceMasters/Teambuilder/cards.php` and `cardsb.php`
+- the exact source `SampleCards.cs` was originally imported from, see
+its own class remarks) and mapping each match to the nearest preceding
+`var <code> = [...]` set-array declaration in that file. All 53
+resolved; 2 (Robin, The Spot) are genuinely reprinted across multiple
+sets with identical text in the source data, resolved by earliest
+release date per the SetInfo tab's date column.
+
+Two incidental spelling discrepancies turned up while cross-referencing
+and are **not** fixed here - flagging for a future decision: our catalog
+has "Madalyne Pryor" where the source (and the official card name)
+spells it "**Madelyne** Pryor," and "Dr. Johnathan Ohnn" (The Spot)
+where the source spells it "**Jonathan** Ohnn" (no extra h). Likely
+typos from the original import.
+
+`web/src/sets.ts` holds the full 48-set `SET_NAMES` table (not just the
+18 sets currently in use), so a future card from a not-yet-seen set only
+needs its `set: "XXX"` added at the `SampleCards.cs` call site - no
+follow-up client change. IP is deliberately not built yet, even though
+the SetInfo tab already has that column - the user wants it added to
+this same tab's own data later rather than a separate lookup; the
+natural follow-up is a `SET_IP: Record<string,string>` derived the same
+way and a matching collapsible filter.
+
+Verified via `dotnet build && dotnet test` (265/265, purely additive/
+nullable so nothing broke), `npm run build`, and a real headless-
+Chromium session on `/teambuilder`: expanded the Set filter and
+confirmed all 18 in-use codes list correctly; checked "MSW" and
+confirmed the row count narrowed correctly (13 of the visible
+`IsImplemented`-only rows - the 21 MSW cards from the mapping include a
+few `IsImplemented: false` ones hidden by default, consistent);
+confirmed the checkbox's tooltip shows the full expansion name
+("Marvel Secret Wars"); sorted by the new Set column and confirmed
+grouping; searched "kryptonite" (an SKC full-name substring, not a short
+code) and got exactly the two visible SKC cards (Harley Quinn, Starfire
+— Starbolts; Big Barda is the third SKC card but stays hidden since
+it's `IsImplemented: false`).

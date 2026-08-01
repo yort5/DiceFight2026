@@ -67,6 +67,19 @@ public sealed record CardDef
     // team-builder) offer only cards that behave correctly, without
     // hiding the rest of the catalog - see CardDefDto.IsImplemented.
     public bool IsImplemented { get; init; } = true;
+
+    // Short set code (e.g. "MSW", "SKC") - which Dice Masters expansion
+    // this printing is from. Nullable/optional like Subtitle/Alignment -
+    // a future card added without a known set stays null rather than
+    // needing a placeholder. Backfilled for every current card by
+    // cross-referencing the local Teambuilder reference data (cards.php/
+    // cardsb.php - the same source this catalog was originally imported
+    // from) rather than guessed - see the "card Set field" status update
+    // in DESIGN_LOG.md for the methodology, and its own remarks for two
+    // incidental spelling discrepancies found along the way (not fixed
+    // here). Lets the web client filter/sort by set, same shape as
+    // Affiliation.
+    public string? Set { get; init; }
 }
 
 // See CardDef.GrantsStaticTeamBonus's remarks.

@@ -28,6 +28,7 @@ export interface CardDef {
   globalAbilityNeedsTarget: boolean;
   isImplemented: boolean;
   whenFieldedNeedsTarget: boolean;
+  set: string | null;
 }
 
 export interface Die {
