@@ -3750,3 +3750,63 @@ shows up in the default filtered view; a plain `Action`-type card
 first real example of that `CardType` in the catalog; initial load of
 the full ~3,700-row catalog and a full-catalog sort both completed in
 under a second.
+
+## Status update — ability templates: real AbilityDefs for formulaic bulk-imported keywords
+
+Follow-on to the bulk import: a small "which ability method to call"
+registry for the handful of keywords that DO need an `AbilityDef` (not
+just zero-`AbilityDef` metadata) but are otherwise formulaic -
+`BulkCards.json` gained an optional `abilityTemplate: {effect,
+trigger, params}` field per card, and `BulkCardCatalog.
+BuildTemplatedAbility` maps `effect` to the exact `AbilityDef` shape a
+matching hand-curated card already uses (`CallOut` -> `BlackWidow`'s
+shape, `Intimidate` -> `ScarletSpider`'s, `Retaliation` -> `SupermanKalEl`'s,
+`Corrupt` -> `Polaris`'s). Adding a 5th template later is one Python
+matcher function plus one more `case` in that switch - nothing else
+changes.
+
+**A correction from the user mid-plan meaningfully changed the yield**:
+the parenthetical reminder text after a keyword (e.g. `"Call Out (When
+this character die attacks, ...)"`) is unofficial and inconsistently
+authored across print runs - it explains the keyword's own already-
+standardized behavior, so it doesn't matter for deciding whether two
+cards share the same ability. `import_bulk_cards.py`'s matchers now
+strip every `(...)` group before comparing, rather than requiring
+exact text - this alone rescued a couple of Intimidate cards whose
+reminder text had typos/wording drift from the "canonical" phrasing. A
+LEADING trigger-phrase clause (only relevant for `Corrupt`, e.g. `"When
+Rogue is fielded, "`) is different - it's real, functional information
+(which `TriggerType` to fire on), so it's parsed, not discarded.
+
+Also fixed along the way: `Corrupt` was wrongly listed in round 1's
+zero-`AbilityDef` keyword list (`PARAM_KEYWORDS`) - harmless in
+practice since no real card's text is ever bare `"Corrupt N"` with no
+trigger phrase, but wrong in principle. Now has its own matcher that
+requires a real trigger phrase.
+
+Final yield: 13 cards (98 auto-`IsImplemented: true` bulk cards, up
+from 85) - 3 `Call Out` (GOTG017, GOTG074, WWE023), 6 `Intimidate`
+(CW008, CW056, CW068, DOOM013, AI025, SW005), 1 `Retaliation`
+(DOOM005), 3 `Corrupt` (DXM013/DXM017 `WhenFielded`, DXM018
+`WhenKOd`). Small, as expected going in - most cards with these
+keywords layer a real extra clause (a restriction, a bonus effect, a
+non-base amount) that isn't safe to auto-template.
+
+Deliberately left out: 3 more `Corrupt` cards (DXM006 "when Dark Beast
+blocks," DXM020 "when Sunspot is damaged," DXM022 "when Thunderbird
+KOs an opposing character die") - checked, and neither `TriggerType.
+WhenBlocks` nor `WhenDamaged` is wired to fire from anywhere in the
+engine yet (`WhenDamaged`'s gap was even pre-documented in
+`CombatEngine.cs` - "no card needs it," until now almost), and "KOs an
+opponent" has no matching `TriggerType` at all. Building an
+`AbilityDef` against a trigger that never fires would be a silent
+no-op bug, worse than leaving `IsImplemented: false` - this needs real
+engine work first, not just another template-registry entry.
+
+Verified: constructed the catalog directly (temporary test, not
+committed) and inspected all 5 distinct template/trigger combinations'
+actual `AbilityDef` shapes - all matched their hand-curated precedent
+exactly. `dotnet build && dotnet test` (265/265). Real headless-
+Chromium session on `/teambuilder`: default (`IsImplemented`-only)
+count went from 124 to 137 (+13, exact match); spot-checked all 5
+cards render and show "OK" in the default filtered view.

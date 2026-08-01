@@ -47,7 +47,12 @@ PURE_KEYWORDS = [
     "Overcrush", "Deadly", "Regenerate", "Swarm", "Fast", "Energy Drain",
     "Infiltrate", "Obscure", "Tag Out", "Strike", "Ally", "Experience",
 ]
-PARAM_KEYWORDS = ["Range", "Corrupt"]  # "Range X" / "Corrupt X"
+PARAM_KEYWORDS = ["Range"]  # "Range X" - Corrupt X is NOT zero-AbilityDef
+# (Corrupt always needs a real trigger + Corrupt effect to do anything -
+# see match_corrupt below. It was wrongly listed here in round 1; harmless
+# in practice since no real card's text is ever bare "Corrupt N" with no
+# trigger phrase, but wrong in principle - a future sheet row shaped like
+# that would have silently gotten IsImplemented: true with empty Abilities.)
 
 VALID_ENERGY = {"Fist", "Bolt", "Mask", "Shield"}
 BASIC_ACTION_SUBS = {"Basic Action Card", "Basic Action Cards", "Basic Action"}
@@ -119,10 +124,86 @@ def classify_ability(ability):
         return True, []
     keywords = sorted(set(m.group(0).split()[0] if " " not in m.group(0) else m.group(0)
                            for m in LOOSE_KEYWORD_RE.finditer(ability)))
-    # Normalize "Range 2" -> "Range", "Corrupt 2" -> "Corrupt" for the Keywords list
+    # Normalize "Range 2" -> "Range" for the Keywords list
     keywords = sorted(set(re.sub(r" \d+$", "", k) for k in keywords))
     is_implemented = bool(STRICT_KEYWORD_RE.match(ability))
     return is_implemented, keywords
+
+
+# ---- Ability templates: formulaic keywords that DO need an AbilityDef,
+# unlike the zero-AbilityDef keywords above. Matched only after
+# classify_ability's strict check fails - i.e. these are cards whose
+# text isn't blank/pure-keyword, but does turn out to be exactly one of
+# these known shapes. Reminder-text parentheticals are stripped before
+# comparing (per the user: unofficial, inconsistently-authored
+# explanation of the keyword's own already-standardized behavior, not
+# part of what makes two cards "the same ability") - only a leading
+# trigger-phrase clause (for Corrupt) is treated as functionally real,
+# since it picks the TriggerType.
+#
+# Each matcher returns (abilityTemplate dict, extra keyword names) or
+# None. See BulkCardCatalog.cs's BuildTemplatedAbility for the C# side
+# that turns "effect" into the actual AbilityDef/EffectNode tree - this
+# is the "JSON value that tells us which ability method to call"
+# registry; adding a 5th template means one more matcher here plus one
+# more case there, nothing else changes.
+
+def strip_parens(text):
+    stripped = re.sub(r"\([^()]*\)", "", text)
+    return re.sub(r"\s+", " ", stripped).strip().rstrip(".").strip()
+
+
+def match_call_out(ability, name):
+    if strip_parens(ability).lower() == "call out":
+        return {"effect": "CallOut", "trigger": "WhenAttacks", "params": {}}, ["Call Out"]
+    return None
+
+
+def match_intimidate(ability, name):
+    if strip_parens(ability).lower() == "intimidate":
+        return {"effect": "Intimidate", "trigger": "WhenFielded", "params": {}}, ["Intimidate"]
+    return None
+
+
+def match_retaliation(ability, name):
+    if strip_parens(ability).lower() == "retaliation":
+        return {"effect": "Retaliation", "trigger": "Retaliation", "params": {"amount": 1}}, ["Retaliation"]
+    return None
+
+
+CORRUPT_AMOUNT_RE = re.compile(r"^Corrupt\s+(\d+)$", re.IGNORECASE)
+
+
+def match_corrupt(ability, name):
+    # Corrupt's trigger varies per card and is stated as a real leading
+    # clause (not reminder text) - e.g. "When Rogue is fielded, Corrupt
+    # 2 (...)". Only WhenFielded/WhenKOd are wired to actually fire in
+    # the engine today (see the plan/DESIGN_LOG for WhenBlocks/
+    # WhenDamaged/"KOs an opponent" - real engine work, not attempted
+    # here) - matched against the card's own real Name, not a generic
+    # regex, since that's exactly what the sheet's text uses.
+    stripped = strip_parens(ability).replace("’", "'").replace("‘", "'")
+    for phrase, trigger in (
+        (f"When {name} is fielded,", "WhenFielded"),
+        (f"When {name} is KO'd,", "WhenKOd"),
+    ):
+        if stripped.startswith(phrase):
+            rest = stripped[len(phrase):].strip()
+            m = CORRUPT_AMOUNT_RE.match(rest)
+            if m:
+                return {"effect": "Corrupt", "trigger": trigger, "params": {"amount": int(m.group(1))}}, ["Corrupt"]
+    return None
+
+
+ABILITY_TEMPLATE_MATCHERS = [match_call_out, match_intimidate, match_retaliation, match_corrupt]
+
+
+def match_ability_template(ability, name):
+    for matcher in ABILITY_TEMPLATE_MATCHERS:
+        result = matcher(ability, name)
+        if result:
+            return result
+    return None
 
 
 def classify_row(code, row):
@@ -177,6 +258,14 @@ def classify_row(code, row):
 
     is_implemented, keywords = classify_ability(ability)
 
+    ability_template = None
+    if not is_implemented:
+        template_match = match_ability_template(ability, name)
+        if template_match:
+            ability_template, extra_keywords = template_match
+            is_implemented = True
+            keywords = sorted(set(keywords) | set(extra_keywords))
+
     entry = {
         "id": card_id,
         "name": name,
@@ -191,6 +280,7 @@ def classify_row(code, row):
         "affiliations": parse_affiliations(row[6] if len(row) > 6 else ""),
         "isImplemented": is_implemented,
         "set": code,
+        "abilityTemplate": ability_template,
     }
     return entry, None
 
@@ -234,10 +324,13 @@ def main():
     OUTPUT_PATH.write_text(json.dumps(entries, indent=2) + "\n", encoding="utf-8")
 
     implemented_count = sum(1 for e in entries if e["isImplemented"])
+    templated = [e for e in entries if e["abilityTemplate"]]
     print(f"\nWrote {len(entries)} cards to {OUTPUT_PATH.relative_to(REPO_ROOT)}")
     print(f"Total sheet rows scanned: {total_rows}")
     print(f"By type: {dict(type_counts)}")
-    print(f"Auto-IsImplemented=true (blank or pure-keyword-only text): {implemented_count}")
+    print(f"Auto-IsImplemented=true (blank/pure-keyword/templated): {implemented_count}")
+    print(f"  of which via an ability template ({len(templated)}): " +
+          ", ".join(f"{e['id']}={e['abilityTemplate']['effect']}" for e in templated))
     print("\nSkip reasons:")
     for reason, count in reasons.most_common():
         print(f"  {count:5d}  {reason}")
