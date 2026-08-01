@@ -934,3 +934,85 @@
 .card-catalog-table tr.unimplemented {
   opacity: 0.5;
 }
+
+/* ---- Team Builder: team sidebar ---- */
+
+.team-add-button {
+  font-size: 12px;
+  line-height: 1;
+  padding: 2px 8px;
+}
+
+.team-sidebar {
+  border: 1px solid rgba(127, 127, 127, 0.3);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 13px;
+  position: sticky;
+  top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.team-sidebar h3 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.65;
+  margin: 0;
+}
+
+.team-violations {
+  margin: 0;
+  color: #c0392b;
+  font-size: 12px;
+}
+
+.team-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.team-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(127, 127, 127, 0.08);
+}
+
+.team-card-name {
+  font-weight: 600;
+}
+
+.team-stepper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.team-stepper button {
+  font-size: 12px;
+  line-height: 1;
+  padding: 2px 8px;
+}
+
+.team-remove-button {
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+.team-strict-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}

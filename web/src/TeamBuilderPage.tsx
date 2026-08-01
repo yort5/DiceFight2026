@@ -4,11 +4,41 @@ import { navigate } from "./router";
 import { SET_NAMES } from "./sets";
 import type { CardDef } from "./types";
 
-// First step toward a real team builder (see RULES_ENGINE_DESIGN.md's
-// next-steps list) - read-only browse/search/sort for now, no team
-// selection yet. Its own page/route (not a modal off the game view) since
-// it has standalone value even to someone who never opens the live
-// digital game - e.g. building a team to play with physical dice.
+// Now a real team builder (see RULES_ENGINE_DESIGN.md's next-steps
+// list) - browse/search/sort plus actually selecting cards into a
+// team, with a shareable URL. Its own page/route (not a modal off the
+// game view) since it has standalone value even to someone who never
+// opens the live digital game - e.g. building a team to play with
+// physical dice. The engine itself never enforces team-construction
+// legality (house rules/alternate formats are common - see
+// TeamSetup.cs's own remarks) - only this page's "Strict rules"
+// checkbox does, and it can be turned off.
+
+const BASIC_ACTION_TYPES = new Set(["BasicAction", "EpicBasicAction"]);
+const MAX_UNIQUE_CARDS = 8;
+const MAX_DICE = 20;
+const MAX_BASIC_ACTIONS = 2;
+
+function isBasicActionFamily(card: CardDef): boolean {
+  return BASIC_ACTION_TYPES.has(card.type);
+}
+
+function encodeTeam(team: Map<string, number>): string {
+  return [...team.entries()].map(([id, count]) => `${id}:${count}`).join(",");
+}
+
+function decodeTeam(search: string): Map<string, number> {
+  const params = new URLSearchParams(search);
+  const raw = params.get("team");
+  const team = new Map<string, number>();
+  if (!raw) return team;
+  for (const entry of raw.split(",")) {
+    const [id, countStr] = entry.split(":");
+    const count = Number(countStr);
+    if (id && Number.isInteger(count) && count > 0) team.set(id, count);
+  }
+  return team;
+}
 
 type SortKey =
   | "name" | "type" | "affiliations" | "set" | "purchaseCost" | "energyTypes" | "dieLimit"
@@ -95,10 +125,103 @@ export function TeamBuilderPage() {
     key: "name",
     direction: "asc",
   });
+  const [team, setTeam] = useState<Map<string, number>>(new Map());
+  const [strictRules, setStrictRules] = useState(true);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     api.getCards().then(setCards).catch((e) => setError(String(e)));
   }, []);
+
+  // Load a shared team link once the catalog is available to resolve
+  // its ids against - silently drops any id that doesn't resolve
+  // (stale/typo'd link) rather than hard-failing.
+  useEffect(() => {
+    if (!cards) return;
+    const fromUrl = decodeTeam(window.location.search);
+    if (fromUrl.size === 0) return;
+    const cardById = new Map(cards.map((c) => [c.id, c]));
+    const resolved = new Map<string, number>();
+    for (const [id, count] of fromUrl) {
+      if (cardById.has(id)) resolved.set(id, count);
+    }
+    setTeam(resolved);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cards !== null]);
+
+  const cardById = useMemo(() => new Map((cards ?? []).map((c) => [c.id, c])), [cards]);
+
+  const teamEntries = useMemo(
+    () =>
+      [...team.entries()]
+        .map(([id, count]) => ({ card: cardById.get(id), count }))
+        .filter((e): e is { card: CardDef; count: number } => e.card !== undefined),
+    [team, cardById],
+  );
+  const characterEntries = useMemo(() => teamEntries.filter((e) => !isBasicActionFamily(e.card)), [teamEntries]);
+  const basicActionEntries = useMemo(() => teamEntries.filter((e) => isBasicActionFamily(e.card)), [teamEntries]);
+  const uniqueNames = useMemo(() => new Set(characterEntries.map((e) => e.card.name)), [characterEntries]);
+  const totalDice = useMemo(() => characterEntries.reduce((sum, e) => sum + e.count, 0), [characterEntries]);
+
+  // Real rules 2.1.1/2.1.3/2.1.4/2.1.5: up to 8 unique-named Character/
+  // Action cards, 1..dieLimit dice each summing to at most 20, exactly
+  // 2 Basic Action cards (excluded from the dice cap). Only "over the
+  // cap" counts as a violation - a team still being built naturally
+  // passes through 0/1 Basic Actions or fewer than 8 cards on the way
+  // to a complete team, that's not illegal, just incomplete.
+  const violations = useMemo(() => {
+    const list: string[] = [];
+    if (uniqueNames.size > MAX_UNIQUE_CARDS) list.push(`${uniqueNames.size}/${MAX_UNIQUE_CARDS} unique cards`);
+    if (totalDice > MAX_DICE) list.push(`${totalDice}/${MAX_DICE} dice`);
+    if (basicActionEntries.length > MAX_BASIC_ACTIONS) list.push(`${basicActionEntries.length}/${MAX_BASIC_ACTIONS} Basic Actions`);
+    return list;
+  }, [uniqueNames, totalDice, basicActionEntries]);
+
+  function canAddCard(card: CardDef): { ok: boolean; reason?: string } {
+    if (team.has(card.id)) return { ok: false, reason: "Already on the team." };
+    if (!strictRules) return { ok: true };
+    if (isBasicActionFamily(card)) {
+      if (basicActionEntries.length >= MAX_BASIC_ACTIONS) {
+        return { ok: false, reason: `Already have ${MAX_BASIC_ACTIONS} Basic Actions.` };
+      }
+      return { ok: true };
+    }
+    if (uniqueNames.has(card.name)) return { ok: false, reason: `Already have a card named "${card.name}".` };
+    if (uniqueNames.size >= MAX_UNIQUE_CARDS) return { ok: false, reason: `Already have ${MAX_UNIQUE_CARDS} cards.` };
+    if (totalDice + 1 > MAX_DICE) return { ok: false, reason: `Would exceed ${MAX_DICE} dice.` };
+    return { ok: true };
+  }
+
+  function canIncrement(card: CardDef, count: number): boolean {
+    if (count >= card.dieLimit) return false;
+    if (strictRules && totalDice + 1 > MAX_DICE) return false;
+    return true;
+  }
+
+  function addCard(card: CardDef) {
+    const next = new Map(team);
+    next.set(card.id, isBasicActionFamily(card) ? card.dieLimit : 1);
+    setTeam(next);
+  }
+
+  function removeCard(cardId: string) {
+    const next = new Map(team);
+    next.delete(cardId);
+    setTeam(next);
+  }
+
+  function setCount(cardId: string, count: number) {
+    const next = new Map(team);
+    next.set(cardId, count);
+    setTeam(next);
+  }
+
+  async function copyTeamLink() {
+    const url = `${window.location.origin}${window.location.pathname}?team=${encodeTeam(team)}`;
+    await navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
 
   const allTypes = useMemo(() => [...new Set((cards ?? []).map((c) => c.type))].sort(), [cards]);
   const allEnergyTypes = useMemo(
@@ -280,6 +403,7 @@ export function TeamBuilderPage() {
               <table className="card-catalog-table">
                 <thead>
                   <tr>
+                    <th />
                     {COLUMNS.map((col) => (
                       <th key={col.key} onClick={() => toggleSort(col.key)}>
                         {col.label}
@@ -291,8 +415,19 @@ export function TeamBuilderPage() {
                 <tbody>
                   {visible.map((c) => {
                     const l1 = level1(c);
+                    const add = canAddCard(c);
                     return (
                       <tr key={c.id} className={c.isImplemented ? "" : "unimplemented"} title={cardTooltip(c)}>
+                        <td>
+                          <button
+                            className="team-add-button"
+                            disabled={!add.ok}
+                            title={add.reason}
+                            onClick={() => addCard(c)}
+                          >
+                            +
+                          </button>
+                        </td>
                         <td>
                           {c.name}
                           {c.subtitle && <span className="hint"> — {c.subtitle}</span>}
@@ -314,6 +449,67 @@ export function TeamBuilderPage() {
               </table>
             </>
           )}
+        </div>
+
+        <div className="team-sidebar">
+          <h3>Team</h3>
+          <p className="hint">
+            {uniqueNames.size}/{MAX_UNIQUE_CARDS} cards, {totalDice}/{MAX_DICE} dice,{" "}
+            {basicActionEntries.length}/{MAX_BASIC_ACTIONS} Basic Actions
+          </p>
+          {violations.length > 0 && (
+            <p className="team-violations">Over the rules: {violations.join(", ")}</p>
+          )}
+
+          {characterEntries.length === 0 && basicActionEntries.length === 0 ? (
+            <p className="hint">No cards yet - click "+" on a card to add it.</p>
+          ) : (
+            <ul className="team-list">
+              {[...characterEntries, ...basicActionEntries].map(({ card, count }) => (
+                <li key={card.id} className="team-list-item">
+                  <div>
+                    <div className="team-card-name">{card.name}</div>
+                    {card.subtitle && <div className="hint">{card.subtitle}</div>}
+                  </div>
+                  {isBasicActionFamily(card) ? (
+                    <span className="hint">{count} dice</span>
+                  ) : (
+                    <span className="team-stepper">
+                      <button
+                        disabled={count <= 1}
+                        onClick={() => setCount(card.id, count - 1)}
+                      >
+                        −
+                      </button>
+                      {count}
+                      <button
+                        disabled={!canIncrement(card, count)}
+                        onClick={() => setCount(card.id, count + 1)}
+                      >
+                        +
+                      </button>
+                    </span>
+                  )}
+                  <button className="team-remove-button" onClick={() => removeCard(card.id)}>
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <label className="team-strict-toggle">
+            <input
+              type="checkbox"
+              checked={strictRules}
+              onChange={(e) => setStrictRules(e.target.checked)}
+            />
+            Strict rules (2.1.1/2.1.3-2.1.5)
+          </label>
+
+          <button onClick={copyTeamLink} disabled={team.size === 0}>
+            {copied ? "Copied!" : "Copy team link"}
+          </button>
         </div>
       </div>
     </div>

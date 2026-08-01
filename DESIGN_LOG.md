@@ -3810,3 +3810,65 @@ exactly. `dotnet build && dotnet test` (265/265). Real headless-
 Chromium session on `/teambuilder`: default (`IsImplemented`-only)
 count went from 124 to 137 (+13, exact match); spot-checked all 5
 cards render and show "OK" in the default filtered view.
+
+## Status update — team selection on `/teambuilder`
+
+Next-steps item #13: the browse/search/sort page (3,692 cards) now
+lets you actually build a team, entirely client-side - no API/engine
+changes at all. Per the user: the engine itself must never enforce
+team-construction legality (house rules/alternate formats are common -
+`TeamSetup.cs`'s "not something this instantiation step should
+silently enforce" comment already said as much, and stays true).
+Instead, `TeamBuilderPage.tsx` enforces the real rules by default, with
+a "Strict rules" checkbox to turn enforcement off - matching the old
+reference Teambuilder tool's own default-on-with-override pattern
+(confirmed by reading its `index.php` directly, though its actual
+override checkbox implementation wasn't found there to copy - built
+the UX from the user's description instead).
+
+**The real rules** (pulled from the comprehensive rules PDF, rules
+2.1.1/2.1.3/2.1.4/2.1.5 - not recorded anywhere in this repo before
+now): up to 8 unique-*named* Character/Action cards (by name, not id -
+two different printings of the same character can't both be on a
+team), each contributing a *chosen* 1..`dieLimit` dice (not always the
+max - a real nuance `TeamSetup.cs`'s own always-full-die-limit
+shortcut doesn't model, though that's fine since it's explicitly not
+enforcing legality anyway), summing to at most 20 dice total, plus
+exactly 2 Basic Action cards (excluded from the 20-dice cap).
+
+Only "over the cap" counts as a violation, both for blocking (under
+Strict rules) and for the sidebar's warning summary (always shown,
+regardless of the checkbox) - a team still being built naturally has
+fewer than 8 cards or fewer than 2 Basic Actions on the way to
+completion, that's incomplete, not illegal.
+
+**URL scheme**: `?team=<id>:<count>,<id>:<count>,...` (finalized the
+"TBD" shape floated in next-steps item #13) - read the old
+Teambuilder's own scheme (`maketeamlink`/`setteam` in its `index.php`,
+`<count>x<card-slug>;...`) for reference, but didn't need to match it
+byte-for-byte since the underlying card ids are a completely different
+scheme now (sheet-derived `SET+number`, not the old tool's internal
+numbering) - old pasted links wouldn't resolve against this catalog
+either way. "Copy team link" writes the current team to the clipboard
+as a full URL; loading `/teambuilder?team=...` resolves each id against
+the loaded catalog once it's fetched, silently dropping anything that
+doesn't resolve (stale/typo'd link) rather than hard-failing.
+
+**Explicitly not done this pass**: wiring a built team into actually
+starting a digital game - `GamesController.Create` is untouched, still
+always the two curated rosters. The user said "team selection first" -
+starting a game with a custom team is a separable next increment (needs
+its own decisions: what's the opponent, building both sides in one
+session or one at a time, etc.).
+
+Verified: `npm run build` clean (no server changes, so no `dotnet
+build`/`test` needed - reran them anyway, still 265/265). Real
+headless-Chromium session on `/teambuilder`: added a card and confirmed
+the die-count stepper correctly caps at its `dieLimit` (Apocalypse, 4);
+added 8 unique-named cards and confirmed a 9th is blocked under Strict
+rules with the exact reason text ("Already have 8 cards."); toggled
+Strict rules off and confirmed the same add now succeeds, with the
+sidebar's violation summary correctly showing "9/8 unique cards"; used
+"Copy team link," read the clipboard, navigated to that exact URL
+fresh, and confirmed the team restored exactly (same 9 cards, same
+per-card dice counts).
