@@ -3872,3 +3872,71 @@ sidebar's violation summary correctly showing "9/8 unique cards"; used
 "Copy team link," read the clipboard, navigated to that exact URL
 fresh, and confirmed the team restored exactly (same 9 cards, same
 per-card dice counts).
+
+## Status update — team URLs now match the old Teambuilder's own style, and resolve its real links
+
+Per the user: not just a similarly-shaped URL scheme, but one that
+lets links people already made with the community Teambuilder tool
+(`~/DiceMasters/Teambuilder/`) paste into ours and actually load. The
+real obstacle wasn't punctuation, it was identity - the old tool
+encodes each card as `<count>x<slug>` (`;`-joined) where `slug =
+num2cardname(nr) = (nr % 1000) + setname.toLowerCase()` (its own
+`index.php`), and `nr` turns out to be nothing more than a 1-based
+position within that set's local card array (`nr = (setid+1)*1000 +
+arrayIndex + 1`, from its own `init()`) - a completely different id
+system from our sheet-derived `SET+number` ids.
+
+Verified (not assumed) that translating one into the other is a safe,
+lookup-table-free string transform by cross-checking real cards across
+3 different sets - the old tool's per-set array position and our
+sheet's per-set row number are independently transcribing the same
+real, printed card number, so they line up exactly every time checked:
+
+| Old slug | Card | Our id |
+|---|---|---|
+| `1msw` | Casket of Ancient Winters | `MSW001` |
+| `2msw` | Cosmic Cube | `MSW002` |
+| `4msw` | Daily Bugle | `MSW004` |
+| `1skc` | Arctic Breath | `SKC001` |
+| `2skc` | Banishment | `SKC002` |
+| `1bat` | Ace the Bat Hound | `BAT001` |
+
+So `18msw` -> `MSW018`: split the trailing letters off as the set
+code, uppercase it, zero-pad the leading digits to 3.
+
+Changed `TeamBuilderPage.tsx`'s `encodeTeam`/`decodeTeam` (the only
+things that changed - same call sites the previous pass already
+wired up) to match the old style: query param renamed `team` ->
+**`cards`**, entries `<count>x<id>` joined by `;` instead of
+`<id>:<count>` joined by `,`. We still only ever **generate** our own
+ids (`4xMSW018`) - not reverting to the old lowercase-reversed slugs
+for new links - but the decoder accepts either shape, running an
+old-style slug through the transform above before catalog lookup.
+`?view` (a valueless flag the old tool always prefixes) and `&name=`
+(an old team-name param we have no equivalent for yet) are harmless if
+present - `URLSearchParams` just ignores params we don't look for.
+
+One real bug caught before shipping: a naive `entry.split("x")` breaks
+for set codes that contain their own "x" (`AvX`, `XFC`, `XMF`, `XFO`) -
+e.g. `"18xfc"` would wrongly split into 3 pieces. Fixed with an
+anchored regex (`/^(\d+)x(.+)$/`) that only splits on the count/id
+boundary, not every "x" in the string.
+
+Not 100% coverage - org-play/promo cards with irregular set codes
+(already excluded from the bulk import, ~127 rows) won't resolve from
+an old link either; that entry just gets dropped, same as any other
+unresolvable id already does.
+
+Verified: `npm run build` clean. Real headless-Chromium session on
+`/teambuilder`: loaded a genuine hand-written old-style URL
+(`?view&cards=1x1msw;1x4msw;1x1skc;2x18xfc`, deliberately including an
+"x"-containing set code as a regression check for the split bug above)
+and confirmed all 4 cards resolved correctly (Casket of Ancient
+Winters, Daily Bugle, Arctic Breath, Juggernaut); built a fresh team,
+copied its link, confirmed the new `?cards=1xMSW018`-style output, and
+confirmed it reloads correctly.
+
+**Noted for later, not built now**: once real auth/login exists (next-
+steps #5, still unbuilt), storing multiple named teams per user would
+be a natural fit - team names aren't modeled anywhere today (the old
+tool's `&name=` param is read-ignored, not stored).

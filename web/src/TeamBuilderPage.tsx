@@ -23,19 +23,48 @@ function isBasicActionFamily(card: CardDef): boolean {
   return BASIC_ACTION_TYPES.has(card.type);
 }
 
+// Matches the old community Teambuilder tool's own URL style
+// (`?cards=<count>x<slug>;<count>x<slug>...`, see its `maketeamlink`/
+// `num2cardname`) so pasted-in old links resolve, not just a similarly
+// -shaped scheme of our own. We always generate `<count>x<OURID>`
+// (`4xMSW018`) - the old tool's own lowercase, reversed
+// `<number><setcode>` slugs (`18msw`) only ever appear on the read
+// side, translated below.
 function encodeTeam(team: Map<string, number>): string {
-  return [...team.entries()].map(([id, count]) => `${id}:${count}`).join(",");
+  return [...team.entries()].map(([id, count]) => `${count}x${id}`).join(";");
 }
+
+// The old tool's slug is `(1-based position within its per-set array)
+// + (set code, lowercased)` - e.g. "18msw" for the 18th card in MSW.
+// Verified (see DESIGN_LOG.md) that this position lines up exactly
+// with our own sheet-derived `SET+number` ids, so this is a pure
+// string transform, not a lookup table: split the trailing letters off
+// as the set code, uppercase it, zero-pad the leading digits to 3.
+const OLD_SLUG_RE = /^(\d+)([a-z]+)$/i;
+
+function toOurId(rawId: string): string {
+  const m = OLD_SLUG_RE.exec(rawId);
+  if (!m) return rawId; // already one of our own ids (or unresolvable - caller drops it)
+  const [, number, setCode] = m;
+  return `${setCode.toUpperCase()}${number.padStart(3, "0")}`;
+}
+
+// "<count>x<id>" - matched with a regex rather than split("x"), since
+// some set codes contain their own "x" (AvX, XFC, XMF, XFO) that a
+// naive split would cut on too.
+const TEAM_ENTRY_RE = /^(\d+)x(.+)$/;
 
 function decodeTeam(search: string): Map<string, number> {
   const params = new URLSearchParams(search);
-  const raw = params.get("team");
+  const raw = params.get("cards");
   const team = new Map<string, number>();
   if (!raw) return team;
-  for (const entry of raw.split(",")) {
-    const [id, countStr] = entry.split(":");
+  for (const entry of raw.split(";")) {
+    const m = TEAM_ENTRY_RE.exec(entry);
+    if (!m) continue;
+    const [, countStr, rawId] = m;
     const count = Number(countStr);
-    if (id && Number.isInteger(count) && count > 0) team.set(id, count);
+    if (Number.isInteger(count) && count > 0) team.set(toOurId(rawId), count);
   }
   return team;
 }
@@ -217,7 +246,7 @@ export function TeamBuilderPage() {
   }
 
   async function copyTeamLink() {
-    const url = `${window.location.origin}${window.location.pathname}?team=${encodeTeam(team)}`;
+    const url = `${window.location.origin}${window.location.pathname}?cards=${encodeTeam(team)}`;
     await navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
