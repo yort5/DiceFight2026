@@ -3940,3 +3940,67 @@ confirmed it reloads correctly.
 steps #5, still unbuilt), storing multiple named teams per user would
 be a natural fit - team names aren't modeled anywhere today (the old
 tool's `&name=` param is read-ignored, not stored).
+
+## Status update — a third pass at bulk-card `IsImplemented`: text-template mining, and "no ability text" placeholders
+
+Asked to look for more formulaic bulk-imported cards to auto-mark
+`IsImplemented: true` beyond the round-2 keyword templates (Call Out,
+Intimidate, Retaliation, Corrupt) - the user's own examples were things
+like "Overcrush" + "When fielded, KO target Shield die" or + "gets +1A
+if you have another active Brotherhood die."
+
+**Mined the real unimplemented-card texts (3,539 of them) rather than
+guessing from the examples**, and the honest result is that the well
+is basically dry after round 2. Normalizing each text (strip a leading
+keyword clause, replace the card's own name, collapse numbers) and
+clustering by shape found 3,409 *distinct* shapes across 3,539 cards -
+almost everything is a one-off. Scanning for specific safe structural
+templates (`WhenFielded: deal N damage/KO/reroll target <X> die`,
+excluding any text with a compound "or" clause or a second sentence)
+found only ~10 cards buildable with zero new engine work, split across
+tiny buckets (4 `WhenFielded` prep-from-bag, 2 `WhenKO'd` gain-life,
+a couple of plain/energy-restricted damage-or-KO). A further ~15 cards
+are blocked specifically on two capabilities `TargetSpec` doesn't have
+yet - affiliation-restricted and level-restricted targeting (e.g.
+"target Brotherhood of Mutants character die," "target level 1
+character die") - real, reusable engine investments, but not template-
+registry additions, and not built this pass (deferred pending the
+user's prioritization - flagged, not silently skipped). The user's own
+second example (a static "+1A if another active affiliated die" self-
+buff) doesn't appear as a recurring pattern in the data at all, and
+would need a wholly new conditional-static-bonus mechanism beyond the
+unconditional team-wide `GrantsStaticTeamBonus` that exists today.
+
+**A real, clean win found along the way, redirected to by the user**:
+66 cards whose sheet "Ability" cell isn't blank, but contains a
+placeholder phrase meaning "this card has no ability" - `"(No Ability
+Text.)"`, `"None."`, `"(blank)"`, etc., in a dozen-odd
+case/punctuation variants across different sets. These were falling
+through round 1's blank-text check (the string genuinely isn't empty)
+and staying `IsImplemented: false` for no good reason - same "genuinely
+blank text box" situation as hand-curated vanilla cards like
+`HarleyQuinn`/`Colossus` in `SampleCards.cs`. New `import_bulk_cards.py`
+helper `is_no_ability_placeholder()` requires the **entire** ability
+text (after stripping one layer of parens and a trailing period) to
+exactly match one of a small whitelist of these phrases - a whole-
+string check, not a substring one, specifically because two real
+counter-examples exist in the data: one card literally reads `"(No
+Ability Text.) Global: Pay Fist. Target character die gets +1A and
++1D..."` (blank base text, but a real Global ability printed on top -
+must NOT match), and another's genuinely unrelated ability text
+happens to contain the words "have no text" in a completely different
+sentence. Matched ability text gets normalized to an empty string (not
+left as the literal placeholder phrase) before storage, matching the
+vanilla-card convention exactly and giving these cards the nicer
+"(blank text box)" tooltip fallback for free.
+
+Yield: 66 cards, `IsImplemented: true` bulk count 98 -> 164 (203 total
+across hand-curated + bulk).
+
+Verified: re-ran `import_bulk_cards.py`, confirmed the +66 exactly and
+spot-checked the rawText normalization (`AOU013`/`BIT010`/`GOTG016` all
+now store `""`, not the placeholder string). `dotnet build && dotnet
+test` (265/265). Real headless-Chromium session on `/teambuilder`:
+default view count 137 -> 203; searched "Iron Man" and confirmed the
+`AOU013` "Big Man" printing (a former no-ability-text false negative)
+now shows in the default filtered view.

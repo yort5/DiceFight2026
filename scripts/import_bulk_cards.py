@@ -118,6 +118,26 @@ def parse_affiliations(raw):
     return [raw]
 
 
+# Some sheet rows encode a genuinely blank text box as a placeholder
+# phrase instead of an actually-empty cell (e.g. "(No Ability Text.)")
+# - treated as equivalent to blank (same "vanilla card" convention
+# HarleyQuinn/Colossus/etc. already use in SampleCards.cs), not left
+# unimplemented. Requires the ENTIRE text (after stripping one layer of
+# parens/trailing period) to be exactly one of these phrases - a card
+# whose real text merely CONTAINS one of these words (e.g. a card that
+# has "(No Ability Text.)" for its base ability but a real printed
+# Global on top) must not match, so this is a whole-string check, not
+# a substring one.
+NO_ABILITY_PHRASES = {"no ability text", "none", "blank", "no ability", "n/a", "no text", "no abilities"}
+
+
+def is_no_ability_placeholder(ability):
+    inner = ability
+    if inner.startswith("(") and inner.endswith(")"):
+        inner = inner[1:-1].strip()
+    return inner.rstrip(".").strip().lower() in NO_ABILITY_PHRASES
+
+
 def classify_ability(ability):
     ability = norm(ability)
     if not ability:
@@ -216,6 +236,8 @@ def classify_row(code, row):
     energy_raw = norm(row[4])
     rarity = norm(row[5])
     ability = norm(row[7])
+    if is_no_ability_placeholder(ability):
+        ability = ""
     statline = norm(row[8])
 
     if not ID_RE.match(card_id):

@@ -2934,12 +2934,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No ability text)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Avengers"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "AOU",
     "abilityTemplate": null
   },
@@ -3045,12 +3045,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No ability text)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Avenger"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "AOU",
     "abilityTemplate": null
   },
@@ -3908,12 +3908,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No ability text)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Avengers"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "AOU",
     "abilityTemplate": null
   },
@@ -7666,12 +7666,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No Ability Text)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Guardians of the Galaxy"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "ASM",
     "abilityTemplate": null
   },
@@ -8110,12 +8110,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No Ability Text.)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Spider-Friends"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "ASM",
     "abilityTemplate": null
   },
@@ -8669,12 +8669,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No Ability Text.)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Spider-Friends"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "ASM",
     "abilityTemplate": null
   },
@@ -8818,13 +8818,13 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No Ability Text.)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Villains",
       "Sinister Six"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "ASM",
     "abilityTemplate": null
   },
@@ -9002,12 +9002,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No Ability Text.)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Spider-Friends"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "ASM",
     "abilityTemplate": null
   },
@@ -9148,12 +9148,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No Ability Text.)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Spider-Friends"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "ASM",
     "abilityTemplate": null
   },
@@ -9486,12 +9486,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No Ability Text.)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Spider-Friends"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "ASM",
     "abilityTemplate": null
   },
@@ -16918,12 +16918,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No Ability Text)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Team Superman"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "BAT",
     "abilityTemplate": null
   },
@@ -17288,12 +17288,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No Ability Text)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Villains"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "BAT",
     "abilityTemplate": null
   },
@@ -21780,12 +21780,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No ability text)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Evil Equip Monster"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "BFF",
     "abilityTemplate": null
   },
@@ -22384,12 +22384,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No ability text)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Neutral Equip Monster"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "BFF",
     "abilityTemplate": null
   },
@@ -22571,12 +22571,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No ability text)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Evil Equip Monster"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "BFF",
     "abilityTemplate": null
   },
@@ -25902,13 +25902,13 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No Ability Text.)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Chaos",
       "Death Guard"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "BFU",
     "abilityTemplate": null
   },
@@ -26020,13 +26020,13 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No Ability Text.)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Imperium",
       "Ultramarine"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "BFU",
     "abilityTemplate": null
   },
@@ -27547,12 +27547,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "None.",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Legends"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "BIT",
     "abilityTemplate": null
   },
@@ -28250,12 +28250,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No Ability Text.)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Avengers"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "CW",
     "abilityTemplate": null
   },
@@ -28441,12 +28441,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No Ability Text.)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Guardians of The Galaxy"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "CW",
     "abilityTemplate": null
   },
@@ -28743,12 +28743,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No Ability Text.)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Avengers"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "CW",
     "abilityTemplate": null
   },
@@ -28977,12 +28977,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No Ability Text.)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Avengers"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "CW",
     "abilityTemplate": null
   },
@@ -29425,10 +29425,10 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No Ability Text.)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "CW",
     "abilityTemplate": null
   },
@@ -34515,12 +34515,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "None",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Justice League"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "DOOM",
     "abilityTemplate": null
   },
@@ -46452,12 +46452,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No ability text.)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Evil Monster"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "FUS",
     "abilityTemplate": null
   },
@@ -46563,12 +46563,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No ability text.)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Evil Monster"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "FUS",
     "abilityTemplate": null
   },
@@ -50919,12 +50919,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No Ability Text.)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Justice League"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "GAF",
     "abilityTemplate": null
   },
@@ -51290,13 +51290,13 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No Ability Text.)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Legion of Doom",
       "Villains"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "GAF",
     "abilityTemplate": null
   },
@@ -51890,12 +51890,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No Ability Text.)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Teen Titans"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "GAF",
     "abilityTemplate": null
   },
@@ -54644,12 +54644,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(blank)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Avengers"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "GOTG",
     "abilityTemplate": null
   },
@@ -55407,12 +55407,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(blank)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Avengers"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "GOTG",
     "abilityTemplate": null
   },
@@ -59908,12 +59908,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No Ability Text)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Villains"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "HHS",
     "abilityTemplate": null
   },
@@ -66773,12 +66773,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No ability text.)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Stark Industries"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "IMW",
     "abilityTemplate": null
   },
@@ -69080,10 +69080,10 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No ability text)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "JL",
     "abilityTemplate": null
   },
@@ -69208,12 +69208,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No ability text)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Justice Society of America"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "JL",
     "abilityTemplate": null
   },
@@ -74733,13 +74733,13 @@
         "burstStars": null
       }
     ],
-    "rawText": "None.",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Legion of Doom",
       "Villains"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "JUS",
     "abilityTemplate": null
   },
@@ -83260,13 +83260,13 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No Ability Text.)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Imperium",
       "Space Wolves"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "SW",
     "abilityTemplate": null
   },
@@ -87175,12 +87175,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "None.",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Inhumans"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "THOR",
     "abilityTemplate": null
   },
@@ -91789,12 +91789,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No Ability Text)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Teenage Mutant Ninja Turtle"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "TMNT",
     "abilityTemplate": null
   },
@@ -92017,12 +92017,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No Ability Text)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Villains"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "TMNT",
     "abilityTemplate": null
   },
@@ -92241,12 +92241,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No Ability Text)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Teenage Mutant Ninja Turtle"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "TMNT",
     "abilityTemplate": null
   },
@@ -92352,12 +92352,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No Ability Text)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Teenage Mutant Ninja Turtle"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "TMNT",
     "abilityTemplate": null
   },
@@ -92574,12 +92574,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No Ability Text)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Teenage Mutant Ninja Turtle"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "TMNT",
     "abilityTemplate": null
   },
@@ -98096,12 +98096,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No ability text)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "X-Men"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "UXM",
     "abilityTemplate": null
   },
@@ -98318,12 +98318,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No ability text)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "X-Men"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "UXM",
     "abilityTemplate": null
   },
@@ -98922,12 +98922,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No ability text)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Avengers"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "UXM",
     "abilityTemplate": null
   },
@@ -99179,12 +99179,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No ability text)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Avengers"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "UXM",
     "abilityTemplate": null
   },
@@ -102330,12 +102330,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No Ability Text.)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Batman Family"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "WF",
     "abilityTemplate": null
   },
@@ -102441,12 +102441,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No Ability Text.)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Batman Family"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "WF",
     "abilityTemplate": null
   },
@@ -102552,12 +102552,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No Ability Text.)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Team Superman"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "WF",
     "abilityTemplate": null
   },
@@ -105337,12 +105337,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No Ability Text.)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Batman Family"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "WF",
     "abilityTemplate": null
   },
@@ -107300,12 +107300,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No ability text)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Red Lanterns"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "WOL",
     "abilityTemplate": null
   },
@@ -107783,13 +107783,13 @@
         "burstStars": null
       }
     ],
-    "rawText": "(no ability text)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Villains",
       "Orange Lanterns"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "WOL",
     "abilityTemplate": null
   },
@@ -108282,13 +108282,13 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No ability text)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Villains",
       "Red Lanterns"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "WOL",
     "abilityTemplate": null
   },
@@ -108357,12 +108357,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No ability text)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Red Lanterns"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "WOL",
     "abilityTemplate": null
   },
@@ -108991,13 +108991,13 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No ability text)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Villains",
       "Sinestro Corps"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "WOL",
     "abilityTemplate": null
   },
@@ -115023,12 +115023,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No Ability Text.)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Villains"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "XFC",
     "abilityTemplate": null
   },
@@ -121161,13 +121161,13 @@
         "burstStars": null
       }
     ],
-    "rawText": "None.",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Hellfire Club",
       "Villains"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "XMF",
     "abilityTemplate": null
   },
@@ -121753,12 +121753,12 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No ability text)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [
       "Thousand Dragon Fusion"
     ],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "YGO",
     "abilityTemplate": null
   },
@@ -122315,10 +122315,10 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No ability text)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "YGO",
     "abilityTemplate": null
   },
@@ -122455,10 +122455,10 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No ability text)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "YGO",
     "abilityTemplate": null
   },
@@ -122490,10 +122490,10 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No ability text)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "YGO",
     "abilityTemplate": null
   },
@@ -122525,10 +122525,10 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No ability text)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "YGO",
     "abilityTemplate": null
   },
@@ -122560,10 +122560,10 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No ability text)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "YGO",
     "abilityTemplate": null
   },
@@ -122630,10 +122630,10 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No ability text)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "YGO",
     "abilityTemplate": null
   },
@@ -122665,10 +122665,10 @@
         "burstStars": null
       }
     ],
-    "rawText": "(No ability text)",
+    "rawText": "",
     "keywords": [],
     "affiliations": [],
-    "isImplemented": false,
+    "isImplemented": true,
     "set": "YGO",
     "abilityTemplate": null
   },
