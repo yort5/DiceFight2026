@@ -17,6 +17,7 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS api-build
 WORKDIR /src
 COPY DiceFight.slnx ./
 COPY src/DiceFight.Engine/ src/DiceFight.Engine/
+COPY src/DiceFight.DiscordBot/ src/DiceFight.DiscordBot/
 COPY src/DiceFight.Api/ src/DiceFight.Api/
 RUN dotnet publish src/DiceFight.Api/DiceFight.Api.csproj -c Release -o /app/publish
 

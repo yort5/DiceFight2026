@@ -4004,3 +4004,108 @@ test` (265/265). Real headless-Chromium session on `/teambuilder`:
 default view count 137 -> 203; searched "Iron Man" and confirmed the
 `AOU013` "Big Man" printing (a former no-ability-text false negative)
 now shows in the default filtered view.
+
+## Status update — a Discord bot: `/card` lookup + `/team` link preview
+
+The user has a separate, actively-developed community Discord bot
+(`github.com/yort5/DiceMastersDiscordBot` - not the stub checked out at
+`~/DiceMasters/DiceBot`) and wanted to fold useful pieces of it into
+this app, explicitly **re-implemented, not copied** - the original is
+6,139 lines and a research pass over the whole thing found a genuinely
+useful, generic core (card lookup, Teambuilder-link parsing) buried
+under a lot that's specific to its own Discord server (a second "TCC"
+crypto-price bot; hardcoded pings for specific community members;
+custom-emote reactions) or dead (commented-out Twitch/LTN-radio
+integrations, an unwired referral system) or actively bad to port
+as-is (Google Sheets used as a live read/write database - magic-number
+column indexing, `record.Contains(username)` as a "primary key" lookup,
+synchronous `.Execute()` calls inside `async` methods, a ~150-line
+score-reporting block duplicated verbatim between two command paths,
+`Console.WriteLine` instead of the injected `ILogger` at nearly every
+catch block).
+
+**Scoped down to card lookup only**, per the user's own choice after
+seeing the full inventory - no event roster/attendance/score-reporting/
+trade features (all need a real datastore; this app currently has none
+beyond the in-memory `GameStore`, same prerequisite gap as the existing
+team-storage-after-auth next-step) and no second bot or community
+in-jokes.
+
+**`src/DiceFight.Engine/TeamBuilding/TeamLinkCodec.cs`** (new): a C#
+port of `web/src/TeamBuilderPage.tsx`'s `encodeTeam`/`decodeTeam`/
+`toOurId` (same old-Teambuilder-slug transform verified in the
+"team URLs now match..." status update above) - one format, ported
+twice by hand (TS for the browser, C# for the bot) since there's no
+shared-language option here. `TeamLinkCodecTests.cs` covers the same
+cases the TS version needed: old-slug decode, our-own-id passthrough,
+the `XFC`/`AvX`-style set-code-contains-"x" edge case, malformed
+entries skipped rather than thrown on, and an encode/decode round-trip.
+
+**`src/DiceFight.DiscordBot/`** (new project, referenced by
+`DiceFight.Api`, itself referencing only `DiceFight.Engine`):
+- `DiscordBotOptions` - just `Token` and an optional `DevGuildId`, bound
+  from a `DiscordBot` config section. Deliberately narrow, unlike the
+  old bot's 20-getter `IAppSettings` god-interface mixing secrets,
+  config, and hardcoded individual Discord user ids.
+- `DiscordBotService` (`BackgroundService`, registered in `Program.cs`
+  right after `GameStore`) - if `DiscordBot:Token` isn't configured, it
+  logs one warning and returns without starting a gateway connection;
+  verified locally that the rest of the app runs completely normally in
+  that state (this matters because most deployments/dev environments
+  won't have a token set). When a token is present: connects, routes
+  Discord.Net's own `Log` event into the injected `ILogger` (not
+  `Console.WriteLine`), and registers two slash commands - guild-scoped
+  (instant) if `DevGuildId` is set, else global (~1hr propagation).
+  - `/card query:` - exact id match against the existing ~3,637-card
+    catalog (`SampleCards.BuildCatalog()` - strictly better data than
+    the old bot's separate, less-complete community sheet), else a
+    name-substring search; replies with an embed for one match, a
+    disambiguation list for several, or a plain "not found." Cards with
+    `IsImplemented: false` get a footer note explaining the ability
+    isn't simulated in the digital game yet.
+  - `/team link:` - runs `TeamLinkCodec.Decode` against a pasted link
+    (old-style or our own), replies with the resolved roster, total
+    dice count, and any ids that didn't resolve - unlike the web page's
+    silent-skip behavior, a Discord reply can afford to call out what
+    didn't decode.
+
+**Deployment**: runs as a `BackgroundService` inside the existing
+`DiceFight.Api` container (the user's choice - a second, separate Cloud
+Run service was the alternative, rejected for the extra
+deploy/maintenance surface). The Discord gateway connection is
+long-lived, which doesn't fit Cloud Run's default scale-to-zero/scale-
+out model - the user will pin this service to `min-instances=1
+max-instances=1` themselves (no `gcloud` access from this sandbox to
+verify or change the live service's current scaling config). `Dockerfile`
+updated to `COPY` the new project's source alongside `Engine`/`Api`.
+
+**Setup** (manual steps only the user can do - a Discord Application/bot
+token needs a real Discord account): create an application at
+`discord.com/developers/applications`, add a Bot user, copy its token,
+enable the `applications.commands` OAuth2 scope when generating an
+invite link (no special permissions needed beyond that - slash-command
+replies don't require the general "Send Messages" permission), invite
+it to a test server, then set the token as `DiscordBot__Token` (double
+underscore - the standard ASP.NET Core nested-config env var
+convention) locally via `dotnet user-secrets set "DiscordBot:Token"
+"..."` (run from `src/DiceFight.Api`) or an env var, and as a Cloud Run
+env var/secret for the deployed service.
+
+**Explicitly not ported**: event/attendance/`.here`/`.drop`/
+score-reporting/Challonge integration and trade/want-list matching (both
+need a real datastore - see `RULES_ENGINE_DESIGN.md`'s next-steps list
+for where this is tracked); the "TCC" crypto-price bot and all of its
+community-specific notifications/reactions; YouTube/RSS content-feed
+posting (a real, generic pattern, just out of scope for this pass - could
+land later as its own `BackgroundService` alongside this one without
+touching card lookup).
+
+Verified: `dotnet build` (solution-wide) and `dotnet test` both clean -
+277/277 (265 existing + 12 new `TeamLinkCodecTests`). Ran the API
+locally with no `DiscordBot:Token` set and confirmed via logs it starts
+normally with just the one warning, and `/api/cards` still serves
+correctly - the no-token no-op path doesn't affect the rest of the app.
+**Not verified**: actual Discord behavior (`/card`/`/team` responses in
+a real server) - no bot token or outbound access to Discord's gateway
+exists in this sandbox. That needs the user to set up a real bot
+token per the setup steps above and try it themselves.

@@ -1,4 +1,5 @@
 using DiceFight.Api;
+using DiceFight.DiscordBot;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +18,14 @@ builder.Services.AddControllers().AddJsonOptions(options =>
     options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
 });
 builder.Services.AddSingleton<GameStore>();
+
+// No-ops (logs a warning, doesn't start a gateway connection) unless
+// DiscordBot:Token is configured - see DiscordBotService's own remarks.
+// The Discord gateway connection this opens is long-lived, so whatever
+// deploys this needs to be pinned to a single always-on instance rather
+// than scaling to zero/many.
+builder.Services.Configure<DiscordBotOptions>(builder.Configuration.GetSection("DiscordBot"));
+builder.Services.AddHostedService<DiscordBotService>();
 
 var app = builder.Build();
 

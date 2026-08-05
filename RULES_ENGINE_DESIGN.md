@@ -154,6 +154,20 @@ here rather than assuming which approach they'd want.
     into actually starting a digital game - `GamesController.Create`
     is untouched, still always the two curated rosters. Natural next
     increment.
+14. ~~A Discord bot~~ - card lookup (`/card`) and Teambuilder-link
+    preview (`/team`) done, re-implemented (not copied) from the
+    user's separate community bot - see the "a Discord bot" status
+    update for the full scope discussion and what was deliberately left
+    out. **Deferred, needs a real datastore first** (same gap as item
+    #5/auth-then-team-storage): event roster/attendance/score-reporting/
+    Challonge integration, and trade/want-list matching - both were real
+    features in the original bot, both were backed there by Google
+    Sheets used as a live read/write database (a pattern explicitly not
+    worth porting - see the status update for why). Also not built:
+    YouTube/RSS content-feed posting - a generic, real pattern, just out
+    of scope for the card-lookup pass; could land later as its own
+    `BackgroundService` in `DiceFight.DiscordBot` without touching the
+    existing commands.
 
 ## Implemented keywords
 
