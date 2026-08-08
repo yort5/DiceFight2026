@@ -1264,4 +1264,182 @@ public class EffectInterpreterTests
         Assert.Equal(0, queue.Count);
         Assert.False(state.LoyaltyCounters.ContainsKey(SampleCards.MadelynePryorSisterhood.Id));
     }
+
+    // Regression: TurnEngine.CheckAwaken/CheckEnergize both gate on
+    // DieStats.HasKeyword(state, die, "Awaken"/"Energize") - Kitty Pryde
+    // and Phoenix were both authored with a real Awaken/Energize
+    // AbilityDef but no matching entry in Keywords, so neither would
+    // ever actually fire through the real trigger path (only a test
+    // that enqueues the trigger directly, bypassing the gate, would
+    // have missed this - these two exercise the real gated path).
+    [Fact]
+    public void KittyPryde_SpinningUp_ActuallyTriggersAwaken_ViaTheRealKeywordGate()
+    {
+        var state = CreateState();
+        var kittyPryde = new DieInstance
+        {
+            Id = "p1-kittypryde-1", CardId = SampleCards.KittyPrydeRightOfPassage.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(kittyPryde);
+
+        var queue = new AbilityQueue();
+        EffectInterpreter.Execute(
+            new Spin(TargetSpec.Self, +1),
+            new EffectContext(state, "p1", kittyPryde.Id, _ => [], Queue: queue));
+
+        Assert.Equal(1, queue.Count);
+        Assert.Equal(TriggerType.Awaken, queue.Pending[0].Trigger);
+    }
+
+    [Fact]
+    public void Phoenix_RolledOnDoubleEnergy_ActuallyTriggersEnergize_ViaTheRealKeywordGate()
+    {
+        var state = CreateState();
+        state.CurrentStep = TurnStep.RollAndReroll;
+        var phoenix = new DieInstance
+        {
+            Id = "p1-phoenix-1", CardId = SampleCards.PhoenixFirepower.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.ReservePool, Status = DieStatus.Energy, EnergyKind = EnergyKind.Generic, EnergyAmount = 2,
+        };
+        state.Dice.Add(phoenix);
+
+        var queue = new AbilityQueue();
+        // Same shape as BlackPantherEnergize's own test - reroll nothing,
+        // so Phoenix stays on its double-energy face and CheckEnergize
+        // (invoked internally at the end of Roll and Reroll) sees it.
+        TurnEngine.Reroll(state, queue, new FixedRoller(DieStatus.Energy, 1), []);
+
+        Assert.Equal(1, queue.Count);
+        Assert.Equal(TriggerType.Energize, queue.Pending[0].Trigger);
+    }
+
+    // Blanket regression for the whole bug class Kitty Pryde/Phoenix
+    // found: TriggerType.Energize/Awaken/Teamwatch are only ever fired
+    // by TurnEngine.CheckEnergize/CheckAwaken/Field's Teamwatch scan,
+    // ALL of which gate on DieStats.HasKeyword - an AbilityDef alone,
+    // with no matching Keywords entry, silently never fires. Checks
+    // every card in the real catalog at once rather than relying on a
+    // hand-picked end-to-end test per card to catch the next one.
+    [Theory]
+    [InlineData(TriggerType.Energize, "Energize")]
+    [InlineData(TriggerType.Awaken, "Awaken")]
+    [InlineData(TriggerType.Teamwatch, "Teamwatch")]
+    public void EveryCardWithThisTrigger_HasTheMatchingKeyword(TriggerType trigger, string keywordName)
+    {
+        var catalog = SampleCards.BuildCatalog();
+        var missing = catalog.Values
+            .Where(c => c.Abilities.Any(a => a.Trigger == trigger))
+            .Where(c => !c.Keywords.Any(k => k.Name == keywordName))
+            .Select(c => c.Id)
+            .ToList();
+
+        Assert.Empty(missing);
+    }
+
+    // Colossus's own Energize - the riskiest of this batch: FieldDie and
+    // Spin are two SEPARATE EffectNodes in a Sequence, sharing one
+    // TargetSpec instance (SampleCards.ColossusEnergizeTarget) so they
+    // resolve to the same die. Confirms that actually holds - the
+    // fielded die ends up at level 3 (1 from FieldDie's own always-
+    // level-1 fielding, +2 from Spin), not some other Reserve Pool
+    // character die and not left at level 1.
+    [Fact]
+    public void Colossus_Energize_FieldsAndSpinsTheSameDieToLevelThree()
+    {
+        var state = CreateState();
+        var colossus = new DieInstance
+        {
+            Id = "p1-colossus-1", CardId = SampleCards.ColossusSkilledPainter.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        var target = new DieInstance
+        {
+            Id = "p1-target-1", CardId = SampleCards.ColossusSkilledPainter.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.ReservePool, Status = DieStatus.Character, Level = 1,
+        };
+        // A second Reserve Pool character die - if the Sequence's two
+        // clauses ever resolved their shared TargetSpec independently,
+        // this is what would let them disagree on which die to use.
+        var decoy = new DieInstance
+        {
+            Id = "p1-decoy-1", CardId = SampleCards.ColossusSkilledPainter.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.ReservePool, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(colossus);
+        state.Dice.Add(target);
+        state.Dice.Add(decoy);
+
+        EffectInterpreter.Execute(
+            new Sequence([
+                new FieldDie(SampleCards.ColossusEnergizeTarget, Free: true),
+                new Spin(SampleCards.ColossusEnergizeTarget, +2)
+            ]),
+            new EffectContext(state, "p1", colossus.Id, _ => [target.Id]));
+
+        Assert.Equal(Zone.FieldZone, target.Zone);
+        Assert.Equal(3, target.Level);
+        Assert.Equal(Zone.ReservePool, decoy.Zone); // untouched
+        Assert.Equal(1, decoy.Level);
+    }
+
+    // Toad's Teamwatch - via the real TurnEngine.Field path (which scans
+    // for HasKeyword("Teamwatch"), not a direct enqueue), same "real
+    // gate, not just a hand-fired trigger" standard as the Kitty Pryde/
+    // Phoenix tests above.
+    [Fact]
+    public void Toad_FieldingAnotherBrotherhoodCharacter_TriggersTeamwatch_ViaTheRealField()
+    {
+        var state = CreateState();
+        var toad = new DieInstance
+        {
+            Id = "p1-toad-1", CardId = SampleCards.ToadSecondaryMutation.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        // Madelyne Pryor - a real Brotherhood of Mutants character, ready
+        // to field for free at level 1 (fielding cost 0).
+        var fielded = new DieInstance
+        {
+            Id = "p1-madelyne-1", CardId = SampleCards.MadelynePryorSisterhood.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.ReservePool, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(toad);
+        state.Dice.Add(fielded);
+        state.CurrentStep = TurnStep.Main;
+
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, fielded.Id, energyDieIdsToSpend: []);
+
+        Assert.Contains(queue.Pending, a => a.Trigger == TriggerType.Teamwatch && a.SourceDieId == toad.Id);
+    }
+
+    // Lilandra's Global - the CharacterOnly narrowing actually matters:
+    // purchasing a Basic Action shouldn't satisfy it, only a character die.
+    [Fact]
+    public void Lilandra_PurchasedOnlyABasicAction_GlobalConditionNotMet()
+    {
+        var state = CreateState();
+        state.GetPlayer("p1").PurchasedDieThisTurn = true; // purchased *something* this turn...
+        state.GetPlayer("p1").PurchasedCharacterDieThisTurn = false; // ...but not a character die
+
+        var bagCountBefore = state.DiceIn("p1", Zone.Bag).Count();
+        EffectInterpreter.Execute(
+            new PrepFromBagIfPurchasedThisTurn(CharacterOnly: true),
+            new EffectContext(state, "p1", SourceDieId: null, _ => [], Random: new Random(1)));
+
+        Assert.Equal(bagCountBefore, state.DiceIn("p1", Zone.Bag).Count()); // nothing drawn
+    }
+
+    [Fact]
+    public void Lilandra_PurchasedACharacterDie_GlobalDrawsAndPreps()
+    {
+        var state = CreateState();
+        state.GetPlayer("p1").PurchasedCharacterDieThisTurn = true;
+
+        EffectInterpreter.Execute(
+            new PrepFromBagIfPurchasedThisTurn(CharacterOnly: true),
+            new EffectContext(state, "p1", SourceDieId: null, _ => [], Random: new Random(1)));
+
+        Assert.Single(state.DiceIn("p1", Zone.PrepArea));
+    }
 }

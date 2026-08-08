@@ -1002,6 +1002,7 @@ public static class SampleCards
         "Awaken - Prep a die from your bag.",
         purchaseCost: 3, energyType: EnergyType.Mask,
         affiliations: ["X-Men"],
+        keywords: [new KeywordInstance("Awaken")],
         abilities: [new AbilityDef(TriggerType.Awaken, Cost: null, Effect: new PrepFromBag())],
         levels: [
             new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 2),
@@ -1019,6 +1020,7 @@ public static class SampleCards
         "die or player.",
         purchaseCost: 6, energyType: EnergyType.Bolt,
         affiliations: ["X-Men"],
+        keywords: [new KeywordInstance("Energize")],
         abilities: [
             new AbilityDef(TriggerType.WhenFielded, Cost: null,
                 Effect: new DealDamage(3, TargetSpec.CharacterDie("target character die"))),
@@ -1187,6 +1189,112 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 4)
         ], set: "DPS");
 
+    // Angel, "Wings Over the World" - a plain Energize + ModifyStat,
+    // straightforward now that Energize's own keyword-gating bug (see
+    // Kitty Pryde/Phoenix's remarks in EffectInterpreterTests) is known
+    // to matter and checked for.
+    public static readonly CardDef AngelWingsOverTheWorld = Character(
+        "DPS017", "Angel", "Wings Over the World", dieLimit: 4,
+        "Energize - Target Sidekick gets +2A this turn.",
+        purchaseCost: 2, energyType: EnergyType.Shield,
+        affiliations: ["X-Men"],
+        keywords: [new KeywordInstance("Energize")],
+        abilities: [new AbilityDef(TriggerType.Energize, Cost: null,
+            Effect: new ModifyStat(TargetSpec.Sidekick("target Sidekick"), AttackDelta: 2, DefenseDelta: null))],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 4)
+        ], set: "DPS");
+
+    // Cable, "I'll Do This All Day" - Energize + Reroll, the second real
+    // card exercising Reroll (Lab Test's Continuous resolution was the
+    // first) and the first via a normal trigger rather than an
+    // activated ability.
+    public static readonly CardDef CableIllDoThisAllDay = Character(
+        "DPS022", "Cable", "I'll Do This All Day", dieLimit: 4,
+        "Energize - Reroll one of your character dice.",
+        purchaseCost: 4, energyType: EnergyType.Bolt,
+        affiliations: ["X-Men"],
+        keywords: [new KeywordInstance("Energize")],
+        abilities: [new AbilityDef(TriggerType.Energize, Cost: null,
+            Effect: new Reroll(TargetSpec.CharacterDie("one of your character dice", TargetOwnership.Own)))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 2),
+            new CharacterFace(FieldingCost: 2, Attack: 3, Defense: 3),
+            new CharacterFace(FieldingCost: 2, Attack: 5, Defense: 5)
+        ], set: "DPS");
+
+    // Colossus's own Energize target - defined once and reused by BOTH
+    // the FieldDie and Spin clauses below, deliberately NOT two separate
+    // `TargetSpec.CharacterDie(...)` call expressions - EffectInterpreter
+    // resolves and caches by TargetSpec structural equality, and two
+    // array-literal EligibleZones (`zones: [Zone.ReservePool]` written
+    // twice) would NOT share a cache entry, which could let the Spin
+    // clause pick a DIFFERENT die than the one FieldDie just moved (see
+    // EffectInterpreter's own class-level remarks on this exact gotcha).
+    public static readonly TargetSpec ColossusEnergizeTarget =
+        TargetSpec.CharacterDie("one of your character dice", TargetOwnership.Own, zones: [Zone.ReservePool]);
+
+    // Colossus, "Skilled Painter" - "field one of your character dice for
+    // free and spin it to level 3" needs no new primitive at all: FieldDie
+    // always fields at level 1 (rule 2.6.3 note), so Spin(+2) on that same
+    // target reaches level 3 exactly, composed as a Sequence. Overcrush
+    // is the separate, already engine-native keyword.
+    public static readonly CardDef ColossusSkilledPainter = Character(
+        "DPS023", "Colossus", "Skilled Painter", dieLimit: 4,
+        "Energize - Field one of your character dice for free and spin it to level 3.Overcrush",
+        purchaseCost: 5, energyType: EnergyType.Fist,
+        affiliations: ["X-Men"],
+        keywords: [new KeywordInstance("Energize"), new KeywordInstance("Overcrush")],
+        abilities: [new AbilityDef(TriggerType.Energize, Cost: null,
+            Effect: new Sequence([new FieldDie(ColossusEnergizeTarget, Free: true), new Spin(ColossusEnergizeTarget, +2)]))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 4),
+            new CharacterFace(FieldingCost: 1, Attack: 6, Defense: 5, BurstStars: 1),
+            new CharacterFace(FieldingCost: 2, Attack: 8, Defense: 7, BurstStars: 1)
+        ], set: "DPS");
+
+    // Toad, "Secondary Mutation" - Awaken + Teamwatch, both already
+    // engine-native trigger points (Teamwatch previously only exercised
+    // by Falcon/Black Panther); each needs its own Keywords entry (see
+    // TurnEngine.Field's Teamwatch scan and CheckAwaken, both of which
+    // gate on DieStats.HasKeyword, not just an authored AbilityDef).
+    public static readonly CardDef ToadSecondaryMutation = Character(
+        "DPS054", "Toad", "Secondary Mutation", dieLimit: 4,
+        "Awaken: Deal 2 damage to target character die. Teamwatch - Spin Toad up 1 level.",
+        purchaseCost: 3, energyType: EnergyType.Fist,
+        affiliations: ["Brotherhood of Mutants"],
+        keywords: [new KeywordInstance("Awaken"), new KeywordInstance("Teamwatch")],
+        abilities: [
+            new AbilityDef(TriggerType.Awaken, Cost: null,
+                Effect: new DealDamage(2, TargetSpec.CharacterDie("target character die"))),
+            new AbilityDef(TriggerType.Teamwatch, Cost: null, Effect: new Spin(TargetSpec.Self, +1))
+        ],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 1, BurstStars: 1),
+            new CharacterFace(FieldingCost: 2, Attack: 3, Defense: 2, BurstStars: 1),
+            new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 4)
+        ], set: "DPS");
+
+    // Lilandra, "Politician" - Starfire's own PrepFromBagIfPurchasedThisTurn,
+    // just narrowed to CharacterOnly (Player.PurchasedCharacterDieThisTurn,
+    // set alongside PurchasedDieThisTurn in TurnEngine.Purchase).
+    public static readonly CardDef LilandraPolitician = Character(
+        "DPS038", "Lilandra", "Politician", dieLimit: 4,
+        "Global: Pay Shield. Once per turn, if you have purchased a character die this turn, you may draw " +
+        "a die from your bag and add it to your Prep Area.",
+        purchaseCost: 3, energyType: EnergyType.Shield,
+        affiliations: ["Shi'ar"],
+        abilities: [new AbilityDef(TriggerType.Global, Cost: null,
+            Effect: new PrepFromBagIfPurchasedThisTurn(CharacterOnly: true),
+            EnergyCost: new EnergyCost(1, EnergyType.Shield), OncePerTurn: true)],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 5),
+            new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 6)
+        ], set: "DPS");
+
     // A team is 8 character cards + 2 Basic Action cards (10 total). Both
     // rosters below are drawn exclusively from IsImplemented: true cards
     // (see CardDef.IsImplemented) - the 16 cards with a deliberately
@@ -1238,7 +1346,9 @@ public static class SampleCards
             JamilahShipwreckedOnChult,
             StormExtremeWeather, KittyPrydeRightOfPassage, PhoenixFirepower, DKenEmperor,
             RonanTheAccuserTreason, PowerBolt, LabTest, JeanGreyPeacefulCoexistence,
-            Magneto, SupremeIntelligence, MadelynePryorSisterhood
+            Magneto, SupremeIntelligence, MadelynePryorSisterhood,
+            AngelWingsOverTheWorld, CableIllDoThisAllDay, ColossusSkilledPainter, ToadSecondaryMutation,
+            LilandraPolitician
         ];
 
         // Hand-curated cards win on id collision - shouldn't happen in

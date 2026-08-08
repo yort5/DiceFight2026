@@ -4482,3 +4482,69 @@ including regression tests for the exact Range/Retaliation and Deadly/
 WhenKOd gaps found, plus real-card tests for all three), and `npm run
 build` all clean. Re-ran `scripts/import_bulk_cards.py` (3629 → 3626
 bulk rows, 63 → 66 hand-curated).
+
+## Status update — five more DPS cards, and a real authoring bug caught along the way
+
+Back to general DPS authoring, per the user's own call ("let's do more
+DPS"). Five new cards: Angel ("Wings Over the World"), Cable ("I'll Do
+This All Day"), Colossus ("Skilled Painter"), Toad ("Secondary
+Mutation"), Lilandra ("Politician").
+
+**A real bug found and fixed while authoring Toad**: checking what
+Teamwatch needed reminded me to check what Energize/Awaken need too -
+`TurnEngine.CheckEnergize`/`CheckAwaken`/`Field`'s Teamwatch scan all
+gate on `DieStats.HasKeyword(state, die, "...")`, not just "does the
+card have a matching `AbilityDef`." Kitty Pryde and Phoenix (both
+authored two updates ago) had real `Awaken`/`Energize` `AbilityDef`s but
+no matching `Keywords` entry - their abilities would have silently
+never fired in an actual game. Fixed both, and added a blanket
+`[Theory]` test (`EveryCardWithThisTrigger_HasTheMatchingKeyword`)
+scanning the *entire* real catalog for this exact mismatch on
+Energize/Awaken/Teamwatch, rather than trusting a per-card test to
+catch the next one. Worth noting for its own sake: my own earlier
+testing missed this because it called `EffectInterpreter.Execute`
+directly against an already-enqueued trigger, never exercising the
+actual gate that decides *whether* the trigger fires - every new test
+added this pass for a keyword-gated trigger goes through the real path
+instead (`TurnEngine.Reroll` for Energize, a real `Spin`/`Field` call
+for Awaken/Teamwatch).
+
+**The cards themselves**: Angel and Cable are plain (`ModifyStat` on a
+Sidekick target; `Reroll` on an owned character die - the second real
+`Reroll` user, and the first via a normal trigger rather than Lab
+Test's Continuous-resolution activation). Colossus needed no new
+primitive at all - "field for free and spin to level 3" is just
+`Sequence([FieldDie(free), Spin(+2)])`, since `FieldDie` already always
+fields at level 1. The one real subtlety: both clauses need to act on
+the SAME die, which only holds if they share one `TargetSpec`
+*instance* (`SampleCards.ColossusEnergizeTarget`, now `public` so a
+test can reference the literal object) - two structurally-identical
+but separately-written `TargetSpec.CharacterDie(..., zones: [...])`
+calls would NOT share `EffectInterpreter`'s resolution cache, since
+array-literal `EligibleZones` compares by reference (already flagged as
+a gotcha in that file's own class-level remarks, now the first card to
+actually hit it). Added a decoy-die test specifically to catch a
+future regression here. Toad reuses Awaken and Teamwatch, no new
+plumbing. Lilandra needed one small extension - `Player.
+PurchasedCharacterDieThisTurn` alongside the existing `PurchasedDieThisTurn`,
+and `PrepFromBagIfPurchasedThisTurn` gained a `CharacterOnly` flag
+rather than becoming a second near-duplicate node.
+
+**Jubilee (DPS036) - looked buildable, turned out not to be**: "if you
+have less life than your opponent, you may immediately field this die
+for free at level 2" seemed like the same `FieldDie`+`Spin`
+composition Colossus uses, but Jubilee's Energize fires while the die
+itself is still `Status: Energy` (that's what Energize means - it just
+rolled a double-energy face) - `FieldDie` only ever sets `Zone`/`Level`,
+it assumes `Status` is already `Character` (true for every other
+FieldDie user so far, including Colossus's target, which comes from a
+separate already-character-status die). Fielding a die directly off an
+energy face needs a real Status transition FieldDie doesn't do, so this
+would've silently produced a broken die (fielded but still flagged
+Energy - excluded from attacking/blocking by the very Status check
+added two updates ago). Left vanilla rather than ship it.
+
+Verified: `dotnet build`, `dotnet test` (308/308 - 15 new cases,
+including the blanket keyword-gate regression theory), and `npm run
+build` all clean. Re-ran `scripts/import_bulk_cards.py` (3626 → 3621
+bulk rows, 66 → 71 hand-curated).

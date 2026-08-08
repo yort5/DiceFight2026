@@ -39131,43 +39131,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS017",
-    "name": "Angel",
-    "subtitle": "Wings Over the World",
-    "type": "Character",
-    "purchaseCost": 2,
-    "energyType": "Shield",
-    "dieLimit": 4,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 2,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 3,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 4,
-        "burstStars": null
-      }
-    ],
-    "rawText": "Energize - Target Sidekick gets +2A this turn.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS018",
     "name": "Beast",
     "subtitle": "Brawny and Brainy",
@@ -39312,82 +39275,6 @@
     "keywords": [],
     "affiliations": [],
     "isImplemented": true,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS022",
-    "name": "Cable",
-    "subtitle": "I\\'ll Do This All Day",
-    "type": "Character",
-    "purchaseCost": 4,
-    "energyType": "Bolt",
-    "dieLimit": 4,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 3,
-        "defense": 3,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 5,
-        "defense": 5,
-        "burstStars": null
-      }
-    ],
-    "rawText": "Energize - Reroll one of your character dice.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS023",
-    "name": "Colossus",
-    "subtitle": "Skilled Painter",
-    "type": "Character",
-    "purchaseCost": 5,
-    "energyType": "Fist",
-    "dieLimit": 4,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 4,
-        "defense": 4,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 6,
-        "defense": 5,
-        "burstStars": 1
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 8,
-        "defense": 7,
-        "burstStars": 1
-      }
-    ],
-    "rawText": "Energize - Field one of your character dice for free and spin it to level 3.Overcrush",
-    "keywords": [
-      "Overcrush"
-    ],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
     "set": "DPS",
     "abilityTemplate": null
   },
@@ -39761,43 +39648,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS038",
-    "name": "Lilandra",
-    "subtitle": "Politician",
-    "type": "Character",
-    "purchaseCost": 3,
-    "energyType": "Shield",
-    "dieLimit": 4,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 3,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 5,
-        "defense": 6,
-        "burstStars": null
-      }
-    ],
-    "rawText": "Global: Pay Shield. Once per turn, if you have purchased a character die this turn, you may draw a die from your bag and add it to your Prep Area.",
-    "keywords": [],
-    "affiliations": [
-      "Shi\\'ar"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS039",
     "name": "Madelyne Pryor",
     "subtitle": "Dark Influence",
@@ -40161,43 +40011,6 @@
       }
     ],
     "rawText": "When fielded, KO target Wolverine characer die, or any character die with a \"While Wolverine is active\" ability.",
-    "keywords": [],
-    "affiliations": [
-      "Brotherhood of Mutants"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS054",
-    "name": "Toad",
-    "subtitle": "Secondary Mutation",
-    "type": "Character",
-    "purchaseCost": 3,
-    "energyType": "Fist",
-    "dieLimit": 4,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 2,
-        "defense": 1,
-        "burstStars": 1
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 3,
-        "defense": 2,
-        "burstStars": 1
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 4,
-        "defense": 4,
-        "burstStars": null
-      }
-    ],
-    "rawText": "Awaken: Deal 2 damage to target character die. Teamwatch - Spin Toad up 1 level.",
     "keywords": [],
     "affiliations": [
       "Brotherhood of Mutants"

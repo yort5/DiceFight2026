@@ -364,7 +364,9 @@ public static class TurnEngine
         // Basic Actions bought by the non-bringing player.
         die.ControllerId = state.ActivePlayerId;
         die.Zone = Zone.UsedPile; // rule 2.6.2.6
-        state.GetPlayer(state.ActivePlayerId).PurchasedDieThisTurn = true;
+        var purchaser = state.GetPlayer(state.ActivePlayerId);
+        purchaser.PurchasedDieThisTurn = true;
+        if (card.Type == CardType.Character) purchaser.PurchasedCharacterDieThisTurn = true;
     }
 
     // Rule 2.6.3 - Field Character Dice, one of the four Main Step game
@@ -1060,9 +1062,12 @@ public static class TurnEngine
         state.GlobalsUsedThisTurn.Clear();
 
         // Rule-text turn-scoped flags reset (Invisible Woman's forced
-        // blockers, Starfire's "purchased a die this turn" check).
+        // blockers, Starfire's "purchased a die this turn" check,
+        // Lilandra's "purchased a character die this turn" check).
         state.MustBlockThisTurn.Clear();
-        state.GetPlayer(activeId).PurchasedDieThisTurn = false;
+        var cleaningPlayer = state.GetPlayer(activeId);
+        cleaningPlayer.PurchasedDieThisTurn = false;
+        cleaningPlayer.PurchasedCharacterDieThisTurn = false;
 
         // Keyword Obscure - "unblockable until end of turn" expires here.
         state.ObscuredCardIds.Clear();

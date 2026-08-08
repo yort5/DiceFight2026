@@ -217,7 +217,16 @@ public static class EffectInterpreter
                     // Rule 2.6.3 note - dice fielded by an ability are
                     // fielded for free on level 1 unless stated otherwise.
                     // Paying for a non-free ability-driven field isn't
-                    // modeled - no currently-authored card needs it.
+                    // modeled - no currently-authored card needs it. Also
+                    // assumes Status is already Character/SidekickCharacter
+                    // (true for every currently-authored user, e.g.
+                    // Colossus's Energize target - a die already sitting
+                    // in the Reserve Pool on a character face) - doesn't
+                    // transition an Energy-status die (Jubilee, DPS036,
+                    // deliberately left vanilla for exactly this reason:
+                    // an Energize ability fires while its own die is
+                    // still Status: Energy, and "field this die" would
+                    // need a real Status change this doesn't do).
                     var die = FindDie(ctx, id);
                     die.Level = 1;
                     die.Zone = Zone.FieldZone;
@@ -413,8 +422,9 @@ public static class EffectInterpreter
                 break;
             }
 
-            case PrepFromBagIfPurchasedThisTurn:
-                if (ctx.State.GetPlayer(ctx.ControllerId).PurchasedDieThisTurn)
+            case PrepFromBagIfPurchasedThisTurn purchasedThisTurn:
+                var purchaser = ctx.State.GetPlayer(ctx.ControllerId);
+                if (purchasedThisTurn.CharacterOnly ? purchaser.PurchasedCharacterDieThisTurn : purchaser.PurchasedDieThisTurn)
                 {
                     // TurnEngine.DrawFromBag already handles refilling an
                     // empty Bag from the Used Pile (rule 2.1.8-adjacent

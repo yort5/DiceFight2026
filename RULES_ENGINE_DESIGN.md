@@ -192,7 +192,15 @@ here rather than assuming which approach they'd want.
     Counter" `TargetSpec` filter plus an aggregate team-wide count
     check), the other three Continuous DPS cards, and web client UI for
     actually resolving a Continuous die once it's sitting in the Field
-    Zone.
+    Zone. Also now real: Angel, Cable, Colossus, Toad, Lilandra (see the
+    "five more DPS cards" status update) - which also caught a real
+    authoring bug (Kitty Pryde/Phoenix had Energize/Awaken `AbilityDef`s
+    with no matching `Keywords` entry, so neither would have actually
+    fired in a real game; both fixed, plus a blanket test now scans the
+    whole catalog for the same mismatch). Jubilee (DPS036) looked
+    buildable the same way Colossus is but isn't yet - `FieldDie`
+    assumes the target is already on a character face, which an
+    Energize-triggering die by definition isn't.
 
 ## Implemented keywords
 

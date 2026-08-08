@@ -221,8 +221,11 @@ public sealed record FieldSidekickForEachPlayer : EffectNode;
 // (Player.PurchasedDieThisTurn), not a die's condition, so like
 // FieldSidekickForEachPlayer this reads game state directly rather than
 // going through Conditional/TargetSpec; the bag pick is fungible, same
-// reasoning as DrawDice's.
-public sealed record PrepFromBagIfPurchasedThisTurn : EffectNode;
+// reasoning as DrawDice's. CharacterOnly checks Player.
+// PurchasedCharacterDieThisTurn instead - Lilandra's own Global narrows
+// Starfire's "a die" to "a character die" specifically, same mechanic
+// otherwise, so this is a filter flag rather than a second node.
+public sealed record PrepFromBagIfPurchasedThisTurn(bool CharacterOnly = false) : EffectNode;
 
 // Ricochet's own Infiltrate follow-up ("draw a die from your bag and add
 // it to your Prep Area") - the same bag-pick-to-Prep-Area mechanic as

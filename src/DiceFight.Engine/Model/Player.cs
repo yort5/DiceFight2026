@@ -16,4 +16,9 @@ public sealed class Player
     // Backs Starfire's Global ("if you purchased a die this turn..."); set
     // in TurnEngine.Purchase, reset in CleanUp.
     public bool PurchasedDieThisTurn { get; set; }
+
+    // Lilandra's own Global needs the narrower "purchased a CHARACTER
+    // die this turn" (not any die) - set alongside PurchasedDieThisTurn
+    // above, same reset point.
+    public bool PurchasedCharacterDieThisTurn { get; set; }
 }
