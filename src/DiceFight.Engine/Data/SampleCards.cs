@@ -84,13 +84,18 @@ public static class SampleCards
         string id, string name, string rawText, bool epic = false,
         IReadOnlyList<AbilityDef>? abilities = null,
         bool isImplemented = true,
+        int? purchaseCost = null,
         string? set = null) => new()
     {
         Id = id,
         Name = name,
         Subtitle = epic ? "Epic Basic Action" : "Basic Action",
         Type = epic ? CardType.EpicBasicAction : CardType.BasicAction,
-        PurchaseCost = epic ? 4 : 2, // placeholder, see class remarks
+        // purchaseCost overrides the epic/non-epic placeholder once a real
+        // cost is known (e.g. from BulkCards.json - see the DPS remarks
+        // below); real Basic Action costs vary (2-5) well beyond a flat
+        // epic/non-epic split, so the placeholder is only ever a fallback.
+        PurchaseCost = purchaseCost ?? (epic ? 4 : 2),
         EnergyTypes = [], // rule 1.2.4/1.3.10 - Basic Actions have no energy type
         DieLimit = 3, // rule 1.2.11 - fixed for every Basic Action card
         RawText = rawText,
@@ -937,6 +942,141 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 3)
         ], set: "TIW");
 
+    // ---- Dark Phoenix Saga (DPS) - working through the set card by card,
+    // per the user's own framing. Unlike every card above, DPS's bulk-
+    // imported stats (cost/energy/dieLimit/levels/affiliations) are
+    // already real (sourced from the reference spreadsheet by the bulk
+    // importer, see BulkCards.json) - copied verbatim below, not
+    // transcribed from a placeholder. Hand-curating a DPS card is now
+    // purely an authoring decision (does the full text map to
+    // EffectNode primitives?), never a stats-fixing one.
+    //
+    // Several DPS cards surfaced real engine gaps rather than one-off
+    // unscriptable text - left vanilla and NOT reattempted card-by-card,
+    // since each is really a small missing subsystem, not a single-card
+    // gap: the Continuous keyword (a Basic Action die that sits in the
+    // Field Zone as a repeatable "whenever you could use a Global
+    // Ability" activated ability, e.g. DPS002/005/006/010 - a
+    // fundamentally different activation shape from the WhenUsed-then-
+    // Used-Pile flow every other authored Action die uses); Loyalty
+    // Counters (a per-CARD, not per-die, persistent marker with its own
+    // "+1A/+1D per counter" payoff - DPS004/006/016/035/041/053/073/079/
+    // 124); per-die "can't be targeted"/"can't block" protection statuses
+    // (DPS033, ties to next-steps item 3's capturing-adjacent gap);
+    // affiliation- or level-restricted TargetSpec filters (DPS034/042,
+    // already flagged in the bulk-card-catalog memory); purchase/
+    // fielding-cost modifiers (DPS024/040/056, same family as Robin's
+    // Energize/Alfred's Ally/The Rock's Sacrifice gaps in next-steps
+    // item 1); and "while [a specific other named card] is active"
+    // conditional self-buffs/keyword-grants (DPS045 Mystique/DPS048
+    // Psylocke both key off "While Wolverine is active" - a real, small
+    // recurring pattern, not modeled by GrantsStaticTeamBonus/
+    // GrantsToSidekicks, which only grant unconditionally to the whole
+    // team/Sidekicks). None built this pass - worth the user's input on
+    // priority before investing, since Continuous especially recurs
+    // constantly outside DPS too (see the grep sample in DESIGN_LOG.md's
+    // "Dark Phoenix Saga, first pass" status update).
+
+    // Storm, "Extreme Weather" - a plain WhenFielded ping, the simplest
+    // possible template for this trigger.
+    public static readonly CardDef StormExtremeWeather = Character(
+        "DPS052", "Storm", "Extreme Weather", dieLimit: 4,
+        "When fielded, deal 1 damage to target character die.",
+        purchaseCost: 2, energyType: EnergyType.Bolt,
+        affiliations: ["X-Men"],
+        abilities: [new AbilityDef(TriggerType.WhenFielded, Cost: null,
+            Effect: new DealDamage(1, TargetSpec.CharacterDie("target character die")))],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 1),
+            new CharacterFace(FieldingCost: 0, Attack: 3, Defense: 1),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3)
+        ], set: "DPS");
+
+    // Kitty Pryde, "Right of Passage" - Awaken (TriggerType.Awaken) paired
+    // with PrepFromBag, the exact mechanic Ricochet's Infiltrate follow-up
+    // already uses, just on a different trigger.
+    public static readonly CardDef KittyPrydeRightOfPassage = Character(
+        "DPS037", "Kitty Pryde", "Right of Passage", dieLimit: 4,
+        "Awaken - Prep a die from your bag.",
+        purchaseCost: 3, energyType: EnergyType.Mask,
+        affiliations: ["X-Men"],
+        abilities: [new AbilityDef(TriggerType.Awaken, Cost: null, Effect: new PrepFromBag())],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 2),
+            new CharacterFace(FieldingCost: 0, Attack: 3, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3)
+        ], set: "DPS");
+
+    // Phoenix, "Firepower" - two independent abilities on one card
+    // (WhenFielded + Energize), both plain damage. Energize's target
+    // reuses CharacterDieOrPlayer, same union DealDamage already
+    // interprets for Attune.
+    public static readonly CardDef PhoenixFirepower = Character(
+        "DPS046", "Phoenix", "Firepower", dieLimit: 4,
+        "When fielded, deal 3 damage to target character die. Energize - Deal 2 damage to target character " +
+        "die or player.",
+        purchaseCost: 6, energyType: EnergyType.Bolt,
+        affiliations: ["X-Men"],
+        abilities: [
+            new AbilityDef(TriggerType.WhenFielded, Cost: null,
+                Effect: new DealDamage(3, TargetSpec.CharacterDie("target character die"))),
+            new AbilityDef(TriggerType.Energize, Cost: null,
+                Effect: new DealDamage(2, TargetSpec.CharacterDieOrPlayer("target character die or player")))
+        ],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 5),
+            new CharacterFace(FieldingCost: 2, Attack: 7, Defense: 7),
+            new CharacterFace(FieldingCost: 3, Attack: 8, Defense: 8)
+        ], set: "DPS");
+
+    // D'Ken, "Emperor" - WhenAttacks + PrepDie sourced from the Used Pile
+    // rather than Self (PrepDie's Source is just a TargetSpec, so
+    // pointing its EligibleZones at UsedPile is all this needs - no new
+    // primitive, just a different zone than Shocking Grasp's precedent).
+    public static readonly CardDef DKenEmperor = Character(
+        "DPS026", "D'Ken", "Emperor", dieLimit: 4,
+        "When D'Ken attacks, Prep a die from your Used Pile.",
+        purchaseCost: 4, energyType: EnergyType.Shield,
+        affiliations: ["Villains", "Shi'ar"],
+        abilities: [new AbilityDef(TriggerType.WhenAttacks, Cost: null,
+            Effect: new PrepDie(TargetSpec.AnyDie(
+                "a die from your Used Pile", TargetOwnership.Own, [Zone.UsedPile])))],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 4, Defense: 4),
+            new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 5),
+            new CharacterFace(FieldingCost: 2, Attack: 6, Defense: 6)
+        ], set: "DPS");
+
+    // Ronan the Accuser, "Treason!" - the card that motivated LoseLife's
+    // new Whose parameter: "When fielded, lose 1 life" is the controller
+    // (LoseLife's existing default), but "When KO'd, your opponent loses
+    // 1 life" needs the other player - every other LoseLife-using card
+    // so far only ever meant the ability's own controller, so the node
+    // had no way to say otherwise until now.
+    public static readonly CardDef RonanTheAccuserTreason = Character(
+        "DPS050", "Ronan the Accuser", "Treason!", dieLimit: 4,
+        "When Ronan the Accuser is fielded, lose 1 life. When Ronan the Accuser is KO'd, your opponent loses 1 life.",
+        purchaseCost: 5, energyType: EnergyType.Bolt,
+        abilities: [
+            new AbilityDef(TriggerType.WhenFielded, Cost: null, Effect: new LoseLife(1)),
+            new AbilityDef(TriggerType.WhenKOd, Cost: null, Effect: new LoseLife(1, TargetOwnership.Opposing))
+        ],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 5),
+            new CharacterFace(FieldingCost: 1, Attack: 6, Defense: 7),
+            new CharacterFace(FieldingCost: 2, Attack: 8, Defense: 8)
+        ], set: "DPS");
+
+    // Power Bolt - a Basic Action with no trigger phrase at all, i.e. its
+    // effect just runs when the die is used (rule 2.6.4 - same WhenUsed
+    // shape Casket of Ancient Winters already established), no Cost/
+    // Sequence needed since it's a single primitive.
+    public static readonly CardDef PowerBolt = BasicAction(
+        "DPS011", "Power Bolt", "Deal 2 damage to target character die or player.",
+        abilities: [new AbilityDef(TriggerType.WhenUsed, Cost: null,
+            Effect: new DealDamage(2, TargetSpec.CharacterDieOrPlayer("target character die or player")))],
+        purchaseCost: 3, set: "DPS");
+
     // A team is 8 character cards + 2 Basic Action cards (10 total). Both
     // rosters below are drawn exclusively from IsImplemented: true cards
     // (see CardDef.IsImplemented) - the 16 cards with a deliberately
@@ -985,7 +1125,9 @@ public static class SampleCards
             Deathbird, WaspPixie, MadalynePryor, TheSpot, Ricochet, ScarletSpider, DrowMercenary,
             SupermanKalEl, BlackMantaDeepSeaDeviant, BizarroMoreThanAMonster,
             SpideysLastStand, TheRock, BigE, RipHunterNavigateTheSandsOfTime, StarfireStarbolts,
-            JamilahShipwreckedOnChult
+            JamilahShipwreckedOnChult,
+            StormExtremeWeather, KittyPrydeRightOfPassage, PhoenixFirepower, DKenEmperor,
+            RonanTheAccuserTreason, PowerBolt
         ];
 
         // Hand-curated cards win on id collision - shouldn't happen in

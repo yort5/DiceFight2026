@@ -170,7 +170,10 @@ public sealed record DrawDice(int Count) : EffectNode;
 public sealed record PrepDie(TargetSpec Source) : EffectNode;
 public sealed record FieldDie(TargetSpec Target, bool Free) : EffectNode;
 public sealed record GainLife(int Amount) : EffectNode;
-public sealed record LoseLife(int Amount) : EffectNode;
+// Whose defaults to Own (rule 3.1.15 - "you" in card text means the
+// ability's controller) - Ronan the Accuser's "your opponent loses 1
+// life" (DPS050) is the first card needing Opposing instead.
+public sealed record LoseLife(int Amount, TargetOwnership Whose = TargetOwnership.Own) : EffectNode;
 
 // Rule 2.9.1's "switch life totals" card text (e.g. Cosmic Cube) - simple
 // enough to be its own primitive rather than a generic "set stat" node.

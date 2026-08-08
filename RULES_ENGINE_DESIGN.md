@@ -168,6 +168,16 @@ here rather than assuming which approach they'd want.
     of scope for the card-lookup pass; could land later as its own
     `BackgroundService` in `DiceFight.DiscordBot` without touching the
     existing commands.
+15. **In progress**: working through the Dark Phoenix Saga (DPS) set
+    card by card - see the "Dark Phoenix Saga, first pass" status
+    update for the first six cards hand-curated (Storm, Kitty Pryde,
+    Phoenix, D'Ken, Ronan the Accuser, Power Bolt) and, more
+    importantly, the full breakdown of *why* the rest of the set's
+    unimplemented cards don't fit current primitives - several are real
+    small missing subsystems (Continuous Action dice, Loyalty Counters,
+    per-die targeting/blocking protection, "while [named card] active"
+    conditional grants), not one-off skips, and worth the user's input
+    on priority before investing further.
 
 ## Implemented keywords
 

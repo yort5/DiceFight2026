@@ -654,6 +654,25 @@ public class EffectInterpreterTests
         Assert.Equal(life - 3, state.GetPlayer("p1").Life); // LoseLife finally ran
     }
 
+    // Ronan the Accuser ("Treason!", DPS050) - "your opponent loses 1
+    // life" needed LoseLife.Whose (every prior LoseLife card only ever
+    // meant the ability's own controller, the default). Confirms Whose:
+    // Opposing debits the other player, not the ability's controller.
+    [Fact]
+    public void LoseLife_WithWhoseOpposing_DebitsTheOpponentNotTheController()
+    {
+        var state = CreateState();
+        var controllerLife = state.GetPlayer("p1").Life;
+        var opponentLife = state.GetPlayer("p2").Life;
+
+        EffectInterpreter.Execute(
+            new LoseLife(1, TargetOwnership.Opposing),
+            new EffectContext(state, "p1", SourceDieId: null, _ => [], Random: new Random(1)));
+
+        Assert.Equal(controllerLife, state.GetPlayer("p1").Life);
+        Assert.Equal(opponentLife - 1, state.GetPlayer("p2").Life);
+    }
+
     // Cosmic Cube "Infinite Possibilities" / Rip Hunter "Navigate the
     // Sands of Time" - unlike Corrupt (an "outside Clear and Draw" draw,
     // rule 2.3.13 - rolls immediately), this one replaces dice that were

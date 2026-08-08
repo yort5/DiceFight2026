@@ -263,7 +263,10 @@ public static class EffectInterpreter
                 break;
 
             case LoseLife lose:
-                ctx.State.GetPlayer(ctx.ControllerId).Life -= lose.Amount;
+                var loserId = lose.Whose == TargetOwnership.Opposing
+                    ? ctx.State.OpponentOf(ctx.ControllerId)
+                    : ctx.ControllerId;
+                ctx.State.GetPlayer(loserId).Life -= lose.Amount;
                 break;
 
             case SwapLife:

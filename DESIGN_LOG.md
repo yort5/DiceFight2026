@@ -4109,3 +4109,125 @@ correctly - the no-token no-op path doesn't affect the rest of the app.
 a real server) - no bot token or outbound access to Discord's gateway
 exists in this sandbox. That needs the user to set up a real bot
 token per the setup steps above and try it themselves.
+
+## Status update — Dark Phoenix Saga, first pass
+
+Started working through the DPS set card by card, per the user's own
+framing ("go through DPS and tackle them one by one, with an eye to
+where we can streamline/refactor"). First pass: 5 characters + 1 Basic
+Action hand-curated into `SampleCards.cs` (Storm "Extreme Weather",
+Kitty Pryde "Right of Passage", Phoenix "Firepower", D'Ken "Emperor",
+Ronan the Accuser "Treason!", Power Bolt), plus one small engine
+refactor and a `BasicAction` helper fix.
+
+**A nice surprise going in**: DPS's bulk-imported stats
+(cost/energy/dieLimit/levels/affiliations) are already real, sourced
+from the reference spreadsheet by `import_bulk_cards.py` - unlike the
+original 55 hand-curated cards (mostly `PlaceholderLevels` when first
+authored), hand-curating a DPS card is now purely an authoring
+decision, never a stats-transcription one. Numbers below were copied
+straight out of `BulkCards.json`.
+
+**New engine capability**: `LoseLife` gained a `Whose` parameter
+(`TargetOwnership`, default `Own`) - every LoseLife-using card so far
+only ever meant "the ability's own controller loses life" (still the
+default), but Ronan the Accuser's "When KO'd, your opponent loses 1
+life" is the first card needing the other player. Small, targeted
+addition (`EffectInterpreter`'s `LoseLife` case now branches on
+`Whose`), covered by a new `EffectInterpreterTests` case
+(`LoseLife_WithWhoseOpposing_DebitsTheOpponentNotTheController`).
+
+**Refactor**: `SampleCards.BasicAction()`'s helper hardcoded
+`PurchaseCost` to a flat 2 (non-epic) or 4 (epic) placeholder - fine
+when every Basic Action's real cost was unknown, but DPS's real Basic
+Action costs range 2-5 (Power Bolt is 3, The Front Line is 5), well
+outside that binary split. Added an optional `purchaseCost` override,
+defaulting to the old placeholder split when omitted so every existing
+call site is unaffected.
+
+**The six cards, briefly**: Storm and Phoenix are plain
+`WhenFielded`/`Energize` damage (Phoenix's Energize target reuses
+`TargetSpec.CharacterDieOrPlayer`, the same union `DealDamage` already
+interprets for Attune). Kitty Pryde pairs the existing `Awaken` trigger
+with `PrepFromBag` (previously only used by Ricochet's Infiltrate
+follow-up) - same primitive, different trigger. D'Ken's "Prep a die
+from your Used Pile" needed no new primitive at all - `PrepDie`'s
+`Source` is just a `TargetSpec`, so pointing `EligibleZones` at
+`UsedPile` instead of the usual self-reference was enough. Power Bolt
+is a Basic Action with no trigger phrase in its text at all - just
+`TriggerType.WhenUsed` + a single `DealDamage`, same shape
+`CasketOfAncientWinters` already established.
+
+**Confirmed while reading `TurnEngine.UseActionDie`/`GamesController`**:
+Action-die use (rule 2.6.4) is fully wired end-to-end already - engine
+method, `POST /{gameId}/use-action-die` API endpoint, `WhenUsed`
+trigger - contrary to a stale-sounding worry; Basic Actions like Power
+Bolt or Casket of Ancient Winters are genuinely playable through the
+real game flow today, not just exercised directly in tests.
+
+**Found, deliberately not built this pass - real gaps, not one-card
+skips**: went through all 150 DPS cards' real text (via `BulkCards.json`,
+already fetched) rather than guessing, and grouped the ones that don't
+map to current primitives by *why*, since several recur enough to be
+worth their own small feature rather than a pile of one-off skips:
+
+- **Continuous** (Appendix 1 keyword) - a Basic Action die that, once
+  used, stays in the Field Zone as a standing, repeatable "whenever you
+  could use a Global Ability, you may send this die to the Used Pile to
+  [effect]" activated ability, instead of the normal WhenUsed-then-
+  Used-Pile flow every currently-authored Action die follows. DPS002
+  (Dampening Collar), DPS005 (Lab Test), DPS006 (Living the Dream),
+  DPS010 (Organic Steel) all need it, and grepping `BulkCards.json`
+  shows the same "Continuous: ... whenever you could use a Global
+  Ability..." shape recurring constantly outside DPS too - this is
+  probably the single highest-leverage engine gap found this pass, not
+  a DPS-specific one.
+- **Loyalty Counters** - a persistent marker on a *card* (not a die,
+  unlike `AppliedModifiers`/keyword-per-die state), each one worth a
+  flat +1A/+1D to a character die per the reminder text. DPS004, DPS006,
+  DPS016, DPS035, DPS041, DPS053, DPS073, DPS079, DPS124 all reference
+  it - a real DPS-set mechanic (X-Men "Founders" theme), not a one-off.
+- Per-die **"can't be targeted"/"can't block"** protection statuses
+  (DPS033 Gladiator's Global) - the same family of gap as next-steps
+  item 3 (capturing-adjacent, blocked on Capturing rule 3.8 not being
+  built) and `Escape!`'s own long-standing `isImplemented: false`.
+- **Affiliation- or level-restricted `TargetSpec` filters** (DPS042
+  Master Mold's "all X-Men and Brotherhood dice", DPS034 Iceman's
+  "target opposing level 1 character die") - already flagged in the
+  `dicefight2026-bulk-card-catalog` memory as blocking ~15 other bulk
+  cards; DPS adds two more concrete examples.
+- **Purchase/fielding-cost modifiers** (DPS024 Corsair, DPS040 Magik,
+  DPS056 Wolverine's conditional free-fielding) - same family as the
+  long-standing Robin's Energize / Alfred's Ally / The Rock's Sacrifice
+  gap already in next-steps item 1.
+- **"While [a specific other named card] is active" conditional
+  self-buffs/keyword-grants** (DPS045 Mystique's "+2A while Wolverine
+  is active", DPS048 Psylocke's "gains Deadly while Wolverine is
+  active") - neither `GrantsStaticTeamBonus` (whole team, unconditional)
+  nor `GrantsToSidekicks` (Sidekicks, unconditional) fits; a real,
+  narrow, and apparently-recurring pattern (both DPS cards key off the
+  same named card), worth a small dedicated mechanism if picked up.
+- Also noted but not itemized above (each affects exactly one seen-so-
+  far DPS card, genuinely one-off so far): "which specific energy type
+  paid a fielding cost" tracking (DPS031 Forge, DPS047 Professor X -
+  fielding cost isn't energy-typed anywhere in the model today, only
+  purchase cost is); draft-format game-mode conditionals (DPS028
+  Deadpool - no draft mode exists at all); a mutual-damage-equal-to-
+  own-attack primitive plus an absolute (not delta) stat-set primitive
+  (DPS001 Archnemesis); an "each player and character die" true-AoE
+  damage primitive plus a spend-energy-for-more-damage loop (DPS003
+  Explosion); a roll-and-branch-on-face-type primitive (DPS007 Making
+  the Team); a permanent (not until-end-of-turn) stat-swap primitive
+  (DPS049 Rogue - `SwapLife` is the only existing "swap" precedent, and
+  it's life-total-specific).
+
+None of the above built this pass - flagging for the user's own
+prioritization before investing, since Continuous especially looks
+like it could unlock a meaningfully larger slice of the card pool than
+one-at-a-time DPS authoring would on its own.
+
+Verified: `dotnet build` (solution-wide), `dotnet test` (278/278, one
+new case), and `npm run build` all clean. Re-ran
+`scripts/import_bulk_cards.py` after hand-curating the six cards above
+so `BulkCards.json` stays free of ids now covered in `SampleCards.cs`
+(3637 → 3631 bulk rows, 55 → 61 hand-curated).

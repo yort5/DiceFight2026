@@ -39067,22 +39067,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS011",
-    "name": "Power Bolt",
-    "subtitle": "Basic Action Card",
-    "type": "BasicAction",
-    "purchaseCost": 3,
-    "energyType": null,
-    "dieLimit": 3,
-    "levels": [],
-    "rawText": "Deal 2 damage to target character die or player.",
-    "keywords": [],
-    "affiliations": [],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS012",
     "name": "Radicalization",
     "subtitle": "Basic Action Card",
@@ -39496,44 +39480,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS026",
-    "name": "D\\'Ken",
-    "subtitle": "Emperor",
-    "type": "Character",
-    "purchaseCost": 4,
-    "energyType": "Shield",
-    "dieLimit": 4,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 4,
-        "defense": 4,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 5,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 6,
-        "defense": 6,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When D\\'Ken attacks, Prep a die from your Used Pile.",
-    "keywords": [],
-    "affiliations": [
-      "Villains",
-      "Shi\\'ar"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS027",
     "name": "Dark Phoenix",
     "subtitle": "Malevolent",
@@ -39868,43 +39814,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS037",
-    "name": "Kitty Pryde",
-    "subtitle": "Right of Passage",
-    "type": "Character",
-    "purchaseCost": 3,
-    "energyType": "Mask",
-    "dieLimit": 4,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 2,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 0,
-        "attack": 3,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 3,
-        "burstStars": null
-      }
-    ],
-    "rawText": "Awaken - Prep a die from your bag.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS038",
     "name": "Lilandra",
     "subtitle": "Politician",
@@ -40201,43 +40110,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS046",
-    "name": "Phoenix",
-    "subtitle": "Firepower",
-    "type": "Character",
-    "purchaseCost": 6,
-    "energyType": "Bolt",
-    "dieLimit": 4,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 5,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 7,
-        "defense": 7,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 3,
-        "attack": 8,
-        "defense": 8,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When fielded, deal 3 damage to target character die. Energize - Deal 2 damage to target character die or player.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS047",
     "name": "Professor X",
     "subtitle": "Dreamer",
@@ -40351,41 +40223,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS050",
-    "name": "Ronan the Accuser",
-    "subtitle": "Treason!",
-    "type": "Character",
-    "purchaseCost": 5,
-    "energyType": "Bolt",
-    "dieLimit": 4,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 5,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 6,
-        "defense": 7,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 8,
-        "defense": 8,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When Ronan the Accuser is fielded, lose 1 life. When Ronan the Accuser is KO\\'d, your opponent loses 1 life.",
-    "keywords": [],
-    "affiliations": [],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS051",
     "name": "Sabretooth",
     "subtitle": "Am I Interrupting?",
@@ -40417,43 +40254,6 @@
     "keywords": [],
     "affiliations": [
       "Brotherhood of Mutants"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS052",
-    "name": "Storm",
-    "subtitle": "Extreme Weather",
-    "type": "Character",
-    "purchaseCost": 2,
-    "energyType": "Bolt",
-    "dieLimit": 4,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 2,
-        "defense": 1,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 0,
-        "attack": 3,
-        "defense": 1,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 3,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When fielded, deal 1 damage to target character die.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
     ],
     "isImplemented": false,
     "set": "DPS",
