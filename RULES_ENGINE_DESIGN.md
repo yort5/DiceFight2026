@@ -171,13 +171,18 @@ here rather than assuming which approach they'd want.
 15. **In progress**: working through the Dark Phoenix Saga (DPS) set
     card by card - see the "Dark Phoenix Saga, first pass" status
     update for the first six cards hand-curated (Storm, Kitty Pryde,
-    Phoenix, D'Ken, Ronan the Accuser, Power Bolt) and, more
-    importantly, the full breakdown of *why* the rest of the set's
-    unimplemented cards don't fit current primitives - several are real
-    small missing subsystems (Continuous Action dice, Loyalty Counters,
-    per-die targeting/blocking protection, "while [named card] active"
-    conditional grants), not one-off skips, and worth the user's input
-    on priority before investing further.
+    Phoenix, D'Ken, Ronan the Accuser, Power Bolt) and the full
+    breakdown of *why* the rest of the set's unimplemented cards don't
+    fit current primitives - several are real small missing subsystems
+    (Continuous Action dice, Loyalty Counters, per-die targeting/
+    blocking protection, "while [named card] active" conditional
+    grants), not one-off skips. Per the user's own prioritization,
+    Continuous is now built (see the "the Continuous keyword, and Lab
+    Test" status update) and Lab Test (DPS005) is its first real card;
+    Loyalty Counters and the rest remain open, along with the other
+    three Continuous DPS cards (each needs something on top of the base
+    mechanic just built) and web client UI for actually resolving a
+    Continuous die once it's sitting in the Field Zone.
 
 ## Implemented keywords
 
@@ -196,6 +201,13 @@ and design rationale - this is just the scannable index.
   spins up one or more levels, whatever caused it.
 - **Call Out** (Black Widow) - when this die attacks, target an
   opposing Character die; only that die (or none) may legally block it.
+- **Continuous** (Lab Test) - a Basic Action die that's "used" by moving
+  it to the Field Zone rather than resolving its ability right away;
+  its controller later chooses to remove it (`TurnEngine.
+  ResolveContinuousDie`, `TriggerType.ContinuousResolve`), which is when
+  the ability actually runs - explicitly not a second "use" (rule
+  2.6.4.3), so it doesn't re-trigger Amplify/Attune/Obscure the way the
+  original move did.
 - **Corrupt** (Polaris) - target player draws X dice from their bag,
   refilling from the Used Pile if needed, then a real choice of which
   one goes to the Used Pile - answered through `GameState.PendingChoice`

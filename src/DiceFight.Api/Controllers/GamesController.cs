@@ -97,6 +97,16 @@ public sealed class GamesController(GameStore store) : ControllerBase
         return Ok(GameStateDto.From(gameId, state));
     }
 
+    [HttpPost("{gameId}/resolve-continuous-die")]
+    public ActionResult<GameStateDto> ResolveContinuousDie(string gameId, [FromBody] ResolveContinuousDieRequest request)
+    {
+        var state = RequireNoPendingChoice(gameId);
+        var queue = new AbilityQueue();
+        TurnEngine.ResolveContinuousDie(state, queue, request.DieId);
+        Drain(state, queue, request.TargetDieIds);
+        return Ok(GameStateDto.From(gameId, state));
+    }
+
     [HttpPost("{gameId}/use-global-ability")]
     public ActionResult<GameStateDto> UseGlobalAbility(string gameId, [FromBody] UseGlobalAbilityRequest request)
     {

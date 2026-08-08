@@ -202,7 +202,22 @@ public enum TriggerType
     // distinctly from (and unrelated in meaning to) TurnStep.ClearAndDraw -
     // this is the reactive trigger fired *during* that step, not the step
     // itself.
-    ClearAndDraw
+    ClearAndDraw,
+
+    // Keyword Continuous - "Action dice with Continuous are 'used' by
+    // moving them to the Field Zone. They can stay there past the end of
+    // the turn... allow you to send them to the Used Pile whenever you
+    // could use a Global ability" (Appendix 1). Rule 2.6.4.2/2.6.4.3 draw
+    // a hard line between the die's two lifecycle moments: moving
+    // Reserve Pool -> Field Zone is "using" it (so Amplify/Attune/Obscure
+    // still react, same as any other Action die use - see
+    // TurnEngine.UseActionDie), but that move does NOT run the die's own
+    // authored ability - only actually removing it later does, and that
+    // removal is explicitly NOT a second "use" (no WhenUsed re-fire, no
+    // second Amplify/Attune/Obscure). So this needs its own trigger,
+    // fired only by TurnEngine.ResolveContinuousDie, never by
+    // UseActionDie.
+    ContinuousResolve
 }
 
 // Rule 2.2.3 - the five steps of a turn, in fixed order (2.2.4 - cannot

@@ -228,33 +228,26 @@ public static class EffectInterpreter
                     picked.Zone = Zone.ReservePool;
 
                     if (ctx.Roller is not null)
-                    {
-                        var cardId = picked.VirtualCardId ?? picked.CardId;
-                        var card = cardId is not null ? ctx.State.CardCatalog.GetValueOrDefault(cardId) : null;
-                        var result = ctx.Roller.Roll(picked, card);
-                        picked.Status = result.Status;
-                        picked.Level = result.Level;
-                        picked.EnergyKind = result.Status == DieStatus.Energy ? result.EnergyKind : EnergyKind.None;
-                        picked.ProvidedEnergyType = result.Status == DieStatus.Energy ? result.ProvidedEnergyType : null;
-                        picked.EnergyAmount = result.Status == DieStatus.Energy ? result.EnergyAmount : 1;
-
-                        // This is a roll outside the Roll and Reroll step
-                        // (there's no reroll decision pending), so an
-                        // Energize die that landed on double energy checks
-                        // right away rather than waiting for anything else.
-                        if (ctx.Queue is not null)
-                            TurnEngine.CheckEnergize(ctx.State, ctx.Queue, picked);
-                    }
+                        ApplyRoll(ctx, picked);
                     else
-                    {
                         picked.Status = DieStatus.Energy;
-                    }
                 }
                 break;
 
-            case Reroll:
-                // Not exercised by any currently-authored card; needs an
-                // IDiceRoller threaded through EffectContext to do anything.
+            // Lab Test (DPS005, a Continuous Action die - see its own
+            // AbilityDef remarks): "reroll one of the character dice in
+            // your Reserve Pool" - unlike DrawDice, the die doesn't move
+            // zones, it's re-rolled in place. Silently a no-op if no
+            // Roller is available (same "can't do anything meaningful"
+            // fallback as DrawDice's `else` branch effectively is for its
+            // own Roller-less case, just without a placeholder face to
+            // fall back to here).
+            case Reroll reroll:
+                foreach (var id in Resolve(ctx, reroll.Target, cache))
+                {
+                    if (ctx.Roller is null) continue;
+                    ApplyRoll(ctx, FindDie(ctx, id));
+                }
                 break;
 
             case GainLife gain:
@@ -495,6 +488,27 @@ public static class EffectInterpreter
     private static DieInstance FindDie(EffectContext ctx, string id) =>
         ctx.State.Dice.SingleOrDefault(d => d.Id == id)
         ?? throw new InvalidOperationException($"No die with id '{id}'.");
+
+    // Shared by DrawDice and Reroll - rolls `die` via ctx.Roller and
+    // applies the result face to it in place (Status/Level/Energy* only;
+    // the caller is responsible for any zone move, since DrawDice needs
+    // one and Reroll doesn't). Also checks Energize immediately, same
+    // "outside the Roll and Reroll Step, so no reroll decision to wait
+    // for" reasoning DrawDice's own remarks already explain.
+    private static void ApplyRoll(EffectContext ctx, DieInstance die)
+    {
+        var cardId = die.VirtualCardId ?? die.CardId;
+        var card = cardId is not null ? ctx.State.CardCatalog.GetValueOrDefault(cardId) : null;
+        var result = ctx.Roller!.Roll(die, card);
+        die.Status = result.Status;
+        die.Level = result.Level;
+        die.EnergyKind = result.Status == DieStatus.Energy ? result.EnergyKind : EnergyKind.None;
+        die.ProvidedEnergyType = result.Status == DieStatus.Energy ? result.ProvidedEnergyType : null;
+        die.EnergyAmount = result.Status == DieStatus.Energy ? result.EnergyAmount : 1;
+
+        if (ctx.Queue is not null)
+            TurnEngine.CheckEnergize(ctx.State, ctx.Queue, die);
+    }
 
     // Counts the ability's own source die's controller's active
     // (Field/Attack Zone) dice that share an affiliation with the source

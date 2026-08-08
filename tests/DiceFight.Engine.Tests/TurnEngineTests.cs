@@ -1574,4 +1574,67 @@ public class TurnEngineTests
 
         Assert.Equal(2, state.ExperienceTokens[ExperienceCard.Id]);
     }
+
+    // Lab Test (DPS005) end-to-end - the first Continuous Action die's
+    // full lifecycle: UseActionDie moves it to the Field Zone without
+    // running its ability (rule 2.6.4.2), then ResolveContinuousDie later
+    // runs the ability and moves it to the Used Pile, and that resolution
+    // is confirmed NOT a second "use" (no re-queued WhenUsed/Amplify/
+    // Attune - nothing else on this minimal roster has those keywords
+    // anyway, but the empty queue after UseActionDie already proves the
+    // ability itself didn't fire early).
+    [Fact]
+    public void ContinuousActionDie_UseThenResolve_MovesToFieldZoneThenRerollsAndGoesToUsedPile()
+    {
+        var labTest = SampleCards.LabTest;
+        var targetCard = new CardDef
+        {
+            Id = "reroll-target", Name = "Reroll Target", Type = CardType.Character,
+            PurchaseCost = 2, DieLimit = 4,
+            Levels = [new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 1)],
+        };
+        var state = GameState.NewGame(
+            new Dictionary<string, CardDef> { [labTest.Id] = labTest, [targetCard.Id] = targetCard },
+            new Player { Id = "p1", Name = "Player One" },
+            new Player { Id = "p2", Name = "Player Two" });
+        state.CurrentStep = TurnStep.Main;
+
+        var actionDie = AddDie(state, "p1-labtest-1", "p1", labTest.Id, Zone.ReservePool, DieStatus.Action);
+        var target = AddDie(state, "p1-target-1", "p1", targetCard.Id, Zone.ReservePool, DieStatus.Character);
+
+        var queue = new AbilityQueue();
+        TurnEngine.UseActionDie(state, queue, actionDie.Id);
+
+        Assert.Equal(Zone.FieldZone, actionDie.Zone);
+        Assert.True(queue.IsEmpty); // the ability itself hasn't run yet
+
+        TurnEngine.ResolveContinuousDie(state, queue, actionDie.Id);
+
+        Assert.Equal(Zone.UsedPile, actionDie.Zone);
+        Assert.Equal(1, queue.Count);
+        Assert.Equal(TriggerType.ContinuousResolve, queue.Pending[0].Trigger);
+
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [target.Id],
+                Roller: new FixedRoller(DieStatus.Character, level: 3))));
+
+        Assert.Equal(DieStatus.Character, target.Status);
+        Assert.Equal(3, target.Level);
+        Assert.Equal(Zone.ReservePool, target.Zone); // Reroll re-rolls in place, unlike DrawDice
+    }
+
+    [Fact]
+    public void ResolveContinuousDie_OnANonContinuousDie_Throws()
+    {
+        var state = GameState.NewGame(
+            new Dictionary<string, CardDef> { [SampleCards.PowerBolt.Id] = SampleCards.PowerBolt },
+            new Player { Id = "p1", Name = "Player One" },
+            new Player { Id = "p2", Name = "Player Two" });
+        state.CurrentStep = TurnStep.Main;
+        var die = AddDie(state, "p1-powerbolt-1", "p1", SampleCards.PowerBolt.Id, Zone.FieldZone, DieStatus.Action);
+
+        Assert.Throws<InvalidOperationException>(() =>
+            TurnEngine.ResolveContinuousDie(state, new AbilityQueue(), die.Id));
+    }
 }

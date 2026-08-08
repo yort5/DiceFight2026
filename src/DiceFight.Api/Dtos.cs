@@ -88,6 +88,10 @@ public sealed record PurchaseRequest(string DieId, IReadOnlyList<string> EnergyD
 public sealed record FieldRequest(
     string DieId, IReadOnlyList<string> EnergyDieIds, IReadOnlyList<string>? TargetDieIds = null);
 public sealed record UseActionDieRequest(string DieId, IReadOnlyList<string>? TargetDieIds);
+// Keyword Continuous - resolves a die already sitting in the Field Zone
+// (having been "used" earlier via UseActionDieRequest) rather than one
+// still in the Reserve Pool. See TurnEngine.ResolveContinuousDie.
+public sealed record ResolveContinuousDieRequest(string DieId, IReadOnlyList<string>? TargetDieIds);
 public sealed record UseGlobalAbilityRequest(
     string CardId, string PlayerId, IReadOnlyList<string> EnergyDieIds, IReadOnlyList<string>? TargetDieIds);
 public sealed record RerollRequest(IReadOnlyList<string> RerollDieIds);

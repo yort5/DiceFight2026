@@ -1,5 +1,6 @@
 using DiceFight.Engine;
 using DiceFight.Engine.Combat;
+using DiceFight.Engine.Data;
 using DiceFight.Engine.Effects;
 using DiceFight.Engine.Model;
 using DiceFight.Engine.Queueing;
@@ -2376,5 +2377,30 @@ public class CombatEngineTests
         var die = AddCharacterDie(state, "p1-plain-1", "p1", PlainThreeLevelCard.Id, Zone.FieldZone);
 
         Assert.Equal(1, DieStats.EffectiveAttack(state, die));
+    }
+
+    // Appendix 1's Continuous entry: "Continuous dice cannot attack or
+    // block." A Continuous Action die now legitimately sits in the Field
+    // Zone (see TurnEngine.UseActionDie/ResolveContinuousDie) - unlike
+    // every other die that can ever be there, it's DieStatus.Action, not
+    // Character/SidekickCharacter, which is exactly what DeclareAttackers/
+    // DeclareBlockers now check for.
+    [Fact]
+    public void DeclareAttackers_ContinuousActionDieInFieldZone_IsNotEligible()
+    {
+        var labTest = SampleCards.LabTest;
+        var catalog = new Dictionary<string, CardDef> { [labTest.Id] = labTest };
+        var state = GameState.NewGame(catalog, new Player { Id = "p1", Name = "Player One" }, new Player { Id = "p2", Name = "Player Two" });
+        state.CurrentStep = TurnStep.Attack;
+        state.AttackSubStep = AttackSubStep.DeclareAttackers;
+        var continuousDie = new DieInstance
+        {
+            Id = "p1-labtest-1", CardId = labTest.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Action,
+        };
+        state.Dice.Add(continuousDie);
+
+        Assert.Throws<InvalidOperationException>(() =>
+            CombatEngine.DeclareAttackers(state, new AbilityQueue(), [continuousDie.Id]));
     }
 }

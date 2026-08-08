@@ -85,6 +85,7 @@ public static class SampleCards
         IReadOnlyList<AbilityDef>? abilities = null,
         bool isImplemented = true,
         int? purchaseCost = null,
+        IReadOnlyList<KeywordInstance>? keywords = null,
         string? set = null) => new()
     {
         Id = id,
@@ -99,6 +100,7 @@ public static class SampleCards
         EnergyTypes = [], // rule 1.2.4/1.3.10 - Basic Actions have no energy type
         DieLimit = 3, // rule 1.2.11 - fixed for every Basic Action card
         RawText = rawText,
+        Keywords = keywords ?? [],
         Abilities = abilities ?? [],
         IsImplemented = isImplemented,
         Set = set
@@ -1077,6 +1079,25 @@ public static class SampleCards
             Effect: new DealDamage(2, TargetSpec.CharacterDieOrPlayer("target character die or player")))],
         purchaseCost: 3, set: "DPS");
 
+    // Lab Test - the first Continuous Basic Action authored (see
+    // TurnEngine.UseActionDie/ResolveContinuousDie and TriggerType.
+    // ContinuousResolve's own remarks for the new lifecycle this needed).
+    // "Send this die to your Used Pile to reroll..." maps to just Reroll -
+    // the move to the Used Pile is ResolveContinuousDie's own job, not
+    // something this card's own Effect tree has to say (every currently-
+    // authored Continuous card's text bundles them the same way). Also
+    // the card that motivated actually implementing Reroll's interpreter
+    // case (previously a stub - see EffectInterpreter's remarks) since no
+    // prior card exercised it.
+    public static readonly CardDef LabTest = BasicAction(
+        "DPS005", "Lab Test",
+        "Continuous: You may send this die to your Used Pile to reroll one of the character dice in your Reserve Pool.",
+        keywords: [new KeywordInstance("Continuous")],
+        abilities: [new AbilityDef(TriggerType.ContinuousResolve, Cost: null,
+            Effect: new Reroll(TargetSpec.CharacterDie(
+                "a character die in your Reserve Pool", TargetOwnership.Own, zones: [Zone.ReservePool])))],
+        purchaseCost: 2, set: "DPS");
+
     // A team is 8 character cards + 2 Basic Action cards (10 total). Both
     // rosters below are drawn exclusively from IsImplemented: true cards
     // (see CardDef.IsImplemented) - the 16 cards with a deliberately
@@ -1127,7 +1148,7 @@ public static class SampleCards
             SpideysLastStand, TheRock, BigE, RipHunterNavigateTheSandsOfTime, StarfireStarbolts,
             JamilahShipwreckedOnChult,
             StormExtremeWeather, KittyPrydeRightOfPassage, PhoenixFirepower, DKenEmperor,
-            RonanTheAccuserTreason, PowerBolt
+            RonanTheAccuserTreason, PowerBolt, LabTest
         ];
 
         // Hand-curated cards win on id collision - shouldn't happen in

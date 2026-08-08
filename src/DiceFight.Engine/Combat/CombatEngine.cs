@@ -25,7 +25,14 @@ public static class CombatEngine
         foreach (var id in attackerDieIds)
         {
             var die = FindDie(state, id);
-            if (die.ControllerId != state.ActivePlayerId || die.Zone != Zone.FieldZone)
+            // Rule 2.7's attackers are Character dice specifically -
+            // Appendix 1's Continuous entry states outright "Continuous
+            // dice cannot attack or block," and a Continuous Action die
+            // now legitimately sits in the Field Zone too (see
+            // TurnEngine.UseActionDie/ResolveContinuousDie), so the zone
+            // check alone isn't enough to exclude it anymore.
+            if (die.ControllerId != state.ActivePlayerId || die.Zone != Zone.FieldZone ||
+                die.Status is not (DieStatus.Character or DieStatus.SidekickCharacter))
                 throw new InvalidOperationException($"Die {id} is not an eligible attacker.");
             die.Zone = Zone.AttackZone;
 
@@ -154,7 +161,9 @@ public static class CombatEngine
         foreach (var id in blockerDieIds)
         {
             var die = FindDie(state, id);
-            if (die.ControllerId != inactiveId || die.Zone != Zone.FieldZone)
+            // Same Continuous exclusion as DeclareAttackers above.
+            if (die.ControllerId != inactiveId || die.Zone != Zone.FieldZone ||
+                die.Status is not (DieStatus.Character or DieStatus.SidekickCharacter))
                 throw new InvalidOperationException($"Die {id} is not an eligible blocker.");
             die.Zone = Zone.AttackZone;
         }

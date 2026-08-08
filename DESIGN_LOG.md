@@ -4231,3 +4231,92 @@ new case), and `npm run build` all clean. Re-ran
 `scripts/import_bulk_cards.py` after hand-curating the six cards above
 so `BulkCards.json` stays free of ids now covered in `SampleCards.cs`
 (3637 → 3631 bulk rows, 55 → 61 hand-curated).
+
+## Status update — the Continuous keyword, and Lab Test (DPS005) as its first real card
+
+The user's call on last update's open question: build Continuous next,
+since it's the highest-leverage of the gaps found scanning DPS (recurs
+constantly outside DPS too - see the grep sample in the previous
+status update).
+
+**What the rulebook actually says** (rule 2.6.4.2-2.6.4.3, Appendix 1's
+own Continuous entry): a Continuous Action die's lifecycle has two
+separate moments, not one. Moving it Reserve Pool -> Field Zone IS
+"using" it - Amplify/Attune/Obscure all still react, same as any other
+Action die use - but that move does NOT run the die's own ability. The
+die then just sits in the Field Zone (can stay past end of turn) until
+its controller later chooses to remove it, "whenever they could use a
+Global ability" - THAT'S when the ability actually resolves. Rule
+2.6.4.3 is explicit that this removal is not a second "use": no
+WhenUsed re-fire, no second Amplify/Attune/Obscure. Every currently-
+authored Continuous card's own text bundles the removal into the
+ability itself ("send this die to your Used Pile to/and [effect]"), so
+modeling it as two genuinely separate trigger points, not one
+trigger-with-a-delay, matches both the rule and every real card's
+wording.
+
+**Engine changes**:
+- New `TriggerType.ContinuousResolve`, fired only by the new
+  `TurnEngine.ResolveContinuousDie(state, queue, dieId)` - never by
+  `UseActionDie`.
+- `UseActionDie` now branches on `DieStats.HasKeyword(..., "Continuous")`:
+  skips the `WhenUsed` enqueue and the Epic Basic Action zone-move
+  branch, and sends the die to the Field Zone instead of Out of
+  Play/back to its card. The Amplify/Attune/Obscure reaction loops
+  still run unconditionally, matching rule 2.6.4.2.
+- `ResolveContinuousDie` validates the die is actually a Continuous die
+  sitting in the Field Zone, checks the same Main-Step-or-Attack-
+  Action/Global-window gate `UseGlobalAbility` already uses (rule
+  2.6.4.2's "whenever you could use a Global ability"), enqueues
+  `ContinuousResolve`, and moves the die to the Used Pile. New API
+  endpoint `POST /{gameId}/resolve-continuous-die` mirrors
+  `use-action-die`'s shape exactly.
+- **A real correctness gap this surfaced and fixed**: `CombatEngine.
+  DeclareAttackers`/`DeclareBlockers` only ever checked `Zone ==
+  FieldZone` for eligibility - harmless before, since nothing but a
+  Character/SidekickCharacter die could ever legitimately sit in the
+  Field Zone. A Continuous Action die now can, and Appendix 1 states
+  outright "Continuous dice cannot attack or block" - both methods now
+  also require `Status is Character or SidekickCharacter`. Covered by a
+  new `CombatEngineTests` case.
+- Spot-checked whether Continuous dice could get miscounted by the
+  engine's other "active dice" scans (`ActiveAffiliateCount`, static
+  team bonus lookups) - both key off `CardDef.Affiliations`, which
+  every real Basic/Epic Basic Action card has empty, so no miscounting
+  in practice today. Worth re-checking if a future mechanism ever
+  scans "active dice" without an affiliation filter.
+- **`Reroll` was actually still a stub** ("not exercised by any
+  currently-authored card" - EffectInterpreter's own old comment) despite
+  being one of the design doc's original ~20-30 primitives and having a
+  real `IDiceRoller` already threaded through `EffectContext` (`ctx.
+  Roller`, used by KO/DrawDice already). Implemented it now (Lab Test
+  needed it) by factoring `DrawDice`'s existing "apply a rolled face to
+  a die" block into a shared `ApplyRoll` helper, reused by both -
+  `Reroll` just skips the zone move `DrawDice` needs.
+
+**Lab Test (DPS005)** is the first Continuous card authored - the
+simplest of the four DPS Continuous cards found last update (no
+conditional gating, no interaction with affiliation-based active-dice
+counts), a clean proof the lifecycle works end-to-end:
+`Keywords: [Continuous]`, one `AbilityDef` on `TriggerType.
+ContinuousResolve` wrapping a plain `Reroll` targeting the Reserve
+Pool. `SampleCards.BasicAction()` also gained a `keywords` parameter
+(previously Basic Actions had no way to carry keywords at all - every
+prior one was keyword-free).
+
+**Not done this pass, deliberately**: the other three Continuous DPS
+cards (Dampening Collar, Living the Dream, Organic Steel) - each needs
+something on top of the base mechanic just built (a live "opposing dice
+can't spin up" restriction; a conditional static team bonus keyed off
+Loyalty Counters, which isn't built either; an "active X-Men character"
+check feeding a conditional bonus). The base Continuous lifecycle is
+real and tested regardless of which specific cards use it yet. Also
+not done: web client UI for `resolve-continuous-die` - a human playing
+through the browser can use a Continuous Action die (moves to the Field
+Zone) but has no way yet to trigger its later resolution; only the API/
+engine can today, same "engine-then-UI-follows" gap `WhenUsed` itself
+had until recently confirmed wired end-to-end.
+
+Verified: `dotnet build`, `dotnet test` (281/281, 3 new cases), and
+`npm run build` all clean. Re-ran `scripts/import_bulk_cards.py` after
+hand-curating Lab Test (3631 → 3630 bulk rows, 61 → 62 hand-curated).

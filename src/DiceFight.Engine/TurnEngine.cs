@@ -439,10 +439,19 @@ public static class TurnEngine
         if (die.ControllerId != state.ActivePlayerId || die.Zone != Zone.ReservePool || die.Status != DieStatus.Action)
             throw new InvalidOperationException($"{DisplayName(state, die)} is not an eligible Action die.");
 
-        // Rule 2.6.4.1 - the ability is initiated (queued) before the die's
-        // post-use zone move; Shocking Grasp's own "you may Prep this die"
-        // effect, for example, overrides the default destination below.
-        EnqueueTriggered(state, queue, die, TriggerType.WhenUsed);
+        var cardId = die.VirtualCardId ?? die.CardId;
+        var card = cardId is not null ? state.CardCatalog.GetValueOrDefault(cardId) : null;
+        var isContinuous = DieStats.HasKeyword(state, die, "Continuous");
+
+        // Rule 2.6.4.2 - a Continuous Action die's own ability does NOT
+        // run here; moving it to the Field Zone IS "using" it (see below),
+        // but the ability itself only resolves later, when its controller
+        // chooses to remove it (ResolveContinuousDie). Every other Action
+        // die's ability is initiated (queued) before the die's post-use
+        // zone move; Shocking Grasp's own "you may Prep this die" effect,
+        // for example, overrides the default destination below.
+        if (!isContinuous)
+            EnqueueTriggered(state, queue, die, TriggerType.WhenUsed);
 
         // Keyword Amplify - "When you use an Action die, spin each
         // Character die with Amplify up one level (if able)." Any Action
@@ -496,9 +505,11 @@ public static class TurnEngine
             if (obscuredCardId is not null) state.ObscuredCardIds.Add(obscuredCardId);
         }
 
-        var cardId = die.VirtualCardId ?? die.CardId;
-        var card = cardId is not null ? state.CardCatalog.GetValueOrDefault(cardId) : null;
-        if (card?.Type == CardType.EpicBasicAction)
+        if (isContinuous)
+        {
+            die.Zone = Zone.FieldZone; // rule 2.6.4.2
+        }
+        else if (card?.Type == CardType.EpicBasicAction)
         {
             // Rule 1.2.3(2)/(3) - returns to its card instead of Out of
             // Play, and only one Epic Basic Action die may be used per turn.
@@ -512,6 +523,46 @@ public static class TurnEngine
         {
             die.Zone = Zone.OutOfPlay; // rule 2.6.4.1
         }
+    }
+
+    // Rule 2.6.4.2/2.6.4.3 and Appendix 1's Continuous entry - the second
+    // half of a Continuous Action die's lifecycle: its controller chooses
+    // to remove it from the Field Zone "whenever [they] could use a
+    // Global ability" (same window UseGlobalAbility itself checks), which
+    // is when its authored ability actually runs. Every currently-
+    // authored Continuous card's own text bundles the zone move into the
+    // ability itself ("send this die to your Used Pile to/and [effect]"),
+    // so the move to the Used Pile happens here, unconditionally, rather
+    // than being something the card's own EffectNode tree has to say -
+    // Appendix 1 clarification (2) restricts this to the die's own
+    // controller (not "either player," unlike a real Global ability).
+    // Gear/Trap's own Continuous sub-variants remove themselves
+    // differently (attach to a card, move on a delay) - not handled here,
+    // since no currently-authored card needs it; a future one would need
+    // its own path rather than stretching this method.
+    public static void ResolveContinuousDie(GameState state, AbilityQueue queue, string dieId)
+    {
+        if (!InMainOrAttackActionWindow(state))
+            throw new InvalidOperationException(
+                "A Continuous Action die can only be resolved during the Main Step or the Attack Step's Action/Global window.");
+
+        var die = FindDie(state, dieId);
+        if (die.Zone != Zone.FieldZone || !DieStats.HasKeyword(state, die, "Continuous"))
+            throw new InvalidOperationException($"{DisplayName(state, die)} is not a Continuous Action die sitting in the Field Zone.");
+
+        // Rule 2.6.4.2's clarification (2) - only the controller who
+        // purchased it may act on it; no explicit playerId parameter to
+        // check that against, same as every other engine method here
+        // (this project has no caller-identity/auth layer at all, see
+        // RULES_ENGINE_DESIGN.md's next-steps list - not this method's
+        // problem to solve).
+
+        // Rule 2.6.4.3 - resolving is explicitly NOT a second "use," so
+        // this only enqueues the die's own ContinuousResolve ability, none
+        // of UseActionDie's "you used an Action die" reactions (Amplify/
+        // Attune/Obscure) fire again.
+        EnqueueTriggered(state, queue, die, TriggerType.ContinuousResolve);
+        die.Zone = Zone.UsedPile;
     }
 
     // Rule 2.6.5 - Use Global Abilities. Available to either player during

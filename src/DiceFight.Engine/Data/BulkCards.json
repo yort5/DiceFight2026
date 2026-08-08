@@ -38969,22 +38969,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS005",
-    "name": "Lab Test",
-    "subtitle": "Basic Action Card",
-    "type": "BasicAction",
-    "purchaseCost": 2,
-    "energyType": null,
-    "dieLimit": 3,
-    "levels": [],
-    "rawText": "Continuous: You may send this die to your Used Pile to reroll one of the character dice in your Reserve Pool.",
-    "keywords": [],
-    "affiliations": [],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS006",
     "name": "Living the Dream",
     "subtitle": "Basic Action Card",
