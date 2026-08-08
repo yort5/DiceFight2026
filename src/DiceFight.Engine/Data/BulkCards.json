@@ -39870,43 +39870,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS041",
-    "name": "Magneto",
-    "subtitle": "Idealist",
-    "type": "Character",
-    "purchaseCost": 6,
-    "energyType": "Mask",
-    "dieLimit": 4,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 4,
-        "defense": 4,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 5,
-        "defense": 7,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 3,
-        "attack": 6,
-        "defense": 8,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When one of your Mask character dice is KO\\'d, put a Loyalty Counter on Magneto\\'s card. (Loyaly Counters give a character die +1A and +1D). Global: Pay Mask. Once per turn, during your turn, if you have no dice in your Prep Area, you may draw a die and place it in your Prep Area.",
-    "keywords": [],
-    "affiliations": [
-      "Brotherhood of Mutants"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS042",
     "name": "Master Mold",
     "subtitle": "Inexplicable Durability",
@@ -40202,41 +40165,6 @@
     "affiliations": [
       "Brotherhood of Mutants"
     ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS053",
-    "name": "Supreme Intelligence",
-    "subtitle": "Kree Science Council",
-    "type": "Character",
-    "purchaseCost": 6,
-    "energyType": "Mask",
-    "dieLimit": 4,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 4,
-        "defense": 4,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 5,
-        "defense": 6,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 7,
-        "defense": 6,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When a card with Kree in its name is KO\\'d, put a Loyalty Counter on Supreme Intelligence\\'s card. (Loyaly Counters give a character die +1A and +1D).",
-    "keywords": [],
-    "affiliations": [],
     "isImplemented": false,
     "set": "DPS",
     "abilityTemplate": null
@@ -41163,43 +41091,6 @@
     "keywords": [],
     "affiliations": [
       "Shi\\'ar"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS079",
-    "name": "Madelyne Pryor",
-    "subtitle": "Sisterhood",
-    "type": "Character",
-    "purchaseCost": 3,
-    "energyType": "Mask",
-    "dieLimit": 3,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 1,
-        "defense": 3,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 0,
-        "attack": 1,
-        "defense": 4,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 2,
-        "defense": 4,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When one of your Brotherhood of Mutants character dice is KO\\'d besides Madelyne Pryor, put a Loyalty Counter on her card. (Loyaly Counters give a character die +1A and +1D).",
-    "keywords": [],
-    "affiliations": [
-      "Brotherhood of Mutants"
     ],
     "isImplemented": false,
     "set": "DPS",

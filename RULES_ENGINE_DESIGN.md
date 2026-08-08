@@ -180,13 +180,19 @@ here rather than assuming which approach they'd want.
     Continuous is now built (see the "the Continuous keyword, and Lab
     Test" status update) and Lab Test (DPS005) is its first real card;
     Loyalty is now built too (see the "the Loyalty keyword, and Jean
-    Grey" status update) with Jean Grey (DPS035) as its first card.
-    Still open: the other 8 Loyalty-referencing DPS cards (4 need their
-    own one-off "react to some other die's KO" filter shape; 3 need
-    consumer-side TargetSpec/aggregate-count support), the other three
-    Continuous DPS cards (each needs something on top of the base
-    mechanic just built), and web client UI for actually resolving a
-    Continuous die once it's sitting in the Field Zone.
+    Grey" and "shared KO-reaction pipeline" status updates), with Jean
+    Grey, Magneto, Supreme Intelligence, and Madelyne Pryor all real
+    now - the reactive-KO-scan gap that blocked 3 of those 4 turned into
+    a real engine fix (`TurnEngine.ResolveKOReactions`), not just a
+    per-card workaround, and also closed a live bug in Retaliation
+    (never fired off a Range KO) and WhenKOd (never fired off any
+    ability-driven or Deadly KO). Still open: Gladiator (needs the
+    unbuilt "can't be targeted" protection status, see next-steps item
+    3), the 3 consumer-side Loyalty DPS cards (need a "has a Loyalty
+    Counter" `TargetSpec` filter plus an aggregate team-wide count
+    check), the other three Continuous DPS cards, and web client UI for
+    actually resolving a Continuous die once it's sitting in the Field
+    Zone.
 
 ## Implemented keywords
 
@@ -237,12 +243,21 @@ and design rationale - this is just the scannable index.
   return to the Field Zone.
 - **Intimidate** (Scarlet Spider) - when fielded, removes a target
   opposing Character die from the Field Zone until end of turn.
-- **Loyalty** (Jean Grey) - a per-CARD, cross-turn counter (unlike a
-  per-die `AppliedModifiers` entry) worth a permanent +1A/+1D to every
-  die of that card, regardless of zone - same shape as Experience
-  Tokens. Only Jean Grey's own grant condition ("at the end of each of
-  your turns, if no character dice were KO'd") is built; the other
-  DPS cards that grant or spend Loyalty Counters differently are not.
+- **Loyalty** (Jean Grey, Magneto, Supreme Intelligence, Madelyne
+  Pryor) - a per-CARD, cross-turn counter (unlike a per-die
+  `AppliedModifiers` entry) worth a permanent +1A/+1D to every die of
+  that card, regardless of zone - same shape as Experience Tokens.
+  Jean Grey's own end-of-turn condition and three cards that grant a
+  counter off *another* die's KO (`TriggerType.WhenAnotherDieKOd` +
+  `AbilityDef.KOdFilter`, see the "shared KO-reaction pipeline" status
+  update) are built; Gladiator's own Loyalty grant is still vanilla,
+  blocked on its Global needing an unbuilt "can't be targeted"
+  protection status, unrelated to Loyalty itself. Also see
+  **Retaliation**'s own entry above - `WhenAnotherDieKOd` shares its
+  new reactive-KO choke point (`TurnEngine.ResolveKOReactions`), which
+  fixed real gaps in Retaliation's own firing (Range KOs never
+  triggered it) and `WhenKOd`'s (ability-driven and Deadly KOs never
+  fired it at all) along the way.
 - **Obscure** (Drow Mercenary) - using any Action die makes every die
   of this card unblockable until end of turn.
 - **Overcrush** (Apocalypse) - if the attacker KOs or otherwise removes
@@ -256,7 +271,9 @@ and design rationale - this is just the scannable index.
 - **Retaliation** (Superman "Kal-El"; Black Manta "Deep Sea Deviant"
   scales the amount) - if an active Retaliation character shares an
   affiliation with one of your Character dice that's KO'd, deal damage
-  to your opponent.
+  to your opponent. Now fires off every real KO in the game (Range
+  KOs used to silently skip it - see the "shared KO-reaction pipeline"
+  status update), not just combat damage.
 - **Sacrifice** (Spidey's Last Stand; The Rock is cataloged but left
   vanilla) - moves a Character die from the Field Zone to Out of Play
   (owner's turn) or the Used Pile (otherwise), never counting as a KO.

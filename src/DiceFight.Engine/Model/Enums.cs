@@ -230,7 +230,18 @@ public enum TriggerType
     // trigger itself, so a future card with the same "end of your turn,
     // while active" shape but a different condition (or none) can reuse
     // this same hook.
-    EndOfYourTurn
+    EndOfYourTurn,
+
+    // "When [a die matching some filter] is KO'd, [my card] reacts" -
+    // Magneto/Supreme Intelligence/Madelyne Pryor (DPS041/053/079), each
+    // reacting to a DIFFERENT other die's KO, not their own (that's
+    // plain WhenKOd). The filter is data (AbilityDef.KOdFilter, a
+    // KOdDieMatch), not engine code, unlike Retaliation/Teamwatch's own
+    // hardcoded scan shapes - see TurnEngine.ResolveKOReactions/
+    // ResolveWhenAnotherDieKOd for the reactive scan this needs, fired
+    // from the same shared choke point every real KO now funnels
+    // through, alongside WhenKOd and Retaliation.
+    WhenAnotherDieKOd
 }
 
 // Rule 2.2.3 - the five steps of a turn, in fixed order (2.2.4 - cannot

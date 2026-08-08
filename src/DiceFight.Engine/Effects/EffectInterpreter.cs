@@ -104,6 +104,8 @@ public static class EffectInterpreter
                 break;
 
             case DealDamage dealDamage:
+            {
+                var koIds = new List<string>();
                 foreach (var id in Resolve(ctx, dealDamage.Target, cache))
                 {
                     // A TargetSpec.CharacterDieOrPlayer resolution can be
@@ -121,13 +123,16 @@ public static class EffectInterpreter
                     // Ability damage KOs immediately rather than waiting
                     // for a simultaneous batch check - abilities resolve
                     // one at a time (rule 3.2.2), unlike combat damage.
-                    DieStats.TryResolveKO(ctx.State, die, ctx.Roller);
+                    if (DieStats.TryResolveKO(ctx.State, die, ctx.Roller)) koIds.Add(id);
                 }
+                TurnEngine.ResolveKOReactions(ctx.State, ctx.Queue, koIds);
                 break;
+            }
 
             case DealDamagePerActiveAffiliate perAffiliate:
             {
                 var amount = ActiveAffiliateCount(ctx);
+                var koIds = new List<string>();
                 foreach (var id in Resolve(ctx, perAffiliate.Target, cache))
                 {
                     if (ctx.State.IsPlayerId(id))
@@ -138,15 +143,22 @@ public static class EffectInterpreter
 
                     var die = FindDie(ctx, id);
                     die.Damage += amount;
-                    DieStats.TryResolveKO(ctx.State, die, ctx.Roller);
+                    if (DieStats.TryResolveKO(ctx.State, die, ctx.Roller)) koIds.Add(id);
                 }
+                TurnEngine.ResolveKOReactions(ctx.State, ctx.Queue, koIds);
                 break;
             }
 
             case Ko ko:
+            {
+                var koIds = new List<string>();
                 foreach (var id in Resolve(ctx, ko.Target, cache))
-                    DieStats.ForceKO(ctx.State, FindDie(ctx, id), ctx.Roller);
+                {
+                    if (DieStats.ForceKO(ctx.State, FindDie(ctx, id), ctx.Roller)) koIds.Add(id);
+                }
+                TurnEngine.ResolveKOReactions(ctx.State, ctx.Queue, koIds);
                 break;
+            }
 
             case Sacrifice sacrifice:
                 foreach (var id in Resolve(ctx, sacrifice.Target, cache))
@@ -495,6 +507,7 @@ public static class EffectInterpreter
         EffectCondition.TargetWasKOd => FindDie(ctx, dieId) is { Zone: Zone.PrepArea, Status: DieStatus.Unrolled },
         // dieId is unused here - see EffectCondition.NoCharacterKOdThisTurn's own remarks.
         EffectCondition.NoCharacterKOdThisTurn => !ctx.State.AnyCharacterKOdThisTurn,
+        EffectCondition.PrepAreaEmpty => !ctx.State.DiceIn(ctx.ControllerId, Zone.PrepArea).Any(),
         _ => throw new NotSupportedException($"Unhandled effect condition: {condition}")
     };
 

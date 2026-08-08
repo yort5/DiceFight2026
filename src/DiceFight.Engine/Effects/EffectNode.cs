@@ -197,7 +197,13 @@ public enum EffectCondition
     // TargetWasKOd) - CheckTarget is still required by Conditional's
     // shape, so callers pass TargetSpec.Self and the resolved id is
     // simply ignored.
-    NoCharacterKOdThisTurn
+    NoCharacterKOdThisTurn,
+
+    // Magneto ("Idealist", DPS041)'s Global - "if you have no dice in
+    // your Prep Area." Reads the ability controller's Prep Area directly,
+    // same "ignores the resolved CheckTarget id" shape as
+    // NoCharacterKOdThisTurn - use TargetSpec.Self here too.
+    PrepAreaEmpty
 }
 
 public sealed record Conditional(TargetSpec CheckTarget, EffectCondition When, EffectNode Then) : EffectNode;

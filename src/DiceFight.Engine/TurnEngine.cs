@@ -784,6 +784,118 @@ public static class TurnEngine
             queue.Enqueue(die.Id, die.ControllerId, trigger, ability.Effect);
     }
 
+    // The single choke point for "everything that reacts to a KO" -
+    // WhenKOd, Retaliation, and WhenAnotherDieKOd. Every real KO site
+    // (CombatEngine's combat-damage wave and Range, EffectInterpreter's
+    // Ko/DealDamage/DealDamagePerActiveAffiliate, CleanUp's Deadly KOs)
+    // calls this once with its own already-KO'd batch, rather than each
+    // remembering to wire up WhenKOd/Retaliation individually - which is
+    // exactly how this gap was found: Retaliation never fired off a
+    // Range KO, and nothing at all fired off an ability-driven or
+    // Deadly KO, because each call site had its own copy-pasted (or
+    // missing) reaction logic instead of one shared path. koDieIds is
+    // treated as one simultaneous batch (Appendix 1 clarification 1) -
+    // WhenKOd fires for every one of them first (order-independent,
+    // rule 2.7.6.5), then Retaliation and WhenAnotherDieKOd are each
+    // scanned once per KO'd die, but only after the WHOLE batch's KOs
+    // already happened to `state` (by the time this is called - the
+    // caller KO's everything first, then calls this), so a reactor
+    // that was ALSO KO'd in the same batch is correctly already gone
+    // from the active scan by the time its own reaction (or anyone
+    // else's) is checked. queue may be null - a no-op in that case rather
+    // than a required param, so KO call sites that don't have one (tests,
+    // mostly, plus any CleanUp caller that doesn't pass one) don't need
+    // to fake one.
+    internal static void ResolveKOReactions(GameState state, AbilityQueue? queue, IReadOnlyList<string> koDieIds)
+    {
+        if (queue is null || koDieIds.Count == 0) return;
+
+        foreach (var koId in koDieIds)
+            EnqueueTriggered(state, queue, FindDie(state, koId), TriggerType.WhenKOd);
+
+        foreach (var koId in koDieIds)
+            ResolveRetaliation(state, queue, FindDie(state, koId));
+
+        foreach (var koId in koDieIds)
+            ResolveWhenAnotherDieKOd(state, queue, FindDie(state, koId));
+    }
+
+    // Keyword Retaliation - "If a character you control with Retaliation
+    // is active, and a Character die you control that shares an
+    // affiliation with it is KO'd, deal 1 damage to an opposing player."
+    // Moved here (was CombatEngine-only) now that every KO site shares
+    // this one reactive-scan path via ResolveKOReactions above. Scans
+    // koDie's OWN controller's currently-active dice for Retaliation
+    // holders sharing an affiliation with koDie's card, deduplicated by
+    // CardId (clarification 2 - multiple copies of the SAME Retaliation
+    // character only trigger once, even though each is independently
+    // active).
+    private static void ResolveRetaliation(GameState state, AbilityQueue queue, DieInstance koDie)
+    {
+        var koCardId = koDie.VirtualCardId ?? koDie.CardId;
+        if (koCardId is null || !state.CardCatalog.TryGetValue(koCardId, out var koCard)) return;
+
+        var retaliators = state.DiceIn(koDie.ControllerId, Zone.FieldZone)
+            .Concat(state.DiceIn(koDie.ControllerId, Zone.AttackZone))
+            .Where(d => DieStats.HasKeyword(state, d, "Retaliation"))
+            .GroupBy(d => d.VirtualCardId ?? d.CardId)
+            .Select(g => g.First());
+
+        foreach (var retaliator in retaliators)
+        {
+            var retaliatorCardId = retaliator.VirtualCardId ?? retaliator.CardId;
+            if (retaliatorCardId is null || !state.CardCatalog.TryGetValue(retaliatorCardId, out var retaliatorCard))
+                continue;
+            if (!retaliatorCard.Affiliations.Any(koCard.Affiliations.Contains)) continue;
+
+            EnqueueTriggered(state, queue, retaliator, TriggerType.Retaliation);
+        }
+    }
+
+    // TriggerType.WhenAnotherDieKOd - bespoke card text shaped like
+    // Retaliation/Teamwatch (a reactive scan over the controller's own
+    // active dice) but with an authored filter (AbilityDef.KOdFilter)
+    // instead of a hardcoded one, since these cards each filter
+    // differently (see KOdDieMatch's own remarks). Scans EVERY active
+    // die on the board, not just koDie's own controller's the way
+    // Retaliation does - KOdFilter.Ownership expresses "must share the
+    // KO'd die's controller" per-card instead, since (unlike Retaliation)
+    // not every card with this trigger actually requires that (Supreme
+    // Intelligence's "a card with Kree in its name" has no ownership
+    // restriction at all).
+    private static void ResolveWhenAnotherDieKOd(GameState state, AbilityQueue queue, DieInstance koDie)
+    {
+        var koCardId = koDie.VirtualCardId ?? koDie.CardId;
+        var koCard = koCardId is not null ? state.CardCatalog.GetValueOrDefault(koCardId) : null;
+
+        foreach (var reactor in state.Dice.Where(d => d.Zone is Zone.FieldZone or Zone.AttackZone).ToList())
+        {
+            var reactorCardId = reactor.VirtualCardId ?? reactor.CardId;
+            if (reactorCardId is null || !state.CardCatalog.TryGetValue(reactorCardId, out var reactorCard)) continue;
+
+            foreach (var ability in reactorCard.Abilities.Where(a => a.Trigger == TriggerType.WhenAnotherDieKOd))
+            {
+                var filter = ability.KOdFilter
+                    ?? throw new InvalidOperationException($"{reactorCard.Name}'s WhenAnotherDieKOd ability has no KOdFilter.");
+                if (!MatchesKOdFilter(state, filter, koDie, koCard, reactor)) continue;
+
+                queue.Enqueue(reactor.Id, reactor.ControllerId, TriggerType.WhenAnotherDieKOd, ability.Effect);
+            }
+        }
+    }
+
+    private static bool MatchesKOdFilter(GameState state, KOdDieMatch filter, DieInstance koDie, CardDef? koCard, DieInstance reactor)
+    {
+        if (filter.ExcludeSelf && koDie.Id == reactor.Id) return false;
+        if (filter.Ownership == TargetOwnership.Own && koDie.ControllerId != reactor.ControllerId) return false;
+        if (filter.Ownership == TargetOwnership.Opposing && koDie.ControllerId == reactor.ControllerId) return false;
+        if (filter.RequiredEnergyType is { } energyType && (koCard is null || !koCard.EnergyTypes.Contains(energyType))) return false;
+        if (filter.NameContains is { } nameFragment &&
+            (koCard is null || !koCard.Name.Contains(nameFragment, StringComparison.OrdinalIgnoreCase))) return false;
+        if (filter.AffiliationContains is { } affiliation && (koCard is null || !koCard.Affiliations.Contains(affiliation))) return false;
+        return true;
+    }
+
     // Rule 2.6.7.1(3)/2.6.7.2 - the active player chooses to attack or not
     // at the end of the Main Step.
     public static void EnterAttackStep(GameState state)
@@ -807,7 +919,12 @@ public static class TurnEngine
     // to real card triggers. roller is optional (null in call sites that
     // don't care) - it's what lets a Deadly-KO'd die with Regenerate
     // reroll instead, same convention as AssignCombatDamage's own roller.
-    public static void CleanUp(GameState state, IDiceRoller? roller = null)
+    // queue is optional too (same nullable convention as ClearAndDraw's
+    // own) - callers that don't pass one just don't get WhenKOd/
+    // Retaliation/WhenAnotherDieKOd reactions off a Deadly KO (ResolveKO
+    // Reactions itself no-ops on a null queue), same as every other
+    // KO-producing call site.
+    public static void CleanUp(GameState state, IDiceRoller? roller = null, AbilityQueue? queue = null)
     {
         if (state.CurrentStep != TurnStep.CleanUp)
             throw new InvalidOperationException($"Expected CleanUp step, was {state.CurrentStep}.");
@@ -817,13 +934,18 @@ public static class TurnEngine
         // Keyword Deadly (rule Appendix 1 clarification 2 - "Deadly is a
         // Persistent ability. Therefore, it is resolved in the Clean Up
         // Step.") - a forced KO, not a damage/defense check, so this goes
-        // through ForceKO directly rather than TryResolveKO. Not
-        // exercised through the AbilityQueue - no "when KO'd" trigger
-        // fires for a Deadly KO yet, since CleanUp has no queue to
-        // enqueue into (a documented gap; no sample card needs it yet).
+        // through ForceKO directly rather than TryResolveKO. Previously
+        // this never fired WhenKOd/Retaliation at all (a documented gap -
+        // CleanUp had no queue to enqueue into); now routed through the
+        // same shared ResolveKOReactions every other KO site uses, once
+        // `queue` is actually supplied by the caller.
+        var deadlyKoIds = new List<string>();
         foreach (var id in state.DeadlyEngagedDieIds)
-            DieStats.ForceKO(state, FindDie(state, id), roller);
+        {
+            if (DieStats.ForceKO(state, FindDie(state, id), roller)) deadlyKoIds.Add(id);
+        }
         state.DeadlyEngagedDieIds.Clear();
+        ResolveKOReactions(state, queue, deadlyKoIds);
 
         // Keyword Intimidate - "remove target opposing Character die from
         // the Field Zone until end of turn." No tracked set needed (unlike

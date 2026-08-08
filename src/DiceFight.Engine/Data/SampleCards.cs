@@ -1121,6 +1121,72 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 3, Attack: 6, Defense: 6)
         ], set: "DPS");
 
+    // Magneto, "Idealist" - the first TriggerType.WhenAnotherDieKOd card
+    // (see KOdDieMatch's own remarks): "one of YOUR Mask character dice"
+    // is Ownership.Own + RequiredEnergyType.Mask, no other filter needed.
+    // The Global's "if you have no dice in your Prep Area" reuses the
+    // same Conditional/TargetSpec.Self shape Jean Grey's own condition
+    // does, just against EffectCondition.PrepAreaEmpty instead. "Once per
+    // turn, during your turn" - OncePerTurn=true covers the once-per-turn
+    // half; the whose-turn-scoping half is the same known engine gap
+    // Falcon's own "Once during your turn" already has (see next-steps
+    // item 6), not a new one.
+    public static readonly CardDef Magneto = Character(
+        "DPS041", "Magneto", "Idealist", dieLimit: 4,
+        "When one of your Mask character dice is KO'd, put a Loyalty Counter on Magneto's card. (Loyaly " +
+        "Counters give a character die +1A and +1D). Global: Pay Mask. Once per turn, during your turn, " +
+        "if you have no dice in your Prep Area, you may draw a die and place it in your Prep Area.",
+        purchaseCost: 6, energyType: EnergyType.Mask,
+        affiliations: ["Brotherhood of Mutants"],
+        abilities: [
+            new AbilityDef(TriggerType.WhenAnotherDieKOd, Cost: null, Effect: new GrantLoyaltyCounter(),
+                KOdFilter: new KOdDieMatch(TargetOwnership.Own, RequiredEnergyType: EnergyType.Mask)),
+            new AbilityDef(TriggerType.Global, Cost: null,
+                Effect: new Conditional(TargetSpec.Self, EffectCondition.PrepAreaEmpty, new PrepFromBag()),
+                EnergyCost: new EnergyCost(1, EnergyType.Mask), OncePerTurn: true)
+        ],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 4),
+            new CharacterFace(FieldingCost: 2, Attack: 5, Defense: 7),
+            new CharacterFace(FieldingCost: 3, Attack: 6, Defense: 8)
+        ], set: "DPS");
+
+    // Supreme Intelligence, "Kree Science Council" - purely a Loyalty
+    // grant, no other text. NameContains is a real substring match here
+    // ("a card with Kree in its name"), unlike Gladiator's "When Lilandra
+    // is KO'd" (not authored - see below), which just happens to reuse
+    // the same field for an exact reference.
+    public static readonly CardDef SupremeIntelligence = Character(
+        "DPS053", "Supreme Intelligence", "Kree Science Council", dieLimit: 4,
+        "When a card with Kree in its name is KO'd, put a Loyalty Counter on Supreme Intelligence's card. " +
+        "(Loyaly Counters give a character die +1A and +1D).",
+        purchaseCost: 6, energyType: EnergyType.Mask,
+        abilities: [new AbilityDef(TriggerType.WhenAnotherDieKOd, Cost: null, Effect: new GrantLoyaltyCounter(),
+            KOdFilter: new KOdDieMatch(NameContains: "Kree"))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 4),
+            new CharacterFace(FieldingCost: 2, Attack: 5, Defense: 6),
+            new CharacterFace(FieldingCost: 2, Attack: 7, Defense: 6)
+        ], set: "DPS");
+
+    // Madelyne Pryor, "Sisterhood" - the ExcludeSelf case: "besides
+    // Madelyne Pryor" means her own death doesn't grant her own card a
+    // counter (which, being posthumous, wouldn't even matter for stats,
+    // but the filter should still say what the card says).
+    public static readonly CardDef MadelynePryorSisterhood = Character(
+        "DPS079", "Madelyne Pryor", "Sisterhood", dieLimit: 3,
+        "When one of your Brotherhood of Mutants character dice is KO'd besides Madelyne Pryor, put a " +
+        "Loyalty Counter on her card. (Loyaly Counters give a character die +1A and +1D).",
+        purchaseCost: 3, energyType: EnergyType.Mask,
+        affiliations: ["Brotherhood of Mutants"],
+        abilities: [new AbilityDef(TriggerType.WhenAnotherDieKOd, Cost: null, Effect: new GrantLoyaltyCounter(),
+            KOdFilter: new KOdDieMatch(TargetOwnership.Own, AffiliationContains: "Brotherhood of Mutants", ExcludeSelf: true))],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 3),
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 4),
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 4)
+        ], set: "DPS");
+
     // A team is 8 character cards + 2 Basic Action cards (10 total). Both
     // rosters below are drawn exclusively from IsImplemented: true cards
     // (see CardDef.IsImplemented) - the 16 cards with a deliberately
@@ -1171,7 +1237,8 @@ public static class SampleCards
             SpideysLastStand, TheRock, BigE, RipHunterNavigateTheSandsOfTime, StarfireStarbolts,
             JamilahShipwreckedOnChult,
             StormExtremeWeather, KittyPrydeRightOfPassage, PhoenixFirepower, DKenEmperor,
-            RonanTheAccuserTreason, PowerBolt, LabTest, JeanGreyPeacefulCoexistence
+            RonanTheAccuserTreason, PowerBolt, LabTest, JeanGreyPeacefulCoexistence,
+            Magneto, SupremeIntelligence, MadelynePryorSisterhood
         ];
 
         // Hand-curated cards win on id collision - shouldn't happen in

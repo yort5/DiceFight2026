@@ -2341,6 +2341,33 @@ public class CombatEngineTests
         Assert.Contains(queue.Pending, a => a.Trigger == TriggerType.WhenKOd && a.SourceDieId == target.Id);
     }
 
+    // A Range KO previously fired WhenKOd (see the test just above) but
+    // never Retaliation - CombatEngine's Range path had its own inline
+    // WhenKOd enqueue but no Retaliation scan at all, unlike the combat-
+    // damage wave's. Now both go through the same shared TurnEngine.
+    // ResolveKOReactions, so this gap is closed too.
+    [Fact]
+    public void Range_KOdTargetTriggersRetaliation()
+    {
+        var catalog = new Dictionary<string, CardDef>
+        {
+            [RangeCard.Id] = RangeCard, [RetaliationCard.Id] = RetaliationCard, [AffiliatedAllyCard.Id] = AffiliatedAllyCard,
+        };
+        var state = GameState.NewGame(catalog, new Player { Id = "p1", Name = "Player One" }, new Player { Id = "p2", Name = "Player Two" });
+        state.CurrentStep = TurnStep.Attack;
+        state.AttackSubStep = AttackSubStep.DeclareAttackers;
+        var attacker = AddCharacterDie(state, "p1-range-1", "p1", RangeCard.Id, Zone.FieldZone);
+        var retaliator = AddCharacterDie(state, "p2-retaliator-1", "p2", RetaliationCard.Id, Zone.FieldZone);
+        var target = AddCharacterDie(state, "p2-ally-1", "p2", AffiliatedAllyCard.Id, Zone.FieldZone); // 1D
+
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        CombatEngine.ResolveRange(state, queue, [(attacker.Id, target.Id)], []);
+
+        Assert.Equal(Zone.PrepArea, target.Zone); // 3 Range damage vs 1D - KO'd
+        Assert.Contains(queue.Pending, a => a.Trigger == TriggerType.Retaliation && a.SourceDieId == retaliator.Id);
+    }
+
     // Keyword Experience Tokens - "Each token grants +1A and +1D to all
     // Character dice belonging to that card." Unlike Strike/Static team
     // bonuses (both "while active"), tokens are unconditional permanent

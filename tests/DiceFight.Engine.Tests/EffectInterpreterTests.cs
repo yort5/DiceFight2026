@@ -954,4 +954,314 @@ public class EffectInterpreterTests
 
         Assert.Equal(Zone.PrepArea, target.Zone); // KO'd by Awaken's 3 damage
     }
+
+    // TurnEngine.ResolveKOReactions - the shared choke point every KO
+    // site now funnels reactions through. Before this existed, an
+    // ability-driven KO (this Ko node) never fired WhenKOd/Retaliation
+    // at all - only combat-damage KOs did, since CombatEngine had its
+    // own hand-wired copy of that logic and nothing else did.
+    private static readonly CardDef KOdReactorCard = new()
+    {
+        Id = "test-kod-reactor", Name = "Test WhenKOd Reactor", Type = CardType.Character,
+        PurchaseCost = 2, DieLimit = 4,
+        Levels = [new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 5)],
+        Abilities = [new AbilityDef(TriggerType.WhenKOd, Cost: null, Effect: new LoseLife(1, TargetOwnership.Opposing))],
+    };
+
+    [Fact]
+    public void Ko_NowFiresWhenKOdViaTheSharedReactionPath()
+    {
+        var catalog = new Dictionary<string, CardDef> { [KOdReactorCard.Id] = KOdReactorCard };
+        var state = CreateState(catalog);
+        var target = new DieInstance
+        {
+            Id = "p2-reactor-1", CardId = KOdReactorCard.Id, OwnerId = "p2", ControllerId = "p2",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(target);
+
+        var queue = new AbilityQueue();
+        EffectInterpreter.Execute(
+            new Ko(TargetSpec.CharacterDie("t")),
+            new EffectContext(state, "p1", SourceDieId: null, _ => [target.Id], Queue: queue));
+
+        Assert.Equal(1, queue.Count);
+        Assert.Equal(TriggerType.WhenKOd, queue.Pending[0].Trigger);
+        Assert.Equal(target.Id, queue.Pending[0].SourceDieId);
+    }
+
+    // TriggerType.WhenAnotherDieKOd / KOdDieMatch - Magneto's own shape
+    // ("when one of YOUR Mask character dice is KO'd") as the test
+    // fixture: Ownership.Own + RequiredEnergyType.Mask.
+    private static readonly CardDef MaskReactorCard = new()
+    {
+        Id = "test-mask-reactor", Name = "Test Mask Reactor", Type = CardType.Character,
+        PurchaseCost = 2, DieLimit = 4,
+        Levels = [new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 1)],
+        Abilities = [new AbilityDef(
+            TriggerType.WhenAnotherDieKOd, Cost: null, Effect: new GrantLoyaltyCounter(),
+            KOdFilter: new KOdDieMatch(TargetOwnership.Own, RequiredEnergyType: EnergyType.Mask))],
+    };
+
+    private static readonly CardDef MaskCharacterCard = new()
+    {
+        Id = "test-mask-character", Name = "Test Mask Character", Type = CardType.Character,
+        PurchaseCost = 2, DieLimit = 4, EnergyTypes = [EnergyType.Mask],
+        Levels = [new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 1)],
+    };
+
+    private static readonly CardDef FistCharacterCard = new()
+    {
+        Id = "test-fist-character", Name = "Test Fist Character", Type = CardType.Character,
+        PurchaseCost = 2, DieLimit = 4, EnergyTypes = [EnergyType.Fist],
+        Levels = [new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 1)],
+    };
+
+    [Fact]
+    public void WhenAnotherDieKOd_MatchingOwnMaskDieKOd_FiresAndGrantsLoyaltyCounter()
+    {
+        var catalog = new Dictionary<string, CardDef>
+        {
+            [MaskReactorCard.Id] = MaskReactorCard, [MaskCharacterCard.Id] = MaskCharacterCard,
+        };
+        var state = CreateState(catalog);
+        var reactor = new DieInstance
+        {
+            Id = "p1-reactor-1", CardId = MaskReactorCard.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        var target = new DieInstance
+        {
+            Id = "p1-mask-1", CardId = MaskCharacterCard.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(reactor);
+        state.Dice.Add(target);
+
+        var queue = new AbilityQueue();
+        EffectInterpreter.Execute(
+            new Ko(TargetSpec.CharacterDie("t")),
+            new EffectContext(state, "p1", SourceDieId: null, _ => [target.Id], Queue: queue));
+
+        Assert.Equal(1, queue.Count);
+        Assert.Equal(TriggerType.WhenAnotherDieKOd, queue.Pending[0].Trigger);
+        Assert.Equal(reactor.Id, queue.Pending[0].SourceDieId);
+
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [])));
+        Assert.Equal(1, state.LoyaltyCounters[MaskReactorCard.Id]);
+    }
+
+    [Fact]
+    public void WhenAnotherDieKOd_WrongEnergyType_DoesNotFire()
+    {
+        var catalog = new Dictionary<string, CardDef>
+        {
+            [MaskReactorCard.Id] = MaskReactorCard, [FistCharacterCard.Id] = FistCharacterCard,
+        };
+        var state = CreateState(catalog);
+        state.Dice.Add(new DieInstance
+        {
+            Id = "p1-reactor-1", CardId = MaskReactorCard.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        });
+        var target = new DieInstance
+        {
+            Id = "p1-fist-1", CardId = FistCharacterCard.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(target);
+
+        var queue = new AbilityQueue();
+        EffectInterpreter.Execute(
+            new Ko(TargetSpec.CharacterDie("t")),
+            new EffectContext(state, "p1", SourceDieId: null, _ => [target.Id], Queue: queue));
+
+        Assert.Equal(0, queue.Count);
+    }
+
+    [Fact]
+    public void WhenAnotherDieKOd_OpponentsMaskDieKOd_DoesNotFire_OwnershipIsOwn()
+    {
+        var catalog = new Dictionary<string, CardDef>
+        {
+            [MaskReactorCard.Id] = MaskReactorCard, [MaskCharacterCard.Id] = MaskCharacterCard,
+        };
+        var state = CreateState(catalog);
+        state.Dice.Add(new DieInstance
+        {
+            Id = "p1-reactor-1", CardId = MaskReactorCard.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        });
+        var target = new DieInstance
+        {
+            // p2's Mask die, not p1's - the reactor's Ownership.Own filter should exclude it.
+            Id = "p2-mask-1", CardId = MaskCharacterCard.Id, OwnerId = "p2", ControllerId = "p2",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(target);
+
+        var queue = new AbilityQueue();
+        EffectInterpreter.Execute(
+            new Ko(TargetSpec.CharacterDie("t")),
+            new EffectContext(state, "p1", SourceDieId: null, _ => [target.Id], Queue: queue));
+
+        Assert.Equal(0, queue.Count);
+    }
+
+    // Madelyne Pryor's own shape - AffiliationContains + ExcludeSelf
+    // together (the two KOdDieMatch fields Magneto's own fixture above
+    // doesn't exercise).
+    private static readonly CardDef BrotherhoodReactorCard = new()
+    {
+        Id = "test-brotherhood-reactor", Name = "Test Brotherhood Reactor", Type = CardType.Character,
+        PurchaseCost = 2, DieLimit = 4, Affiliations = ["Brotherhood of Mutants"],
+        Levels = [new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 1)],
+        Abilities = [new AbilityDef(
+            TriggerType.WhenAnotherDieKOd, Cost: null, Effect: new GrantLoyaltyCounter(),
+            KOdFilter: new KOdDieMatch(TargetOwnership.Own, AffiliationContains: "Brotherhood of Mutants", ExcludeSelf: true))],
+    };
+
+    private static readonly CardDef SecondBrotherhoodCard = new()
+    {
+        Id = "test-brotherhood-ally", Name = "Test Brotherhood Ally", Type = CardType.Character,
+        PurchaseCost = 2, DieLimit = 4, Affiliations = ["Brotherhood of Mutants"],
+        Levels = [new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 1)],
+    };
+
+    [Fact]
+    public void WhenAnotherDieKOd_ExcludeSelf_OwnDeathDoesNotTriggerItsOwnReaction()
+    {
+        var catalog = new Dictionary<string, CardDef> { [BrotherhoodReactorCard.Id] = BrotherhoodReactorCard };
+        var state = CreateState(catalog);
+        var reactor = new DieInstance
+        {
+            Id = "p1-reactor-1", CardId = BrotherhoodReactorCard.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(reactor);
+
+        var queue = new AbilityQueue();
+        EffectInterpreter.Execute(
+            new Ko(TargetSpec.CharacterDie("t")),
+            new EffectContext(state, "p1", SourceDieId: null, _ => [reactor.Id], Queue: queue));
+
+        Assert.Equal(0, queue.Count); // "besides Madelyne Pryor" - its own death isn't "another die"
+    }
+
+    [Fact]
+    public void WhenAnotherDieKOd_AffiliatedAllyKOd_Fires()
+    {
+        var catalog = new Dictionary<string, CardDef>
+        {
+            [BrotherhoodReactorCard.Id] = BrotherhoodReactorCard, [SecondBrotherhoodCard.Id] = SecondBrotherhoodCard,
+        };
+        var state = CreateState(catalog);
+        var reactor = new DieInstance
+        {
+            Id = "p1-reactor-1", CardId = BrotherhoodReactorCard.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        var ally = new DieInstance
+        {
+            Id = "p1-ally-1", CardId = SecondBrotherhoodCard.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(reactor);
+        state.Dice.Add(ally);
+
+        var queue = new AbilityQueue();
+        EffectInterpreter.Execute(
+            new Ko(TargetSpec.CharacterDie("t")),
+            new EffectContext(state, "p1", SourceDieId: null, _ => [ally.Id], Queue: queue));
+
+        Assert.Equal(1, queue.Count);
+        Assert.Equal(reactor.Id, queue.Pending[0].SourceDieId);
+    }
+
+    // The three real WhenAnotherDieKOd cards, end-to-end against
+    // SampleCards' own data (catches an authoring/wiring mistake the
+    // synthetic-fixture tests above wouldn't, since those hand-build
+    // their own KOdDieMatch rather than exercising a real CardDef).
+    [Fact]
+    public void Magneto_YourMaskCharacterDieKOd_GrantsLoyaltyCounter()
+    {
+        var state = CreateState();
+        var magneto = new DieInstance
+        {
+            Id = "p1-magneto-1", CardId = SampleCards.Magneto.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        var target = new DieInstance
+        {
+            Id = "p1-mask-1", CardId = SampleCards.KittyPrydeRightOfPassage.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        }; // Kitty Pryde "Right of Passage" - a real Mask-energy character die
+        state.Dice.Add(magneto);
+        state.Dice.Add(target);
+
+        var queue = new AbilityQueue();
+        EffectInterpreter.Execute(
+            new Ko(TargetSpec.CharacterDie("t")),
+            new EffectContext(state, "p1", SourceDieId: null, _ => [target.Id], Queue: queue));
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [])));
+
+        Assert.Equal(1, state.LoyaltyCounters[SampleCards.Magneto.Id]);
+    }
+
+    [Fact]
+    public void SupremeIntelligence_AnyCardNamedWithKree_GrantsLoyaltyCounter()
+    {
+        var kreeCard = new CardDef
+        {
+            Id = "test-kree-character", Name = "Kree Sentry", Type = CardType.Character,
+            PurchaseCost = 2, DieLimit = 4,
+            Levels = [new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 1)],
+        };
+        var catalog = new Dictionary<string, CardDef>(SampleCards.BuildCatalog()) { [kreeCard.Id] = kreeCard };
+        var state = CreateState(catalog);
+        var supremeIntelligence = new DieInstance
+        {
+            Id = "p1-si-1", CardId = SampleCards.SupremeIntelligence.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        var target = new DieInstance
+        {
+            // owned by the OPPONENT - Supreme Intelligence's own filter has no Ownership restriction.
+            Id = "p2-kree-1", CardId = kreeCard.Id, OwnerId = "p2", ControllerId = "p2",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(supremeIntelligence);
+        state.Dice.Add(target);
+
+        var queue = new AbilityQueue();
+        EffectInterpreter.Execute(
+            new Ko(TargetSpec.CharacterDie("t")),
+            new EffectContext(state, "p1", SourceDieId: null, _ => [target.Id], Queue: queue));
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [])));
+
+        Assert.Equal(1, state.LoyaltyCounters[SampleCards.SupremeIntelligence.Id]);
+    }
+
+    [Fact]
+    public void MadelynePryor_HerOwnDeath_DoesNotGrantHerOwnLoyaltyCounter()
+    {
+        var state = CreateState();
+        var madelyne = new DieInstance
+        {
+            Id = "p1-madelyne-1", CardId = SampleCards.MadelynePryorSisterhood.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(madelyne);
+
+        var queue = new AbilityQueue();
+        EffectInterpreter.Execute(
+            new Ko(TargetSpec.CharacterDie("t")),
+            new EffectContext(state, "p1", SourceDieId: null, _ => [madelyne.Id], Queue: queue));
+
+        Assert.Equal(0, queue.Count);
+        Assert.False(state.LoyaltyCounters.ContainsKey(SampleCards.MadelynePryorSisterhood.Id));
+    }
 }

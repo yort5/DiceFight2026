@@ -228,7 +228,15 @@ public sealed class GamesController(GameStore store) : ControllerBase
     public ActionResult<GameStateDto> CleanUp(string gameId)
     {
         var state = RequireNoPendingChoice(gameId);
-        TurnEngine.CleanUp(state);
+        var queue = new AbilityQueue();
+        // roller lets a Deadly-KO'd die with Regenerate reroll instead
+        // (previously always null here, so Regenerate silently never
+        // applied to a real Deadly KO through the API); queue lets that
+        // same KO's WhenKOd/Retaliation/WhenAnotherDieKOd reactions fire
+        // (see TurnEngine.ResolveKOReactions) instead of the documented
+        // gap CleanUp used to have.
+        TurnEngine.CleanUp(state, new PlaceholderDiceRoller(new Random()), queue);
+        Drain(state, queue, null);
         return Ok(GameStateDto.From(gameId, state));
     }
 

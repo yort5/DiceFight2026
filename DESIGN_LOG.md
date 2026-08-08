@@ -4400,3 +4400,85 @@ card is in.
 Verified: `dotnet build`, `dotnet test` (288/288, 7 new cases), and
 `npm run build` all clean. Re-ran `scripts/import_bulk_cards.py` after
 hand-curating Jean Grey (3630 → 3629 bulk rows, 62 → 63 hand-curated).
+
+## Status update — a shared KO-reaction pipeline, and three more Loyalty cards
+
+The user's own question drove this one: "is there a way to plumb [reactive
+triggers] into the KO event?" - prompted by the 4 remaining Loyalty
+granter cards (Magneto, Supreme Intelligence, Gladiator, Madelyne Pryor)
+each needing to react to some OTHER die's KO.
+
+**What was actually found**: `WhenKOd` and `Retaliation` were never
+centralized in the first place - each KO-producing call site had its
+own hand-copied logic, and most had it wrong or missing entirely.
+Audited every `DieStats.ForceKO`/`TryResolveKO` call site (6 total) and
+found:
+- Combat-damage-wave KOs: fired both `WhenKOd` and `Retaliation`.
+- Range KOs: fired `WhenKOd` only - `Retaliation` was silently never
+  wired up (no test caught it because none existed for it).
+- Deadly KOs (`TurnEngine.CleanUp`): fired neither - a documented gap,
+  since `CleanUp` had no `AbilityQueue` to enqueue into at all.
+- Every ability-driven KO (`EffectInterpreter`'s `Ko`, `DealDamage`,
+  `DealDamagePerActiveAffiliate` cases): fired neither. A Global like
+  Magic Missile's "Pay Bolt, deal 1 damage to a character" KO'ing a
+  1-defense Sidekick would silently never trigger anything reacting to
+  KOs - the same question the user asked about, confirmed as a real gap
+  by inspection rather than guessed at.
+
+**The fix**: a single new choke point, `TurnEngine.ResolveKOReactions
+(state, queue, koDieIds)`, called once per KO batch by every one of
+those 6 sites instead of each rolling its own. It fires `WhenKOd` for
+every KO'd die (order-independent, rule 2.7.6.5), then scans
+`Retaliation` and the new `WhenAnotherDieKOd` (see below) once per KO'd
+die - but only after the FULL batch's KOs already landed on `state`,
+preserving Retaliation's simultaneous-KO exclusion (Appendix 1
+clarification 1) exactly as the combat-only code used to. `queue` is
+nullable and the whole thing no-ops if it's null, so call sites without
+one (mostly tests) don't need to fake one.
+
+Two small pieces of scaffolding needed touching for every KO site to
+actually route through this:
+- `EffectInterpreter`'s three KO-producing cases now collect their own
+  batch's KO'd ids locally instead of reacting inline, then call
+  `ResolveKOReactions` once at the end of the case - one EffectNode's
+  own multi-target KO/damage is treated as one simultaneous batch
+  (reasonable given rule 3.2.2's "abilities resolve one at a time" -
+  nothing currently authored has two targets where this would matter,
+  but the batching is the more defensible reading regardless).
+- `TurnEngine.CleanUp` gained an optional `AbilityQueue? queue = null`
+  parameter (same nullable convention `ClearAndDraw` already uses) -
+  closing the "no queue in CleanUp" gap for Deadly KOs specifically (not
+  the separate, still-open `EndOfYourTurn`-needs-no-external-targeting
+  design choice from last update, which is unrelated). `GamesController`
+  's `/clean-up` endpoint now builds and drains one, and also finally
+  passes a real `IDiceRoller` (previously always null, so Regenerate
+  silently never applied to a real Deadly KO through the actual API).
+
+**New keyword-shaped mechanism**: `TriggerType.WhenAnotherDieKOd` +
+`AbilityDef.KOdFilter` (a new `KOdDieMatch` record: `Ownership`,
+`RequiredEnergyType`, `NameContains`, `AffiliationContains`,
+`ExcludeSelf` - all non-null fields AND together). Unlike Retaliation/
+Teamwatch's own hardcoded scan shapes, the filter here is authored data,
+since the 4 Loyalty granters each filter completely differently
+(energy type / name substring / specific card / affiliation-excluding-
+self) with no shared pattern to hardcode into engine code the way
+Retaliation's affiliation-sharing check is. Scans every active die on
+the board (not just the KO'd die's own controller's, unlike Retaliation)
+since not every card with this trigger actually needs an ownership
+restriction (Supreme Intelligence's doesn't).
+
+**Three more real cards, now buildable**: Magneto ("Idealist" - Loyalty
+grant off `Ownership.Own + RequiredEnergyType.Mask`, plus a Global that
+needed one more new small piece, `EffectCondition.PrepAreaEmpty`, for
+"if you have no dice in your Prep Area"), Supreme Intelligence ("Kree
+Science Council" - pure `NameContains: "Kree"`, no other text at all),
+Madelyne Pryor ("Sisterhood" - `Ownership.Own + AffiliationContains +
+ExcludeSelf`, proving the "besides Madelyne Pryor" self-exclusion
+case). Gladiator remains vanilla - its Global needs the still-unbuilt
+"can't be targeted" protection status, unrelated to any of this.
+
+Verified: `dotnet build`, `dotnet test` (299/299 - 11 new cases,
+including regression tests for the exact Range/Retaliation and Deadly/
+WhenKOd gaps found, plus real-card tests for all three), and `npm run
+build` all clean. Re-ran `scripts/import_bulk_cards.py` (3629 → 3626
+bulk rows, 63 → 66 hand-curated).

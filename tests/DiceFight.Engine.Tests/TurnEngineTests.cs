@@ -1062,6 +1062,40 @@ public class TurnEngineTests
         Assert.Empty(state.DeadlyEngagedDieIds);
     }
 
+    // A Deadly KO previously never fired WhenKOd/Retaliation at all - a
+    // documented gap (CleanUp had no queue to enqueue into). Now that
+    // CleanUp accepts an optional queue and routes Deadly KOs through
+    // the same shared TurnEngine.ResolveKOReactions every other KO site
+    // uses, supplying one closes that gap.
+    [Fact]
+    public void CleanUp_DeadlyKO_FiresWhenKOd_WhenQueueSupplied()
+    {
+        var whenKOdCard = new CardDef
+        {
+            Id = "deadly-when-kod-target", Name = "Deadly WhenKOd Target", Type = CardType.Character,
+            PurchaseCost = 2, DieLimit = 4,
+            Levels = [new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 1)],
+            Abilities = [new AbilityDef(TriggerType.WhenKOd, Cost: null, Effect: new GainLife(1))],
+        };
+        var state = GameState.NewGame(
+            new Dictionary<string, CardDef> { [whenKOdCard.Id] = whenKOdCard },
+            new Player { Id = "p1", Name = "Player One" },
+            new Player { Id = "p2", Name = "Player Two" });
+        var engaged = new DieInstance
+        {
+            Id = "p1-target-1", CardId = whenKOdCard.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(engaged);
+        state.DeadlyEngagedDieIds.Add(engaged.Id);
+        state.CurrentStep = TurnStep.CleanUp;
+
+        var queue = new AbilityQueue();
+        TurnEngine.CleanUp(state, roller: null, queue: queue);
+
+        Assert.Contains(queue.Pending, a => a.Trigger == TriggerType.WhenKOd && a.SourceDieId == engaged.Id);
+    }
+
     // Clarification: "...even if the Character die with Deadly has been
     // KO'd or leaves the Field Zone" - the engaged die is KO'd
     // regardless of what happened to the Deadly die in the meantime;
