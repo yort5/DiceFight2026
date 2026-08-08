@@ -208,6 +208,32 @@ public class EffectInterpreterTests
         Assert.True(state.OpposingMonsterKOdThisTurn);
     }
 
+    // Keyword Loyalty's own "no character dice were KO'd that turn"
+    // condition (GameState.AnyCharacterKOdThisTurn) - same choke point,
+    // but unlike OpposingMonsterKOdThisTurn it's unscoped by controller
+    // or affiliation: ANY character KO counts, either player's.
+    [Fact]
+    public void ForceKO_AnyCharacterKOd_SetsTheUnscopedFlag()
+    {
+        var catalog = new Dictionary<string, CardDef> { [NonMonsterCard.Id] = NonMonsterCard };
+        var state = CreateState(catalog);
+        state.ActivePlayerId = "p1";
+        var target = new DieInstance
+        {
+            // Owned/controlled by the active player themself - unlike
+            // OpposingMonsterKOdThisTurn, Loyalty's flag doesn't care whose.
+            Id = "p1-nonmonster-1", CardId = NonMonsterCard.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(target);
+
+        EffectInterpreter.Execute(
+            new DealDamage(1, TargetSpec.CharacterDie("t")),
+            new EffectContext(state, "p1", SourceDieId: null, _ => [target.Id]));
+
+        Assert.True(state.AnyCharacterKOdThisTurn);
+    }
+
     [Fact]
     public void ForceKO_OpposingNonMonsterKOd_DoesNotSetTheFlag()
     {

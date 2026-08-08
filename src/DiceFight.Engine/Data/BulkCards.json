@@ -39724,43 +39724,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS035",
-    "name": "Jean Grey",
-    "subtitle": "Peaceful Coexistence",
-    "type": "Character",
-    "purchaseCost": 4,
-    "energyType": "Bolt",
-    "dieLimit": 4,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 3,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 5,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 3,
-        "attack": 6,
-        "defense": 6,
-        "burstStars": null
-      }
-    ],
-    "rawText": "Founder While Jean Grey is active, at the end of each or your turns, if no character dice were KO\\'d that turn, put a Loyalty Counter on Jean Grey\\'s card (Loyalty Counters give a character die +1A and +1D.)",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS036",
     "name": "Jubilee",
     "subtitle": "Rebellious Nature",

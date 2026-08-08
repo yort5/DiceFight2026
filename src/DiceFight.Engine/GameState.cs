@@ -75,6 +75,16 @@ public sealed class GameState
     // CleanUp's own token-granting check reads it.
     public bool OpposingMonsterKOdThisTurn { get; set; }
 
+    // Jean Grey ("Peaceful Coexistence", DPS035) - "at the end of each of
+    // your turns, if no character dice were KO'd that turn, put a
+    // Loyalty Counter on Jean Grey's card." Same choke point and same
+    // "set once at the real KO, read once at Clean Up, reset after" shape
+    // as OpposingMonsterKOdThisTurn just above, just unscoped by
+    // controller/affiliation - ANY character die, either player's,
+    // failing this check (unlike Experience's "opposing Monster"
+    // narrowing).
+    public bool AnyCharacterKOdThisTurn { get; set; }
+
     // Keyword Experience Tokens - the first persistent, cross-turn,
     // per-CARD (not per-die, not per-turn) counter this engine has
     // needed. CardDef is otherwise static/immutable data ("never
@@ -83,9 +93,23 @@ public sealed class GameState
     // of that card (see DieStats.ExperienceBonus), forever, until
     // removed by another ability - nothing removes them yet, matching
     // "consider these tokens as permanent modifiers until specifically
-    // removed by another ability." Loyalty Counters (Appendix 1) are the
-    // same shape - a natural home for those too, if a card ever needs them.
+    // removed by another ability."
     public Dictionary<string, int> ExperienceTokens { get; } = [];
+
+    // Keyword Loyalty - Appendix 1: "Represented by a Loyalty Counter.
+    // These counters stay on a Character card and give their applicable
+    // dice +1A and +1D modifiers for each counter. A Character die from
+    // that card does not need to be active to get a Loyalty Counter."
+    // Same shape as ExperienceTokens above (permanent, per-CardId,
+    // +1A/+1D each, active-or-not) right down to the wording - the
+    // comment above already called this out as "a natural home for
+    // those too" before any card actually needed it; Jean Grey (DPS035)
+    // is the first. Kept as its own dictionary rather than merged into
+    // ExperienceTokens - they're unrelated keywords that happen to share
+    // a payoff shape, and Living the Dream (DPS006, not yet authored)
+    // needs to sum Loyalty Counters specifically, not every counter of
+    // any kind, so the two must stay distinguishable in storage.
+    public Dictionary<string, int> LoyaltyCounters { get; } = [];
 
     // A mid-resolution choice (keyword Corrupt, RedrawFromBag) that
     // can't be answered in the same request that triggered it - see

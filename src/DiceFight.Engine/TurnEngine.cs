@@ -912,6 +912,25 @@ public static class TurnEngine
         }
         state.OpposingMonsterKOdThisTurn = false;
 
+        // TriggerType.EndOfYourTurn (e.g. Jean Grey, DPS035 - "at the end
+        // of each of your turns... put a Loyalty Counter"). Executed
+        // directly rather than via AbilityQueue, same as Deadly's KOs
+        // above and for the same reason (CleanUp has no queue to
+        // enqueue into - a documented gap) - safe here specifically
+        // because no currently-authored EndOfYourTurn ability needs an
+        // external target choice (Jean Grey's own Conditional/
+        // GrantLoyaltyCounter tree is entirely self-contained). A future
+        // card that DOES need real targeting here would need the queue
+        // gap closed first, not just a new case added to this loop.
+        foreach (var die in state.DiceIn(activeId, Zone.FieldZone).Concat(state.DiceIn(activeId, Zone.AttackZone)).ToList())
+        {
+            var cardId = die.VirtualCardId ?? die.CardId;
+            if (cardId is null || !state.CardCatalog.TryGetValue(cardId, out var card)) continue;
+            foreach (var ability in card.Abilities.Where(a => a.Trigger == TriggerType.EndOfYourTurn))
+                EffectInterpreter.Execute(ability.Effect, new EffectContext(state, activeId, die.Id, _ => [], Roller: roller));
+        }
+        state.AnyCharacterKOdThisTurn = false;
+
         // Rule 1.2.3(3) - the once-per-turn Epic Basic Action limit resets.
         state.EpicBasicActionUsedThisTurn = false;
 

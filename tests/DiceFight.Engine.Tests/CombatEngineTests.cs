@@ -2379,6 +2379,45 @@ public class CombatEngineTests
         Assert.Equal(1, DieStats.EffectiveAttack(state, die));
     }
 
+    // Keyword Loyalty - "give their applicable dice +1A and +1D
+    // modifiers for each counter... does not need to be active" -
+    // same unconditional, zone-independent shape as Experience Tokens
+    // above, just a separate GameState dictionary (see GameState.
+    // LoyaltyCounters's own remarks for why they're not merged).
+    [Fact]
+    public void LoyaltyBonus_CountersGrantFlatAttackAndDefenseBonus()
+    {
+        var state = CreateStaticTeamBonusGame();
+        var die = AddCharacterDie(state, "p1-plain-1", "p1", PlainThreeLevelCard.Id, Zone.FieldZone);
+        state.LoyaltyCounters[PlainThreeLevelCard.Id] = 2;
+
+        Assert.Equal(3, DieStats.EffectiveAttack(state, die)); // 1 base + 2 counters
+        Assert.Equal(3, DieStats.EffectiveDefense(state, die));
+    }
+
+    [Fact]
+    public void LoyaltyBonus_AppliesRegardlessOfZone()
+    {
+        var state = CreateStaticTeamBonusGame();
+        var die = AddCharacterDie(state, "p1-plain-1", "p1", PlainThreeLevelCard.Id, Zone.ReservePool);
+        state.LoyaltyCounters[PlainThreeLevelCard.Id] = 1;
+
+        Assert.Equal(2, DieStats.EffectiveAttack(state, die)); // 1 base + 1 counter, even though not active
+    }
+
+    // Experience and Loyalty stack independently - a card could in
+    // principle earn both kinds of counter.
+    [Fact]
+    public void ExperienceAndLoyaltyBonuses_BothPresent_Stack()
+    {
+        var state = CreateStaticTeamBonusGame();
+        var die = AddCharacterDie(state, "p1-plain-1", "p1", PlainThreeLevelCard.Id, Zone.FieldZone);
+        state.ExperienceTokens[PlainThreeLevelCard.Id] = 1;
+        state.LoyaltyCounters[PlainThreeLevelCard.Id] = 1;
+
+        Assert.Equal(3, DieStats.EffectiveAttack(state, die)); // 1 base + 1 token + 1 counter
+    }
+
     // Appendix 1's Continuous entry: "Continuous dice cannot attack or
     // block." A Continuous Action die now legitimately sits in the Field
     // Zone (see TurnEngine.UseActionDie/ResolveContinuousDie) - unlike

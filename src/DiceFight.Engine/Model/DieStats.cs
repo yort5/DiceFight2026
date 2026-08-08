@@ -205,6 +205,20 @@ public static class DieStats
         return cardId is not null ? state.ExperienceTokens.GetValueOrDefault(cardId) : 0;
     }
 
+    // Keyword Loyalty - "give their applicable dice +1A and +1D
+    // modifiers for each counter. A Character die from that card does
+    // not need to be active to get a Loyalty Counter" (Appendix 1) -
+    // same unconditional, zone-independent shape as ExperienceBonus
+    // above, just a separate GameState dictionary (see its own remarks
+    // for why they're not merged). Looked up by CardId against
+    // GameState.LoyaltyCounters (see TurnEngine.CleanUp/EffectNode.
+    // GrantLoyaltyCounter for how counters are actually granted).
+    public static int LoyaltyBonus(GameState state, DieInstance die)
+    {
+        var cardId = die.VirtualCardId ?? die.CardId;
+        return cardId is not null ? state.LoyaltyCounters.GetValueOrDefault(cardId) : 0;
+    }
+
     // Rule 3.6.1/3.6.4 - combine all Applied/Static modifiers, clamp at zero.
     public static int EffectiveAttack(GameState state, DieInstance die)
     {
@@ -213,6 +227,7 @@ public static class DieStats
         if (HasStrikeBonus(state, die)) total += 2;
         total += StaticTeamBonusFor(state, die).AttackDelta;
         total += ExperienceBonus(state, die);
+        total += LoyaltyBonus(state, die);
         return Math.Max(0, total);
     }
 
@@ -223,6 +238,7 @@ public static class DieStats
         if (HasStrikeBonus(state, die)) total += 2;
         total += StaticTeamBonusFor(state, die).DefenseDelta;
         total += ExperienceBonus(state, die);
+        total += LoyaltyBonus(state, die);
         return Math.Max(0, total);
     }
 
@@ -295,6 +311,12 @@ public static class DieStats
         // interception above, which returns before this point).
         if (die.ControllerId == state.OpponentOf(state.ActivePlayerId) && HasAffiliation(state, die, "Monster"))
             state.OpposingMonsterKOdThisTurn = true;
+
+        // Keyword Loyalty (Jean Grey, DPS035) - "if no character dice
+        // were KO'd that turn" - any character or Sidekick die, either
+        // player's, same choke point as the Experience check above.
+        if (die.Status is DieStatus.Character or DieStatus.SidekickCharacter)
+            state.AnyCharacterKOdThisTurn = true;
 
         die.Zone = Zone.PrepArea; // rule 1.5.3.2
         die.ResetToUnrolled(); // also covers rule 3.4.5.4 - modifier lifetime ends when the die leaves the Field Zone

@@ -179,9 +179,13 @@ here rather than assuming which approach they'd want.
     grants), not one-off skips. Per the user's own prioritization,
     Continuous is now built (see the "the Continuous keyword, and Lab
     Test" status update) and Lab Test (DPS005) is its first real card;
-    Loyalty Counters and the rest remain open, along with the other
-    three Continuous DPS cards (each needs something on top of the base
-    mechanic just built) and web client UI for actually resolving a
+    Loyalty is now built too (see the "the Loyalty keyword, and Jean
+    Grey" status update) with Jean Grey (DPS035) as its first card.
+    Still open: the other 8 Loyalty-referencing DPS cards (4 need their
+    own one-off "react to some other die's KO" filter shape; 3 need
+    consumer-side TargetSpec/aggregate-count support), the other three
+    Continuous DPS cards (each needs something on top of the base
+    mechanic just built), and web client UI for actually resolving a
     Continuous die once it's sitting in the Field Zone.
 
 ## Implemented keywords
@@ -233,6 +237,12 @@ and design rationale - this is just the scannable index.
   return to the Field Zone.
 - **Intimidate** (Scarlet Spider) - when fielded, removes a target
   opposing Character die from the Field Zone until end of turn.
+- **Loyalty** (Jean Grey) - a per-CARD, cross-turn counter (unlike a
+  per-die `AppliedModifiers` entry) worth a permanent +1A/+1D to every
+  die of that card, regardless of zone - same shape as Experience
+  Tokens. Only Jean Grey's own grant condition ("at the end of each of
+  your turns, if no character dice were KO'd") is built; the other
+  DPS cards that grant or spend Loyalty Counters differently are not.
 - **Obscure** (Drow Mercenary) - using any Action die makes every die
   of this card unblockable until end of turn.
 - **Overcrush** (Apocalypse) - if the attacker KOs or otherwise removes

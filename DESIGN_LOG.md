@@ -4320,3 +4320,83 @@ had until recently confirmed wired end-to-end.
 Verified: `dotnet build`, `dotnet test` (281/281, 3 new cases), and
 `npm run build` all clean. Re-ran `scripts/import_bulk_cards.py` after
 hand-curating Lab Test (3631 → 3630 bulk rows, 61 → 62 hand-curated).
+
+## Status update — the Loyalty keyword, and Jean Grey (DPS035) as its first card
+
+Continuing the DPS pass, per the user's own priority call: Loyalty next.
+
+**Turns out Loyalty already had a designated home.** Appendix 1: "Loyalty:
+Represented by a Loyalty Counter. These counters stay on a Character
+card and give their applicable dice +1A and +1D modifiers for each
+counter. A Character die from that card does not need to be active to
+get a Loyalty Counter." That's the exact shape Experience Tokens
+already implement (permanent, per-CardId, +1A/+1D each, active-or-not)
+- `GameState.ExperienceTokens`'s own comment had already flagged this
+("a natural home for those too, if a card ever needs them") before any
+card actually needed it. `GameState.LoyaltyCounters` is a second,
+parallel dictionary (not merged into ExperienceTokens - Living the
+Dream, DPS006, not yet authored, needs to sum Loyalty Counters
+specifically, "at least 3 Loyalty Counters" across the whole team, so
+the two must stay distinguishable), with `DieStats.LoyaltyBonus`
+folded into `EffectiveAttack`/`EffectiveDefense` right alongside
+`ExperienceBonus`.
+
+**The granting side is genuinely per-card, not reusable across all 9
+DPS Loyalty cards found last update** - each has its own trigger shape
+(Magneto: "when one of your Mask character dice is KO'd"; Supreme
+Intelligence: "when a card with Kree in its name is KO'd"; Gladiator:
+"when Lilandra is KO'd"; Madelyne Pryor: "when a Brotherhood die is
+KO'd besides herself"; Jean Grey: "at the end of each of your turns, if
+no character dice were KO'd"). Only Jean Grey's needed genuinely new,
+reusable-shaped plumbing rather than a one-off reactive-KO-scan with
+its own bespoke filter, so she's the one built this pass:
+
+- New `TriggerType.EndOfYourTurn` - fired once per the active player's
+  own active Character die at Clean Up, unconditionally (not gated on
+  a keyword, unlike Experience's own loop) - a future card with the
+  same "while active, at the end of each of your turns" shape but a
+  different condition (or none) can reuse this same hook, since Jean
+  Grey's own "if no character dice were KO'd" clause lives in her
+  Effect tree, not the trigger.
+- New `GameState.AnyCharacterKOdThisTurn` flag, set inside `DieStats.
+  ForceKO` (the same single choke point `OpposingMonsterKOdThisTurn`
+  already uses) - unscoped by controller or affiliation, unlike
+  Experience's flag: ANY character or Sidekick KO counts, either
+  player's, matching the card text's plain "no character dice were
+  KO'd" with no "opposing" qualifier.
+- New `EffectCondition.NoCharacterKOdThisTurn`, reusing the existing
+  `Conditional` node shape (`CheckTarget: TargetSpec.Self`, ignored by
+  this particular condition since it reads global state, not a
+  resolved die's own).
+- New `GrantLoyaltyCounter` EffectNode - self-referential like
+  `PrepFromBag`/`FieldSidekickForEachPlayer`, since every printed
+  Loyalty-granting card puts the counter on its OWN card, never a
+  target choice.
+- `TurnEngine.CleanUp` executes `EndOfYourTurn` abilities directly
+  (`EffectInterpreter.Execute`, not via `AbilityQueue`) - CleanUp still
+  has no queue to enqueue into (the same documented gap Deadly's own
+  KOs already work around), safe here specifically because Jean Grey's
+  whole effect tree is self-contained and needs no external target
+  choice. A future `EndOfYourTurn` card that DOES need real targeting
+  would need that gap closed first, not just a new case added here.
+
+Jean Grey's own `AbilityDef`: `Trigger: EndOfYourTurn, Effect:
+Conditional(TargetSpec.Self, NoCharacterKOdThisTurn, GrantLoyaltyCounter())`
+- three new small pieces, composed, no bespoke card-specific code path.
+
+**Not done this pass, deliberately**: the other 8 Loyalty-referencing
+DPS cards. Four (Magneto, Supreme Intelligence, Gladiator, Madelyne
+Pryor) are grant-side cards each needing their own "react to some OTHER
+die's KO, filtered by [energy type / name substring / specific card /
+affiliation-excluding-self]" mechanism - genuinely one-off filter
+shapes, not an obvious shared abstraction the way `EndOfYourTurn` was.
+Three (Greetings from Krakoa, Living the Dream, Tight Ranks) are
+consumer-side, needing a `TargetSpec` filter for "character die whose
+card has a Loyalty Counter" and an aggregate "sum of Loyalty Counters
+across your whole team" check - real, but building them with nothing
+yet consuming them felt premature; worth doing once a second granter
+card is in.
+
+Verified: `dotnet build`, `dotnet test` (288/288, 7 new cases), and
+`npm run build` all clean. Re-ran `scripts/import_bulk_cards.py` after
+hand-curating Jean Grey (3630 → 3629 bulk rows, 62 → 63 hand-curated).

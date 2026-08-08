@@ -189,7 +189,15 @@ public sealed record Sequence(IReadOnlyList<EffectNode> Steps) : EffectNode;
 // for at least one resolved die.
 public enum EffectCondition
 {
-    TargetWasKOd
+    TargetWasKOd,
+
+    // Jean Grey ("Peaceful Coexistence", DPS035) - "if no character dice
+    // were KO'd that turn." Reads GameState.AnyCharacterKOdThisTurn
+    // directly rather than a resolved target's own state (unlike
+    // TargetWasKOd) - CheckTarget is still required by Conditional's
+    // shape, so callers pass TargetSpec.Self and the resolved id is
+    // simply ignored.
+    NoCharacterKOdThisTurn
 }
 
 public sealed record Conditional(TargetSpec CheckTarget, EffectCondition When, EffectNode Then) : EffectNode;
@@ -214,3 +222,12 @@ public sealed record PrepFromBagIfPurchasedThisTurn : EffectNode;
 // it to your Prep Area") - the same bag-pick-to-Prep-Area mechanic as
 // PrepFromBagIfPurchasedThisTurn, just unconditional.
 public sealed record PrepFromBag : EffectNode;
+
+// Keyword Loyalty's own grant side (e.g. Jean Grey's "put a Loyalty
+// Counter on Jean Grey's card") - every printed instance of this puts a
+// counter on the ability's OWN card, never a target choice, so like
+// FieldSidekickForEachPlayer/PrepFromBag this bypasses TargetSpec
+// entirely rather than modeling a single-choice-of-exactly-one-fixed-
+// option Target. See GameState.LoyaltyCounters/DieStats.LoyaltyBonus
+// for storage and payoff.
+public sealed record GrantLoyaltyCounter : EffectNode;

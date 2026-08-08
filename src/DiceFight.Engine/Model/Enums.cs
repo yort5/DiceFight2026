@@ -217,7 +217,20 @@ public enum TriggerType
     // second Amplify/Attune/Obscure). So this needs its own trigger,
     // fired only by TurnEngine.ResolveContinuousDie, never by
     // UseActionDie.
-    ContinuousResolve
+    ContinuousResolve,
+
+    // "While active, at the end of each of your turns, [effect]" (e.g.
+    // Jean Grey, DPS035) - fired once per the active player's own active
+    // Character die at Clean Up (TurnEngine.CleanUp), before turn-scoped
+    // flags reset, same "active right now" simplification Experience's
+    // own Clean Up check already uses. Deliberately a plain trigger, not
+    // gated on any keyword (unlike Experience) - Jean Grey's own "if no
+    // character dice were KO'd" condition lives in her Effect tree
+    // (Conditional + EffectCondition.NoCharacterKOdThisTurn), not the
+    // trigger itself, so a future card with the same "end of your turn,
+    // while active" shape but a different condition (or none) can reuse
+    // this same hook.
+    EndOfYourTurn
 }
 
 // Rule 2.2.3 - the five steps of a turn, in fixed order (2.2.4 - cannot

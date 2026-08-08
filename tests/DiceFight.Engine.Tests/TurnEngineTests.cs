@@ -1575,6 +1575,59 @@ public class TurnEngineTests
         Assert.Equal(2, state.ExperienceTokens[ExperienceCard.Id]);
     }
 
+    // Keyword Loyalty - Jean Grey (DPS035), the first real card. Mirrors
+    // the Experience tests just above: GameState.AnyCharacterKOdThisTurn
+    // (set by DieStats.ForceKO) is seeded directly to isolate CleanUp's
+    // own EndOfYourTurn/Conditional handling from the KO-flagging half.
+    private static GameState CreateJeanGreyGame()
+    {
+        var jeanGrey = SampleCards.JeanGreyPeacefulCoexistence;
+        var state = GameState.NewGame(
+            new Dictionary<string, CardDef> { [jeanGrey.Id] = jeanGrey },
+            new Player { Id = "p1", Name = "Player One" }, new Player { Id = "p2", Name = "Player Two" });
+        state.Dice.Add(new DieInstance
+        {
+            Id = "p1-jeangrey-1", CardId = jeanGrey.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        });
+        return state;
+    }
+
+    [Fact]
+    public void CleanUp_JeanGreyActiveAndNoCharacterKOdThisTurn_GrantsLoyaltyCounter()
+    {
+        var state = CreateJeanGreyGame();
+        state.CurrentStep = TurnStep.CleanUp;
+
+        TurnEngine.CleanUp(state);
+
+        Assert.Equal(1, state.LoyaltyCounters[SampleCards.JeanGreyPeacefulCoexistence.Id]);
+    }
+
+    [Fact]
+    public void CleanUp_JeanGreyActiveButACharacterWasKOdThisTurn_GrantsNoLoyaltyCounter()
+    {
+        var state = CreateJeanGreyGame();
+        state.AnyCharacterKOdThisTurn = true;
+        state.CurrentStep = TurnStep.CleanUp;
+
+        TurnEngine.CleanUp(state);
+
+        Assert.False(state.LoyaltyCounters.ContainsKey(SampleCards.JeanGreyPeacefulCoexistence.Id));
+    }
+
+    [Fact]
+    public void CleanUp_AlwaysResetsAnyCharacterKOdThisTurn()
+    {
+        var state = CreateJeanGreyGame();
+        state.AnyCharacterKOdThisTurn = true;
+        state.CurrentStep = TurnStep.CleanUp;
+
+        TurnEngine.CleanUp(state);
+
+        Assert.False(state.AnyCharacterKOdThisTurn);
+    }
+
     // Lab Test (DPS005) end-to-end - the first Continuous Action die's
     // full lifecycle: UseActionDie moves it to the Field Zone without
     // running its ability (rule 2.6.4.2), then ResolveContinuousDie later

@@ -422,6 +422,17 @@ public static class EffectInterpreter
                 break;
             }
 
+            case GrantLoyaltyCounter:
+                if (ctx.SourceDieId is not null)
+                {
+                    var grantee = FindDie(ctx, ctx.SourceDieId);
+                    var granteeCardId = grantee.VirtualCardId ?? grantee.CardId;
+                    if (granteeCardId is not null)
+                        ctx.State.LoyaltyCounters[granteeCardId] =
+                            ctx.State.LoyaltyCounters.GetValueOrDefault(granteeCardId) + 1;
+                }
+                break;
+
             default:
                 throw new NotSupportedException($"Unhandled effect node: {node.GetType().Name}");
         }
@@ -482,6 +493,8 @@ public static class EffectInterpreter
     private static bool CheckCondition(EffectContext ctx, string dieId, EffectCondition condition) => condition switch
     {
         EffectCondition.TargetWasKOd => FindDie(ctx, dieId) is { Zone: Zone.PrepArea, Status: DieStatus.Unrolled },
+        // dieId is unused here - see EffectCondition.NoCharacterKOdThisTurn's own remarks.
+        EffectCondition.NoCharacterKOdThisTurn => !ctx.State.AnyCharacterKOdThisTurn,
         _ => throw new NotSupportedException($"Unhandled effect condition: {condition}")
     };
 

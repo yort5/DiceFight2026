@@ -1098,6 +1098,29 @@ public static class SampleCards
                 "a character die in your Reserve Pool", TargetOwnership.Own, zones: [Zone.ReservePool])))],
         purchaseCost: 2, set: "DPS");
 
+    // Jean Grey, "Peaceful Coexistence" - the first Loyalty card (see
+    // GameState.LoyaltyCounters/DieStats.LoyaltyBonus and TriggerType.
+    // EndOfYourTurn's own remarks for the new plumbing this needed).
+    // "Founder" prefixing the raw text isn't a real structured field
+    // anywhere in the source sheet (same non-modeled flavor-label
+    // treatment as Darkseid's own remarks describe for similar cases) -
+    // nothing else on this card references it, so it's not worth
+    // inventing a mechanism for here.
+    public static readonly CardDef JeanGreyPeacefulCoexistence = Character(
+        "DPS035", "Jean Grey", "Peaceful Coexistence", dieLimit: 4,
+        "Founder While Jean Grey is active, at the end of each or your turns, if no character dice were " +
+        "KO'd that turn, put a Loyalty Counter on Jean Grey's card (Loyalty Counters give a character die " +
+        "+1A and +1D.)",
+        purchaseCost: 4, energyType: EnergyType.Bolt,
+        affiliations: ["X-Men"],
+        abilities: [new AbilityDef(TriggerType.EndOfYourTurn, Cost: null,
+            Effect: new Conditional(TargetSpec.Self, EffectCondition.NoCharacterKOdThisTurn, new GrantLoyaltyCounter()))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3),
+            new CharacterFace(FieldingCost: 2, Attack: 5, Defense: 5),
+            new CharacterFace(FieldingCost: 3, Attack: 6, Defense: 6)
+        ], set: "DPS");
+
     // A team is 8 character cards + 2 Basic Action cards (10 total). Both
     // rosters below are drawn exclusively from IsImplemented: true cards
     // (see CardDef.IsImplemented) - the 16 cards with a deliberately
@@ -1148,7 +1171,7 @@ public static class SampleCards
             SpideysLastStand, TheRock, BigE, RipHunterNavigateTheSandsOfTime, StarfireStarbolts,
             JamilahShipwreckedOnChult,
             StormExtremeWeather, KittyPrydeRightOfPassage, PhoenixFirepower, DKenEmperor,
-            RonanTheAccuserTreason, PowerBolt, LabTest
+            RonanTheAccuserTreason, PowerBolt, LabTest, JeanGreyPeacefulCoexistence
         ];
 
         // Hand-curated cards win on id collision - shouldn't happen in
