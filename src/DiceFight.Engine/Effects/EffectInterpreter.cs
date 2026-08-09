@@ -61,6 +61,7 @@ public static class EffectInterpreter
             case Ko n: if (!n.Target.IsSelf) yield return n.Target; break;
             case Sacrifice n: if (!n.Target.IsSelf) yield return n.Target; break;
             case ForceBlock n: if (!n.Target.IsSelf) yield return n.Target; break;
+            case ForceAttack n: if (!n.Target.IsSelf) yield return n.Target; break;
             case SetCallOutTarget n: if (!n.Target.IsSelf) yield return n.Target; break;
             case Corrupt n: yield return n.PlayerTarget; break; // never Self - see TargetSpec.Player
             // RedrawFromBag's own choice is deliberately NOT collected
@@ -313,6 +314,11 @@ public static class EffectInterpreter
             case ForceBlock forceBlock:
                 foreach (var id in Resolve(ctx, forceBlock.Target, cache))
                     ctx.State.MustBlockThisTurn.Add(id);
+                break;
+
+            case ForceAttack forceAttack:
+                foreach (var id in Resolve(ctx, forceAttack.Target, cache))
+                    ctx.State.MustAttackThisTurn.Add(id);
                 break;
 
             case SetCallOutTarget callOut:

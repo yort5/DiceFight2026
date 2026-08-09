@@ -2469,4 +2469,107 @@ public class CombatEngineTests
         Assert.Throws<InvalidOperationException>(() =>
             CombatEngine.DeclareAttackers(state, new AbilityQueue(), [continuousDie.Id]));
     }
+
+    // Vulcan's Global ("target character die must attack this turn",
+    // DPS055) - GameState.MustAttackThisTurn/ForceAttack, the Declare
+    // Attackers side of Invisible Woman's MustBlockThisTurn/ForceBlock.
+    // Same "if able" enforcement shape as DeclareBlockers' own forced-
+    // blocker check.
+    [Fact]
+    public void DeclareAttackers_ForcedAttackerOmitted_Throws()
+    {
+        var state = CreateDeadlyGame(); // reuses its plain catalog/fixtures
+        var forced = AddCharacterDie(state, "p1-forced-1", "p1", PlainCharacterCard.Id, Zone.FieldZone);
+        state.MustAttackThisTurn.Add(forced.Id);
+
+        Assert.Throws<InvalidOperationException>(() =>
+            CombatEngine.DeclareAttackers(state, new AbilityQueue(), []));
+    }
+
+    [Fact]
+    public void DeclareAttackers_ForcedAttackerIncluded_Succeeds()
+    {
+        var state = CreateDeadlyGame();
+        var forced = AddCharacterDie(state, "p1-forced-1", "p1", PlainCharacterCard.Id, Zone.FieldZone);
+        state.MustAttackThisTurn.Add(forced.Id);
+
+        CombatEngine.DeclareAttackers(state, new AbilityQueue(), [forced.Id]);
+
+        Assert.Equal(Zone.AttackZone, forced.Zone);
+    }
+
+    // "If able" spirit (same as DeclareBlockers' own precedent) - a
+    // forced attacker that's no longer actually eligible (KO'd, moved
+    // elsewhere) doesn't block declaring attackers at all.
+    [Fact]
+    public void DeclareAttackers_ForcedAttackerNoLongerInFieldZone_DoesNotBlock()
+    {
+        var state = CreateDeadlyGame();
+        var forced = AddCharacterDie(state, "p1-forced-1", "p1", PlainCharacterCard.Id, Zone.PrepArea); // KO'd, say
+        state.MustAttackThisTurn.Add(forced.Id);
+
+        CombatEngine.DeclareAttackers(state, new AbilityQueue(), []); // doesn't throw
+    }
+
+    // Psylocke's own conditional self keyword grant (CardDef.
+    // GrantsSelfKeywordWhileNamedCardActive) - "gains Deadly while
+    // Wolverine is active." A synthetic Name: "Wolverine" fixture card
+    // isolates the mechanism from any of the (still-vanilla) real DPS
+    // Wolverine printings - HasConditionalSelfGrant only cares about the
+    // Name field matching, not any particular card's own id/abilities.
+    private static readonly CardDef WolverineNamedCard = new()
+    {
+        Id = "test-wolverine", Name = "Wolverine", Type = CardType.Character,
+        PurchaseCost = 2, DieLimit = 4,
+        Levels = [new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 1)],
+    };
+
+    private static GameState CreatePsylockeGame()
+    {
+        var catalog = new Dictionary<string, CardDef>
+        {
+            [SampleCards.PsylockeAdventurer.Id] = SampleCards.PsylockeAdventurer, [WolverineNamedCard.Id] = WolverineNamedCard,
+        };
+        return GameState.NewGame(catalog, new Player { Id = "p1", Name = "Player One" }, new Player { Id = "p2", Name = "Player Two" });
+    }
+
+    [Fact]
+    public void Psylocke_WolverineActive_GainsDeadly()
+    {
+        var state = CreatePsylockeGame();
+        var psylocke = AddCharacterDie(state, "p1-psylocke-1", "p1", SampleCards.PsylockeAdventurer.Id, Zone.FieldZone);
+        AddCharacterDie(state, "p1-wolverine-1", "p1", WolverineNamedCard.Id, Zone.FieldZone);
+
+        Assert.True(DieStats.HasKeyword(state, psylocke, "Deadly"));
+    }
+
+    [Fact]
+    public void Psylocke_WolverineNotActive_DoesNotGainDeadly()
+    {
+        var state = CreatePsylockeGame();
+        var psylocke = AddCharacterDie(state, "p1-psylocke-1", "p1", SampleCards.PsylockeAdventurer.Id, Zone.FieldZone);
+        AddCharacterDie(state, "p1-wolverine-1", "p1", WolverineNamedCard.Id, Zone.ReservePool); // not active
+
+        Assert.False(DieStats.HasKeyword(state, psylocke, "Deadly"));
+    }
+
+    // No "your" in the card text - either player's active Wolverine counts.
+    [Fact]
+    public void Psylocke_OpponentsWolverineActive_StillGainsDeadly()
+    {
+        var state = CreatePsylockeGame();
+        var psylocke = AddCharacterDie(state, "p1-psylocke-1", "p1", SampleCards.PsylockeAdventurer.Id, Zone.FieldZone);
+        AddCharacterDie(state, "p2-wolverine-1", "p2", WolverineNamedCard.Id, Zone.FieldZone);
+
+        Assert.True(DieStats.HasKeyword(state, psylocke, "Deadly"));
+    }
+
+    [Fact]
+    public void Psylocke_WithoutWolverine_DoesNotHaveOtherKeywordsGrantedEither()
+    {
+        var state = CreatePsylockeGame();
+        var psylocke = AddCharacterDie(state, "p1-psylocke-1", "p1", SampleCards.PsylockeAdventurer.Id, Zone.FieldZone);
+
+        Assert.False(DieStats.HasKeyword(state, psylocke, "Overcrush")); // only Deadly is granted, and only conditionally
+    }
 }

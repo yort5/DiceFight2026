@@ -54,6 +54,22 @@ public sealed record CardDef
     // attacking/blocking"-only variants yet - see rule 3.4.5.6).
     public StaticTeamBonus? GrantsStaticTeamBonus { get; init; }
 
+    // Psylocke ("Adventurer", DPS048): "While Wolverine is active,
+    // Psylocke gains Deadly" - a live, continuously-recomputed SELF
+    // keyword grant conditioned on some OTHER named card being active
+    // (any printing, any controller - the text doesn't say "your"),
+    // unlike GrantsToSidekicks (unconditional, scoped to the granter's
+    // own Sidekicks) or GrantsStaticTeamBonus (unconditional, whole
+    // team). See DieStats.HasKeyword for how this is actually checked
+    // live. Null for every card that doesn't have one - deliberately
+    // narrow (exactly this one shape: grant ONE keyword to yourself
+    // while ONE named card is active), not a general conditional-
+    // ability framework; Mystique's own "+2A while Wolverine is active"
+    // is the same trigger condition but a stat bonus instead of a
+    // keyword grant, not covered by this field, and not built (her
+    // Global has its own separate, larger gap - see her own remarks).
+    public ConditionalSelfKeywordGrant? GrantsSelfKeywordWhileNamedCardActive { get; init; }
+
     // Whether this card's FULL printed text is correctly modeled -
     // scripted via AbilityDef, built entirely into the engine (a pure
     // keyword like Deadly/Infiltrate needs no AbilityDef at all), or
@@ -84,6 +100,9 @@ public sealed record CardDef
 
 // See CardDef.GrantsStaticTeamBonus's remarks.
 public sealed record StaticTeamBonus(int AttackDelta, int DefenseDelta);
+
+// See CardDef.GrantsSelfKeywordWhileNamedCardActive's remarks.
+public sealed record ConditionalSelfKeywordGrant(string WhileCardNamed, string Keyword);
 
 // Rule Appendix 1 - keyword abilities are a finite, engine-known set
 // implemented as plugins (see design doc); Params covers e.g. Range X,

@@ -33,6 +33,12 @@ public sealed class GameState
     // enforced by CombatEngine.DeclareBlockers; reset in CleanUp.
     public HashSet<string> MustBlockThisTurn { get; } = [];
 
+    // Die ids forced to attack this turn (e.g. Vulcan's Global, DPS055),
+    // enforced by CombatEngine.DeclareAttackers; reset in CleanUp. Same
+    // shape as MustBlockThisTurn, just the other side of Declare
+    // Attackers/Blockers.
+    public HashSet<string> MustAttackThisTurn { get; } = [];
+
     // Keyword Deadly - die ids engaged (rule 2.7.2.3) with a Deadly die
     // this combat; recorded by CombatEngine.DeclareBlockers at the
     // moment of engagement (not at combat damage - rule Appendix 1

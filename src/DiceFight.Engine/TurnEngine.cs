@@ -912,6 +912,21 @@ public static class TurnEngine
     {
         if (state.CurrentStep != TurnStep.Main)
             throw new InvalidOperationException("Must be in the Main Step to skip the Attack Step.");
+
+        // Rule-text "must attack" (Vulcan's Global) - CombatEngine.
+        // DeclareAttackers enforces this once the Attack Step is actually
+        // entered, but skipping the step outright bypasses that check
+        // entirely unless it's guarded here too. Same "if able" scoping
+        // (only currently-eligible dice) as that check.
+        var forcedButSkipped = state.DiceIn(state.ActivePlayerId, Zone.FieldZone)
+            .Where(d => state.MustAttackThisTurn.Contains(d.Id))
+            .ToList();
+        if (forcedButSkipped.Count > 0)
+        {
+            var names = string.Join(", ", forcedButSkipped.Select(d => DisplayName(state, d)));
+            throw new InvalidOperationException($"{names} must attack this turn - cannot skip the Attack Step.");
+        }
+
         state.CurrentStep = TurnStep.CleanUp;
     }
 
@@ -1065,6 +1080,7 @@ public static class TurnEngine
         // blockers, Starfire's "purchased a die this turn" check,
         // Lilandra's "purchased a character die this turn" check).
         state.MustBlockThisTurn.Clear();
+        state.MustAttackThisTurn.Clear();
         var cleaningPlayer = state.GetPlayer(activeId);
         cleaningPlayer.PurchasedDieThisTurn = false;
         cleaningPlayer.PurchasedCharacterDieThisTurn = false;

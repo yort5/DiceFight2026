@@ -128,6 +128,10 @@ public sealed record Sacrifice(TargetSpec Target) : EffectNode;
 // flags the target in GameState.MustBlockThisTurn; enforced by
 // CombatEngine.DeclareBlockers, cleared at Clean Up.
 public sealed record ForceBlock(TargetSpec Target) : EffectNode;
+// Vulcan's Global ("target character die must attack this turn", DPS055) -
+// the Declare Attackers side of ForceBlock above, same shape (GameState.
+// MustAttackThisTurn, enforced by CombatEngine.DeclareAttackers).
+public sealed record ForceAttack(TargetSpec Target) : EffectNode;
 // Keyword Call Out ("when this Character die attacks, target character
 // die is the only character die that may block this character die") -
 // records the choice in GameState.CallOutTargets, keyed by the attacking

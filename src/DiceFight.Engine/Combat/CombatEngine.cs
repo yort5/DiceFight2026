@@ -22,6 +22,20 @@ public static class CombatEngine
         // declared rather than waiting for Clean Up.
         state.CallOutTargets.Clear();
 
+        // Rule-text "must attack" (Vulcan's Global) - same "if able" spirit
+        // as DeclareBlockers' own forced-blocker check below: only
+        // enforced against dice still actually eligible to attack
+        // (controlled by the active player, still in the Field Zone) - a
+        // forced die that got KO'd or moved elsewhere is just skipped.
+        var forcedButOmitted = state.DiceIn(state.ActivePlayerId, Zone.FieldZone)
+            .Where(d => state.MustAttackThisTurn.Contains(d.Id) && !attackerDieIds.Contains(d.Id))
+            .ToList();
+        if (forcedButOmitted.Count > 0)
+        {
+            var names = string.Join(", ", forcedButOmitted.Select(d => DisplayName(state, d)));
+            throw new InvalidOperationException($"{names} must attack this turn.");
+        }
+
         foreach (var id in attackerDieIds)
         {
             var die = FindDie(state, id);

@@ -59,6 +59,7 @@ public static class SampleCards
         IReadOnlyList<string>? grantsToSidekicks = null,
         IReadOnlyList<string>? affiliations = null,
         StaticTeamBonus? grantsStaticTeamBonus = null,
+        ConditionalSelfKeywordGrant? grantsSelfKeywordWhileNamedCardActive = null,
         bool isImplemented = true,
         string? set = null) => new()
     {
@@ -76,6 +77,7 @@ public static class SampleCards
         GrantsToSidekicks = grantsToSidekicks ?? [],
         Affiliations = affiliations ?? [],
         GrantsStaticTeamBonus = grantsStaticTeamBonus,
+        GrantsSelfKeywordWhileNamedCardActive = grantsSelfKeywordWhileNamedCardActive,
         IsImplemented = isImplemented,
         Set = set
     };
@@ -1295,6 +1297,117 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 6)
         ], set: "DPS");
 
+    // Vulcan, "Ruler of The Imperium" - the first "must attack" card,
+    // needing a new GameState.MustAttackThisTurn/ForceAttack pair -
+    // Declare Attackers' own side of Invisible Woman's ForceBlock/
+    // MustBlockThisTurn (see CombatEngine.DeclareAttackers and
+    // TurnEngine.SkipAttackStep, which also had to learn to reject
+    // skipping the Attack Step outright while an obligation is
+    // outstanding, not just enforce it once the step is entered).
+    public static readonly CardDef VulcanRulerOfTheImperium = Character(
+        "DPS055", "Vulcan", "Ruler of The Imperium", dieLimit: 4,
+        "Global: Pay Fist. Target character die must attack this turn.",
+        purchaseCost: 4, energyType: EnergyType.Fist,
+        abilities: [new AbilityDef(TriggerType.Global, Cost: null,
+            Effect: new ForceAttack(TargetSpec.CharacterDie("target character die")),
+            EnergyCost: new EnergyCost(1, EnergyType.Fist))],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 3, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 4),
+            new CharacterFace(FieldingCost: 1, Attack: 6, Defense: 5)
+        ], set: "DPS");
+
+    // Psylocke, "Adventurer" - the first conditional self keyword grant
+    // (CardDef.GrantsSelfKeywordWhileNamedCardActive/DieStats.
+    // HasConditionalSelfGrant): "gains Deadly while Wolverine is active"
+    // is a live, continuously-recomputed check against any active die
+    // named Wolverine (any printing, either controller - the text has no
+    // "your"), not a discrete triggered effect, so it's a CardDef-level
+    // grant like GrantsToSidekicks/GrantsStaticTeamBonus rather than an
+    // AbilityDef. "When fielded, spin target character die up 1 level" is
+    // the separate, ordinary half. Mystique's own "+2A while Wolverine is
+    // active" is the same condition but a stat bonus, not built - her
+    // Global needs unrelated, bigger new work (an affiliation-vs-team-
+    // roster check plus a "can't block" mechanism) that would block her
+    // regardless, so the shared condition alone wasn't worth splitting out
+    // into its own reusable piece yet.
+    public static readonly CardDef PsylockeAdventurer = Character(
+        "DPS048", "Psylocke", "Adventurer", dieLimit: 4,
+        "While Wolverine is active, Psylocke gains Deadly. When fielded, spin target character die up 1 level.",
+        purchaseCost: 2, energyType: EnergyType.Mask,
+        affiliations: ["X-Men"],
+        grantsSelfKeywordWhileNamedCardActive: new ConditionalSelfKeywordGrant("Wolverine", "Deadly"),
+        abilities: [new AbilityDef(TriggerType.WhenFielded, Cost: null,
+            Effect: new Spin(TargetSpec.CharacterDie("target character die"), +1))],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 2),
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3)
+        ], set: "DPS");
+
+    // Blob, "MGH Dependent" - two independent WhenFielded effects on one
+    // trigger: the card's own "lose 1 life" plus Intimidate's own built-in
+    // "remove target opposing character die" (same MoveDie-to-Intimidated
+    // shape Scarlet Spider's own Intimidate printing uses).
+    public static readonly CardDef BlobMGHDependent = Character(
+        "DPS061", "Blob", "MGH Dependent", dieLimit: 3,
+        "When fielded, lose 1 life. Intimidate.",
+        purchaseCost: 4, energyType: EnergyType.Shield,
+        affiliations: ["Brotherhood of Mutants"],
+        keywords: [new KeywordInstance("Intimidate")],
+        abilities: [
+            new AbilityDef(TriggerType.WhenFielded, Cost: null, Effect: new LoseLife(1)),
+            new AbilityDef(TriggerType.WhenFielded, Cost: null,
+                Effect: new MoveDie(TargetSpec.CharacterDie("target opposing character die", TargetOwnership.Opposing), Zone.Intimidated))
+        ],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 5),
+            new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 6),
+            new CharacterFace(FieldingCost: 2, Attack: 1, Defense: 8)
+        ], set: "DPS");
+
+    // Supreme Intelligence, "Psionic Collective" - a different printing
+    // from "Kree Science Council" (DPS053) above, purely two keywords:
+    // Overcrush (engine-native, no AbilityDef) and Intimidate (needs its
+    // own WhenFielded AbilityDef, same as Blob/Scarlet Spider above) -
+    // "Intimidate Overcrush" together isn't a bare single keyword, so the
+    // bulk importer's own pure-keyword auto-detection doesn't catch it.
+    public static readonly CardDef SupremeIntelligencePsionicCollective = Character(
+        "DPS093", "Supreme Intelligence", "Psionic Collective", dieLimit: 3,
+        "Intimidate Overcrush",
+        purchaseCost: 7, energyType: EnergyType.Mask,
+        keywords: [new KeywordInstance("Intimidate"), new KeywordInstance("Overcrush")],
+        abilities: [new AbilityDef(TriggerType.WhenFielded, Cost: null,
+            Effect: new MoveDie(TargetSpec.CharacterDie("target opposing character die", TargetOwnership.Opposing), Zone.Intimidated))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 4),
+            new CharacterFace(FieldingCost: 2, Attack: 5, Defense: 6),
+            new CharacterFace(FieldingCost: 2, Attack: 7, Defense: 6)
+        ], set: "DPS");
+
+    // Toad, "Looking for Comradery" - a different printing from
+    // "Secondary Mutation" (DPS054) above. "Spin ... to level 1" needs no
+    // new primitive: DieStats.SpinLevel clamps to [1, maxLevel]
+    // regardless of how negative the delta is, and every Character card
+    // in this game has exactly 3 levels (rule 1.3.5's fixed structure),
+    // so any delta of -2 or further negative always lands on exactly
+    // level 1 from any starting level - same trick as Colossus's own
+    // Spin(+2) reaching exactly level 3 from a guaranteed level-1 start.
+    public static readonly CardDef ToadLookingForComradery = Character(
+        "DPS094", "Toad", "Looking for Comradery", dieLimit: 3,
+        "Energize - You may spin one of the Character dice in your reserve pool from a character face to level 1.",
+        purchaseCost: 3, energyType: EnergyType.Fist,
+        affiliations: ["Brotherhood of Mutants"],
+        keywords: [new KeywordInstance("Energize")],
+        abilities: [new AbilityDef(TriggerType.Energize, Cost: null,
+            Effect: new Spin(TargetSpec.CharacterDie(
+                "one of the character dice in your reserve pool", TargetOwnership.Own, zones: [Zone.ReservePool]), -2))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 1, BurstStars: 1),
+            new CharacterFace(FieldingCost: 2, Attack: 3, Defense: 2, BurstStars: 1),
+            new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 4)
+        ], set: "DPS");
+
     // A team is 8 character cards + 2 Basic Action cards (10 total). Both
     // rosters below are drawn exclusively from IsImplemented: true cards
     // (see CardDef.IsImplemented) - the 16 cards with a deliberately
@@ -1348,7 +1461,8 @@ public static class SampleCards
             RonanTheAccuserTreason, PowerBolt, LabTest, JeanGreyPeacefulCoexistence,
             Magneto, SupremeIntelligence, MadelynePryorSisterhood,
             AngelWingsOverTheWorld, CableIllDoThisAllDay, ColossusSkilledPainter, ToadSecondaryMutation,
-            LilandraPolitician
+            LilandraPolitician, VulcanRulerOfTheImperium, PsylockeAdventurer,
+            BlobMGHDependent, SupremeIntelligencePsionicCollective, ToadLookingForComradery
         ];
 
         // Hand-curated cards win on id collision - shouldn't happen in

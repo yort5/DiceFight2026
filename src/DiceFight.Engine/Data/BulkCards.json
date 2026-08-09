@@ -39907,45 +39907,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS048",
-    "name": "Psylocke",
-    "subtitle": "Adventurer",
-    "type": "Character",
-    "purchaseCost": 2,
-    "energyType": "Mask",
-    "dieLimit": 4,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 1,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 0,
-        "attack": 2,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 3,
-        "burstStars": null
-      }
-    ],
-    "rawText": "While Wolverine is active, Psylocke gains Deadly.When fielded, spin target character die up 1 level.",
-    "keywords": [
-      "Deadly"
-    ],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS049",
     "name": "Rogue",
     "subtitle": "Mrs. X",
@@ -40015,41 +39976,6 @@
     "affiliations": [
       "Brotherhood of Mutants"
     ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS055",
-    "name": "Vulcan",
-    "subtitle": "Ruler of The Imperium",
-    "type": "Character",
-    "purchaseCost": 4,
-    "energyType": "Fist",
-    "dieLimit": 4,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 3,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 4,
-        "defense": 4,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 6,
-        "defense": 5,
-        "burstStars": null
-      }
-    ],
-    "rawText": "Global: Pay Fist. Target character die must attack this turn.",
-    "keywords": [],
-    "affiliations": [],
     "isImplemented": false,
     "set": "DPS",
     "abilityTemplate": null
@@ -40236,43 +40162,6 @@
     ],
     "affiliations": [
       "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS061",
-    "name": "Blob",
-    "subtitle": "MGH Dependent",
-    "type": "Character",
-    "purchaseCost": 4,
-    "energyType": "Shield",
-    "dieLimit": 3,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 1,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 1,
-        "defense": 6,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 1,
-        "defense": 8,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When fielded, lose 1 life. Intimidate.",
-    "keywords": [],
-    "affiliations": [
-      "Brotherhood of Mutants"
     ],
     "isImplemented": false,
     "set": "DPS",
@@ -41385,80 +41274,6 @@
     "keywords": [],
     "affiliations": [
       "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS093",
-    "name": "Supreme Intelligence",
-    "subtitle": "Psionic Collective",
-    "type": "Character",
-    "purchaseCost": 7,
-    "energyType": "Mask",
-    "dieLimit": 3,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 4,
-        "defense": 4,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 5,
-        "defense": 6,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 7,
-        "defense": 6,
-        "burstStars": null
-      }
-    ],
-    "rawText": "Intimidate Overcrush",
-    "keywords": [
-      "Overcrush"
-    ],
-    "affiliations": [],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS094",
-    "name": "Toad",
-    "subtitle": "Looking for Comradery",
-    "type": "Character",
-    "purchaseCost": 3,
-    "energyType": "Fist",
-    "dieLimit": 3,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 2,
-        "defense": 1,
-        "burstStars": 1
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 3,
-        "defense": 2,
-        "burstStars": 1
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 4,
-        "defense": 4,
-        "burstStars": null
-      }
-    ],
-    "rawText": "Energize - You may spin one of the Character dice in your reserve pool from a character face to level 1.",
-    "keywords": [],
-    "affiliations": [
-      "Brotherhood of Mutants"
     ],
     "isImplemented": false,
     "set": "DPS",

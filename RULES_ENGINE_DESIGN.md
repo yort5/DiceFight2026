@@ -200,7 +200,13 @@ here rather than assuming which approach they'd want.
     whole catalog for the same mismatch). Jubilee (DPS036) looked
     buildable the same way Colossus is but isn't yet - `FieldDie`
     assumes the target is already on a character face, which an
-    Energize-triggering die by definition isn't.
+    Energize-triggering die by definition isn't. Also now real: Vulcan,
+    Psylocke, Blob, and two more second-printing cards (see the "'must
+    attack,' a conditional self keyword grant" status update) - which
+    added `GameState.MustAttackThisTurn`/`ForceAttack` (the Declare-
+    Attackers mirror of `MustBlockThisTurn`/`ForceBlock`) and `CardDef.
+    GrantsSelfKeywordWhileNamedCardActive` (a live conditional keyword
+    grant, first used by "gains Deadly while Wolverine is active").
 
 ## Implemented keywords
 

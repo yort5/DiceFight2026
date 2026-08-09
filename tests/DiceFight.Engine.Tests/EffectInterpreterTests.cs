@@ -1442,4 +1442,77 @@ public class EffectInterpreterTests
 
         Assert.Single(state.DiceIn("p1", Zone.PrepArea));
     }
+
+    // Vulcan's Global itself, end-to-end - ForceAttack flags the target
+    // in GameState.MustAttackThisTurn (enforcement is CombatEngine.
+    // DeclareAttackers/TurnEngine.SkipAttackStep's job, covered there).
+    [Fact]
+    public void Vulcan_Global_FlagsTargetAsMustAttackThisTurn()
+    {
+        var state = CreateState();
+        var target = new DieInstance
+        {
+            Id = "p1-target-1", CardId = SampleCards.VulcanRulerOfTheImperium.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(target);
+
+        var ability = SampleCards.VulcanRulerOfTheImperium.Abilities.Single(a => a.Trigger == TriggerType.Global);
+        EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, "p1", SourceDieId: null, _ => [target.Id]));
+
+        Assert.Contains(target.Id, state.MustAttackThisTurn);
+    }
+
+    // Toad "Looking for Comradery" - the -2-always-reaches-level-1 trick
+    // (see SampleCards.ToadLookingForComradery's own remarks). Checked
+    // from two different starting levels to confirm it's a real clamp to
+    // exactly 1, not just a fixed -2 offset.
+    [Theory]
+    [InlineData(2)]
+    [InlineData(3)]
+    public void ToadLookingForComradery_Energize_SpinsAnyStartingLevelDownToExactlyOne(int startingLevel)
+    {
+        var state = CreateState();
+        var toad = new DieInstance
+        {
+            Id = "p1-toad-1", CardId = SampleCards.ToadLookingForComradery.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.ReservePool, Status = DieStatus.Energy, EnergyAmount = 2,
+        };
+        var target = new DieInstance
+        {
+            Id = "p1-target-1", CardId = SampleCards.ToadLookingForComradery.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.ReservePool, Status = DieStatus.Character, Level = startingLevel,
+        };
+        state.Dice.Add(toad);
+        state.Dice.Add(target);
+
+        var ability = SampleCards.ToadLookingForComradery.Abilities.Single(a => a.Trigger == TriggerType.Energize);
+        EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, "p1", toad.Id, _ => [target.Id]));
+
+        Assert.Equal(1, target.Level);
+    }
+
+    // Blob "MGH Dependent" - two separate AbilityDefs on the same
+    // WhenFielded trigger (the card's own "lose 1 life" plus Intimidate's
+    // built-in effect) both actually enqueue off one real Field call.
+    [Fact]
+    public void Blob_WhenFielded_BothAbilitiesFire()
+    {
+        var state = CreateState();
+        var blob = new DieInstance
+        {
+            Id = "p1-blob-1", CardId = SampleCards.BlobMGHDependent.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.ReservePool, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(blob);
+        state.CurrentStep = TurnStep.Main;
+
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, blob.Id, energyDieIdsToSpend: []);
+
+        Assert.Equal(2, queue.Count);
+        Assert.All(queue.Pending, a => Assert.Equal(TriggerType.WhenFielded, a.Trigger));
+    }
 }

@@ -22,6 +22,7 @@ public static class DieStats
     {
         if (HasPrintedKeyword(state, die, keyword)) return true;
         if (keyword == "Overcrush" && HasStrikeBonus(state, die)) return true;
+        if (HasConditionalSelfGrant(state, die, keyword)) return true;
 
         if (keyword == "Ally" || !CountsAsSidekick(state, die)) return false;
 
@@ -42,6 +43,24 @@ public static class DieStats
         return cardId is not null
             && state.CardCatalog.TryGetValue(cardId, out var card)
             && card.Keywords.Any(k => k.Name == keyword);
+    }
+
+    // See CardDef.GrantsSelfKeywordWhileNamedCardActive's remarks -
+    // Psylocke's own "gains Deadly while Wolverine is active." "Active"
+    // means the named card anywhere on the board, either player's (the
+    // text doesn't say "your"), not just die's own controller's side.
+    private static bool HasConditionalSelfGrant(GameState state, DieInstance die, string keyword)
+    {
+        var cardId = die.VirtualCardId ?? die.CardId;
+        if (cardId is null || !state.CardCatalog.TryGetValue(cardId, out var card)) return false;
+        var grant = card.GrantsSelfKeywordWhileNamedCardActive;
+        if (grant is null || grant.Keyword != keyword) return false;
+
+        return state.Dice.Any(d =>
+            d.Zone is Zone.FieldZone or Zone.AttackZone &&
+            (d.VirtualCardId ?? d.CardId) is { } otherCardId &&
+            state.CardCatalog.TryGetValue(otherCardId, out var otherCard) &&
+            otherCard.Name == grant.WhileCardNamed);
     }
 
     // Whether this die's own card carries the named affiliation (e.g.

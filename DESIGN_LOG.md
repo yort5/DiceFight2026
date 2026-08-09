@@ -4548,3 +4548,53 @@ Verified: `dotnet build`, `dotnet test` (308/308 - 15 new cases,
 including the blanket keyword-gate regression theory), and `npm run
 build` all clean. Re-ran `scripts/import_bulk_cards.py` (3626 → 3621
 bulk rows, 66 → 71 hand-curated).
+
+## Status update — "must attack," a conditional self keyword grant, and five more DPS cards
+
+Continuing to work through the DPS list per the user's own direction.
+Two new small mechanisms plus five real cards: Vulcan ("Ruler of The
+Imperium"), Psylocke ("Adventurer"), Blob ("MGH Dependent"), Supreme
+Intelligence ("Psionic Collective," a second printing), Toad ("Looking
+for Comradery," a second printing).
+
+**"Must attack"** (Vulcan's Global) - `GameState.MustAttackThisTurn` +
+a new `ForceAttack` EffectNode, the exact Declare-Attackers mirror of
+Invisible Woman's existing `MustBlockThisTurn`/`ForceBlock`. Enforced in
+`CombatEngine.DeclareAttackers` the same "if able" way (only dice still
+actually eligible), but also needed a second guard in `TurnEngine.
+SkipAttackStep` - skipping the Attack Step outright would otherwise
+dodge the obligation entirely, since `DeclareAttackers` never even runs
+in that path.
+
+**Conditional self keyword grant** (Psylocke's "gains Deadly while
+Wolverine is active") - a new `CardDef.GrantsSelfKeywordWhileNamedCardActive`
+(`ConditionalSelfKeywordGrant: WhileCardNamed, Keyword`), checked live
+inside `DieStats.HasKeyword` alongside the existing printed-keyword and
+`GrantsToSidekicks` checks - same "recomputed every call, not cached"
+shape as everything else there. Deliberately narrow (one keyword, one
+named card, self only) rather than a general conditional-ability
+framework - Mystique's own "+2A while Wolverine is active" uses the
+same trigger condition but needs a stat bonus instead of a keyword
+grant, and her Global has separate, larger unrelated gaps anyway, so
+splitting the condition out into something more generic wasn't worth
+it yet for a sample size of one real stat-bonus card.
+
+**The five cards**: Vulcan is a plain `ForceAttack` Global. Psylocke
+pairs the new grant with an ordinary `WhenFielded` Spin. Blob is two
+separate `AbilityDef`s sharing one `WhenFielded` trigger (its own "lose
+1 life" plus Intimidate's own built-in effect - Intimidate needed its
+own explicit `AbilityDef` here, same as Supreme Intelligence's second
+printing below, since "Intimidate Overcrush" together isn't a bare
+single keyword the bulk importer's pure-keyword auto-detection
+recognizes). Supreme Intelligence ("Psionic Collective") is exactly
+that - Intimidate + Overcrush, no other text. Toad ("Looking for
+Comradery")'s "spin ... to level 1" needed no new primitive at all -
+`DieStats.SpinLevel` clamps to `[1, maxLevel]` regardless of how
+negative the delta is, and every Character card in this game has
+exactly 3 levels (rule 1.3.5's fixed structure), so `Spin(-2)` always
+lands on exactly level 1 from any starting level - the same trick
+Colossus's own `Spin(+2)` already relies on to reach exactly level 3.
+
+Verified: `dotnet build`, `dotnet test` (320/320 - 12 new cases), and
+`npm run build` all clean. Re-ran `scripts/import_bulk_cards.py`
+(3621 → 3616 bulk rows, 71 → 76 hand-curated).

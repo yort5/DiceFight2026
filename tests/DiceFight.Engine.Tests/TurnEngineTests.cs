@@ -914,6 +914,24 @@ public class TurnEngineTests
         Assert.False(state.IsFirstTurn);
     }
 
+    // Vulcan's Global ("must attack this turn") would be trivially
+    // dodged if a player could just skip the Attack Step entirely -
+    // CombatEngine.DeclareAttackers only enforces the obligation once
+    // the step is actually entered, so SkipAttackStep needs its own
+    // guard against the same GameState.MustAttackThisTurn set.
+    [Fact]
+    public void SkipAttackStep_WithOutstandingForcedAttacker_Throws()
+    {
+        var state = CreateNewGame();
+        var forced = state.DiceIn("p1", Zone.Bag).First();
+        forced.Zone = Zone.FieldZone;
+        forced.Status = DieStatus.SidekickCharacter;
+        state.MustAttackThisTurn.Add(forced.Id);
+        state.CurrentStep = TurnStep.Main;
+
+        Assert.Throws<InvalidOperationException>(() => TurnEngine.SkipAttackStep(state));
+    }
+
     [Fact]
     public void AdvanceStep_PastCleanUp_Throws()
     {
