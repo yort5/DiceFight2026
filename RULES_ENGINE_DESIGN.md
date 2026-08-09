@@ -215,11 +215,11 @@ here rather than assuming which approach they'd want.
     dice now have a real per-face model too (`DieInstance.BurstStars`,
     `RolledFace.BurstStars`, `PlaceholderDiceRoller` actually
     randomizing among the 3 Action faces - see the "Basic Action dice
-    now have real burst faces" status update) - Rally (DPS013) is the
-    first card using it. Still open: Gambit (DPS032) needs a separate
-    new mid-resolution-choice primitive for its own "Instead" clause
-    (the same `PendingChoice` shape Corrupt/RedrawFromBag already use,
-    just not reused here yet); Take Cover/Radicalization/Explosion each
+    now have real burst faces" status update) - Rally (DPS013) and now
+    Gambit (DPS032, see the "closing the loop on the burst-symbol
+    thread" status update - needed one more new primitive,
+    `DrawAndChooseOneToRoll`, structurally almost identical to Corrupt)
+    are both real. Still open: Take Cover/Radicalization/Explosion each
     have their own unrelated blocking gap (mass-apply-to-all-your-dice;
     a temporary affiliation grant; an AoE-to-everyone-plus-mana-sink-loop).
 

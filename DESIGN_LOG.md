@@ -4719,3 +4719,42 @@ custom fixture die silently created a duplicate id, since `state.Dice`
 has no uniqueness enforcement - renamed to a `test-`-prefixed id), and
 `npm run build` all clean. Re-ran `scripts/import_bulk_cards.py`
 (3616 → 3615 bulk rows, 76 → 77 hand-curated).
+
+## Status update — Gambit, and closing the loop on the burst-symbol thread
+
+The user's own "might as well keep going" - closing out the last open
+thread from the burst work: Gambit (DPS032), the card that originally
+motivated it.
+
+**New primitive**: `DrawAndChooseOneToRoll(DrawCount)`, structurally
+almost identical to `Corrupt` (draw N random dice from the bag, pause
+for a real choice among exactly what got drawn, do something different
+with the chosen one vs. the rest) - same `GameState.PendingChoice`
+mechanism, same "1 drawn = no real choice, resolve immediately" shortcut,
+even the same underlying `TurnEngine.DrawFromBag` call. The only real
+difference is the destinations: `Corrupt`'s chosen die goes to the Used
+Pile (unrolled), the rest return to the bag; here the chosen die gets
+rolled and kept in the Reserve Pool, the rest return to the bag. Worth
+noting why this needed a real pause at all rather than treating the 2
+drawn dice as fungible (the way `DrawDice`'s own bag-pick already is):
+an unrolled die still reveals which CARD it is (rule 1.6.3 - only the
+face is unknown), so "roll one of these 2, return the other" is a real,
+information-bearing decision, not an arbitrary pick.
+
+**Gambit itself**: `Conditional(Self, OnSingleBurstFace, Then:
+DrawAndChooseOneToRoll(2), Else: DrawDice(1))` - the ordinary "you may
+draw and roll a die" is just `DrawDice(1)`, no different from any other
+card using that primitive. Only single burst applies to this printing
+(no "**" clause on Gambit), so there's no Double branch.
+
+Verified: `dotnet build`, `dotnet test` (339/339 - 5 new cases,
+including one arithmetic mistake in a test's own bag-count assertion
+caught by the test actually failing rather than being trusted blind),
+and `npm run build` all clean. Re-ran `scripts/import_bulk_cards.py`
+(3615 → 3614 bulk rows, 77 → 78 hand-curated).
+
+This closes out the whole burst/double-burst thread from the last few
+updates: the condition mechanism, Basic Action dice's own face model,
+and now the one card that needed a genuinely new choice primitive on
+top of both. Take Cover, Radicalization, and Explosion remain open,
+each on their own separate, unrelated gap.

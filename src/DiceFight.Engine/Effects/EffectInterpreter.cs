@@ -381,6 +381,43 @@ public static class EffectInterpreter
                 break;
             }
 
+            case DrawAndChooseOneToRoll drawChoose:
+            {
+                var drawn = TurnEngine.DrawFromBag(ctx.State, ctx.ControllerId, drawChoose.DrawCount, ctx.Random);
+                if (drawn.Count == 0) break; // nothing left anywhere, even after refilling
+
+                void RollAndKeep(DieInstance die)
+                {
+                    die.Zone = Zone.ReservePool;
+                    if (ctx.Roller is not null) ApplyRoll(ctx, die);
+                    else die.Status = DieStatus.Energy; // no roller available - same DrawDice fallback
+                }
+
+                if (drawn.Count == 1)
+                {
+                    // No real choice among which - resolves immediately,
+                    // same as Corrupt's own single-draw case above.
+                    RollAndKeep(drawn[0]);
+                    break;
+                }
+
+                ctx.State.PendingChoice = new PendingChoice
+                {
+                    ControllerId = ctx.ControllerId,
+                    Description = "Choose one drawn die to roll - the rest return to the bag.",
+                    CandidateDieIds = drawn.Select(d => d.Id).ToList(),
+                    AllowMultiple = false,
+                    Resolve = chosenIds =>
+                    {
+                        var chosen = drawn.First(d => d.Id == chosenIds[0]);
+                        RollAndKeep(chosen);
+                        foreach (var d in drawn.Where(d => d != chosen))
+                            d.Zone = Zone.Bag; // "return the other to your bag"
+                    }
+                };
+                break;
+            }
+
             case RedrawFromBag redraw:
             {
                 // Unlike most targets, this one's candidates DO already

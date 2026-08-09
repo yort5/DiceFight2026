@@ -39484,43 +39484,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS032",
-    "name": "Gambit",
-    "subtitle": "Ace in the Hole",
-    "type": "Character",
-    "purchaseCost": 3,
-    "energyType": "Mask",
-    "dieLimit": 4,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 1,
-        "defense": 1,
-        "burstStars": 1
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 2,
-        "defense": 2,
-        "burstStars": 1
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 4,
-        "defense": 4,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When fielded, you may draw and roll a die. * Instead, draw 2 dice, Roll one and return the other to your bag.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS033",
     "name": "Gladiator",
     "subtitle": "Psi Resistance",

@@ -640,6 +640,107 @@ public class EffectInterpreterTests
         Assert.Throws<InvalidOperationException>(() => state.PendingChoice!.Resolve(["not-a-real-die-id"]));
     }
 
+    // DrawAndChooseOneToRoll - Gambit's own burst bonus ("draw 2 dice,
+    // Roll one and return the other to your bag"), the same "draw N
+    // random, pause for a real choice among what was actually drawn"
+    // shape as Corrupt just above, just rolling-and-keeping the chosen
+    // one instead of sending it to the Used Pile.
+    [Fact]
+    public void DrawAndChooseOneToRoll_DrawsTwoDice_RollsTheChosenOne_ReturnsTheOtherToTheBag()
+    {
+        var state = CreateState();
+        Assert.Equal(8, state.DiceIn("p1", Zone.Bag).Count());
+
+        EffectInterpreter.Execute(
+            new DrawAndChooseOneToRoll(2),
+            new EffectContext(state, "p1", SourceDieId: null, _ => [], Roller: new FixedRoller(DieStatus.SidekickCharacter, 1)));
+
+        Assert.NotNull(state.PendingChoice);
+        Assert.False(state.PendingChoice!.AllowMultiple);
+        Assert.Equal(2, state.PendingChoice.CandidateDieIds.Count);
+
+        var chosenId = state.PendingChoice.CandidateDieIds[0];
+        state.PendingChoice.Resolve([chosenId]);
+
+        var chosen = state.Dice.Single(d => d.Id == chosenId);
+        Assert.Equal(Zone.ReservePool, chosen.Zone);
+        Assert.Equal(DieStatus.SidekickCharacter, chosen.Status); // actually rolled, not left unrolled
+        Assert.Equal(7, state.DiceIn("p1", Zone.Bag).Count()); // 8 - 2 drawn + 1 returned
+        Assert.Empty(state.DiceIn("p1", Zone.DiceFromBag)); // nothing left staged mid-effect
+    }
+
+    [Fact]
+    public void DrawAndChooseOneToRoll_DrawingOnlyOneDie_SkipsTheChoiceAndRollsItDirectly()
+    {
+        var state = CreateState();
+        // Leave p1 with exactly 1 die reachable at all (bag + Used Pile
+        // combined) - drawing 2 can only actually draw 1.
+        foreach (var d in state.DiceIn("p1", Zone.Bag).Skip(1).ToList())
+            d.Zone = Zone.ReservePool;
+
+        EffectInterpreter.Execute(
+            new DrawAndChooseOneToRoll(2),
+            new EffectContext(state, "p1", SourceDieId: null, _ => [], Roller: new FixedRoller(DieStatus.SidekickCharacter, 1)));
+
+        Assert.Null(state.PendingChoice); // no real choice among which
+        Assert.Single(state.DiceIn("p1", Zone.ReservePool), d => d.Status == DieStatus.SidekickCharacter);
+    }
+
+    [Fact]
+    public void DrawAndChooseOneToRoll_NoDiceAnywhereToDraw_NoOp()
+    {
+        var state = CreateState();
+        foreach (var d in state.DiceFor("p1").ToList()) d.Zone = Zone.ReservePool; // neither Bag nor Used Pile has anything
+
+        EffectInterpreter.Execute(
+            new DrawAndChooseOneToRoll(2),
+            new EffectContext(state, "p1", SourceDieId: null, _ => [], Roller: new FixedRoller(DieStatus.SidekickCharacter, 1)));
+
+        Assert.Null(state.PendingChoice);
+    }
+
+    // Gambit end-to-end, both branches.
+    [Fact]
+    public void Gambit_WhenFieldedOnSingleBurstFace_RaisesTheRealChoice()
+    {
+        var state = CreateState();
+        var gambit = new DieInstance
+        {
+            Id = "p1-gambit-1", CardId = SampleCards.GambitAceInTheHole.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1, // single-burst face
+        };
+        state.Dice.Add(gambit);
+
+        var ability = SampleCards.GambitAceInTheHole.Abilities.Single(a => a.Trigger == TriggerType.WhenFielded);
+        EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(state, "p1", gambit.Id, _ => [], Roller: new FixedRoller(DieStatus.SidekickCharacter, 1)));
+
+        Assert.NotNull(state.PendingChoice);
+        Assert.Equal(2, state.PendingChoice!.CandidateDieIds.Count);
+    }
+
+    [Fact]
+    public void Gambit_WhenFieldedOnBlankFace_JustDrawsOneDie_NoChoice()
+    {
+        var state = CreateState();
+        var gambit = new DieInstance
+        {
+            Id = "p1-gambit-1", CardId = SampleCards.GambitAceInTheHole.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 3, // blank face - not single-burst
+        };
+        state.Dice.Add(gambit);
+        var bagCountBefore = state.DiceIn("p1", Zone.Bag).Count();
+
+        var ability = SampleCards.GambitAceInTheHole.Abilities.Single(a => a.Trigger == TriggerType.WhenFielded);
+        EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(state, "p1", gambit.Id, _ => [], Roller: new FixedRoller(DieStatus.SidekickCharacter, 1)));
+
+        Assert.Null(state.PendingChoice);
+        Assert.Equal(bagCountBefore - 1, state.DiceIn("p1", Zone.Bag).Count());
+    }
+
     // The property that matters most about GameState.PendingQueue: if two
     // abilities are queued together and the first one pauses, the second
     // must NOT run until the pause is answered - and must still run

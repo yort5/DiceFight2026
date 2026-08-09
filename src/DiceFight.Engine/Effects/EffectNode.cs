@@ -154,6 +154,21 @@ public sealed record SetCallOutTarget(TargetSpec Target) : EffectNode;
 // EffectInterpreter calls ctx.ResolveTargets for it directly instead
 // (validating the answer is actually one of the drawn dice).
 public sealed record Corrupt(int Count, TargetSpec PlayerTarget) : EffectNode;
+// Gambit ("Ace in the Hole", DPS032)'s own burst bonus - "draw 2 dice,
+// Roll one and return the other to your bag." Same "draw N random from
+// the bag, choose exactly one, do X with it, the rest go elsewhere"
+// shape as Corrupt just above (down to reusing TurnEngine.DrawFromBag),
+// just a different pair of destinations: the chosen die is rolled and
+// stays in the Reserve Pool (not moved to the Used Pile), the rest
+// return to the Bag (not the same "the rest are returned to the bag"
+// wording Corrupt's own card text also happens to use, but a genuinely
+// different mechanical outcome for the chosen one). Always a real
+// choice once 2+ dice are drawn - the drawn dice are visible by card
+// identity before rolling (rule 1.6.3's "unrolled" only means the FACE
+// is unknown, not which card it is), so this can't be resolved upfront
+// through the normal TargetSpec pipeline any more than Corrupt's own
+// choice can.
+public sealed record DrawAndChooseOneToRoll(int DrawCount) : EffectNode;
 // A WhenDrawn "mulligan" effect (Cosmic Cube's "Infinite Possibilities"
 // printing, Rip Hunter's "Navigate the Sands of Time" printing) - moves
 // the chosen already-drawn dice (Target's zones should be DiceFromBag/

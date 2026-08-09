@@ -1126,6 +1126,31 @@ public static class SampleCards
                     Zone.FieldZone)))],
         purchaseCost: 3, set: "DPS");
 
+    // Gambit, "Ace in the Hole" - the card that originally motivated the
+    // whole burst-symbol mechanism (see EffectCondition.OnSingleBurstFace
+    // and DrawAndChooseOneToRoll's own remarks). "You may draw and roll a
+    // die" is the ordinary DrawDice(1); "* Instead, draw 2 dice, Roll one
+    // and return the other to your bag" needed the new choice primitive,
+    // since the 2 drawn dice are visible by card identity before rolling.
+    // Checked against Gambit's OWN die (TargetSpec.Self) at the moment
+    // it's fielded - only single burst applies to this printing (no "**"
+    // clause), so there's no Double branch to add.
+    public static readonly CardDef GambitAceInTheHole = Character(
+        "DPS032", "Gambit", "Ace in the Hole", dieLimit: 4,
+        "When fielded, you may draw and roll a die. * Instead, draw 2 dice, Roll one and return the other " +
+        "to your bag.",
+        purchaseCost: 3, energyType: EnergyType.Mask,
+        affiliations: ["X-Men"],
+        abilities: [new AbilityDef(TriggerType.WhenFielded, Cost: null,
+            Effect: new Conditional(TargetSpec.Self, EffectCondition.OnSingleBurstFace,
+                Then: new DrawAndChooseOneToRoll(2),
+                Else: new DrawDice(1)))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 1, BurstStars: 1),
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 2, BurstStars: 1),
+            new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 4)
+        ], set: "DPS");
+
     // Jean Grey, "Peaceful Coexistence" - the first Loyalty card (see
     // GameState.LoyaltyCounters/DieStats.LoyaltyBonus and TriggerType.
     // EndOfYourTurn's own remarks for the new plumbing this needed).
@@ -1486,7 +1511,8 @@ public static class SampleCards
             Magneto, SupremeIntelligence, MadelynePryorSisterhood,
             AngelWingsOverTheWorld, CableIllDoThisAllDay, ColossusSkilledPainter, ToadSecondaryMutation,
             LilandraPolitician, VulcanRulerOfTheImperium, PsylockeAdventurer,
-            BlobMGHDependent, SupremeIntelligencePsionicCollective, ToadLookingForComradery, Rally
+            BlobMGHDependent, SupremeIntelligencePsionicCollective, ToadLookingForComradery, Rally,
+            GambitAceInTheHole
         ];
 
         // Hand-curated cards win on id collision - shouldn't happen in
