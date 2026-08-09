@@ -47,8 +47,10 @@ public sealed record TargetSpec(
         TargetOwnership ownership = TargetOwnership.Any,
         Model.EnergyType? energyType = null,
         int count = 1,
-        IReadOnlyList<Model.Zone>? zones = null) =>
-        new(ownership, CharacterDiceOnly: true, zones ?? DefaultZones, energyType, count, description);
+        IReadOnlyList<Model.Zone>? zones = null,
+        bool optional = false) =>
+        new(ownership, CharacterDiceOnly: true, zones ?? DefaultZones, energyType, count, description,
+            Optional: optional);
 
     // optional: true models "you MAY target up to Count" (any number,
     // including zero, is a legal chosen count) rather than rule 3.3.11's
@@ -192,6 +194,21 @@ public sealed record RedrawFromBag(TargetSpec Target, Model.Zone ToZone) : Effec
 public sealed record MoveDie(TargetSpec Target, Model.Zone ToZone) : EffectNode;
 public sealed record ModifyStat(TargetSpec Target, int? AttackDelta, int? DefenseDelta) : EffectNode;
 public sealed record Reroll(TargetSpec Target) : EffectNode;
+// "Reroll target die(s); each that doesn't roll a character goes to the
+// Used Pile" - confirmed a real recurring pattern across many sets, not a
+// DPS-only one-off (Gambit "Unless I Got Someone to Play With"/DPS112,
+// Psylocke "Advanced Telekinetic Combatant"/DPS150, Storm "Queen"/DPS132,
+// plus non-DPS printings like Gambit "Cardsharp"/AVX107 and Storm
+// "Wind-Rider"/AVX092 use the same text). DamagePerMovedToOpponent folds
+// a follow-up like Psylocke/Storm's own "...deals 2 damage to your
+// opponent for each die moved" into the same node rather than a separate
+// Sequence step after it - the moved-die count only exists for the
+// instant this node finishes rerolling, and nothing else in the DSL
+// currently threads a live count from one Sequence step into the next.
+// Zero (the default) means no such follow-up text exists at all (Gambit's
+// own printing has none).
+public sealed record RerollAndMoveUnlessCharacter(
+    TargetSpec Target, Model.Zone ToZone, int DamagePerMovedToOpponent = 0) : EffectNode;
 public sealed record Spin(TargetSpec Target, int LevelDelta) : EffectNode;
 public sealed record DrawDice(int Count) : EffectNode;
 public sealed record PrepDie(TargetSpec Source) : EffectNode;

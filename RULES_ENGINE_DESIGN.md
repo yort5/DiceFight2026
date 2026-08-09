@@ -238,7 +238,18 @@ here rather than assuming which approach they'd want.
     DPS092's own CantBlock use), and "each player makes their own choice"
     threaded through an ability the opponent didn't trigger (blocks Ronan
     "No Mercy" DPS090's KO side, distinct from "No Exceptions"'s fixed
-    amounts).
+    amounts). Also now real: `RerollAndMoveUnlessCharacter` ("reroll
+    target die(s); each that doesn't land on a character face goes to
+    the Used Pile," confirmed recurring across ~20 cards spanning many
+    sets, not DPS-only) plus an `optional` param on `TargetSpec.
+    CharacterDie` it needed along the way - Gambit ("Unless I Got
+    Someone to Play With", DPS112), Psylocke ("Advanced Telekinetic
+    Combatant", DPS150, adding a damage-per-moved-die follow-up), and
+    Storm ("Queen", DPS132, three abilities across WhenFielded/
+    WhenAttacks/Energize) are all real now - see the "RerollAndMoveUnless
+    Character, and three more DPS cards" status update, including why
+    Storm's own sheet text ("Move each die that DOES roll a character...")
+    is read as a typo rather than a real rules variant.
 
 ## Implemented keywords
 

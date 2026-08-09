@@ -1151,6 +1151,91 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 4)
         ], set: "DPS");
 
+    // Gambit, "Unless I Got Someone to Play With" - the first card to use
+    // RerollAndMoveUnlessCharacter (new this pass): reroll up to 2 target
+    // opposing character dice, each that doesn't land on a character face
+    // goes to the opponent's Used Pile. No damage follow-up on this
+    // printing (unlike Psylocke/Storm below), so DamagePerMovedToOpponent
+    // is left at its default 0. This printing's own stat line carries a
+    // "*" burst mark too, but the ability text has no matching "Instead"/
+    // "Also" clause referencing it - burst marks are purely decorative on
+    // a stat line unless the card's OWN text keys off them (see the
+    // burst-symbol status update), so it's recorded on the levels below
+    // for data accuracy but not wired into any Conditional.
+    public static readonly CardDef GambitUnlessIGotSomeoneToPlayWith = Character(
+        "DPS112", "Gambit", "Unless I Got Someone to Play With", dieLimit: 2,
+        "When fielded, reroll up to 2 target opposing character dice. Each die that doesn't roll a character " +
+        "goes to your opponent's Used Pile.",
+        purchaseCost: 5, energyType: EnergyType.Mask,
+        affiliations: ["X-Men"],
+        abilities: [new AbilityDef(TriggerType.WhenFielded, Cost: null,
+            Effect: new RerollAndMoveUnlessCharacter(
+                TargetSpec.CharacterDie("up to 2 target opposing character dice", TargetOwnership.Opposing,
+                    count: 2, optional: true),
+                Zone.UsedPile))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 1, BurstStars: 1),
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 2, BurstStars: 1),
+            new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 6)
+        ], set: "DPS");
+
+    // Psylocke, "Advanced Telekinetic Combatant" - RerollAndMoveUnlessCharacter's
+    // second user, this time with the DamagePerMovedToOpponent follow-up
+    // ("Psylocke deals 2 damage to your opponent for each die moved").
+    public static readonly CardDef PsylockeAdvancedTelekineticCombatant = Character(
+        "DPS150", "Psylocke", "Advanced Telekinetic Combatant", dieLimit: 1,
+        "When fielded, reroll up to 2 opposing character dice. Each die that does not roll a character goes " +
+        "to your opponent's Used Pile. Psylocke deals 2 damage to your opponent for each die moved.",
+        purchaseCost: 5, energyType: EnergyType.Mask,
+        affiliations: ["X-Men"],
+        abilities: [new AbilityDef(TriggerType.WhenFielded, Cost: null,
+            Effect: new RerollAndMoveUnlessCharacter(
+                TargetSpec.CharacterDie("up to 2 opposing character dice", TargetOwnership.Opposing,
+                    count: 2, optional: true),
+                Zone.UsedPile, DamagePerMovedToOpponent: 2))],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 2),
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3)
+        ], set: "DPS");
+
+    // Storm, "Queen" - three abilities off three different triggers
+    // (WhenFielded/WhenAttacks/Energize), the busiest single card this
+    // pass. The sheet's own WhenAttacks clause reads "Move each die that
+    // DOES roll a character goes to [...] Used Pile" - almost certainly a
+    // sheet typo (transposed "does"/"does not"), not a real rules
+    // variant: Psylocke's near-identical text just above is unambiguous
+    // ("does NOT roll a character"), the flavor (rerolling an opponent's
+    // dice hoping to knock them off a character face) only makes sense as
+    // a punishment for NOT landing on a character, and "moves the die
+    // that stayed a character to the Used Pile" would be a bizarre
+    // self-defeating effect with no precedent anywhere in the set. Read
+    // as the same RerollAndMoveUnlessCharacter shape as Psylocke.
+    public static readonly CardDef StormQueen = Character(
+        "DPS132", "Storm", "Queen", dieLimit: 2,
+        "When Fielded, reroll target character die. When Storm attacks, reroll up to 2 opposing character " +
+        "dice. Move each die that does roll a character goes to you opponent's Used Pile. Storm deals 2 " +
+        "damage to your opponent for each die moved. Energize - Reroll target opposing character die",
+        purchaseCost: 7, energyType: EnergyType.Bolt,
+        affiliations: ["X-Men"],
+        keywords: [new KeywordInstance("Energize")],
+        abilities: [
+            new AbilityDef(TriggerType.WhenFielded, Cost: null,
+                Effect: new Reroll(TargetSpec.CharacterDie("target character die"))),
+            new AbilityDef(TriggerType.WhenAttacks, Cost: null,
+                Effect: new RerollAndMoveUnlessCharacter(
+                    TargetSpec.CharacterDie("up to 2 opposing character dice", TargetOwnership.Opposing,
+                        count: 2, optional: true),
+                    Zone.UsedPile, DamagePerMovedToOpponent: 2)),
+            new AbilityDef(TriggerType.Energize, Cost: null,
+                Effect: new Reroll(TargetSpec.CharacterDie("target opposing character die", TargetOwnership.Opposing)))
+        ],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 1),
+            new CharacterFace(FieldingCost: 0, Attack: 3, Defense: 1),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3)
+        ], set: "DPS");
+
     // Deathbird, "War of Kings" - the first card to use CantBlock (new
     // this pass): GameState.CantBlockThisTurn, the restriction mirror of
     // ForceBlock/MustBlockThisTurn - enforced by CombatEngine.
@@ -1569,7 +1654,8 @@ public static class SampleCards
             AngelWingsOverTheWorld, CableIllDoThisAllDay, ColossusSkilledPainter, ToadSecondaryMutation,
             LilandraPolitician, VulcanRulerOfTheImperium, PsylockeAdventurer,
             BlobMGHDependent, SupremeIntelligencePsionicCollective, ToadLookingForComradery, Rally,
-            GambitAceInTheHole, DeathbirdWarOfKings, DeadpoolMoreThanAChumpBlocker, RonanTheAccuserNoExceptions
+            GambitAceInTheHole, DeathbirdWarOfKings, DeadpoolMoreThanAChumpBlocker, RonanTheAccuserNoExceptions,
+            GambitUnlessIGotSomeoneToPlayWith, PsylockeAdvancedTelekineticCombatant, StormQueen
         ];
 
         // Hand-curated cards win on id collision - shouldn't happen in

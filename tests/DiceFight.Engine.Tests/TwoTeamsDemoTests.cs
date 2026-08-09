@@ -447,6 +447,139 @@ public class TwoTeamsDemoTests
     }
 
     [Fact]
+    public void FieldingGambit_RerollsOpposingDie_MovesToUsedPileIfNotCharacter()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.GambitUnlessIGotSomeoneToPlayWith.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var opposingTarget = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        opposingTarget.Zone = Zone.FieldZone;
+        opposingTarget.Status = DieStatus.Character;
+        opposingTarget.Level = 1;
+
+        var gambitDie = FindUnpurchased(state, "teamA", SampleCards.GambitUnlessIGotSomeoneToPlayWith.Id);
+        var purchaseEnergy = GiveWildEnergy(state, "teamA", SampleCards.GambitUnlessIGotSomeoneToPlayWith.PurchaseCost);
+        TurnEngine.Purchase(state, gambitDie.Id, purchaseEnergy.Select(d => d.Id).ToList());
+        gambitDie.Zone = Zone.ReservePool;
+        gambitDie.Status = DieStatus.Character;
+        gambitDie.Level = 1; // fielding cost 1
+
+        var fieldEnergy = GiveWildEnergy(state, "teamA", 1);
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, gambitDie.Id, energyDieIdsToSpend: [fieldEnergy[0].Id]);
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(
+                state, ability.ControllerId, ability.SourceDieId, _ => [opposingTarget.Id],
+                Roller: new FixedRoller(DieStatus.Energy, 1))));
+
+        Assert.Equal(Zone.UsedPile, opposingTarget.Zone);
+    }
+
+    [Fact]
+    public void FieldingGambit_RerollsOpposingDie_StaysPutIfItRollsAnotherCharacterFace()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.GambitUnlessIGotSomeoneToPlayWith.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var opposingTarget = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        opposingTarget.Zone = Zone.FieldZone;
+        opposingTarget.Status = DieStatus.Character;
+        opposingTarget.Level = 1;
+
+        var gambitDie = FindUnpurchased(state, "teamA", SampleCards.GambitUnlessIGotSomeoneToPlayWith.Id);
+        var purchaseEnergy = GiveWildEnergy(state, "teamA", SampleCards.GambitUnlessIGotSomeoneToPlayWith.PurchaseCost);
+        TurnEngine.Purchase(state, gambitDie.Id, purchaseEnergy.Select(d => d.Id).ToList());
+        gambitDie.Zone = Zone.ReservePool;
+        gambitDie.Status = DieStatus.Character;
+        gambitDie.Level = 1;
+
+        var fieldEnergy = GiveWildEnergy(state, "teamA", 1);
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, gambitDie.Id, energyDieIdsToSpend: [fieldEnergy[0].Id]);
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(
+                state, ability.ControllerId, ability.SourceDieId, _ => [opposingTarget.Id],
+                Roller: new FixedRoller(DieStatus.Character, 2))));
+
+        Assert.Equal(Zone.FieldZone, opposingTarget.Zone);
+        Assert.Equal(2, opposingTarget.Level); // actually rerolled, just landed on a character face again
+    }
+
+    [Fact]
+    public void FieldingPsylocke_DealsDamageToOpponent_ScaledByHowManyDiceActuallyMoved()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.PsylockeAdvancedTelekineticCombatant.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var firstTarget = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        firstTarget.Zone = Zone.FieldZone;
+        firstTarget.Status = DieStatus.Character;
+        firstTarget.Level = 1;
+        var secondTarget = FindUnpurchased(state, "teamB", SampleCards.Groot.Id);
+        secondTarget.Zone = Zone.FieldZone;
+        secondTarget.Status = DieStatus.Character;
+        secondTarget.Level = 1;
+
+        var psylockeDie = FindUnpurchased(state, "teamA", SampleCards.PsylockeAdvancedTelekineticCombatant.Id);
+        var purchaseEnergy = GiveWildEnergy(state, "teamA", SampleCards.PsylockeAdvancedTelekineticCombatant.PurchaseCost);
+        TurnEngine.Purchase(state, psylockeDie.Id, purchaseEnergy.Select(d => d.Id).ToList());
+        psylockeDie.Zone = Zone.ReservePool;
+        psylockeDie.Status = DieStatus.Character;
+        psylockeDie.Level = 1; // fielding cost 0 at level 1
+
+        var opponentLifeBefore = state.PlayerTwo.Life;
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, psylockeDie.Id, energyDieIdsToSpend: []);
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(
+                state, ability.ControllerId, ability.SourceDieId, _ => [firstTarget.Id, secondTarget.Id],
+                Roller: new FixedRoller(DieStatus.Energy, 1))));
+
+        Assert.Equal(Zone.UsedPile, firstTarget.Zone);
+        Assert.Equal(Zone.UsedPile, secondTarget.Zone);
+        Assert.Equal(opponentLifeBefore - 4, state.PlayerTwo.Life); // 2 damage x 2 dice moved
+    }
+
+    [Fact]
+    public void StormQueenEnergize_FiresOffRealEnergizeGate_RerollsTargetOpposingDie()
+    {
+        // Same "test the gate, not just the effect" bar the Kitty Pryde/
+        // Phoenix Awaken/Energize bug established - TurnEngine.Reroll's
+        // real post-roll Energize scan, not a manually-enqueued trigger,
+        // is what has to actually find Storm's own KeywordInstance here.
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.StormQueen.Id]);
+        state.ActivePlayerId = "teamA";
+        state.CurrentStep = TurnStep.RollAndReroll;
+
+        var stormDie = FindUnpurchased(state, "teamA", SampleCards.StormQueen.Id);
+        stormDie.Zone = Zone.ReservePool;
+        stormDie.Status = DieStatus.Energy;
+        stormDie.EnergyKind = EnergyKind.Generic;
+        stormDie.EnergyAmount = 2; // double energy - Energize's own trigger condition
+
+        var opposingTarget = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        opposingTarget.Zone = Zone.FieldZone;
+        opposingTarget.Status = DieStatus.Character;
+        opposingTarget.Level = 1;
+
+        var queue = new AbilityQueue();
+        TurnEngine.Reroll(state, queue, new FixedRoller(DieStatus.Energy, 1), []);
+
+        Assert.Equal(1, queue.Count);
+        Assert.Equal(TriggerType.Energize, queue.Pending[0].Trigger);
+
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [opposingTarget.Id],
+                Roller: new FixedRoller(DieStatus.Energy, 1))));
+
+        Assert.Equal(DieStatus.Energy, opposingTarget.Status); // rerolled off its character face
+    }
+
+    [Fact]
     public void UsingStarfireGlobalAbility_PrepsADieFromBag_IfYouPurchasedADieThisTurn()
     {
         var state = BuildTwoTeamGame();

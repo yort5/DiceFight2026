@@ -72,6 +72,7 @@ public static class EffectInterpreter
             case MoveDie n: if (!n.Target.IsSelf) yield return n.Target; break;
             case ModifyStat n: if (!n.Target.IsSelf) yield return n.Target; break;
             case Reroll n: if (!n.Target.IsSelf) yield return n.Target; break;
+            case RerollAndMoveUnlessCharacter n: if (!n.Target.IsSelf) yield return n.Target; break;
             case Spin n: if (!n.Target.IsSelf) yield return n.Target; break;
             case PrepDie n: if (!n.Source.IsSelf) yield return n.Source; break;
             case FieldDie n: if (!n.Target.IsSelf) yield return n.Target; break;
@@ -275,6 +276,26 @@ public static class EffectInterpreter
                     ApplyRoll(ctx, FindDie(ctx, id));
                 }
                 break;
+
+            case RerollAndMoveUnlessCharacter rerollAndMove:
+            {
+                var movedCount = 0;
+                foreach (var id in Resolve(ctx, rerollAndMove.Target, cache))
+                {
+                    if (ctx.Roller is null) continue;
+                    var die = FindDie(ctx, id);
+                    ApplyRoll(ctx, die);
+                    if (die.Status is DieStatus.Character or DieStatus.SidekickCharacter) continue;
+                    die.Zone = rerollAndMove.ToZone;
+                    movedCount++;
+                }
+                if (rerollAndMove.DamagePerMovedToOpponent > 0 && movedCount > 0)
+                {
+                    var damagedOpponent = ctx.State.GetPlayer(ctx.State.OpponentOf(ctx.ControllerId));
+                    damagedOpponent.Life -= rerollAndMove.DamagePerMovedToOpponent * movedCount;
+                }
+                break;
+            }
 
             case GainLife gain:
                 var gainingPlayer = ctx.State.GetPlayer(ctx.ControllerId);

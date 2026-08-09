@@ -4838,3 +4838,60 @@ candidates, worth remembering before the next batch**:
 Verified: `dotnet build`, `dotnet test` (342/342 - 3 new cases), and
 `npm run build` all clean. Re-ran `scripts/import_bulk_cards.py`
 (3611 rows, 78 → 81 hand-curated).
+
+## Status update — RerollAndMoveUnlessCharacter, and three more DPS cards
+
+Second batch this session, picking up the top item flagged as a real gap
+last round: a recurring "reroll target die(s); each that doesn't land on
+a character face goes to the Used Pile" pattern, confirmed (by grepping
+the full ~3,600-card sheet, not just the DPS subset) to appear on at
+least 20 cards across many sets, not a DPS-only one-off.
+
+**New primitive**: `RerollAndMoveUnlessCharacter(TargetSpec Target,
+Zone ToZone, int DamagePerMovedToOpponent = 0)`. Rerolls each resolved
+target via the same `ApplyRoll` helper `Reroll`/`DrawDice` already
+share; anything that doesn't land on `Character`/`SidekickCharacter`
+moves to `ToZone` and counts toward `DamagePerMovedToOpponent` (folded
+into the same node, defaulting to 0/no-op, rather than a separate
+`Sequence` step after it - the moved-die count only exists for the
+instant this node finishes rerolling, and nothing else in the DSL
+threads a live count from one step to the next the way this card text
+needs). Also added an `optional` parameter to `TargetSpec.CharacterDie`
+(mirroring `Sidekick`/`AnyDie`'s own) - "reroll up to 2 [...] character
+dice" needed the same 0-to-N voluntary-count semantic Rally's "up to 3
+Sidekick dice" established, but for `CharacterDiceOnly` targets, which
+had no factory path to it before now.
+
+**Three cards**:
+- Gambit, "Unless I Got Someone to Play With" (DPS112) - the shape with
+  no damage follow-up (`DamagePerMovedToOpponent` left at 0).
+- Psylocke, "Advanced Telekinetic Combatant" (DPS150) - adds "deals 2
+  damage to your opponent for each die moved."
+- Storm, "Queen" (DPS132) - three abilities off three different
+  triggers (`WhenFielded`: plain `Reroll` of a single character die,
+  either side; `WhenAttacks`: the same `RerollAndMoveUnlessCharacter`
+  shape as Psylocke; `Energize`: a plain `Reroll` of a target opposing
+  die). The sheet's own `WhenAttacks` clause reads "Move each die that
+  DOES roll a character goes to [...] Used Pile" - read as a sheet typo
+  (transposed does/does not), not a real variant: Psylocke's near-
+  identical text is unambiguous, the flavor only makes sense as a
+  punishment for missing a character face, and "move the die that
+  stayed a character away" has no precedent anywhere in the set. Storm
+  is also the first of this trio to actually need its `Energize`
+  keyword entry wired correctly - the Kitty Pryde/Phoenix lesson from
+  several updates back (an `AbilityDef` with no matching `Keywords`
+  entry silently never fires) applies to every keyword-gated trigger
+  added, not just the two that originally caught it.
+
+Tests exercise the real path throughout: Gambit/Psylocke go through
+`TurnEngine.Purchase`/`Field` + `AbilityQueue.Drain`, same as every
+other `WhenFielded` card added this session; Storm's own test drives
+`TurnEngine.Reroll`'s real post-roll Energize scan (not a manually
+enqueued trigger) to prove the keyword is actually wired, matching the
+"test the gate" bar the Kitty Pryde/Phoenix bug established.
+
+Verified: `dotnet build`, `dotnet test` (346/346 - 4 new cases, one
+`CS0136` local-variable-shadowing build error from a stray `opponent`
+name collision with `SwapLife`'s own local caught and fixed before
+committing), and `npm run build` all clean. Re-ran
+`scripts/import_bulk_cards.py` (81 → 84 hand-curated).

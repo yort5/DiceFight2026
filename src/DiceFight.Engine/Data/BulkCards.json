@@ -41781,43 +41781,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS112",
-    "name": "Gambit",
-    "subtitle": "Unless I Got Someone to Play With",
-    "type": "Character",
-    "purchaseCost": 5,
-    "energyType": "Mask",
-    "dieLimit": 2,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 1,
-        "defense": 1,
-        "burstStars": 1
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 2,
-        "defense": 2,
-        "burstStars": 1
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 4,
-        "defense": 6,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When fielded, reroll up to 2 target opposing character dice. Each die that doesn\\'t roll a character goes to your opponent\\'s Used Pile.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS113",
     "name": "Gladiator",
     "subtitle": "Majestor Kallark",
@@ -42491,43 +42454,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS132",
-    "name": "Storm",
-    "subtitle": "Queen",
-    "type": "Character",
-    "purchaseCost": 7,
-    "energyType": "Bolt",
-    "dieLimit": 2,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 2,
-        "defense": 1,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 0,
-        "attack": 3,
-        "defense": 1,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 3,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When Fielded, reroll target character die. When Storm attacks, reroll up to 2 opposing character dice. Move each die that does roll a character goes to you opponent\\'s Used Pile. Storm deals 2 damage to your opponent for each die moved. Energize - Reroll target opposing character die",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS134",
     "name": "Toad",
     "subtitle": "Journey Into Misery",
@@ -43120,43 +43046,6 @@
     "affiliations": [
       "Brotherhood of Mutants",
       "Villains"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS150",
-    "name": "Psylocke",
-    "subtitle": "Advanced Telekinetic Combatant",
-    "type": "Character",
-    "purchaseCost": 5,
-    "energyType": "Mask",
-    "dieLimit": 1,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 1,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 0,
-        "attack": 2,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 3,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When fielded, reroll up to 2 opposing character dice. Each die that does not roll a character goes to your opponent\\'s Used Pile. Psylocke deals 2 damage to your opponent for each die moved.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
     ],
     "isImplemented": false,
     "set": "DPS",
