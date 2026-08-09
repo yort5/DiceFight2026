@@ -221,6 +221,16 @@ public sealed record DrawAndChooseOneToRoll(int DrawCount) : EffectNode;
 public sealed record RedrawFromBag(TargetSpec Target, Model.Zone ToZone) : EffectNode;
 public sealed record MoveDie(TargetSpec Target, Model.Zone ToZone) : EffectNode;
 public sealed record ModifyStat(TargetSpec Target, int? AttackDelta, int? DefenseDelta) : EffectNode;
+// Rogue "Strength Absorption" (DPS151): "target character die has 0A
+// this turn" - a snapshot to an exact VALUE, unlike ModifyStat's relative
+// delta. Still just an Applied ability underneath (rule 3.4.3.9 - "this
+// turn" is its own duration statement, same default lifetime ModifyStat
+// already has), so it's implemented as a computed one-time delta
+// (Attack/Defense minus the target's current EffectiveAttack/
+// EffectiveDefense) added as a Modifier - same storage, same Clean Up
+// expiry, no separate "set value" bookkeeping needed. Null Attack/
+// Defense means that stat is left alone, same convention ModifyStat uses.
+public sealed record SetStat(TargetSpec Target, int? Attack, int? Defense) : EffectNode;
 public sealed record Reroll(TargetSpec Target) : EffectNode;
 // "Reroll target die(s); each that doesn't roll a character goes to the
 // Used Pile" - confirmed a real recurring pattern across many sets, not a

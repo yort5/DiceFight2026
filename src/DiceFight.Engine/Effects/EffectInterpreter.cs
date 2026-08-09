@@ -71,6 +71,7 @@ public static class EffectInterpreter
             // just for a different reason).
             case MoveDie n: if (!n.Target.IsSelf) yield return n.Target; break;
             case ModifyStat n: if (!n.Target.IsSelf) yield return n.Target; break;
+            case SetStat n: if (!n.Target.IsSelf) yield return n.Target; break;
             case Reroll n: if (!n.Target.IsSelf) yield return n.Target; break;
             case RerollAndMoveUnlessCharacter n: if (!n.Target.IsSelf) yield return n.Target; break;
             case Spin n: if (!n.Target.IsSelf) yield return n.Target; break;
@@ -193,6 +194,16 @@ public static class EffectInterpreter
                 {
                     FindDie(ctx, id).AppliedModifiers.Add(
                         new Modifier(modify.AttackDelta ?? 0, modify.DefenseDelta ?? 0, ctx.SourceDieId ?? "ability"));
+                }
+                break;
+
+            case SetStat setStat:
+                foreach (var id in Resolve(ctx, setStat.Target, cache))
+                {
+                    var die = FindDie(ctx, id);
+                    var attackDelta = setStat.Attack is { } attack ? attack - DieStats.EffectiveAttack(ctx.State, die) : 0;
+                    var defenseDelta = setStat.Defense is { } defense ? defense - DieStats.EffectiveDefense(ctx.State, die) : 0;
+                    die.AppliedModifiers.Add(new Modifier(attackDelta, defenseDelta, ctx.SourceDieId ?? "ability"));
                 }
                 break;
 

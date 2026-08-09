@@ -937,6 +937,135 @@ public class TwoTeamsDemoTests
     }
 
     [Fact]
+    public void CyclopsDefendingThePhoenixEnergize_FiresOffRealGate_DamagesTargetAndRerollsSelf()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.CyclopsDefendingThePhoenix.Id]);
+        state.ActivePlayerId = "teamA";
+        state.CurrentStep = TurnStep.RollAndReroll;
+
+        var cyclopsDie = FindUnpurchased(state, "teamA", SampleCards.CyclopsDefendingThePhoenix.Id);
+        cyclopsDie.Zone = Zone.ReservePool;
+        cyclopsDie.Status = DieStatus.Energy;
+        cyclopsDie.EnergyKind = EnergyKind.Generic;
+        cyclopsDie.EnergyAmount = 2; // double energy - Energize's own trigger condition
+
+        var target = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        target.Zone = Zone.FieldZone;
+        target.Status = DieStatus.Character;
+        target.Level = 1;
+
+        var queue = new AbilityQueue();
+        TurnEngine.Reroll(state, queue, new FixedRoller(DieStatus.Energy, 1), []);
+
+        Assert.Equal(1, queue.Count);
+        Assert.Equal(TriggerType.Energize, queue.Pending[0].Trigger);
+
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(
+                state, ability.ControllerId, ability.SourceDieId, _ => [target.Id],
+                Roller: new FixedRoller(DieStatus.Character, 3))));
+
+        Assert.Equal(1, target.Damage);
+        Assert.Equal(DieStatus.Character, cyclopsDie.Status); // rerolled itself
+        Assert.Equal(3, cyclopsDie.Level);
+    }
+
+    [Fact]
+    public void RogueStrengthAbsorptionEnergize_SetsTargetAttackToZero_ButOnlyUntilEndOfTurn()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.RogueStrengthAbsorption.Id]);
+        state.ActivePlayerId = "teamA";
+        state.CurrentStep = TurnStep.RollAndReroll;
+
+        var rogueDie = FindUnpurchased(state, "teamA", SampleCards.RogueStrengthAbsorption.Id);
+        rogueDie.Zone = Zone.ReservePool;
+        rogueDie.Status = DieStatus.Energy;
+        rogueDie.EnergyKind = EnergyKind.Generic;
+        rogueDie.EnergyAmount = 2;
+
+        var target = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        target.Zone = Zone.FieldZone;
+        target.Status = DieStatus.Character;
+        target.Level = 3; // PlaceholderLevels: 4A
+        var attackBefore = DieStats.EffectiveAttack(state, target);
+        Assert.NotEqual(0, attackBefore);
+
+        var queue = new AbilityQueue();
+        TurnEngine.Reroll(state, queue, new FixedRoller(DieStatus.Energy, 1), []);
+        Assert.Equal(1, queue.Count);
+        Assert.Equal(TriggerType.Energize, queue.Pending[0].Trigger);
+
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [target.Id])));
+
+        Assert.Equal(0, DieStats.EffectiveAttack(state, target));
+
+        state.CurrentStep = TurnStep.CleanUp;
+        TurnEngine.CleanUp(state, new FixedRoller(DieStatus.Energy, 1));
+
+        Assert.Equal(attackBefore, DieStats.EffectiveAttack(state, target));
+    }
+
+    [Fact]
+    public void MoiraIfItsReal_GetsPlusOneDefense_OnlyWhileAWolverineDieIsActive()
+    {
+        // ASM074 is a bulk-only "Wolverine" card (no AbilityDef, but a
+        // real Name) - all GrantsSelfStatBonusWhileNamedCardActive needs
+        // is a die whose card is named "Wolverine" active somewhere.
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.MoiraIfItsReal.Id, "ASM074"]);
+
+        var moiraDie = FindUnpurchased(state, "teamA", SampleCards.MoiraIfItsReal.Id);
+        moiraDie.Zone = Zone.FieldZone;
+        moiraDie.Status = DieStatus.Character;
+        moiraDie.Level = 1;
+        var baseDefense = DieStats.EffectiveDefense(state, moiraDie);
+
+        var wolverineDie = FindUnpurchased(state, "teamA", "ASM074");
+        wolverineDie.Zone = Zone.FieldZone;
+        wolverineDie.Status = DieStatus.Character;
+        wolverineDie.Level = 1;
+
+        Assert.Equal(baseDefense + 1, DieStats.EffectiveDefense(state, moiraDie));
+    }
+
+    [Fact]
+    public void FieldingMoira_GivesAllXMenDiceAnAttackBuff_ButNotOthers()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.MoiraIfItsReal.Id, SampleCards.GambitUnlessIGotSomeoneToPlayWith.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var xMenDie = FindUnpurchased(state, "teamA", SampleCards.GambitUnlessIGotSomeoneToPlayWith.Id);
+        xMenDie.Zone = Zone.FieldZone;
+        xMenDie.Status = DieStatus.Character;
+        xMenDie.Level = 1;
+        var xMenAttackBefore = DieStats.EffectiveAttack(state, xMenDie);
+
+        var nonXMenDie = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id); // no affiliation
+        nonXMenDie.Zone = Zone.FieldZone;
+        nonXMenDie.Status = DieStatus.Character;
+        nonXMenDie.Level = 1;
+        var nonXMenAttackBefore = DieStats.EffectiveAttack(state, nonXMenDie);
+
+        var moiraDie = FindUnpurchased(state, "teamA", SampleCards.MoiraIfItsReal.Id);
+        moiraDie.Zone = Zone.ReservePool;
+        moiraDie.Status = DieStatus.Character;
+        moiraDie.Level = 1; // fielding cost 0
+
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, moiraDie.Id, energyDieIdsToSpend: []);
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(
+                state, ability.ControllerId, ability.SourceDieId,
+                _ => throw new InvalidOperationException("MatchAll shouldn't ask for a choice"))));
+
+        Assert.Equal(xMenAttackBefore + 1, DieStats.EffectiveAttack(state, xMenDie));
+        Assert.Equal(nonXMenAttackBefore, DieStats.EffectiveAttack(state, nonXMenDie));
+    }
+
+    [Fact]
     public void UsingStarfireGlobalAbility_PrepsADieFromBag_IfYouPurchasedADieThisTurn()
     {
         var state = BuildTwoTeamGame();

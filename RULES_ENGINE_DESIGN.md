@@ -279,7 +279,20 @@ here rather than assuming which approach they'd want.
     Two OTHER "spin to an energy face" DPS cards (Magneto/Mystique) say
     "of your opponent's choice" - a real, separate "other player makes a
     choice" gap, same category as Ronan "No Mercy," deliberately left
-    for later. Also now real: `TargetSpec.RequiredAffiliations`
+    for later. Also now real: `CardDef.
+    GrantsSelfStatBonusWhileNamedCardActive` (the stat-bonus counterpart
+    to the existing keyword-grant version, closing a gap flagged in that
+    field's own remarks several updates back) and `SetStat` ("target
+    character die has 0A this turn" - a snapshot to an exact value,
+    stored as an ordinary `Modifier` computed once so it expires at Clean
+    Up for free) - Cyclops ("Defending the Phoenix", DPS065, pure
+    existing-primitive reuse), Rogue ("Strength Absorption", DPS151,
+    `SetStat`'s first user), and Moira ("If It's Real", DPS084, all
+    three of its abilities built at once: the stat-bonus-while-active
+    grant, a `WhenFielded` X-Men-wide buff combining `RequiredAffiliations`
+    + `MatchAll`, and a `WhenKOd` Prep) are all real now - see the
+    "GrantsSelfStatBonusWhileNamedCardActive, SetStat, and three more
+    DPS cards" status update. Also now real: `TargetSpec.RequiredAffiliations`
     ("target Brotherhood of Mutants/X-Men character die," matching ANY
     of a listed affiliation set) and `TargetSpec.MatchAll` ("deal 2
     damage to ALL X-Men and Brotherhood of Mutants character dice" /

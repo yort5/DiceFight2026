@@ -40150,43 +40150,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS065",
-    "name": "Cyclops",
-    "subtitle": "Defending the Phoenix",
-    "type": "Character",
-    "purchaseCost": 4,
-    "energyType": "Bolt",
-    "dieLimit": 3,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 4,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 5,
-        "defense": 3,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 6,
-        "defense": 4,
-        "burstStars": null
-      }
-    ],
-    "rawText": "Energize - Deal 1 damage to target character die and reroll this die.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS066",
     "name": "D\\'Ken",
     "subtitle": "Obsessed",
@@ -40703,43 +40666,6 @@
     "keywords": [],
     "affiliations": [
       "Villains"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS084",
-    "name": "Moira",
-    "subtitle": "If It\\'s Real",
-    "type": "Character",
-    "purchaseCost": 3,
-    "energyType": "Shield",
-    "dieLimit": 3,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 0,
-        "defense": 1,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 0,
-        "attack": 1,
-        "defense": 2,
-        "burstStars": 1
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 2,
-        "defense": 2,
-        "burstStars": null
-      }
-    ],
-    "rawText": "While Wolverine is active, Moira gets +1D. When fielded, your X-Men character dice get +1A until end of turn. When Moira is KO\\'d, Prep a die from your Used Pile.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
     ],
     "isImplemented": false,
     "set": "DPS",
@@ -42672,43 +42598,6 @@
     "affiliations": [
       "Brotherhood of Mutants",
       "Villains"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS151",
-    "name": "Rogue",
-    "subtitle": "Strength Absorption",
-    "type": "Character",
-    "purchaseCost": 4,
-    "energyType": "Mask",
-    "dieLimit": 1,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 2,
-        "defense": 3,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 4,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 5,
-        "defense": 6,
-        "burstStars": null
-      }
-    ],
-    "rawText": "Energize - Target character die has 0A this turn.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
     ],
     "isImplemented": false,
     "set": "DPS",

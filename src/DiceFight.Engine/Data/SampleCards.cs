@@ -60,6 +60,7 @@ public static class SampleCards
         IReadOnlyList<string>? affiliations = null,
         StaticTeamBonus? grantsStaticTeamBonus = null,
         ConditionalSelfKeywordGrant? grantsSelfKeywordWhileNamedCardActive = null,
+        ConditionalSelfStatBonus? grantsSelfStatBonusWhileNamedCardActive = null,
         bool isImplemented = true,
         string? set = null) => new()
     {
@@ -78,6 +79,7 @@ public static class SampleCards
         Affiliations = affiliations ?? [],
         GrantsStaticTeamBonus = grantsStaticTeamBonus,
         GrantsSelfKeywordWhileNamedCardActive = grantsSelfKeywordWhileNamedCardActive,
+        GrantsSelfStatBonusWhileNamedCardActive = grantsSelfStatBonusWhileNamedCardActive,
         IsImplemented = isImplemented,
         Set = set
     };
@@ -1435,6 +1437,75 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 6)
         ], set: "DPS");
 
+    // Cyclops, "Defending the Phoenix" - purely existing primitives:
+    // Energize firing a Sequence of a DealDamage and a Reroll of its own
+    // source die.
+    public static readonly CardDef CyclopsDefendingThePhoenix = Character(
+        "DPS065", "Cyclops", "Defending the Phoenix", dieLimit: 3,
+        "Energize - Deal 1 damage to target character die and reroll this die.",
+        purchaseCost: 4, energyType: EnergyType.Bolt,
+        affiliations: ["X-Men"],
+        keywords: [new KeywordInstance("Energize")],
+        abilities: [new AbilityDef(TriggerType.Energize, Cost: null,
+            Effect: new Sequence([
+                new DealDamage(1, TargetSpec.CharacterDie("target character die")),
+                new Reroll(TargetSpec.Self)
+            ]))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 3),
+            new CharacterFace(FieldingCost: 1, Attack: 6, Defense: 4)
+        ], set: "DPS");
+
+    // Rogue, "Strength Absorption" - the first card to use SetStat (new
+    // this pass): "has 0A this turn" is a snapshot to an exact value, not
+    // a delta.
+    public static readonly CardDef RogueStrengthAbsorption = Character(
+        "DPS151", "Rogue", "Strength Absorption", dieLimit: 1,
+        "Energize - Target character die has 0A this turn.",
+        purchaseCost: 4, energyType: EnergyType.Mask,
+        affiliations: ["X-Men"],
+        keywords: [new KeywordInstance("Energize")],
+        abilities: [new AbilityDef(TriggerType.Energize, Cost: null,
+            Effect: new SetStat(TargetSpec.CharacterDie("target character die"), Attack: 0, Defense: null))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 3),
+            new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 5),
+            new CharacterFace(FieldingCost: 2, Attack: 5, Defense: 6)
+        ], set: "DPS");
+
+    // Moira, "If It's Real" - three abilities, all buildable once
+    // CardDef.GrantsSelfStatBonusWhileNamedCardActive existed (new this
+    // pass - see its own remarks): the "while Wolverine active" self +1D
+    // uses it directly; the WhenFielded X-Men team-wide +1A composes two
+    // already-existing TargetSpec features (RequiredAffiliations +
+    // MatchAll, since "your X-Men character dice get +1A" has no target
+    // choice at all); the WhenKOd Prep is TargetSpec.AnyDie against the
+    // Used Pile, same shape Professor X's own Energize already
+    // established just with no affiliation restriction ("a die," not "an
+    // X-Men die").
+    public static readonly CardDef MoiraIfItsReal = Character(
+        "DPS084", "Moira", "If It's Real", dieLimit: 3,
+        "While Wolverine is active, Moira gets +1D. When fielded, your X-Men character dice get +1A until " +
+        "end of turn. When Moira is KO'd, Prep a die from your Used Pile.",
+        purchaseCost: 3, energyType: EnergyType.Shield,
+        affiliations: ["X-Men"],
+        grantsSelfStatBonusWhileNamedCardActive: new ConditionalSelfStatBonus("Wolverine", AttackDelta: 0, DefenseDelta: 1),
+        abilities: [
+            new AbilityDef(TriggerType.WhenFielded, Cost: null,
+                Effect: new ModifyStat(
+                    TargetSpec.CharacterDie(
+                        "your X-Men character dice", TargetOwnership.Own, requiredAffiliations: ["X-Men"], matchAll: true),
+                    AttackDelta: 1, DefenseDelta: null)),
+            new AbilityDef(TriggerType.WhenKOd, Cost: null,
+                Effect: new PrepDie(TargetSpec.AnyDie("a die from your Used Pile", TargetOwnership.Own, zones: [Zone.UsedPile])))
+        ],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 0, Defense: 1),
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 2, BurstStars: 1),
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 2)
+        ], set: "DPS");
+
     // Deathbird, "War of Kings" - the first card to use CantBlock (new
     // this pass): GameState.CantBlockThisTurn, the restriction mirror of
     // ForceBlock/MustBlockThisTurn - enforced by CombatEngine.
@@ -1857,7 +1928,8 @@ public static class SampleCards
             GambitUnlessIGotSomeoneToPlayWith, PsylockeAdvancedTelekineticCombatant, StormQueen,
             MagikSorceressOfLimbo, PsylockeTelepath, StormCloudCover,
             MasterMoldTargetingMutants, MasterMoldUntoldElectronicExpertise, MasterMoldInexplicableDurability,
-            PhoenixEternalFlame, MagikBetterThanBelasco, ProfessorXUncannyLeadership, IcemanIcyInterference
+            PhoenixEternalFlame, MagikBetterThanBelasco, ProfessorXUncannyLeadership, IcemanIcyInterference,
+            CyclopsDefendingThePhoenix, RogueStrengthAbsorption, MoiraIfItsReal
         ];
 
         // Hand-curated cards win on id collision - shouldn't happen in

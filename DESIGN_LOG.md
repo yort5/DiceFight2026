@@ -5074,3 +5074,55 @@ Re-ran `scripts/import_bulk_cards.py` (91 → 94 hand-curated).
 Per the user's own note mid-pass: committing each round as usual, but
 holding off on *pushing* until the whole DPS pass wraps up, so the
 Cloud Build deploy doesn't churn once per small batch.
+
+## Status update — GrantsSelfStatBonusWhileNamedCardActive, SetStat, and three more DPS cards
+
+Sixth batch this session. The first primitive here was already flagged
+as a known gap in `CardDef.GrantsSelfKeywordWhileNamedCardActive`'s own
+remarks from several updates back ("Mystique's own '+2A while Wolverine
+is active' is the same trigger condition but a stat bonus instead of a
+keyword grant... not built") - closing exactly that.
+
+**CardDef.GrantsSelfStatBonusWhileNamedCardActive** (+
+`ConditionalSelfStatBonus`) - the stat-bonus counterpart to the existing
+keyword-grant version, same "named card active anywhere on the board,
+either player's" check, wired into `DieStats.EffectiveAttack`/
+`EffectiveDefense` the same way `StaticTeamBonusFor`/`ExperienceBonus`/
+`LoyaltyBonus` already are.
+
+**SetStat(TargetSpec Target, int? Attack, int? Defense)** - "target
+character die has 0A this turn." A snapshot to an exact value, unlike
+`ModifyStat`'s relative delta - implemented as a computed one-time delta
+(target value minus the die's current `EffectiveAttack`/
+`EffectiveDefense`) stored as an ordinary `Modifier`, so it gets the
+same Clean-Up expiry as everything else in `AppliedModifiers` for free
+rather than needing its own bookkeeping.
+
+**Three cards**:
+- Cyclops, "Defending the Phoenix" (DPS065) - purely existing
+  primitives (Energize + a `Sequence` of `DealDamage` and `Reroll(Self)`).
+- Rogue, "Strength Absorption" (DPS151) - `SetStat`'s first user.
+- Moira, "If It's Real" (DPS084) - three abilities, all buildable once
+  the two primitives above existed: the "while Wolverine active" +1D
+  uses `GrantsSelfStatBonusWhileNamedCardActive` directly; the
+  `WhenFielded` "your X-Men character dice get +1A" composes two
+  already-existing `TargetSpec` features (`RequiredAffiliations` +
+  `MatchAll` - no target choice at all in that clause); the `WhenKOd`
+  "Prep a die from your Used Pile" is `TargetSpec.AnyDie` against the
+  Used Pile, same shape Professor X's own Energize already established
+  minus the affiliation restriction ("a die," not "an X-Men die").
+
+Tests exercise the real path throughout: Cyclops and Rogue both go
+through `TurnEngine.Reroll`'s real Energize gate (matching Storm
+"Queen"'s own pattern); Rogue's test additionally proves the "0A" is
+turn-scoped, not permanent, by running a real `TurnEngine.CleanUp` and
+checking the attack value is restored; Moira's stat-bonus test toggles
+a bulk-only "Wolverine"-named card (no `AbilityDef` needed - only the
+`Name` match matters) active/inactive and checks `EffectiveDefense`
+both ways; Moira's `WhenFielded` test passes a resolver that throws if
+ever asked to choose, proving `MatchAll` really means no choice, while
+still only buffing the X-Men-affiliated die and leaving the other alone.
+
+Verified: `dotnet build`, `dotnet test` (361/361 - 4 new cases), and
+`npm run build` all clean. Re-ran `scripts/import_bulk_cards.py`
+(94 → 97 hand-curated).

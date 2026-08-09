@@ -64,11 +64,19 @@ public sealed record CardDef
     // live. Null for every card that doesn't have one - deliberately
     // narrow (exactly this one shape: grant ONE keyword to yourself
     // while ONE named card is active), not a general conditional-
-    // ability framework; Mystique's own "+2A while Wolverine is active"
-    // is the same trigger condition but a stat bonus instead of a
-    // keyword grant, not covered by this field, and not built (her
-    // Global has its own separate, larger gap - see her own remarks).
+    // ability framework; see GrantsSelfStatBonusWhileNamedCardActive
+    // just below for the stat-bonus counterpart this comment used to
+    // flag as unbuilt.
     public ConditionalSelfKeywordGrant? GrantsSelfKeywordWhileNamedCardActive { get; init; }
+
+    // Moira ("If It's Real", DPS084): "While Wolverine is active, Moira
+    // gets +1D." Mystique ("Relentless", DPS045)'s own "+2A while
+    // Wolverine is active" is the same shape - same condition as
+    // GrantsSelfKeywordWhileNamedCardActive just above, a stat bonus
+    // instead of a keyword grant. See DieStats.EffectiveAttack/
+    // EffectiveDefense for how this is actually applied live. Null for
+    // every card that doesn't have one.
+    public ConditionalSelfStatBonus? GrantsSelfStatBonusWhileNamedCardActive { get; init; }
 
     // Whether this card's FULL printed text is correctly modeled -
     // scripted via AbilityDef, built entirely into the engine (a pure
@@ -103,6 +111,9 @@ public sealed record StaticTeamBonus(int AttackDelta, int DefenseDelta);
 
 // See CardDef.GrantsSelfKeywordWhileNamedCardActive's remarks.
 public sealed record ConditionalSelfKeywordGrant(string WhileCardNamed, string Keyword);
+
+// See CardDef.GrantsSelfStatBonusWhileNamedCardActive's remarks.
+public sealed record ConditionalSelfStatBonus(string WhileCardNamed, int AttackDelta, int DefenseDelta);
 
 // Rule Appendix 1 - keyword abilities are a finite, engine-known set
 // implemented as plugins (see design doc); Params covers e.g. Range X,

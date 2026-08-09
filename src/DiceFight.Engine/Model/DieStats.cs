@@ -64,6 +64,24 @@ public static class DieStats
             otherCard.Name == grant.WhileCardNamed);
     }
 
+    // See CardDef.GrantsSelfStatBonusWhileNamedCardActive's remarks - the
+    // stat-bonus counterpart to HasConditionalSelfGrant just above, same
+    // "named card active anywhere on the board, either player's" check.
+    private static ConditionalSelfStatBonus? SelfStatBonusWhileNamedCardActive(GameState state, DieInstance die)
+    {
+        var cardId = die.VirtualCardId ?? die.CardId;
+        if (cardId is null || !state.CardCatalog.TryGetValue(cardId, out var card)) return null;
+        var grant = card.GrantsSelfStatBonusWhileNamedCardActive;
+        if (grant is null) return null;
+
+        var active = state.Dice.Any(d =>
+            d.Zone is Zone.FieldZone or Zone.AttackZone &&
+            (d.VirtualCardId ?? d.CardId) is { } otherCardId &&
+            state.CardCatalog.TryGetValue(otherCardId, out var otherCard) &&
+            otherCard.Name == grant.WhileCardNamed);
+        return active ? grant : null;
+    }
+
     // Whether this die's own card carries the named affiliation (e.g.
     // "Monster" for keyword Experience's own earning condition). Printed
     // only - nothing grants an affiliation the way Darkseid grants Swarm.
@@ -248,6 +266,7 @@ public static class DieStats
         total += StaticTeamBonusFor(state, die).AttackDelta;
         total += ExperienceBonus(state, die);
         total += LoyaltyBonus(state, die);
+        total += SelfStatBonusWhileNamedCardActive(state, die)?.AttackDelta ?? 0;
         return Math.Max(0, total);
     }
 
@@ -259,6 +278,7 @@ public static class DieStats
         total += StaticTeamBonusFor(state, die).DefenseDelta;
         total += ExperienceBonus(state, die);
         total += LoyaltyBonus(state, die);
+        total += SelfStatBonusWhileNamedCardActive(state, die)?.DefenseDelta ?? 0;
         return Math.Max(0, total);
     }
 
