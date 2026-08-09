@@ -4758,3 +4758,83 @@ updates: the condition mechanism, Basic Action dice's own face model,
 and now the one card that needed a genuinely new choice primitive on
 top of both. Take Cover, Radicalization, and Explosion remain open,
 each on their own separate, unrelated gap.
+
+## Status update — CantBlock, and three more DPS cards
+
+Picking the next batch after the burst-symbol thread closed. Scanned the
+remaining unauthored DPS cards for text matching already-built primitives
+first, per the established rhythm, rather than reaching for a new
+mechanism speculatively.
+
+**New primitive**: `CantBlock(TargetSpec)` - "target character die cannot
+block this turn," the restriction mirror of the existing `ForceBlock`/
+`GameState.MustBlockThisTurn` pair. Same shape throughout: `GameState.
+CantBlockThisTurn` (a turn-scoped `HashSet<string>`, cleared in `TurnEngine.
+CleanUp` alongside `MustBlockThisTurn`/`MustAttackThisTurn`), populated by
+`EffectInterpreter`'s `CantBlock` case, enforced by `CombatEngine.
+DeclareBlockers`. Enforcement itself is one clause simpler than
+`MustBlockThisTurn`'s: a forced blocker needs an "omitted but should have
+been present" check run *before* the main per-blocker loop (rule text's
+"if able" framing - a die that's still legally eligible must appear in the
+list). A barred blocker needs no such pre-check - it just fails the same
+per-blocker eligibility test every other disqualifying condition
+(wrong controller, wrong zone, wrong status) already runs through, so it
+was a one-line addition (`|| state.CantBlockThisTurn.Contains(die.Id)`) to
+that existing check rather than a parallel code path.
+
+**Three cards, all real stats from the reference spreadsheet**:
+- Deathbird, "War of Kings" (DPS109) - `WhenFielded` + `CantBlock`,
+  CantBlock's first real user.
+- Deadpool, "More than a Chump Blocker" (DPS068) - `WhenAttacks` +
+  `DealDamage(1, TargetSpec.Player(..., Opposing))`, no new primitive -
+  same shape Superman "Kal-El"'s Retaliation effect already established,
+  just off a different trigger. Caught one test-writing gotcha worth
+  flagging for next time: `TargetSpec.Player` still runs through the
+  normal target-resolution path even though there's only ever one legal
+  candidate (the opponent) - a test's resolver lambda has to actually
+  supply that player's id (`_ => [state.PlayerTwo.Id]`), the same as any
+  other target, or `Resolve` throws "needs 1 target(s) but only 0 were
+  chosen." Not a bug, just non-obvious from the card text alone.
+- Ronan the Accuser, "No Exceptions" (DPS130) - `WhenFielded` +
+  `Sequence([LoseLife(3), LoseLife(3, Opposing)])`. "Each player loses 3
+  life" turned out not to need an "each player" mechanism at all, since
+  both amounts are fixed and neither side makes a choice - just two
+  `LoseLife` calls back to back, reusing the exact primitive Ronan's own
+  "Treason!" printing (DPS050) already established for the `Opposing`
+  half of it.
+
+All three ability-firing tests go through the real path (`TurnEngine.
+Purchase`/`Field` or `CombatEngine.DeclareAttackers`, then `AbilityQueue.
+Drain` into `EffectInterpreter.Execute`), not a manually-enqueued trigger -
+and Deathbird's specifically re-proves the gate, not just the effect:
+it asserts `CombatEngine.DeclareBlockers` itself throws when the
+restricted die is offered as a blocker (and that declaring no blockers at
+all is still legal - this isn't a "must block" in reverse), the same
+"test the gate" shape the Kitty Pryde/Phoenix Energize/Awaken bug from
+several updates back established as the bar for any keyword-gated or
+turn-restriction-gated trigger.
+
+**Explicitly not pursued this pass, real gaps found while scoping
+candidates, worth remembering before the next batch**:
+- A genuinely common DPS pattern - "reroll target die; each that doesn't
+  land on a character face goes to the Used Pile" - has no primitive
+  anywhere in the engine yet (Gambit DPS112, Psylocke DPS150, Storm
+  DPS132's "Queen" printing all need it). Worth building as its own
+  primitive next, not a one-off per card.
+- Storm's own "Cloud Cover" (DPS092, "target character die with 3A or
+  less can't block this turn") would have been a fourth immediate
+  CantBlock user, but needs a stat-threshold `TargetSpec` filter that
+  doesn't exist yet (same "no affiliation- or level-restricted filter"
+  gap the bulk-card-catalog memory already flagged for affiliation -
+  this is the same shape, just keyed on a stat value instead).
+- "Each player KOs a character die they control" (Ronan's other
+  printing, DPS090 "No Mercy") looks superficially like the "each
+  player" shape above but isn't: each player makes their OWN choice of
+  which die to KO, and nothing in the ability DSL threads an opposing
+  player's own choice through an effect the ability's controller
+  triggered. A real, separate gap from anything fixed-amount like
+  Ronan's "No Exceptions" side of it.
+
+Verified: `dotnet build`, `dotnet test` (342/342 - 3 new cases), and
+`npm run build` all clean. Re-ran `scripts/import_bulk_cards.py`
+(3611 rows, 78 → 81 hand-curated).

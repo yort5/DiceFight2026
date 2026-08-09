@@ -1090,6 +1090,7 @@ public static class TurnEngine
         // Lilandra's "purchased a character die this turn" check).
         state.MustBlockThisTurn.Clear();
         state.MustAttackThisTurn.Clear();
+        state.CantBlockThisTurn.Clear();
         var cleaningPlayer = state.GetPlayer(activeId);
         cleaningPlayer.PurchasedDieThisTurn = false;
         cleaningPlayer.PurchasedCharacterDieThisTurn = false;

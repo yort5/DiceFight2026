@@ -40336,43 +40336,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS068",
-    "name": "Deadpool",
-    "subtitle": "More than a Chump Blocker",
-    "type": "Character",
-    "purchaseCost": 4,
-    "energyType": "Fist",
-    "dieLimit": 3,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 2,
-        "defense": 4,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 0,
-        "attack": 2,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 7,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When Deadpool attacks, he deals your opponent 1 damage.",
-    "keywords": [],
-    "affiliations": [
-      "Deadpool Affiliation"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS069",
     "name": "Deathbird",
     "subtitle": "Usurper",
@@ -41743,44 +41706,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS109",
-    "name": "Deathbird",
-    "subtitle": "War of Kings",
-    "type": "Character",
-    "purchaseCost": 3,
-    "energyType": "Shield",
-    "dieLimit": 2,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 1,
-        "defense": 1,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 0,
-        "attack": 1,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 4,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When fielded, target character die cannot block this turn.",
-    "keywords": [],
-    "affiliations": [
-      "Villains",
-      "Shi\\'ar"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS110",
     "name": "Emma Frost",
     "subtitle": "Finesse",
@@ -42524,41 +42449,6 @@
     "affiliations": [
       "X-Men"
     ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS130",
-    "name": "Ronan the Accuser",
-    "subtitle": "No Exceptions",
-    "type": "Character",
-    "purchaseCost": 6,
-    "energyType": "Bolt",
-    "dieLimit": 2,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 5,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 6,
-        "defense": 7,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 8,
-        "defense": 8,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When fielded, each player loses 3 life.",
-    "keywords": [],
-    "affiliations": [],
     "isImplemented": false,
     "set": "DPS",
     "abilityTemplate": null

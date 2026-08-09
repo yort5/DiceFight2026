@@ -133,6 +133,13 @@ public sealed record ForceBlock(TargetSpec Target) : EffectNode;
 // the Declare Attackers side of ForceBlock above, same shape (GameState.
 // MustAttackThisTurn, enforced by CombatEngine.DeclareAttackers).
 public sealed record ForceAttack(TargetSpec Target) : EffectNode;
+// Deathbird's "War of Kings" (DPS109) - "target character die cannot
+// block this turn" - the restriction mirror of ForceBlock above (GameState.
+// CantBlockThisTurn, enforced by CombatEngine.DeclareBlockers rejecting the
+// die as an eligible blocker at all, cleared at Clean Up). Unlike
+// ForceBlock, there's no "if able" framing to honor - a die that can't
+// block simply never appears in a legal blockerDieIds list.
+public sealed record CantBlock(TargetSpec Target) : EffectNode;
 // Keyword Call Out ("when this Character die attacks, target character
 // die is the only character die that may block this character die") -
 // records the choice in GameState.CallOutTargets, keyed by the attacking

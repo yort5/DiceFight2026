@@ -1151,6 +1151,63 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 4)
         ], set: "DPS");
 
+    // Deathbird, "War of Kings" - the first card to use CantBlock (new
+    // this pass): GameState.CantBlockThisTurn, the restriction mirror of
+    // ForceBlock/MustBlockThisTurn - enforced by CombatEngine.
+    // DeclareBlockers rejecting the die as an eligible blocker outright,
+    // not by removing it from a legal-blockers list a caller would still
+    // have to know to consult.
+    public static readonly CardDef DeathbirdWarOfKings = Character(
+        "DPS109", "Deathbird", "War of Kings", dieLimit: 2,
+        "When fielded, target character die cannot block this turn.",
+        purchaseCost: 3, energyType: EnergyType.Shield,
+        affiliations: ["Villains", "Shi'ar"],
+        abilities: [new AbilityDef(TriggerType.WhenFielded, Cost: null,
+            Effect: new CantBlock(TargetSpec.CharacterDie("target character die")))],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 1),
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 4)
+        ], set: "DPS");
+
+    // Deadpool, "More than a Chump Blocker" - a fixed (not targeted)
+    // WhenAttacks trigger dealing damage straight to the opponent, same
+    // shape Superman "Kal-El"'s Retaliation effect already uses for its
+    // own DealDamage(..., TargetSpec.Player(...)) call, just off a
+    // different trigger.
+    public static readonly CardDef DeadpoolMoreThanAChumpBlocker = Character(
+        "DPS068", "Deadpool", "More than a Chump Blocker", dieLimit: 3,
+        "When Deadpool attacks, he deals your opponent 1 damage.",
+        purchaseCost: 4, energyType: EnergyType.Fist,
+        affiliations: ["Deadpool Affiliation"],
+        abilities: [new AbilityDef(TriggerType.WhenAttacks, Cost: null,
+            Effect: new DealDamage(1, TargetSpec.Player("your opponent", TargetOwnership.Opposing)))],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 4),
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 5),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 7)
+        ], set: "DPS");
+
+    // Ronan the Accuser, "No Exceptions" - "each player loses 3 life" is
+    // just two LoseLife calls (Own then Opposing), same primitive Ronan's
+    // own "Treason!" printing (DPS050) already established for one side
+    // of it - no new mechanism needed for "each player" here since both
+    // amounts and both sides are fixed, unlike a real per-player choice
+    // (e.g. "No Mercy"'s "each player KOs a character die they control",
+    // left unauthored - that needs the opposing player to make their own
+    // choice, which nothing in the ability DSL threads through yet).
+    public static readonly CardDef RonanTheAccuserNoExceptions = Character(
+        "DPS130", "Ronan the Accuser", "No Exceptions", dieLimit: 2,
+        "When fielded, each player loses 3 life.",
+        purchaseCost: 6, energyType: EnergyType.Bolt,
+        abilities: [new AbilityDef(TriggerType.WhenFielded, Cost: null,
+            Effect: new Sequence([new LoseLife(3), new LoseLife(3, TargetOwnership.Opposing)]))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 5),
+            new CharacterFace(FieldingCost: 1, Attack: 6, Defense: 7),
+            new CharacterFace(FieldingCost: 2, Attack: 8, Defense: 8)
+        ], set: "DPS");
+
     // Jean Grey, "Peaceful Coexistence" - the first Loyalty card (see
     // GameState.LoyaltyCounters/DieStats.LoyaltyBonus and TriggerType.
     // EndOfYourTurn's own remarks for the new plumbing this needed).
@@ -1512,7 +1569,7 @@ public static class SampleCards
             AngelWingsOverTheWorld, CableIllDoThisAllDay, ColossusSkilledPainter, ToadSecondaryMutation,
             LilandraPolitician, VulcanRulerOfTheImperium, PsylockeAdventurer,
             BlobMGHDependent, SupremeIntelligencePsionicCollective, ToadLookingForComradery, Rally,
-            GambitAceInTheHole
+            GambitAceInTheHole, DeathbirdWarOfKings, DeadpoolMoreThanAChumpBlocker, RonanTheAccuserNoExceptions
         ];
 
         // Hand-curated cards win on id collision - shouldn't happen in

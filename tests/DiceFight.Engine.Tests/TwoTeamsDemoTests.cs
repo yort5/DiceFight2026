@@ -347,6 +347,106 @@ public class TwoTeamsDemoTests
     }
 
     [Fact]
+    public void FieldingDeathbird_TargetedDieCantBlockThisTurn_EnforcedAtDeclareBlockers()
+    {
+        // The restriction mirror of the InvisibleWoman test above: CantBlock
+        // (new this pass) instead of ForceBlock - real firing path through
+        // TurnEngine.Field, real enforcement through CombatEngine.
+        // DeclareBlockers actually rejecting the die as a blocker, not just
+        // GameState.CantBlockThisTurn getting populated.
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.DeathbirdWarOfKings.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var opposingTarget = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        opposingTarget.Zone = Zone.FieldZone;
+        opposingTarget.Status = DieStatus.Character;
+        opposingTarget.Level = 1;
+
+        var deathbirdDie = FindUnpurchased(state, "teamA", SampleCards.DeathbirdWarOfKings.Id);
+        var purchaseEnergy = GiveWildEnergy(state, "teamA", SampleCards.DeathbirdWarOfKings.PurchaseCost);
+        TurnEngine.Purchase(state, deathbirdDie.Id, purchaseEnergy.Select(d => d.Id).ToList());
+        deathbirdDie.Zone = Zone.ReservePool;
+        deathbirdDie.Status = DieStatus.Character;
+        deathbirdDie.Level = 1; // fielding cost 0 at level 1
+
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, deathbirdDie.Id, energyDieIdsToSpend: []);
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [opposingTarget.Id])));
+
+        Assert.Contains(opposingTarget.Id, state.CantBlockThisTurn);
+
+        // What's attacking doesn't matter for this test - a bare Sidekick
+        // stands in so Declare Attackers has something legal to work with.
+        var attacker = state.DiceIn("teamA", Zone.Bag).First();
+        attacker.Zone = Zone.FieldZone;
+        attacker.Status = DieStatus.SidekickCharacter;
+        attacker.Level = 1;
+
+        state.CurrentStep = TurnStep.Attack;
+        state.AttackSubStep = AttackSubStep.DeclareAttackers;
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            CombatEngine.DeclareBlockers(state, new CombatAssignment(), blockerDieIds: [opposingTarget.Id]));
+        Assert.Contains("not an eligible blocker", ex.Message);
+
+        // Not a "must block" in reverse - declaring no blockers at all
+        // (the die simply sitting out) is perfectly legal.
+        CombatEngine.DeclareBlockers(state, new CombatAssignment(), blockerDieIds: []);
+    }
+
+    [Fact]
+    public void DeadpoolAttacking_DealsDamageStraightToOpponent()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.DeadpoolMoreThanAChumpBlocker.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var deadpoolDie = FindUnpurchased(state, "teamA", SampleCards.DeadpoolMoreThanAChumpBlocker.Id);
+        deadpoolDie.Zone = Zone.FieldZone;
+        deadpoolDie.Status = DieStatus.Character;
+        deadpoolDie.Level = 1;
+
+        var opponentLifeBefore = state.PlayerTwo.Life;
+
+        state.CurrentStep = TurnStep.Attack;
+        state.AttackSubStep = AttackSubStep.DeclareAttackers;
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [deadpoolDie.Id]);
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [state.PlayerTwo.Id])));
+
+        Assert.Equal(opponentLifeBefore - 1, state.PlayerTwo.Life);
+    }
+
+    [Fact]
+    public void FieldingRonanTheAccuser_BothPlayersLoseLife()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.RonanTheAccuserNoExceptions.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var ronanDie = FindUnpurchased(state, "teamA", SampleCards.RonanTheAccuserNoExceptions.Id);
+        var purchaseEnergy = GiveWildEnergy(state, "teamA", SampleCards.RonanTheAccuserNoExceptions.PurchaseCost);
+        TurnEngine.Purchase(state, ronanDie.Id, purchaseEnergy.Select(d => d.Id).ToList());
+        ronanDie.Zone = Zone.ReservePool;
+        ronanDie.Status = DieStatus.Character;
+        ronanDie.Level = 2; // fielding cost 1 at level 1; skip straight to level 2's own 1-cost face
+
+        var fieldEnergy = GiveWildEnergy(state, "teamA", 1);
+        var controllerLifeBefore = state.PlayerOne.Life;
+        var opponentLifeBefore = state.PlayerTwo.Life;
+
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, ronanDie.Id, energyDieIdsToSpend: [fieldEnergy[0].Id]);
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [])));
+
+        Assert.Equal(controllerLifeBefore - 3, state.PlayerOne.Life);
+        Assert.Equal(opponentLifeBefore - 3, state.PlayerTwo.Life);
+    }
+
+    [Fact]
     public void UsingStarfireGlobalAbility_PrepsADieFromBag_IfYouPurchasedADieThisTurn()
     {
         var state = BuildTwoTeamGame();

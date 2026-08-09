@@ -39,6 +39,12 @@ public sealed class GameState
     // Attackers/Blockers.
     public HashSet<string> MustAttackThisTurn { get; } = [];
 
+    // Die ids barred from blocking this turn (e.g. Deathbird's "War of
+    // Kings", DPS109) - the restriction mirror of MustBlockThisTurn,
+    // enforced by CombatEngine.DeclareBlockers rejecting the die as an
+    // eligible blocker at all; reset in CleanUp.
+    public HashSet<string> CantBlockThisTurn { get; } = [];
+
     // Keyword Deadly - die ids engaged (rule 2.7.2.3) with a Deadly die
     // this combat; recorded by CombatEngine.DeclareBlockers at the
     // moment of engagement (not at combat damage - rule Appendix 1

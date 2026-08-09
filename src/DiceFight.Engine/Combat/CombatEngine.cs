@@ -183,7 +183,8 @@ public static class CombatEngine
             var die = FindDie(state, id);
             // Same Continuous exclusion as DeclareAttackers above.
             if (die.ControllerId != inactiveId || die.Zone != Zone.FieldZone ||
-                die.Status is not (DieStatus.Character or DieStatus.SidekickCharacter))
+                die.Status is not (DieStatus.Character or DieStatus.SidekickCharacter) ||
+                state.CantBlockThisTurn.Contains(die.Id))
                 throw new InvalidOperationException($"Die {id} is not an eligible blocker.");
             die.Zone = Zone.AttackZone;
         }

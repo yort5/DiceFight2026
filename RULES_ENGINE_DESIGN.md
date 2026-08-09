@@ -222,6 +222,23 @@ here rather than assuming which approach they'd want.
     are both real. Still open: Take Cover/Radicalization/Explosion each
     have their own unrelated blocking gap (mass-apply-to-all-your-dice;
     a temporary affiliation grant; an AoE-to-everyone-plus-mana-sink-loop).
+    Also now real: `CantBlock` (the restriction mirror of `ForceBlock`/
+    `MustBlockThisTurn`, enforced by `CombatEngine.DeclareBlockers`
+    rejecting the die as an eligible blocker outright) with Deathbird
+    ("War of Kings", DPS109) as its first card, plus Deadpool ("More than
+    a Chump Blocker", DPS068 - `WhenAttacks` dealing damage straight to
+    the opponent, no new primitive) and Ronan the Accuser ("No
+    Exceptions", DPS130 - "each player loses 3" is just two `LoseLife`
+    calls, not a new mechanism) - see the "CantBlock, and three more DPS
+    cards" status update. Real gaps found scoping the next batch, not yet
+    built: a "reroll; each die that doesn't land on a character face goes
+    to the Used Pile" primitive (blocks Gambit DPS112, Psylocke DPS150,
+    Storm "Queen" DPS132 - a recurring pattern, not one-off), a
+    stat-threshold `TargetSpec` filter (blocks Storm "Cloud Cover"
+    DPS092's own CantBlock use), and "each player makes their own choice"
+    threaded through an ability the opponent didn't trigger (blocks Ronan
+    "No Mercy" DPS090's KO side, distinct from "No Exceptions"'s fixed
+    amounts).
 
 ## Implemented keywords
 
