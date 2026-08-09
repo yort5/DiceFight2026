@@ -5010,3 +5010,67 @@ dice that actually match.
 Verified: `dotnet build`, `dotnet test` (353/353 - 4 new cases), and
 `npm run build` all clean. Re-ran `scripts/import_bulk_cards.py`
 (87 → 91 hand-curated).
+
+## Status update — SpinToEnergyFace, TargetSpec.RequiredLevel, and three more DPS cards
+
+Fifth batch this session. Checked the comprehensive rules PDF again
+before assuming a default: rule 3.7.5 treats "spin to an energy face" as
+its own distinct thing from a Character die's level-delta Spin, which is
+why this needed a new node rather than reusing `Spin`.
+
+**SpinToEnergyFace(TargetSpec Target, int Amount = 1)** - "spin [a/
+target] die to its single/an energy face." Reuses the exact
+single-vs-double energy-face formula `PlaceholderDiceRoller` already
+uses for a natural Character-die roll (`EnergyKind.Specific`,
+`ProvidedEnergyType` from the target's own card - Dice Masters energy
+faces are always the card's own printed type) rather than inventing a
+second one. `Amount` defaults to 1 - Professor X's own text says
+"single" explicitly, and Iceman's just says "an energy face" with no
+double/opponent's-choice language, so 1 is the simplest reading rather
+than a real ambiguity worth modeling further. Two OTHER "spin to an
+energy face" DPS cards (Magneto "Master of Magnetism"/DPS121, Mystique
+"She Walks Among Us"/DPS149) explicitly say "of your opponent's choice"
+- a real, separate "the other player makes a choice mid-ability" gap
+(same category as Ronan "No Mercy"'s KO side, still open), deliberately
+not conflated with this primitive.
+
+**TargetSpec.RequiredLevel** - "target opposing level 1 character die"
+(Iceman). The level-restricted filter counterpart to
+`RequiredAffiliations`, both flagged together as a known gap several
+updates back.
+
+**Three cards**:
+- Magik, "Better than Belasco" (DPS080) - purely Awaken + `DrawDice`,
+  the same shape Kitty Pryde/Black Panther already established, no new
+  primitive needed.
+- Professor X, "Uncanny Leadership" (DPS127) - `SpinToEnergyFace`'s
+  first user (`WhenFielded`, targeting "an opposing die" generically via
+  `TargetSpec.AnyDie` since the text says "die," not "character die")
+  plus an `Energize` ability moving an X-Men die from the Used Pile to
+  the Prep Area. Hit a real modeling gap while testing that half: a die
+  sitting in the Used Pile is always `DieStatus.Unrolled` (rule 1.6.8 -
+  "unrolled dice" are never considered Character dice), so `TargetSpec.
+  CharacterDie`'s `CharacterDiceOnly` filter can never match anything
+  there - `TargetSpec.AnyDie` needed a `requiredAffiliations` parameter
+  added to reach a specific-card, Used-Pile-sitting target by
+  affiliation instead.
+- Iceman, "Icy Interference" (DPS034) - `SpinToEnergyFace`'s second
+  user, combined with `RequiredLevel`.
+
+Tests exercise the real path throughout: Magik's own test goes through
+`EffectInterpreter`'s real `Spin` case (which calls `TurnEngine.
+CheckAwaken`, itself checking `DieStats.HasKeyword`) rather than a
+manually-enqueued Awaken trigger, matching the established "test the
+gate" bar for keyword-gated triggers; Professor X's Energize test
+mirrors Storm "Queen"'s own real-gate pattern; Iceman's test proves
+`RequiredLevel` is enforced by asserting a level-2 choice throws while a
+level-1 one succeeds.
+
+Verified: `dotnet build`, `dotnet test` (357/357 - 4 new cases, one
+real bug caught by a test failing rather than assumed correct - see the
+CharacterDiceOnly/Used-Pile gap above), and `npm run build` all clean.
+Re-ran `scripts/import_bulk_cards.py` (91 → 94 hand-curated).
+
+Per the user's own note mid-pass: committing each round as usual, but
+holding off on *pushing* until the whole DPS pass wraps up, so the
+Cloud Build deploy doesn't churn once per small batch.

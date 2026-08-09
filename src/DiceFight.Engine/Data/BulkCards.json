@@ -39521,43 +39521,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS034",
-    "name": "Iceman",
-    "subtitle": "Icy Interference",
-    "type": "Character",
-    "purchaseCost": 4,
-    "energyType": "Bolt",
-    "dieLimit": 4,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 2,
-        "defense": 4,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 6,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 4,
-        "defense": 6,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When Iceman attacks, spin target opposing level 1 character die to an energy face.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS036",
     "name": "Jubilee",
     "subtitle": "Rebellious Nature",
@@ -40666,43 +40629,6 @@
     "keywords": [],
     "affiliations": [
       "Shi\\'ar"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS080",
-    "name": "Magik",
-    "subtitle": "Better than Belasco",
-    "type": "Character",
-    "purchaseCost": 4,
-    "energyType": "Mask",
-    "dieLimit": 3,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 1,
-        "defense": 4,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 0,
-        "attack": 1,
-        "defense": 6,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 2,
-        "defense": 7,
-        "burstStars": null
-      }
-    ],
-    "rawText": "Awaken Roll a die from your bag.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
     ],
     "isImplemented": false,
     "set": "DPS",
@@ -42037,43 +41963,6 @@
     "affiliations": [
       "X-Men",
       "Brotherhood of Mutants"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS127",
-    "name": "Professor X",
-    "subtitle": "Uncanny Leadership",
-    "type": "Character",
-    "purchaseCost": 6,
-    "energyType": "Mask",
-    "dieLimit": 2,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 1,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 1,
-        "defense": 7,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 3,
-        "attack": 1,
-        "defense": 9,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When fielded, spin an opposing die to it\\'s single energy face. Energize - Move an X-Men die from your Used Pile to your Prep Area.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
     ],
     "isImplemented": false,
     "set": "DPS",

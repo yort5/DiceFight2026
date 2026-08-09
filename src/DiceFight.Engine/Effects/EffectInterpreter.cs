@@ -74,6 +74,7 @@ public static class EffectInterpreter
             case Reroll n: if (!n.Target.IsSelf) yield return n.Target; break;
             case RerollAndMoveUnlessCharacter n: if (!n.Target.IsSelf) yield return n.Target; break;
             case Spin n: if (!n.Target.IsSelf) yield return n.Target; break;
+            case SpinToEnergyFace n: if (!n.Target.IsSelf) yield return n.Target; break;
             case PrepDie n: if (!n.Source.IsSelf) yield return n.Source; break;
             case FieldDie n: if (!n.Target.IsSelf) yield return n.Target; break;
             case GrantKeyword n: if (!n.Target.IsSelf) yield return n.Target; break;
@@ -206,6 +207,24 @@ public static class EffectInterpreter
                     // point in TurnEngine.UseActionDie.
                     if (ctx.Queue is not null)
                         TurnEngine.CheckAwaken(ctx.State, ctx.Queue, die, actualDelta);
+                }
+                break;
+
+            case SpinToEnergyFace spinToEnergy:
+                foreach (var id in Resolve(ctx, spinToEnergy.Target, cache))
+                {
+                    var die = FindDie(ctx, id);
+                    var cardId = die.VirtualCardId ?? die.CardId;
+                    var energyType = cardId is not null && ctx.State.CardCatalog.TryGetValue(cardId, out var spunCard)
+                        ? spunCard.EnergyTypes.FirstOrDefault()
+                        : (EnergyType?)null;
+
+                    die.Status = DieStatus.Energy;
+                    die.Level = 0;
+                    die.EnergyKind = energyType is not null ? EnergyKind.Specific : EnergyKind.Generic;
+                    die.ProvidedEnergyType = energyType;
+                    die.EnergyAmount = spinToEnergy.Amount;
+                    die.BurstStars = null;
                 }
                 break;
 

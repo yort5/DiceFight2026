@@ -45,6 +45,9 @@ public static class LegalTargets
             });
         }
 
+        if (spec.RequiredLevel is { } requiredLevel)
+            candidates = candidates.Where(d => d.Level == requiredLevel);
+
         if (spec.SidekicksOnly)
             candidates = candidates.Where(d => DieStats.CountsAsSidekick(state, d));
 

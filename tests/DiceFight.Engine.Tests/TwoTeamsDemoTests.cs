@@ -806,6 +806,137 @@ public class TwoTeamsDemoTests
     }
 
     [Fact]
+    public void MagikBetterThanBelasco_AwakenFiresOffRealSpinUp_RollsADieFromBag()
+    {
+        // Same "test the gate, not just the effect" bar as every other
+        // keyword-gated trigger this session - EffectInterpreter's own
+        // Spin case is the real path that calls TurnEngine.CheckAwaken,
+        // which itself checks DieStats.HasKeyword, so this actually
+        // proves the Awaken KeywordInstance is wired, not just the
+        // AbilityDef's effect.
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.MagikBetterThanBelasco.Id]);
+        var magikDie = FindUnpurchased(state, "teamA", SampleCards.MagikBetterThanBelasco.Id);
+        magikDie.Zone = Zone.FieldZone;
+        magikDie.Status = DieStatus.Character;
+        magikDie.Level = 1;
+
+        var queue = new AbilityQueue();
+        EffectInterpreter.Execute(
+            new Spin(TargetSpec.Self, +1),
+            new EffectContext(state, "teamA", magikDie.Id, _ => [], Queue: queue));
+
+        Assert.Equal(2, magikDie.Level);
+        Assert.Equal(1, queue.Count);
+        Assert.Equal(TriggerType.Awaken, queue.Pending[0].Trigger);
+
+        var bagCountBefore = state.DiceIn("teamA", Zone.Bag).Count();
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(
+                state, ability.ControllerId, ability.SourceDieId, _ => [], Roller: new FixedRoller(DieStatus.Energy, 1))));
+
+        Assert.Equal(bagCountBefore - 1, state.DiceIn("teamA", Zone.Bag).Count());
+    }
+
+    [Fact]
+    public void FieldingProfessorX_SpinsAnyOpposingDieToItsSingleEnergyFace()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.ProfessorXUncannyLeadership.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var target = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        target.Zone = Zone.FieldZone;
+        target.Status = DieStatus.Character;
+        target.Level = 2;
+
+        var profXDie = FindUnpurchased(state, "teamA", SampleCards.ProfessorXUncannyLeadership.Id);
+        var purchaseEnergy = GiveWildEnergy(state, "teamA", SampleCards.ProfessorXUncannyLeadership.PurchaseCost);
+        TurnEngine.Purchase(state, profXDie.Id, purchaseEnergy.Select(d => d.Id).ToList());
+        profXDie.Zone = Zone.ReservePool;
+        profXDie.Status = DieStatus.Character;
+        profXDie.Level = 1;
+
+        var fieldEnergy = GiveWildEnergy(state, "teamA", 1);
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, profXDie.Id, energyDieIdsToSpend: [fieldEnergy[0].Id]);
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [target.Id])));
+
+        Assert.Equal(DieStatus.Energy, target.Status);
+        Assert.Equal(1, target.EnergyAmount);
+        Assert.Equal(EnergyKind.Specific, target.EnergyKind);
+        Assert.Equal(SampleCards.Falcon.EnergyTypes[0], target.ProvidedEnergyType);
+    }
+
+    [Fact]
+    public void ProfessorXUncannyLeadershipEnergize_FiresOffRealGate_MovesAnXMenDieFromUsedPileToPrepArea()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds:
+            [SampleCards.ProfessorXUncannyLeadership.Id, SampleCards.GambitUnlessIGotSomeoneToPlayWith.Id]);
+        state.ActivePlayerId = "teamA";
+        state.CurrentStep = TurnStep.RollAndReroll;
+
+        var profXDie = FindUnpurchased(state, "teamA", SampleCards.ProfessorXUncannyLeadership.Id);
+        profXDie.Zone = Zone.ReservePool;
+        profXDie.Status = DieStatus.Energy;
+        profXDie.EnergyKind = EnergyKind.Generic;
+        profXDie.EnergyAmount = 2; // double energy - Energize's own trigger condition
+
+        var xMenDie = FindUnpurchased(state, "teamA", SampleCards.GambitUnlessIGotSomeoneToPlayWith.Id);
+        xMenDie.Zone = Zone.UsedPile;
+
+        var queue = new AbilityQueue();
+        TurnEngine.Reroll(state, queue, new FixedRoller(DieStatus.Energy, 1), []);
+
+        Assert.Equal(1, queue.Count);
+        Assert.Equal(TriggerType.Energize, queue.Pending[0].Trigger);
+
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [xMenDie.Id])));
+
+        Assert.Equal(Zone.PrepArea, xMenDie.Zone);
+    }
+
+    [Fact]
+    public void IcemanIcyInterference_OnlyAcceptsALevel1OpposingCharacterDie()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.IcemanIcyInterference.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var level1Target = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        level1Target.Zone = Zone.FieldZone;
+        level1Target.Status = DieStatus.Character;
+        level1Target.Level = 1;
+
+        var level2Target = FindUnpurchased(state, "teamB", SampleCards.Groot.Id);
+        level2Target.Zone = Zone.FieldZone;
+        level2Target.Status = DieStatus.Character;
+        level2Target.Level = 2;
+
+        var icemanDie = FindUnpurchased(state, "teamA", SampleCards.IcemanIcyInterference.Id);
+        icemanDie.Zone = Zone.FieldZone;
+        icemanDie.Status = DieStatus.Character;
+        icemanDie.Level = 1;
+
+        state.CurrentStep = TurnStep.Attack;
+        state.AttackSubStep = AttackSubStep.DeclareAttackers;
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [icemanDie.Id]);
+        Assert.Equal(1, queue.Count);
+        Assert.Equal(TriggerType.WhenAttacks, queue.Pending[0].Trigger);
+
+        var ability = SampleCards.IcemanIcyInterference.Abilities.Single(a => a.Trigger == TriggerType.WhenAttacks);
+
+        var ex = Assert.Throws<InvalidOperationException>(() => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, "teamA", icemanDie.Id, _ => [level2Target.Id])));
+        Assert.Contains("not legal", ex.Message);
+
+        EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, "teamA", icemanDie.Id, _ => [level1Target.Id]));
+        Assert.Equal(DieStatus.Energy, level1Target.Status);
+    }
+
+    [Fact]
     public void UsingStarfireGlobalAbility_PrepsADieFromBag_IfYouPurchasedADieThisTurn()
     {
         var state = BuildTwoTeamGame();

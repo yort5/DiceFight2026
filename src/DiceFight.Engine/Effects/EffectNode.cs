@@ -40,9 +40,10 @@ public enum TargetOwnership
 // Mold's own "deal 2 damage to ALL X-Men and Brotherhood of Mutants
 // character dice") skips the caller-choice step in Resolve entirely and
 // applies to every legal match automatically - there's no "target" at
-// all in that card text, unlike everything else here. Still no level-
-// restricted filter (a real, separate gap - see the bulk-card-catalog
-// memory).
+// all in that card text, unlike everything else here. RequiredLevel
+// (Iceman "Icy Interference"/DPS034's "target opposing level 1
+// character die") is the level-restricted filter previously flagged as
+// missing alongside RequiredAffiliations.
 public sealed record TargetSpec(
     TargetOwnership Ownership,
     bool CharacterDiceOnly,
@@ -56,7 +57,8 @@ public sealed record TargetSpec(
     bool Optional = false,
     int? MaxAttack = null,
     IReadOnlyList<string>? RequiredAffiliations = null,
-    bool MatchAll = false)
+    bool MatchAll = false,
+    int? RequiredLevel = null)
 {
     // Rule 3.3.4/3.3.5 - only dice in the Field Zone (which includes the
     // Attack Zone) may be targeted, unless otherwise stated.
@@ -71,9 +73,11 @@ public sealed record TargetSpec(
         bool optional = false,
         int? maxAttack = null,
         IReadOnlyList<string>? requiredAffiliations = null,
-        bool matchAll = false) =>
+        bool matchAll = false,
+        int? requiredLevel = null) =>
         new(ownership, CharacterDiceOnly: true, zones ?? DefaultZones, energyType, count, description,
-            Optional: optional, MaxAttack: maxAttack, RequiredAffiliations: requiredAffiliations, MatchAll: matchAll);
+            Optional: optional, MaxAttack: maxAttack, RequiredAffiliations: requiredAffiliations, MatchAll: matchAll,
+            RequiredLevel: requiredLevel);
 
     // optional: true models "you MAY target up to Count" (any number,
     // including zero, is a legal chosen count) rather than rule 3.3.11's
@@ -84,8 +88,9 @@ public sealed record TargetSpec(
     // availability.
     public static TargetSpec AnyDie(
         string description, TargetOwnership ownership, IReadOnlyList<Model.Zone> zones, int count = 1,
-        bool optional = false) =>
-        new(ownership, CharacterDiceOnly: false, zones, RequiredEnergyType: null, count, description, Optional: optional);
+        bool optional = false, IReadOnlyList<string>? requiredAffiliations = null) =>
+        new(ownership, CharacterDiceOnly: false, zones, RequiredEnergyType: null, count, description,
+            Optional: optional, RequiredAffiliations: requiredAffiliations);
 
     // "target player or Character die" card text (e.g. Attune) - a single
     // choice between the two, not two separate targets. LegalTargets
@@ -233,6 +238,21 @@ public sealed record Reroll(TargetSpec Target) : EffectNode;
 public sealed record RerollAndMoveUnlessCharacter(
     TargetSpec Target, Model.Zone ToZone, int DamagePerMovedToOpponent = 0) : EffectNode;
 public sealed record Spin(TargetSpec Target, int LevelDelta) : EffectNode;
+// "Spin [a/target] die to its [single/an] energy face" (Professor X
+// "Uncanny Leadership"/DPS127, Iceman "Icy Interference"/DPS034) - a
+// direct conversion, not a level-delta the way Spin above is (rule
+// 3.7.5's own framing treats "spin to an energy face" as its own thing,
+// distinct from spinning a Character die's level). Reuses the exact
+// single-vs-double energy-face formula PlaceholderDiceRoller already
+// uses for a natural Character-die roll (EnergyKind.Specific,
+// ProvidedEnergyType from the target's own card, since Dice Masters
+// energy faces are always the card's own printed type) rather than
+// inventing a second one. Amount defaults to 1 (a "single" energy face)
+// since that's the only amount either printing needs today - Professor
+// X's own text says "single" explicitly; Iceman's just says "an energy
+// face" with no double/opponent's-choice language, so 1 is the
+// simplest reading rather than a real ambiguity worth modeling further.
+public sealed record SpinToEnergyFace(TargetSpec Target, int Amount = 1) : EffectNode;
 public sealed record DrawDice(int Count) : EffectNode;
 public sealed record PrepDie(TargetSpec Source) : EffectNode;
 public sealed record FieldDie(TargetSpec Target, bool Free) : EffectNode;

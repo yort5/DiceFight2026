@@ -263,7 +263,23 @@ here rather than assuming which approach they'd want.
     the "GrantKeyword, TargetSpec.MaxAttack, and five more DPS cards"
     status update, including a real authoring trap it caught (the bulk
     sheet mis-attributes Magik's OWN granted keyword as one of her
-    printed Keywords). Also now real: `TargetSpec.RequiredAffiliations`
+    printed Keywords). Also now real: `SpinToEnergyFace` ("spin [a/
+    target] die to its single/an energy face," reusing `PlaceholderDiceRoller`'s
+    own Character-die energy-face formula) and `TargetSpec.RequiredLevel`
+    ("target opposing level 1 character die") - Magik ("Better than
+    Belasco", DPS080, pure Awaken+DrawDice, no new primitive), Professor
+    X ("Uncanny Leadership", DPS127, `SpinToEnergyFace`'s first user plus
+    an Energize ability that caught a real gap: a Used Pile die is always
+    unrolled per rule 1.6.8, so `TargetSpec.CharacterDie`'s
+    `CharacterDiceOnly` filter can never match one - `AnyDie` needed a
+    `requiredAffiliations` param instead), and Iceman ("Icy
+    Interference", DPS034, combining `SpinToEnergyFace` with
+    `RequiredLevel`) are all real now - see the "SpinToEnergyFace,
+    TargetSpec.RequiredLevel, and three more DPS cards" status update.
+    Two OTHER "spin to an energy face" DPS cards (Magneto/Mystique) say
+    "of your opponent's choice" - a real, separate "other player makes a
+    choice" gap, same category as Ronan "No Mercy," deliberately left
+    for later. Also now real: `TargetSpec.RequiredAffiliations`
     ("target Brotherhood of Mutants/X-Men character die," matching ANY
     of a listed affiliation set) and `TargetSpec.MatchAll` ("deal 2
     damage to ALL X-Men and Brotherhood of Mutants character dice" /

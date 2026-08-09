@@ -1366,6 +1366,75 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 3, Attack: 8, Defense: 8)
         ], set: "DPS");
 
+    // Magik, "Better than Belasco" - purely the Awaken keyword paired
+    // with DrawDice, the exact same shape Kitty Pryde/Black Panther's own
+    // Awaken/Energize cards already established. No new primitive needed.
+    public static readonly CardDef MagikBetterThanBelasco = Character(
+        "DPS080", "Magik", "Better than Belasco", dieLimit: 3,
+        "Awaken Roll a die from your bag.",
+        purchaseCost: 4, energyType: EnergyType.Mask,
+        affiliations: ["X-Men"],
+        keywords: [new KeywordInstance("Awaken")],
+        abilities: [new AbilityDef(TriggerType.Awaken, Cost: null, Effect: new DrawDice(1))],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 4),
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 6),
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 7)
+        ], set: "DPS");
+
+    // Professor X, "Uncanny Leadership" - the first card to use
+    // SpinToEnergyFace (new this pass): "spin an opposing die to it's
+    // single energy face" targets any opposing die (the text says "die,"
+    // not "character die"), not just a Character one, so TargetSpec.
+    // AnyDie is the right shape here rather than CharacterDie.
+    public static readonly CardDef ProfessorXUncannyLeadership = Character(
+        "DPS127", "Professor X", "Uncanny Leadership", dieLimit: 2,
+        "When fielded, spin an opposing die to it's single energy face. Energize - Move an X-Men die from " +
+        "your Used Pile to your Prep Area.",
+        purchaseCost: 6, energyType: EnergyType.Mask,
+        affiliations: ["X-Men"],
+        keywords: [new KeywordInstance("Energize")],
+        abilities: [
+            new AbilityDef(TriggerType.WhenFielded, Cost: null,
+                Effect: new SpinToEnergyFace(
+                    TargetSpec.AnyDie("an opposing die", TargetOwnership.Opposing, TargetSpec.DefaultZones))),
+            new AbilityDef(TriggerType.Energize, Cost: null,
+                // A Used Pile die is always unrolled (rule 1.6.8 - never
+                // DieStatus.Character), so this can't use TargetSpec.
+                // CharacterDie's CharacterDiceOnly filter the way an
+                // in-play target normally would; AnyDie + RequiredAffiliations
+                // matches on the card's own Affiliations regardless of the
+                // die's current (irrelevant, dormant-zone) rolled status.
+                Effect: new MoveDie(
+                    TargetSpec.AnyDie(
+                        "an X-Men die from your Used Pile", TargetOwnership.Own,
+                        zones: [Zone.UsedPile], requiredAffiliations: ["X-Men"]),
+                    Zone.PrepArea))
+        ],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 5),
+            new CharacterFace(FieldingCost: 2, Attack: 1, Defense: 7),
+            new CharacterFace(FieldingCost: 3, Attack: 1, Defense: 9)
+        ], set: "DPS");
+
+    // Iceman, "Icy Interference" - SpinToEnergyFace's second user, this
+    // time gated by TargetSpec.RequiredLevel (new this pass, the level-
+    // restricted filter counterpart to RequiredAffiliations): "target
+    // opposing LEVEL 1 character die."
+    public static readonly CardDef IcemanIcyInterference = Character(
+        "DPS034", "Iceman", "Icy Interference", dieLimit: 4,
+        "When Iceman attacks, spin target opposing level 1 character die to an energy face.",
+        purchaseCost: 4, energyType: EnergyType.Bolt,
+        affiliations: ["X-Men"],
+        abilities: [new AbilityDef(TriggerType.WhenAttacks, Cost: null,
+            Effect: new SpinToEnergyFace(
+                TargetSpec.CharacterDie("target opposing level 1 character die", TargetOwnership.Opposing, requiredLevel: 1)))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 4),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 6),
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 6)
+        ], set: "DPS");
+
     // Deathbird, "War of Kings" - the first card to use CantBlock (new
     // this pass): GameState.CantBlockThisTurn, the restriction mirror of
     // ForceBlock/MustBlockThisTurn - enforced by CombatEngine.
@@ -1788,7 +1857,7 @@ public static class SampleCards
             GambitUnlessIGotSomeoneToPlayWith, PsylockeAdvancedTelekineticCombatant, StormQueen,
             MagikSorceressOfLimbo, PsylockeTelepath, StormCloudCover,
             MasterMoldTargetingMutants, MasterMoldUntoldElectronicExpertise, MasterMoldInexplicableDurability,
-            PhoenixEternalFlame
+            PhoenixEternalFlame, MagikBetterThanBelasco, ProfessorXUncannyLeadership, IcemanIcyInterference
         ];
 
         // Hand-curated cards win on id collision - shouldn't happen in
