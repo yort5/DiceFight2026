@@ -83,9 +83,10 @@ public sealed record TargetSpec(
         string description,
         TargetOwnership ownership = TargetOwnership.Any,
         int count = 1,
-        IReadOnlyList<Model.Zone>? zones = null) =>
+        IReadOnlyList<Model.Zone>? zones = null,
+        bool optional = false) =>
         new(ownership, CharacterDiceOnly: false, zones ?? DefaultZones, RequiredEnergyType: null, count, description,
-            SidekicksOnly: true);
+            SidekicksOnly: true, Optional: optional);
 
     // "target player" card text (e.g. Corrupt) - no die option at all,
     // unlike CharacterDieOrPlayer. EligibleZones: [] means the die-side of
@@ -211,16 +212,19 @@ public enum EffectCondition
     // from the OLD misreading of them as "a different printing's text" -
     // see the "burst and double-burst" status update for how that got
     // corrected): "some abilities key off rolling that face" (per the
-    // user, re: the stat line's own */** marks). A Character die's
-    // CURRENT face is CharacterFace, looked up by Level (DieStats.
-    // GetFace) - unlike TargetWasKOd, THIS resolved die's own current
-    // face is exactly what's being asked about, so CheckTarget is
-    // normally TargetSpec.Self (the ability's own source die) rather
-    // than ignored. A face can only ever be blank, single-, or double-
-    // burst (mutually exclusive, never both), so these two never overlap
-    // for the same die at the same time - "*/**" printed together (e.g.
-    // Take Cover) is just both conditions checked independently, each
-    // firing on its own face, not a combined third state.
+    // user, re: the stat line's own */** marks). Works for both Character
+    // dice (CharacterFace, looked up by Level - DieStats.GetFace) and
+    // Basic Action/Action dice (DieInstance.BurstStars directly, since
+    // those have no "level" to derive a face from - see
+    // EffectInterpreter.CurrentBurstStars for which source applies to
+    // which). Unlike TargetWasKOd, THIS resolved die's own current face
+    // is exactly what's being asked about, so CheckTarget is normally
+    // TargetSpec.Self (the ability's own source die) rather than ignored.
+    // A face can only ever be blank, single-, or double-burst (mutually
+    // exclusive, never both), so these two never overlap for the same
+    // die at the same time - "*/**" printed together (e.g. Take Cover)
+    // is just both conditions checked independently, each firing on its
+    // own face, not a combined third state.
     OnSingleBurstFace,
     OnDoubleBurstFace,
 }

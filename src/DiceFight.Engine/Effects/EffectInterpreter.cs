@@ -529,10 +529,21 @@ public static class EffectInterpreter
         // dieId is unused here - see EffectCondition.NoCharacterKOdThisTurn's own remarks.
         EffectCondition.NoCharacterKOdThisTurn => !ctx.State.AnyCharacterKOdThisTurn,
         EffectCondition.PrepAreaEmpty => !ctx.State.DiceIn(ctx.ControllerId, Zone.PrepArea).Any(),
-        EffectCondition.OnSingleBurstFace => DieStats.GetFace(ctx.State, FindDie(ctx, dieId)).BurstStars == 1,
-        EffectCondition.OnDoubleBurstFace => DieStats.GetFace(ctx.State, FindDie(ctx, dieId)).BurstStars == 2,
+        EffectCondition.OnSingleBurstFace => CurrentBurstStars(ctx.State, FindDie(ctx, dieId)) == 1,
+        EffectCondition.OnDoubleBurstFace => CurrentBurstStars(ctx.State, FindDie(ctx, dieId)) == 2,
         _ => throw new NotSupportedException($"Unhandled effect condition: {condition}")
     };
+
+    // A Character die's current face is always derivable from Level (no
+    // separate storage - DieStats.GetFace). A Basic Action/Action die has
+    // no "level," so which of its 3 faces it landed on is instead stored
+    // directly on the die itself (DieInstance.BurstStars, set by
+    // TurnEngine/EffectInterpreter's own ApplyRoll) - this picks whichever
+    // source actually applies to the die being checked.
+    private static int? CurrentBurstStars(GameState state, DieInstance die) =>
+        die.Status is DieStatus.Character or DieStatus.SidekickCharacter
+            ? DieStats.GetFace(state, die).BurstStars
+            : die.BurstStars;
 
     private static DieInstance FindDie(EffectContext ctx, string id) =>
         ctx.State.Dice.SingleOrDefault(d => d.Id == id)
@@ -554,6 +565,7 @@ public static class EffectInterpreter
         die.EnergyKind = result.Status == DieStatus.Energy ? result.EnergyKind : EnergyKind.None;
         die.ProvidedEnergyType = result.Status == DieStatus.Energy ? result.ProvidedEnergyType : null;
         die.EnergyAmount = result.Status == DieStatus.Energy ? result.EnergyAmount : 1;
+        die.BurstStars = result.Status == DieStatus.Action ? result.BurstStars : null;
 
         if (ctx.Queue is not null)
             TurnEngine.CheckEnergize(ctx.State, ctx.Queue, die);

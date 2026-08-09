@@ -1102,6 +1102,30 @@ public static class SampleCards
                 "a character die in your Reserve Pool", TargetOwnership.Own, zones: [Zone.ReservePool])))],
         purchaseCost: 2, set: "DPS");
 
+    // Rally - the first burst-conditional Basic Action (see
+    // EffectCondition.OnDoubleBurstFace/DieInstance.BurstStars's own
+    // remarks for the plumbing this needed): "Move up to 2 Sidekick
+    // dice... ** Instead, move up to 3." Checked against Rally's OWN die
+    // (TargetSpec.Self, its current action face) via Conditional.Else -
+    // Then handles the double-burst face, Else the ordinary one. "Up to
+    // N" is TargetSpec's `optional: true` (a real 0-to-N voluntary
+    // choice, not "as many as available, capped").
+    public static readonly CardDef Rally = BasicAction(
+        "DPS013", "Rally",
+        "Move up to 2 Sidekick dice from your Used Pile to your Field Zone. ** Instead, move up to 3 " +
+        "Sidekicks instead.",
+        abilities: [new AbilityDef(TriggerType.WhenUsed, Cost: null,
+            Effect: new Conditional(TargetSpec.Self, EffectCondition.OnDoubleBurstFace,
+                Then: new MoveDie(
+                    TargetSpec.Sidekick("up to 3 Sidekick dice from your Used Pile", TargetOwnership.Own,
+                        count: 3, zones: [Zone.UsedPile], optional: true),
+                    Zone.FieldZone),
+                Else: new MoveDie(
+                    TargetSpec.Sidekick("up to 2 Sidekick dice from your Used Pile", TargetOwnership.Own,
+                        count: 2, zones: [Zone.UsedPile], optional: true),
+                    Zone.FieldZone)))],
+        purchaseCost: 3, set: "DPS");
+
     // Jean Grey, "Peaceful Coexistence" - the first Loyalty card (see
     // GameState.LoyaltyCounters/DieStats.LoyaltyBonus and TriggerType.
     // EndOfYourTurn's own remarks for the new plumbing this needed).
@@ -1462,7 +1486,7 @@ public static class SampleCards
             Magneto, SupremeIntelligence, MadelynePryorSisterhood,
             AngelWingsOverTheWorld, CableIllDoThisAllDay, ColossusSkilledPainter, ToadSecondaryMutation,
             LilandraPolitician, VulcanRulerOfTheImperium, PsylockeAdventurer,
-            BlobMGHDependent, SupremeIntelligencePsionicCollective, ToadLookingForComradery
+            BlobMGHDependent, SupremeIntelligencePsionicCollective, ToadLookingForComradery, Rally
         ];
 
         // Hand-curated cards win on id collision - shouldn't happen in

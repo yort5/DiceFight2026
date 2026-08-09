@@ -23,10 +23,17 @@ public sealed class PlaceholderDiceRoller(Random random) : IDiceRoller
             // die is 3 double-Generic energy faces and 3 Action faces -
             // "a die with a double generic energy face (such as a Basic
             // Action Die)" is the rulebook's own canonical example of a
-            // Double.
-            return random.Next(2) == 0
-                ? new RolledFace(DieStatus.Energy, 0, EnergyKind.Generic, EnergyAmount: 2)
-                : new RolledFace(DieStatus.Action, 0);
+            // Double. The 3 Action faces are themselves blank/single-/
+            // double-burst (see DieInstance.BurstStars's own remarks and
+            // the dicefight2026-stats-spreadsheet memory's own note on
+            // what the stat line's "*"/"**" burst marks mean) - evenly
+            // split, same "no real per-card face table sourced yet"
+            // caveat as everything else in this class.
+            if (random.Next(2) == 0)
+                return new RolledFace(DieStatus.Energy, 0, EnergyKind.Generic, EnergyAmount: 2);
+
+            int? burstStars = random.Next(3) switch { 1 => 1, 2 => 2, _ => null };
+            return new RolledFace(DieStatus.Action, 0, BurstStars: burstStars);
         }
 
         if (die.CardId is null)

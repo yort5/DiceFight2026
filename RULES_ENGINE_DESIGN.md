@@ -211,15 +211,17 @@ here rather than assuming which approach they'd want.
     too - `EffectCondition.OnSingleBurstFace`/`OnDoubleBurstFace` plus a
     new `Conditional.Else` branch (see the "burst and double-burst
     symbols" status update, including a correction to how these marks
-    had been read in earlier updates on this list). No card uses it yet -
-    Gambit (DPS032), the natural first user, needs a separate new
-    mid-resolution-choice primitive for its own "Instead" clause first
+    had been read in earlier updates on this list). Basic Action/Action
+    dice now have a real per-face model too (`DieInstance.BurstStars`,
+    `RolledFace.BurstStars`, `PlaceholderDiceRoller` actually
+    randomizing among the 3 Action faces - see the "Basic Action dice
+    now have real burst faces" status update) - Rally (DPS013) is the
+    first card using it. Still open: Gambit (DPS032) needs a separate
+    new mid-resolution-choice primitive for its own "Instead" clause
     (the same `PendingChoice` shape Corrupt/RedrawFromBag already use,
-    just not reused here yet), and every burst-marked Basic Action/
-    Action card found so far (Take Cover, Rally, Radicalization,
-    Explosion) is blocked on a deeper, separate gap: Action dice have no
-    per-face model at all in `DieInstance`, unlike Character dice's
-    `CharacterFace.BurstStars`.
+    just not reused here yet); Take Cover/Radicalization/Explosion each
+    have their own unrelated blocking gap (mass-apply-to-all-your-dice;
+    a temporary affiliation grant; an AoE-to-everyone-plus-mana-sink-loop).
 
 ## Implemented keywords
 

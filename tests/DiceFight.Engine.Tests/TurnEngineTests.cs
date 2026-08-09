@@ -11,10 +11,10 @@ namespace DiceFight.Engine.Tests;
 // physical die face tables yet (see TurnEngine.RolledFace remarks).
 file sealed class FixedRoller(
     DieStatus status, int level, EnergyKind energyKind = EnergyKind.None,
-    EnergyType? providedEnergyType = null, int EnergyAmount = 1)
+    EnergyType? providedEnergyType = null, int EnergyAmount = 1, int? burstStars = null)
     : IDiceRoller
 {
-    public RolledFace Roll(DieInstance die, CardDef? card) => new(status, level, energyKind, providedEnergyType, EnergyAmount);
+    public RolledFace Roll(DieInstance die, CardDef? card) => new(status, level, energyKind, providedEnergyType, EnergyAmount, burstStars);
 }
 
 // Distinguishes "rerolled" from "kept as originally rolled" by giving each
@@ -758,6 +758,39 @@ public class TurnEngineTests
         var reserve = state.DiceIn("p1", Zone.ReservePool).ToList();
         Assert.All(reserve, d => Assert.Equal(EnergyKind.Specific, d.EnergyKind));
         Assert.All(reserve, d => Assert.Equal(EnergyType.Bolt, d.ProvidedEnergyType));
+    }
+
+    // DieInstance.BurstStars - a Basic Action/Action die's own persisted
+    // face (no "level" to derive it from, unlike a Character die). Same
+    // "trust the roller" shape as the Energy case just above.
+    [Fact]
+    public void Roll_ActionDieOnADoubleBurstFace_PersistsBurstStars()
+    {
+        var state = CreateNewGame();
+        state.IsFirstTurn = false;
+        TurnEngine.ClearAndDraw(state, new Random(1));
+        TurnEngine.AdvanceStep(state);
+        state.CurrentStep = TurnStep.RollAndReroll;
+
+        TurnEngine.Roll(state, new FixedRoller(DieStatus.Action, 0, burstStars: 2));
+
+        var reserve = state.DiceIn("p1", Zone.ReservePool).ToList();
+        Assert.All(reserve, d => Assert.Equal(2, d.BurstStars));
+    }
+
+    [Fact]
+    public void Roll_NonActionFace_LeavesBurstStarsNull()
+    {
+        var state = CreateNewGame();
+        state.IsFirstTurn = false;
+        TurnEngine.ClearAndDraw(state, new Random(1));
+        TurnEngine.AdvanceStep(state);
+        state.CurrentStep = TurnStep.RollAndReroll;
+
+        TurnEngine.Roll(state, new FixedRoller(DieStatus.Energy, 0));
+
+        var reserve = state.DiceIn("p1", Zone.ReservePool).ToList();
+        Assert.All(reserve, d => Assert.Null(d.BurstStars));
     }
 
     [Fact]

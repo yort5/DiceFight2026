@@ -39067,22 +39067,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS013",
-    "name": "Rally",
-    "subtitle": "Basic Action Card",
-    "type": "BasicAction",
-    "purchaseCost": 3,
-    "energyType": null,
-    "dieLimit": 3,
-    "levels": [],
-    "rawText": "Move up to 2 Sidekick dice from your Used Pile to your Field Zone. ** Instead, move up to 3 Sidekicks instead.",
-    "keywords": [],
-    "affiliations": [],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS014",
     "name": "Take Cover",
     "subtitle": "Basic Action Card",

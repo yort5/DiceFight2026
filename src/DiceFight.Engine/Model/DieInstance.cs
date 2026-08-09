@@ -38,6 +38,19 @@ public sealed class DieInstance
     // place, rather than moving zones - see TurnEngine's SpendEnergy.
     public int EnergyAmount { get; set; } = 1;
 
+    // Only meaningful when Status == Action - which of a Basic Action/
+    // Action die's 3 action faces (blank/single-/double-burst) got
+    // rolled, per DieStats.HasKeyword's own "burst symbols" note (see
+    // EffectCondition.OnSingleBurstFace/OnDoubleBurstFace). Unlike a
+    // Character die (whose current face is always derivable from Level
+    // via DieStats.GetFace - no separate storage needed), an Action die
+    // has no "level" concept at all; which specific action face it landed
+    // on is a genuinely random, persistent fact about THIS roll, decided
+    // by the roller (see RolledFace's own remarks) and carried here until
+    // the die is rerolled or swept back to a dormant zone
+    // (ResetToUnrolled). null = blank face, 1 = single burst, 2 = double.
+    public int? BurstStars { get; set; }
+
     // A bookkeeping stand-in for "virtual" generic energy (rule 1.4.4/
     // 1.4.5 - from a draw shortfall, or from partially spending a Generic
     // double that has no single-energy face to spin down to), represented
@@ -96,6 +109,7 @@ public sealed class DieInstance
         EnergyKind = EnergyKind.None;
         ProvidedEnergyType = null;
         EnergyAmount = 1;
+        BurstStars = null;
         AppliedModifiers.Clear();
     }
 }

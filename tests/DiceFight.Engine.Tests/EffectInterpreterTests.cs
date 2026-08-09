@@ -1644,4 +1644,63 @@ public class EffectInterpreterTests
 
         Assert.Equal(life, state.GetPlayer("p1").Life);
     }
+
+    // Rally end-to-end - the first burst-conditional Basic Action.
+    // Rally's own die's BurstStars (not a Character die's Level-derived
+    // face) drives which branch fires.
+    private static (GameState state, DieInstance rally, List<DieInstance> sidekicks) CreateRallyGame(int? rallyBurstStars)
+    {
+        var state = CreateState();
+        var rally = new DieInstance
+        {
+            Id = "p1-rally-1", CardId = SampleCards.Rally.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.ReservePool, Status = DieStatus.Action, BurstStars = rallyBurstStars,
+        };
+        state.Dice.Add(rally);
+        var sidekicks = Enumerable.Range(0, 3).Select(i => new DieInstance
+        {
+            // "test-" prefix avoids colliding with GameState.NewGame's own
+            // default "{playerId}-sidekick-{i}" starting-bag dice.
+            Id = $"p1-test-sidekick-{i}", OwnerId = "p1", ControllerId = "p1", Zone = Zone.UsedPile,
+        }).ToList();
+        state.Dice.AddRange(sidekicks);
+        return (state, rally, sidekicks);
+    }
+
+    [Fact]
+    public void Rally_OnBlankFace_MovesAtMostTwoSidekicksEvenWithThreeAvailable()
+    {
+        var (state, rally, sidekicks) = CreateRallyGame(rallyBurstStars: null);
+        var allThreeIds = sidekicks.Select(s => s.Id).ToList();
+
+        var ability = SampleCards.Rally.Abilities.Single(a => a.Trigger == TriggerType.WhenUsed);
+        EffectInterpreter.Execute(ability.Effect, new EffectContext(state, "p1", rally.Id, _ => allThreeIds));
+
+        Assert.Equal(2, state.DiceIn("p1", Zone.FieldZone).Count()); // capped at 2, not 3
+    }
+
+    [Fact]
+    public void Rally_OnDoubleBurstFace_CanMoveAllThreeSidekicks()
+    {
+        var (state, rally, sidekicks) = CreateRallyGame(rallyBurstStars: 2);
+        var allThreeIds = sidekicks.Select(s => s.Id).ToList();
+
+        var ability = SampleCards.Rally.Abilities.Single(a => a.Trigger == TriggerType.WhenUsed);
+        EffectInterpreter.Execute(ability.Effect, new EffectContext(state, "p1", rally.Id, _ => allThreeIds));
+
+        Assert.Equal(3, state.DiceIn("p1", Zone.FieldZone).Count());
+    }
+
+    // "Up to N" is a real voluntary choice (TargetSpec.Optional) - moving
+    // zero is legal even when Sidekicks are available.
+    [Fact]
+    public void Rally_ChoosingNone_IsLegal()
+    {
+        var (state, rally, _) = CreateRallyGame(rallyBurstStars: null);
+
+        var ability = SampleCards.Rally.Abilities.Single(a => a.Trigger == TriggerType.WhenUsed);
+        EffectInterpreter.Execute(ability.Effect, new EffectContext(state, "p1", rally.Id, _ => []));
+
+        Assert.Empty(state.DiceIn("p1", Zone.FieldZone));
+    }
 }

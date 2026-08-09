@@ -4659,3 +4659,63 @@ one topic from the card text alone.
 Verified: `dotnet build`, `dotnet test` (329/329, 6 new cases), and
 `npm run build` all clean. No `BulkCards.json` changes this pass - no
 card was re-classified or hand-curated.
+
+## Status update — Basic Action dice now have real burst faces, and Rally is real
+
+The user's direct follow-up: "let's fix Basic Actions (BAC)" - closing
+the deeper gap flagged last update (Action dice had no per-face model
+at all, unlike Character dice's `CharacterFace.BurstStars`).
+
+**What was missing, concretely**: `PlaceholderDiceRoller` already knew
+a Basic Action die has "3 double-Generic energy faces and 3 Action
+faces," but treated all 3 Action faces as identical - `new RolledFace
+(DieStatus.Action, 0)`, no burst information at all. There was nowhere
+to put it even if the roller had one: `DieInstance` had fields for a
+Character die's face (`Level`, looked up against `CharacterFace` at
+read time) and an Energy die's face (`EnergyKind`/`ProvidedEnergyType`/
+`EnergyAmount`, stored directly), but nothing for "which of an Action
+die's 3 faces did this land on" - and unlike a Character die, there's
+no "level" to derive it from; it's a genuinely random, persistent fact
+about the roll that has to be stored.
+
+**What was built**:
+- `RolledFace` gained `BurstStars` (nullable, meaningful only when
+  `Status == Action`) so `IDiceRoller` implementations can report it.
+- `DieInstance` gained its own `BurstStars` field, set by both real
+  roll-application paths (`TurnEngine.ApplyRoll`, used by `Roll`/
+  `Reroll`; `EffectInterpreter`'s own private `ApplyRoll`, used by
+  `DrawDice`/`Reroll`-the-effect) and cleared by `ResetToUnrolled`
+  alongside every other stale rolled-face field.
+- `PlaceholderDiceRoller` now actually randomizes among the 3 Action
+  faces (blank/single-/double-burst, evenly split) instead of always
+  returning blank.
+- `EffectInterpreter.CurrentBurstStars` is the new single lookup point
+  `OnSingleBurstFace`/`OnDoubleBurstFace` both go through: Character
+  dice still read `DieStats.GetFace(...).BurstStars` (Level-derived,
+  unchanged), anything else reads the die's own new `BurstStars` field
+  directly - one condition, two backing sources, picked by `die.Status`.
+
+**Rally (DPS013)** is the first real card: "Move up to 2 Sidekick
+dice... ** Instead, move up to 3." `Conditional.Else` (added last
+update, unused until now) does the branching - `Then` for the double-
+burst face, `Else` for the ordinary one - checked against Rally's own
+die via `TargetSpec.Self`. "Up to N" turned out to be `TargetSpec.
+Optional` (a genuine 0-to-N voluntary choice), not the default "as many
+as available, capped" semantic - confirmed against the class's own
+documented distinction rather than assumed. `TargetSpec.Sidekick`
+gained an `optional` parameter (matching `AnyDie`'s existing one) to
+express this cleanly instead of a post-construction `with` expression.
+
+Not revisited this pass: Take Cover, Radicalization, and Explosion -
+each still has its own separate blocking gap (mass-apply-to-all-your-
+dice-without-a-choice; a temporary affiliation grant; an AoE-to-
+everyone-plus-a-mana-sink-loop, respectively) unrelated to burst faces,
+same as noted when they were first set aside.
+
+Verified: `dotnet build`, `dotnet test` (334/334 - 5 new cases,
+including one that caught a real test-fixture bug: reusing `GameState.
+NewGame`'s own default `"{playerId}-sidekick-{i}"` id scheme for a
+custom fixture die silently created a duplicate id, since `state.Dice`
+has no uniqueness enforcement - renamed to a `test-`-prefixed id), and
+`npm run build` all clean. Re-ran `scripts/import_bulk_cards.py`
+(3616 → 3615 bulk rows, 76 → 77 hand-curated).

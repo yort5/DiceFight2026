@@ -20,7 +20,12 @@ public readonly record struct RolledFace(
     int Level,
     EnergyKind EnergyKind = EnergyKind.None,
     EnergyType? ProvidedEnergyType = null,
-    int EnergyAmount = 1);
+    int EnergyAmount = 1,
+    // Only meaningful when Status == Action - a Basic Action/Action die's
+    // face is one of blank/single-/double-burst (see DieInstance.
+    // BurstStars's own remarks for why this needs to persist per-die
+    // rather than being derived, unlike a Character die's burst symbol).
+    int? BurstStars = null);
 
 public interface IDiceRoller
 {
@@ -295,20 +300,24 @@ public static class TurnEngine
         die.Status = result.Status;
         die.Level = result.Level;
 
-        if (die.Status != DieStatus.Energy)
+        if (die.Status == DieStatus.Energy)
+        {
+            // Rule 1.3.10/1.4.2 - what an energy face provides is a
+            // property of which specific face got rolled, decided by the
+            // roller (see RolledFace remarks), not inferred here from the
+            // die's card.
+            die.EnergyKind = result.EnergyKind;
+            die.ProvidedEnergyType = result.ProvidedEnergyType;
+            die.EnergyAmount = result.EnergyAmount;
+        }
+        else
         {
             die.EnergyKind = EnergyKind.None;
             die.ProvidedEnergyType = null;
             die.EnergyAmount = 1;
-            return;
         }
 
-        // Rule 1.3.10/1.4.2 - what an energy face provides is a property of
-        // which specific face got rolled, decided by the roller (see
-        // RolledFace remarks), not inferred here from the die's card.
-        die.EnergyKind = result.EnergyKind;
-        die.ProvidedEnergyType = result.ProvidedEnergyType;
-        die.EnergyAmount = result.EnergyAmount;
+        die.BurstStars = die.Status == DieStatus.Action ? result.BurstStars : null;
     }
 
     // Rule 2.6.2 - Purchase Dice, one of the four Main Step game actions.
