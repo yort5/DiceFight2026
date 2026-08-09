@@ -249,7 +249,21 @@ here rather than assuming which approach they'd want.
     WhenAttacks/Energize) are all real now - see the "RerollAndMoveUnless
     Character, and three more DPS cards" status update, including why
     Storm's own sheet text ("Move each die that DOES roll a character...")
-    is read as a typo rather than a real rules variant.
+    is read as a typo rather than a real rules variant. Also now real:
+    `GrantKeyword` ("target character die gains/gets [keyword]" -
+    modeled as an Applied ability per rule 3.4.3.9, so it defaults to
+    "until end of turn" on `DieInstance.AppliedKeywords`, same lifecycle
+    as `AppliedModifiers`, even though neither Magik's nor Psylocke's own
+    text says so explicitly) and `TargetSpec.MaxAttack` ("target
+    character die with 3A or less," checked against `DieStats.
+    EffectiveAttack` and enforced by `EffectInterpreter.Resolve`'s own
+    existing legal-target check) - Magik ("Sorceress of Limbo", DPS120),
+    Psylocke ("Telepath", DPS088), and Storm ("Cloud Cover", DPS092) are
+    all real now, closing both gaps flagged in the previous entry - see
+    the "GrantKeyword, TargetSpec.MaxAttack, and five more DPS cards"
+    status update, including a real authoring trap it caught (the bulk
+    sheet mis-attributes Magik's OWN granted keyword as one of her
+    printed Keywords).
 
 ## Implemented keywords
 

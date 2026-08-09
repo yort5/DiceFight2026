@@ -76,6 +76,7 @@ public static class EffectInterpreter
             case Spin n: if (!n.Target.IsSelf) yield return n.Target; break;
             case PrepDie n: if (!n.Source.IsSelf) yield return n.Source; break;
             case FieldDie n: if (!n.Target.IsSelf) yield return n.Target; break;
+            case GrantKeyword n: if (!n.Target.IsSelf) yield return n.Target; break;
             case Conditional n:
                 if (!n.CheckTarget.IsSelf) yield return n.CheckTarget;
                 foreach (var spec in CollectTargetSpecs(n.Then))
@@ -527,6 +528,15 @@ public static class EffectInterpreter
                     if (granteeCardId is not null)
                         ctx.State.LoyaltyCounters[granteeCardId] =
                             ctx.State.LoyaltyCounters.GetValueOrDefault(granteeCardId) + 1;
+                }
+                break;
+
+            case GrantKeyword grant:
+                foreach (var id in Resolve(ctx, grant.Target, cache))
+                {
+                    var die = FindDie(ctx, id);
+                    if (!die.AppliedKeywords.Contains(grant.Keyword))
+                        die.AppliedKeywords.Add(grant.Keyword);
                 }
                 break;
 

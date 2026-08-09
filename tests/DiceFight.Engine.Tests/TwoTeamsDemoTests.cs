@@ -580,6 +580,99 @@ public class TwoTeamsDemoTests
     }
 
     [Fact]
+    public void FieldingMagik_GrantsOvercrushAndAttackBuff_ButOnlyUntilEndOfTurn()
+    {
+        // Rule 3.4.3.9 - an Applied ability (Magik's own text has no
+        // duration language at all) defaults to "until end of turn," the
+        // same lifetime as a numeric Applied stat modifier - not
+        // permanent just because the card text doesn't say "until end of
+        // turn" itself.
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.MagikSorceressOfLimbo.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var target = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        target.Zone = Zone.FieldZone;
+        target.Status = DieStatus.Character;
+        target.Level = 1;
+        var attackBefore = DieStats.EffectiveAttack(state, target);
+
+        var magikDie = FindUnpurchased(state, "teamA", SampleCards.MagikSorceressOfLimbo.Id);
+        var purchaseEnergy = GiveWildEnergy(state, "teamA", SampleCards.MagikSorceressOfLimbo.PurchaseCost);
+        TurnEngine.Purchase(state, magikDie.Id, purchaseEnergy.Select(d => d.Id).ToList());
+        magikDie.Zone = Zone.ReservePool;
+        magikDie.Status = DieStatus.Character;
+        magikDie.Level = 1; // fielding cost 0 at level 1
+
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, magikDie.Id, energyDieIdsToSpend: []);
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [target.Id])));
+
+        Assert.True(DieStats.HasKeyword(state, target, "Overcrush"));
+        Assert.Equal(attackBefore + 2, DieStats.EffectiveAttack(state, target));
+
+        state.CurrentStep = TurnStep.CleanUp;
+        TurnEngine.CleanUp(state, new FixedRoller(DieStatus.Energy, 1), queue);
+
+        Assert.False(DieStats.HasKeyword(state, target, "Overcrush"));
+        Assert.Equal(attackBefore, DieStats.EffectiveAttack(state, target));
+    }
+
+    [Fact]
+    public void FieldingPsylockeTelepath_GrantsOvercrushToTargetDie()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.PsylockeTelepath.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var target = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        target.Zone = Zone.FieldZone;
+        target.Status = DieStatus.Character;
+        target.Level = 1;
+        Assert.False(DieStats.HasKeyword(state, target, "Overcrush"));
+
+        var psylockeDie = FindUnpurchased(state, "teamA", SampleCards.PsylockeTelepath.Id);
+        var purchaseEnergy = GiveWildEnergy(state, "teamA", SampleCards.PsylockeTelepath.PurchaseCost);
+        TurnEngine.Purchase(state, psylockeDie.Id, purchaseEnergy.Select(d => d.Id).ToList());
+        psylockeDie.Zone = Zone.ReservePool;
+        psylockeDie.Status = DieStatus.Character;
+        psylockeDie.Level = 1;
+
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, psylockeDie.Id, energyDieIdsToSpend: []);
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [target.Id])));
+
+        Assert.True(DieStats.HasKeyword(state, target, "Overcrush"));
+    }
+
+    [Fact]
+    public void FieldingStormCloudCover_OnlyAcceptsATargetWith3AttackOrLess()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.StormCloudCover.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var lowAttackTarget = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        lowAttackTarget.Zone = Zone.FieldZone;
+        lowAttackTarget.Status = DieStatus.Character;
+        lowAttackTarget.Level = 1; // PlaceholderLevels: 1A
+
+        var highAttackTarget = FindUnpurchased(state, "teamB", SampleCards.Groot.Id);
+        highAttackTarget.Zone = Zone.FieldZone;
+        highAttackTarget.Status = DieStatus.Character;
+        highAttackTarget.Level = 3; // PlaceholderLevels: 4A - over the "3A or less" threshold
+
+        var ability = SampleCards.StormCloudCover.Abilities.Single(a => a.Trigger == TriggerType.WhenFielded);
+
+        var ex = Assert.Throws<InvalidOperationException>(() => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, "teamA", SourceDieId: null, _ => [highAttackTarget.Id])));
+        Assert.Contains("not legal", ex.Message);
+
+        EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, "teamA", SourceDieId: null, _ => [lowAttackTarget.Id]));
+        Assert.Contains(lowAttackTarget.Id, state.CantBlockThisTurn);
+    }
+
+    [Fact]
     public void UsingStarfireGlobalAbility_PrepsADieFromBag_IfYouPurchasedADieThisTurn()
     {
         var state = BuildTwoTeamGame();

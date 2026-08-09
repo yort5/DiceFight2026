@@ -31,6 +31,9 @@ public static class LegalTargets
         if (spec.CharacterDiceOnly)
             candidates = candidates.Where(d => d.Status is DieStatus.Character or DieStatus.SidekickCharacter);
 
+        if (spec.MaxAttack is { } maxAttack)
+            candidates = candidates.Where(d => DieStats.EffectiveAttack(state, d) <= maxAttack);
+
         if (spec.SidekicksOnly)
             candidates = candidates.Where(d => DieStats.CountsAsSidekick(state, d));
 

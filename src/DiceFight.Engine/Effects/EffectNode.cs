@@ -26,6 +26,13 @@ public enum TargetOwnership
 // question in the design doc; it still doesn't model captured dice
 // (3.8) or per-die "cannot be targeted" abilities, since neither
 // Capturing nor per-die targeting restrictions are implemented yet.
+// MaxAttack (Storm "Cloud Cover"/DPS092's "target character die with 3A
+// or less") is the first stat-threshold filter - checked against
+// DieStats.EffectiveAttack (the live, modifier-inclusive value, not the
+// printed face) since a card text threshold means "as it currently
+// stands," same as every other targeting/condition check elsewhere.
+// Still no affiliation- or level-restricted filter (a real, separate gap -
+// see the bulk-card-catalog memory).
 public sealed record TargetSpec(
     TargetOwnership Ownership,
     bool CharacterDiceOnly,
@@ -36,7 +43,8 @@ public sealed record TargetSpec(
     bool IsSelf = false,
     bool SidekicksOnly = false,
     bool PlayersAllowed = false,
-    bool Optional = false)
+    bool Optional = false,
+    int? MaxAttack = null)
 {
     // Rule 3.3.4/3.3.5 - only dice in the Field Zone (which includes the
     // Attack Zone) may be targeted, unless otherwise stated.
@@ -48,9 +56,10 @@ public sealed record TargetSpec(
         Model.EnergyType? energyType = null,
         int count = 1,
         IReadOnlyList<Model.Zone>? zones = null,
-        bool optional = false) =>
+        bool optional = false,
+        int? maxAttack = null) =>
         new(ownership, CharacterDiceOnly: true, zones ?? DefaultZones, energyType, count, description,
-            Optional: optional);
+            Optional: optional, MaxAttack: maxAttack);
 
     // optional: true models "you MAY target up to Count" (any number,
     // including zero, is a legal chosen count) rather than rule 3.3.11's
@@ -309,3 +318,14 @@ public sealed record PrepFromBag : EffectNode;
 // option Target. See GameState.LoyaltyCounters/DieStats.LoyaltyBonus
 // for storage and payoff.
 public sealed record GrantLoyaltyCounter : EffectNode;
+
+// "Target character die gains [keyword]" (Magik "Sorceress of Limbo"/
+// DPS120, Psylocke "Telepath"/DPS088 both grant Overcrush this way) -
+// rule 3.4.3.9 calls this kind of grant an Applied ability, same default
+// lifetime as a numeric Applied stat modifier (until end of turn, unless
+// otherwise stated), so it's stored on DieInstance.AppliedKeywords right
+// alongside AppliedModifiers rather than as its own GameState-level
+// turn-scoped set. Only meaningful for keywords DieStats.HasKeyword
+// already resolves purely from state (Overcrush, etc.) - doesn't grant
+// anything that needs its own AbilityDef wired up too.
+public sealed record GrantKeyword(TargetSpec Target, string Keyword) : EffectNode;

@@ -1004,7 +1004,10 @@ public static class TurnEngine
         // opposing Global ability), and it's the turn ending, not whose
         // turn it was, that matters.
         foreach (var die in state.Dice)
+        {
             die.AppliedModifiers.Clear();
+            die.AppliedKeywords.Clear();
+        }
 
         // Rule 2.8.3 - Action dice left on their action face in the Reserve
         // Pool move to the Used Pile.

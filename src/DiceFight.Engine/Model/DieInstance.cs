@@ -63,6 +63,18 @@ public sealed class DieInstance
     public bool IsVirtualEnergy { get; set; }
 
     public List<Modifier> AppliedModifiers { get; } = [];
+
+    // Rule 3.4.3.9 - "Character dice in your Reserve Pool gain Intimidate
+    // (until end of turn)" is explicitly called an Applied ability by the
+    // rulebook's own example, not a separate category from a numeric
+    // Applied stat modifier - same default lifetime (until end of turn,
+    // unless otherwise stated; lost early if the die leaves the Field
+    // Zone), so it's cleared at every point AppliedModifiers already is,
+    // rather than tracked as its own thing with its own lifecycle. See
+    // DieStats.HasKeyword for where this is actually consulted, and the
+    // GrantKeyword effect node for how a die ends up in this list.
+    public List<string> AppliedKeywords { get; } = [];
+
     public List<DieInstance> AttachedGear { get; } = [];
 
     // The raw, zone-independent physical fact: no card, not virtual
@@ -111,5 +123,6 @@ public sealed class DieInstance
         EnergyAmount = 1;
         BurstStars = null;
         AppliedModifiers.Clear();
+        AppliedKeywords.Clear();
     }
 }

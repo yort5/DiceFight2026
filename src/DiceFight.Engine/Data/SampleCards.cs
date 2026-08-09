@@ -1236,6 +1236,63 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3)
         ], set: "DPS");
 
+    // Magik, "Sorceress of Limbo" - the first card to use GrantKeyword
+    // (new this pass): "target character die gains Overcrush and +2A."
+    // The bulk sheet's own parsed Keywords list for this row is
+    // ["Overcrush"] - that's the sheet mis-attributing the keyword the
+    // ABILITY grants to a target as though it were printed on Magik's
+    // own card; Magik's own CardDef deliberately leaves Keywords empty,
+    // since giving her own die unconditional Overcrush would be a real
+    // authoring bug (the same class of mistake the Kitty Pryde/Phoenix
+    // Energize/Awaken bug was, just on the "own printed Keywords" side
+    // instead of the "own AbilityDef" side).
+    public static readonly CardDef MagikSorceressOfLimbo = Character(
+        "DPS120", "Magik", "Sorceress of Limbo", dieLimit: 2,
+        "When fielded, target character die gains Overcrush and +2A.",
+        purchaseCost: 4, energyType: EnergyType.Mask,
+        affiliations: ["X-Men"],
+        abilities: [new AbilityDef(TriggerType.WhenFielded, Cost: null,
+            Effect: new Sequence([
+                new GrantKeyword(TargetSpec.CharacterDie("target character die"), "Overcrush"),
+                new ModifyStat(TargetSpec.CharacterDie("target character die"), AttackDelta: 2, DefenseDelta: null)
+            ]))],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 4),
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 6),
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 7)
+        ], set: "DPS");
+
+    // Psylocke, "Telepath" - GrantKeyword's second user, no stat buff
+    // attached this time.
+    public static readonly CardDef PsylockeTelepath = Character(
+        "DPS088", "Psylocke", "Telepath", dieLimit: 3,
+        "When fielded, target character die gets Overcrush.",
+        purchaseCost: 2, energyType: EnergyType.Mask,
+        affiliations: ["X-Men"],
+        abilities: [new AbilityDef(TriggerType.WhenFielded, Cost: null,
+            Effect: new GrantKeyword(TargetSpec.CharacterDie("target character die"), "Overcrush"))],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 2),
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3)
+        ], set: "DPS");
+
+    // Storm, "Cloud Cover" - closes out the gap flagged when Deathbird
+    // first used CantBlock: TargetSpec.MaxAttack (new this pass), the
+    // stat-threshold filter "target character die with 3A or less" needs.
+    public static readonly CardDef StormCloudCover = Character(
+        "DPS092", "Storm", "Cloud Cover", dieLimit: 3,
+        "When fielded, target character die with 3A or less can't block this turn.",
+        purchaseCost: 4, energyType: EnergyType.Bolt,
+        affiliations: ["X-Men"],
+        abilities: [new AbilityDef(TriggerType.WhenFielded, Cost: null,
+            Effect: new CantBlock(TargetSpec.CharacterDie("target character die with 3A or less", maxAttack: 3)))],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 1),
+            new CharacterFace(FieldingCost: 0, Attack: 3, Defense: 1),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3)
+        ], set: "DPS");
+
     // Deathbird, "War of Kings" - the first card to use CantBlock (new
     // this pass): GameState.CantBlockThisTurn, the restriction mirror of
     // ForceBlock/MustBlockThisTurn - enforced by CombatEngine.
@@ -1655,7 +1712,8 @@ public static class SampleCards
             LilandraPolitician, VulcanRulerOfTheImperium, PsylockeAdventurer,
             BlobMGHDependent, SupremeIntelligencePsionicCollective, ToadLookingForComradery, Rally,
             GambitAceInTheHole, DeathbirdWarOfKings, DeadpoolMoreThanAChumpBlocker, RonanTheAccuserNoExceptions,
-            GambitUnlessIGotSomeoneToPlayWith, PsylockeAdvancedTelekineticCombatant, StormQueen
+            GambitUnlessIGotSomeoneToPlayWith, PsylockeAdvancedTelekineticCombatant, StormQueen,
+            MagikSorceressOfLimbo, PsylockeTelepath, StormCloudCover
         ];
 
         // Hand-curated cards win on id collision - shouldn't happen in

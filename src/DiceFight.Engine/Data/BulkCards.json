@@ -41005,45 +41005,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS088",
-    "name": "Psylocke",
-    "subtitle": "Telepath",
-    "type": "Character",
-    "purchaseCost": 2,
-    "energyType": "Mask",
-    "dieLimit": 3,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 1,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 0,
-        "attack": 2,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 3,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When fielded, target character die gets Overcrush.",
-    "keywords": [
-      "Overcrush"
-    ],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS089",
     "name": "Rogue",
     "subtitle": "Surveillance Immunity",
@@ -41147,43 +41108,6 @@
     "keywords": [],
     "affiliations": [
       "Brotherhood of Mutants"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS092",
-    "name": "Storm",
-    "subtitle": "Cloud Cover",
-    "type": "Character",
-    "purchaseCost": 4,
-    "energyType": "Bolt",
-    "dieLimit": 3,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 2,
-        "defense": 1,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 0,
-        "attack": 3,
-        "defense": 1,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 3,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When fielded, target character die with 3A or less can\\'t block this turn.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
     ],
     "isImplemented": false,
     "set": "DPS",
@@ -42038,45 +41962,6 @@
     "affiliations": [
       "Brotherhood of Mutants",
       "Hellfire Club"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS120",
-    "name": "Magik",
-    "subtitle": "Sorceress of Limbo",
-    "type": "Character",
-    "purchaseCost": 4,
-    "energyType": "Mask",
-    "dieLimit": 2,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 1,
-        "defense": 4,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 0,
-        "attack": 1,
-        "defense": 6,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 2,
-        "defense": 7,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When fielded, target character die gains Overcrush and +2A.",
-    "keywords": [
-      "Overcrush"
-    ],
-    "affiliations": [
-      "X-Men"
     ],
     "isImplemented": false,
     "set": "DPS",

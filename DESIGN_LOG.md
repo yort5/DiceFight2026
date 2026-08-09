@@ -4895,3 +4895,69 @@ Verified: `dotnet build`, `dotnet test` (346/346 - 4 new cases, one
 name collision with `SwapLife`'s own local caught and fixed before
 committing), and `npm run build` all clean. Re-ran
 `scripts/import_bulk_cards.py` (81 → 84 hand-curated).
+
+## Status update — GrantKeyword, TargetSpec.MaxAttack, and five more DPS cards
+
+Third batch this session, closing out both real gaps flagged when the
+last two primitives shipped: a way to grant a keyword to a chosen
+target die, and a stat-threshold `TargetSpec` filter.
+
+**GrantKeyword(TargetSpec Target, string Keyword)** - "target character
+die gains/gets [keyword]." Checked the comprehensive rules PDF before
+guessing at its duration: rule 3.4.3.9's own worked example calls
+"Character dice in your Reserve Pool gain Intimidate (until end of
+turn)" an *Applied* ability, the same category as a numeric Applied
+stat modifier, with the same default lifetime ("until end of turn,
+unless otherwise stated") - not permanent just because a card's own
+text has no duration clause. So the grant lives on a new `DieInstance.
+AppliedKeywords` list, cleared at every point `AppliedModifiers` already
+is (`ResetToUnrolled`, the Regenerate-reroll fresh-face path in
+`DieStats.ForceKO`, and `TurnEngine.CleanUp`'s end-of-turn sweep) rather
+than a separate GameState-level turn-scoped set - same lifecycle, so no
+reason to duplicate the bookkeeping. `DieStats.HasKeyword` checks it
+alongside printed/conditional-grant keywords, which means every
+existing Overcrush consumer (`CombatEngine`'s Overcrush check) picks
+this up for free.
+
+**TargetSpec.MaxAttack** - "target character die with 3A or less."
+Checked against `DieStats.EffectiveAttack` (the live, modifier-inclusive
+value), same "as it currently stands" convention every other
+targeting/condition check already follows. Filters in `LegalTargets.
+Query` itself, which - worth noting for future primitive design - means
+`EffectInterpreter.Resolve`'s own existing legal-target check enforces
+it directly: a test can prove the restriction by asserting a
+too-high-attack choice throws "not legal for [...]", no separate
+enforcement path to build or test.
+
+**Five cards**:
+- Magik, "Sorceress of Limbo" (DPS120) - `GrantKeyword`'s first user
+  (Overcrush + a `ModifyStat` +2A in the same `Sequence`). Caught a real
+  authoring trap: the bulk sheet's own parsed `Keywords` for this row is
+  `["Overcrush"]` - the sheet mis-attributing the keyword the ABILITY
+  grants to a target as though Magik's own card printed it. Copying
+  that into the hand-curated `CardDef.Keywords` would have given Magik's
+  own die permanent, unconditional Overcrush - a real bug, same class of
+  mistake as the Kitty Pryde/Phoenix one from several updates back, just
+  on the "own printed Keywords" side instead of the "own AbilityDef"
+  side. Left `Keywords` empty, as it should be.
+- Psylocke, "Telepath" (DPS088) - `GrantKeyword`'s second user, no stat
+  buff attached.
+- Storm, "Cloud Cover" (DPS092) - `MaxAttack`'s first user, paired with
+  the existing `CantBlock`.
+- Gambit ("Unless I Got Someone to Play With"), Psylocke ("Advanced
+  Telekinetic Combatant"), and Storm ("Queen") from the *previous*
+  status update are unaffected by this one - listed here only to avoid
+  confusion, since this update adds a second Psylocke and Storm printing.
+
+Tests exercise the real path: Magik's own test is the first to prove the
+"until end of turn" reading isn't just an assumption - it fields Magik,
+asserts the target's `HasKeyword`/`EffectiveAttack` reflect the grant,
+then runs a real `TurnEngine.CleanUp` and asserts both are gone
+afterward. Storm "Cloud Cover"'s test proves `MaxAttack` is actually
+enforced (not just descriptive) by asserting a high-attack choice throws
+through `EffectInterpreter.Execute` itself, and a low-attack choice
+succeeds and populates `CantBlockThisTurn`.
+
+Verified: `dotnet build`, `dotnet test` (349/349 - 3 new cases), and
+`npm run build` all clean. Re-ran `scripts/import_bulk_cards.py`
+(84 → 87 hand-curated).

@@ -23,6 +23,7 @@ public static class DieStats
         if (HasPrintedKeyword(state, die, keyword)) return true;
         if (keyword == "Overcrush" && HasStrikeBonus(state, die)) return true;
         if (HasConditionalSelfGrant(state, die, keyword)) return true;
+        if (die.AppliedKeywords.Contains(keyword)) return true;
 
         if (keyword == "Ally" || !CountsAsSidekick(state, die)) return false;
 
@@ -313,6 +314,7 @@ public static class DieStats
                 die.ProvidedEnergyType = null;
                 die.EnergyAmount = 1;
                 die.AppliedModifiers.Clear(); // rule 3.4.5.4 - lifetime ends when it leaves the Field Zone (it never did here, but it's a fresh face)
+                die.AppliedKeywords.Clear();
                 return false;
             }
             // Rolled a non-character face - falls through to a normal KO,
