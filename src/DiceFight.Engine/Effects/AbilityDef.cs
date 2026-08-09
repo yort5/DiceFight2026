@@ -36,6 +36,18 @@ public sealed record KOdDieMatch(
     // be the reacting die itself.
     bool ExcludeSelf = false);
 
+// TriggerType.WhenAnotherDieFielded's own filter - same shape as
+// KOdDieMatch just above, for "when [a die matching this] is fielded"
+// instead of "is KO'd". RequiredKeyword (Cyclops "First Class"/DPS025's
+// "a character die with Founder") checks DieStats.HasKeyword rather than
+// a printed-only lookup, since keywords can be granted as well as
+// printed and this filter shouldn't care which.
+public sealed record FieldedDieMatch(
+    TargetOwnership Ownership = TargetOwnership.Any,
+    string? RequiredKeyword = null,
+    string? AffiliationContains = null,
+    bool ExcludeSelf = false);
+
 // A single authored ability on a card: when it fires, what it costs
 // (rule 3.1.16 - Ability Cost, distinct from energy cost), and what it does.
 // Cost and Effects are both effect trees so a cost like "KO one of your
@@ -54,4 +66,7 @@ public sealed record AbilityDef(
     // Only meaningful for Trigger == WhenAnotherDieKOd - required (never
     // null) for that trigger, since a card without any real filter would
     // fire for every single KO in the game, which no real card means.
-    KOdDieMatch? KOdFilter = null);
+    KOdDieMatch? KOdFilter = null,
+    // Only meaningful for Trigger == WhenAnotherDieFielded - same
+    // "always required" reasoning as KOdFilter above.
+    FieldedDieMatch? FieldedFilter = null);

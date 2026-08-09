@@ -39298,43 +39298,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS025",
-    "name": "Cyclops",
-    "subtitle": "First Class",
-    "type": "Character",
-    "purchaseCost": 5,
-    "energyType": "Bolt",
-    "dieLimit": 4,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 4,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 5,
-        "defense": 3,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 6,
-        "defense": 4,
-        "burstStars": null
-      }
-    ],
-    "rawText": "FounderWhile Cyclops is active, when you field a character die with Founder, deal 2 damage to target character die.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS027",
     "name": "Dark Phoenix",
     "subtitle": "Malevolent",
@@ -39515,43 +39478,6 @@
     "keywords": [],
     "affiliations": [
       "Shi\\'ar"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS036",
-    "name": "Jubilee",
-    "subtitle": "Rebellious Nature",
-    "type": "Character",
-    "purchaseCost": 2,
-    "energyType": "Bolt",
-    "dieLimit": 4,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 2,
-        "defense": 1,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 3,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 4,
-        "defense": 3,
-        "burstStars": null
-      }
-    ],
-    "rawText": "Energize - If you have less life than your opponent, you may immediately field this die for free at level 2.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
     ],
     "isImplemented": false,
     "set": "DPS",
@@ -40855,43 +40781,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS091",
-    "name": "Sabretooth",
-    "subtitle": "Do I Smell... Weakness?",
-    "type": "Character",
-    "purchaseCost": 4,
-    "energyType": "Fist",
-    "dieLimit": 3,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 3,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 4,
-        "defense": 4,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 5,
-        "defense": 4,
-        "burstStars": null
-      }
-    ],
-    "rawText": "Sabretooth gets +1A for each opposing character die with 2D or less.",
-    "keywords": [],
-    "affiliations": [
-      "Brotherhood of Mutants"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS095",
     "name": "Vulcan",
     "subtitle": "Power Suppression",
@@ -41895,43 +41784,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS128",
-    "name": "Psylocke",
-    "subtitle": "Heiress",
-    "type": "Character",
-    "purchaseCost": 4,
-    "energyType": "Mask",
-    "dieLimit": 2,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 1,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 0,
-        "attack": 2,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 3,
-        "burstStars": null
-      }
-    ],
-    "rawText": "Psylocke gets +2A for each of your X-Men dice in the Prep Area. Energize - Spin target character die up 1 level.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS129",
     "name": "Rogue",
     "subtitle": "Unity Squad",
@@ -41963,80 +41815,6 @@
     "keywords": [],
     "affiliations": [
       "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS131",
-    "name": "Sabretooth",
-    "subtitle": "You Ready to Party?",
-    "type": "Character",
-    "purchaseCost": 5,
-    "energyType": "Fist",
-    "dieLimit": 2,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 3,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 4,
-        "defense": 4,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 5,
-        "defense": 4,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When Sabretooth attacks, your Brotherhood of Mutants character dice get +2A. Teamwatch - Target character die can\\'t block this turn",
-    "keywords": [],
-    "affiliations": [
-      "Brotherhood of Mutants"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS134",
-    "name": "Toad",
-    "subtitle": "Journey Into Misery",
-    "type": "Character",
-    "purchaseCost": 3,
-    "energyType": "Fist",
-    "dieLimit": 2,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 2,
-        "defense": 1,
-        "burstStars": 1
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 3,
-        "defense": 2,
-        "burstStars": 1
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 4,
-        "defense": 4,
-        "burstStars": null
-      }
-    ],
-    "rawText": "Teamwatch - Move a die from your opponents Prep Area to their bag.",
-    "keywords": [],
-    "affiliations": [
-      "Brotherhood of Mutants"
     ],
     "isImplemented": false,
     "set": "DPS",
@@ -42342,80 +42120,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS143",
-    "name": "Jubilee",
-    "subtitle": "X-Men Field Leader",
-    "type": "Character",
-    "purchaseCost": 4,
-    "energyType": "Bolt",
-    "dieLimit": 1,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 2,
-        "defense": 1,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 3,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 4,
-        "defense": 3,
-        "burstStars": null
-      }
-    ],
-    "rawText": "While Jubilee is active, when you field a character die she deals 1 damage to your opponent and 1 damage to target character die.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS144",
-    "name": "Kitty Pryde",
-    "subtitle": "Experienced Leader",
-    "type": "Character",
-    "purchaseCost": 4,
-    "energyType": "Mask",
-    "dieLimit": 1,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 2,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 0,
-        "attack": 3,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 3,
-        "burstStars": null
-      }
-    ],
-    "rawText": "While Kitty Pryde is active, each of your X-Men character dice get +1A and +1D.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS145",
     "name": "Lilandra",
     "subtitle": "Majestrix",
@@ -42447,43 +42151,6 @@
     "keywords": [],
     "affiliations": [
       "Shi\\'ar"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS146",
-    "name": "Magneto",
-    "subtitle": "Founder of the Brotherhood",
-    "type": "Character",
-    "purchaseCost": 6,
-    "energyType": "Mask",
-    "dieLimit": 1,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 4,
-        "defense": 4,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 5,
-        "defense": 7,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 3,
-        "attack": 6,
-        "defense": 8,
-        "burstStars": null
-      }
-    ],
-    "rawText": "While Magneto is active, when one of your Brotherhood of Mutants character dice is KO\\'d, KO target opposing character dice. Global Pay Mask. Once per turn, during your turn, if you have no dice in your Prep Area, you may draw a die and place it in your Prep Area.",
-    "keywords": [],
-    "affiliations": [
-      "Brotherhood of Mutants"
     ],
     "isImplemented": false,
     "set": "DPS",

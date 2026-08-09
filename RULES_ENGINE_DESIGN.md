@@ -263,7 +263,19 @@ here rather than assuming which approach they'd want.
     the "GrantKeyword, TargetSpec.MaxAttack, and five more DPS cards"
     status update, including a real authoring trap it caught (the bulk
     sheet mis-attributes Magik's OWN granted keyword as one of her
-    printed Keywords). Also now real: `SpinToEnergyFace` ("spin [a/
+    printed Keywords). Also now real: `TriggerType.WhenAnotherDieFielded`
+    (same shape as `WhenAnotherDieKOd`, fired from `TurnEngine.Field`
+    instead of a KO), `StaticTeamBonus.RequiredAffiliation`, `CardDef.
+    GrantsSelfAttackBonusPerMatchingDie` (+ `TargetSpec.MaxDefense`), a
+    `FieldDie` fix (Sidekick-aware Status, a configurable Level - closing
+    the exact gap that had left Jubilee "Rebellious Nature" vanilla), and
+    `EffectCondition.OwnLifeLessThanOpponent` - nine more DPS cards
+    (Kitty Pryde, Sabretooth x2, Psylocke, Magneto, Toad, Jubilee x2,
+    Cyclops) landed in the same round - see the "WhenAnotherDieFielded, 5
+    more primitives, and nine more DPS cards" status update, including a
+    retroactive fix it needed (Jean Grey's own "Founder" prefix, first
+    treated as pure flavor text, needed a real `KeywordInstance` once
+    Cyclops's own filter had to recognize it). Also now real: `SpinToEnergyFace` ("spin [a/
     target] die to its single/an energy face," reusing `PlaceholderDiceRoller`'s
     own Character-die energy-face formula) and `TargetSpec.RequiredLevel`
     ("target opposing level 1 character die") - Magik ("Better than

@@ -34,6 +34,9 @@ public static class LegalTargets
         if (spec.MaxAttack is { } maxAttack)
             candidates = candidates.Where(d => DieStats.EffectiveAttack(state, d) <= maxAttack);
 
+        if (spec.MaxDefense is { } maxDefense)
+            candidates = candidates.Where(d => DieStats.EffectiveDefense(state, d) <= maxDefense);
+
         if (spec.RequiredAffiliations is { } requiredAffiliations)
         {
             candidates = candidates.Where(d =>

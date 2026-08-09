@@ -247,7 +247,20 @@ public enum TriggerType
     // ResolveWhenAnotherDieKOd for the reactive scan this needs, fired
     // from the same shared choke point every real KO now funnels
     // through, alongside WhenKOd and Retaliation.
-    WhenAnotherDieKOd
+    WhenAnotherDieKOd,
+
+    // "While active, when you field [a die matching some filter], [my
+    // card] reacts" - Cyclops "First Class"/DPS025 (filtered to Founder-
+    // keyword dice), Jubilee "X-Men Field Leader"/DPS143 (unfiltered -
+    // any of your own dice being fielded). Same shape as
+    // WhenAnotherDieKOd just above, one trigger point earlier in a die's
+    // life: AbilityDef.FieldedFilter (a FieldedDieMatch) is the per-card
+    // data, TurnEngine.ResolveWhenAnotherDieFielded is the shared
+    // reactive scan, fired from TurnEngine.Field right after its existing
+    // Teamwatch scan (both react to the same "a Character die entered
+    // the Field Zone" moment, just with a per-card filter here instead of
+    // Teamwatch's hardcoded "same affiliation" rule).
+    WhenAnotherDieFielded
 }
 
 // Rule 2.2.3 - the five steps of a turn, in fixed order (2.2.4 - cannot

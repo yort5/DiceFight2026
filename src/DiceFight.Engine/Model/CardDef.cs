@@ -49,10 +49,24 @@ public sealed record CardDef
     // object like AppliedModifiers (see DieStats.StaticTeamBonusFor and
     // its EffectiveAttack/EffectiveDefense callers). Null for every card
     // that doesn't grant one. Deliberately narrow in scope to "your
-    // Character dice get +A/+D while I'm active" - not a general static-
-    // ability framework (no debuffs, no affiliation-scoped or "while
-    // attacking/blocking"-only variants yet - see rule 3.4.5.6).
+    // Character dice get +A/+D while I'm active," optionally scoped to
+    // one affiliation (StaticTeamBonus.RequiredAffiliation) - not a
+    // general static-ability framework (no debuffs, no keyword-scoped or
+    // "while attacking/blocking"-only variants yet - see rule 3.4.5.6).
     public StaticTeamBonus? GrantsStaticTeamBonus { get; init; }
+
+    // Sabretooth ("Do I Smell... Weakness?", DPS091): "gets +1A for each
+    // opposing character die with 2D or less." Psylocke ("Heiress",
+    // DPS128): "gets +2A for each of your X-Men dice in the Prep Area."
+    // Both are a live, continuously-recomputed SELF attack bonus scaled
+    // by a COUNT of other dice matching some filter - reuses TargetSpec/
+    // LegalTargets.Query as that filter (Ownership/zones/
+    // RequiredAffiliations/MaxDefense already exist; Count/Description
+    // are irrelevant here and ignored) rather than inventing a second,
+    // narrower filter shape just for counting. See DieStats.
+    // EffectiveAttack for how this is actually applied live. Null for
+    // every card that doesn't have one.
+    public SelfAttackBonusPerMatchingDie? GrantsSelfAttackBonusPerMatchingDie { get; init; }
 
     // Psylocke ("Adventurer", DPS048): "While Wolverine is active,
     // Psylocke gains Deadly" - a live, continuously-recomputed SELF
@@ -106,14 +120,24 @@ public sealed record CardDef
     public string? Set { get; init; }
 }
 
-// See CardDef.GrantsStaticTeamBonus's remarks.
-public sealed record StaticTeamBonus(int AttackDelta, int DefenseDelta);
+// See CardDef.GrantsStaticTeamBonus's remarks. RequiredAffiliation
+// (Kitty Pryde "Experienced Leader"/DPS144's "each of your X-Men
+// character dice get +1A and +1D") narrows which of the granting
+// player's dice actually receive the bonus - null (every other current
+// user) means every Character die, matching Captain Marvel's own
+// unqualified "your Character dice" text.
+public sealed record StaticTeamBonus(int AttackDelta, int DefenseDelta, string? RequiredAffiliation = null);
 
 // See CardDef.GrantsSelfKeywordWhileNamedCardActive's remarks.
 public sealed record ConditionalSelfKeywordGrant(string WhileCardNamed, string Keyword);
 
 // See CardDef.GrantsSelfStatBonusWhileNamedCardActive's remarks.
 public sealed record ConditionalSelfStatBonus(string WhileCardNamed, int AttackDelta, int DefenseDelta);
+
+// See CardDef.GrantsSelfAttackBonusPerMatchingDie's remarks. CountFilter
+// is a TargetSpec repurposed as a counting filter rather than a real
+// choice - LegalTargets.Query still does the actual matching.
+public sealed record SelfAttackBonusPerMatchingDie(TargetSpec CountFilter, int AttackPerMatch);
 
 // Rule Appendix 1 - keyword abilities are a finite, engine-known set
 // implemented as plugins (see design doc); Params covers e.g. Range X,

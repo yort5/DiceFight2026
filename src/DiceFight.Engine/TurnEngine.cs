@@ -436,6 +436,49 @@ public static class TurnEngine
                 EnqueueTriggered(state, queue, teamwatcher, TriggerType.Teamwatch);
             }
         }
+
+        ResolveWhenAnotherDieFielded(state, queue, die);
+    }
+
+    // TriggerType.WhenAnotherDieFielded - same shape as
+    // ResolveWhenAnotherDieKOd, just reacting to a fielding instead of a
+    // KO. Scans EVERY active die on the board, not just the fielded die's
+    // own controller's - FieldedDieMatch.Ownership expresses "must share
+    // the fielded die's controller" per-card instead, same reasoning
+    // WhenAnotherDieKOd's own remarks give (not every card with this
+    // trigger needs that restriction, even though both currently-authored
+    // users happen to want Own).
+    private static void ResolveWhenAnotherDieFielded(GameState state, AbilityQueue queue, DieInstance fieldedDie)
+    {
+        var fieldedCardId = fieldedDie.VirtualCardId ?? fieldedDie.CardId;
+        var fieldedCard = fieldedCardId is not null ? state.CardCatalog.GetValueOrDefault(fieldedCardId) : null;
+
+        foreach (var reactor in state.Dice.Where(d => d.Zone is Zone.FieldZone or Zone.AttackZone).ToList())
+        {
+            var reactorCardId = reactor.VirtualCardId ?? reactor.CardId;
+            if (reactorCardId is null || !state.CardCatalog.TryGetValue(reactorCardId, out var reactorCard)) continue;
+
+            foreach (var ability in reactorCard.Abilities.Where(a => a.Trigger == TriggerType.WhenAnotherDieFielded))
+            {
+                var filter = ability.FieldedFilter
+                    ?? throw new InvalidOperationException($"{reactorCard.Name}'s WhenAnotherDieFielded ability has no FieldedFilter.");
+                if (!MatchesFieldedFilter(state, filter, fieldedDie, fieldedCard, reactor)) continue;
+
+                queue.Enqueue(reactor.Id, reactor.ControllerId, TriggerType.WhenAnotherDieFielded, ability.Effect);
+            }
+        }
+    }
+
+    private static bool MatchesFieldedFilter(
+        GameState state, FieldedDieMatch filter, DieInstance fieldedDie, CardDef? fieldedCard, DieInstance reactor)
+    {
+        if (filter.ExcludeSelf && fieldedDie.Id == reactor.Id) return false;
+        if (filter.Ownership == TargetOwnership.Own && fieldedDie.ControllerId != reactor.ControllerId) return false;
+        if (filter.Ownership == TargetOwnership.Opposing && fieldedDie.ControllerId == reactor.ControllerId) return false;
+        if (filter.RequiredKeyword is { } keyword && !DieStats.HasKeyword(state, fieldedDie, keyword)) return false;
+        if (filter.AffiliationContains is { } affiliation &&
+            (fieldedCard is null || !fieldedCard.Affiliations.Contains(affiliation))) return false;
+        return true;
     }
 
     // Rule 2.6.4 - Use Action Dice Abilities, one of the four Main Step

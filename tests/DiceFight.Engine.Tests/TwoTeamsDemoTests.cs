@@ -1066,6 +1066,364 @@ public class TwoTeamsDemoTests
     }
 
     [Fact]
+    public void KittyPrydeExperiencedLeader_BuffsOnlyActiveXMenDice()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.KittyPrydeExperiencedLeader.Id, SampleCards.GambitUnlessIGotSomeoneToPlayWith.Id]);
+
+        var kittyDie = FindUnpurchased(state, "teamA", SampleCards.KittyPrydeExperiencedLeader.Id);
+        kittyDie.Zone = Zone.FieldZone;
+        kittyDie.Status = DieStatus.Character;
+        kittyDie.Level = 1;
+
+        var xMenDie = FindUnpurchased(state, "teamA", SampleCards.GambitUnlessIGotSomeoneToPlayWith.Id);
+        xMenDie.Zone = Zone.FieldZone;
+        xMenDie.Status = DieStatus.Character;
+        xMenDie.Level = 1;
+        var xMenAttackWithKitty = DieStats.EffectiveAttack(state, xMenDie);
+        var xMenDefenseWithKitty = DieStats.EffectiveDefense(state, xMenDie);
+
+        var nonXMenDie = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        nonXMenDie.Zone = Zone.FieldZone;
+        nonXMenDie.Status = DieStatus.Character;
+        nonXMenDie.Level = 1;
+        var nonXMenAttack = DieStats.EffectiveAttack(state, nonXMenDie);
+
+        kittyDie.Zone = Zone.Unpurchased; // Kitty leaves the field - the bonus should vanish
+        Assert.Equal(xMenAttackWithKitty - 1, DieStats.EffectiveAttack(state, xMenDie));
+        Assert.Equal(xMenDefenseWithKitty - 1, DieStats.EffectiveDefense(state, xMenDie));
+        Assert.Equal(nonXMenAttack, DieStats.EffectiveAttack(state, nonXMenDie)); // never affected
+    }
+
+    [Fact]
+    public void SabretoothDoISmellWeakness_AttackScalesWithLowDefenseOpposingDice()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.SabretoothDoISmellWeakness.Id]);
+
+        var sabretoothDie = FindUnpurchased(state, "teamA", SampleCards.SabretoothDoISmellWeakness.Id);
+        sabretoothDie.Zone = Zone.FieldZone;
+        sabretoothDie.Status = DieStatus.Character;
+        sabretoothDie.Level = 1;
+        var baseAttack = DieStats.EffectiveAttack(state, sabretoothDie);
+
+        var lowDefenseTarget = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        lowDefenseTarget.Zone = Zone.FieldZone;
+        lowDefenseTarget.Status = DieStatus.Character;
+        lowDefenseTarget.Level = 1; // PlaceholderLevels: 2D
+        Assert.Equal(baseAttack + 1, DieStats.EffectiveAttack(state, sabretoothDie));
+
+        var highDefenseTarget = FindUnpurchased(state, "teamB", SampleCards.Groot.Id);
+        highDefenseTarget.Zone = Zone.FieldZone;
+        highDefenseTarget.Status = DieStatus.Character;
+        highDefenseTarget.Level = 3; // PlaceholderLevels: 4D - doesn't qualify
+        Assert.Equal(baseAttack + 1, DieStats.EffectiveAttack(state, sabretoothDie)); // unchanged
+    }
+
+    [Fact]
+    public void PsylockeHeiress_AttackScalesWithOwnXMenDiceInPrepArea()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.PsylockeHeiress.Id, SampleCards.GambitUnlessIGotSomeoneToPlayWith.Id]);
+
+        var psylockeDie = FindUnpurchased(state, "teamA", SampleCards.PsylockeHeiress.Id);
+        psylockeDie.Zone = Zone.FieldZone;
+        psylockeDie.Status = DieStatus.Character;
+        psylockeDie.Level = 1;
+        var baseAttack = DieStats.EffectiveAttack(state, psylockeDie);
+
+        var xMenPrepDie = FindUnpurchased(state, "teamA", SampleCards.GambitUnlessIGotSomeoneToPlayWith.Id);
+        xMenPrepDie.Zone = Zone.PrepArea;
+
+        Assert.Equal(baseAttack + 2, DieStats.EffectiveAttack(state, psylockeDie));
+    }
+
+    [Fact]
+    public void PsylockeHeiressEnergize_FiresOffRealGate_SpinsTargetUpOneLevel()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.PsylockeHeiress.Id]);
+        state.ActivePlayerId = "teamA";
+        state.CurrentStep = TurnStep.RollAndReroll;
+
+        var psylockeDie = FindUnpurchased(state, "teamA", SampleCards.PsylockeHeiress.Id);
+        psylockeDie.Zone = Zone.ReservePool;
+        psylockeDie.Status = DieStatus.Energy;
+        psylockeDie.EnergyKind = EnergyKind.Generic;
+        psylockeDie.EnergyAmount = 2;
+
+        var target = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        target.Zone = Zone.FieldZone;
+        target.Status = DieStatus.Character;
+        target.Level = 1;
+
+        var queue = new AbilityQueue();
+        TurnEngine.Reroll(state, queue, new FixedRoller(DieStatus.Energy, 1), []);
+        Assert.Equal(1, queue.Count);
+        Assert.Equal(TriggerType.Energize, queue.Pending[0].Trigger);
+
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [target.Id])));
+
+        Assert.Equal(2, target.Level);
+    }
+
+    [Fact]
+    public void SabretoothYouReadyToPartyAttacking_BuffsOnlyBrotherhoodOfMutantsDice()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.SabretoothYouReadyToParty.Id, SampleCards.MagnetoFounderOfTheBrotherhood.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var brotherhoodDie = FindUnpurchased(state, "teamA", SampleCards.MagnetoFounderOfTheBrotherhood.Id);
+        brotherhoodDie.Zone = Zone.FieldZone;
+        brotherhoodDie.Status = DieStatus.Character;
+        brotherhoodDie.Level = 1;
+        var brotherhoodAttackBefore = DieStats.EffectiveAttack(state, brotherhoodDie);
+
+        var nonBrotherhoodDie = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        nonBrotherhoodDie.Zone = Zone.FieldZone;
+        nonBrotherhoodDie.Status = DieStatus.Character;
+        nonBrotherhoodDie.Level = 1;
+        var nonBrotherhoodAttackBefore = DieStats.EffectiveAttack(state, nonBrotherhoodDie);
+
+        var sabretoothDie = FindUnpurchased(state, "teamA", SampleCards.SabretoothYouReadyToParty.Id);
+        sabretoothDie.Zone = Zone.FieldZone;
+        sabretoothDie.Status = DieStatus.Character;
+        sabretoothDie.Level = 1;
+
+        state.CurrentStep = TurnStep.Attack;
+        state.AttackSubStep = AttackSubStep.DeclareAttackers;
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [sabretoothDie.Id]);
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(
+                state, ability.ControllerId, ability.SourceDieId,
+                _ => throw new InvalidOperationException("MatchAll shouldn't ask for a choice"))));
+
+        Assert.Equal(brotherhoodAttackBefore + 2, DieStats.EffectiveAttack(state, brotherhoodDie));
+        Assert.Equal(nonBrotherhoodAttackBefore, DieStats.EffectiveAttack(state, nonBrotherhoodDie));
+    }
+
+    [Fact]
+    public void SabretoothYouReadyToPartyTeamwatch_FiresOffRealFieldScan_TargetCantBlock()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.SabretoothYouReadyToParty.Id, SampleCards.MagnetoFounderOfTheBrotherhood.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var sabretoothDie = FindUnpurchased(state, "teamA", SampleCards.SabretoothYouReadyToParty.Id);
+        sabretoothDie.Zone = Zone.FieldZone;
+        sabretoothDie.Status = DieStatus.Character;
+        sabretoothDie.Level = 1;
+
+        var opposingTarget = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        opposingTarget.Zone = Zone.FieldZone;
+        opposingTarget.Status = DieStatus.Character;
+        opposingTarget.Level = 1;
+
+        // Fielding a different Brotherhood of Mutants die is what fires
+        // Sabretooth's own Teamwatch (TurnEngine.Field's real scan).
+        var magnetoDie = FindUnpurchased(state, "teamA", SampleCards.MagnetoFounderOfTheBrotherhood.Id);
+        var purchaseEnergy = GiveWildEnergy(state, "teamA", SampleCards.MagnetoFounderOfTheBrotherhood.PurchaseCost);
+        TurnEngine.Purchase(state, magnetoDie.Id, purchaseEnergy.Select(d => d.Id).ToList());
+        magnetoDie.Zone = Zone.ReservePool;
+        magnetoDie.Status = DieStatus.Character;
+        magnetoDie.Level = 1;
+
+        var fieldEnergy = GiveWildEnergy(state, "teamA", 1);
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, magnetoDie.Id, energyDieIdsToSpend: [fieldEnergy[0].Id]);
+
+        Assert.Contains(queue.Pending, a => a.Trigger == TriggerType.Teamwatch);
+
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [opposingTarget.Id])));
+
+        Assert.Contains(opposingTarget.Id, state.CantBlockThisTurn);
+    }
+
+    [Fact]
+    public void ToadJourneyIntoMiseryTeamwatch_FiresOffRealFieldScan_MovesOpponentPrepAreaDieToBag()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.ToadJourneyIntoMisery.Id, SampleCards.MagnetoFounderOfTheBrotherhood.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var toadDie = FindUnpurchased(state, "teamA", SampleCards.ToadJourneyIntoMisery.Id);
+        toadDie.Zone = Zone.FieldZone;
+        toadDie.Status = DieStatus.Character;
+        toadDie.Level = 1;
+
+        var opponentPrepDie = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        opponentPrepDie.Zone = Zone.PrepArea;
+
+        var magnetoDie = FindUnpurchased(state, "teamA", SampleCards.MagnetoFounderOfTheBrotherhood.Id);
+        var purchaseEnergy = GiveWildEnergy(state, "teamA", SampleCards.MagnetoFounderOfTheBrotherhood.PurchaseCost);
+        TurnEngine.Purchase(state, magnetoDie.Id, purchaseEnergy.Select(d => d.Id).ToList());
+        magnetoDie.Zone = Zone.ReservePool;
+        magnetoDie.Status = DieStatus.Character;
+        magnetoDie.Level = 1;
+
+        var fieldEnergy = GiveWildEnergy(state, "teamA", 1);
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, magnetoDie.Id, energyDieIdsToSpend: [fieldEnergy[0].Id]);
+
+        Assert.Contains(queue.Pending, a => a.Trigger == TriggerType.Teamwatch);
+
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [opponentPrepDie.Id])));
+
+        Assert.Equal(Zone.Bag, opponentPrepDie.Zone);
+    }
+
+    [Fact]
+    public void JubileeRebelliousNatureEnergize_WhenLifeIsLower_FieldsItselfForFreeAtLevel2()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.JubileeRebelliousNature.Id]);
+        state.ActivePlayerId = "teamA";
+        state.CurrentStep = TurnStep.RollAndReroll;
+        state.PlayerOne.Life = 10;
+        state.PlayerTwo.Life = 20;
+
+        var jubileeDie = FindUnpurchased(state, "teamA", SampleCards.JubileeRebelliousNature.Id);
+        jubileeDie.Zone = Zone.ReservePool;
+        jubileeDie.Status = DieStatus.Energy;
+        jubileeDie.EnergyKind = EnergyKind.Generic;
+        jubileeDie.EnergyAmount = 2;
+
+        var queue = new AbilityQueue();
+        TurnEngine.Reroll(state, queue, new FixedRoller(DieStatus.Energy, 1), []);
+        Assert.Equal(1, queue.Count);
+        Assert.Equal(TriggerType.Energize, queue.Pending[0].Trigger);
+
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [])));
+
+        // Status was Energy going in - FieldDie's own fix (Sidekick-aware
+        // Status, a configurable Level) is what makes this land correctly.
+        Assert.Equal(Zone.FieldZone, jubileeDie.Zone);
+        Assert.Equal(DieStatus.Character, jubileeDie.Status);
+        Assert.Equal(2, jubileeDie.Level);
+    }
+
+    [Fact]
+    public void JubileeRebelliousNatureEnergize_WhenLifeIsNotLower_DoesNothing()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.JubileeRebelliousNature.Id]);
+        state.ActivePlayerId = "teamA";
+        state.CurrentStep = TurnStep.RollAndReroll;
+        state.PlayerOne.Life = 20;
+        state.PlayerTwo.Life = 20;
+
+        var jubileeDie = FindUnpurchased(state, "teamA", SampleCards.JubileeRebelliousNature.Id);
+        jubileeDie.Zone = Zone.ReservePool;
+        jubileeDie.Status = DieStatus.Energy;
+        jubileeDie.EnergyKind = EnergyKind.Generic;
+        jubileeDie.EnergyAmount = 2;
+
+        var queue = new AbilityQueue();
+        TurnEngine.Reroll(state, queue, new FixedRoller(DieStatus.Energy, 1), []);
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [])));
+
+        Assert.Equal(Zone.ReservePool, jubileeDie.Zone); // unchanged - condition false
+        Assert.Equal(DieStatus.Energy, jubileeDie.Status);
+    }
+
+    [Fact]
+    public void CyclopsFirstClass_ReactsOnlyToFieldingAFounderKeywordDie()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds:
+            [SampleCards.CyclopsFirstClass.Id, SampleCards.JeanGreyPeacefulCoexistence.Id,
+             SampleCards.GambitUnlessIGotSomeoneToPlayWith.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var cyclopsDie = FindUnpurchased(state, "teamA", SampleCards.CyclopsFirstClass.Id);
+        cyclopsDie.Zone = Zone.FieldZone;
+        cyclopsDie.Status = DieStatus.Character;
+        cyclopsDie.Level = 1;
+
+        var opposingTarget = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        opposingTarget.Zone = Zone.FieldZone;
+        opposingTarget.Status = DieStatus.Character;
+        opposingTarget.Level = 3; // PlaceholderLevels: 4D - survives 2 damage so Damage is observable
+
+        // Fielding a non-Founder die does NOT trigger Cyclops. Rule 2.4
+        // bypass: mark the die as already purchased and rolled onto its
+        // level-1 character face, ready to field - purchase mechanics
+        // aren't what this test is about.
+        var gambitDie = FindUnpurchased(state, "teamA", SampleCards.GambitUnlessIGotSomeoneToPlayWith.Id);
+        gambitDie.Zone = Zone.ReservePool;
+        gambitDie.Status = DieStatus.Character;
+        gambitDie.Level = 1; // fielding cost 1
+        var gambitFieldEnergy = GiveWildEnergy(state, "teamA", 1);
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, gambitDie.Id, energyDieIdsToSpend: [gambitFieldEnergy[0].Id]);
+        Assert.DoesNotContain(queue.Pending, a => a.Trigger == TriggerType.WhenAnotherDieFielded);
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [opposingTarget.Id])));
+
+        // Fielding a Founder die DOES trigger Cyclops.
+        var jeanGreyDie = FindUnpurchased(state, "teamA", SampleCards.JeanGreyPeacefulCoexistence.Id);
+        jeanGreyDie.Zone = Zone.ReservePool;
+        jeanGreyDie.Status = DieStatus.Character;
+        jeanGreyDie.Level = 1; // fielding cost 1
+        var jeanGreyFieldEnergy = GiveWildEnergy(state, "teamA", 1);
+        TurnEngine.Field(state, queue, jeanGreyDie.Id, energyDieIdsToSpend: [jeanGreyFieldEnergy[0].Id]);
+        Assert.Contains(queue.Pending, a => a.Trigger == TriggerType.WhenAnotherDieFielded);
+
+        var damageBefore = opposingTarget.Damage;
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [opposingTarget.Id])));
+
+        Assert.Equal(damageBefore + 2, opposingTarget.Damage);
+    }
+
+    [Fact]
+    public void JubileeXMenFieldLeader_ReactsToFieldingAnyOfYourOwnDice()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.JubileeXMenFieldLeader.Id, SampleCards.GambitUnlessIGotSomeoneToPlayWith.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var jubileeDie = FindUnpurchased(state, "teamA", SampleCards.JubileeXMenFieldLeader.Id);
+        jubileeDie.Zone = Zone.FieldZone;
+        jubileeDie.Status = DieStatus.Character;
+        jubileeDie.Level = 1;
+
+        var opposingTarget = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        opposingTarget.Zone = Zone.FieldZone;
+        opposingTarget.Status = DieStatus.Character;
+        opposingTarget.Level = 1;
+        var opponentLifeBefore = state.PlayerTwo.Life;
+
+        var gambitDie = FindUnpurchased(state, "teamA", SampleCards.GambitUnlessIGotSomeoneToPlayWith.Id);
+        var purchaseEnergy = GiveWildEnergy(state, "teamA", SampleCards.GambitUnlessIGotSomeoneToPlayWith.PurchaseCost);
+        TurnEngine.Purchase(state, gambitDie.Id, purchaseEnergy.Select(d => d.Id).ToList());
+        gambitDie.Zone = Zone.ReservePool;
+        gambitDie.Status = DieStatus.Character;
+        gambitDie.Level = 1; // fielding cost 1
+        var gambitFieldEnergy = GiveWildEnergy(state, "teamA", 1);
+
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, gambitDie.Id, energyDieIdsToSpend: [gambitFieldEnergy[0].Id]);
+        Assert.Contains(queue.Pending, a => a.Trigger == TriggerType.WhenAnotherDieFielded);
+
+        // Two different TargetSpecs in the same Sequence (a fixed Player
+        // target, a chosen CharacterDie target) - the resolver has to
+        // discriminate by spec shape, unlike every single-target-spec
+        // resolver elsewhere in this file.
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(
+                state, ability.ControllerId, ability.SourceDieId,
+                spec => spec.CharacterDiceOnly ? [opposingTarget.Id] : [state.PlayerTwo.Id])));
+
+        Assert.Equal(opponentLifeBefore - 1, state.PlayerTwo.Life);
+        Assert.Equal(1, opposingTarget.Damage);
+    }
+
+    [Fact]
     public void UsingStarfireGlobalAbility_PrepsADieFromBag_IfYouPurchasedADieThisTurn()
     {
         var state = BuildTwoTeamGame();

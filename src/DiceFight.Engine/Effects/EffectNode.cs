@@ -58,7 +58,11 @@ public sealed record TargetSpec(
     int? MaxAttack = null,
     IReadOnlyList<string>? RequiredAffiliations = null,
     bool MatchAll = false,
-    int? RequiredLevel = null)
+    int? RequiredLevel = null,
+    // Sabretooth "Do I Smell... Weakness?" (DPS091)'s "opposing character
+    // die with 2D or less" - the defense-side counterpart to MaxAttack,
+    // same "live EffectiveDefense, not printed face" convention.
+    int? MaxDefense = null)
 {
     // Rule 3.3.4/3.3.5 - only dice in the Field Zone (which includes the
     // Attack Zone) may be targeted, unless otherwise stated.
@@ -74,10 +78,11 @@ public sealed record TargetSpec(
         int? maxAttack = null,
         IReadOnlyList<string>? requiredAffiliations = null,
         bool matchAll = false,
-        int? requiredLevel = null) =>
+        int? requiredLevel = null,
+        int? maxDefense = null) =>
         new(ownership, CharacterDiceOnly: true, zones ?? DefaultZones, energyType, count, description,
             Optional: optional, MaxAttack: maxAttack, RequiredAffiliations: requiredAffiliations, MatchAll: matchAll,
-            RequiredLevel: requiredLevel);
+            RequiredLevel: requiredLevel, MaxDefense: maxDefense);
 
     // optional: true models "you MAY target up to Count" (any number,
     // including zero, is a legal chosen count) rather than rule 3.3.11's
@@ -265,7 +270,11 @@ public sealed record Spin(TargetSpec Target, int LevelDelta) : EffectNode;
 public sealed record SpinToEnergyFace(TargetSpec Target, int Amount = 1) : EffectNode;
 public sealed record DrawDice(int Count) : EffectNode;
 public sealed record PrepDie(TargetSpec Source) : EffectNode;
-public sealed record FieldDie(TargetSpec Target, bool Free) : EffectNode;
+// Level defaults to 1 (rule 2.6.3 note - dice fielded by an ability are
+// fielded for free on level 1 unless stated otherwise); Jubilee
+// "Rebellious Nature" (DPS036)'s own "field this die for free at level 2"
+// is the first card that needed anything else.
+public sealed record FieldDie(TargetSpec Target, bool Free, int Level = 1) : EffectNode;
 public sealed record GainLife(int Amount) : EffectNode;
 // Whose defaults to Own (rule 3.1.15 - "you" in card text means the
 // ability's controller) - Ronan the Accuser's "your opponent loses 1
@@ -299,6 +308,12 @@ public enum EffectCondition
     // same "ignores the resolved CheckTarget id" shape as
     // NoCharacterKOdThisTurn - use TargetSpec.Self here too.
     PrepAreaEmpty,
+
+    // Jubilee ("Rebellious Nature", DPS036)'s Energize - "if you have
+    // less life than your opponent." Reads both players' Life directly,
+    // same "ignores the resolved CheckTarget id" shape as
+    // NoCharacterKOdThisTurn/PrepAreaEmpty - use TargetSpec.Self here too.
+    OwnLifeLessThanOpponent,
 
     // Burst symbols - the sheet's "*"/"**" ability-text marks (distinct
     // from the OLD misreading of them as "a different printing's text" -

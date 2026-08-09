@@ -252,20 +252,21 @@ public static class EffectInterpreter
                 foreach (var id in Resolve(ctx, field.Target, cache))
                 {
                     // Rule 2.6.3 note - dice fielded by an ability are
-                    // fielded for free on level 1 unless stated otherwise.
-                    // Paying for a non-free ability-driven field isn't
-                    // modeled - no currently-authored card needs it. Also
-                    // assumes Status is already Character/SidekickCharacter
-                    // (true for every currently-authored user, e.g.
-                    // Colossus's Energize target - a die already sitting
-                    // in the Reserve Pool on a character face) - doesn't
-                    // transition an Energy-status die (Jubilee, DPS036,
-                    // deliberately left vanilla for exactly this reason:
-                    // an Energize ability fires while its own die is
-                    // still Status: Energy, and "field this die" would
-                    // need a real Status change this doesn't do).
+                    // fielded for free unless stated otherwise (Level
+                    // defaults to 1, per that same note; Jubilee
+                    // "Rebellious Nature"/DPS036 is the first card that
+                    // needed a different one). Paying for a non-free
+                    // ability-driven field isn't modeled - no currently-
+                    // authored card needs it. Explicitly sets Status
+                    // (Sidekick-aware, not a blind DieStatus.Character)
+                    // rather than assuming the die already happens to be
+                    // on a character face - Jubilee's own die is still
+                    // Status.Energy when this fires (Energize triggers
+                    // off a double-energy roll), unlike Colossus's
+                    // Energize target which already was Character.
                     var die = FindDie(ctx, id);
-                    die.Level = 1;
+                    die.Status = die.IsSidekick ? DieStatus.SidekickCharacter : DieStatus.Character;
+                    die.Level = field.Level;
                     die.Zone = Zone.FieldZone;
                 }
                 break;
@@ -644,6 +645,9 @@ public static class EffectInterpreter
         // dieId is unused here - see EffectCondition.NoCharacterKOdThisTurn's own remarks.
         EffectCondition.NoCharacterKOdThisTurn => !ctx.State.AnyCharacterKOdThisTurn,
         EffectCondition.PrepAreaEmpty => !ctx.State.DiceIn(ctx.ControllerId, Zone.PrepArea).Any(),
+        // dieId is unused here - see EffectCondition.OwnLifeLessThanOpponent's own remarks.
+        EffectCondition.OwnLifeLessThanOpponent =>
+            ctx.State.GetPlayer(ctx.ControllerId).Life < ctx.State.GetPlayer(ctx.State.OpponentOf(ctx.ControllerId)).Life,
         EffectCondition.OnSingleBurstFace => CurrentBurstStars(ctx.State, FindDie(ctx, dieId)) == 1,
         EffectCondition.OnDoubleBurstFace => CurrentBurstStars(ctx.State, FindDie(ctx, dieId)) == 2,
         _ => throw new NotSupportedException($"Unhandled effect condition: {condition}")

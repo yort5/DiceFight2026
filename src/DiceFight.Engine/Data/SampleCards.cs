@@ -61,6 +61,7 @@ public static class SampleCards
         StaticTeamBonus? grantsStaticTeamBonus = null,
         ConditionalSelfKeywordGrant? grantsSelfKeywordWhileNamedCardActive = null,
         ConditionalSelfStatBonus? grantsSelfStatBonusWhileNamedCardActive = null,
+        SelfAttackBonusPerMatchingDie? grantsSelfAttackBonusPerMatchingDie = null,
         bool isImplemented = true,
         string? set = null) => new()
     {
@@ -80,6 +81,7 @@ public static class SampleCards
         GrantsStaticTeamBonus = grantsStaticTeamBonus,
         GrantsSelfKeywordWhileNamedCardActive = grantsSelfKeywordWhileNamedCardActive,
         GrantsSelfStatBonusWhileNamedCardActive = grantsSelfStatBonusWhileNamedCardActive,
+        GrantsSelfAttackBonusPerMatchingDie = grantsSelfAttackBonusPerMatchingDie,
         IsImplemented = isImplemented,
         Set = set
     };
@@ -1566,11 +1568,12 @@ public static class SampleCards
     // Jean Grey, "Peaceful Coexistence" - the first Loyalty card (see
     // GameState.LoyaltyCounters/DieStats.LoyaltyBonus and TriggerType.
     // EndOfYourTurn's own remarks for the new plumbing this needed).
-    // "Founder" prefixing the raw text isn't a real structured field
-    // anywhere in the source sheet (same non-modeled flavor-label
-    // treatment as Darkseid's own remarks describe for similar cases) -
-    // nothing else on this card references it, so it's not worth
-    // inventing a mechanism for here.
+    // "Founder" prefixing the raw text was originally left untagged as a
+    // non-modeled flavor label (nothing on THIS card referenced it) -
+    // correction, now that Cyclops "First Class" (DPS025) needs a real
+    // Founder KeywordInstance to recognize fielded Founder dice: this is
+    // a genuine printed keyword after all, just one nothing consumed
+    // until now.
     public static readonly CardDef JeanGreyPeacefulCoexistence = Character(
         "DPS035", "Jean Grey", "Peaceful Coexistence", dieLimit: 4,
         "Founder While Jean Grey is active, at the end of each or your turns, if no character dice were " +
@@ -1578,6 +1581,7 @@ public static class SampleCards
         "+1A and +1D.)",
         purchaseCost: 4, energyType: EnergyType.Bolt,
         affiliations: ["X-Men"],
+        keywords: [new KeywordInstance("Founder")],
         abilities: [new AbilityDef(TriggerType.EndOfYourTurn, Cost: null,
             Effect: new Conditional(TargetSpec.Self, EffectCondition.NoCharacterKOdThisTurn, new GrantLoyaltyCounter()))],
         levels: [
@@ -1614,6 +1618,203 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 4),
             new CharacterFace(FieldingCost: 2, Attack: 5, Defense: 7),
             new CharacterFace(FieldingCost: 3, Attack: 6, Defense: 8)
+        ], set: "DPS");
+
+    // Kitty Pryde, "Experienced Leader" - the first card to use an
+    // affiliation-scoped StaticTeamBonus (new this pass): "each of your
+    // X-Men character dice get +1A and +1D," no AbilityDef needed at all
+    // (purely a live, continuously-recomputed Static ability, same as
+    // Captain Marvel's own unqualified version).
+    public static readonly CardDef KittyPrydeExperiencedLeader = Character(
+        "DPS144", "Kitty Pryde", "Experienced Leader", dieLimit: 1,
+        "While Kitty Pryde is active, each of your X-Men character dice get +1A and +1D.",
+        purchaseCost: 4, energyType: EnergyType.Mask,
+        affiliations: ["X-Men"],
+        grantsStaticTeamBonus: new StaticTeamBonus(1, 1, RequiredAffiliation: "X-Men"),
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 2),
+            new CharacterFace(FieldingCost: 0, Attack: 3, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3)
+        ], set: "DPS");
+
+    // Sabretooth, "Do I Smell... Weakness?" - the first card to use
+    // GrantsSelfAttackBonusPerMatchingDie (new this pass), counting via
+    // TargetSpec.MaxDefense (also new this pass). No AbilityDef needed -
+    // purely a live, continuously-recomputed self bonus.
+    public static readonly CardDef SabretoothDoISmellWeakness = Character(
+        "DPS091", "Sabretooth", "Do I Smell... Weakness?", dieLimit: 3,
+        "Sabretooth gets +1A for each opposing character die with 2D or less.",
+        purchaseCost: 4, energyType: EnergyType.Fist,
+        affiliations: ["Brotherhood of Mutants"],
+        grantsSelfAttackBonusPerMatchingDie: new SelfAttackBonusPerMatchingDie(
+            TargetSpec.CharacterDie("opposing character die with 2D or less", TargetOwnership.Opposing, maxDefense: 2),
+            AttackPerMatch: 1),
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3),
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 4),
+            new CharacterFace(FieldingCost: 2, Attack: 5, Defense: 4)
+        ], set: "DPS");
+
+    // Psylocke, "Heiress" - GrantsSelfAttackBonusPerMatchingDie's second
+    // user, counting via TargetSpec.AnyDie against the Prep Area instead
+    // (a Prep Area die is always Unrolled, same "can't use CharacterDie's
+    // CharacterDiceOnly filter" reasoning Professor X's own Energize
+    // already established) - plus a real Energize ability on top.
+    public static readonly CardDef PsylockeHeiress = Character(
+        "DPS128", "Psylocke", "Heiress", dieLimit: 2,
+        "Psylocke gets +2A for each of your X-Men dice in the Prep Area. Energize - Spin target character " +
+        "die up 1 level.",
+        purchaseCost: 4, energyType: EnergyType.Mask,
+        affiliations: ["X-Men"],
+        keywords: [new KeywordInstance("Energize")],
+        grantsSelfAttackBonusPerMatchingDie: new SelfAttackBonusPerMatchingDie(
+            TargetSpec.AnyDie(
+                "your X-Men dice in the Prep Area", TargetOwnership.Own, zones: [Zone.PrepArea],
+                requiredAffiliations: ["X-Men"]),
+            AttackPerMatch: 2),
+        abilities: [new AbilityDef(TriggerType.Energize, Cost: null,
+            Effect: new Spin(TargetSpec.CharacterDie("target character die"), +1))],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 2),
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3)
+        ], set: "DPS");
+
+    // Magneto, "Founder of the Brotherhood" - both abilities reuse
+    // primitives Magneto's own "Idealist" printing (DPS041) already
+    // established: WhenAnotherDieKOd + KOdDieMatch (affiliation instead
+    // of energy type this time), and the exact same "if you have no dice
+    // in your Prep Area, draw one" Global.
+    public static readonly CardDef MagnetoFounderOfTheBrotherhood = Character(
+        "DPS146", "Magneto", "Founder of the Brotherhood", dieLimit: 1,
+        "While Magneto is active, when one of your Brotherhood of Mutants character dice is KO'd, KO " +
+        "target opposing character dice. Global Pay Mask. Once per turn, during your turn, if you have no " +
+        "dice in your Prep Area, you may draw a die and place it in your Prep Area.",
+        purchaseCost: 6, energyType: EnergyType.Mask,
+        affiliations: ["Brotherhood of Mutants"],
+        abilities: [
+            new AbilityDef(TriggerType.WhenAnotherDieKOd, Cost: null,
+                Effect: new Ko(TargetSpec.CharacterDie("target opposing character die", TargetOwnership.Opposing)),
+                KOdFilter: new KOdDieMatch(TargetOwnership.Own, AffiliationContains: "Brotherhood of Mutants")),
+            new AbilityDef(TriggerType.Global, Cost: null,
+                Effect: new Conditional(TargetSpec.Self, EffectCondition.PrepAreaEmpty, new PrepFromBag()),
+                EnergyCost: new EnergyCost(1, EnergyType.Mask), OncePerTurn: true)
+        ],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 4),
+            new CharacterFace(FieldingCost: 2, Attack: 5, Defense: 7),
+            new CharacterFace(FieldingCost: 3, Attack: 6, Defense: 8)
+        ], set: "DPS");
+
+    // Sabretooth, "You Ready to Party?" - both abilities are existing
+    // primitives recombined: WhenAttacks + a MatchAll/RequiredAffiliations
+    // ModifyStat (same shape Moira/Sabretooth's own other printing
+    // already established for "your [affiliation] dice get +NA"), and
+    // Teamwatch + the existing plain CantBlock.
+    public static readonly CardDef SabretoothYouReadyToParty = Character(
+        "DPS131", "Sabretooth", "You Ready to Party?", dieLimit: 2,
+        "When Sabretooth attacks, your Brotherhood of Mutants character dice get +2A. Teamwatch - Target " +
+        "character die can't block this turn",
+        purchaseCost: 5, energyType: EnergyType.Fist,
+        affiliations: ["Brotherhood of Mutants"],
+        keywords: [new KeywordInstance("Teamwatch")],
+        abilities: [
+            new AbilityDef(TriggerType.WhenAttacks, Cost: null,
+                Effect: new ModifyStat(
+                    TargetSpec.CharacterDie(
+                        "your Brotherhood of Mutants character dice", TargetOwnership.Own,
+                        requiredAffiliations: ["Brotherhood of Mutants"], matchAll: true),
+                    AttackDelta: 2, DefenseDelta: null)),
+            new AbilityDef(TriggerType.Teamwatch, Cost: null,
+                Effect: new CantBlock(TargetSpec.CharacterDie("target character die")))
+        ],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3),
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 4),
+            new CharacterFace(FieldingCost: 2, Attack: 5, Defense: 4)
+        ], set: "DPS");
+
+    // Toad, "Journey Into Misery" - Teamwatch + a plain MoveDie against
+    // the opponent's Prep Area, no new primitive needed.
+    public static readonly CardDef ToadJourneyIntoMisery = Character(
+        "DPS134", "Toad", "Journey Into Misery", dieLimit: 2,
+        "Teamwatch - Move a die from your opponents Prep Area to their bag.",
+        purchaseCost: 3, energyType: EnergyType.Fist,
+        affiliations: ["Brotherhood of Mutants"],
+        keywords: [new KeywordInstance("Teamwatch")],
+        abilities: [new AbilityDef(TriggerType.Teamwatch, Cost: null,
+            Effect: new MoveDie(
+                TargetSpec.AnyDie("a die from your opponent's Prep Area", TargetOwnership.Opposing, zones: [Zone.PrepArea]),
+                Zone.Bag))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 1, BurstStars: 1),
+            new CharacterFace(FieldingCost: 2, Attack: 3, Defense: 2, BurstStars: 1),
+            new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 4)
+        ], set: "DPS");
+
+    // Jubilee, "Rebellious Nature" - the first card to use the new
+    // EffectCondition.OwnLifeLessThanOpponent, and FieldDie's newly-fixed
+    // Status transition (see FieldDie's own remarks): this ability fires
+    // while its own die is still Status.Energy (Energize's own trigger
+    // condition), which the OLD FieldDie couldn't handle - deliberately
+    // left vanilla for exactly that reason until now.
+    public static readonly CardDef JubileeRebelliousNature = Character(
+        "DPS036", "Jubilee", "Rebellious Nature", dieLimit: 4,
+        "Energize - If you have less life than your opponent, you may immediately field this die for free " +
+        "at level 2.",
+        purchaseCost: 2, energyType: EnergyType.Bolt,
+        affiliations: ["X-Men"],
+        keywords: [new KeywordInstance("Energize")],
+        abilities: [new AbilityDef(TriggerType.Energize, Cost: null,
+            Effect: new Conditional(TargetSpec.Self, EffectCondition.OwnLifeLessThanOpponent,
+                Then: new FieldDie(TargetSpec.Self, Free: true, Level: 2)))],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 1),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3),
+            new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 3)
+        ], set: "DPS");
+
+    // Cyclops, "First Class" - the first card to use TriggerType.
+    // WhenAnotherDieFielded (new this pass), filtered to Founder-keyword
+    // dice. Cyclops's own text prints "Founder" too (a real
+    // KeywordInstance now - see Jean Grey's own remarks for the
+    // correction), though nothing currently checks Cyclops's OWN
+    // Founder-ness, only the fielded die's.
+    public static readonly CardDef CyclopsFirstClass = Character(
+        "DPS025", "Cyclops", "First Class", dieLimit: 4,
+        "Founder While Cyclops is active, when you field a character die with Founder, deal 2 damage to " +
+        "target character die.",
+        purchaseCost: 5, energyType: EnergyType.Bolt,
+        affiliations: ["X-Men"],
+        keywords: [new KeywordInstance("Founder")],
+        abilities: [new AbilityDef(TriggerType.WhenAnotherDieFielded, Cost: null,
+            Effect: new DealDamage(2, TargetSpec.CharacterDie("target character die")),
+            FieldedFilter: new FieldedDieMatch(TargetOwnership.Own, RequiredKeyword: "Founder"))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 3),
+            new CharacterFace(FieldingCost: 1, Attack: 6, Defense: 4)
+        ], set: "DPS");
+
+    // Jubilee, "X-Men Field Leader" - WhenAnotherDieFielded's second
+    // user, this time unfiltered (any of your own dice being fielded,
+    // not just Founder ones).
+    public static readonly CardDef JubileeXMenFieldLeader = Character(
+        "DPS143", "Jubilee", "X-Men Field Leader", dieLimit: 1,
+        "While Jubilee is active, when you field a character die she deals 1 damage to your opponent and " +
+        "1 damage to target character die.",
+        purchaseCost: 4, energyType: EnergyType.Bolt,
+        affiliations: ["X-Men"],
+        abilities: [new AbilityDef(TriggerType.WhenAnotherDieFielded, Cost: null,
+            Effect: new Sequence([
+                new DealDamage(1, TargetSpec.Player("your opponent", TargetOwnership.Opposing)),
+                new DealDamage(1, TargetSpec.CharacterDie("target character die"))
+            ]),
+            FieldedFilter: new FieldedDieMatch(TargetOwnership.Own))],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 1),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3),
+            new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 3)
         ], set: "DPS");
 
     // Supreme Intelligence, "Kree Science Council" - purely a Loyalty
@@ -1929,7 +2130,10 @@ public static class SampleCards
             MagikSorceressOfLimbo, PsylockeTelepath, StormCloudCover,
             MasterMoldTargetingMutants, MasterMoldUntoldElectronicExpertise, MasterMoldInexplicableDurability,
             PhoenixEternalFlame, MagikBetterThanBelasco, ProfessorXUncannyLeadership, IcemanIcyInterference,
-            CyclopsDefendingThePhoenix, RogueStrengthAbsorption, MoiraIfItsReal
+            CyclopsDefendingThePhoenix, RogueStrengthAbsorption, MoiraIfItsReal,
+            KittyPrydeExperiencedLeader, SabretoothDoISmellWeakness, PsylockeHeiress,
+            MagnetoFounderOfTheBrotherhood, SabretoothYouReadyToParty, ToadJourneyIntoMisery,
+            JubileeRebelliousNature, CyclopsFirstClass, JubileeXMenFieldLeader
         ];
 
         // Hand-curated cards win on id collision - shouldn't happen in

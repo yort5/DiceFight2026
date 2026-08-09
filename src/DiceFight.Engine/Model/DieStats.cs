@@ -1,4 +1,5 @@
 using DiceFight.Engine;
+using DiceFight.Engine.Effects;
 
 namespace DiceFight.Engine.Model;
 
@@ -80,6 +81,23 @@ public static class DieStats
             state.CardCatalog.TryGetValue(otherCardId, out var otherCard) &&
             otherCard.Name == grant.WhileCardNamed);
         return active ? grant : null;
+    }
+
+    // See CardDef.GrantsSelfAttackBonusPerMatchingDie's remarks -
+    // LegalTargets.Query does the actual counting, reusing whichever
+    // TargetSpec dimensions (ownership, zone, RequiredAffiliations,
+    // MaxDefense, ...) the card's own CountFilter needs; Count/
+    // Description/Optional on that spec are irrelevant here since
+    // nothing is ever "chosen" from the result, just counted.
+    private static int SelfAttackBonusPerMatchingDie(GameState state, DieInstance die)
+    {
+        var cardId = die.VirtualCardId ?? die.CardId;
+        if (cardId is null || !state.CardCatalog.TryGetValue(cardId, out var card)) return 0;
+        var grant = card.GrantsSelfAttackBonusPerMatchingDie;
+        if (grant is null) return 0;
+
+        var matchCount = LegalTargets.Query(state, die.ControllerId, grant.CountFilter).Count;
+        return matchCount * grant.AttackPerMatch;
     }
 
     // Whether this die's own card carries the named affiliation (e.g.
@@ -223,6 +241,7 @@ public static class DieStats
         {
             if (!state.CardCatalog.TryGetValue(cardId!, out var card) || card.GrantsStaticTeamBonus is not { } bonus)
                 continue;
+            if (bonus.RequiredAffiliation is { } affiliation && !HasAffiliation(state, die, affiliation)) continue;
             attack += bonus.AttackDelta;
             defense += bonus.DefenseDelta;
         }
@@ -267,6 +286,7 @@ public static class DieStats
         total += ExperienceBonus(state, die);
         total += LoyaltyBonus(state, die);
         total += SelfStatBonusWhileNamedCardActive(state, die)?.AttackDelta ?? 0;
+        total += SelfAttackBonusPerMatchingDie(state, die);
         return Math.Max(0, total);
     }
 

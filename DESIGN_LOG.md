@@ -5126,3 +5126,83 @@ still only buffing the X-Men-affiliated die and leaving the other alone.
 Verified: `dotnet build`, `dotnet test` (361/361 - 4 new cases), and
 `npm run build` all clean. Re-ran `scripts/import_bulk_cards.py`
 (94 → 97 hand-curated).
+
+## Status update — WhenAnotherDieFielded, 5 more primitives, and nine more DPS cards
+
+Seventh batch this session, the largest single round - user asked for
+"at least 10 more" cards, so this pass mined more aggressively for
+reusable shapes across the remaining ~100 cards before touching new
+engine code, then built five small primitives together since several
+turned out to unlock multiple cards each.
+
+**TriggerType.WhenAnotherDieFielded** (+ `FieldedDieMatch`) - "while
+active, when you field [a die matching some filter], [my card] reacts."
+Exactly the same shape as `WhenAnotherDieKOd` (`AbilityDef.FieldedFilter`
+is per-card data, not engine code; `TurnEngine.ResolveWhenAnotherDieFielded`
+is the shared reactive scan), just fired from `TurnEngine.Field` right
+after its existing Teamwatch scan instead of from a KO. Unlocks Cyclops
+"First Class" (DPS025, filtered to Founder-keyword dice) and Jubilee
+"X-Men Field Leader" (DPS143, unfiltered - any of your own dice).
+Authoring Cyclops surfaced a real, retroactive fix: "Founder" prefixing
+a card's raw text had been treated as pure flavor (Jean Grey's own
+remarks explicitly said so, since nothing consumed it) - now that
+Cyclops's filter needs to recognize Founder dice for real, Jean Grey
+needed an actual `KeywordInstance("Founder")` added retroactively. Bulk
+(non-hand-curated) cards with "Founder" in their text still won't be
+recognized - the import script never tags it - a known, accepted
+limitation matching how bulk cards work everywhere else.
+
+**StaticTeamBonus.RequiredAffiliation** - Kitty Pryde "Experienced
+Leader" (DPS144)'s "each of your X-Men character dice get +1A/+1D," the
+affiliation-scoped counterpart to Captain Marvel's unqualified version.
+No `AbilityDef` needed at all - purely a live Static ability.
+
+**CardDef.GrantsSelfAttackBonusPerMatchingDie** (+ `TargetSpec.
+MaxDefense`) - "gets +1A for each opposing character die with 2D or
+less" (Sabretooth "Do I Smell... Weakness?"/DPS091), "+2A for each of
+your X-Men dice in the Prep Area" (Psylocke "Heiress"/DPS128). Reuses
+`TargetSpec`/`LegalTargets.Query` as the counting filter rather than
+inventing a second, narrower shape just for counting - `MaxDefense` is
+the defense-side counterpart to the existing `MaxAttack`.
+
+**FieldDie fixed to handle a non-Character source status**, plus a new
+`Level` parameter (default 1). The old version assumed the target was
+already on a character face (true for every prior user, e.g. Colossus's
+Energize target) and always fielded at level 1 - documented at the time
+as the reason Jubilee "Rebellious Nature" (DPS036) was left vanilla,
+since her own Energize fires while her die is still `Status.Energy` and
+needs to land on level 2 specifically. Now sets `Status` Sidekick-aware
+(`die.IsSidekick ? SidekickCharacter : Character`) rather than blindly
+overwriting it, so the existing Colossus path (which could in principle
+target an already-Sidekick-Character die) stays correct too.
+
+**EffectCondition.OwnLifeLessThanOpponent** - Jubilee's own "if you have
+less life than your opponent" - same "ignores the resolved CheckTarget
+id, reads GameState directly" shape as `NoCharacterKOdThisTurn`/
+`PrepAreaEmpty`.
+
+**Nine cards**: Kitty Pryde "Experienced Leader" (DPS144), Sabretooth
+"Do I Smell... Weakness?" (DPS091), Psylocke "Heiress" (DPS128, plus a
+real Energize `Spin`), Magneto "Founder of the Brotherhood" (DPS146,
+entirely a recombination of primitives Magneto's own "Idealist"
+printing already established - `WhenAnotherDieKOd` with an affiliation
+filter instead of energy type, and the identical Global), Sabretooth
+"You Ready to Party?" (DPS131, `WhenAttacks` MatchAll buff + Teamwatch
+`CantBlock`), Toad "Journey Into Misery" (DPS134, Teamwatch `MoveDie`
+against the opponent's Prep Area), Jubilee "Rebellious Nature" (DPS036,
+`OwnLifeLessThanOpponent` + the fixed `FieldDie`), Cyclops "First Class"
+(DPS025) and Jubilee "X-Men Field Leader" (DPS143, both
+`WhenAnotherDieFielded`).
+
+Tests exercise the real path throughout (11 new cases) - both
+`WhenAnotherDieFielded` cards are tested for a real *negative* case too
+(fielding a die that shouldn't match), not just the positive one, since
+this is brand-new reactive-scan plumbing; one test caught its own bug
+during authoring (a target with 2D took Cyclops's 2 damage and was
+immediately KO'd, which resets `Damage` back to 0 via the normal KO
+cleanup path - not an engine bug, just the wrong target stat to assert
+against, fixed by picking a target that actually survives).
+
+Verified: `dotnet build`, `dotnet test` (372/372 - 11 new cases), and
+`npm run build` all clean. Re-ran `scripts/import_bulk_cards.py`
+(97 → 106 hand-curated).
