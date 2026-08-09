@@ -1293,6 +1293,79 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3)
         ], set: "DPS");
 
+    // Master Mold, "Targeting Mutants" - the first card to use
+    // TargetSpec.RequiredAffiliations (new this pass), a plain single-
+    // affiliation KO with nothing else on the card.
+    public static readonly CardDef MasterMoldTargetingMutants = Character(
+        "DPS082", "Master Mold", "Targeting Mutants", dieLimit: 3,
+        "When fielded, KO target Brotherhood of Mutants character die.",
+        purchaseCost: 5, energyType: EnergyType.Shield,
+        affiliations: ["Villains"],
+        abilities: [new AbilityDef(TriggerType.WhenFielded, Cost: null,
+            Effect: new Ko(TargetSpec.CharacterDie(
+                "target Brotherhood of Mutants character die", requiredAffiliations: ["Brotherhood of Mutants"])))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 5),
+            new CharacterFace(FieldingCost: 2, Attack: 6, Defense: 6),
+            new CharacterFace(FieldingCost: 3, Attack: 8, Defense: 8)
+        ], set: "DPS");
+
+    // Master Mold, "Untold Electronic Expertise" - RequiredAffiliations'
+    // second user, same shape targeting X-Men instead.
+    public static readonly CardDef MasterMoldUntoldElectronicExpertise = Character(
+        "DPS122", "Master Mold", "Untold Electronic Expertise", dieLimit: 2,
+        "When fielded, KO target X-Men character die.",
+        purchaseCost: 5, energyType: EnergyType.Shield,
+        affiliations: ["Villains"],
+        abilities: [new AbilityDef(TriggerType.WhenFielded, Cost: null,
+            Effect: new Ko(TargetSpec.CharacterDie("target X-Men character die", requiredAffiliations: ["X-Men"])))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 5),
+            new CharacterFace(FieldingCost: 2, Attack: 6, Defense: 6),
+            new CharacterFace(FieldingCost: 3, Attack: 8, Defense: 8)
+        ], set: "DPS");
+
+    // Master Mold, "Inexplicable Durability" - the first card to use
+    // TargetSpec.MatchAll (new this pass): "deal 2 damage to ALL X-Men
+    // and Brotherhood of Mutants character dice" has no target choice at
+    // all in the text, unlike the other two Master Mold printings above -
+    // RequiredAffiliations still does the affiliation filtering (two
+    // affiliations joined by "and" in the card text is the same "matches
+    // any of these" shape as one), MatchAll just skips the caller-choice
+    // step entirely so every legal match is hit automatically.
+    public static readonly CardDef MasterMoldInexplicableDurability = Character(
+        "DPS042", "Master Mold", "Inexplicable Durability", dieLimit: 4,
+        "When fielded, deal 2 damage to all X-Men and Brotherhood of Mutants character dice.",
+        purchaseCost: 5, energyType: EnergyType.Shield,
+        affiliations: ["Villains"],
+        abilities: [new AbilityDef(TriggerType.WhenFielded, Cost: null,
+            Effect: new DealDamage(2, TargetSpec.CharacterDie(
+                "all X-Men and Brotherhood of Mutants character dice",
+                requiredAffiliations: ["X-Men", "Brotherhood of Mutants"], matchAll: true)))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 5),
+            new CharacterFace(FieldingCost: 2, Attack: 6, Defense: 6),
+            new CharacterFace(FieldingCost: 3, Attack: 8, Defense: 8)
+        ], set: "DPS");
+
+    // Phoenix, "Eternal Flame" - MatchAll's second user, combined with
+    // the existing MaxAttack filter: "opposing character dice with less
+    // than 4A can't block" is every legal match at once, same as Master
+    // Mold above, just gated on attack value instead of affiliation.
+    public static readonly CardDef PhoenixEternalFlame = Character(
+        "DPS126", "Phoenix", "Eternal Flame", dieLimit: 2,
+        "When Phoenix attacks, opposing character dice with less than 4A can't block.",
+        purchaseCost: 6, energyType: EnergyType.Bolt,
+        affiliations: ["X-Men"],
+        abilities: [new AbilityDef(TriggerType.WhenAttacks, Cost: null,
+            Effect: new CantBlock(TargetSpec.CharacterDie(
+                "opposing character dice with less than 4A", TargetOwnership.Opposing, maxAttack: 3, matchAll: true)))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 5),
+            new CharacterFace(FieldingCost: 2, Attack: 7, Defense: 7),
+            new CharacterFace(FieldingCost: 3, Attack: 8, Defense: 8)
+        ], set: "DPS");
+
     // Deathbird, "War of Kings" - the first card to use CantBlock (new
     // this pass): GameState.CantBlockThisTurn, the restriction mirror of
     // ForceBlock/MustBlockThisTurn - enforced by CombatEngine.
@@ -1713,7 +1786,9 @@ public static class SampleCards
             BlobMGHDependent, SupremeIntelligencePsionicCollective, ToadLookingForComradery, Rally,
             GambitAceInTheHole, DeathbirdWarOfKings, DeadpoolMoreThanAChumpBlocker, RonanTheAccuserNoExceptions,
             GambitUnlessIGotSomeoneToPlayWith, PsylockeAdvancedTelekineticCombatant, StormQueen,
-            MagikSorceressOfLimbo, PsylockeTelepath, StormCloudCover
+            MagikSorceressOfLimbo, PsylockeTelepath, StormCloudCover,
+            MasterMoldTargetingMutants, MasterMoldUntoldElectronicExpertise, MasterMoldInexplicableDurability,
+            PhoenixEternalFlame
         ];
 
         // Hand-curated cards win on id collision - shouldn't happen in

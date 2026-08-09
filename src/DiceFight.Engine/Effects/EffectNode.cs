@@ -31,8 +31,18 @@ public enum TargetOwnership
 // DieStats.EffectiveAttack (the live, modifier-inclusive value, not the
 // printed face) since a card text threshold means "as it currently
 // stands," same as every other targeting/condition check elsewhere.
-// Still no affiliation- or level-restricted filter (a real, separate gap -
-// see the bulk-card-catalog memory).
+// RequiredAffiliations (Master Mold's "target Brotherhood of Mutants
+// character die"/"target X-Men character die" printings) matches ANY of
+// the listed affiliations, not all - card text with two affiliations
+// joined by "or" (e.g. "target Shi'ar or X-Men character die") is the
+// same shape as one, just a longer list. MatchAll (Phoenix "Eternal
+// Flame"'s "opposing character dice with less than 4A can't block," Master
+// Mold's own "deal 2 damage to ALL X-Men and Brotherhood of Mutants
+// character dice") skips the caller-choice step in Resolve entirely and
+// applies to every legal match automatically - there's no "target" at
+// all in that card text, unlike everything else here. Still no level-
+// restricted filter (a real, separate gap - see the bulk-card-catalog
+// memory).
 public sealed record TargetSpec(
     TargetOwnership Ownership,
     bool CharacterDiceOnly,
@@ -44,7 +54,9 @@ public sealed record TargetSpec(
     bool SidekicksOnly = false,
     bool PlayersAllowed = false,
     bool Optional = false,
-    int? MaxAttack = null)
+    int? MaxAttack = null,
+    IReadOnlyList<string>? RequiredAffiliations = null,
+    bool MatchAll = false)
 {
     // Rule 3.3.4/3.3.5 - only dice in the Field Zone (which includes the
     // Attack Zone) may be targeted, unless otherwise stated.
@@ -57,9 +69,11 @@ public sealed record TargetSpec(
         int count = 1,
         IReadOnlyList<Model.Zone>? zones = null,
         bool optional = false,
-        int? maxAttack = null) =>
+        int? maxAttack = null,
+        IReadOnlyList<string>? requiredAffiliations = null,
+        bool matchAll = false) =>
         new(ownership, CharacterDiceOnly: true, zones ?? DefaultZones, energyType, count, description,
-            Optional: optional, MaxAttack: maxAttack);
+            Optional: optional, MaxAttack: maxAttack, RequiredAffiliations: requiredAffiliations, MatchAll: matchAll);
 
     // optional: true models "you MAY target up to Count" (any number,
     // including zero, is a legal chosen count) rather than rule 3.3.11's

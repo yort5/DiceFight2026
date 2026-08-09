@@ -263,7 +263,21 @@ here rather than assuming which approach they'd want.
     the "GrantKeyword, TargetSpec.MaxAttack, and five more DPS cards"
     status update, including a real authoring trap it caught (the bulk
     sheet mis-attributes Magik's OWN granted keyword as one of her
-    printed Keywords).
+    printed Keywords). Also now real: `TargetSpec.RequiredAffiliations`
+    ("target Brotherhood of Mutants/X-Men character die," matching ANY
+    of a listed affiliation set) and `TargetSpec.MatchAll` ("deal 2
+    damage to ALL X-Men and Brotherhood of Mutants character dice" /
+    "opposing character dice with less than 4A can't block" - no chosen
+    target at all, so `EffectInterpreter.Resolve` short-circuits straight
+    to every legal match without asking a caller to choose) - Master
+    Mold's "Targeting Mutants"/DPS082 and "Untold Electronic Expertise"/
+    DPS122 use the affiliation filter alone, "Inexplicable Durability"/
+    DPS042 combines it with MatchAll, and Phoenix "Eternal Flame"/DPS126
+    combines MatchAll with the existing MaxAttack filter instead - see
+    the "TargetSpec.RequiredAffiliations, TargetSpec.MatchAll, and four
+    more DPS cards" status update. This was the affiliation-filter gap
+    the bulk-card-catalog memory had already flagged as blocking ~15
+    more bulk cards beyond DPS, not just a DPS-scoped fix.
 
 ## Implemented keywords
 

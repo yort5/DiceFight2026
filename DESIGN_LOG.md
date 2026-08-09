@@ -4961,3 +4961,52 @@ succeeds and populates `CantBlockThisTurn`.
 Verified: `dotnet build`, `dotnet test` (349/349 - 3 new cases), and
 `npm run build` all clean. Re-ran `scripts/import_bulk_cards.py`
 (84 → 87 hand-curated).
+
+## Status update — TargetSpec.RequiredAffiliations, TargetSpec.MatchAll, and four more DPS cards
+
+Fourth batch this session. Picked the affiliation filter first since the
+bulk-card-catalog memory had already flagged it as blocking ~15 bulk
+cards beyond DPS, then found MatchAll was the natural companion once
+Master Mold's third printing and Phoenix's other printing turned out to
+need "apply to every legal match, no chosen target at all" rather than
+a chosen-target filter.
+
+**TargetSpec.RequiredAffiliations** - "target Brotherhood of Mutants
+character die"/"target X-Men character die." Matches ANY of the listed
+affiliations (a card text like "target Shi'ar or X-Men character die"
+is the same shape as a single affiliation, just a longer list), checked
+in `LegalTargets.Query` against `CardDef.Affiliations` the same way
+`RequiredEnergyType` already is.
+
+**TargetSpec.MatchAll** - "deal 2 damage to ALL X-Men and Brotherhood of
+Mutants character dice," "opposing character dice with less than 4A
+can't block." Neither card names a *target* at all - every legal match
+is affected automatically. Implemented as a short-circuit in
+`EffectInterpreter.Resolve`: when set, it returns every `LegalTargets.
+Query` result directly and skips the caller-choice step (`ctx.
+ResolveTargets`) entirely, so existing effect nodes (`DealDamage`,
+`CantBlock`) needed no changes to support it - a resolver that would
+throw if ever called is a legitimate way to prove nothing asked for a
+choice, which two of this update's own tests do.
+
+**Four cards**:
+- Master Mold, "Targeting Mutants" (DPS082) and "Untold Electronic
+  Expertise" (DPS122) - `RequiredAffiliations`' first two users, plain
+  single-affiliation KOs with nothing else on either card.
+- Master Mold, "Inexplicable Durability" (DPS042) - combines
+  `RequiredAffiliations` (two affiliations) with `MatchAll` for real.
+- Phoenix, "Eternal Flame" (DPS126) - combines `MatchAll` with the
+  existing `MaxAttack` filter instead of affiliation.
+
+Tests exercise the real path throughout, same bar as every prior
+primitive this session: the two `RequiredAffiliations` cards prove the
+filter is enforced (not just descriptive) by asserting a wrong-
+affiliation choice throws "not legal for [...]"; the two `MatchAll`
+cards go through `TurnEngine.Field`/`CombatEngine.DeclareAttackers` and
+`DeclareBlockers` and pass a resolver that throws if invoked, proving
+the effect never asks for a choice at all while still only hitting the
+dice that actually match.
+
+Verified: `dotnet build`, `dotnet test` (353/353 - 4 new cases), and
+`npm run build` all clean. Re-ran `scripts/import_bulk_cards.py`
+(87 → 91 hand-curated).

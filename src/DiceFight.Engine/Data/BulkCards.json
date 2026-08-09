@@ -39667,43 +39667,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS042",
-    "name": "Master Mold",
-    "subtitle": "Inexplicable Durability",
-    "type": "Character",
-    "purchaseCost": 5,
-    "energyType": "Shield",
-    "dieLimit": 4,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 5,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 6,
-        "defense": 6,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 3,
-        "attack": 8,
-        "defense": 8,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When fielded, deal 2 damage to all X-Men and Brotherhood of Mutants character dice.",
-    "keywords": [],
-    "affiliations": [
-      "Villains"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS043",
     "name": "Mister Sinister",
     "subtitle": "Geneticist",
@@ -40777,43 +40740,6 @@
     "keywords": [],
     "affiliations": [
       "Brotherhood of Mutants"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS082",
-    "name": "Master Mold",
-    "subtitle": "Targeting Mutants",
-    "type": "Character",
-    "purchaseCost": 5,
-    "energyType": "Shield",
-    "dieLimit": 3,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 5,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 6,
-        "defense": 6,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 3,
-        "attack": 8,
-        "defense": 8,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When fielded, KO target Brotherhood of Mutants character die.",
-    "keywords": [],
-    "affiliations": [
-      "Villains"
     ],
     "isImplemented": false,
     "set": "DPS",
@@ -42005,43 +41931,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS122",
-    "name": "Master Mold",
-    "subtitle": "Untold Electronic Expertise",
-    "type": "Character",
-    "purchaseCost": 5,
-    "energyType": "Shield",
-    "dieLimit": 2,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 5,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 6,
-        "defense": 6,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 3,
-        "attack": 8,
-        "defense": 8,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When fielded, KO target X-Men character die.",
-    "keywords": [],
-    "affiliations": [
-      "Villains"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS123",
     "name": "Mister Sinister",
     "subtitle": "Dark Experimentation",
@@ -42148,43 +42037,6 @@
     "affiliations": [
       "X-Men",
       "Brotherhood of Mutants"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS126",
-    "name": "Phoenix",
-    "subtitle": "Eternal Flame",
-    "type": "Character",
-    "purchaseCost": 6,
-    "energyType": "Bolt",
-    "dieLimit": 2,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 5,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 7,
-        "defense": 7,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 3,
-        "attack": 8,
-        "defense": 8,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When Phoenix attacks, opposing character dice with less than 4A can\\'t block.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
     ],
     "isImplemented": false,
     "set": "DPS",

@@ -673,6 +673,139 @@ public class TwoTeamsDemoTests
     }
 
     [Fact]
+    public void FieldingMasterMoldTargetingMutants_OnlyAcceptsABrotherhoodOfMutantsTarget()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.MasterMoldTargetingMutants.Id],
+            extraTeamBCardIds: [SampleCards.Magneto.Id]); // Brotherhood of Mutants
+
+        var legalTarget = FindUnpurchased(state, "teamB", SampleCards.Magneto.Id);
+        legalTarget.Zone = Zone.FieldZone;
+        legalTarget.Status = DieStatus.Character;
+        legalTarget.Level = 1;
+
+        var illegalTarget = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id); // no affiliation
+        illegalTarget.Zone = Zone.FieldZone;
+        illegalTarget.Status = DieStatus.Character;
+        illegalTarget.Level = 1;
+
+        var ability = SampleCards.MasterMoldTargetingMutants.Abilities.Single(a => a.Trigger == TriggerType.WhenFielded);
+
+        var ex = Assert.Throws<InvalidOperationException>(() => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, "teamA", SourceDieId: null, _ => [illegalTarget.Id])));
+        Assert.Contains("not legal", ex.Message);
+
+        EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, "teamA", SourceDieId: null, _ => [legalTarget.Id]));
+        Assert.Equal(Zone.PrepArea, legalTarget.Zone); // KO'd
+    }
+
+    [Fact]
+    public void FieldingMasterMoldUntoldElectronicExpertise_OnlyAcceptsAnXMenTarget()
+    {
+        // GambitUnlessIGotSomeoneToPlayWith is X-Men-affiliated and doesn't
+        // need to be on either live roster to serve as a target here.
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.MasterMoldUntoldElectronicExpertise.Id],
+            extraTeamBCardIds: [SampleCards.GambitUnlessIGotSomeoneToPlayWith.Id]);
+
+        var legalTarget = FindUnpurchased(state, "teamB", SampleCards.GambitUnlessIGotSomeoneToPlayWith.Id);
+        legalTarget.Zone = Zone.FieldZone;
+        legalTarget.Status = DieStatus.Character;
+        legalTarget.Level = 3; // 6D - survives being KO'd trivially, just proving legality here
+
+        var illegalTarget = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id); // no affiliation
+        illegalTarget.Zone = Zone.FieldZone;
+        illegalTarget.Status = DieStatus.Character;
+        illegalTarget.Level = 1;
+
+        var ability = SampleCards.MasterMoldUntoldElectronicExpertise.Abilities.Single(a => a.Trigger == TriggerType.WhenFielded);
+
+        var ex = Assert.Throws<InvalidOperationException>(() => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, "teamA", SourceDieId: null, _ => [illegalTarget.Id])));
+        Assert.Contains("not legal", ex.Message);
+
+        EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, "teamA", SourceDieId: null, _ => [legalTarget.Id]));
+        Assert.Equal(Zone.PrepArea, legalTarget.Zone); // KO'd - a real Ko despite 6D, since abilities aren't blocked by defense
+    }
+
+    [Fact]
+    public void FieldingMasterMoldInexplicableDurability_DamagesEveryMatchingDie_NoChoiceNeeded()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.MasterMoldInexplicableDurability.Id],
+            extraTeamBCardIds: [SampleCards.Magneto.Id, SampleCards.GambitUnlessIGotSomeoneToPlayWith.Id]);
+
+        var brotherhoodDie = FindUnpurchased(state, "teamB", SampleCards.Magneto.Id);
+        brotherhoodDie.Zone = Zone.FieldZone;
+        brotherhoodDie.Status = DieStatus.Character;
+        brotherhoodDie.Level = 1; // 4D - survives 2 damage
+
+        var xMenDie = FindUnpurchased(state, "teamB", SampleCards.GambitUnlessIGotSomeoneToPlayWith.Id);
+        xMenDie.Zone = Zone.FieldZone;
+        xMenDie.Status = DieStatus.Character;
+        xMenDie.Level = 3; // 6D - survives 2 damage
+
+        var unaffiliatedDie = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        unaffiliatedDie.Zone = Zone.FieldZone;
+        unaffiliatedDie.Status = DieStatus.Character;
+        unaffiliatedDie.Level = 3; // 4D - survives, but shouldn't be hit at all
+
+        var ability = SampleCards.MasterMoldInexplicableDurability.Abilities.Single(a => a.Trigger == TriggerType.WhenFielded);
+        // MatchAll bypasses target resolution entirely - a resolver that
+        // throws proves nothing was ever asked to choose.
+        EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(state, "teamA", SourceDieId: null, _ => throw new InvalidOperationException("MatchAll shouldn't ask for a choice")));
+
+        Assert.Equal(2, brotherhoodDie.Damage);
+        Assert.Equal(2, xMenDie.Damage);
+        Assert.Equal(0, unaffiliatedDie.Damage);
+    }
+
+    [Fact]
+    public void PhoenixEternalFlameAttacking_BarsOnlyLowAttackOpposingDice_EnforcedAtDeclareBlockers()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.PhoenixEternalFlame.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var lowAttackOpponent = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        lowAttackOpponent.Zone = Zone.FieldZone;
+        lowAttackOpponent.Status = DieStatus.Character;
+        lowAttackOpponent.Level = 1; // PlaceholderLevels: 1A
+
+        var highAttackOpponent = FindUnpurchased(state, "teamB", SampleCards.Groot.Id);
+        highAttackOpponent.Zone = Zone.FieldZone;
+        highAttackOpponent.Status = DieStatus.Character;
+        highAttackOpponent.Level = 3; // PlaceholderLevels: 4A - over the "less than 4A" threshold
+
+        var phoenixDie = FindUnpurchased(state, "teamA", SampleCards.PhoenixEternalFlame.Id);
+        phoenixDie.Zone = Zone.FieldZone;
+        phoenixDie.Status = DieStatus.Character;
+        phoenixDie.Level = 1;
+
+        state.CurrentStep = TurnStep.Attack;
+        state.AttackSubStep = AttackSubStep.DeclareAttackers;
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [phoenixDie.Id]);
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => throw new InvalidOperationException("MatchAll shouldn't ask for a choice"))));
+
+        Assert.Contains(lowAttackOpponent.Id, state.CantBlockThisTurn);
+        Assert.DoesNotContain(highAttackOpponent.Id, state.CantBlockThisTurn);
+
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            CombatEngine.DeclareBlockers(state, new CombatAssignment(), blockerDieIds: [lowAttackOpponent.Id]));
+        Assert.Contains("not an eligible blocker", ex.Message);
+
+        // The high-attack die is unaffected - still a legal blocker.
+        CombatEngine.DeclareBlockers(state, new CombatAssignment(), blockerDieIds: [highAttackOpponent.Id]);
+        Assert.Equal(Zone.AttackZone, highAttackOpponent.Zone);
+    }
+
+    [Fact]
     public void UsingStarfireGlobalAbility_PrepsADieFromBag_IfYouPurchasedADieThisTurn()
     {
         var state = BuildTwoTeamGame();

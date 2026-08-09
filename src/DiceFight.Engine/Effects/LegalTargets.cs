@@ -34,6 +34,17 @@ public static class LegalTargets
         if (spec.MaxAttack is { } maxAttack)
             candidates = candidates.Where(d => DieStats.EffectiveAttack(state, d) <= maxAttack);
 
+        if (spec.RequiredAffiliations is { } requiredAffiliations)
+        {
+            candidates = candidates.Where(d =>
+            {
+                var cardId = d.VirtualCardId ?? d.CardId;
+                return cardId is not null
+                    && state.CardCatalog.TryGetValue(cardId, out var card)
+                    && card.Affiliations.Any(requiredAffiliations.Contains);
+            });
+        }
+
         if (spec.SidekicksOnly)
             candidates = candidates.Where(d => DieStats.CountsAsSidekick(state, d));
 

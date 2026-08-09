@@ -567,6 +567,17 @@ public static class EffectInterpreter
             return cached;
 
         var legal = LegalTargets.Query(ctx.State, ctx.ControllerId, spec);
+
+        // MatchAll (e.g. Phoenix "Eternal Flame"'s "opposing character
+        // dice with less than 4A") has no target at all in the card text -
+        // every legal match is affected automatically, so there's no
+        // caller choice to ask for or validate.
+        if (spec.MatchAll)
+        {
+            cache[spec] = legal;
+            return legal;
+        }
+
         var chosen = ctx.ResolveTargets(spec);
 
         var illegal = chosen.Where(id => !legal.Contains(id)).ToList();
