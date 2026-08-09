@@ -78,6 +78,9 @@ public static class EffectInterpreter
                 if (!n.CheckTarget.IsSelf) yield return n.CheckTarget;
                 foreach (var spec in CollectTargetSpecs(n.Then))
                     yield return spec;
+                if (n.Else is not null)
+                    foreach (var spec in CollectTargetSpecs(n.Else))
+                        yield return spec;
                 break;
         }
     }
@@ -293,6 +296,8 @@ public static class EffectInterpreter
             case Conditional conditional:
                 if (Resolve(ctx, conditional.CheckTarget, cache).Any(id => CheckCondition(ctx, id, conditional.When)))
                     Execute(conditional.Then, ctx, cache);
+                else if (conditional.Else is not null)
+                    Execute(conditional.Else, ctx, cache);
                 break;
 
             case FieldSidekickForEachPlayer:
@@ -524,6 +529,8 @@ public static class EffectInterpreter
         // dieId is unused here - see EffectCondition.NoCharacterKOdThisTurn's own remarks.
         EffectCondition.NoCharacterKOdThisTurn => !ctx.State.AnyCharacterKOdThisTurn,
         EffectCondition.PrepAreaEmpty => !ctx.State.DiceIn(ctx.ControllerId, Zone.PrepArea).Any(),
+        EffectCondition.OnSingleBurstFace => DieStats.GetFace(ctx.State, FindDie(ctx, dieId)).BurstStars == 1,
+        EffectCondition.OnDoubleBurstFace => DieStats.GetFace(ctx.State, FindDie(ctx, dieId)).BurstStars == 2,
         _ => throw new NotSupportedException($"Unhandled effect condition: {condition}")
     };
 

@@ -125,8 +125,14 @@ public enum TriggerType
     WhenDrawn,
 
     Global,
-    Burst1,
-    Burst2,
+
+    // NOTE: burst-symbol-conditional bonuses ("*"/"**" in ability text)
+    // are NOT a separate trigger point, despite an early design sketch
+    // once assuming they would be (a since-removed, never-wired "Burst1"/
+    // "Burst2" pair here) - once real cards were actually scoped, every
+    // one of them turned out to modify an EXISTING trigger's effect
+    // (usually WhenFielded), not fire independently. See Effects.
+    // EffectCondition.OnSingleBurstFace/OnDoubleBurstFace instead.
 
     // Keyword Energize - fires once, after Roll and Reroll completes, for
     // any Energize-keyword die that ended up on a double-energy face. Not

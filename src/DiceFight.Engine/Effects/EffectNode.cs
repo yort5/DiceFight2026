@@ -187,10 +187,8 @@ public sealed record SwapLife : EffectNode;
 // effects resolve sequentially in text-box order.
 public sealed record Sequence(IReadOnlyList<EffectNode> Steps) : EffectNode;
 
-// Rule 3.1.17's "if you do" / "if [x], then [y]" pattern (e.g. Shocking
-// Grasp: "if that character is KO'd by this damage, you may Prep this
-// die"). CheckTarget is evaluated against When; Then only runs if it holds
-// for at least one resolved die.
+// Rule 3.1.17's "if you do" / "if [x], then [y]" pattern - see
+// Conditional's own remarks just below for the full shape.
 public enum EffectCondition
 {
     TargetWasKOd,
@@ -207,10 +205,34 @@ public enum EffectCondition
     // your Prep Area." Reads the ability controller's Prep Area directly,
     // same "ignores the resolved CheckTarget id" shape as
     // NoCharacterKOdThisTurn - use TargetSpec.Self here too.
-    PrepAreaEmpty
+    PrepAreaEmpty,
+
+    // Burst symbols - the sheet's "*"/"**" ability-text marks (distinct
+    // from the OLD misreading of them as "a different printing's text" -
+    // see the "burst and double-burst" status update for how that got
+    // corrected): "some abilities key off rolling that face" (per the
+    // user, re: the stat line's own */** marks). A Character die's
+    // CURRENT face is CharacterFace, looked up by Level (DieStats.
+    // GetFace) - unlike TargetWasKOd, THIS resolved die's own current
+    // face is exactly what's being asked about, so CheckTarget is
+    // normally TargetSpec.Self (the ability's own source die) rather
+    // than ignored. A face can only ever be blank, single-, or double-
+    // burst (mutually exclusive, never both), so these two never overlap
+    // for the same die at the same time - "*/**" printed together (e.g.
+    // Take Cover) is just both conditions checked independently, each
+    // firing on its own face, not a combined third state.
+    OnSingleBurstFace,
+    OnDoubleBurstFace,
 }
 
-public sealed record Conditional(TargetSpec CheckTarget, EffectCondition When, EffectNode Then) : EffectNode;
+// Rule 3.1.17's "if you do" / "if [x], then [y]" pattern (e.g. Shocking
+// Grasp: "if that character is KO'd by this damage, you may Prep this
+// die"). CheckTarget is evaluated against When; Then only runs if it holds
+// for at least one resolved die. Else (e.g. Gambit's "you may draw and
+// roll a die. * Instead, draw 2 dice...") runs instead when it doesn't -
+// null means "no else clause" (every condition before burst symbols only
+// ever needed the Then half).
+public sealed record Conditional(TargetSpec CheckTarget, EffectCondition When, EffectNode Then, EffectNode? Else = null) : EffectNode;
 
 // Falcon's Global ("each player must field a Sidekick from their Used Pile
 // if able") - a forced action on both players at once, not a chosen

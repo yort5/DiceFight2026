@@ -4598,3 +4598,64 @@ Colossus's own `Spin(+2)` already relies on to reach exactly level 3.
 Verified: `dotnet build`, `dotnet test` (320/320 - 12 new cases), and
 `npm run build` all clean. Re-ran `scripts/import_bulk_cards.py`
 (3621 → 3616 bulk rows, 71 → 76 hand-curated).
+
+## Status update — burst and double-burst symbols, and a correction to how they'd been read
+
+The user's direct follow-up to last update's flagged discovery: "let's
+take care of the burst and double-burst."
+
+**First, a correction.** Earlier DPS status updates (Rally, Take Cover,
+Explosion, Radicalization, and others) treated a card's ability-text
+`*`/`**` marks as a "different, higher-rarity printing's alternate
+text" and set those cards aside on that basis. That was wrong. Per the
+`dicefight2026-stats-spreadsheet` memory (which covers the *stat line*
+column's own `*`/`**` marks, already correctly wired into `CharacterFace.
+BurstStars` since the original bulk-import work): "they mark a die face
+that has a single or double burst symbol... some abilities key off
+rolling that face." The ability-text marks are the SAME concept, not a
+separate one - a card's own text describing a bonus that only applies
+when the die is CURRENTLY on its burst-marked face (by level, since
+`CharacterFace` is looked up via `DieStats.GetFace`, keyed on `die.
+Level`). A face is blank, single-, or double-burst - never more than
+one of those at once for the same die - so `*` and `**` are two
+independent, mutually-exclusive conditions, not tiers of one scale.
+
+**What was built**: `EffectCondition.OnSingleBurstFace`/
+`OnDoubleBurstFace`, checked against `DieStats.GetFace(state, die).
+BurstStars` (1 or 2 respectively) via the resolved `CheckTarget` die
+(normally `TargetSpec.Self`, since these check the ability's OWN die,
+unlike `NoCharacterKOdThisTurn`/`PrepAreaEmpty` which ignore the
+resolved id entirely). Also added `Conditional.Else` (a new optional
+third branch, `null` by default so every prior `Conditional` call site
+is unaffected) - `*`/`**` text is usually phrased as "Instead, [X]" (a
+real either/or, e.g. Gambit), not "Also, [X]" (additive, which never
+needed an Else at all), and `Conditional` previously had no way to
+express "if not, do this other thing." 6 new tests cover both
+conditions across all three face states plus Else's three shapes
+(runs Then, runs Else, does nothing with no Else and no match).
+
+**Not done this pass**: no card is actually re-authored yet using this.
+Gambit ("Ace in the Hole," DPS032 - "When fielded, you may draw and
+roll a die. * Instead, draw 2 dice, Roll one and return the other to
+your bag") was the natural first user, but its OWN "Instead" clause
+needs a separate, unrelated new primitive first - "draw 2, then choose
+which one to roll and which to return to the bag" is a real mid-
+resolution choice (the two drawn dice are visible by card identity
+before rolling, so this isn't fungible the way DrawDice's bag-pick is),
+the same shape Corrupt/RedrawFromBag's own `GameState.PendingChoice`
+already solves for a different card, but not yet reused here. Also
+confirmed while scoping this: the whole */** mechanism only ever works
+for Character dice (`CharacterFace.BurstStars`, keyed by `Level`) -
+Basic Action/Action dice have no per-level face model at all (they're
+just blank/single/double-burst action faces with no CAD stats), and
+nothing in `DieInstance`/`RolledFace` currently records which of those
+three an Action die actually landed on. That blocks every burst-marked
+Basic Action card found so far (Take Cover, Rally, Radicalization,
+Explosion) on a real, separate, deeper gap - burst conditions for
+Character dice and burst conditions for Action dice turned out not to
+be the same piece of work once actually scoped, despite reading like
+one topic from the card text alone.
+
+Verified: `dotnet build`, `dotnet test` (329/329, 6 new cases), and
+`npm run build` all clean. No `BulkCards.json` changes this pass - no
+card was re-classified or hand-curated.

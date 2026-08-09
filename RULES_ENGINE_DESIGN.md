@@ -207,6 +207,19 @@ here rather than assuming which approach they'd want.
     Attackers mirror of `MustBlockThisTurn`/`ForceBlock`) and `CardDef.
     GrantsSelfKeywordWhileNamedCardActive` (a live conditional keyword
     grant, first used by "gains Deadly while Wolverine is active").
+    Burst/double-burst symbols (`*`/`**` in ability text) are now real
+    too - `EffectCondition.OnSingleBurstFace`/`OnDoubleBurstFace` plus a
+    new `Conditional.Else` branch (see the "burst and double-burst
+    symbols" status update, including a correction to how these marks
+    had been read in earlier updates on this list). No card uses it yet -
+    Gambit (DPS032), the natural first user, needs a separate new
+    mid-resolution-choice primitive for its own "Instead" clause first
+    (the same `PendingChoice` shape Corrupt/RedrawFromBag already use,
+    just not reused here yet), and every burst-marked Basic Action/
+    Action card found so far (Take Cover, Rally, Radicalization,
+    Explosion) is blocked on a deeper, separate gap: Action dice have no
+    per-face model at all in `DieInstance`, unlike Character dice's
+    `CharacterFace.BurstStars`.
 
 ## Implemented keywords
 

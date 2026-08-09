@@ -1515,4 +1515,133 @@ public class EffectInterpreterTests
         Assert.Equal(2, queue.Count);
         Assert.All(queue.Pending, a => Assert.Equal(TriggerType.WhenFielded, a.Trigger));
     }
+
+    // EffectCondition.OnSingleBurstFace/OnDoubleBurstFace - the sheet's
+    // "*"/"**" ability-text marks, now correctly understood as "some
+    // abilities key off rolling that face" (a face-conditional bonus tied
+    // to CharacterFace.BurstStars) rather than the earlier assumption
+    // this session had (a different printing's separate text). Level 1 =
+    // blank, level 2 = single burst, level 3 = double burst - a clean
+    // fixture covering all three face states.
+    private static readonly CardDef BurstFaceCard = new()
+    {
+        Id = "test-burst-face", Name = "Test Burst Face Character", Type = CardType.Character,
+        PurchaseCost = 2, DieLimit = 4,
+        Levels =
+        [
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 1, BurstStars: null),
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 2, BurstStars: 1),
+            new CharacterFace(FieldingCost: 2, Attack: 3, Defense: 3, BurstStars: 2),
+        ],
+    };
+
+    [Theory]
+    [InlineData(1, false)] // blank face
+    [InlineData(2, true)] // single-burst face
+    [InlineData(3, false)] // double-burst face
+    public void OnSingleBurstFace_OnlyTrueOnTheSingleBurstLevel(int level, bool expected)
+    {
+        var state = CreateState(new Dictionary<string, CardDef> { [BurstFaceCard.Id] = BurstFaceCard });
+        var die = new DieInstance
+        {
+            Id = "p1-burst-1", CardId = BurstFaceCard.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = level,
+        };
+        state.Dice.Add(die);
+
+        // Rule 1.1.3 - life gain never exceeds StartingLife (20), so
+        // GainLife needs headroom to actually move the needle here.
+        state.GetPlayer("p1").Life = 10;
+        var life = state.GetPlayer("p1").Life;
+        EffectInterpreter.Execute(
+            new Conditional(TargetSpec.Self, EffectCondition.OnSingleBurstFace, new GainLife(1)),
+            new EffectContext(state, "p1", die.Id, _ => []));
+
+        Assert.Equal(expected, state.GetPlayer("p1").Life > life);
+    }
+
+    [Theory]
+    [InlineData(1, false)]
+    [InlineData(2, false)]
+    [InlineData(3, true)] // double-burst face only
+    public void OnDoubleBurstFace_OnlyTrueOnTheDoubleBurstLevel(int level, bool expected)
+    {
+        var state = CreateState(new Dictionary<string, CardDef> { [BurstFaceCard.Id] = BurstFaceCard });
+        var die = new DieInstance
+        {
+            Id = "p1-burst-1", CardId = BurstFaceCard.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = level,
+        };
+        state.Dice.Add(die);
+
+        state.GetPlayer("p1").Life = 10;
+        var life = state.GetPlayer("p1").Life;
+        EffectInterpreter.Execute(
+            new Conditional(TargetSpec.Self, EffectCondition.OnDoubleBurstFace, new GainLife(1)),
+            new EffectContext(state, "p1", die.Id, _ => []));
+
+        Assert.Equal(expected, state.GetPlayer("p1").Life > life);
+    }
+
+    // Conditional.Else - Gambit's own "Instead" shape ("you may draw and
+    // roll a die. * Instead, [bonus]"), the first real use of the new
+    // Else branch. GainLife(1) vs LoseLife(1) makes Then/Else trivially
+    // distinguishable in a single assertion.
+    [Fact]
+    public void Conditional_WithElse_RunsThenWhenConditionHolds()
+    {
+        var state = CreateState(new Dictionary<string, CardDef> { [BurstFaceCard.Id] = BurstFaceCard });
+        var die = new DieInstance
+        {
+            Id = "p1-burst-1", CardId = BurstFaceCard.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 2, // single-burst face
+        };
+        state.Dice.Add(die);
+
+        state.GetPlayer("p1").Life = 10;
+        var life = state.GetPlayer("p1").Life;
+        EffectInterpreter.Execute(
+            new Conditional(TargetSpec.Self, EffectCondition.OnSingleBurstFace, new GainLife(1), new LoseLife(1)),
+            new EffectContext(state, "p1", die.Id, _ => []));
+
+        Assert.Equal(life + 1, state.GetPlayer("p1").Life);
+    }
+
+    [Fact]
+    public void Conditional_WithElse_RunsElseWhenConditionDoesNotHold()
+    {
+        var state = CreateState(new Dictionary<string, CardDef> { [BurstFaceCard.Id] = BurstFaceCard });
+        var die = new DieInstance
+        {
+            Id = "p1-burst-1", CardId = BurstFaceCard.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1, // blank face - not single-burst
+        };
+        state.Dice.Add(die);
+
+        var life = state.GetPlayer("p1").Life;
+        EffectInterpreter.Execute(
+            new Conditional(TargetSpec.Self, EffectCondition.OnSingleBurstFace, new GainLife(1), new LoseLife(1)),
+            new EffectContext(state, "p1", die.Id, _ => []));
+
+        Assert.Equal(life - 1, state.GetPlayer("p1").Life);
+    }
+
+    [Fact]
+    public void Conditional_NoElseAndConditionDoesNotHold_DoesNothing()
+    {
+        var state = CreateState(new Dictionary<string, CardDef> { [BurstFaceCard.Id] = BurstFaceCard });
+        var die = new DieInstance
+        {
+            Id = "p1-burst-1", CardId = BurstFaceCard.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
+        };
+        state.Dice.Add(die);
+
+        var life = state.GetPlayer("p1").Life;
+        EffectInterpreter.Execute(
+            new Conditional(TargetSpec.Self, EffectCondition.OnSingleBurstFace, new GainLife(1)), // no Else
+            new EffectContext(state, "p1", die.Id, _ => []));
+
+        Assert.Equal(life, state.GetPlayer("p1").Life);
+    }
 }
