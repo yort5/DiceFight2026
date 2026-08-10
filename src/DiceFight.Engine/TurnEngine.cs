@@ -375,6 +375,31 @@ public static class TurnEngine
             state.PendingPurchaseDiscount = null;
         }
 
+        // Dark Phoenix ("Malevolent", DPS027) - "costs 1 less to purchase
+        // if your opponent has an X-Men character on their team." A
+        // SELF-referential discount checked against the card being
+        // purchased directly, no granter scan (see the field's own
+        // remarks).
+        if (card.GrantsSelfPurchaseDiscountIfOpponentHasAffiliation is { } selfDiscount)
+        {
+            var opponentHasIt = state.GetPlayer(state.OpponentOf(state.ActivePlayerId)).TeamCardIds.Any(id =>
+                state.CardCatalog.TryGetValue(id, out var opponentCard) &&
+                opponentCard.Affiliations.Contains(selfDiscount.OpponentAffiliation));
+            if (opponentHasIt) effectiveCost = Math.Max(1, effectiveCost - selfDiscount.Amount);
+        }
+
+        // Beast ("Combat Ready", DPS098) - "the first Beast die you
+        // purchase each game costs 1 extra." SELF-referential surcharge,
+        // consumed exactly once per game per card - see Player.
+        // SurchargedFirstPurchaseCardIds's own remarks. Checked (not
+        // consumed) here, before payment is validated; only actually
+        // recorded once the purchase below really succeeds, same
+        // "don't burn a one-shot on a rejected attempt" reasoning as
+        // OncePerTurn Globals.
+        var isFirstEverPurchaseOfThisCard = card.SelfFirstPurchaseSurcharge is not null &&
+            !state.GetPlayer(state.ActivePlayerId).SurchargedFirstPurchaseCardIds.Contains(card.Id);
+        if (isFirstEverPurchaseOfThisCard) effectiveCost += card.SelfFirstPurchaseSurcharge!.Value;
+
         // Cable ("Bosom Buddies", DPS062) - "your Deadpool costs 1 less
         // to purchase (to a minimum of 1)." Continuous (active-granter
         // scan), unlike PendingPurchaseDiscount above (one-shot,
@@ -416,6 +441,8 @@ public static class TurnEngine
             () => $"Not enough energy offered to purchase {card.Name} (needs {effectiveCost}).",
             requiredType => $"Purchasing {card.Name} requires at least one {requiredType} energy.");
 
+        if (isFirstEverPurchaseOfThisCard) state.GetPlayer(state.ActivePlayerId).SurchargedFirstPurchaseCardIds.Add(card.Id);
+
         // Rule 1.1.4 - the purchaser becomes controller; OwnerId (whoever
         // brought the card) is untouched, which matters for community
         // Basic Actions bought by the non-bringing player.
@@ -455,8 +482,14 @@ public static class TurnEngine
         if (die.Status is not (DieStatus.Character or DieStatus.SidekickCharacter))
             throw new InvalidOperationException($"{DisplayName(state, die)} is not on a character face.");
 
+        // Gambit ("I Like Solitaire", DPS072) - "you may not field any
+        // more character dice this turn."
+        if (state.CantFieldCharacterDiceThisTurn.Contains(die.ControllerId))
+            throw new InvalidOperationException($"{DisplayName(state, die)}'s controller can't field any more character dice this turn.");
+
         var fieldingCost = DieStats.GetFace(state, die).FieldingCost;
         if (IsFreeToField(state, die, fieldingCost)) fieldingCost = 0;
+        else fieldingCost = Math.Max(0, fieldingCost - FieldingCostReductionFor(state, die));
         var energyDice = energyDieIdsToSpend.Select(id => FindEnergyDie(state, id)).ToList();
         SpendEnergy(
             state, state.ActivePlayerId, energyDice, fieldingCost, [], Zone.OutOfPlay,
@@ -554,6 +587,32 @@ public static class TurnEngine
             return true;
         }
         return false;
+    }
+
+    // Rogue ("Unity Squad", DPS129) - "your X-Men character dice cost 1
+    // less to field." Same active-granter scan shape as IsFreeToField
+    // just above, a partial reduction instead of an all-the-way-to-zero
+    // pass/fail - summed across multiple distinct granters, same as
+    // every other numeric Grants* scan in this file.
+    private static int FieldingCostReductionFor(GameState state, DieInstance die)
+    {
+        var cardId = die.VirtualCardId ?? die.CardId;
+        if (cardId is null || !state.CardCatalog.TryGetValue(cardId, out var card)) return 0;
+
+        var granterCards = state.DiceIn(die.ControllerId, Zone.FieldZone)
+            .Concat(state.DiceIn(die.ControllerId, Zone.AttackZone))
+            .Select(d => DieStats.GetCard(state, d))
+            .Where(c => c is not null)
+            .Distinct();
+
+        var reduction = 0;
+        foreach (var granterCard in granterCards)
+        {
+            if (granterCard!.GrantsFieldingCostReduction is not { } grant) continue;
+            if (grant.RequiredAffiliation is { } affiliation && !card.Affiliations.Contains(affiliation)) continue;
+            reduction += grant.Amount;
+        }
+        return reduction;
     }
 
     // TriggerType.WhenAnotherDieFielded - same shape as
@@ -1309,6 +1368,7 @@ public static class TurnEngine
         state.MustBlockThisTurn.Clear();
         state.MustAttackThisTurn.Clear();
         state.CantBlockThisTurn.Clear();
+        state.CantFieldCharacterDiceThisTurn.Clear();
         state.PendingPurchaseDiscount = null;
         state.PendingNextPurchaseGoesToBag = false;
         state.UsedDamageRedirectThisTurn.Clear();

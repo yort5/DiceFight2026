@@ -292,6 +292,17 @@ public sealed record Spin(TargetSpec Target, int LevelDelta) : EffectNode;
 // face" with no double/opponent's-choice language, so 1 is the
 // simplest reading rather than a real ambiguity worth modeling further.
 public sealed record SpinToEnergyFace(TargetSpec Target, int Amount = 1) : EffectNode;
+
+// Wolverine ("Hardened by Madripoor", DPS096)'s own Energize - "spin
+// this die to level 1." The mirror image of SpinToEnergyFace just
+// above: this fires FROM an energy face (Energize only ever triggers on
+// one), converting the die back onto a character face at the given
+// level - unlike the ordinary Spin node (a level DELTA, a no-op on a die
+// that isn't already on a character face per DieStats.SpinLevel's own
+// guard), this is a direct face conversion the same way SpinToEnergyFace
+// is, just in the opposite direction. Level is clamped to the card's
+// real level range, same as SpinLevel.
+public sealed record SpinToCharacterLevel(TargetSpec Target, int Level) : EffectNode;
 public sealed record DrawDice(int Count) : EffectNode;
 public sealed record PrepDie(TargetSpec Source) : EffectNode;
 // Level defaults to 1 (rule 2.6.3 note - dice fielded by an ability are
@@ -385,6 +396,42 @@ public enum EffectCondition
     // "dieId ignored, reads state directly" shape as PrepAreaEmpty/
     // OwnLifeLessThanOpponent.
     OpponentHasAtLeastNCharacterDiceInFieldZone,
+
+    // Cyclops ("Utopia Realized", DPS105) - "while you have 2 or more
+    // character dice in the Field Zone" - the OWN-side mirror of
+    // OpponentHasAtLeastNCharacterDiceInFieldZone just above (same
+    // CountParam shape), Zone.FieldZone only (not AttackZone) since the
+    // attacking die itself has already left the Field Zone by the time
+    // its own WhenAttacks resolves, matching the card text's literal
+    // "in the Field Zone" rather than "active."
+    OwnCharacterDiceInFieldZoneAtLeast,
+
+    // Wolverine ("Hardened by Madripoor", DPS096) - "when you have at
+    // least 3 active X-Men character dice, Wolverine gains [...]."
+    // Mutant Research Program (DPS008) - "if you have at least 2 active
+    // Founder character dice, [...]." AffiliationParam doubles as either
+    // a real affiliation (DieStats.HasAffiliation) or a keyword name
+    // (DieStats.HasKeyword) - "Founder" is modeled as a KeywordInstance,
+    // not an affiliation (see the WhenAnotherDieFielded/Cyclops "Founder
+    // prefix" status update), and no card needs to distinguish the two
+    // in a single count, so this checks either. CountParam is the
+    // threshold, same shape as OpponentHasAtLeastNCharacterDiceInFieldZone.
+    OwnActiveAffiliationOrKeywordCountAtLeast,
+
+    // "Living the Dream" (DPS006) - "if among all character cards on
+    // your team you have at least 3 Loyalty Counters" - an AGGREGATE sum
+    // of GameState.LoyaltyCounters across every card in the controller's
+    // OWN roster (Player.TeamCardIds), unlike DieStats.LoyaltyBonus
+    // (one specific card's own count). CountParam is the threshold.
+    OwnTeamWideLoyaltyCounterCountAtLeast,
+
+    // Gambit ("I Like Solitaire", DPS072) - "if you have fielded no
+    // other character dice this turn." Same GameState.FieldedThisTurn
+    // data DieStats.HasStrikeBonus already reads, just surfaced as a
+    // one-shot Conditional instead of a continuous stat grant - CheckTarget
+    // is the ability's own source die (TargetSpec.Self), not ignored,
+    // since "no OTHER" needs to know which die to exclude from the count.
+    OnlyCharacterFieldedThisTurn,
 }
 
 // Rule 3.1.17's "if you do" / "if [x], then [y]" pattern (e.g. Shocking
@@ -467,6 +514,13 @@ public sealed record BlankTargetText(TargetSpec Target) : EffectNode;
 // Enums.cs).
 public sealed record GrantSelfTargetingImmunityFromActionAndGlobal : EffectNode;
 
+// Gambit ("I Like Solitaire", DPS072) - "you may not field any more
+// character dice this turn." Whole-controller, no target choice (same
+// shape as GrantSelfTargetingImmunityFromActionAndGlobal above), keyed
+// into GameState.CantFieldCharacterDiceThisTurn by the ability's own
+// controller.
+public sealed record GrantCantFieldCharacterDiceThisTurn : EffectNode;
+
 // Rogue ("Mrs. X", DPS049) - "you may swap Rogue's A with target
 // opposing character die's A." "You may" simplified to "always swap"
 // (house convention). Implemented as two SetStat-shaped snapshots
@@ -478,6 +532,17 @@ public sealed record GrantSelfTargetingImmunityFromActionAndGlobal : EffectNode;
 // (always the source die) - Target is the single opposing die to swap
 // with.
 public sealed record SwapAttack(TargetSpec Target) : EffectNode;
+
+// Cable ("High Stakes", DPS102) - "when Cable attacks, double the
+// printed A of all your other character dice." Unlike ModifyStat (a
+// single fixed delta applied to every resolved die), each resolved die
+// here gets its OWN printed Attack (DieStats.GetFace, not
+// EffectiveAttack - "printed," not current) added as its own Modifier,
+// doubling its total. "All your other" excludes the ability's own
+// source die - handled directly in the interpreter case (Resolve's own
+// id filtering), not a new TargetSpec-level exclusion flag, since no
+// other card needs a general "exclude self from MatchAll" primitive yet.
+public sealed record DoublePrintedAttackOfEach(TargetSpec Target) : EffectNode;
 
 // Corsair ("Recruiting a Crew", DPS024) - "place the next die you
 // purchase this turn into your bag" (instead of the Used Pile it would

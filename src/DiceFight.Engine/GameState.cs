@@ -45,6 +45,13 @@ public sealed class GameState
     // eligible blocker at all; reset in CleanUp.
     public HashSet<string> CantBlockThisTurn { get; } = [];
 
+    // Gambit ("I Like Solitaire", DPS072) - "you may not field any more
+    // character dice this turn." Player-keyed (not die-keyed, unlike
+    // CantBlockThisTurn/MustBlockThisTurn above) since the restriction is
+    // on the CONTROLLER's own remaining Field actions this turn, not any
+    // specific die - enforced by TurnEngine.Field; reset in CleanUp.
+    public HashSet<string> CantFieldCharacterDiceThisTurn { get; } = [];
+
     // Keyword Deadly - die ids engaged (rule 2.7.2.3) with a Deadly die
     // this combat; recorded by CombatEngine.DeclareBlockers at the
     // moment of engagement (not at combat damage - rule Appendix 1

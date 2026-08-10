@@ -74,6 +74,10 @@ public static class SampleCards
         OpponentPurchaseSurcharge? grantsOpponentPurchaseSurcharge = null,
         OpponentGlobalSurcharge? grantsOpponentGlobalSurcharge = null,
         NamedCardSupport? grantsNamedCardSupport = null,
+        FieldingCostReduction? grantsFieldingCostReduction = null,
+        MinimumBlockersRequirement? grantsMinimumBlockersRequirement = null,
+        int? selfFirstPurchaseSurcharge = null,
+        SelfPurchaseDiscountIfOpponentHasAffiliation? grantsSelfPurchaseDiscountIfOpponentHasAffiliation = null,
         bool isImplemented = true,
         string? set = null) => new()
     {
@@ -106,6 +110,10 @@ public static class SampleCards
         GrantsOpponentPurchaseSurcharge = grantsOpponentPurchaseSurcharge,
         GrantsOpponentGlobalSurcharge = grantsOpponentGlobalSurcharge,
         GrantsNamedCardSupport = grantsNamedCardSupport,
+        GrantsFieldingCostReduction = grantsFieldingCostReduction,
+        GrantsMinimumBlockersRequirement = grantsMinimumBlockersRequirement,
+        SelfFirstPurchaseSurcharge = selfFirstPurchaseSurcharge,
+        GrantsSelfPurchaseDiscountIfOpponentHasAffiliation = grantsSelfPurchaseDiscountIfOpponentHasAffiliation,
         IsImplemented = isImplemented,
         Set = set
     };
@@ -2535,6 +2543,247 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 4)
         ], set: "DPS");
 
+    // Rogue, "Unity Squad" - the first user of GrantsFieldingCostReduction
+    // (new this round).
+    public static readonly CardDef RogueUnitySquad = Character(
+        "DPS129", "Rogue", "Unity Squad", dieLimit: 2,
+        "While Rogue is active, your X-Men character dice cost 1 less to field. Teamwatch - Rogue gets +2A.",
+        purchaseCost: 4, energyType: EnergyType.Mask,
+        affiliations: ["X-Men"],
+        keywords: [new KeywordInstance("Teamwatch")],
+        grantsFieldingCostReduction: new FieldingCostReduction(1, "X-Men"),
+        abilities: [new AbilityDef(TriggerType.Teamwatch, Cost: null,
+            Effect: new ModifyStat(TargetSpec.Self, AttackDelta: 2, DefenseDelta: null))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 3),
+            new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 5),
+            new CharacterFace(FieldingCost: 2, Attack: 5, Defense: 6)
+        ], set: "DPS");
+
+    // Magneto, "Visionary" - the first user of
+    // GrantsMinimumBlockersRequirement (new this round). The Global's
+    // "if you have any dice in your Prep Area, you may draw..." reuses
+    // the EXISTING PrepAreaEmpty condition with Then/Else swapped
+    // (Then a no-op Sequence([]), Else the real PrepFromBag) rather than
+    // adding a redundant "PrepAreaNotEmpty" condition just to avoid the
+    // inversion.
+    public static readonly CardDef MagnetoVisionary = Character(
+        "DPS081", "Magneto", "Visionary", dieLimit: 3,
+        "While Magneto is active, your Brotherhood of Mutants character dice can only be blocked by 2 " +
+        "or more character dice. Teamwatch - Prep a die from your bag. Global Pay Mask. Once per turn, " +
+        "during your turn, if you have any dice in your Prep Area, you may draw a die and place it in " +
+        "your Prep Area.",
+        purchaseCost: 5, energyType: EnergyType.Mask,
+        affiliations: ["Brotherhood of Mutants"],
+        keywords: [new KeywordInstance("Teamwatch")],
+        grantsMinimumBlockersRequirement: new MinimumBlockersRequirement(2, "Brotherhood of Mutants"),
+        abilities: [
+            new AbilityDef(TriggerType.Teamwatch, Cost: null, Effect: new PrepFromBag()),
+            new AbilityDef(TriggerType.Global, Cost: null,
+                Effect: new Conditional(
+                    TargetSpec.Self, EffectCondition.PrepAreaEmpty, Then: new Sequence([]), Else: new PrepFromBag()),
+                EnergyCost: new EnergyCost(1, EnergyType.Mask), OncePerTurn: true)
+        ],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 4),
+            new CharacterFace(FieldingCost: 2, Attack: 5, Defense: 7),
+            new CharacterFace(FieldingCost: 3, Attack: 6, Defense: 8)
+        ], set: "DPS");
+
+    // Wolverine, "Hardened by Madripoor" - the first user of
+    // EffectCondition.OwnActiveAffiliationOrKeywordCountAtLeast (new
+    // this round). The keyword is granted UNCONDITIONALLY here
+    // (simplification - see the condition's own remarks) with only the
+    // actual spin gated by the Conditional; "spin this die to level 1"
+    // needed the new SpinToCharacterLevel node (also new this round) -
+    // Energize only ever fires FROM an energy face, and the ordinary
+    // Spin node is a level DELTA that no-ops on a die that isn't already
+    // on a character face (see DieStats.SpinLevel's own guard), so it
+    // couldn't do the energy-to-character conversion this text needs.
+    public static readonly CardDef WolverineHardenedByMadripoor = Character(
+        "DPS096", "Wolverine", "Hardened by Madripoor", dieLimit: 3,
+        "When you have at least 3 active X-Men character dice, Wolverine gains \"Energize Spin this die " +
+        "to level 1\"",
+        purchaseCost: 5, energyType: EnergyType.Fist,
+        affiliations: ["X-Men"],
+        keywords: [new KeywordInstance("Energize")],
+        abilities: [new AbilityDef(TriggerType.Energize, Cost: null,
+            Effect: new Conditional(
+                TargetSpec.Self, EffectCondition.OwnActiveAffiliationOrKeywordCountAtLeast,
+                Then: new SpinToCharacterLevel(TargetSpec.Self, Level: 1),
+                AffiliationParam: "X-Men", CountParam: 3))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 2, BurstStars: 1),
+            new CharacterFace(FieldingCost: 2, Attack: 6, Defense: 3, BurstStars: 1),
+            new CharacterFace(FieldingCost: 3, Attack: 8, Defense: 4)
+        ], set: "DPS");
+
+    // Beast, "Combat Ready" - the first user of SelfFirstPurchaseSurcharge
+    // (new this round).
+    public static readonly CardDef BeastCombatReady = Character(
+        "DPS098", "Beast", "Combat Ready", dieLimit: 2,
+        "Founder When Beast attacks, Prep a die from your bag. The first Beast die you purchase each " +
+        "game costs 1 extra.",
+        purchaseCost: 2, energyType: EnergyType.Fist,
+        affiliations: ["X-Men"],
+        keywords: [new KeywordInstance("Founder")],
+        selfFirstPurchaseSurcharge: 1,
+        abilities: [new AbilityDef(TriggerType.WhenAttacks, Cost: null, Effect: new PrepFromBag())],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 1),
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 2)
+        ], set: "DPS");
+
+    // Dark Phoenix, "Malevolent" - the first user of
+    // GrantsSelfPurchaseDiscountIfOpponentHasAffiliation (new this
+    // round). The Global reuses the exact Ko+GrantNextPurchaseDiscount
+    // Sequence DarkPhoenixEnemyOfTheShiar's own printing already
+    // established; the WhenFielded's "if it's an X-Men character die"
+    // follow-up reuses the SAME TargetSpec instance as the Ko immediately
+    // before it (structurally identical, so it resolves from the shared
+    // per-ability cache instead of re-querying a board the Ko itself
+    // just changed) - same "the target already answered, don't ask
+    // again" reasoning as Shocking Grasp's own "if that character is
+    // KO'd, [...]" follow-up.
+    public static readonly CardDef DarkPhoenixMalevolent = Character(
+        "DPS027", "Dark Phoenix", "Malevolent", dieLimit: 4,
+        "Dark Phoenix costs 1 less to purchase if your opponent has an X-Men character on their team. " +
+        "When fielded, KO target character die. If it's an X-Men character die, deal your opponent 1 " +
+        "damage. Global: Pay Bolt and KO one of your character dice. The next die you purchase this " +
+        "turn costs 2 less (to a minimum of 1).",
+        purchaseCost: 7, energyType: EnergyType.Bolt,
+        affiliations: ["Villains"],
+        grantsSelfPurchaseDiscountIfOpponentHasAffiliation: new SelfPurchaseDiscountIfOpponentHasAffiliation("X-Men", 1),
+        abilities: [
+            new AbilityDef(TriggerType.WhenFielded, Cost: null,
+                Effect: new Sequence([
+                    new Ko(TargetSpec.CharacterDie("target character die")),
+                    new Conditional(
+                        TargetSpec.CharacterDie("target character die"), EffectCondition.TargetHasAffiliation,
+                        Then: new DealDamage(1, TargetSpec.Player("your opponent", TargetOwnership.Opposing)),
+                        AffiliationParam: "X-Men")
+                ])),
+            new AbilityDef(TriggerType.Global, Cost: null,
+                Effect: new Sequence([
+                    new Ko(TargetSpec.CharacterDie("one of your character dice", TargetOwnership.Own)),
+                    new GrantNextPurchaseDiscount(2)
+                ]),
+                EnergyCost: new EnergyCost(1, EnergyType.Bolt))
+        ],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 5),
+            new CharacterFace(FieldingCost: 2, Attack: 7, Defense: 7),
+            new CharacterFace(FieldingCost: 3, Attack: 8, Defense: 8)
+        ], set: "DPS");
+
+    // Cable, "High Stakes" - the first user of DoublePrintedAttackOfEach
+    // (new this round).
+    public static readonly CardDef CableHighStakes = Character(
+        "DPS102", "Cable", "High Stakes", dieLimit: 2,
+        "When Cable attacks, double the printed A of all your other character dice.",
+        purchaseCost: 6, energyType: EnergyType.Bolt,
+        affiliations: ["X-Men"],
+        abilities: [new AbilityDef(TriggerType.WhenAttacks, Cost: null,
+            Effect: new DoublePrintedAttackOfEach(
+                TargetSpec.CharacterDie("your other character dice", TargetOwnership.Own, matchAll: true)))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 2),
+            new CharacterFace(FieldingCost: 2, Attack: 3, Defense: 3),
+            new CharacterFace(FieldingCost: 2, Attack: 5, Defense: 5)
+        ], set: "DPS");
+
+    // Gambit, "I Like Solitaire" - the first user of
+    // EffectCondition.OnlyCharacterFieldedThisTurn and
+    // GrantCantFieldCharacterDiceThisTurn (both new this round); reuses
+    // the existing RerollAndMoveUnlessCharacter primitive (Gambit's OTHER
+    // printing, "Unless I Got Someone to Play With", already established
+    // it) for the "reroll all opposing character dice; non-character
+    // results go to their Used Pile" half.
+    public static readonly CardDef GambitILikeSolitaire = Character(
+        "DPS072", "Gambit", "I Like Solitaire", dieLimit: 3,
+        "When fielded, if you have fielded no other character dice this turn, reroll all opposing " +
+        "character dice. Move any that roll an energy face to their Used Pile. You may not field any " +
+        "more character dice this turn.",
+        purchaseCost: 5, energyType: EnergyType.Mask,
+        affiliations: ["X-Men"],
+        abilities: [new AbilityDef(TriggerType.WhenFielded, Cost: null,
+            Effect: new Conditional(
+                TargetSpec.Self, EffectCondition.OnlyCharacterFieldedThisTurn,
+                Then: new Sequence([
+                    new RerollAndMoveUnlessCharacter(
+                        TargetSpec.CharacterDie("all opposing character dice", TargetOwnership.Opposing, matchAll: true),
+                        Zone.UsedPile),
+                    new GrantCantFieldCharacterDiceThisTurn()
+                ])))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 1, BurstStars: 1),
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 2, BurstStars: 1),
+            new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 5)
+        ], set: "DPS");
+
+    // Cyclops, "Utopia Realized" - the first user of
+    // EffectCondition.OwnCharacterDiceInFieldZoneAtLeast (new this
+    // round, the own-side mirror of the existing opponent-side version).
+    public static readonly CardDef CyclopsUtopiaRealized = Character(
+        "DPS105", "Cyclops", "Utopia Realized", dieLimit: 2,
+        "While you have 2 or more character dice in the Field Zone, when Cyclops attacks, deal 3 " +
+        "damage to target character die.",
+        purchaseCost: 6, energyType: EnergyType.Bolt,
+        affiliations: ["X-Men"],
+        abilities: [new AbilityDef(TriggerType.WhenAttacks, Cost: null,
+            Effect: new Conditional(
+                TargetSpec.Self, EffectCondition.OwnCharacterDiceInFieldZoneAtLeast,
+                Then: new DealDamage(3, TargetSpec.CharacterDie("target character die")),
+                CountParam: 2))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 3),
+            new CharacterFace(FieldingCost: 1, Attack: 6, Defense: 4)
+        ], set: "DPS");
+
+    // Mutant Research Program - the first user of
+    // EffectCondition.OwnActiveAffiliationOrKeywordCountAtLeast alongside
+    // Wolverine "Hardened by Madripoor" above; "draw and roll N dice" is
+    // just DrawDice(N) - it already rolls what it draws (see DrawDice's
+    // own remarks).
+    public static readonly CardDef MutantResearchProgram = BasicAction(
+        "DPS008", "Mutant Research Program",
+        "If you have at least 2 active Founder character dice, draw and roll 3 dice. Otherwise, draw " +
+        "and roll a die.",
+        abilities: [new AbilityDef(TriggerType.WhenUsed, Cost: null,
+            Effect: new Conditional(
+                TargetSpec.Self, EffectCondition.OwnActiveAffiliationOrKeywordCountAtLeast,
+                Then: new DrawDice(3), Else: new DrawDice(1),
+                AffiliationParam: "Founder", CountParam: 2))],
+        purchaseCost: 2, set: "DPS");
+
+    // Living the Dream - the first user of
+    // EffectCondition.OwnTeamWideLoyaltyCounterCountAtLeast (new this
+    // round) and the same Continuous/ContinuousResolve shape Lab Test
+    // established. "Overcrush" here is a GRANTED keyword (via
+    // GrantKeyword, Applied per rule 3.4.3.9), not a printed one on this
+    // card - unlike the bulk sheet's own naive keyword scan, which
+    // mis-attributed it as printed (the same class of parsing trap
+    // Magik's own granted keyword hit before).
+    public static readonly CardDef LivingTheDream = BasicAction(
+        "DPS006", "Living the Dream",
+        "Continuous: If among all character cards on your team you have at least 3 Loyalty Counters, " +
+        "your character dice get +1A and Overcrush (until the end of turn).",
+        keywords: [new KeywordInstance("Continuous")],
+        abilities: [new AbilityDef(TriggerType.ContinuousResolve, Cost: null,
+            Effect: new Conditional(
+                TargetSpec.Self, EffectCondition.OwnTeamWideLoyaltyCounterCountAtLeast,
+                Then: new Sequence([
+                    new ModifyStat(
+                        TargetSpec.CharacterDie("your character dice", TargetOwnership.Own, matchAll: true),
+                        AttackDelta: 1, DefenseDelta: null),
+                    new GrantKeyword(
+                        TargetSpec.CharacterDie("your character dice", TargetOwnership.Own, matchAll: true), "Overcrush")
+                ]),
+                CountParam: 3))],
+        purchaseCost: 4, set: "DPS");
+
     // Supreme Intelligence, "Kree Science Council" - purely a Loyalty
     // grant, no other text. NameContains is a real substring match here
     // ("a card with Kree in its name"), unlike Gladiator's "When Lilandra
@@ -2861,7 +3110,10 @@ public static class SampleCards
             DeadpoolDraftPick, WolverinePureOfHeart, CorsairRecruitingACrew, RogueSurveillanceImmunity,
             RogueMrsX, AngelJeanGreysSchool, MystiqueRelentless, CableBosomBuddies, BeastXaviersDream,
             ForgeSupportTechnician, JeanGreyXaviersDream, JeanGreyMarvelGirl, AngelXaviersDream,
-            MoiraStrengthOfForesight
+            MoiraStrengthOfForesight,
+            RogueUnitySquad, MagnetoVisionary, WolverineHardenedByMadripoor, BeastCombatReady,
+            DarkPhoenixMalevolent, CableHighStakes, GambitILikeSolitaire, CyclopsUtopiaRealized,
+            MutantResearchProgram, LivingTheDream
         ];
 
         // Hand-curated cards win on id collision - shouldn't happen in

@@ -410,6 +410,32 @@ here rather than assuming which approach they'd want.
     on a live A=D relationship and a divided-damage `WhenAttacks`
     respectively, neither fitting the flat-delta shape built for Beast)
     - see the "fourteen more DPS cards" status update.
+    Ten more DPS cards landed the round after that, several sharing new
+    primitives across 2+ cards: five new count-threshold
+    `EffectCondition`s (`OwnCharacterDiceInFieldZoneAtLeast` - Cyclops
+    "Utopia Realized"/DPS105; `OwnActiveAffiliationOrKeywordCountAtLeast`
+    - Wolverine "Hardened by Madripoor"/DPS096 AND Mutant Research
+    Program/DPS008; `OwnTeamWideLoyaltyCounterCountAtLeast` - Living the
+    Dream/DPS006; `OnlyCharacterFieldedThisTurn` - Gambit "I Like
+    Solitaire"/DPS072), two new effect nodes (`SpinToCharacterLevel`,
+    `DoublePrintedAttackOfEach` - Cable "High Stakes"/DPS102), and four
+    new granter-side CardDef fields each used by one card
+    (`GrantsFieldingCostReduction` - Rogue "Unity Squad"/DPS129;
+    `GrantsMinimumBlockersRequirement` - Magneto "Visionary"/DPS081, a
+    new `CombatEngine.ValidateMinimumBlockers`; `SelfFirstPurchaseSurcharge`
+    - Beast "Combat Ready"/DPS098; `GrantsSelfPurchaseDiscountIfOpponentHasAffiliation`
+    - Dark Phoenix "Malevolent"/DPS027, which also reuses
+    DarkPhoenixEnemyOfTheShiar's own Global `Sequence` verbatim). Also
+    found and fixed a real, previously-unexercised bug along the way:
+    `EffectInterpreter.Resolve`'s `TargetSpec.Self` case returned an
+    empty list whenever `ctx.SourceDieId` was null - always true for a
+    Global ability (rule 3.1.5) - which silently forced every state-only
+    `Conditional` keyed on `TargetSpec.Self` (`PrepAreaEmpty` etc.) to its
+    Else/no-op branch regardless of the real condition; Magneto
+    ("Idealist," DPS041)'s own Global had this exact shape and had
+    apparently never once actually fired correctly before the fix. See
+    the "ten more DPS cards" status update for the full list and the
+    Damage-resets-to-0-on-KO test-authoring trap it caught again.
 
 ## Implemented keywords
 

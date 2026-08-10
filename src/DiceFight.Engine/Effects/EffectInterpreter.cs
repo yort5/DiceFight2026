@@ -73,10 +73,12 @@ public static class EffectInterpreter
             case ModifyStat n: if (!n.Target.IsSelf) yield return n.Target; break;
             case SetStat n: if (!n.Target.IsSelf) yield return n.Target; break;
             case SwapAttack n: if (!n.Target.IsSelf) yield return n.Target; break;
+            case DoublePrintedAttackOfEach n: if (!n.Target.IsSelf) yield return n.Target; break;
             case Reroll n: if (!n.Target.IsSelf) yield return n.Target; break;
             case RerollAndMoveUnlessCharacter n: if (!n.Target.IsSelf) yield return n.Target; break;
             case Spin n: if (!n.Target.IsSelf) yield return n.Target; break;
             case SpinToEnergyFace n: if (!n.Target.IsSelf) yield return n.Target; break;
+            case SpinToCharacterLevel n: if (!n.Target.IsSelf) yield return n.Target; break;
             case PrepDie n: if (!n.Source.IsSelf) yield return n.Source; break;
             case FieldDie n: if (!n.Target.IsSelf) yield return n.Target; break;
             case BlankTargetText n: if (!n.Target.IsSelf) yield return n.Target; break;
@@ -228,6 +230,16 @@ public static class EffectInterpreter
                 ctx.State.PendingNextPurchaseGoesToBag = true;
                 break;
 
+            case DoublePrintedAttackOfEach doubleAttack:
+                foreach (var id in Resolve(ctx, doubleAttack.Target, cache))
+                {
+                    if (id == ctx.SourceDieId) continue; // "all your OTHER character dice"
+                    var die = FindDie(ctx, id);
+                    var printedAttack = DieStats.GetFace(ctx.State, die).Attack;
+                    die.AppliedModifiers.Add(new Modifier(printedAttack, 0, ctx.SourceDieId ?? "ability"));
+                }
+                break;
+
             case Spin spin:
                 foreach (var id in Resolve(ctx, spin.Target, cache))
                 {
@@ -257,6 +269,24 @@ public static class EffectInterpreter
                     die.ProvidedEnergyType = energyType;
                     die.EnergyAmount = spinToEnergy.Amount;
                     die.BurstStars = null;
+                }
+                break;
+
+            case SpinToCharacterLevel spinToCharacter:
+                foreach (var id in Resolve(ctx, spinToCharacter.Target, cache))
+                {
+                    var die = FindDie(ctx, id);
+                    var cardId = die.VirtualCardId ?? die.CardId;
+                    var maxLevel = cardId is not null && ctx.State.CardCatalog.TryGetValue(cardId, out var spunCard)
+                        ? Math.Max(1, spunCard.Levels.Count)
+                        : 1;
+
+                    die.Status = DieStatus.Character;
+                    die.Level = Math.Clamp(spinToCharacter.Level, 1, maxLevel);
+                    die.Damage = 0;
+                    die.EnergyKind = EnergyKind.None;
+                    die.ProvidedEnergyType = null;
+                    die.EnergyAmount = 1;
                 }
                 break;
 
@@ -450,6 +480,10 @@ public static class EffectInterpreter
 
             case GrantSelfTargetingImmunityFromActionAndGlobal:
                 ctx.State.ImmuneToActionAndGlobalTargetingControllerIds.Add(ctx.ControllerId);
+                break;
+
+            case GrantCantFieldCharacterDiceThisTurn:
+                ctx.State.CantFieldCharacterDiceThisTurn.Add(ctx.ControllerId);
                 break;
 
             case ForceBlock forceBlock:
@@ -677,8 +711,27 @@ public static class EffectInterpreter
     private static IReadOnlyList<string> Resolve(
         EffectContext ctx, TargetSpec spec, Dictionary<TargetSpec, IReadOnlyList<string>> cache)
     {
+        // Rule 3.1.5 - a Global ability's own source is the paying
+        // player, not a specific die (see UseGlobalAbility's own
+        // remarks), so ctx.SourceDieId is always null there. A bare
+        // `ctx.SourceDieId is not null ? [id] : []` used to make every
+        // state-only Conditional keyed on TargetSpec.Self (PrepAreaEmpty,
+        // OwnLifeLessThanOpponent, OwnTeamWideLoyaltyCounterCountAtLeast,
+        // etc. - every one of them ignores the resolved id entirely, see
+        // CheckCondition's own remarks) silently resolve to an empty
+        // list on any Global ability, which made `Resolve(...).Any(...)`
+        // always false regardless of the real condition - a real bug
+        // caught authoring Magneto ("Visionary", DPS081)'s own Global,
+        // and already latent in Magneto ("Idealist", DPS041)'s
+        // (`Conditional(TargetSpec.Self, PrepAreaEmpty, ...)` on its own
+        // Global never actually fired). Falling back to ctx.ControllerId
+        // - a real, non-null id, just not a die's - fixes every state-
+        // only condition; a future card pairing TargetSpec.Self with a
+        // die-dependent condition (burst faces, TargetWasKOd) on a
+        // sourceless Global would still fail loudly at FindDie instead of
+        // silently doing nothing, which is the right failure mode.
         if (spec.IsSelf)
-            return ctx.SourceDieId is not null ? [ctx.SourceDieId] : [];
+            return [ctx.SourceDieId ?? ctx.ControllerId];
 
         if (cache.TryGetValue(spec, out var cached))
             return cached;
@@ -749,6 +802,24 @@ public static class EffectInterpreter
         EffectCondition.OpponentHasAtLeastNCharacterDiceInFieldZone => conditional.CountParam is { } threshold
             && ctx.State.DiceIn(ctx.State.OpponentOf(ctx.ControllerId), Zone.FieldZone)
                 .Count(d => d.Status is DieStatus.Character or DieStatus.SidekickCharacter) >= threshold,
+        // dieId is unused here - see EffectCondition.OwnCharacterDiceInFieldZoneAtLeast's own remarks.
+        EffectCondition.OwnCharacterDiceInFieldZoneAtLeast => conditional.CountParam is { } ownThreshold
+            && ctx.State.DiceIn(ctx.ControllerId, Zone.FieldZone)
+                .Count(d => d.Status is DieStatus.Character or DieStatus.SidekickCharacter) >= ownThreshold,
+        // dieId is unused here - see EffectCondition.OwnActiveAffiliationOrKeywordCountAtLeast's own remarks.
+        EffectCondition.OwnActiveAffiliationOrKeywordCountAtLeast => conditional.AffiliationParam is { } matchName
+            && conditional.CountParam is { } matchThreshold
+            && ctx.State.DiceIn(ctx.ControllerId, Zone.FieldZone).Concat(ctx.State.DiceIn(ctx.ControllerId, Zone.AttackZone))
+                .Count(d => DieStats.HasAffiliation(ctx.State, d, matchName) || DieStats.HasKeyword(ctx.State, d, matchName))
+                >= matchThreshold,
+        // dieId is unused here - see EffectCondition.OwnTeamWideLoyaltyCounterCountAtLeast's own remarks.
+        EffectCondition.OwnTeamWideLoyaltyCounterCountAtLeast => conditional.CountParam is { } loyaltyThreshold
+            && ctx.State.GetPlayer(ctx.ControllerId).TeamCardIds.Sum(id => ctx.State.LoyaltyCounters.GetValueOrDefault(id))
+                >= loyaltyThreshold,
+        // See EffectCondition.OnlyCharacterFieldedThisTurn's own remarks - dieId IS used here (unlike most
+        // state-only conditions above), since "no OTHER" needs to exclude it from the count.
+        EffectCondition.OnlyCharacterFieldedThisTurn => ctx.State.FieldedThisTurn.Contains(dieId)
+            && ctx.State.Dice.Count(d => ctx.State.FieldedThisTurn.Contains(d.Id) && d.ControllerId == ctx.ControllerId) == 1,
         _ => throw new NotSupportedException($"Unhandled effect condition: {conditional.When}")
     };
 

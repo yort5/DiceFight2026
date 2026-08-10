@@ -21,4 +21,10 @@ public sealed class Player
     // die this turn" (not any die) - set alongside PurchasedDieThisTurn
     // above, same reset point.
     public bool PurchasedCharacterDieThisTurn { get; set; }
+
+    // Beast ("Combat Ready", DPS098) - "the first Beast die you purchase
+    // each game costs 1 extra." Game-scoped (never cleared, unlike every
+    // "ThisTurn" tracker elsewhere), keyed by CardId since the surcharge
+    // is per-CARD, not per-player-overall - see TurnEngine.Purchase.
+    public HashSet<string> SurchargedFirstPurchaseCardIds { get; } = [];
 }

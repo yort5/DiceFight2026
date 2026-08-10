@@ -38969,24 +38969,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS006",
-    "name": "Living the Dream",
-    "subtitle": "Basic Action Card",
-    "type": "BasicAction",
-    "purchaseCost": 4,
-    "energyType": null,
-    "dieLimit": 3,
-    "levels": [],
-    "rawText": "Continuous: If among all character cards on your team you have at least 3 Loyalty Counters, your character dice get +1A an Overcrush (until the end of turn).",
-    "keywords": [
-      "Overcrush"
-    ],
-    "affiliations": [],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS007",
     "name": "Making the Team",
     "subtitle": "Basic Action Card",
@@ -38996,22 +38978,6 @@
     "dieLimit": 3,
     "levels": [],
     "rawText": "Roll a character die from your Used Pile. If it rolls a character face, field it for free. Otherwise, Prep it.",
-    "keywords": [],
-    "affiliations": [],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS008",
-    "name": "Mutant Research Program",
-    "subtitle": "Basic Action Card",
-    "type": "BasicAction",
-    "purchaseCost": 2,
-    "energyType": null,
-    "dieLimit": 3,
-    "levels": [],
-    "rawText": "If you have at least 2 active Founder character dice, draw and roll 3 dice. Otherwise, draw and roll a die.",
     "keywords": [],
     "affiliations": [],
     "isImplemented": false,
@@ -39243,43 +39209,6 @@
     "keywords": [],
     "affiliations": [],
     "isImplemented": true,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS027",
-    "name": "Dark Phoenix",
-    "subtitle": "Malevolent",
-    "type": "Character",
-    "purchaseCost": 7,
-    "energyType": "Bolt",
-    "dieLimit": 4,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 5,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 7,
-        "defense": 7,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 3,
-        "attack": 8,
-        "defense": 8,
-        "burstStars": null
-      }
-    ],
-    "rawText": "Dark Phoenix costs 1 less to purchase if your opponent has an X-Men character on their team.When fielded, KO target character die. If it\\'s an X-Men character die, deal your opponent 1 damage. Global: Pay Bolt and KO one of your character dice. The next die you purchase this turn costs 2 less (to a minimum of 1).",
-    "keywords": [],
-    "affiliations": [
-      "Villains"
-    ],
-    "isImplemented": false,
     "set": "DPS",
     "abilityTemplate": null
   },
@@ -39767,43 +39696,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS072",
-    "name": "Gambit",
-    "subtitle": "I Like Solitaire",
-    "type": "Character",
-    "purchaseCost": 5,
-    "energyType": "Mask",
-    "dieLimit": 3,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 1,
-        "defense": 1,
-        "burstStars": 1
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 2,
-        "defense": 2,
-        "burstStars": 1
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 4,
-        "defense": 5,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When fielded, if you have fielded no other character dice this turn, reroll all opposing character dice. Move any that roll an energy face to their Used Pile. You may not field any more character dice this turn.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS073",
     "name": "Gladiator",
     "subtitle": "The Empire Must Stand",
@@ -39874,43 +39766,6 @@
     "keywords": [],
     "affiliations": [
       "Shi\\'ar"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS081",
-    "name": "Magneto",
-    "subtitle": "Visionary",
-    "type": "Character",
-    "purchaseCost": 5,
-    "energyType": "Mask",
-    "dieLimit": 3,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 4,
-        "defense": 4,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 5,
-        "defense": 7,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 3,
-        "attack": 6,
-        "defense": 8,
-        "burstStars": null
-      }
-    ],
-    "rawText": "While Magneto is active, your Brotherhood of Mutants character dice can only be blocked by 2 or more character dice. Teamwatch - Prep a die from your bag. Global Pay Mask. Once per turn, during your turn, if you have any dice in your Prep Area, you may draw a die and place it in your Prep Area.",
-    "keywords": [],
-    "affiliations": [
-      "Brotherhood of Mutants"
     ],
     "isImplemented": false,
     "set": "DPS",
@@ -39991,43 +39846,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS096",
-    "name": "Wolverine",
-    "subtitle": "Hardened by Madripoor",
-    "type": "Character",
-    "purchaseCost": 5,
-    "energyType": "Fist",
-    "dieLimit": 3,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 5,
-        "defense": 2,
-        "burstStars": 1
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 6,
-        "defense": 3,
-        "burstStars": 1
-      },
-      {
-        "fieldingCost": 3,
-        "attack": 8,
-        "defense": 4,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When you have at least 3 active X-Men character dice, Wolverine gains \"Energize Spin this die to level 1\"",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS097",
     "name": "Angel",
     "subtitle": "Air Support",
@@ -40056,43 +39874,6 @@
       }
     ],
     "rawText": "Founder While Angel is active, when an opponent targets one of your character dice, gain 1 life.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS098",
-    "name": "Beast",
-    "subtitle": "Combat Ready",
-    "type": "Character",
-    "purchaseCost": 2,
-    "energyType": "Fist",
-    "dieLimit": 2,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 2,
-        "defense": 1,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 2,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 2,
-        "burstStars": null
-      }
-    ],
-    "rawText": "Founder When Beast attacks, Prep a die from your bag. The first Beast die you purchase each game costs 1 extra.",
     "keywords": [],
     "affiliations": [
       "X-Men"
@@ -40213,43 +39994,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS102",
-    "name": "Cable",
-    "subtitle": "High Stakes",
-    "type": "Character",
-    "purchaseCost": 6,
-    "energyType": "Bolt",
-    "dieLimit": 2,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 3,
-        "defense": 3,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 5,
-        "defense": 5,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When Cable attacks, double the printed A of all your other character dice.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS103",
     "name": "Colossus",
     "subtitle": "Piotr",
@@ -40278,43 +40022,6 @@
       }
     ],
     "rawText": "While Colossus is active, at the end of your turn, each of your level 2 or 3 character dice deals your opponent 2 damage (not 2 damage per Colossus die)",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS105",
-    "name": "Cyclops",
-    "subtitle": "Utopia Realized",
-    "type": "Character",
-    "purchaseCost": 6,
-    "energyType": "Bolt",
-    "dieLimit": 2,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 4,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 5,
-        "defense": 3,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 6,
-        "defense": 4,
-        "burstStars": null
-      }
-    ],
-    "rawText": "While you have 2 or more character dice in the Field Zone, when Cyclops attacks, deal 3 damage to target character die.",
     "keywords": [],
     "affiliations": [
       "X-Men"
@@ -40693,43 +40400,6 @@
     "keywords": [],
     "affiliations": [
       "Villains"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS129",
-    "name": "Rogue",
-    "subtitle": "Unity Squad",
-    "type": "Character",
-    "purchaseCost": 4,
-    "energyType": "Mask",
-    "dieLimit": 2,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 2,
-        "defense": 3,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 4,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 5,
-        "defense": 6,
-        "burstStars": null
-      }
-    ],
-    "rawText": "While Rogue is active,your X-Men character dice cost 1 less to field. Teamwatch -Rogue gets +2A.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
     ],
     "isImplemented": false,
     "set": "DPS",

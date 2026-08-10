@@ -3996,4 +3996,581 @@ public class TwoTeamsDemoTests
 
         Assert.Equal(1, state.LoyaltyCounters.GetValueOrDefault(SampleCards.MoiraStrengthOfForesight.Id)); // unchanged
     }
+
+    [Fact]
+    public void RogueUnitySquad_ReducesFieldingCost_ForXMenDice()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.RogueUnitySquad.Id, SampleCards.RogueMrsX.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var rogueDie = FindUnpurchased(state, "teamA", SampleCards.RogueUnitySquad.Id);
+        rogueDie.Zone = Zone.FieldZone; rogueDie.Status = DieStatus.Character; rogueDie.Level = 1;
+
+        var xMenDie = FindUnpurchased(state, "teamA", SampleCards.RogueMrsX.Id);
+        xMenDie.Zone = Zone.ReservePool; xMenDie.Status = DieStatus.Character; xMenDie.Level = 1; // printed fielding cost 1
+
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, xMenDie.Id, energyDieIdsToSpend: []); // free with the -1 reduction
+
+        Assert.Equal(Zone.FieldZone, xMenDie.Zone);
+    }
+
+    [Fact]
+    public void RogueUnitySquadTeamwatch_FiresOffRealFieldingGate_GetsPlus2AttackUntilEndOfTurn()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.RogueUnitySquad.Id, SampleCards.RogueMrsX.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var rogueDie = FindUnpurchased(state, "teamA", SampleCards.RogueUnitySquad.Id);
+        rogueDie.Zone = Zone.FieldZone; rogueDie.Status = DieStatus.Character; rogueDie.Level = 1;
+        var baseAttack = DieStats.EffectiveAttack(state, rogueDie);
+
+        var otherXMen = FindUnpurchased(state, "teamA", SampleCards.RogueMrsX.Id); // shares X-Men with Rogue
+        otherXMen.Zone = Zone.ReservePool; otherXMen.Status = DieStatus.Character; otherXMen.Level = 1;
+
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, otherXMen.Id, energyDieIdsToSpend: []);
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [])));
+
+        Assert.Equal(baseAttack + 2, DieStats.EffectiveAttack(state, rogueDie));
+    }
+
+    [Fact]
+    public void MagnetoVisionary_RequiresAtLeastTwoBlockers_ForItsOwnBrotherhoodAttacker()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.MagnetoVisionary.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var magnetoDie = FindUnpurchased(state, "teamA", SampleCards.MagnetoVisionary.Id);
+        magnetoDie.Zone = Zone.FieldZone; magnetoDie.Status = DieStatus.Character; magnetoDie.Level = 1;
+
+        var blocker1 = state.DiceIn("teamB", Zone.Bag).First();
+        blocker1.Zone = Zone.FieldZone; blocker1.Status = DieStatus.SidekickCharacter; blocker1.Level = 1;
+        var blocker2 = state.DiceIn("teamB", Zone.Bag).Skip(1).First();
+        blocker2.Zone = Zone.FieldZone; blocker2.Status = DieStatus.SidekickCharacter; blocker2.Level = 1;
+
+        TurnEngine.EnterAttackStep(state);
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [magnetoDie.Id]);
+
+        var oneBlockerAssignment = new CombatAssignment();
+        oneBlockerAssignment.AssignBlocker(magnetoDie.Id, blocker1.Id);
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            CombatEngine.DeclareBlockers(state, oneBlockerAssignment, [blocker1.Id]));
+        Assert.Contains("2 or more", ex.Message);
+
+        var twoBlockerAssignment = new CombatAssignment();
+        twoBlockerAssignment.AssignBlocker(magnetoDie.Id, blocker1.Id);
+        twoBlockerAssignment.AssignBlocker(magnetoDie.Id, blocker2.Id);
+        CombatEngine.DeclareBlockers(state, twoBlockerAssignment, [blocker1.Id, blocker2.Id]); // succeeds
+    }
+
+    [Fact]
+    public void MagnetoVisionary_LeavingAnAttackerUnblocked_IsStillLegal()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.MagnetoVisionary.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var magnetoDie = FindUnpurchased(state, "teamA", SampleCards.MagnetoVisionary.Id);
+        magnetoDie.Zone = Zone.FieldZone; magnetoDie.Status = DieStatus.Character; magnetoDie.Level = 1;
+
+        TurnEngine.EnterAttackStep(state);
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [magnetoDie.Id]);
+        CombatEngine.DeclareBlockers(state, new CombatAssignment(), []); // no exception - unblocked is fine
+    }
+
+    [Fact]
+    public void MagnetoVisionaryGlobal_IsANoOp_WhenPrepAreaIsEmpty()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.MagnetoVisionary.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var magnetoDie = FindUnpurchased(state, "teamA", SampleCards.MagnetoVisionary.Id);
+        magnetoDie.Zone = Zone.FieldZone; magnetoDie.Status = DieStatus.Character; magnetoDie.Level = 1;
+
+        var energy = GiveWildEnergy(state, "teamA", 1);
+        var queue = new AbilityQueue();
+        TurnEngine.UseGlobalAbility(state, queue, SampleCards.MagnetoVisionary.Id, "teamA", energy.Select(d => d.Id).ToList());
+        var bagCountBefore = state.DiceIn("teamA", Zone.Bag).Count();
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [])));
+
+        Assert.Empty(state.DiceIn("teamA", Zone.PrepArea));
+        Assert.Equal(bagCountBefore, state.DiceIn("teamA", Zone.Bag).Count());
+    }
+
+    [Fact]
+    public void MagnetoVisionaryGlobal_DrawsADie_WhenPrepAreaAlreadyHasOne()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.MagnetoVisionary.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var magnetoDie = FindUnpurchased(state, "teamA", SampleCards.MagnetoVisionary.Id);
+        magnetoDie.Zone = Zone.FieldZone; magnetoDie.Status = DieStatus.Character; magnetoDie.Level = 1;
+
+        var alreadyInPrep = state.DiceIn("teamA", Zone.Bag).First();
+        alreadyInPrep.Zone = Zone.PrepArea;
+
+        var energy = GiveWildEnergy(state, "teamA", 1);
+        var bagCountBefore = state.DiceIn("teamA", Zone.Bag).Count(); // after GiveWildEnergy's own removal
+        var queue = new AbilityQueue();
+        TurnEngine.UseGlobalAbility(state, queue, SampleCards.MagnetoVisionary.Id, "teamA", energy.Select(d => d.Id).ToList());
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [])));
+
+        Assert.Equal(2, state.DiceIn("teamA", Zone.PrepArea).Count());
+        Assert.Equal(bagCountBefore - 1, state.DiceIn("teamA", Zone.Bag).Count());
+    }
+
+    // A pre-existing bug caught while authoring Magneto Visionary's own
+    // Global above: EffectContext.SourceDieId is always null for a Global
+    // ability (rule 3.1.5 - the source is the paying player, not a die),
+    // and TargetSpec.Self's own Resolve used to return an EMPTY list
+    // whenever SourceDieId was null - which made `Resolve(...).Any(...)`
+    // always false for ANY Conditional keyed on TargetSpec.Self inside a
+    // Global, regardless of the real condition. Magneto ("Idealist",
+    // DPS041)'s own Global ("if you have no dice in your Prep Area, [...]")
+    // was already using exactly that shape and had never been exercised by
+    // a test - fixed by falling back to ctx.ControllerId when SourceDieId
+    // is null (see EffectInterpreter.Resolve's own remarks).
+    [Fact]
+    public void MagnetoIdealistGlobal_PrepsADie_WhenPrepAreaIsEmpty()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.Magneto.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var magnetoDie = FindUnpurchased(state, "teamA", SampleCards.Magneto.Id);
+        magnetoDie.Zone = Zone.FieldZone; magnetoDie.Status = DieStatus.Character; magnetoDie.Level = 1;
+
+        var energy = GiveWildEnergy(state, "teamA", 1);
+        var queue = new AbilityQueue();
+        TurnEngine.UseGlobalAbility(state, queue, SampleCards.Magneto.Id, "teamA", energy.Select(d => d.Id).ToList());
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [])));
+
+        Assert.Single(state.DiceIn("teamA", Zone.PrepArea));
+    }
+
+    [Fact]
+    public void MagnetoIdealistGlobal_IsANoOp_WhenPrepAreaAlreadyHasADie()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.Magneto.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var magnetoDie = FindUnpurchased(state, "teamA", SampleCards.Magneto.Id);
+        magnetoDie.Zone = Zone.FieldZone; magnetoDie.Status = DieStatus.Character; magnetoDie.Level = 1;
+
+        var alreadyInPrep = state.DiceIn("teamA", Zone.Bag).First();
+        alreadyInPrep.Zone = Zone.PrepArea;
+
+        var energy = GiveWildEnergy(state, "teamA", 1);
+        var queue = new AbilityQueue();
+        TurnEngine.UseGlobalAbility(state, queue, SampleCards.Magneto.Id, "teamA", energy.Select(d => d.Id).ToList());
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [])));
+
+        Assert.Single(state.DiceIn("teamA", Zone.PrepArea)); // unchanged - still just the one already there
+    }
+
+    [Fact]
+    public void WolverineHardenedByMadripoorEnergize_FiresOffRealGate_SpinsToLevel1_WithThreeActiveXMen()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [
+            SampleCards.WolverineHardenedByMadripoor.Id, SampleCards.RogueMrsX.Id, SampleCards.WolverinePureOfHeart.Id,
+            SampleCards.AngelJeanGreysSchool.Id]);
+        state.ActivePlayerId = "teamA";
+        state.CurrentStep = TurnStep.RollAndReroll;
+
+        var wolverineDie = FindUnpurchased(state, "teamA", SampleCards.WolverineHardenedByMadripoor.Id);
+        wolverineDie.Zone = Zone.ReservePool;
+        wolverineDie.Status = DieStatus.Energy;
+        wolverineDie.EnergyKind = EnergyKind.Generic;
+        wolverineDie.EnergyAmount = 2; // double energy - Energize's own trigger condition
+
+        // 3 active X-Men dice, none of them Wolverine himself (he's on an
+        // energy face right now, not active).
+        foreach (var cardId in new[] { SampleCards.RogueMrsX.Id, SampleCards.WolverinePureOfHeart.Id, SampleCards.AngelJeanGreysSchool.Id })
+        {
+            var xMenDie = FindUnpurchased(state, "teamA", cardId);
+            xMenDie.Zone = Zone.FieldZone; xMenDie.Status = DieStatus.Character; xMenDie.Level = 1;
+        }
+
+        var queue = new AbilityQueue();
+        TurnEngine.Reroll(state, queue, new FixedRoller(DieStatus.Energy, 1), []);
+
+        Assert.Equal(1, queue.Count);
+        Assert.Equal(TriggerType.Energize, queue.Pending[0].Trigger);
+
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [])));
+
+        Assert.Equal(DieStatus.Character, wolverineDie.Status);
+        Assert.Equal(1, wolverineDie.Level);
+    }
+
+    [Fact]
+    public void WolverineHardenedByMadripoorEnergize_DoesNotSpin_WithFewerThanThreeActiveXMen()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [
+            SampleCards.WolverineHardenedByMadripoor.Id, SampleCards.RogueMrsX.Id]);
+        state.ActivePlayerId = "teamA";
+        state.CurrentStep = TurnStep.RollAndReroll;
+
+        var wolverineDie = FindUnpurchased(state, "teamA", SampleCards.WolverineHardenedByMadripoor.Id);
+        wolverineDie.Zone = Zone.ReservePool;
+        wolverineDie.Status = DieStatus.Energy;
+        wolverineDie.EnergyKind = EnergyKind.Generic;
+        wolverineDie.EnergyAmount = 2;
+
+        var onlyXMen = FindUnpurchased(state, "teamA", SampleCards.RogueMrsX.Id);
+        onlyXMen.Zone = Zone.FieldZone; onlyXMen.Status = DieStatus.Character; onlyXMen.Level = 1;
+
+        var queue = new AbilityQueue();
+        TurnEngine.Reroll(state, queue, new FixedRoller(DieStatus.Energy, 1), []);
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [])));
+
+        Assert.Equal(DieStatus.Energy, wolverineDie.Status); // condition not met - stayed on its energy face
+    }
+
+    [Fact]
+    public void BeastCombatReadyWhenAttacks_FiresOffRealAttackGate_PrepsADieFromBag()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.BeastCombatReady.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var beastDie = FindUnpurchased(state, "teamA", SampleCards.BeastCombatReady.Id);
+        beastDie.Zone = Zone.FieldZone; beastDie.Status = DieStatus.Character; beastDie.Level = 1;
+
+        TurnEngine.EnterAttackStep(state);
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [beastDie.Id]);
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [], Random: new Random(1))));
+
+        Assert.Single(state.DiceIn("teamA", Zone.PrepArea));
+    }
+
+    [Fact]
+    public void BeastCombatReady_SurchargesOnlyTheFirstPurchase_EachGame()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.BeastCombatReady.Id]);
+        state.ActivePlayerId = "teamA";
+        Assert.True(SampleCards.BeastCombatReady.DieLimit >= 2);
+
+        var firstBeast = state.DiceIn("teamA", Zone.Unpurchased).Where(d => d.CardId == SampleCards.BeastCombatReady.Id).ElementAt(0);
+        var secondBeast = state.DiceIn("teamA", Zone.Unpurchased).Where(d => d.CardId == SampleCards.BeastCombatReady.Id).ElementAt(1);
+
+        var exactEnergy = GiveWildEnergy(state, "teamA", SampleCards.BeastCombatReady.PurchaseCost);
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            TurnEngine.Purchase(state, firstBeast.Id, exactEnergy.Select(d => d.Id).ToList()));
+        Assert.Contains("Not enough energy", ex.Message);
+
+        var extra = GiveWildEnergy(state, "teamA", 1);
+        TurnEngine.Purchase(state, firstBeast.Id, exactEnergy.Concat(extra).Select(d => d.Id).ToList());
+        Assert.Equal(Zone.UsedPile, firstBeast.Zone); // the +1 surcharge really was required
+
+        var secondExactEnergy = GiveWildEnergy(state, "teamA", SampleCards.BeastCombatReady.PurchaseCost);
+        TurnEngine.Purchase(state, secondBeast.Id, secondExactEnergy.Select(d => d.Id).ToList()); // no surcharge this time
+        Assert.Equal(Zone.UsedPile, secondBeast.Zone);
+    }
+
+    [Fact]
+    public void DarkPhoenixMalevolent_CostsOneLess_WhenOpponentHasAnXMenCharacterOnTheirTeam()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.DarkPhoenixMalevolent.Id],
+            extraTeamBCardIds: [SampleCards.RogueMrsX.Id]); // X-Men on teamB's roster
+        state.ActivePlayerId = "teamA";
+
+        var dpDie = FindUnpurchased(state, "teamA", SampleCards.DarkPhoenixMalevolent.Id);
+        var discountedEnergy = GiveWildEnergy(state, "teamA", SampleCards.DarkPhoenixMalevolent.PurchaseCost - 1);
+        TurnEngine.Purchase(state, dpDie.Id, discountedEnergy.Select(d => d.Id).ToList());
+
+        Assert.Equal(Zone.UsedPile, dpDie.Zone); // succeeded 1 short of full price - the discount applied
+    }
+
+    [Fact]
+    public void DarkPhoenixMalevolent_CostsFullPrice_WhenOpponentHasNoXMen()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.DarkPhoenixMalevolent.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var dpDie = FindUnpurchased(state, "teamA", SampleCards.DarkPhoenixMalevolent.Id);
+        var tooLittleEnergy = GiveWildEnergy(state, "teamA", SampleCards.DarkPhoenixMalevolent.PurchaseCost - 1);
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            TurnEngine.Purchase(state, dpDie.Id, tooLittleEnergy.Select(d => d.Id).ToList()));
+        Assert.Contains("Not enough energy", ex.Message);
+    }
+
+    [Fact]
+    public void DarkPhoenixMalevolentWhenFielded_DamagesOpponent_OnlyIfTheKOdDieWasXMen()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.DarkPhoenixMalevolent.Id, SampleCards.RogueMrsX.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var xMenVictim = FindUnpurchased(state, "teamA", SampleCards.RogueMrsX.Id); // targetable by "target character die" (any ownership)
+        xMenVictim.Zone = Zone.FieldZone; xMenVictim.Status = DieStatus.Character; xMenVictim.Level = 1;
+
+        var dpDie = FindUnpurchased(state, "teamA", SampleCards.DarkPhoenixMalevolent.Id);
+        dpDie.Zone = Zone.FieldZone; dpDie.Status = DieStatus.Character; dpDie.Level = 1;
+
+        var ability = SampleCards.DarkPhoenixMalevolent.Abilities.Single(a => a.Trigger == TriggerType.WhenFielded);
+        var opponentLifeBefore = state.PlayerTwo.Life;
+        EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(state, "teamA", dpDie.Id, spec => spec.PlayersAllowed ? [state.OpponentOf("teamA")] : [xMenVictim.Id]));
+
+        Assert.Equal(Zone.PrepArea, xMenVictim.Zone); // KO'd
+        Assert.Equal(opponentLifeBefore - 1, state.PlayerTwo.Life); // it was X-Men - damage dealt
+    }
+
+    [Fact]
+    public void DarkPhoenixMalevolentWhenFielded_DoesNotDamageOpponent_WhenTheKOdDieIsNotXMen()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.DarkPhoenixMalevolent.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var nonXMenVictim = FindUnpurchased(state, "teamA", SampleCards.BlackWidow.Id); // no affiliation
+        nonXMenVictim.Zone = Zone.FieldZone; nonXMenVictim.Status = DieStatus.Character; nonXMenVictim.Level = 1;
+
+        var dpDie = FindUnpurchased(state, "teamA", SampleCards.DarkPhoenixMalevolent.Id);
+        dpDie.Zone = Zone.FieldZone; dpDie.Status = DieStatus.Character; dpDie.Level = 1;
+
+        var ability = SampleCards.DarkPhoenixMalevolent.Abilities.Single(a => a.Trigger == TriggerType.WhenFielded);
+        var opponentLifeBefore = state.PlayerTwo.Life;
+        EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(state, "teamA", dpDie.Id, spec => spec.PlayersAllowed ? [state.OpponentOf("teamA")] : [nonXMenVictim.Id]));
+
+        Assert.Equal(Zone.PrepArea, nonXMenVictim.Zone); // still KO'd
+        Assert.Equal(opponentLifeBefore, state.PlayerTwo.Life); // but not X-Men - no damage
+    }
+
+    [Fact]
+    public void CableHighStakesWhenAttacks_FiresOffRealAttackGate_DoublesOtherDiceButNotSelfOrOpponents()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.CableHighStakes.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var cableDie = FindUnpurchased(state, "teamA", SampleCards.CableHighStakes.Id);
+        cableDie.Zone = Zone.FieldZone; cableDie.Status = DieStatus.Character; cableDie.Level = 1;
+        var cableAttackBefore = DieStats.EffectiveAttack(state, cableDie);
+
+        var otherOwnDie = state.DiceIn("teamA", Zone.Bag).First();
+        otherOwnDie.Zone = Zone.FieldZone; otherOwnDie.Status = DieStatus.SidekickCharacter; otherOwnDie.Level = 1;
+        var otherOwnAttackBefore = DieStats.EffectiveAttack(state, otherOwnDie);
+
+        var opposingDie = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        opposingDie.Zone = Zone.FieldZone; opposingDie.Status = DieStatus.Character; opposingDie.Level = 1;
+        var opposingAttackBefore = DieStats.EffectiveAttack(state, opposingDie);
+
+        TurnEngine.EnterAttackStep(state);
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [cableDie.Id]);
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [])));
+
+        Assert.Equal(cableAttackBefore, DieStats.EffectiveAttack(state, cableDie)); // "other" - excludes itself
+        Assert.Equal(otherOwnAttackBefore * 2, DieStats.EffectiveAttack(state, otherOwnDie));
+        Assert.Equal(opposingAttackBefore, DieStats.EffectiveAttack(state, opposingDie)); // "your" - not opponent's
+    }
+
+    [Fact]
+    public void GambitILikeSolitaire_FiresOffRealFieldingGate_WhenItsTheOnlyCharacterFieldedThisTurn()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.GambitILikeSolitaire.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var opposingDie = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        opposingDie.Zone = Zone.FieldZone; opposingDie.Status = DieStatus.Character; opposingDie.Level = 1;
+
+        var gambitDie = FindUnpurchased(state, "teamA", SampleCards.GambitILikeSolitaire.Id);
+        gambitDie.Zone = Zone.ReservePool; gambitDie.Status = DieStatus.Character; gambitDie.Level = 1;
+
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, gambitDie.Id, energyDieIdsToSpend: [.. GiveWildEnergy(state, "teamA", 2).Select(d => d.Id)]);
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [],
+                Roller: new FixedRoller(DieStatus.Energy, 1))));
+
+        Assert.Equal(DieStatus.Energy, opposingDie.Status); // rerolled off its character face
+        Assert.Contains("teamA", state.CantFieldCharacterDiceThisTurn);
+
+        // The real gate this restriction is enforced through:
+        var anotherGambit = state.DiceIn("teamA", Zone.Unpurchased)
+            .Where(d => d.CardId == SampleCards.GambitILikeSolitaire.Id).ElementAtOrDefault(1);
+        if (anotherGambit is not null)
+        {
+            anotherGambit.Zone = Zone.ReservePool; anotherGambit.Status = DieStatus.Character; anotherGambit.Level = 1;
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                TurnEngine.Field(state, new AbilityQueue(), anotherGambit.Id, energyDieIdsToSpend: []));
+            Assert.Contains("can't field any more character dice", ex.Message);
+        }
+    }
+
+    [Fact]
+    public void GambitILikeSolitaire_DoesNothing_WhenAnotherCharacterDieWasAlreadyFieldedThisTurn()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.GambitILikeSolitaire.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var opposingDie = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        opposingDie.Zone = Zone.FieldZone; opposingDie.Status = DieStatus.Character; opposingDie.Level = 1;
+
+        var alreadyFielded = state.DiceIn("teamA", Zone.Bag).First();
+        alreadyFielded.Zone = Zone.FieldZone; alreadyFielded.Status = DieStatus.SidekickCharacter; alreadyFielded.Level = 1;
+        state.FieldedThisTurn.Add(alreadyFielded.Id);
+
+        var gambitDie = FindUnpurchased(state, "teamA", SampleCards.GambitILikeSolitaire.Id);
+        gambitDie.Zone = Zone.ReservePool; gambitDie.Status = DieStatus.Character; gambitDie.Level = 1;
+
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, gambitDie.Id, energyDieIdsToSpend: [.. GiveWildEnergy(state, "teamA", 2).Select(d => d.Id)]);
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [],
+                Roller: new FixedRoller(DieStatus.Energy, 1))));
+
+        Assert.Equal(DieStatus.Character, opposingDie.Status); // untouched - condition wasn't met
+        Assert.DoesNotContain("teamA", state.CantFieldCharacterDiceThisTurn);
+    }
+
+    [Fact]
+    public void CyclopsUtopiaRealizedWhenAttacks_DealsNoDamage_WithFewerThanTwoOwnFieldZoneCharacterDice()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.CyclopsUtopiaRealized.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var cyclopsDie = FindUnpurchased(state, "teamA", SampleCards.CyclopsUtopiaRealized.Id);
+        cyclopsDie.Zone = Zone.FieldZone; cyclopsDie.Status = DieStatus.Character; cyclopsDie.Level = 1;
+
+        var opposingTarget = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        opposingTarget.Zone = Zone.FieldZone; opposingTarget.Status = DieStatus.Character; opposingTarget.Level = 1;
+
+        TurnEngine.EnterAttackStep(state);
+        var queue = new AbilityQueue();
+        // Cyclops alone - by the time WhenAttacks resolves he's already
+        // left the Field Zone for the Attack Zone (DeclareAttackers'
+        // own zone move happens before enqueueing), leaving 0 OTHER
+        // dice in the Field Zone.
+        CombatEngine.DeclareAttackers(state, queue, [cyclopsDie.Id]);
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [opposingTarget.Id])));
+
+        Assert.Equal(0, opposingTarget.Damage); // condition not met - the Conditional's Then never ran
+    }
+
+    [Fact]
+    public void CyclopsUtopiaRealizedWhenAttacks_FiresOffRealAttackGate_DealsDamage_WithTwoOrMoreOwnFieldZoneCharacterDice()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.CyclopsUtopiaRealized.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var cyclopsDie = FindUnpurchased(state, "teamA", SampleCards.CyclopsUtopiaRealized.Id);
+        cyclopsDie.Zone = Zone.FieldZone; cyclopsDie.Status = DieStatus.Character; cyclopsDie.Level = 1;
+
+        var ownDie1 = state.DiceIn("teamA", Zone.Bag).First();
+        ownDie1.Zone = Zone.FieldZone; ownDie1.Status = DieStatus.SidekickCharacter; ownDie1.Level = 1;
+        var ownDie2 = state.DiceIn("teamA", Zone.Bag).Skip(1).First();
+        ownDie2.Zone = Zone.FieldZone; ownDie2.Status = DieStatus.SidekickCharacter; ownDie2.Level = 1;
+
+        // Level 3 (placeholder 4D) so 3 damage doesn't KO it - a KO'd die's
+        // Damage resets to 0 (DieStats.ForceKO's own ResetToUnrolled), which
+        // would make a bare Damage-field assertion indistinguishable from
+        // "no damage was ever dealt" - the same class of mistake this
+        // project already caught once before (Colossus's own redirect
+        // tests).
+        var opposingTarget = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        opposingTarget.Zone = Zone.FieldZone; opposingTarget.Status = DieStatus.Character; opposingTarget.Level = 3;
+
+        TurnEngine.EnterAttackStep(state);
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [cyclopsDie.Id]); // 2 other dice remain in the Field Zone
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [opposingTarget.Id])));
+
+        Assert.Equal(3, opposingTarget.Damage);
+    }
+
+    [Fact]
+    public void MutantResearchProgram_DrawsThreeDice_WithAtLeastTwoActiveFounders()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.AngelJeanGreysSchool.Id, SampleCards.JeanGreyXaviersDream.Id]);
+        state.ActivePlayerId = "teamA";
+
+        foreach (var cardId in new[] { SampleCards.AngelJeanGreysSchool.Id, SampleCards.JeanGreyXaviersDream.Id })
+        {
+            var founder = FindUnpurchased(state, "teamA", cardId);
+            founder.Zone = Zone.FieldZone; founder.Status = DieStatus.Character; founder.Level = 1;
+        }
+
+        var ability = SampleCards.MutantResearchProgram.Abilities.Single(a => a.Trigger == TriggerType.WhenUsed);
+        var reservePoolCountBefore = state.DiceIn("teamA", Zone.ReservePool).Count();
+        EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(state, "teamA", SourceDieId: null, _ => [],
+                Random: new Random(1), Roller: new FixedRoller(DieStatus.Energy, 1)));
+
+        Assert.Equal(reservePoolCountBefore + 3, state.DiceIn("teamA", Zone.ReservePool).Count());
+    }
+
+    [Fact]
+    public void MutantResearchProgram_DrawsOneDie_WithFewerThanTwoActiveFounders()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamA";
+
+        var ability = SampleCards.MutantResearchProgram.Abilities.Single(a => a.Trigger == TriggerType.WhenUsed);
+        var reservePoolCountBefore = state.DiceIn("teamA", Zone.ReservePool).Count();
+        EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(state, "teamA", SourceDieId: null, _ => [],
+                Random: new Random(1), Roller: new FixedRoller(DieStatus.Energy, 1)));
+
+        Assert.Equal(reservePoolCountBefore + 1, state.DiceIn("teamA", Zone.ReservePool).Count());
+    }
+
+    [Fact]
+    public void LivingTheDream_BuffsTheWholeTeam_WithAtLeastThreeTeamWideLoyaltyCounters()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamA";
+        state.LoyaltyCounters[SampleCards.Apocalypse.Id] = 2;
+        state.LoyaltyCounters[SampleCards.Beast.Id] = 1;
+
+        var ownDie = FindUnpurchased(state, "teamA", SampleCards.BlackWidow.Id);
+        ownDie.Zone = Zone.FieldZone; ownDie.Status = DieStatus.Character; ownDie.Level = 1;
+        var baseAttack = DieStats.EffectiveAttack(state, ownDie);
+        Assert.False(DieStats.HasKeyword(state, ownDie, "Overcrush"));
+
+        var ability = SampleCards.LivingTheDream.Abilities.Single(a => a.Trigger == TriggerType.ContinuousResolve);
+        EffectInterpreter.Execute(ability.Effect, new EffectContext(state, "teamA", SourceDieId: null, _ => []));
+
+        Assert.Equal(baseAttack + 1, DieStats.EffectiveAttack(state, ownDie));
+        Assert.True(DieStats.HasKeyword(state, ownDie, "Overcrush"));
+    }
+
+    [Fact]
+    public void LivingTheDream_DoesNothing_WithFewerThanThreeTeamWideLoyaltyCounters()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamA";
+        state.LoyaltyCounters[SampleCards.Apocalypse.Id] = 2;
+
+        var ownDie = FindUnpurchased(state, "teamA", SampleCards.BlackWidow.Id);
+        ownDie.Zone = Zone.FieldZone; ownDie.Status = DieStatus.Character; ownDie.Level = 1;
+        var baseAttack = DieStats.EffectiveAttack(state, ownDie);
+
+        var ability = SampleCards.LivingTheDream.Abilities.Single(a => a.Trigger == TriggerType.ContinuousResolve);
+        EffectInterpreter.Execute(ability.Effect, new EffectContext(state, "teamA", SourceDieId: null, _ => []));
+
+        Assert.Equal(baseAttack, DieStats.EffectiveAttack(state, ownDie));
+        Assert.False(DieStats.HasKeyword(state, ownDie, "Overcrush"));
+    }
 }

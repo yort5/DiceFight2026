@@ -5654,3 +5654,99 @@ project has made and fixed before) for the swap and static-bonus cases.
 Verified: `dotnet build`, `dotnet test` (427/427 - 17 new cases), and
 `npm run build` all clean. Re-ran `scripts/import_bulk_cards.py`
 (126 → 140 hand-curated).
+
+## Status update — ten more DPS cards, five new conditions, and a real Global/TargetSpec.Self bug fix
+
+Ten more DPS cards, several sharing new primitives across two or more
+cards each - better reuse than most rounds, since a few of the new
+pieces (the count-threshold conditions especially) turned out to be
+genuinely general-purpose rather than single-card one-offs.
+
+**A real bug fix, found along the way** - `EffectInterpreter.Resolve`'s
+`TargetSpec.Self` case used to return an EMPTY list whenever
+`ctx.SourceDieId` was null, which is ALWAYS the case for a Global
+ability (rule 3.1.5 - the source is the paying player, not a die). Every
+state-only `Conditional` keyed on `TargetSpec.Self` (`PrepAreaEmpty`,
+`OwnLifeLessThanOpponent`, and every new count-threshold condition this
+round) ignores the resolved id entirely, but `Conditional`'s own
+execution still gates on `Resolve(...).Any(...)` - an empty list made
+that always false, silently forcing the Else branch (or a no-op)
+regardless of the real condition. Caught authoring Magneto ("Visionary,"
+DPS081)'s own Global, and already latent and unexercised in Magneto
+("Idealist," DPS041)'s near-identical `Conditional(TargetSpec.Self,
+PrepAreaEmpty, PrepFromBag())` - that Global has apparently never once
+actually Prepped a die since it was authored. Fixed by falling back to
+`ctx.ControllerId` (a real, non-null id, just not a die's) when
+`SourceDieId` is null; two new tests confirm Magneto Idealist's Global
+now genuinely gates on Prep Area state.
+
+**Five new EffectConditions, most shared across 2+ cards** -
+`OwnCharacterDiceInFieldZoneAtLeast` (Cyclops "Utopia Realized"/DPS105 -
+the own-side mirror of the existing opponent-side version),
+`OwnActiveAffiliationOrKeywordCountAtLeast` (Wolverine "Hardened by
+Madripoor"/DPS096 and Mutant Research Program/DPS008 both share it -
+AffiliationParam doubles as either a real affiliation or a keyword name,
+since "Founder" is modeled as a keyword, not an affiliation),
+`OwnTeamWideLoyaltyCounterCountAtLeast` (Living the Dream/DPS006 - an
+aggregate sum across the controller's whole roster, unlike
+`DieStats.LoyaltyBonus`'s one-card lookup), and
+`OnlyCharacterFieldedThisTurn` (Gambit "I Like Solitaire"/DPS072,
+reading the same `GameState.FieldedThisTurn` data `HasStrikeBonus`
+already established). Magneto ("Visionary," DPS081)'s own Global needed
+no new condition at all - it reuses the EXISTING `PrepAreaEmpty` with
+Then/Else swapped (Then a no-op `Sequence([])`) rather than adding a
+redundant "PrepAreaNotEmpty."
+
+**New effect nodes** - `SpinToCharacterLevel` (Wolverine "Hardened by
+Madripoor"'s own "Energize - spin this die to level 1": the mirror image
+of the existing `SpinToEnergyFace`, needed because the ordinary `Spin`
+node is a level DELTA that no-ops on a die not already on a character
+face per `DieStats.SpinLevel`'s own guard - Energize only ever fires
+FROM an energy face, so the ordinary node genuinely couldn't do this
+conversion) and `DoublePrintedAttackOfEach` (Cable "High Stakes"/DPS102 -
+each resolved die gets its OWN printed Attack, via `DieStats.GetFace`,
+added as its own Modifier, rather than one fixed delta applied to every
+target the way `ModifyStat` works).
+
+**New granter-side CardDef fields, each used by one card this round** -
+`GrantsFieldingCostReduction` (Rogue "Unity Squad"/DPS129 - the partial-
+discount counterpart to `GrantsFreeFielding`'s all-the-way-to-zero),
+`GrantsMinimumBlockersRequirement` (Magneto "Visionary" - enforced as a
+new `CombatEngine.ValidateMinimumBlockers`, rejecting a block assignment
+that gives a matching attacker exactly 1 blocker while leaving 0
+(unblocked) and the minimum-or-more both legal), `SelfFirstPurchaseSurcharge`
+(Beast "Combat Ready"/DPS098 - a new `Player.SurchargedFirstPurchaseCardIds`
+tracks it per card, game-scoped rather than per-turn; checked before
+payment but only recorded once the purchase actually succeeds, so a
+rejected attempt doesn't burn the one-shot), and
+`GrantsSelfPurchaseDiscountIfOpponentHasAffiliation` (Dark Phoenix
+"Malevolent"/DPS027 - checked against the OPPONENT's roster directly,
+no granter scan needed since it's the card's own self-referential
+condition). Dark Phoenix's WhenFielded ("KO target character die; if
+it's X-Men, deal your opponent 1 damage") reuses the SAME TargetSpec
+instance for both the `Ko` and the follow-up `Conditional.CheckTarget` -
+structurally identical, so it resolves from the shared per-ability cache
+instead of re-querying a board the `Ko` itself just changed, the same
+"the target already answered, don't ask again" shape Shocking Grasp's
+own "if that character is KO'd" follow-up established; its Global
+reuses the exact `Ko`+`GrantNextPurchaseDiscount` `Sequence`
+DarkPhoenixEnemyOfTheShiar's own printing already established.
+
+**GrantCantFieldCharacterDiceThisTurn** (Gambit "I Like Solitaire") is a
+new whole-controller restriction flag (`GameState.
+CantFieldCharacterDiceThisTurn`, enforced in `TurnEngine.Field`),
+alongside the `RerollAndMoveUnlessCharacter` reuse (Gambit's OTHER
+printing, DPS112, already established it) for the "reroll all opposing
+character dice; non-character results to their Used Pile" half.
+
+A real authoring mistake this round's own tests caught (again): a KO'd
+die's `Damage` resets to 0 (`DieStats.ForceKO`'s `ResetToUnrolled`), so
+asserting a bare `Damage` value after dealing damage that's enough to
+KO the target is indistinguishable from "no damage was ever dealt" -
+the exact same class of mistake Colossus's own redirect tests caught
+earlier this project; fixed by fielding the target at a level with
+enough Defense to survive the hit instead.
+
+Verified: `dotnet build`, `dotnet test` (452/452 - 25 new cases, plus 2
+regression cases for the Magneto Idealist bug fix), and `npm run build`
+all clean. Re-ran `scripts/import_bulk_cards.py` (140 → 150 hand-curated).

@@ -185,6 +185,40 @@ public sealed record CardDef
     // TurnEngine.Purchase for the discount half.
     public NamedCardSupport? GrantsNamedCardSupport { get; init; }
 
+    // Rogue ("Unity Squad", DPS129): "your X-Men character dice cost 1
+    // less to field." A continuous, granter-active-scan FIELDING cost
+    // reduction - the discount counterpart to GrantsFreeFielding (all-
+    // the-way-to-zero) - consulted in TurnEngine.Field before the
+    // free-fielding check, since a die that's already free needs no
+    // further reduction.
+    public FieldingCostReduction? GrantsFieldingCostReduction { get; init; }
+
+    // Magneto ("Visionary", DPS081): "your Brotherhood of Mutants
+    // character dice can only be blocked by 2 or more character dice."
+    // A continuous, granter-active-scan restriction on how the OPPOSING
+    // (blocking) player may legally respond to an attack from a matching
+    // die - enforced in CombatEngine.DeclareBlockers, which rejects a
+    // block assignment that gives a matching attacker exactly 1 blocker
+    // (0 - unblocked - and MinBlockers-or-more both remain legal).
+    public MinimumBlockersRequirement? GrantsMinimumBlockersRequirement { get; init; }
+
+    // Beast ("Combat Ready", DPS098): "the first Beast die you purchase
+    // each game costs 1 extra." A SELF-referential purchase surcharge
+    // (unlike GrantsOpponentPurchaseSurcharge, this applies to the
+    // purchasing player's OWN purchase of THIS card), consumed exactly
+    // once per game - see Player.SurchargedFirstPurchaseCardIds and
+    // TurnEngine.Purchase for enforcement.
+    public int? SelfFirstPurchaseSurcharge { get; init; }
+
+    // Dark Phoenix ("Malevolent", DPS027): "Dark Phoenix costs 1 less to
+    // purchase if your opponent has an X-Men character on their team." A
+    // SELF-referential purchase discount conditioned on the OPPONENT's
+    // roster (Player.TeamCardIds), not board state or the purchaser's own
+    // roster - checked directly against the card being purchased in
+    // TurnEngine.Purchase, same "no granter scan, the card checks its
+    // own condition" shape as SelfFreeFieldingUnlessTeamHasAffiliation.
+    public SelfPurchaseDiscountIfOpponentHasAffiliation? GrantsSelfPurchaseDiscountIfOpponentHasAffiliation { get; init; }
+
     // Psylocke ("Adventurer", DPS048): "While Wolverine is active,
     // Psylocke gains Deadly" - a live, continuously-recomputed SELF
     // keyword grant conditioned on some OTHER named card being active
@@ -293,6 +327,15 @@ public sealed record OpponentGlobalSurcharge(int Amount, bool RequiresOwnActiveS
 // RECEIVING die's own CardDef.Name (any printing) - not affiliation,
 // not keyword, a third independent dimension alongside those two.
 public sealed record NamedCardSupport(string CardName, int PurchaseDiscount = 0, int AttackDelta = 0, int DefenseDelta = 0);
+
+// See CardDef.GrantsFieldingCostReduction's remarks.
+public sealed record FieldingCostReduction(int Amount, string? RequiredAffiliation = null);
+
+// See CardDef.GrantsMinimumBlockersRequirement's remarks.
+public sealed record MinimumBlockersRequirement(int MinBlockers, string? RequiredAffiliation = null);
+
+// See CardDef.GrantsSelfPurchaseDiscountIfOpponentHasAffiliation's remarks.
+public sealed record SelfPurchaseDiscountIfOpponentHasAffiliation(string OpponentAffiliation, int Amount);
 
 // See CardDef.GrantsSelfAttackBonusPerMatchingDie's remarks. CountFilter
 // is a TargetSpec repurposed as a counting filter rather than a real

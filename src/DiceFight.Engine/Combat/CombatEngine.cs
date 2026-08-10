@@ -184,6 +184,7 @@ public static class CombatEngine
 
         ValidateCallOuts(state, assignment);
         ValidateObscure(state, assignment);
+        ValidateMinimumBlockers(state, assignment);
 
         foreach (var id in blockerDieIds)
         {
@@ -479,6 +480,45 @@ public static class CombatEngine
     {
         var cardId = die.VirtualCardId ?? die.CardId;
         return cardId is not null && state.ObscuredCardIds.Contains(cardId);
+    }
+
+    // Magneto ("Visionary", DPS081) - "your Brotherhood of Mutants
+    // character dice can only be blocked by 2 or more character dice."
+    // Granter must be active on the ATTACKER's own side (the ability
+    // says "your," i.e. the attacking player's), same active-granter
+    // scan shape as every other continuous Grants* field - just
+    // enforced here as a blocking-legality check instead of a stat/cost
+    // computation. Zero blockers (unblocked) is always legal regardless
+    // of any minimum - only a NONZERO count below the minimum is
+    // rejected.
+    private static void ValidateMinimumBlockers(GameState state, CombatAssignment assignment)
+    {
+        var attackerControllerId = state.ActivePlayerId;
+        var granterCards = state.DiceIn(attackerControllerId, Zone.FieldZone)
+            .Concat(state.DiceIn(attackerControllerId, Zone.AttackZone))
+            .Select(d => DieStats.GetCard(state, d))
+            .Where(c => c is not null)
+            .Distinct()
+            .ToList();
+
+        foreach (var attacker in state.DiceIn(attackerControllerId, Zone.AttackZone))
+        {
+            var attackerCard = DieStats.GetCard(state, attacker);
+            var blockerCount = assignment.BlockersOf(attacker.Id).Count;
+            if (blockerCount == 0) continue;
+
+            foreach (var granterCard in granterCards)
+            {
+                if (granterCard!.GrantsMinimumBlockersRequirement is not { } requirement) continue;
+                if (requirement.RequiredAffiliation is { } affiliation &&
+                    !(attackerCard?.Affiliations.Contains(affiliation) ?? false)) continue;
+                if (blockerCount < requirement.MinBlockers)
+                {
+                    throw new InvalidOperationException(
+                        $"{DisplayName(state, attacker)} can only be blocked by {requirement.MinBlockers} or more character dice.");
+                }
+            }
+        }
     }
 
     // Rule 2.7.4 (assign) and 2.7.6 (resolve KOs, return survivors).
