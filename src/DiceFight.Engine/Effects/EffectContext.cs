@@ -17,6 +17,12 @@ namespace DiceFight.Engine.Effects;
 // enqueue that trigger too (rolls outside Roll and Reroll check Energize
 // immediately, unlike the Roll and Reroll step itself - see TurnEngine.
 // CheckEnergize's remarks) - also null wherever nothing rolled needs it.
+// Trigger is the currently-resolving ability's own TriggerType - only
+// consulted by LegalTargets.Query so far, to enforce Gladiator's own
+// "your character dice can't be the target of Action Dice or Global
+// Abilities" (GameState.ImmuneToActionAndGlobalTargetingControllerIds) -
+// null in every call site that doesn't need that distinction (most of
+// them), same "optional, most callers don't care" shape as Roller/Queue.
 public sealed record EffectContext(
     GameState State,
     string ControllerId,
@@ -24,4 +30,5 @@ public sealed record EffectContext(
     Func<TargetSpec, IReadOnlyList<string>> ResolveTargets,
     Random? Random = null,
     IDiceRoller? Roller = null,
-    AbilityQueue? Queue = null);
+    AbilityQueue? Queue = null,
+    TriggerType? Trigger = null);

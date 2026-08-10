@@ -11,7 +11,8 @@ namespace DiceFight.Engine.Effects;
 // narrower shapes still not covered).
 public static class LegalTargets
 {
-    public static IReadOnlyList<string> Query(GameState state, string requestingControllerId, TargetSpec spec)
+    public static IReadOnlyList<string> Query(
+        GameState state, string requestingControllerId, TargetSpec spec, TriggerType? currentTrigger = null)
     {
         if (spec.IsSelf)
         {
@@ -23,6 +24,13 @@ public static class LegalTargets
         IEnumerable<DieInstance> candidates = state.Dice.Where(d => zones.Contains(d.Zone));
 
         candidates = candidates.Where(d => !DieStats.IsProtectedFromOpponentTargeting(state, d, requestingControllerId));
+
+        if (currentTrigger is TriggerType.Global or TriggerType.WhenUsed)
+        {
+            var opponentId = state.OpponentOf(requestingControllerId);
+            candidates = candidates.Where(d =>
+                !(d.ControllerId == opponentId && state.ImmuneToActionAndGlobalTargetingControllerIds.Contains(opponentId)));
+        }
 
         candidates = spec.Ownership switch
         {

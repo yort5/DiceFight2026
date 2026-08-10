@@ -409,6 +409,40 @@ public sealed record OpponentKOsOwnCharacterDie : EffectNode;
 // is no target, just an unconditional creation.
 public sealed record PlaceToken(string TokenCardId) : EffectNode;
 
+// Mister Sinister ("Mutant Supremacist", DPS083) - "ignore all text on
+// opposing character cards (including Global Abilities) (until end of
+// turn)." A whole-SIDE blank (GameState.BlankedControllerIds), not
+// specific dice - the card text says "cards," not "dice you control
+// right now" - so like FieldSidekickForEachPlayer/GrantLoyaltyCounter
+// this bypasses TargetSpec entirely; there's no target choice, just the
+// ability controller's own opponent. See DieStats.GetCard for the
+// actual enforcement choke point.
+public sealed record BlankOpposingTeamText : EffectNode;
+
+// Mister Sinister's own Global ("ignore target attacking character
+// die's text until end of turn") - the single-die counterpart to
+// BlankOpposingTeamText above (GameState.BlankedDieIds instead of
+// BlankedControllerIds). Also the shape Vulcan ("Power Suppression",
+// DPS095) needs, just populated a different way - see
+// CombatEngine.DeclareBlockers' own "blank engaged-with-Vulcan dice"
+// step instead of through a normal AbilityDef/EffectInterpreter path,
+// since Vulcan's own text is a continuous combat-scoped grant, not a
+// triggered ability with a target choice.
+public sealed record BlankTargetText(TargetSpec Target) : EffectNode;
+
+// Gladiator ("Psi Resistance" DPS033 / "Majestor Kallark" DPS113 - both
+// printings share identical Global text): "until end of turn, your
+// character dice can't be the target of Action Dice or Global Abilities."
+// Whole-side, no target choice (same shape as BlankOpposingTeamText),
+// keyed by the ABILITY CONTROLLER's own id into GameState.
+// ImmuneToActionAndGlobalTargetingControllerIds - LegalTargets.Query
+// consults it only when its own currentTrigger parameter is Global or
+// WhenUsed (the two trigger types this text actually protects against;
+// nothing else in the engine currently distinguishes "Action Die" as its
+// own trigger type - WhenUsed is that shape, see its own remarks in
+// Enums.cs).
+public sealed record GrantSelfTargetingImmunityFromActionAndGlobal : EffectNode;
+
 // Starfire's Global ("if you purchased a die this turn, Prep a die from
 // your bag") - the "if you..." check is against turn-scoped state
 // (Player.PurchasedDieThisTurn), not a die's condition, so like

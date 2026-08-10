@@ -143,6 +143,44 @@ public sealed class GameState
     // duration statement.
     public PendingPurchaseDiscount? PendingPurchaseDiscount { get; set; }
 
+    // Colossus ("Organic Steel", DPS063) - "the first time one of your
+    // character dice would take damage each turn, [...]." A player-id
+    // set (not a bool) since it's tracked per-controller, same "who,"
+    // not "how many," shape as GlobalsUsedThisTurn - see DieStats.
+    // ApplyDamage for where this is actually consulted. Turn-scoped like
+    // MustBlockThisTurn - cleared in CleanUp.
+    public HashSet<string> UsedDamageRedirectThisTurn { get; } = [];
+
+    // Mister Sinister ("Mutant Supremacist", DPS083)'s Global ("ignore
+    // target attacking character die's text until end of turn") and
+    // Vulcan ("Power Suppression", DPS095)'s own continuous "ignore the
+    // abilities of character dice blocking or blocked by Vulcan" (Vulcan's
+    // own case populates this fresh every combat from CombatEngine.
+    // DeclareBlockers - it happens to share the same turn-scoped lifetime
+    // as everything else here, not because the card text says "this
+    // turn"). See DieStats.GetCard for the single choke point that
+    // actually consults this - "text" is scoped to keywords/triggered-
+    // and static-ability grants specifically, not fixed card attributes
+    // like affiliation, energy type, or printed stats (see GetCard's own
+    // remarks for why that line is drawn there).
+    public HashSet<string> BlankedDieIds { get; } = [];
+
+    // Mister Sinister's own WhenFielded ("ignore all text on opposing
+    // character cards... until end of turn") - a whole-SIDE blank rather
+    // than specific dice, since it's phrased as "cards," not "dice you
+    // control right now."
+    public HashSet<string> BlankedControllerIds { get; } = [];
+
+    // Gladiator's Global ("Psi Resistance"/"Majestor Kallark" - identical
+    // text on both printings): "until end of turn, your character dice
+    // can't be the target of Action Dice or Global Abilities." Keyed by
+    // the PROTECTED player's id (whoever controlled Gladiator when the
+    // Global was used), not the caster - LegalTargets.Query checks it
+    // against a targeting attempt's candidate dice's own controller, not
+    // against who's asking. Turn-scoped like everything above; cleared in
+    // CleanUp.
+    public HashSet<string> ImmuneToActionAndGlobalTargetingControllerIds { get; } = [];
+
     // Whatever was still queued in the Drain call that PendingChoice
     // paused, preserved so ResolvePendingChoice can pick up exactly
     // where it left off instead of losing anything still waiting to

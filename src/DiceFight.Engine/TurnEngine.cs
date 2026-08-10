@@ -467,16 +467,15 @@ public static class TurnEngine
         var cardId = die.VirtualCardId ?? die.CardId;
         if (cardId is null || !state.CardCatalog.TryGetValue(cardId, out var card)) return false;
 
-        var granters = state.DiceIn(state.ActivePlayerId, Zone.FieldZone)
+        var granterCards = state.DiceIn(state.ActivePlayerId, Zone.FieldZone)
             .Concat(state.DiceIn(state.ActivePlayerId, Zone.AttackZone))
-            .Select(d => d.VirtualCardId ?? d.CardId)
-            .Where(id => id is not null)
+            .Select(d => DieStats.GetCard(state, d))
+            .Where(c => c is not null)
             .Distinct();
 
-        foreach (var granterId in granters)
+        foreach (var granterCard in granterCards)
         {
-            if (!state.CardCatalog.TryGetValue(granterId!, out var granterCard) ||
-                granterCard.GrantsFreeFielding is not { } grant) continue;
+            if (granterCard!.GrantsFreeFielding is not { } grant) continue;
             if (grant.RequiredAffiliation is { } affiliation && !card.Affiliations.Contains(affiliation)) continue;
             if (grant.MaxFieldingCost is { } maxCost && fieldingCost > maxCost) continue;
             return true;
@@ -499,8 +498,9 @@ public static class TurnEngine
 
         foreach (var reactor in state.Dice.Where(d => d.Zone is Zone.FieldZone or Zone.AttackZone).ToList())
         {
-            var reactorCardId = reactor.VirtualCardId ?? reactor.CardId;
-            if (reactorCardId is null || !state.CardCatalog.TryGetValue(reactorCardId, out var reactorCard)) continue;
+            // DieStats.GetCard, not a raw lookup - a blanked reactor's
+            // own reactive abilities don't fire either.
+            if (DieStats.GetCard(state, reactor) is not { } reactorCard) continue;
 
             foreach (var ability in reactorCard.Abilities.Where(a => a.Trigger == TriggerType.WhenAnotherDieFielded))
             {
@@ -675,6 +675,17 @@ public static class TurnEngine
 
         if (!state.CardCatalog.TryGetValue(cardId, out var card))
             throw new InvalidOperationException($"Unknown card '{cardId}'.");
+        // Mister Sinister's own "(including Global Abilities)" - the
+        // whole-side blank specifically calls this out, so it's the one
+        // enforced here. The per-die blank (GameState.BlankedDieIds -
+        // Mister Sinister's own Global target, Vulcan's combat-scoped
+        // grant) is deliberately NOT checked here: UseGlobalAbility only
+        // ever receives a cardId/playerId, never which specific die is
+        // invoking it (rule 2.6.5.2 - a Global can be used by CARD
+        // ownership alone, without any die of it even being active), so
+        // there's no die-level distinction to make at this choke point.
+        if (state.BlankedControllerIds.Contains(playerId))
+            throw new InvalidOperationException($"{card.Name}'s text is currently ignored - its Global ability can't be used.");
         var ability = card.Abilities.FirstOrDefault(a => a.Trigger == TriggerType.Global)
             ?? throw new InvalidOperationException($"{card.Name} has no Global ability.");
         var cost = ability.EnergyCost
@@ -875,8 +886,11 @@ public static class TurnEngine
     // (same assembly) can reuse it for WhenAttacks/WhenKOd.
     internal static void EnqueueTriggered(GameState state, AbilityQueue queue, DieInstance die, TriggerType trigger)
     {
-        var cardId = die.VirtualCardId ?? die.CardId;
-        if (cardId is null || !state.CardCatalog.TryGetValue(cardId, out var card)) return;
+        // DieStats.GetCard (not a raw CardId lookup) - Mister Sinister/
+        // Vulcan's own "ignore text" both mean a blanked die's triggered
+        // abilities simply never fire.
+        var card = DieStats.GetCard(state, die);
+        if (card is null) return;
 
         foreach (var ability in card.Abilities.Where(a => a.Trigger == trigger))
             queue.Enqueue(die.Id, die.ControllerId, trigger, ability.Effect);
@@ -968,8 +982,9 @@ public static class TurnEngine
 
         foreach (var reactor in state.Dice.Where(d => d.Zone is Zone.FieldZone or Zone.AttackZone).ToList())
         {
-            var reactorCardId = reactor.VirtualCardId ?? reactor.CardId;
-            if (reactorCardId is null || !state.CardCatalog.TryGetValue(reactorCardId, out var reactorCard)) continue;
+            // DieStats.GetCard, not a raw lookup - a blanked reactor's
+            // own reactive abilities don't fire either.
+            if (DieStats.GetCard(state, reactor) is not { } reactorCard) continue;
 
             foreach (var ability in reactorCard.Abilities.Where(a => a.Trigger == TriggerType.WhenAnotherDieKOd))
             {
@@ -1183,7 +1198,7 @@ public static class TurnEngine
             var cardId = die.VirtualCardId ?? die.CardId;
             if (cardId is null || !state.CardCatalog.TryGetValue(cardId, out var card)) continue;
             foreach (var ability in card.Abilities.Where(a => a.Trigger == TriggerType.EndOfYourTurn))
-                EffectInterpreter.Execute(ability.Effect, new EffectContext(state, activeId, die.Id, _ => [], Roller: roller));
+                EffectInterpreter.Execute(ability.Effect, new EffectContext(state, activeId, die.Id, _ => [], Roller: roller, Trigger: ability.Trigger));
         }
         state.AnyCharacterKOdThisTurn = false;
 
@@ -1200,6 +1215,10 @@ public static class TurnEngine
         state.MustAttackThisTurn.Clear();
         state.CantBlockThisTurn.Clear();
         state.PendingPurchaseDiscount = null;
+        state.UsedDamageRedirectThisTurn.Clear();
+        state.BlankedDieIds.Clear();
+        state.BlankedControllerIds.Clear();
+        state.ImmuneToActionAndGlobalTargetingControllerIds.Clear();
         var cleaningPlayer = state.GetPlayer(activeId);
         cleaningPlayer.PurchasedDieThisTurn = false;
         cleaningPlayer.PurchasedCharacterDieThisTurn = false;

@@ -78,6 +78,7 @@ public static class EffectInterpreter
             case SpinToEnergyFace n: if (!n.Target.IsSelf) yield return n.Target; break;
             case PrepDie n: if (!n.Source.IsSelf) yield return n.Source; break;
             case FieldDie n: if (!n.Target.IsSelf) yield return n.Target; break;
+            case BlankTargetText n: if (!n.Target.IsSelf) yield return n.Target; break;
             case GrantKeyword n: if (!n.Target.IsSelf) yield return n.Target; break;
             case Conditional n:
                 if (!n.CheckTarget.IsSelf) yield return n.CheckTarget;
@@ -128,11 +129,12 @@ public static class EffectInterpreter
                     }
 
                     var die = FindDie(ctx, id);
-                    die.Damage += dealDamage.Amount;
+                    var recipient = DieStats.ApplyDamage(ctx.State, die, dealDamage.Amount);
                     // Ability damage KOs immediately rather than waiting
                     // for a simultaneous batch check - abilities resolve
                     // one at a time (rule 3.2.2), unlike combat damage.
-                    if (DieStats.TryResolveKO(ctx.State, die, ctx.Roller)) koIds.Add(id);
+                    if (recipient is not null && DieStats.TryResolveKO(ctx.State, recipient, ctx.Roller))
+                        koIds.Add(recipient.Id);
                 }
                 TurnEngine.ResolveKOReactions(ctx.State, ctx.Queue, koIds);
                 break;
@@ -151,8 +153,9 @@ public static class EffectInterpreter
                     }
 
                     var die = FindDie(ctx, id);
-                    die.Damage += amount;
-                    if (DieStats.TryResolveKO(ctx.State, die, ctx.Roller)) koIds.Add(id);
+                    var recipient = DieStats.ApplyDamage(ctx.State, die, amount);
+                    if (recipient is not null && DieStats.TryResolveKO(ctx.State, recipient, ctx.Roller))
+                        koIds.Add(recipient.Id);
                 }
                 TurnEngine.ResolveKOReactions(ctx.State, ctx.Queue, koIds);
                 break;
@@ -418,6 +421,19 @@ public static class EffectInterpreter
                 });
                 break;
 
+            case BlankOpposingTeamText:
+                ctx.State.BlankedControllerIds.Add(ctx.State.OpponentOf(ctx.ControllerId));
+                break;
+
+            case BlankTargetText blankTarget:
+                foreach (var id in Resolve(ctx, blankTarget.Target, cache))
+                    ctx.State.BlankedDieIds.Add(id);
+                break;
+
+            case GrantSelfTargetingImmunityFromActionAndGlobal:
+                ctx.State.ImmuneToActionAndGlobalTargetingControllerIds.Add(ctx.ControllerId);
+                break;
+
             case ForceBlock forceBlock:
                 foreach (var id in Resolve(ctx, forceBlock.Target, cache))
                     ctx.State.MustBlockThisTurn.Add(id);
@@ -649,7 +665,7 @@ public static class EffectInterpreter
         if (cache.TryGetValue(spec, out var cached))
             return cached;
 
-        var legal = LegalTargets.Query(ctx.State, ctx.ControllerId, spec);
+        var legal = LegalTargets.Query(ctx.State, ctx.ControllerId, spec, ctx.Trigger);
 
         // MatchAll (e.g. Phoenix "Eternal Flame"'s "opposing character
         // dice with less than 4A") has no target at all in the card text -

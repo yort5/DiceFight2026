@@ -5414,3 +5414,106 @@ Verified: `dotnet build`, `dotnet test` (397/397 - 9 new cases), and
 `npm run build` all clean. Re-ran `scripts/import_bulk_cards.py`
 (120 → 121 hand-curated; the Sentinel token isn't a real sheet card so
 it doesn't move that count on its own).
+
+## Status update — damage redirection, ability-blanking, and targeting immunity
+
+Closed all three of the deeper gaps flagged as deliberately unattempted
+two rounds back - the user asked to "tackle the last three" directly
+rather than continue picking off easier cards.
+
+**Damage redirection** - Colossus ("Organic Steel", DPS063): "the first
+time one of your character dice would take damage each turn, you may
+have Colossus take that damage instead." Every damage-application site
+in the engine (combat's Range/Fast/Slow damage resolution, and
+`DealDamage`/`DealDamagePerActiveAffiliate` from ability text) now
+funnels through one new choke point, `DieStats.ApplyDamage`, which
+checks for a same-controller redirect granter before applying anything
+and returns whichever die actually took the damage (or `null` if a
+single-burst-face redirect prevented it outright, since Colossus's own
+text says "instead" the die's current face decides prevent-vs-take).
+"You may" is simplified to "always redirect," the same house convention
+as every other "you may [beneficial action]" card. The hardest part
+wasn't the redirect check itself but that the redirect TARGET can sit in
+a completely different zone than the original recipient (a Field Zone
+Colossus catching damage meant for an Attack Zone blocker) - the
+existing zone-scoped KO-scan loops in `CombatEngine` had to be unioned
+with the actual list of damage recipients `ApplyDamage` returns, not
+just re-scanned against the original zone. `GameState.
+UsedDamageRedirectThisTurn` tracks the once-per-turn limit, cleared in
+`CleanUp`.
+
+**Ability-blanking** - Vulcan ("Power Suppression", DPS095): "ignore the
+abilities of character dice blocking or blocked by Vulcan" (combat-
+scoped, recorded once per combat by a new `CombatEngine.
+RecordVulcanTextBlanking` alongside the existing `RecordDeadlyEngagements`
+into `GameState.BlankedDieIds`); Mister Sinister ("Mutant Supremacist",
+DPS083): a `WhenFielded` whole-SIDE blank (`GameState.
+BlankedControllerIds` - the card text says "cards," not "dice you
+control right now") plus a per-die Global blank (`BlankTargetText`,
+also into `BlankedDieIds`). Rather than touch every individual "does
+this die's card grant X" call site ad hoc, introduced one shared choke
+point, `DieStats.GetCard`, and audited every consulting site in
+`DieStats.cs`/`TurnEngine.cs` to route through it - but only where the
+check is genuinely "text"/"ability" in Dice Masters terms (keywords,
+triggered abilities, static/conditional grants): `HasPrintedKeyword`,
+`HasConditionalSelfGrant`, `SelfStatBonusWhileNamedCardActive`,
+`IsProtectedFromOpponentTargeting`, `SelfAttackBonusPerMatchingDie`,
+`TotalOpponentStatDebuff`/`StaticTeamBonusFor`'s granter loops,
+`EnergyDrainAmount`, `RangeAmount`, `EnqueueTriggered`, and the reactor-
+side lookups in `ResolveWhenAnotherDieFielded`/`ResolveWhenAnotherDieKOd`.
+Deliberately NOT routed through it: affiliation, energy type, printed
+stats/levels (`GetFace`/`GetMaxLevel`), and any "is a die identified as
+card X currently active" check used by another die's OWN condition -
+none of those are "text" being ignored, they're fixed identity. Also
+deliberately scoped: `UseGlobalAbility` only checks the whole-team blank
+(`BlankedControllerIds`), not the per-die one, since rule 2.6.5.2 means
+a Global is used by card ownership alone, with no specific die
+identified to check a per-die blank against.
+
+**Targeting immunity** - Gladiator ("Psi Resistance"/DPS033 and
+"Majestor Kallark"/DPS113, identical Global text on both): "until end
+of turn, your character dice can't be the target of Action Dice or
+Global Abilities." This needed `LegalTargets.Query` to know what KIND
+of ability is currently asking - a dimension that didn't exist
+anywhere in the interpreter. Added an optional `TriggerType? Trigger`
+field to `EffectContext` (defaulted, so no existing call site broke),
+threaded from the real `QueuedAbility.Trigger` at both places an
+`EffectContext` gets constructed for a drained ability
+(`GamesController.Drain`, `TurnEngine`'s own `EndOfYourTurn` loop), and
+a matching optional `currentTrigger` parameter on `LegalTargets.Query`
+itself (also defaulted, so the many existing test call sites didn't
+need touching). When `currentTrigger` is `Global` or `WhenUsed` (the
+Action-die trigger), candidates controlled by a player in the new
+`GameState.ImmuneToActionAndGlobalTargetingControllerIds` set are
+filtered out. A new no-target `GrantSelfTargetingImmunityFromAction
+AndGlobal` effect node populates it, keyed by the ability's own
+controller. The printed cost ("Pay Fist when you attack") was
+simplified to a plain Fist-energy Global usable any time the existing
+Main/Attack Global window is open, dropping the "only during your
+attack" sub-restriction - no "currently declared an attack this turn"
+state exists to check yet and no other authored card needs it, the same
+documented-simplification convention as every other "you may" case this
+pass.
+
+Tests exercise the real gate throughout: a full round trip through
+`TurnEngine.UseGlobalAbility` + `AbilityQueue.Drain` (the same
+production shape as `GamesController.Drain`, `Trigger` included) proves
+`LegalTargets.Query` excludes a protected die only once Gladiator's
+Global has actually been used, and that a real `EffectInterpreter.
+Execute` attempt to target it through another card's own Global
+(Mister Sinister's) is rejected via the same "chosen target isn't
+legal" exception every other illegal-target case goes through; a
+second test proves the immunity does NOT block a non-Global/non-WhenUsed
+targeting attempt; a third proves it clears at `CleanUp`. Colossus and
+the two blanking cards each got their own suite (redirect, once-per-turn
+limit, single-burst-face prevention, `CleanUp` reset for the redirect
+case; whole-side blank, own-side non-application, single-die Global
+blank, `UseGlobalAbility` rejection, Vulcan's engaged-only scope, and
+`CleanUp` reset for the blanking case).
+
+Verified: `dotnet build`, `dotnet test` (411/411 - 14 new cases across
+this round), and `npm run build` all clean. Re-ran
+`scripts/import_bulk_cards.py` (121 → 126 hand-curated across this
+round's five new cards: Colossus "Organic Steel", Vulcan "Power
+Suppression", Mister Sinister "Mutant Supremacist", and both Gladiator
+printings).

@@ -2085,6 +2085,359 @@ public class TwoTeamsDemoTests
     }
 
     [Fact]
+    public void ColossusOrganicSteel_RedirectsFirstDamageThisTurn_ToItself()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.ColossusOrganicSteel.Id]);
+
+        var colossusDie = FindUnpurchased(state, "teamA", SampleCards.ColossusOrganicSteel.Id);
+        colossusDie.Zone = Zone.FieldZone;
+        colossusDie.Status = DieStatus.Character;
+        colossusDie.Level = 1; // no burst mark - a real redirect, not a prevention
+
+        var otherDie = state.DiceIn("teamA", Zone.Bag).First();
+        otherDie.Zone = Zone.FieldZone;
+        otherDie.Status = DieStatus.SidekickCharacter;
+        otherDie.Level = 1;
+
+        EffectInterpreter.Execute(
+            new DealDamage(2, TargetSpec.Self), new EffectContext(state, "teamA", otherDie.Id, _ => []));
+
+        Assert.Equal(0, otherDie.Damage); // redirected away
+        Assert.Equal(2, colossusDie.Damage); // Colossus took it instead
+    }
+
+    [Fact]
+    public void ColossusOrganicSteel_OnlyRedirectsTheFirstDamageEachTurn()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.ColossusOrganicSteel.Id]);
+
+        var colossusDie = FindUnpurchased(state, "teamA", SampleCards.ColossusOrganicSteel.Id);
+        colossusDie.Zone = Zone.FieldZone;
+        colossusDie.Status = DieStatus.Character;
+        colossusDie.Level = 1;
+
+        var die1 = state.DiceIn("teamA", Zone.Bag).First();
+        die1.Zone = Zone.FieldZone; die1.Status = DieStatus.SidekickCharacter; die1.Level = 1;
+        var die2 = state.DiceIn("teamA", Zone.Bag).First();
+        die2.Zone = Zone.FieldZone; die2.Status = DieStatus.SidekickCharacter; die2.Level = 1;
+
+        EffectInterpreter.Execute(new DealDamage(1, TargetSpec.Self), new EffectContext(state, "teamA", die1.Id, _ => []));
+        EffectInterpreter.Execute(new DealDamage(1, TargetSpec.Self), new EffectContext(state, "teamA", die2.Id, _ => []));
+
+        Assert.Equal(0, die1.Damage);
+        Assert.Equal(1, colossusDie.Damage);
+        // die2's own damage was NOT redirected (the "first time" already
+        // happened) - it took the hit directly and, being a bare 1A/1D
+        // Sidekick, was KO'd by it (which resets Damage to 0 via the
+        // normal KO cleanup - Zone is the real proof here, not Damage).
+        Assert.Equal(Zone.PrepArea, die2.Zone);
+    }
+
+    [Fact]
+    public void ColossusOrganicSteel_PreventsDamageEntirely_WhenOnItsSingleBurstFace()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.ColossusOrganicSteel.Id]);
+
+        var colossusDie = FindUnpurchased(state, "teamA", SampleCards.ColossusOrganicSteel.Id);
+        colossusDie.Zone = Zone.FieldZone;
+        colossusDie.Status = DieStatus.Character;
+        colossusDie.Level = 2; // single-burst face
+
+        var otherDie = state.DiceIn("teamA", Zone.Bag).First();
+        otherDie.Zone = Zone.FieldZone;
+        otherDie.Status = DieStatus.SidekickCharacter;
+        otherDie.Level = 1;
+
+        EffectInterpreter.Execute(
+            new DealDamage(2, TargetSpec.Self), new EffectContext(state, "teamA", otherDie.Id, _ => []));
+
+        Assert.Equal(0, otherDie.Damage);
+        Assert.Equal(0, colossusDie.Damage); // prevented entirely - nobody takes it
+    }
+
+    [Fact]
+    public void ColossusOrganicSteel_RedirectUsageResets_AtCleanUp()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.ColossusOrganicSteel.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var colossusDie = FindUnpurchased(state, "teamA", SampleCards.ColossusOrganicSteel.Id);
+        colossusDie.Zone = Zone.FieldZone;
+        colossusDie.Status = DieStatus.Character;
+        colossusDie.Level = 1;
+
+        var die1 = state.DiceIn("teamA", Zone.Bag).First();
+        die1.Zone = Zone.FieldZone; die1.Status = DieStatus.SidekickCharacter; die1.Level = 1;
+
+        EffectInterpreter.Execute(new DealDamage(1, TargetSpec.Self), new EffectContext(state, "teamA", die1.Id, _ => []));
+        Assert.Contains("teamA", state.UsedDamageRedirectThisTurn);
+
+        state.CurrentStep = TurnStep.CleanUp;
+        TurnEngine.CleanUp(state, new FixedRoller(DieStatus.Energy, 1));
+
+        Assert.DoesNotContain("teamA", state.UsedDamageRedirectThisTurn);
+    }
+
+    [Fact]
+    public void ColossusOrganicSteel_RedirectsCombatDamage_EvenWhileSittingOutOfCombat()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.ColossusOrganicSteel.Id]);
+        state.ActivePlayerId = "teamB";
+
+        var colossusDie = FindUnpurchased(state, "teamA", SampleCards.ColossusOrganicSteel.Id);
+        colossusDie.Zone = Zone.FieldZone;
+        colossusDie.Status = DieStatus.Character;
+        colossusDie.Level = 1; // 4D - not participating in this combat at all
+
+        var blockerDie = state.DiceIn("teamA", Zone.Bag).First();
+        blockerDie.Zone = Zone.FieldZone;
+        blockerDie.Status = DieStatus.SidekickCharacter;
+        blockerDie.Level = 1;
+
+        var attackerDie = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        attackerDie.Zone = Zone.FieldZone;
+        attackerDie.Status = DieStatus.Character;
+        attackerDie.Level = 2; // PlaceholderLevels: 2A
+
+        TurnEngine.EnterAttackStep(state);
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attackerDie.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attackerDie.Id, blockerDie.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [blockerDie.Id]);
+
+        var splits = new Dictionary<string, IReadOnlyDictionary<string, int>>
+        {
+            [attackerDie.Id] = new Dictionary<string, int> { [blockerDie.Id] = 2 }, // must match Falcon L2's full 2A
+        };
+        CombatEngine.AssignCombatDamage(state, queue, assignment, splits);
+
+        Assert.Equal(0, blockerDie.Damage); // redirected away from the actual blocker
+        Assert.Equal(2, colossusDie.Damage); // Colossus (Field Zone, not blocking) took it instead - survives (4D)
+        Assert.Equal(Zone.FieldZone, blockerDie.Zone); // survived combat (never took damage, never KO'd)
+    }
+
+    [Fact]
+    public void FieldingMisterSinisterMutantSupremacist_BlanksTheWholeOpposingTeamsText()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.MisterSinisterMutantSupremacist.Id],
+            extraTeamBCardIds: [SampleCards.Apocalypse.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var opposingDie = FindUnpurchased(state, "teamB", SampleCards.Apocalypse.Id); // printed Overcrush
+        opposingDie.Zone = Zone.FieldZone;
+        opposingDie.Status = DieStatus.Character;
+        opposingDie.Level = 1;
+        Assert.True(DieStats.HasKeyword(state, opposingDie, "Overcrush"));
+
+        var sinisterDie = FindUnpurchased(state, "teamA", SampleCards.MisterSinisterMutantSupremacist.Id);
+        sinisterDie.Zone = Zone.FieldZone;
+        sinisterDie.Status = DieStatus.Character;
+        sinisterDie.Level = 1;
+
+        var ability = SampleCards.MisterSinisterMutantSupremacist.Abilities.Single(a => a.Trigger == TriggerType.WhenFielded);
+        EffectInterpreter.Execute(ability.Effect, new EffectContext(state, "teamA", sinisterDie.Id, _ => []));
+
+        Assert.False(DieStats.HasKeyword(state, opposingDie, "Overcrush")); // text ignored
+    }
+
+    [Fact]
+    public void MisterSinisterMutantSupremacist_DoesNotBlankItsOwnSidesText()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.MisterSinisterMutantSupremacist.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var ownDie = FindUnpurchased(state, "teamA", SampleCards.Apocalypse.Id); // own roster's own Overcrush card
+        ownDie.Zone = Zone.FieldZone;
+        ownDie.Status = DieStatus.Character;
+        ownDie.Level = 1;
+
+        var sinisterDie = FindUnpurchased(state, "teamA", SampleCards.MisterSinisterMutantSupremacist.Id);
+        sinisterDie.Zone = Zone.FieldZone;
+        sinisterDie.Status = DieStatus.Character;
+        sinisterDie.Level = 1;
+
+        var ability = SampleCards.MisterSinisterMutantSupremacist.Abilities.Single(a => a.Trigger == TriggerType.WhenFielded);
+        EffectInterpreter.Execute(ability.Effect, new EffectContext(state, "teamA", sinisterDie.Id, _ => []));
+
+        Assert.True(DieStats.HasKeyword(state, ownDie, "Overcrush")); // own side, unaffected
+    }
+
+    [Fact]
+    public void MisterSinisterMutantSupremacistGlobal_BlanksOnlyTheTargetedAttacker()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.MisterSinisterMutantSupremacist.Id],
+            extraTeamBCardIds: [SampleCards.Apocalypse.Id, SampleCards.Beast.Id]);
+        state.ActivePlayerId = "teamB";
+
+        var attacker1 = FindUnpurchased(state, "teamB", SampleCards.Apocalypse.Id); // Overcrush
+        attacker1.Zone = Zone.FieldZone; attacker1.Status = DieStatus.Character; attacker1.Level = 1;
+        var attacker2 = FindUnpurchased(state, "teamB", SampleCards.Beast.Id); // Regenerate
+        attacker2.Zone = Zone.FieldZone; attacker2.Status = DieStatus.Character; attacker2.Level = 1;
+
+        TurnEngine.EnterAttackStep(state);
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker1.Id, attacker2.Id]);
+
+        var ability = SampleCards.MisterSinisterMutantSupremacist.Abilities.Single(a => a.Trigger == TriggerType.Global);
+        EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, "teamA", SourceDieId: null, _ => [attacker1.Id]));
+
+        Assert.False(DieStats.HasKeyword(state, attacker1, "Overcrush")); // targeted - blanked
+        Assert.True(DieStats.HasKeyword(state, attacker2, "Regenerate")); // not targeted - unaffected
+    }
+
+    [Fact]
+    public void UsingGlobalAbility_IsBlocked_WhileControllersTextIsBlanked()
+    {
+        var state = BuildTwoTeamGame();
+        state.BlankedControllerIds.Add("teamB");
+
+        var energy = GiveWildEnergy(state, "teamB", 1);
+        var queue = new AbilityQueue();
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            TurnEngine.UseGlobalAbility(state, queue, SampleCards.Falcon.Id, "teamB", energy.Select(d => d.Id).ToList()));
+        Assert.Contains("ignored", ex.Message);
+    }
+
+    [Fact]
+    public void VulcanPowerSuppression_BlanksAbilities_OnlyForDiceEngagedWithIt()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.VulcanPowerSuppression.Id],
+            extraTeamBCardIds: [SampleCards.Apocalypse.Id, SampleCards.Beast.Id]);
+        state.ActivePlayerId = "teamB";
+
+        var vulcanDie = FindUnpurchased(state, "teamA", SampleCards.VulcanPowerSuppression.Id);
+        vulcanDie.Zone = Zone.FieldZone;
+        vulcanDie.Status = DieStatus.Character;
+        vulcanDie.Level = 1;
+
+        var otherBlocker = state.DiceIn("teamA", Zone.Bag).First(); // not engaged with Vulcan at all
+        otherBlocker.Zone = Zone.FieldZone;
+        otherBlocker.Status = DieStatus.SidekickCharacter;
+        otherBlocker.Level = 1;
+
+        var blockedByVulcan = FindUnpurchased(state, "teamB", SampleCards.Apocalypse.Id); // Overcrush
+        blockedByVulcan.Zone = Zone.FieldZone; blockedByVulcan.Status = DieStatus.Character; blockedByVulcan.Level = 1;
+
+        var notEngagedWithVulcan = FindUnpurchased(state, "teamB", SampleCards.Beast.Id); // Regenerate
+        notEngagedWithVulcan.Zone = Zone.FieldZone; notEngagedWithVulcan.Status = DieStatus.Character; notEngagedWithVulcan.Level = 1;
+
+        TurnEngine.EnterAttackStep(state);
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [blockedByVulcan.Id, notEngagedWithVulcan.Id]);
+
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(blockedByVulcan.Id, vulcanDie.Id);
+        assignment.AssignBlocker(notEngagedWithVulcan.Id, otherBlocker.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [vulcanDie.Id, otherBlocker.Id]);
+
+        Assert.False(DieStats.HasKeyword(state, blockedByVulcan, "Overcrush")); // blocked BY Vulcan - blanked
+        Assert.True(DieStats.HasKeyword(state, notEngagedWithVulcan, "Regenerate")); // unaffected
+    }
+
+    [Fact]
+    public void BlankedText_ClearsAtCleanUp()
+    {
+        var state = BuildTwoTeamGame();
+        state.BlankedDieIds.Add("some-die-id");
+        state.BlankedControllerIds.Add("teamB");
+        state.ActivePlayerId = "teamA";
+        state.CurrentStep = TurnStep.CleanUp;
+
+        TurnEngine.CleanUp(state, new FixedRoller(DieStatus.Energy, 1));
+
+        Assert.Empty(state.BlankedDieIds);
+        Assert.Empty(state.BlankedControllerIds);
+    }
+
+    [Fact]
+    public void GladiatorGlobal_ProtectsControllersCharacterDice_FromARealGlobalTargetingAttempt()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.GladiatorMajestorKallark.Id],
+            extraTeamBCardIds: [SampleCards.MisterSinisterMutantSupremacist.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var gladiatorDie = FindUnpurchased(state, "teamA", SampleCards.GladiatorMajestorKallark.Id);
+        gladiatorDie.Zone = Zone.FieldZone;
+        gladiatorDie.Status = DieStatus.Character;
+        gladiatorDie.Level = 1;
+
+        TurnEngine.EnterAttackStep(state);
+        var combatQueue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, combatQueue, [gladiatorDie.Id]);
+        CombatEngine.DeclareBlockers(state, new CombatAssignment(), []); // no blockers - reach the Action/Global window
+
+        var sinisterGlobal = SampleCards.MisterSinisterMutantSupremacist.Abilities.Single(a => a.Trigger == TriggerType.Global);
+        var sinisterTarget = ((BlankTargetText)sinisterGlobal.Effect).Target;
+
+        // Before Gladiator's own Global is used, its attacking die is a
+        // perfectly ordinary legal target for another Global.
+        Assert.Contains(gladiatorDie.Id, LegalTargets.Query(state, "teamB", sinisterTarget, TriggerType.Global));
+
+        // Team A activates Gladiator's own Global for real, through the
+        // same TurnEngine.UseGlobalAbility gate/AbilityQueue.Drain path
+        // production uses (GamesController.Drain), Trigger included.
+        var globalEnergy = GiveWildEnergy(state, "teamA", 1);
+        var globalQueue = new AbilityQueue();
+        TurnEngine.UseGlobalAbility(state, globalQueue, SampleCards.GladiatorMajestorKallark.Id, "teamA", globalEnergy.Select(d => d.Id).ToList());
+        globalQueue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [], Trigger: ability.Trigger)));
+
+        Assert.Contains("teamA", state.ImmuneToActionAndGlobalTargetingControllerIds);
+
+        // Now the same query, with the same Global trigger, excludes it.
+        Assert.DoesNotContain(gladiatorDie.Id, LegalTargets.Query(state, "teamB", sinisterTarget, TriggerType.Global));
+
+        // And a real attempt to resolve Mister Sinister's own Global
+        // choosing Gladiator's die as the target is rejected as illegal,
+        // the same path/exception every other "chosen target isn't
+        // legal" case goes through.
+        var ex = Assert.Throws<InvalidOperationException>(() => EffectInterpreter.Execute(
+            sinisterGlobal.Effect,
+            new EffectContext(state, "teamB", SourceDieId: null, _ => [gladiatorDie.Id], Trigger: TriggerType.Global)));
+        Assert.Contains("not legal", ex.Message);
+    }
+
+    [Fact]
+    public void GladiatorGlobal_DoesNotProtectAgainst_TriggersOtherThanGlobalOrActionDie()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.GladiatorMajestorKallark.Id]);
+        state.ActivePlayerId = "teamA";
+        state.ImmuneToActionAndGlobalTargetingControllerIds.Add("teamA");
+
+        var gladiatorDie = FindUnpurchased(state, "teamA", SampleCards.GladiatorMajestorKallark.Id);
+        gladiatorDie.Zone = Zone.FieldZone;
+        gladiatorDie.Status = DieStatus.Character;
+        gladiatorDie.Level = 1;
+
+        var spec = TargetSpec.CharacterDie("target character die", TargetOwnership.Opposing);
+
+        // A WhenFielded/WhenAttacks/etc-triggered targeting attempt (or a
+        // caller that doesn't pass a trigger at all) isn't what Gladiator's
+        // text protects against - only Global and WhenUsed (Action Die) are.
+        Assert.Contains(gladiatorDie.Id, LegalTargets.Query(state, "teamB", spec, TriggerType.WhenFielded));
+        Assert.Contains(gladiatorDie.Id, LegalTargets.Query(state, "teamB", spec));
+    }
+
+    [Fact]
+    public void GladiatorGlobal_TargetingImmunity_ClearsAtCleanUp()
+    {
+        var state = BuildTwoTeamGame();
+        state.ImmuneToActionAndGlobalTargetingControllerIds.Add("teamA");
+        state.ActivePlayerId = "teamA";
+        state.CurrentStep = TurnStep.CleanUp;
+
+        TurnEngine.CleanUp(state, new FixedRoller(DieStatus.Energy, 1));
+
+        Assert.Empty(state.ImmuneToActionAndGlobalTargetingControllerIds);
+    }
+
+    [Fact]
     public void UsingStarfireGlobalAbility_PrepsADieFromBag_IfYouPurchasedADieThisTurn()
     {
         var state = BuildTwoTeamGame();

@@ -361,6 +361,26 @@ here rather than assuming which approach they'd want.
     more DPS cards" status update. This was the affiliation-filter gap
     the bulk-card-catalog memory had already flagged as blocking ~15
     more bulk cards beyond DPS, not just a DPS-scoped fix.
+    **Update: the three remaining deeper gaps from two updates back are
+    now all closed too** - damage redirection (`DieStats.ApplyDamage`,
+    the single choke point every damage-application site, combat and
+    ability alike, now funnels through - Colossus "Organic Steel"/
+    DPS063), ability-blanking (`DieStats.GetCard`, a second choke point
+    consulted everywhere a die's card is looked up for keywords/
+    triggered/static-ability purposes specifically, NOT for affiliation/
+    energy-type/printed-stat purposes - `GameState.BlankedDieIds`/
+    `BlankedControllerIds` - Vulcan "Power Suppression"/DPS095's own
+    combat-scoped engaged-dice blank and Mister Sinister "Mutant
+    Supremacist"/DPS083's whole-side and single-die blanks), and
+    Gladiator's temporary Global-activated targeting immunity
+    (`EffectContext.Trigger` threading the currently-resolving ability's
+    own `TriggerType` down into `LegalTargets.Query`, which now excludes
+    a protected controller's dice specifically when the query's trigger
+    is `Global` or `WhenUsed` - `GameState.
+    ImmuneToActionAndGlobalTargetingControllerIds` - both Gladiator
+    printings, "Psi Resistance"/DPS033 and "Majestor Kallark"/DPS113) -
+    see the "damage redirection, ability-blanking, and targeting
+    immunity" status update for the full design writeup of each.
 
 ## Implemented keywords
 

@@ -90,6 +90,29 @@ public sealed record CardDef
     // this is actually applied live.
     public OpponentStatDebuff? GrantsOpponentStatDebuff { get; init; }
 
+    // Colossus ("Organic Steel", DPS063): "the first time one of your
+    // character dice would take damage each turn you may have Colossus
+    // take that damage instead. *Instead, prevent that damage." A
+    // granter-side flag (same scan shape as GrantsFreeFielding/
+    // GrantsStaticTeamBonus) consulted by the single shared choke point
+    // every damage-application site now funnels through - see
+    // DieStats.ApplyDamage. "You may" is simplified to "always redirect"
+    // (same house convention as every other "you may [beneficial
+    // action]" card this session) - the burst check on the redirecting
+    // die's OWN current face (not the original recipient's) is what
+    // decides redirect-and-take vs. prevent-outright.
+    public bool GrantsFirstDamageRedirectToSelf { get; init; }
+
+    // Vulcan ("Power Suppression", DPS095): "Ignore the abilities of
+    // character dice blocking or blocked by Vulcan." Combat-scoped, not
+    // continuous like every other Grants* field in this file - Vulcan
+    // must be directly engaged (an attacker or one of its blockers), not
+    // merely active elsewhere, so this is recorded once per combat by
+    // CombatEngine.DeclareBlockers (mirroring RecordDeadlyEngagements'
+    // own shape) into GameState.BlankedDieIds rather than recomputed
+    // live like the other Grants* fields.
+    public bool GrantsIgnoresAbilitiesWhileEngaged { get; init; }
+
     // Psylocke ("Adventurer", DPS048): "While Wolverine is active,
     // Psylocke gains Deadly" - a live, continuously-recomputed SELF
     // keyword grant conditioned on some OTHER named card being active

@@ -39431,43 +39431,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS033",
-    "name": "Gladiator",
-    "subtitle": "Psi Resistance",
-    "type": "Character",
-    "purchaseCost": 5,
-    "energyType": "Fist",
-    "dieLimit": 4,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 5,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 6,
-        "defense": 6,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 0,
-        "attack": 7,
-        "defense": 7,
-        "burstStars": null
-      }
-    ],
-    "rawText": "Intimidate Global: Pay Fist when you attack. Your character dice can\\'t be the target of Action Dice or Global Abilities (until the end of turn).",
-    "keywords": [],
-    "affiliations": [
-      "Shi\\'ar"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS039",
     "name": "Madelyne Pryor",
     "subtitle": "Dark Influence",
@@ -39951,43 +39914,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS063",
-    "name": "Colossus",
-    "subtitle": "Organic Steel",
-    "type": "Character",
-    "purchaseCost": 5,
-    "energyType": "Fist",
-    "dieLimit": 3,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 4,
-        "defense": 4,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 6,
-        "defense": 5,
-        "burstStars": 1
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 8,
-        "defense": 7,
-        "burstStars": 1
-      }
-    ],
-    "rawText": "While Colossus is active, the first time one of your character dice would take damage each turn you may have Colossus take that damage instead. *Instead, prevent that damage.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS064",
     "name": "Corsair",
     "subtitle": "Leading the Starjammers",
@@ -40323,43 +40249,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS083",
-    "name": "Mister Sinister",
-    "subtitle": "Mutant Supremacist",
-    "type": "Character",
-    "purchaseCost": 5,
-    "energyType": "Bolt",
-    "dieLimit": 3,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 4,
-        "defense": 1,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 5,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 6,
-        "defense": 3,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When fielded, ignore all text on opposing character cards (including Global Abilities) (until end of turn). Global: Pay 3. Ignore target attacking character die\\'s text until end of turn.",
-    "keywords": [],
-    "affiliations": [
-      "Villains"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS085",
     "name": "Mystique",
     "subtitle": "Freedom Force",
@@ -40466,41 +40355,6 @@
     "affiliations": [
       "X-Men"
     ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS095",
-    "name": "Vulcan",
-    "subtitle": "Power Suppression",
-    "type": "Character",
-    "purchaseCost": 5,
-    "energyType": "Fist",
-    "dieLimit": 3,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 3,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 4,
-        "defense": 4,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 6,
-        "defense": 5,
-        "burstStars": null
-      }
-    ],
-    "rawText": "Ignore the abilities of character dice blocking or blocked by Vulcan.",
-    "keywords": [],
-    "affiliations": [],
     "isImplemented": false,
     "set": "DPS",
     "abilityTemplate": null
@@ -40945,43 +40799,6 @@
     "keywords": [],
     "affiliations": [
       "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS113",
-    "name": "Gladiator",
-    "subtitle": "Majestor Kallark",
-    "type": "Character",
-    "purchaseCost": 4,
-    "energyType": "Fist",
-    "dieLimit": 2,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 5,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 6,
-        "defense": 6,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 0,
-        "attack": 7,
-        "defense": 7,
-        "burstStars": null
-      }
-    ],
-    "rawText": "Global: Pay Fist when you attack. Your character dice can\\'t be the target of Action Dice or Global Abilities (until the end of turn).",
-    "keywords": [],
-    "affiliations": [
-      "Shi\\'ar"
     ],
     "isImplemented": false,
     "set": "DPS",

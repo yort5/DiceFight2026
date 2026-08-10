@@ -308,7 +308,7 @@ public sealed class GamesController(GameStore store) : ControllerBase
         queue.Drain(
             ability => EffectInterpreter.Execute(
                 ability.Effect,
-                new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => targets, Roller: roller, Queue: queue)),
+                new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => targets, Roller: roller, Queue: queue, Trigger: ability.Trigger)),
             shouldStop: () => state.PendingChoice is not null);
 
         if (state.PendingChoice is not null)

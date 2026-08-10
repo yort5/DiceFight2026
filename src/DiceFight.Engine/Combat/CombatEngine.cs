@@ -134,15 +134,22 @@ public static class CombatEngine
     private static void ApplyRangeDamageAndResolveKOs(
         GameState state, AbilityQueue queue, IReadOnlyList<(string RangeDieId, string TargetDieId)> assignments, IDiceRoller? roller)
     {
+        var recipients = new List<DieInstance>();
         foreach (var (rangeDieId, targetDieId) in assignments)
-            FindDie(state, targetDieId).Damage += DieStats.RangeAmount(state, FindDie(state, rangeDieId));
+        {
+            var amount = DieStats.RangeAmount(state, FindDie(state, rangeDieId));
+            var recipient = DieStats.ApplyDamage(state, FindDie(state, targetDieId), amount);
+            if (recipient is not null) recipients.Add(recipient);
+        }
 
         var koIds = new List<string>();
-        foreach (var targetDieId in assignments.Select(a => a.TargetDieId).Distinct())
+        // Distinct by id, not by reference - two Range dice hitting the
+        // same target (or redirecting to the same Colossus) still means
+        // one KO check, not two.
+        foreach (var recipient in recipients.DistinctBy(d => d.Id))
         {
-            var target = FindDie(state, targetDieId);
-            if (target.Zone is Zone.FieldZone or Zone.AttackZone && DieStats.TryResolveKO(state, target, roller))
-                koIds.Add(targetDieId);
+            if (recipient.Zone is Zone.FieldZone or Zone.AttackZone && DieStats.TryResolveKO(state, recipient, roller))
+                koIds.Add(recipient.Id);
         }
         // Previously this only fired WhenKOd, never Retaliation - a Range
         // KO is just as real a KO as a combat-damage one, and now goes
@@ -190,6 +197,7 @@ public static class CombatEngine
         }
 
         RecordDeadlyEngagements(state, assignment);
+        RecordVulcanTextBlanking(state, assignment);
         ResolveEnergyDrain(state, assignment);
 
         // Keyword Infiltrate carves out a real sub-window here, strictly
@@ -368,6 +376,26 @@ public static class CombatEngine
                     state.DeadlyEngagedDieIds.Add(blockerId);
                 if (DieStats.HasKeyword(state, FindDie(state, blockerId), "Deadly"))
                     state.DeadlyEngagedDieIds.Add(attacker.Id);
+            }
+        }
+    }
+
+    // Vulcan ("Power Suppression", DPS095) - "Ignore the abilities of
+    // character dice blocking or blocked by Vulcan." Same per-engagement
+    // scan shape as RecordDeadlyEngagements just above, populating
+    // GameState.BlankedDieIds (see DieStats.GetCard) instead of
+    // DeadlyEngagedDieIds - Vulcan must be directly engaged (an attacker,
+    // or one of its blockers), not merely active elsewhere on the board.
+    private static void RecordVulcanTextBlanking(GameState state, CombatAssignment assignment)
+    {
+        foreach (var attacker in state.DiceIn(state.ActivePlayerId, Zone.AttackZone))
+        {
+            var attackerBlanksOpponents = DieStats.GetCard(state, attacker)?.GrantsIgnoresAbilitiesWhileEngaged ?? false;
+            foreach (var blockerId in assignment.BlockersOf(attacker.Id))
+            {
+                if (attackerBlanksOpponents) state.BlankedDieIds.Add(blockerId);
+                if (DieStats.GetCard(state, FindDie(state, blockerId))?.GrantsIgnoresAbilitiesWhileEngaged ?? false)
+                    state.BlankedDieIds.Add(attacker.Id);
             }
         }
     }
@@ -595,6 +623,12 @@ public static class CombatEngine
         bool fast,
         IDiceRoller? roller)
     {
+        // Colossus ("Organic Steel", DPS063) - a redirect target isn't
+        // guaranteed to already be in the Attack Zone (it just has to be
+        // active), so the KO scan below unions this with its own
+        // Attack-Zone-wide scan rather than relying on that scan alone.
+        var damagedRecipients = new List<DieInstance>();
+
         foreach (var attacker in state.DiceIn(state.ActivePlayerId, Zone.AttackZone).ToList())
         {
             var liveBlockerIds = assignment.BlockersOf(attacker.Id)
@@ -608,7 +642,10 @@ public static class CombatEngine
                 foreach (var blockerId in liveBlockerIds)
                 {
                     if (split.TryGetValue(blockerId, out var dealt) && dealt > 0)
-                        FindDie(state, blockerId).Damage += dealt;
+                    {
+                        var recipient = DieStats.ApplyDamage(state, FindDie(state, blockerId), dealt);
+                        if (recipient is not null) damagedRecipients.Add(recipient);
+                    }
                 }
             }
 
@@ -619,7 +656,10 @@ public static class CombatEngine
             {
                 var blocker = FindDie(state, blockerId);
                 if (DieStats.HasKeyword(state, blocker, "Fast") == fast)
-                    attacker.Damage += DieStats.EffectiveAttack(state, blocker);
+                {
+                    var recipient = DieStats.ApplyDamage(state, attacker, DieStats.EffectiveAttack(state, blocker));
+                    if (recipient is not null) damagedRecipients.Add(recipient);
+                }
             }
         }
 
@@ -627,7 +667,11 @@ public static class CombatEngine
         // among whoever just took damage this wave (Regenerate, if the die
         // has it, intercepts inside TryResolveKO).
         var koIds = new List<string>();
-        foreach (var die in state.Dice.Where(d => d.Zone == Zone.AttackZone).ToList())
+        var koScanCandidates = state.Dice.Where(d => d.Zone == Zone.AttackZone)
+            .Concat(damagedRecipients)
+            .DistinctBy(d => d.Id)
+            .ToList();
+        foreach (var die in koScanCandidates)
         {
             if (DieStats.TryResolveKO(state, die, roller)) koIds.Add(die.Id);
         }

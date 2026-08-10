@@ -7,6 +7,31 @@ namespace DiceFight.Engine.Model;
 // Sidekicks have no card (rule 1.3.9), so this isn't card-driven data.
 public static class DieStats
 {
+    // The single lookup point for "which CardDef currently backs this
+    // die's own ABILITY text" - Mister Sinister ("Mutant Supremacist",
+    // DPS083)/Vulcan ("Power Suppression", DPS095) both "ignore text,"
+    // enforced here by returning null (as if the die had no card at all)
+    // whenever GameState.BlankedDieIds/BlankedControllerIds says so.
+    // Every keyword/triggered-ability/static-grant lookup that asks "what
+    // does THIS die's own card do" goes through this now, rather than
+    // reimplementing its own VirtualCardId-or-CardId lookup. Deliberately
+    // NOT used for GetFace/GetMaxLevel/EffectiveAttack's face lookup, the
+    // physical roll-face composition (PlaceholderDiceRoller), affiliation
+    // (DieStats.HasAffiliation), or energy type - "ignore text" reads as
+    // the rules-text box specifically (keywords, triggered/static
+    // abilities), not fixed printed attributes a blanked card still
+    // physically has. Also not used when a DIFFERENT die's card is being
+    // consulted just for board-presence/identity (e.g. "is a die named X
+    // currently active" for someone ELSE's condition) - only for asking
+    // whether THIS card's own text grants something.
+    internal static CardDef? GetCard(GameState state, DieInstance die)
+    {
+        if (state.BlankedDieIds.Contains(die.Id) || state.BlankedControllerIds.Contains(die.ControllerId))
+            return null;
+        var cardId = die.VirtualCardId ?? die.CardId;
+        return cardId is not null ? state.CardCatalog.GetValueOrDefault(cardId) : null;
+    }
+
     // Whether the die currently has the named keyword - either printed on
     // its own card (Overcrush, Regenerate, etc. - see CardDef.Keywords/
     // KeywordInstance), or granted live by some other active die's
@@ -30,22 +55,11 @@ public static class DieStats
 
         var granters = state.DiceIn(die.ControllerId, Zone.FieldZone)
             .Concat(state.DiceIn(die.ControllerId, Zone.AttackZone));
-        return granters.Any(granter =>
-        {
-            var granterCardId = granter.VirtualCardId ?? granter.CardId;
-            return granterCardId is not null
-                && state.CardCatalog.TryGetValue(granterCardId, out var granterCard)
-                && granterCard.GrantsToSidekicks.Contains(keyword);
-        });
+        return granters.Any(granter => GetCard(state, granter)?.GrantsToSidekicks.Contains(keyword) ?? false);
     }
 
-    private static bool HasPrintedKeyword(GameState state, DieInstance die, string keyword)
-    {
-        var cardId = die.VirtualCardId ?? die.CardId;
-        return cardId is not null
-            && state.CardCatalog.TryGetValue(cardId, out var card)
-            && card.Keywords.Any(k => k.Name == keyword);
-    }
+    private static bool HasPrintedKeyword(GameState state, DieInstance die, string keyword) =>
+        GetCard(state, die)?.Keywords.Any(k => k.Name == keyword) ?? false;
 
     // See CardDef.GrantsSelfKeywordWhileNamedCardActive's remarks -
     // Psylocke's own "gains Deadly while Wolverine is active." "Active"
@@ -53,11 +67,13 @@ public static class DieStats
     // text doesn't say "your"), not just die's own controller's side.
     private static bool HasConditionalSelfGrant(GameState state, DieInstance die, string keyword)
     {
-        var cardId = die.VirtualCardId ?? die.CardId;
-        if (cardId is null || !state.CardCatalog.TryGetValue(cardId, out var card)) return false;
-        var grant = card.GrantsSelfKeywordWhileNamedCardActive;
+        var grant = GetCard(state, die)?.GrantsSelfKeywordWhileNamedCardActive;
         if (grant is null || grant.Keyword != keyword) return false;
 
+        // "Active" here just means board presence/identity for a
+        // DIFFERENT die - not this die's own text, so it's the raw
+        // lookup, not GetCard (a blanked die's existence still counts
+        // for someone ELSE's "while [Name] is active" condition).
         return state.Dice.Any(d =>
             d.Zone is Zone.FieldZone or Zone.AttackZone &&
             (d.VirtualCardId ?? d.CardId) is { } otherCardId &&
@@ -70,9 +86,7 @@ public static class DieStats
     // "named card active anywhere on the board, either player's" check.
     private static ConditionalSelfStatBonus? SelfStatBonusWhileNamedCardActive(GameState state, DieInstance die)
     {
-        var cardId = die.VirtualCardId ?? die.CardId;
-        if (cardId is null || !state.CardCatalog.TryGetValue(cardId, out var card)) return null;
-        var grant = card.GrantsSelfStatBonusWhileNamedCardActive;
+        var grant = GetCard(state, die)?.GrantsSelfStatBonusWhileNamedCardActive;
         if (grant is null) return null;
 
         var active = state.Dice.Any(d =>
@@ -91,9 +105,7 @@ public static class DieStats
     {
         if (die.ControllerId == requestingControllerId) return false;
 
-        var cardId = die.VirtualCardId ?? die.CardId;
-        if (cardId is null || !state.CardCatalog.TryGetValue(cardId, out var card)) return false;
-        var namedCard = card.CannotBeTargetedByOpponentWhileNamedCardActive;
+        var namedCard = GetCard(state, die)?.CannotBeTargetedByOpponentWhileNamedCardActive;
         if (namedCard is null) return false;
 
         return state.Dice.Any(d =>
@@ -111,9 +123,7 @@ public static class DieStats
     // nothing is ever "chosen" from the result, just counted.
     private static int SelfAttackBonusPerMatchingDie(GameState state, DieInstance die)
     {
-        var cardId = die.VirtualCardId ?? die.CardId;
-        if (cardId is null || !state.CardCatalog.TryGetValue(cardId, out var card)) return 0;
-        var grant = card.GrantsSelfAttackBonusPerMatchingDie;
+        var grant = GetCard(state, die)?.GrantsSelfAttackBonusPerMatchingDie;
         if (grant is null) return 0;
 
         var matchCount = LegalTargets.Query(state, die.ControllerId, grant.CountFilter).Count;
@@ -128,21 +138,23 @@ public static class DieStats
     {
         if (die.Zone is not (Zone.FieldZone or Zone.AttackZone)) return new OpponentStatDebuff(0, 0);
 
+        // Energy type is a fixed printed attribute, not "text" - the raw
+        // lookup, not GetCard (see GetCard's own remarks on the line
+        // between the two).
         var dieCardId = die.VirtualCardId ?? die.CardId;
         var dieCard = dieCardId is not null ? state.CardCatalog.GetValueOrDefault(dieCardId) : null;
 
-        var grantingCardIds = state.DiceIn(state.OpponentOf(die.ControllerId), Zone.FieldZone)
+        var granterCards = state.DiceIn(state.OpponentOf(die.ControllerId), Zone.FieldZone)
             .Concat(state.DiceIn(state.OpponentOf(die.ControllerId), Zone.AttackZone))
-            .Select(d => d.VirtualCardId ?? d.CardId)
-            .Where(id => id is not null)
+            .Select(d => GetCard(state, d))
+            .Where(card => card is not null)
             .Distinct();
 
         var attack = 0;
         var defense = 0;
-        foreach (var cardId in grantingCardIds)
+        foreach (var card in granterCards)
         {
-            if (!state.CardCatalog.TryGetValue(cardId!, out var card) || card.GrantsOpponentStatDebuff is not { } debuff)
-                continue;
+            if (card!.GrantsOpponentStatDebuff is not { } debuff) continue;
             if (debuff.ExcludedEnergyType is { } excluded && (dieCard?.EnergyTypes.Contains(excluded) ?? false)) continue;
             attack += debuff.AttackDelta;
             defense += debuff.DefenseDelta;
@@ -196,9 +208,7 @@ public static class DieStats
     // defaulting to 1 for the bare "Energy Drain" wording.
     public static int EnergyDrainAmount(GameState state, DieInstance die)
     {
-        var cardId = die.VirtualCardId ?? die.CardId;
-        if (cardId is null || !state.CardCatalog.TryGetValue(cardId, out var card)) return 0;
-        var keyword = card.Keywords.FirstOrDefault(k => k.Name == "Energy Drain");
+        var keyword = GetCard(state, die)?.Keywords.FirstOrDefault(k => k.Name == "Energy Drain");
         if (keyword is null) return 0;
         return keyword.Params is { Count: > 0 } ? keyword.Params[0] : 1;
     }
@@ -209,9 +219,7 @@ public static class DieStats
     // "never throw over missing data" reason EnergyDrainAmount does.
     public static int RangeAmount(GameState state, DieInstance die)
     {
-        var cardId = die.VirtualCardId ?? die.CardId;
-        if (cardId is null || !state.CardCatalog.TryGetValue(cardId, out var card)) return 0;
-        var keyword = card.Keywords.FirstOrDefault(k => k.Name == "Range");
+        var keyword = GetCard(state, die)?.Keywords.FirstOrDefault(k => k.Name == "Range");
         if (keyword is null) return 0;
         return keyword.Params is { Count: > 0 } ? keyword.Params[0] : 1;
     }
@@ -293,18 +301,17 @@ public static class DieStats
     {
         if (die.Zone is not (Zone.FieldZone or Zone.AttackZone)) return new StaticTeamBonus(0, 0);
 
-        var grantingCardIds = state.DiceIn(die.ControllerId, Zone.FieldZone)
+        var granterCards = state.DiceIn(die.ControllerId, Zone.FieldZone)
             .Concat(state.DiceIn(die.ControllerId, Zone.AttackZone))
-            .Select(d => d.VirtualCardId ?? d.CardId)
-            .Where(id => id is not null)
+            .Select(d => GetCard(state, d))
+            .Where(card => card is not null)
             .Distinct();
 
         var attack = 0;
         var defense = 0;
-        foreach (var cardId in grantingCardIds)
+        foreach (var card in granterCards)
         {
-            if (!state.CardCatalog.TryGetValue(cardId!, out var card) || card.GrantsStaticTeamBonus is not { } bonus)
-                continue;
+            if (card!.GrantsStaticTeamBonus is not { } bonus) continue;
             if (bonus.RequiredAffiliation is { } affiliation && !HasAffiliation(state, die, affiliation)) continue;
             attack += bonus.AttackDelta;
             defense += bonus.DefenseDelta;
@@ -366,6 +373,53 @@ public static class DieStats
         total += SelfStatBonusWhileNamedCardActive(state, die)?.DefenseDelta ?? 0;
         total += TotalOpponentStatDebuff(state, die).DefenseDelta;
         return Math.Max(0, total);
+    }
+
+    // Colossus ("Organic Steel", DPS063) - the single choke point every
+    // damage-application site (combat fast/slow waves, Range, ability
+    // DealDamage/DealDamagePerActiveAffiliate) now funnels through,
+    // exactly like TurnEngine.ResolveKOReactions already is for "what
+    // happens after a KO." Returns the die that actually ends up holding
+    // the damage - not necessarily `die` itself, since a redirect target
+    // can sit in a completely different zone than the original recipient
+    // (Colossus in the Field Zone intercepting damage meant for a
+    // blocker in the Attack Zone) - or null if the damage was fully
+    // prevented. Callers that run their own KO check afterward must use
+    // the RETURNED die, and fold it into whatever zone-scoped scan
+    // they'd otherwise run, since a redirect target isn't guaranteed to
+    // already be in that zone.
+    public static DieInstance? ApplyDamage(GameState state, DieInstance die, int amount)
+    {
+        if (amount <= 0) return die;
+
+        var redirector = FindDamageRedirector(state, die);
+        if (redirector is null)
+        {
+            die.Damage += amount;
+            return die;
+        }
+
+        state.UsedDamageRedirectThisTurn.Add(die.ControllerId);
+
+        // "*Instead, prevent that damage" - the redirecting die's OWN
+        // current face decides this, same "the ability's own source die,
+        // not the original target" convention every other burst check in
+        // this engine already follows.
+        if (GetFace(state, redirector).BurstStars == 1)
+            return null;
+
+        redirector.Damage += amount;
+        return redirector;
+    }
+
+    private static DieInstance? FindDamageRedirector(GameState state, DieInstance die)
+    {
+        if (die.Status is not (DieStatus.Character or DieStatus.SidekickCharacter)) return null;
+        if (state.UsedDamageRedirectThisTurn.Contains(die.ControllerId)) return null;
+
+        return state.DiceIn(die.ControllerId, Zone.FieldZone)
+            .Concat(state.DiceIn(die.ControllerId, Zone.AttackZone))
+            .FirstOrDefault(d => d.Id != die.Id && (GetCard(state, d)?.GrantsFirstDamageRedirectToSelf ?? false));
     }
 
     // Rule 2.7.6.1 - KO once damage reaches/exceeds defense. Shared by

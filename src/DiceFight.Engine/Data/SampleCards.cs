@@ -65,6 +65,8 @@ public static class SampleCards
         string? cannotBeTargetedByOpponentWhileNamedCardActive = null,
         FreeFieldingGrant? grantsFreeFielding = null,
         OpponentStatDebuff? grantsOpponentStatDebuff = null,
+        bool grantsFirstDamageRedirectToSelf = false,
+        bool grantsIgnoresAbilitiesWhileEngaged = false,
         bool isImplemented = true,
         string? set = null) => new()
     {
@@ -88,6 +90,8 @@ public static class SampleCards
         CannotBeTargetedByOpponentWhileNamedCardActive = cannotBeTargetedByOpponentWhileNamedCardActive,
         GrantsFreeFielding = grantsFreeFielding,
         GrantsOpponentStatDebuff = grantsOpponentStatDebuff,
+        GrantsFirstDamageRedirectToSelf = grantsFirstDamageRedirectToSelf,
+        GrantsIgnoresAbilitiesWhileEngaged = grantsIgnoresAbilitiesWhileEngaged,
         IsImplemented = isImplemented,
         Set = set
     };
@@ -2158,6 +2162,117 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 1, Attack: 6, Defense: 5)
         ], set: "DPS");
 
+    // Colossus, "Organic Steel" - the first card to use
+    // CardDef.GrantsFirstDamageRedirectToSelf/DieStats.ApplyDamage (new
+    // this pass). No AbilityDef needed - purely a live interception every
+    // damage-application site now consults. Levels 2/3 carry the real
+    // single-burst mark the "*Instead, prevent that damage" clause reads.
+    public static readonly CardDef ColossusOrganicSteel = Character(
+        "DPS063", "Colossus", "Organic Steel", dieLimit: 3,
+        "While Colossus is active, the first time one of your character dice would take damage each turn " +
+        "you may have Colossus take that damage instead. *Instead, prevent that damage.",
+        purchaseCost: 5, energyType: EnergyType.Fist,
+        affiliations: ["X-Men"],
+        grantsFirstDamageRedirectToSelf: true,
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 4),
+            new CharacterFace(FieldingCost: 1, Attack: 6, Defense: 5, BurstStars: 1),
+            new CharacterFace(FieldingCost: 2, Attack: 8, Defense: 7, BurstStars: 1)
+        ], set: "DPS");
+
+    // Vulcan, "Power Suppression" - the first card to use
+    // CardDef.GrantsIgnoresAbilitiesWhileEngaged/DieStats.GetCard (new
+    // this pass). No AbilityDef needed - CombatEngine.DeclareBlockers'
+    // own RecordVulcanTextBlanking records the engagement every combat.
+    public static readonly CardDef VulcanPowerSuppression = Character(
+        "DPS095", "Vulcan", "Power Suppression", dieLimit: 3,
+        "Ignore the abilities of character dice blocking or blocked by Vulcan.",
+        purchaseCost: 5, energyType: EnergyType.Fist,
+        grantsIgnoresAbilitiesWhileEngaged: true,
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 3, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 4),
+            new CharacterFace(FieldingCost: 1, Attack: 6, Defense: 5)
+        ], set: "DPS");
+
+    // Mister Sinister, "Mutant Supremacist" - the first card to use
+    // BlankOpposingTeamText/BlankTargetText (new this pass). The Global's
+    // "target attacking character die" is a plain TargetSpec.CharacterDie
+    // scoped to Zone.AttackZone only - no new primitive needed for that
+    // half beyond the new blanking node itself.
+    public static readonly CardDef MisterSinisterMutantSupremacist = Character(
+        "DPS083", "Mister Sinister", "Mutant Supremacist", dieLimit: 3,
+        "When fielded, ignore all text on opposing character cards (including Global Abilities) (until " +
+        "end of turn). Global: Pay 3. Ignore target attacking character die's text until end of turn.",
+        purchaseCost: 5, energyType: EnergyType.Bolt,
+        affiliations: ["Villains"],
+        abilities: [
+            new AbilityDef(TriggerType.WhenFielded, Cost: null, Effect: new BlankOpposingTeamText()),
+            new AbilityDef(TriggerType.Global, Cost: null,
+                Effect: new BlankTargetText(
+                    TargetSpec.CharacterDie("target attacking character die", TargetOwnership.Opposing, zones: [Zone.AttackZone])),
+                EnergyCost: new EnergyCost(3))
+        ],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 1),
+            new CharacterFace(FieldingCost: 2, Attack: 5, Defense: 2),
+            new CharacterFace(FieldingCost: 2, Attack: 6, Defense: 3)
+        ], set: "DPS");
+
+    // Gladiator, "Psi Resistance" - Intimidate (same WhenFielded shape as
+    // ScarletSpider above) plus a Global shared verbatim with Gladiator's
+    // own "Majestor Kallark" printing below (and, per the bulk sheet,
+    // Lilandra's Loyalty-granting "Overcrush" printing DPS073 and even
+    // Hawkman's unrelated cards) - GrantSelfTargetingImmunityFromAction
+    // AndGlobal, no TargetSpec since it protects the whole side rather
+    // than one chosen die. The printed cost is "Pay Fist when you
+    // attack" - simplified here to a plain Fist cost usable any time the
+    // Main/Attack Global window is open (UseGlobalAbility's own gate),
+    // dropping the "only during your attack" restriction, since no
+    // "currently declared an attack this turn" state exists to check yet
+    // and no other authored card needs it (same house convention as
+    // every other documented simplification this pass - see Colossus/
+    // Vulcan's own remarks for the pattern).
+    public static readonly CardDef GladiatorPsiResistance = Character(
+        "DPS033", "Gladiator", "Psi Resistance", dieLimit: 4,
+        "Intimidate (When fielded, remove target opposing character die from the Field Zone until end of " +
+        "turn - place it next to your character cards.) Global: Pay Fist. Your character dice can't be " +
+        "the target of Action Dice or Global Abilities (until end of turn).",
+        purchaseCost: 5, energyType: EnergyType.Fist,
+        affiliations: ["Shi'ar"],
+        keywords: [new KeywordInstance("Intimidate")],
+        abilities: [
+            new AbilityDef(TriggerType.WhenFielded, Cost: null,
+                Effect: new MoveDie(TargetSpec.CharacterDie("target opposing character die", TargetOwnership.Opposing), Zone.Intimidated)),
+            new AbilityDef(TriggerType.Global, Cost: null,
+                Effect: new GrantSelfTargetingImmunityFromActionAndGlobal(),
+                EnergyCost: new EnergyCost(1, EnergyType.Fist))
+        ],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 5, Defense: 5),
+            new CharacterFace(FieldingCost: 1, Attack: 6, Defense: 6),
+            new CharacterFace(FieldingCost: 0, Attack: 7, Defense: 7)
+        ], set: "DPS");
+
+    // Gladiator, "Majestor Kallark" - the same Global as "Psi Resistance"
+    // above with no Intimidate half.
+    public static readonly CardDef GladiatorMajestorKallark = Character(
+        "DPS113", "Gladiator", "Majestor Kallark", dieLimit: 2,
+        "Global: Pay Fist. Your character dice can't be the target of Action Dice or Global Abilities " +
+        "(until end of turn).",
+        purchaseCost: 4, energyType: EnergyType.Fist,
+        affiliations: ["Shi'ar"],
+        abilities: [
+            new AbilityDef(TriggerType.Global, Cost: null,
+                Effect: new GrantSelfTargetingImmunityFromActionAndGlobal(),
+                EnergyCost: new EnergyCost(1, EnergyType.Fist))
+        ],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 5, Defense: 5),
+            new CharacterFace(FieldingCost: 1, Attack: 6, Defense: 6),
+            new CharacterFace(FieldingCost: 0, Attack: 7, Defense: 7)
+        ], set: "DPS");
+
     // Supreme Intelligence, "Kree Science Council" - purely a Loyalty
     // grant, no other text. NameContains is a real substring match here
     // ("a card with Kree in its name"), unlike Gladiator's "When Lilandra
@@ -2479,7 +2594,8 @@ public static class SampleCards
             DarkPhoenixEnemyOfTheShiar, MagikWielderOfTheSoulsword, TakeCover, DeadpoolCollectThis,
             MystiqueTaughtByMagneto, IcemanFrozenFistsOfFury,
             RonanTheAccuserNoMercy, EmmaFrostManipulative, EmmaFrostFinesse, SentinelToken, MasterMoldEndlessSentinels,
-            VulcanAggession
+            VulcanAggession, ColossusOrganicSteel, VulcanPowerSuppression, MisterSinisterMutantSupremacist,
+            GladiatorPsiResistance, GladiatorMajestorKallark
         ];
 
         // Hand-curated cards win on id collision - shouldn't happen in
