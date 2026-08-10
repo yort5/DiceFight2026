@@ -348,7 +348,7 @@ public static class EffectInterpreter
                 break;
 
             case Conditional conditional:
-                if (Resolve(ctx, conditional.CheckTarget, cache).Any(id => CheckCondition(ctx, id, conditional.When)))
+                if (Resolve(ctx, conditional.CheckTarget, cache).Any(id => CheckCondition(ctx, id, conditional)))
                     Execute(conditional.Then, ctx, cache);
                 else if (conditional.Else is not null)
                     Execute(conditional.Else, ctx, cache);
@@ -562,6 +562,10 @@ public static class EffectInterpreter
                 }
                 break;
 
+            case GrantNextPurchaseDiscount discount:
+                ctx.State.PendingPurchaseDiscount = new PendingPurchaseDiscount(discount.Amount, discount.RequiredType);
+                break;
+
             case GrantKeyword grant:
                 foreach (var id in Resolve(ctx, grant.Target, cache))
                 {
@@ -639,7 +643,7 @@ public static class EffectInterpreter
         return result;
     }
 
-    private static bool CheckCondition(EffectContext ctx, string dieId, EffectCondition condition) => condition switch
+    private static bool CheckCondition(EffectContext ctx, string dieId, Conditional conditional) => conditional.When switch
     {
         EffectCondition.TargetWasKOd => FindDie(ctx, dieId) is { Zone: Zone.PrepArea, Status: DieStatus.Unrolled },
         // dieId is unused here - see EffectCondition.NoCharacterKOdThisTurn's own remarks.
@@ -650,7 +654,20 @@ public static class EffectInterpreter
             ctx.State.GetPlayer(ctx.ControllerId).Life < ctx.State.GetPlayer(ctx.State.OpponentOf(ctx.ControllerId)).Life,
         EffectCondition.OnSingleBurstFace => CurrentBurstStars(ctx.State, FindDie(ctx, dieId)) == 1,
         EffectCondition.OnDoubleBurstFace => CurrentBurstStars(ctx.State, FindDie(ctx, dieId)) == 2,
-        _ => throw new NotSupportedException($"Unhandled effect condition: {condition}")
+        EffectCondition.TargetHasAffiliation => conditional.AffiliationParam is { } affiliation
+            && DieStats.HasAffiliation(ctx.State, FindDie(ctx, dieId), affiliation),
+        // dieId is unused here - see EffectCondition.NamedCardIsActive's own remarks.
+        EffectCondition.NamedCardIsActive => conditional.NamedCardParam is { } namedCard
+            && ctx.State.Dice.Any(d =>
+                d.Zone is Zone.FieldZone or Zone.AttackZone &&
+                (d.VirtualCardId ?? d.CardId) is { } cardId &&
+                ctx.State.CardCatalog.TryGetValue(cardId, out var card) &&
+                card.Name == namedCard),
+        // dieId is unused here - see EffectCondition.OpponentHasAtLeastNCharacterDiceInFieldZone's own remarks.
+        EffectCondition.OpponentHasAtLeastNCharacterDiceInFieldZone => conditional.CountParam is { } threshold
+            && ctx.State.DiceIn(ctx.State.OpponentOf(ctx.ControllerId), Zone.FieldZone)
+                .Count(d => d.Status is DieStatus.Character or DieStatus.SidekickCharacter) >= threshold,
+        _ => throw new NotSupportedException($"Unhandled effect condition: {conditional.When}")
     };
 
     // A Character die's current face is always derivable from Level (no

@@ -362,10 +362,23 @@ public static class TurnEngine
             }
         }
 
+        // Dark Phoenix/Magik's own "next die/action die you purchase this
+        // turn costs N less" (GameState.PendingPurchaseDiscount) - only
+        // consumed once a purchase actually matches RequiredType (or any
+        // purchase at all, if null); an unmatched purchase leaves it
+        // pending for a later one this same turn.
+        var effectiveCost = card.PurchaseCost;
+        if (state.PendingPurchaseDiscount is { } discount &&
+            (discount.RequiredType is null || discount.RequiredType == card.Type))
+        {
+            effectiveCost = Math.Max(1, effectiveCost - discount.Amount);
+            state.PendingPurchaseDiscount = null;
+        }
+
         var energyDice = energyDieIdsToSpend.Select(id => FindEnergyDie(state, id)).ToList();
         SpendEnergy(
-            state, state.ActivePlayerId, energyDice, card.PurchaseCost, card.EnergyTypes, Zone.OutOfPlay,
-            () => $"Not enough energy offered to purchase {card.Name} (needs {card.PurchaseCost}).",
+            state, state.ActivePlayerId, energyDice, effectiveCost, card.EnergyTypes, Zone.OutOfPlay,
+            () => $"Not enough energy offered to purchase {card.Name} (needs {effectiveCost}).",
             requiredType => $"Purchasing {card.Name} requires at least one {requiredType} energy.");
 
         // Rule 1.1.4 - the purchaser becomes controller; OwnerId (whoever
@@ -395,6 +408,7 @@ public static class TurnEngine
             throw new InvalidOperationException($"{DisplayName(state, die)} is not on a character face.");
 
         var fieldingCost = DieStats.GetFace(state, die).FieldingCost;
+        if (IsFreeToField(state, die, fieldingCost)) fieldingCost = 0;
         var energyDice = energyDieIdsToSpend.Select(id => FindEnergyDie(state, id)).ToList();
         SpendEnergy(
             state, state.ActivePlayerId, energyDice, fieldingCost, [], Zone.OutOfPlay,
@@ -438,6 +452,36 @@ public static class TurnEngine
         }
 
         ResolveWhenAnotherDieFielded(state, queue, die);
+    }
+
+    // Deadpool ("Collect THIS!", DPS108)/Mystique ("Taught by Magneto",
+    // DPS125) - "your character dice with fielding cost of 2/[a given
+    // affiliation] are free to field." Same granter-side scan shape as
+    // DieStats.StaticTeamBonusFor/GrantsToSidekicks (the controller's own
+    // active dice, deduplicated by CardId isn't needed here since this is
+    // a plain pass/fail, not a stacking numeric bonus), just checked once
+    // at Field time against CardDef.GrantsFreeFielding instead of applied
+    // to a running stat total.
+    private static bool IsFreeToField(GameState state, DieInstance die, int fieldingCost)
+    {
+        var cardId = die.VirtualCardId ?? die.CardId;
+        if (cardId is null || !state.CardCatalog.TryGetValue(cardId, out var card)) return false;
+
+        var granters = state.DiceIn(state.ActivePlayerId, Zone.FieldZone)
+            .Concat(state.DiceIn(state.ActivePlayerId, Zone.AttackZone))
+            .Select(d => d.VirtualCardId ?? d.CardId)
+            .Where(id => id is not null)
+            .Distinct();
+
+        foreach (var granterId in granters)
+        {
+            if (!state.CardCatalog.TryGetValue(granterId!, out var granterCard) ||
+                granterCard.GrantsFreeFielding is not { } grant) continue;
+            if (grant.RequiredAffiliation is { } affiliation && !card.Affiliations.Contains(affiliation)) continue;
+            if (grant.MaxFieldingCost is { } maxCost && fieldingCost > maxCost) continue;
+            return true;
+        }
+        return false;
     }
 
     // TriggerType.WhenAnotherDieFielded - same shape as
@@ -1137,6 +1181,7 @@ public static class TurnEngine
         state.MustBlockThisTurn.Clear();
         state.MustAttackThisTurn.Clear();
         state.CantBlockThisTurn.Clear();
+        state.PendingPurchaseDiscount = null;
         var cleaningPlayer = state.GetPlayer(activeId);
         cleaningPlayer.PurchasedDieThisTurn = false;
         cleaningPlayer.PurchasedCharacterDieThisTurn = false;

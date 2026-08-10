@@ -5,9 +5,10 @@ namespace DiceFight.Engine.Effects;
 // Rule 3.3 - Targeting, and rule 3.1.9's Legal Target definition. Computes
 // which die ids a TargetSpec could legally apply to, given who controls
 // the ability and the current game state. This is a first pass - it
-// doesn't exclude captured dice (rule 3.8) or dice with a "cannot be
-// targeted" ability applied to them, since neither Capturing nor per-die
-// targeting restrictions are modeled yet (see RULES_ENGINE_DESIGN.md).
+// doesn't exclude captured dice (rule 3.8); CardDef.
+// CannotBeTargetedByOpponentWhileNamedCardActive is the only per-die
+// "cannot be targeted" shape modeled so far (see its own remarks for the
+// narrower shapes still not covered).
 public static class LegalTargets
 {
     public static IReadOnlyList<string> Query(GameState state, string requestingControllerId, TargetSpec spec)
@@ -20,6 +21,8 @@ public static class LegalTargets
 
         var zones = spec.EligibleZones ?? TargetSpec.DefaultZones;
         IEnumerable<DieInstance> candidates = state.Dice.Where(d => zones.Contains(d.Zone));
+
+        candidates = candidates.Where(d => !DieStats.IsProtectedFromOpponentTargeting(state, d, requestingControllerId));
 
         candidates = spec.Ownership switch
         {

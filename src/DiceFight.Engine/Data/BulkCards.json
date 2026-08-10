@@ -39067,22 +39067,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS014",
-    "name": "Take Cover",
-    "subtitle": "Basic Action Card",
-    "type": "BasicAction",
-    "purchaseCost": 3,
-    "energyType": null,
-    "dieLimit": 3,
-    "levels": [],
-    "rawText": "Character dice you control get +2D. */** Target character die gets an extra +3D. Global: Pay Shield. Target character die gets +1D (until end of turn).",
-    "keywords": [],
-    "affiliations": [],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS015",
     "name": "The Front Line",
     "subtitle": "Basic Action Card",
@@ -39514,43 +39498,6 @@
     "rawText": "While Madelyne Pryor is active, opposing character dice can\\'t use Rush.",
     "keywords": [],
     "affiliations": [],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS040",
-    "name": "Magik",
-    "subtitle": "Wielder of the Soulsword",
-    "type": "Character",
-    "purchaseCost": 3,
-    "energyType": "Mask",
-    "dieLimit": 4,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 1,
-        "defense": 4,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 0,
-        "attack": 1,
-        "defense": 6,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 2,
-        "defense": 7,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When fielded, the next action die you purchase costs 1 less (to a minimum of 1)",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
     "isImplemented": false,
     "set": "DPS",
     "abilityTemplate": null
@@ -40114,43 +40061,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS067",
-    "name": "Dark Phoenix",
-    "subtitle": "Enemy of the Shi\\'ar",
-    "type": "Character",
-    "purchaseCost": 6,
-    "energyType": "Bolt",
-    "dieLimit": 3,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 5,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 7,
-        "defense": 7,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 3,
-        "attack": 8,
-        "defense": 8,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When fielded, KO target Shi\\'ar or X-Men character die.When Dark Phoenix attacks, deal 2 damage to your opponent. Global: Pay Bolt and KO one of your character dice. Your next die you purchase this turn costs 2 less (to a minimum of 1).",
-    "keywords": [],
-    "affiliations": [
-      "Villains"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS069",
     "name": "Deathbird",
     "subtitle": "Usurper",
@@ -40339,43 +40249,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS074",
-    "name": "Iceman",
-    "subtitle": "Frozen Fists of Fury",
-    "type": "Character",
-    "purchaseCost": 4,
-    "energyType": "Bolt",
-    "dieLimit": 3,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 2,
-        "defense": 4,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 6,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 4,
-        "defense": 6,
-        "burstStars": null
-      }
-    ],
-    "rawText": "Founder When Iceman attacks, if Wolverine is active, deal 3 damage to target character die.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS075",
     "name": "Jean Grey",
     "subtitle": "Xavier\\'s Dream",
@@ -40404,80 +40277,6 @@
       }
     ],
     "rawText": "Founder While Jean Grey and one of your Sidekick dice are active, your opponents must pay 1 extra to use a Global Ability.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS076",
-    "name": "Jubilee",
-    "subtitle": "Things Never Change",
-    "type": "Character",
-    "purchaseCost": 2,
-    "energyType": "Bolt",
-    "dieLimit": 3,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 2,
-        "defense": 1,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 3,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 4,
-        "defense": 3,
-        "burstStars": null
-      }
-    ],
-    "rawText": "While Woverine is active, Jubilee gets +1A.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS077",
-    "name": "Kitty Pryde",
-    "subtitle": "Headmistress",
-    "type": "Character",
-    "purchaseCost": 3,
-    "energyType": "Mask",
-    "dieLimit": 3,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 2,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 0,
-        "attack": 3,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 3,
-        "burstStars": null
-      }
-    ],
-    "rawText": "While Woverine is active, Kitty Pryde gets +1A and can\\'t be targeted by your opponent.",
     "keywords": [],
     "affiliations": [
       "X-Men"
@@ -40629,43 +40428,6 @@
     "keywords": [],
     "affiliations": [
       "Brotherhood of Mutants"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS086",
-    "name": "Phoenix",
-    "subtitle": "Psionic Maelstrom",
-    "type": "Character",
-    "purchaseCost": 6,
-    "energyType": "Bolt",
-    "dieLimit": 3,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 5,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 7,
-        "defense": 7,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 3,
-        "attack": 8,
-        "defense": 8,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When Phoenix attacks, deal 3 damage to target character die. If that character die is a Villains character die, you may deal 3 damage to another target character die.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
     ],
     "isImplemented": false,
     "set": "DPS",
@@ -41112,41 +40874,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS104",
-    "name": "Corsair",
-    "subtitle": "Criminal Record",
-    "type": "Character",
-    "purchaseCost": 5,
-    "energyType": "Fist",
-    "dieLimit": 2,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 3,
-        "defense": 4,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 4,
-        "defense": 5,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When fielded, KO target Villains character die, or KO 2 target Villains character dice if your opponent has 4 or more character dice in the Field Zone.",
-    "keywords": [],
-    "affiliations": [],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS105",
     "name": "Cyclops",
     "subtitle": "Utopia Realized",
@@ -41253,44 +40980,6 @@
     "keywords": [],
     "affiliations": [
       "Villains"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS108",
-    "name": "Deadpool",
-    "subtitle": "Collect THIS!",
-    "type": "Character",
-    "purchaseCost": 4,
-    "energyType": "Fist",
-    "dieLimit": 2,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 2,
-        "defense": 4,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 0,
-        "attack": 2,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 7,
-        "burstStars": null
-      }
-    ],
-    "rawText": "While Deadpool is active, your character dice with fielding cost of 2 are free to field.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men",
-      "Deadpool Affiliation"
     ],
     "isImplemented": false,
     "set": "DPS",
@@ -41740,44 +41429,6 @@
     "keywords": [],
     "affiliations": [
       "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS125",
-    "name": "Mystique",
-    "subtitle": "Taught by Magneto",
-    "type": "Character",
-    "purchaseCost": 3,
-    "energyType": "Mask",
-    "dieLimit": 2,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 1,
-        "defense": 1,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 0,
-        "attack": 1,
-        "defense": 1,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 1,
-        "defense": 1,
-        "burstStars": 1
-      }
-    ],
-    "rawText": "While Mystique is active, Brotherhood of Mutants character dice are free to field. Energize - You may field a Brotherhood of Mutants character die for free.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men",
-      "Brotherhood of Mutants"
     ],
     "isImplemented": false,
     "set": "DPS",

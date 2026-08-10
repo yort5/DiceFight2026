@@ -1424,6 +1424,408 @@ public class TwoTeamsDemoTests
     }
 
     [Fact]
+    public void JubileeThingsNeverChange_GetsPlusOneAttack_OnlyWhileWolverineActive()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.JubileeThingsNeverChange.Id, "ASM074"]);
+
+        var jubileeDie = FindUnpurchased(state, "teamA", SampleCards.JubileeThingsNeverChange.Id);
+        jubileeDie.Zone = Zone.FieldZone;
+        jubileeDie.Status = DieStatus.Character;
+        jubileeDie.Level = 1;
+        var baseAttack = DieStats.EffectiveAttack(state, jubileeDie);
+
+        var wolverineDie = FindUnpurchased(state, "teamA", "ASM074"); // bulk-only "Wolverine" - Name is all that matters
+        wolverineDie.Zone = Zone.FieldZone;
+        wolverineDie.Status = DieStatus.Character;
+        wolverineDie.Level = 1;
+
+        Assert.Equal(baseAttack + 1, DieStats.EffectiveAttack(state, jubileeDie));
+    }
+
+    [Fact]
+    public void KittyPrydeHeadmistress_CannotBeTargetedByOpponent_ButOwnControllerCanStill_WhileWolverineActive()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.KittyPrydeHeadmistress.Id, "ASM074"]);
+
+        var kittyDie = FindUnpurchased(state, "teamA", SampleCards.KittyPrydeHeadmistress.Id);
+        kittyDie.Zone = Zone.FieldZone;
+        kittyDie.Status = DieStatus.Character;
+        kittyDie.Level = 1;
+        var baseAttack = DieStats.EffectiveAttack(state, kittyDie);
+
+        var anyTarget = TargetSpec.CharacterDie("target character die");
+        Assert.Contains(kittyDie.Id, LegalTargets.Query(state, "teamB", anyTarget));
+
+        var wolverineDie = FindUnpurchased(state, "teamA", "ASM074");
+        wolverineDie.Zone = Zone.FieldZone;
+        wolverineDie.Status = DieStatus.Character;
+        wolverineDie.Level = 1;
+
+        Assert.Equal(baseAttack + 1, DieStats.EffectiveAttack(state, kittyDie));
+        Assert.DoesNotContain(kittyDie.Id, LegalTargets.Query(state, "teamB", anyTarget)); // opponent can't target her
+        Assert.Contains(kittyDie.Id, LegalTargets.Query(state, "teamA", anyTarget)); // her own controller still can
+    }
+
+    [Fact]
+    public void FieldingCorsairCriminalRecord_KOsTwoVillainsDice_WhenOpponentHasFourOrMoreFieldedCharacters()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.CorsairCriminalRecord.Id],
+            extraTeamBCardIds: [SampleCards.MasterMoldTargetingMutants.Id, SampleCards.MasterMoldUntoldElectronicExpertise.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var villain1 = FindUnpurchased(state, "teamB", SampleCards.MasterMoldTargetingMutants.Id);
+        villain1.Zone = Zone.FieldZone; villain1.Status = DieStatus.Character; villain1.Level = 1;
+        var villain2 = FindUnpurchased(state, "teamB", SampleCards.MasterMoldUntoldElectronicExpertise.Id);
+        villain2.Zone = Zone.FieldZone; villain2.Status = DieStatus.Character; villain2.Level = 1;
+        var pad1 = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        pad1.Zone = Zone.FieldZone; pad1.Status = DieStatus.Character; pad1.Level = 1;
+        var pad2 = FindUnpurchased(state, "teamB", SampleCards.Groot.Id);
+        pad2.Zone = Zone.FieldZone; pad2.Status = DieStatus.Character; pad2.Level = 1;
+
+        var corsairDie = FindUnpurchased(state, "teamA", SampleCards.CorsairCriminalRecord.Id);
+        corsairDie.Zone = Zone.FieldZone;
+        corsairDie.Status = DieStatus.Character;
+        corsairDie.Level = 1;
+
+        var ability = SampleCards.CorsairCriminalRecord.Abilities.Single(a => a.Trigger == TriggerType.WhenFielded);
+        EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, "teamA", corsairDie.Id, _ => [villain1.Id, villain2.Id]));
+
+        Assert.Equal(Zone.PrepArea, villain1.Zone);
+        Assert.Equal(Zone.PrepArea, villain2.Zone);
+    }
+
+    [Fact]
+    public void FieldingCorsairCriminalRecord_KOsOnlyOneVillainsDie_WhenOpponentHasFewerThanFourFieldedCharacters()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.CorsairCriminalRecord.Id],
+            extraTeamBCardIds: [SampleCards.MasterMoldTargetingMutants.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var villain = FindUnpurchased(state, "teamB", SampleCards.MasterMoldTargetingMutants.Id);
+        villain.Zone = Zone.FieldZone; villain.Status = DieStatus.Character; villain.Level = 1;
+
+        var corsairDie = FindUnpurchased(state, "teamA", SampleCards.CorsairCriminalRecord.Id);
+        corsairDie.Zone = Zone.FieldZone;
+        corsairDie.Status = DieStatus.Character;
+        corsairDie.Level = 1;
+
+        var ability = SampleCards.CorsairCriminalRecord.Abilities.Single(a => a.Trigger == TriggerType.WhenFielded);
+        EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, "teamA", corsairDie.Id, _ => [villain.Id]));
+
+        Assert.Equal(Zone.PrepArea, villain.Zone);
+    }
+
+    [Fact]
+    public void PhoenixPsionicMaelstromAttacking_DealsSecondDamage_OnlyIfFirstTargetIsVillains()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.PhoenixPsionicMaelstrom.Id, SampleCards.MasterMoldTargetingMutants.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var villainTarget = FindUnpurchased(state, "teamA", SampleCards.MasterMoldTargetingMutants.Id);
+        villainTarget.Zone = Zone.FieldZone; villainTarget.Status = DieStatus.Character; villainTarget.Level = 3;
+
+        var secondTarget = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        secondTarget.Zone = Zone.FieldZone; secondTarget.Status = DieStatus.Character; secondTarget.Level = 3;
+
+        var phoenixDie = FindUnpurchased(state, "teamA", SampleCards.PhoenixPsionicMaelstrom.Id);
+        phoenixDie.Zone = Zone.FieldZone; phoenixDie.Status = DieStatus.Character; phoenixDie.Level = 1;
+
+        state.CurrentStep = TurnStep.Attack;
+        state.AttackSubStep = AttackSubStep.DeclareAttackers;
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [phoenixDie.Id]);
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(
+                state, ability.ControllerId, ability.SourceDieId,
+                spec => spec.Description == "another target character die" ? [secondTarget.Id] : [villainTarget.Id])));
+
+        Assert.Equal(3, villainTarget.Damage);
+        Assert.Equal(3, secondTarget.Damage);
+    }
+
+    [Fact]
+    public void PhoenixPsionicMaelstromAttacking_DoesNotDealSecondDamage_IfFirstTargetIsNotVillains()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.PhoenixPsionicMaelstrom.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var nonVillainTarget = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        nonVillainTarget.Zone = Zone.FieldZone; nonVillainTarget.Status = DieStatus.Character; nonVillainTarget.Level = 3;
+
+        var phoenixDie = FindUnpurchased(state, "teamA", SampleCards.PhoenixPsionicMaelstrom.Id);
+        phoenixDie.Zone = Zone.FieldZone; phoenixDie.Status = DieStatus.Character; phoenixDie.Level = 1;
+
+        state.CurrentStep = TurnStep.Attack;
+        state.AttackSubStep = AttackSubStep.DeclareAttackers;
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [phoenixDie.Id]);
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [nonVillainTarget.Id])));
+
+        Assert.Equal(3, nonVillainTarget.Damage); // only the first DealDamage landed
+    }
+
+    [Fact]
+    public void FieldingDarkPhoenixEnemyOfTheShiar_OnlyAcceptsShiarOrXMenTarget()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.DarkPhoenixEnemyOfTheShiar.Id],
+            extraTeamBCardIds: [SampleCards.GambitUnlessIGotSomeoneToPlayWith.Id]); // X-Men
+
+        var xMenTarget = FindUnpurchased(state, "teamB", SampleCards.GambitUnlessIGotSomeoneToPlayWith.Id);
+        xMenTarget.Zone = Zone.FieldZone; xMenTarget.Status = DieStatus.Character; xMenTarget.Level = 3;
+
+        var illegalTarget = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id); // no affiliation
+        illegalTarget.Zone = Zone.FieldZone; illegalTarget.Status = DieStatus.Character; illegalTarget.Level = 1;
+
+        var ability = SampleCards.DarkPhoenixEnemyOfTheShiar.Abilities.Single(a => a.Trigger == TriggerType.WhenFielded);
+
+        var ex = Assert.Throws<InvalidOperationException>(() => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, "teamA", SourceDieId: null, _ => [illegalTarget.Id])));
+        Assert.Contains("not legal", ex.Message);
+
+        EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, "teamA", SourceDieId: null, _ => [xMenTarget.Id]));
+        Assert.Equal(Zone.PrepArea, xMenTarget.Zone);
+    }
+
+    [Fact]
+    public void DarkPhoenixEnemyOfTheShiarGlobal_KOsOwnDieAndDiscountsNextPurchaseByTwo()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.DarkPhoenixEnemyOfTheShiar.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var sacrificeDie = state.DiceIn("teamA", Zone.Bag).First();
+        sacrificeDie.Zone = Zone.FieldZone;
+        sacrificeDie.Status = DieStatus.SidekickCharacter;
+        sacrificeDie.Level = 1;
+
+        var globalEnergy = GiveWildEnergy(state, "teamA", 1);
+        var queue = new AbilityQueue();
+        TurnEngine.UseGlobalAbility(
+            state, queue, SampleCards.DarkPhoenixEnemyOfTheShiar.Id, "teamA", globalEnergy.Select(d => d.Id).ToList());
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [sacrificeDie.Id])));
+
+        Assert.Equal(Zone.PrepArea, sacrificeDie.Zone); // the Global's own cost, KO'd
+        Assert.NotNull(state.PendingPurchaseDiscount);
+
+        var toBuy = FindUnpurchased(state, "teamA", SampleCards.DarkPhoenixEnemyOfTheShiar.Id);
+        var purchaseEnergy = GiveWildEnergy(state, "teamA", SampleCards.DarkPhoenixEnemyOfTheShiar.PurchaseCost - 2);
+        TurnEngine.Purchase(state, toBuy.Id, purchaseEnergy.Select(d => d.Id).ToList());
+
+        Assert.Equal(Zone.UsedPile, toBuy.Zone);
+        Assert.Null(state.PendingPurchaseDiscount); // consumed
+    }
+
+    [Fact]
+    public void FieldingMagikWielderOfTheSoulsword_DiscountsOnlyTheNextActionDiePurchase()
+    {
+        // AI004 is a bulk-only real Action-type card - no hand-curated
+        // Action card exists yet to prove the RequiredType filter with.
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.MagikWielderOfTheSoulsword.Id, "AI004"]);
+        state.ActivePlayerId = "teamA";
+
+        var magikDie = FindUnpurchased(state, "teamA", SampleCards.MagikWielderOfTheSoulsword.Id);
+        magikDie.Zone = Zone.FieldZone;
+        magikDie.Status = DieStatus.Character;
+        magikDie.Level = 1;
+
+        var ability = SampleCards.MagikWielderOfTheSoulsword.Abilities.Single(a => a.Trigger == TriggerType.WhenFielded);
+        EffectInterpreter.Execute(ability.Effect, new EffectContext(state, "teamA", magikDie.Id, _ => []));
+        Assert.NotNull(state.PendingPurchaseDiscount);
+
+        // A Character die purchase first doesn't consume it (Action-only).
+        var characterDie = FindUnpurchased(state, "teamA", SampleCards.MagikWielderOfTheSoulsword.Id);
+        var characterEnergy = GiveWildEnergy(state, "teamA", SampleCards.MagikWielderOfTheSoulsword.PurchaseCost);
+        TurnEngine.Purchase(state, characterDie.Id, characterEnergy.Select(d => d.Id).ToList());
+        Assert.NotNull(state.PendingPurchaseDiscount);
+
+        // An Action die purchase next DOES consume it (cost 2 - 1 = 1).
+        var actionDie = FindUnpurchased(state, "teamA", "AI004");
+        var actionEnergy = GiveWildEnergy(state, "teamA", 1);
+        TurnEngine.Purchase(state, actionDie.Id, actionEnergy.Select(d => d.Id).ToList());
+
+        Assert.Equal(Zone.UsedPile, actionDie.Zone);
+        Assert.Null(state.PendingPurchaseDiscount);
+    }
+
+    [Fact]
+    public void UsingTakeCover_BuffsAllOwnDice_PlusABurstBonusOnASingleTarget()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.TakeCover.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var ownDie = state.DiceIn("teamA", Zone.Bag).First();
+        ownDie.Zone = Zone.FieldZone;
+        ownDie.Status = DieStatus.SidekickCharacter;
+        ownDie.Level = 1;
+        var ownDefenseBefore = DieStats.EffectiveDefense(state, ownDie);
+
+        var burstTarget = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        burstTarget.Zone = Zone.FieldZone;
+        burstTarget.Status = DieStatus.Character;
+        burstTarget.Level = 1;
+        var burstTargetDefenseBefore = DieStats.EffectiveDefense(state, burstTarget);
+
+        var takeCoverDie = FindUnpurchased(state, "teamA", SampleCards.TakeCover.Id);
+        takeCoverDie.Zone = Zone.ReservePool;
+        takeCoverDie.Status = DieStatus.Action;
+        takeCoverDie.BurstStars = 1; // single burst face
+
+        var queue = new AbilityQueue();
+        TurnEngine.UseActionDie(state, queue, takeCoverDie.Id);
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [burstTarget.Id])));
+
+        Assert.Equal(ownDefenseBefore + 2, DieStats.EffectiveDefense(state, ownDie)); // team-wide +2D, own dice only
+        Assert.Equal(burstTargetDefenseBefore + 3, DieStats.EffectiveDefense(state, burstTarget)); // burst-only bonus, not the team one (opposing)
+    }
+
+    [Fact]
+    public void UsingTakeCoverGlobal_GivesTargetPlusOneDefense()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.TakeCover.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var target = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        target.Zone = Zone.FieldZone;
+        target.Status = DieStatus.Character;
+        target.Level = 1;
+        var defenseBefore = DieStats.EffectiveDefense(state, target);
+
+        var energy = GiveWildEnergy(state, "teamA", 1);
+        var queue = new AbilityQueue();
+        TurnEngine.UseGlobalAbility(state, queue, SampleCards.TakeCover.Id, "teamA", energy.Select(d => d.Id).ToList());
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [target.Id])));
+
+        Assert.Equal(defenseBefore + 1, DieStats.EffectiveDefense(state, target));
+    }
+
+    [Fact]
+    public void DeadpoolCollectThis_MakesFieldingCost2DiceFree()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.DeadpoolCollectThis.Id, SampleCards.DarkPhoenixEnemyOfTheShiar.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var deadpoolDie = FindUnpurchased(state, "teamA", SampleCards.DeadpoolCollectThis.Id);
+        deadpoolDie.Zone = Zone.FieldZone;
+        deadpoolDie.Status = DieStatus.Character;
+        deadpoolDie.Level = 1;
+
+        var costTwoDie = FindUnpurchased(state, "teamA", SampleCards.DarkPhoenixEnemyOfTheShiar.Id);
+        costTwoDie.Zone = Zone.ReservePool;
+        costTwoDie.Status = DieStatus.Character;
+        costTwoDie.Level = 2; // fielding cost 2
+
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, costTwoDie.Id, energyDieIdsToSpend: []); // would throw if not actually free
+
+        Assert.Equal(Zone.FieldZone, costTwoDie.Zone);
+    }
+
+    [Fact]
+    public void FieldingACostTwoDie_WithoutDeadpoolActive_StillRequiresEnergy()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.DarkPhoenixEnemyOfTheShiar.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var costTwoDie = FindUnpurchased(state, "teamA", SampleCards.DarkPhoenixEnemyOfTheShiar.Id);
+        costTwoDie.Zone = Zone.ReservePool;
+        costTwoDie.Status = DieStatus.Character;
+        costTwoDie.Level = 2;
+
+        var queue = new AbilityQueue();
+        Assert.Throws<InvalidOperationException>(() =>
+            TurnEngine.Field(state, queue, costTwoDie.Id, energyDieIdsToSpend: []));
+    }
+
+    [Fact]
+    public void MystiqueTaughtByMagneto_MakesBrotherhoodOfMutantsDiceFreeToField()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.MystiqueTaughtByMagneto.Id, SampleCards.MagnetoFounderOfTheBrotherhood.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var mystiqueDie = FindUnpurchased(state, "teamA", SampleCards.MystiqueTaughtByMagneto.Id);
+        mystiqueDie.Zone = Zone.FieldZone;
+        mystiqueDie.Status = DieStatus.Character;
+        mystiqueDie.Level = 3;
+
+        var magnetoDie = FindUnpurchased(state, "teamA", SampleCards.MagnetoFounderOfTheBrotherhood.Id);
+        magnetoDie.Zone = Zone.ReservePool;
+        magnetoDie.Status = DieStatus.Character;
+        magnetoDie.Level = 1; // fielding cost 1
+
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, magnetoDie.Id, energyDieIdsToSpend: []); // would throw if not actually free
+
+        Assert.Equal(Zone.FieldZone, magnetoDie.Zone);
+    }
+
+    [Fact]
+    public void MystiqueTaughtByMagnetoEnergize_FiresOffRealGate_FieldsABrotherhoodDieForFree()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.MystiqueTaughtByMagneto.Id, SampleCards.MagnetoFounderOfTheBrotherhood.Id]);
+        state.ActivePlayerId = "teamA";
+        state.CurrentStep = TurnStep.RollAndReroll;
+
+        var mystiqueDie = FindUnpurchased(state, "teamA", SampleCards.MystiqueTaughtByMagneto.Id);
+        mystiqueDie.Zone = Zone.ReservePool;
+        mystiqueDie.Status = DieStatus.Energy;
+        mystiqueDie.EnergyKind = EnergyKind.Generic;
+        mystiqueDie.EnergyAmount = 2;
+
+        var magnetoDie = FindUnpurchased(state, "teamA", SampleCards.MagnetoFounderOfTheBrotherhood.Id);
+        magnetoDie.Zone = Zone.ReservePool;
+        magnetoDie.Status = DieStatus.Character;
+        magnetoDie.Level = 2;
+
+        var queue = new AbilityQueue();
+        TurnEngine.Reroll(state, queue, new FixedRoller(DieStatus.Energy, 1), []);
+        Assert.Equal(1, queue.Count);
+        Assert.Equal(TriggerType.Energize, queue.Pending[0].Trigger);
+
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [magnetoDie.Id])));
+
+        Assert.Equal(Zone.FieldZone, magnetoDie.Zone);
+    }
+
+    [Fact]
+    public void IcemanFrozenFistsOfFuryAttacking_DealsDamage_OnlyWhileWolverineActive()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.IcemanFrozenFistsOfFury.Id, "ASM074"]);
+        state.ActivePlayerId = "teamA";
+
+        var target = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        target.Zone = Zone.FieldZone; target.Status = DieStatus.Character; target.Level = 3;
+
+        var icemanDie = FindUnpurchased(state, "teamA", SampleCards.IcemanFrozenFistsOfFury.Id);
+        icemanDie.Zone = Zone.FieldZone; icemanDie.Status = DieStatus.Character; icemanDie.Level = 1;
+
+        var ability = SampleCards.IcemanFrozenFistsOfFury.Abilities.Single(a => a.Trigger == TriggerType.WhenAttacks);
+
+        EffectInterpreter.Execute(ability.Effect, new EffectContext(state, "teamA", icemanDie.Id, _ => [target.Id]));
+        Assert.Equal(0, target.Damage);
+
+        var wolverineDie = FindUnpurchased(state, "teamA", "ASM074");
+        wolverineDie.Zone = Zone.FieldZone; wolverineDie.Status = DieStatus.Character; wolverineDie.Level = 1;
+
+        EffectInterpreter.Execute(ability.Effect, new EffectContext(state, "teamA", icemanDie.Id, _ => [target.Id]));
+        Assert.Equal(3, target.Damage);
+    }
+
+    [Fact]
     public void UsingStarfireGlobalAbility_PrepsADieFromBag_IfYouPurchasedADieThisTurn()
     {
         var state = BuildTwoTeamGame();

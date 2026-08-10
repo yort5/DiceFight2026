@@ -132,6 +132,17 @@ public sealed class GameState
     // since every other action endpoint refuses to run while it's set).
     public PendingChoice? PendingChoice { get; set; }
 
+    // Dark Phoenix ("Enemy of the Shi'ar", DPS067)'s Global ("your next
+    // die you purchase this turn costs 2 less"), Magik ("Wielder of the
+    // Soulsword", DPS040)'s WhenFielded ("the next action die you
+    // purchase costs 1 less") - a one-shot discount waiting for whichever
+    // future Purchase this turn actually matches RequiredType (or any
+    // purchase at all, if null), consumed by TurnEngine.Purchase the
+    // moment one does. Turn-scoped like MustBlockThisTurn - cleared in
+    // CleanUp if never used, since the card text's own "this turn" is the
+    // duration statement.
+    public PendingPurchaseDiscount? PendingPurchaseDiscount { get; set; }
+
     // Whatever was still queued in the Drain call that PendingChoice
     // paused, preserved so ResolvePendingChoice can pick up exactly
     // where it left off instead of losing anything still waiting to

@@ -275,7 +275,29 @@ here rather than assuming which approach they'd want.
     more primitives, and nine more DPS cards" status update, including a
     retroactive fix it needed (Jean Grey's own "Founder" prefix, first
     treated as pure flavor text, needed a real `KeywordInstance` once
-    Cyclops's own filter had to recognize it). Also now real: `SpinToEnergyFace` ("spin [a/
+    Cyclops's own filter had to recognize it). Also now real:
+    `Conditional.AffiliationParam`/`NamedCardParam`/`CountParam` (three
+    parametrized `EffectCondition`s - `TargetHasAffiliation`,
+    `NamedCardIsActive`, `OpponentHasAtLeastNCharacterDiceInFieldZone`),
+    `GameState.PendingPurchaseDiscount`/`GrantNextPurchaseDiscount` ("the
+    next die you purchase this turn costs N less," consumed by
+    `TurnEngine.Purchase`), `CardDef.GrantsFreeFielding` (a granter-side
+    check consumed by `TurnEngine.Field`'s new `IsFreeToField`), and
+    `CardDef.CannotBeTargetedByOpponentWhileNamedCardActive` (enforced
+    in `LegalTargets.Query`) - ten more DPS cards (Jubilee, Kitty Pryde,
+    Corsair, Phoenix, Dark Phoenix, Magik, Take Cover, Deadpool,
+    Mystique, Iceman) landed in this round, including Take Cover - a
+    Basic Action previously flagged as blocked by "mass-apply-to-all-
+    your-dice," now unblocked entirely by the already-existing
+    `MatchAll` - see the "six more primitives, and ten more DPS cards"
+    status update, including a closing list of what's left that's each
+    its own deeper, real gap (a "who caused this KO" tracking gap, an
+    opponent-makes-their-own-choice mechanism, a start-of-opponent's-
+    Attack-Step trigger hook, a cross-player static debuff, ability-
+    blanking, spawning a token die not backed by any card, damage
+    redirection, and a temporary Global-activated targeting-immunity
+    shape distinct from Kitty Pryde's own continuous one). Also now
+    real: `SpinToEnergyFace` ("spin [a/
     target] die to its single/an energy face," reusing `PlaceholderDiceRoller`'s
     own Character-die energy-face formula) and `TargetSpec.RequiredLevel`
     ("target opposing level 1 character die") - Magik ("Better than

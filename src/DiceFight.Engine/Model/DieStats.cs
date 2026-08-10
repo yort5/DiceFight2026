@@ -83,6 +83,26 @@ public static class DieStats
         return active ? grant : null;
     }
 
+    // See CardDef.CannotBeTargetedByOpponentWhileNamedCardActive's
+    // remarks - checked by LegalTargets.Query against whoever is doing
+    // the targeting (requestingControllerId), not just the die's own
+    // controller, since this protection only blocks the OPPONENT.
+    public static bool IsProtectedFromOpponentTargeting(GameState state, DieInstance die, string requestingControllerId)
+    {
+        if (die.ControllerId == requestingControllerId) return false;
+
+        var cardId = die.VirtualCardId ?? die.CardId;
+        if (cardId is null || !state.CardCatalog.TryGetValue(cardId, out var card)) return false;
+        var namedCard = card.CannotBeTargetedByOpponentWhileNamedCardActive;
+        if (namedCard is null) return false;
+
+        return state.Dice.Any(d =>
+            d.Zone is Zone.FieldZone or Zone.AttackZone &&
+            (d.VirtualCardId ?? d.CardId) is { } otherCardId &&
+            state.CardCatalog.TryGetValue(otherCardId, out var otherCard) &&
+            otherCard.Name == namedCard);
+    }
+
     // See CardDef.GrantsSelfAttackBonusPerMatchingDie's remarks -
     // LegalTargets.Query does the actual counting, reusing whichever
     // TargetSpec dimensions (ownership, zone, RequiredAffiliations,

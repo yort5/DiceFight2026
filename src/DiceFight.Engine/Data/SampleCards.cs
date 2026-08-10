@@ -62,6 +62,8 @@ public static class SampleCards
         ConditionalSelfKeywordGrant? grantsSelfKeywordWhileNamedCardActive = null,
         ConditionalSelfStatBonus? grantsSelfStatBonusWhileNamedCardActive = null,
         SelfAttackBonusPerMatchingDie? grantsSelfAttackBonusPerMatchingDie = null,
+        string? cannotBeTargetedByOpponentWhileNamedCardActive = null,
+        FreeFieldingGrant? grantsFreeFielding = null,
         bool isImplemented = true,
         string? set = null) => new()
     {
@@ -82,6 +84,8 @@ public static class SampleCards
         GrantsSelfKeywordWhileNamedCardActive = grantsSelfKeywordWhileNamedCardActive,
         GrantsSelfStatBonusWhileNamedCardActive = grantsSelfStatBonusWhileNamedCardActive,
         GrantsSelfAttackBonusPerMatchingDie = grantsSelfAttackBonusPerMatchingDie,
+        CannotBeTargetedByOpponentWhileNamedCardActive = cannotBeTargetedByOpponentWhileNamedCardActive,
+        GrantsFreeFielding = grantsFreeFielding,
         IsImplemented = isImplemented,
         Set = set
     };
@@ -1817,6 +1821,224 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 3)
         ], set: "DPS");
 
+    // Jubilee, "Things Never Change" - purely GrantsSelfStatBonusWhileNamedCardActive,
+    // no AbilityDef needed at all.
+    public static readonly CardDef JubileeThingsNeverChange = Character(
+        "DPS076", "Jubilee", "Things Never Change", dieLimit: 3,
+        "While Woverine is active, Jubilee gets +1A.",
+        purchaseCost: 2, energyType: EnergyType.Bolt,
+        affiliations: ["X-Men"],
+        grantsSelfStatBonusWhileNamedCardActive: new ConditionalSelfStatBonus("Wolverine", AttackDelta: 1, DefenseDelta: 0),
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 1),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3),
+            new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 3)
+        ], set: "DPS");
+
+    // Kitty Pryde, "Headmistress" - the first card to use
+    // CannotBeTargetedByOpponentWhileNamedCardActive (new this pass),
+    // combined with the existing GrantsSelfStatBonusWhileNamedCardActive.
+    // No AbilityDef needed - both are continuous.
+    public static readonly CardDef KittyPrydeHeadmistress = Character(
+        "DPS077", "Kitty Pryde", "Headmistress", dieLimit: 3,
+        "While Woverine is active, Kitty Pryde gets +1A and can't be targeted by your opponent.",
+        purchaseCost: 3, energyType: EnergyType.Mask,
+        affiliations: ["X-Men"],
+        grantsSelfStatBonusWhileNamedCardActive: new ConditionalSelfStatBonus("Wolverine", AttackDelta: 1, DefenseDelta: 0),
+        cannotBeTargetedByOpponentWhileNamedCardActive: "Wolverine",
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 2),
+            new CharacterFace(FieldingCost: 0, Attack: 3, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3)
+        ], set: "DPS");
+
+    // Corsair, "Criminal Record" - the first card to use
+    // EffectCondition.OpponentHasAtLeastNCharacterDiceInFieldZone (new
+    // this pass).
+    public static readonly CardDef CorsairCriminalRecord = Character(
+        "DPS104", "Corsair", "Criminal Record", dieLimit: 2,
+        "When fielded, KO target Villains character die, or KO 2 target Villains character dice if your " +
+        "opponent has 4 or more character dice in the Field Zone.",
+        purchaseCost: 5, energyType: EnergyType.Fist,
+        abilities: [new AbilityDef(TriggerType.WhenFielded, Cost: null,
+            Effect: new Conditional(TargetSpec.Self, EffectCondition.OpponentHasAtLeastNCharacterDiceInFieldZone,
+                Then: new Ko(TargetSpec.CharacterDie(
+                    "2 target Villains character dice", requiredAffiliations: ["Villains"], count: 2)),
+                Else: new Ko(TargetSpec.CharacterDie("target Villains character die", requiredAffiliations: ["Villains"])),
+                CountParam: 4))],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 3, Defense: 4),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 5),
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 5)
+        ], set: "DPS");
+
+    // Phoenix, "Psionic Maelstrom" - PhoenixPsionicMaelstromTarget is
+    // shared between the DealDamage and the Conditional's CheckTarget so
+    // both resolve to the SAME chosen die (the same "share a TargetSpec
+    // instance/cache entry" trick ColossusEnergizeTarget's own remarks
+    // document) - otherwise the Conditional could ask about a
+    // different, independently-chosen "target character die." The
+    // second DealDamage's own target ("another target character die")
+    // is deliberately a separate TargetSpec with no exclusion against
+    // the first choice - the engine doesn't enforce "different die" here,
+    // a minor simplification against the card's literal "another."
+    public static readonly TargetSpec PhoenixPsionicMaelstromTarget = TargetSpec.CharacterDie("target character die");
+
+    public static readonly CardDef PhoenixPsionicMaelstrom = Character(
+        "DPS086", "Phoenix", "Psionic Maelstrom", dieLimit: 3,
+        "When Phoenix attacks, deal 3 damage to target character die. If that character die is a Villains " +
+        "character die, you may deal 3 damage to another target character die.",
+        purchaseCost: 6, energyType: EnergyType.Bolt,
+        affiliations: ["X-Men"],
+        abilities: [new AbilityDef(TriggerType.WhenAttacks, Cost: null,
+            Effect: new Sequence([
+                new DealDamage(3, PhoenixPsionicMaelstromTarget),
+                new Conditional(PhoenixPsionicMaelstromTarget, EffectCondition.TargetHasAffiliation,
+                    Then: new DealDamage(3, TargetSpec.CharacterDie("another target character die")),
+                    AffiliationParam: "Villains")
+            ]))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 5),
+            new CharacterFace(FieldingCost: 2, Attack: 7, Defense: 7),
+            new CharacterFace(FieldingCost: 3, Attack: 8, Defense: 8)
+        ], set: "DPS");
+
+    // Dark Phoenix, "Enemy of the Shi'ar" - the first card to use
+    // GrantNextPurchaseDiscount/GameState.PendingPurchaseDiscount (new
+    // this pass). The Global's "Pay Bolt and KO one of your character
+    // dice" cost is folded straight into the Effect as its own first
+    // Sequence step, same "not via the unused AbilityDef.Cost field"
+    // choice Sacrifice's own status update already made - Cost stays
+    // unused engine-wide, not just for Sacrifice.
+    public static readonly CardDef DarkPhoenixEnemyOfTheShiar = Character(
+        "DPS067", "Dark Phoenix", "Enemy of the Shi'ar", dieLimit: 3,
+        "When fielded, KO target Shi'ar or X-Men character die.When Dark Phoenix attacks, deal 2 damage to " +
+        "your opponent. Global: Pay Bolt and KO one of your character dice. Your next die you purchase " +
+        "this turn costs 2 less (to a minimum of 1).",
+        purchaseCost: 6, energyType: EnergyType.Bolt,
+        affiliations: ["Villains"],
+        abilities: [
+            new AbilityDef(TriggerType.WhenFielded, Cost: null,
+                Effect: new Ko(TargetSpec.CharacterDie(
+                    "target Shi'ar or X-Men character die", requiredAffiliations: ["Shi'ar", "X-Men"]))),
+            new AbilityDef(TriggerType.WhenAttacks, Cost: null,
+                Effect: new DealDamage(2, TargetSpec.Player("your opponent", TargetOwnership.Opposing))),
+            new AbilityDef(TriggerType.Global, Cost: null,
+                Effect: new Sequence([
+                    new Ko(TargetSpec.CharacterDie("one of your character dice", TargetOwnership.Own)),
+                    new GrantNextPurchaseDiscount(2)
+                ]),
+                EnergyCost: new EnergyCost(1, EnergyType.Bolt))
+        ],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 5),
+            new CharacterFace(FieldingCost: 2, Attack: 7, Defense: 7),
+            new CharacterFace(FieldingCost: 3, Attack: 8, Defense: 8)
+        ], set: "DPS");
+
+    // Magik, "Wielder of the Soulsword" - GrantNextPurchaseDiscount's
+    // second user, scoped to Action dice only via RequiredType.
+    public static readonly CardDef MagikWielderOfTheSoulsword = Character(
+        "DPS040", "Magik", "Wielder of the Soulsword", dieLimit: 4,
+        "When fielded, the next action die you purchase costs 1 less (to a minimum of 1)",
+        purchaseCost: 3, energyType: EnergyType.Mask,
+        affiliations: ["X-Men"],
+        abilities: [new AbilityDef(TriggerType.WhenFielded, Cost: null,
+            Effect: new GrantNextPurchaseDiscount(1, CardType.Action))],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 4),
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 6),
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 7)
+        ], set: "DPS");
+
+    // Take Cover - the "*/**" burst marks apply the SAME extra bonus off
+    // either face (both conditions checked independently, per the burst-
+    // symbol status update's own remarks on this exact card), so two
+    // separate Conditionals (one per face) reach it rather than one
+    // combined check. No new primitive needed - MatchAll (for "character
+    // dice you control get +2D") and the burst conditions both already
+    // existed.
+    public static readonly CardDef TakeCover = BasicAction(
+        "DPS014", "Take Cover",
+        "Character dice you control get +2D. */** Target character die gets an extra +3D. Global: Pay " +
+        "Shield. Target character die gets +1D (until end of turn).",
+        purchaseCost: 3,
+        abilities: [
+            new AbilityDef(TriggerType.WhenUsed, Cost: null,
+                Effect: new Sequence([
+                    new ModifyStat(
+                        TargetSpec.CharacterDie("character dice you control", TargetOwnership.Own, matchAll: true),
+                        AttackDelta: null, DefenseDelta: 2),
+                    new Conditional(TargetSpec.Self, EffectCondition.OnSingleBurstFace,
+                        Then: new ModifyStat(TargetSpec.CharacterDie("target character die"), AttackDelta: null, DefenseDelta: 3)),
+                    new Conditional(TargetSpec.Self, EffectCondition.OnDoubleBurstFace,
+                        Then: new ModifyStat(TargetSpec.CharacterDie("target character die"), AttackDelta: null, DefenseDelta: 3))
+                ])),
+            new AbilityDef(TriggerType.Global, Cost: null,
+                Effect: new ModifyStat(TargetSpec.CharacterDie("target character die"), AttackDelta: null, DefenseDelta: 1),
+                EnergyCost: new EnergyCost(1, EnergyType.Shield))
+        ], set: "DPS");
+
+    // Deadpool, "Collect THIS!" - the first card to use
+    // CardDef.GrantsFreeFielding (new this pass), scoped by fielding cost.
+    public static readonly CardDef DeadpoolCollectThis = Character(
+        "DPS108", "Deadpool", "Collect THIS!", dieLimit: 2,
+        "While Deadpool is active, your character dice with fielding cost of 2 are free to field.",
+        purchaseCost: 4, energyType: EnergyType.Fist,
+        affiliations: ["X-Men", "Deadpool Affiliation"],
+        grantsFreeFielding: new FreeFieldingGrant(MaxFieldingCost: 2),
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 4),
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 5),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 7)
+        ], set: "DPS");
+
+    // Mystique, "Taught by Magneto" - GrantsFreeFielding's second user,
+    // scoped by affiliation instead, plus an Energize FieldDie targeting
+    // a Brotherhood of Mutants die directly (the same primitive Colossus's
+    // own Energize already established).
+    public static readonly CardDef MystiqueTaughtByMagneto = Character(
+        "DPS125", "Mystique", "Taught by Magneto", dieLimit: 2,
+        "While Mystique is active, Brotherhood of Mutants character dice are free to field. Energize - You " +
+        "may field a Brotherhood of Mutants character die for free.",
+        purchaseCost: 3, energyType: EnergyType.Mask,
+        affiliations: ["X-Men", "Brotherhood of Mutants"],
+        keywords: [new KeywordInstance("Energize")],
+        grantsFreeFielding: new FreeFieldingGrant(RequiredAffiliation: "Brotherhood of Mutants"),
+        abilities: [new AbilityDef(TriggerType.Energize, Cost: null,
+            Effect: new FieldDie(
+                TargetSpec.CharacterDie(
+                    "a Brotherhood of Mutants character die", TargetOwnership.Own,
+                    zones: [Zone.ReservePool], requiredAffiliations: ["Brotherhood of Mutants"]),
+                Free: true))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 1),
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 1),
+            new CharacterFace(FieldingCost: 2, Attack: 1, Defense: 1, BurstStars: 1)
+        ], set: "DPS");
+
+    // Iceman, "Frozen Fists of Fury" - the first card to use
+    // EffectCondition.NamedCardIsActive (new this pass) - a one-shot
+    // Conditional check for the same "while [Name] is active" idiom
+    // GrantsSelfKeywordWhileNamedCardActive/
+    // GrantsSelfStatBonusWhileNamedCardActive apply continuously,
+    // surfaced here as a gate on a triggered effect instead.
+    public static readonly CardDef IcemanFrozenFistsOfFury = Character(
+        "DPS074", "Iceman", "Frozen Fists of Fury", dieLimit: 3,
+        "Founder When Iceman attacks, if Wolverine is active, deal 3 damage to target character die.",
+        purchaseCost: 4, energyType: EnergyType.Bolt,
+        affiliations: ["X-Men"],
+        keywords: [new KeywordInstance("Founder")],
+        abilities: [new AbilityDef(TriggerType.WhenAttacks, Cost: null,
+            Effect: new Conditional(TargetSpec.Self, EffectCondition.NamedCardIsActive,
+                Then: new DealDamage(3, TargetSpec.CharacterDie("target character die")),
+                NamedCardParam: "Wolverine"))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 4),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 6),
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 6)
+        ], set: "DPS");
+
     // Supreme Intelligence, "Kree Science Council" - purely a Loyalty
     // grant, no other text. NameContains is a real substring match here
     // ("a card with Kree in its name"), unlike Gladiator's "When Lilandra
@@ -2133,7 +2355,10 @@ public static class SampleCards
             CyclopsDefendingThePhoenix, RogueStrengthAbsorption, MoiraIfItsReal,
             KittyPrydeExperiencedLeader, SabretoothDoISmellWeakness, PsylockeHeiress,
             MagnetoFounderOfTheBrotherhood, SabretoothYouReadyToParty, ToadJourneyIntoMisery,
-            JubileeRebelliousNature, CyclopsFirstClass, JubileeXMenFieldLeader
+            JubileeRebelliousNature, CyclopsFirstClass, JubileeXMenFieldLeader,
+            JubileeThingsNeverChange, KittyPrydeHeadmistress, CorsairCriminalRecord, PhoenixPsionicMaelstrom,
+            DarkPhoenixEnemyOfTheShiar, MagikWielderOfTheSoulsword, TakeCover, DeadpoolCollectThis,
+            MystiqueTaughtByMagneto, IcemanFrozenFistsOfFury
         ];
 
         // Hand-curated cards win on id collision - shouldn't happen in

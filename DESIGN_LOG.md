@@ -5206,3 +5206,102 @@ against, fixed by picking a target that actually survives).
 Verified: `dotnet build`, `dotnet test` (372/372 - 11 new cases), and
 `npm run build` all clean. Re-ran `scripts/import_bulk_cards.py`
 (97 → 106 hand-curated).
+
+## Status update — six more primitives, and ten more DPS cards
+
+Eighth batch this session (user asked for "another 20 or so" - this
+round landed 10 cleanly-buildable, well-tested ones; the remaining ~85
+cards get bespoke/deep fast - see the closing note on what's left).
+
+**Conditional gained two optional parameters, AffiliationParam and
+NamedCardParam** (plus a matching CountParam for a third), alongside two
+new `EffectCondition` values that consume them:
+- `TargetHasAffiliation` - Phoenix "Psionic Maelstrom" (DPS086)'s "if
+  that character die is a Villains character die, [...]." Checked
+  against the SAME `TargetSpec` instance the preceding `DealDamage`
+  used (a shared `PhoenixPsionicMaelstromTarget` field, the same
+  "share a TargetSpec/cache entry" trick `ColossusEnergizeTarget`'s own
+  remarks already document) so both refer to the actual chosen die, not
+  an independently-resolved one.
+- `NamedCardIsActive` - Iceman "Frozen Fists of Fury" (DPS074)'s "if
+  Wolverine is active, [...]." Same "active anywhere on the board"
+  condition `GrantsSelfKeywordWhileNamedCardActive`/
+  `GrantsSelfStatBonusWhileNamedCardActive` already apply continuously,
+  surfaced here as a one-shot gate on a triggered effect instead.
+- `OpponentHasAtLeastNCharacterDiceInFieldZone` (+ `CountParam`) -
+  Corsair "Criminal Record" (DPS104)'s "KO 2 [...] if your opponent has
+  4 or more character dice in the Field Zone."
+
+**GameState.PendingPurchaseDiscount + GrantNextPurchaseDiscount** - "the
+next die/action die you purchase this turn costs N less." A one-shot
+flag consumed by `TurnEngine.Purchase` the moment a matching purchase
+happens (held pending across multiple purchases this turn if the first
+one(s) don't match `RequiredType`), cleared at Clean Up if never used.
+Dark Phoenix "Enemy of the Shi'ar" (DPS067, any die, -2) and Magik
+"Wielder of the Soulsword" (DPS040, Action dice only, -1) both use it.
+Dark Phoenix's own Global ("Pay Bolt and KO one of your character
+dice") folds the KO straight into the Effect as a `Sequence`'s first
+step, same "not via the unused `AbilityDef.Cost` field" choice
+Sacrifice's own status update already made - confirmed by grep that
+`Cost` is genuinely unread anywhere in the engine, not just unused by
+Sacrifice specifically.
+
+**CardDef.GrantsFreeFielding** - "your character dice with fielding
+cost of 2/[an affiliation] are free to field." Same granter-side scan
+shape as `GrantsStaticTeamBonus`/`GrantsToSidekicks` (the controller's
+own active dice), checked once in `TurnEngine.Field` via the new
+`IsFreeToField` helper instead of applied to a running stat total.
+Deadpool "Collect THIS!" (DPS108, fielding-cost threshold) and Mystique
+"Taught by Magneto" (DPS125, affiliation) both use it - Mystique's own
+Energize also reuses `FieldDie` (Colossus's own primitive) targeting a
+specific affiliation directly.
+
+**CardDef.CannotBeTargetedByOpponentWhileNamedCardActive** - Kitty
+Pryde "Headmistress" (DPS077)'s "can't be targeted by your opponent"
+while Wolverine is active. Enforced as a new filter at the very top of
+`LegalTargets.Query` (excluded before any other filter runs) via
+`DieStats.IsProtectedFromOpponentTargeting` - only blocks the die's
+OPPONENT from targeting it, not its own controller. Deliberately narrow
+(continuous, self-only, blocks every kind of targeting) - Gladiator's
+own "can't be the target of Action Dice or Global Abilities" Global
+printings are a different shape (temporary, Global-activated, ability-
+type-scoped, whole-team) and aren't covered by this field.
+
+**Ten cards**: Jubilee "Things Never Change" (DPS076, pure reuse of the
+existing stat-bonus field), Kitty Pryde "Headmistress" (DPS077),
+Corsair "Criminal Record" (DPS104), Phoenix "Psionic Maelstrom"
+(DPS086), Dark Phoenix "Enemy of the Shi'ar" (DPS067), Magik "Wielder
+of the Soulsword" (DPS040), Take Cover (DPS014 - a Basic Action
+previously flagged as blocked by "mass-apply-to-all-your-dice," now
+fully expressible via `MatchAll` + the existing burst conditions, no
+new primitive needed), Deadpool "Collect THIS!" (DPS108), Mystique
+"Taught by Magneto" (DPS125), Iceman "Frozen Fists of Fury" (DPS074).
+
+Tests (16 new) exercise the real path throughout, same bar as every
+other round: `DeadpoolCollectThis`/`MystiqueTaughtByMagneto`'s tests
+prove free fielding by fielding a die with NO energy offered (which
+would throw if the cost weren't actually zeroed), plus a negative
+control proving the same die still costs normally without the granter
+active; the purchase-discount tests buy real dice through
+`TurnEngine.Purchase` and check the discount is/isn't consumed based on
+`RequiredType`; `KittyPrydeHeadmistress`'s test queries
+`LegalTargets.Query` directly for both controllers to prove the
+asymmetry (blocked for the opponent, not for her own side).
+
+**What's left gets a lot more bespoke, fast** - scoped but explicitly
+NOT built this round, each blocking a real card (or several): a
+"who caused this KO" tracking gap (Deathbird "Usurper"), an opponent-
+makes-their-own-choice mechanism (Ronan "No Mercy"), a start-of-
+opponent's-Attack-Step trigger hook (both Emma Frost printings), a
+continuous cross-player static debuff (Vulcan "Aggession"), an
+ability-blanking mechanism (Vulcan "Power Suppression," Mister Sinister
+"Mutant Supremacist"), a "spawn a token die not backed by any card"
+mechanism (Master Mold "Endless Sentinels"), a damage-redirect mechanism
+(Colossus "Organic Steel"), and a temporary Global-activated whole-team
+targeting-immunity shape distinct from Kitty Pryde's own continuous one
+(both Gladiator printings). None of these are one-line additions - each
+would be its own round.
+
+Verified: `dotnet build`, `dotnet test` (388/388 - 16 new cases), and
+`npm run build` all clean. Re-ran `scripts/import_bulk_cards.py`
+(106 → 116 hand-curated).

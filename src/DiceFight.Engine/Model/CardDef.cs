@@ -68,6 +68,14 @@ public sealed record CardDef
     // every card that doesn't have one.
     public SelfAttackBonusPerMatchingDie? GrantsSelfAttackBonusPerMatchingDie { get; init; }
 
+    // Deadpool ("Collect THIS!", DPS108): "your character dice with
+    // fielding cost of 2 are free to field." Mystique ("Taught by
+    // Magneto", DPS125): "Brotherhood of Mutants character dice are free
+    // to field." A live, continuously-recomputed granter-side check, same
+    // scan shape as GrantsStaticTeamBonus/GrantsToSidekicks - see
+    // TurnEngine.Field's own IsFreeToField for where this is consulted.
+    public FreeFieldingGrant? GrantsFreeFielding { get; init; }
+
     // Psylocke ("Adventurer", DPS048): "While Wolverine is active,
     // Psylocke gains Deadly" - a live, continuously-recomputed SELF
     // keyword grant conditioned on some OTHER named card being active
@@ -91,6 +99,20 @@ public sealed record CardDef
     // EffectiveDefense for how this is actually applied live. Null for
     // every card that doesn't have one.
     public ConditionalSelfStatBonus? GrantsSelfStatBonusWhileNamedCardActive { get; init; }
+
+    // Kitty Pryde ("Headmistress", DPS077): "can't be targeted by your
+    // opponent" while Wolverine is active - same "named card active
+    // anywhere on the board" condition as the two fields above, this time
+    // a targeting immunity rather than a stat/keyword grant. Only blocks
+    // the OPPONENT of this die's own controller from targeting it -
+    // its own controller can still target it normally. See
+    // LegalTargets.Query/DieStats.IsProtectedFromOpponentTargeting for
+    // enforcement. Deliberately narrow (continuous, self-only, blocks
+    // every kind of targeting) - Gladiator's own "can't be the target of
+    // Action Dice or Global Abilities" printings are a different shape
+    // (temporary, Global-activated, ability-type-scoped, applies to your
+    // WHOLE team) and aren't covered by this field.
+    public string? CannotBeTargetedByOpponentWhileNamedCardActive { get; init; }
 
     // Whether this card's FULL printed text is correctly modeled -
     // scripted via AbilityDef, built entirely into the engine (a pure
@@ -138,6 +160,18 @@ public sealed record ConditionalSelfStatBonus(string WhileCardNamed, int AttackD
 // is a TargetSpec repurposed as a counting filter rather than a real
 // choice - LegalTargets.Query still does the actual matching.
 public sealed record SelfAttackBonusPerMatchingDie(TargetSpec CountFilter, int AttackPerMatch);
+
+// See CardDef.GrantsFreeFielding's remarks. Both filters are independent
+// (an implicit AND if both are set) - only one is ever set by any current
+// printing, matching how a real card's text only ever states one
+// restriction, but nothing stops a future card needing both at once.
+public sealed record FreeFieldingGrant(string? RequiredAffiliation = null, int? MaxFieldingCost = null);
+
+// See GameState.PendingPurchaseDiscount's remarks. RequiredType null
+// means any purchase qualifies (Dark Phoenix's own "your next die");
+// CardType.Action means only an Action die does (Magik's own "the next
+// action die").
+public sealed record PendingPurchaseDiscount(int Amount, CardType? RequiredType = null);
 
 // Rule Appendix 1 - keyword abilities are a finite, engine-known set
 // implemented as plugins (see design doc); Params covers e.g. Range X,

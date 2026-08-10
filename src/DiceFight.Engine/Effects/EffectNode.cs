@@ -334,6 +334,33 @@ public enum EffectCondition
     // own face, not a combined third state.
     OnSingleBurstFace,
     OnDoubleBurstFace,
+
+    // Phoenix ("Psionic Maelstrom", DPS086) - "if that character die is a
+    // Villains character die, [...]." Unlike every condition above, this
+    // one needs a parameter (which affiliation) - Conditional.
+    // AffiliationParam carries it, checked via DieStats.HasAffiliation
+    // against the resolved CheckTarget die (normally the ability's own
+    // just-damaged/just-chosen target, not TargetSpec.Self).
+    TargetHasAffiliation,
+
+    // Iceman ("Frozen Fists of Fury", DPS074) - "if Wolverine is active,
+    // [...]." Also needs a parameter (which card) - Conditional.
+    // NamedCardParam carries it, same "active anywhere on the board,
+    // either player's" check CardDef.GrantsSelfKeywordWhileNamedCardActive/
+    // GrantsSelfStatBonusWhileNamedCardActive already use for a
+    // continuously-applied grant; this is the same condition surfaced as
+    // a one-shot Conditional instead, for card text where the "while
+    // active" clause gates a triggered EFFECT rather than a continuous
+    // grant. CheckTarget is ignored (TargetSpec.Self, matching every
+    // other state-only condition above).
+    NamedCardIsActive,
+
+    // Corsair ("Criminal Record", DPS104) - "if your opponent has 4 or
+    // more character dice in the Field Zone." Also needs a parameter
+    // (the count threshold) - Conditional.CountParam carries it, same
+    // "dieId ignored, reads state directly" shape as PrepAreaEmpty/
+    // OwnLifeLessThanOpponent.
+    OpponentHasAtLeastNCharacterDiceInFieldZone,
 }
 
 // Rule 3.1.17's "if you do" / "if [x], then [y]" pattern (e.g. Shocking
@@ -342,8 +369,13 @@ public enum EffectCondition
 // for at least one resolved die. Else (e.g. Gambit's "you may draw and
 // roll a die. * Instead, draw 2 dice...") runs instead when it doesn't -
 // null means "no else clause" (every condition before burst symbols only
-// ever needed the Then half).
-public sealed record Conditional(TargetSpec CheckTarget, EffectCondition When, EffectNode Then, EffectNode? Else = null) : EffectNode;
+// ever needed the Then half). AffiliationParam/NamedCardParam are only
+// meaningful for their matching EffectCondition (TargetHasAffiliation/
+// NamedCardIsActive respectively) - null otherwise, same "only meaningful
+// for this one condition" shape as AbilityDef.KOdFilter/FieldedFilter.
+public sealed record Conditional(
+    TargetSpec CheckTarget, EffectCondition When, EffectNode Then, EffectNode? Else = null,
+    string? AffiliationParam = null, string? NamedCardParam = null, int? CountParam = null) : EffectNode;
 
 // Falcon's Global ("each player must field a Sidekick from their Used Pile
 // if able") - a forced action on both players at once, not a chosen
@@ -377,6 +409,12 @@ public sealed record PrepFromBag : EffectNode;
 // option Target. See GameState.LoyaltyCounters/DieStats.LoyaltyBonus
 // for storage and payoff.
 public sealed record GrantLoyaltyCounter : EffectNode;
+
+// See GameState.PendingPurchaseDiscount's remarks - "the next die/action
+// die you purchase this turn costs N less." Bypasses TargetSpec entirely,
+// same reasoning as GrantLoyaltyCounter above: there's no target choice
+// at all, just a fact recorded for TurnEngine.Purchase to consume later.
+public sealed record GrantNextPurchaseDiscount(int Amount, Model.CardType? RequiredType = null) : EffectNode;
 
 // "Target character die gains [keyword]" (Magik "Sorceress of Limbo"/
 // DPS120, Psylocke "Telepath"/DPS088 both grant Overcrush this way) -
