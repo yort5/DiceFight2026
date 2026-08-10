@@ -162,6 +162,58 @@ public static class DieStats
         return new OpponentStatDebuff(attack, defense);
     }
 
+    // Angel ("Xavier's Dream", DPS137) - see CardDef.
+    // GrantsSidekickImmunityToOpponentGlobalTargeting's remarks. Checked
+    // by LegalTargets.Query against the SIDEKICK's own controller (whose
+    // Angel must be active), not the requester.
+    public static bool SidekicksAreImmuneToOpponentGlobalTargeting(GameState state, string controllerId) =>
+        state.DiceIn(controllerId, Zone.FieldZone)
+            .Concat(state.DiceIn(controllerId, Zone.AttackZone))
+            .Any(d => GetCard(state, d)?.GrantsSidekickImmunityToOpponentGlobalTargeting ?? false);
+
+    // Beast ("Xavier's Dream", DPS138)'s own "while you have an active
+    // Sidekick die" gate - shared board-state check, distinct from
+    // CountsAsSidekick (which asks about ONE specific die) the same way
+    // FindDamageRedirector's own scan is distinct from a single-die
+    // question. "Active" means Field/Attack Zone, same as every other
+    // "while active" check in this file.
+    public static bool HasActiveSidekick(GameState state, string controllerId) =>
+        state.DiceIn(controllerId, Zone.FieldZone)
+            .Concat(state.DiceIn(controllerId, Zone.AttackZone))
+            .Any(d => CountsAsSidekick(state, d));
+
+    // See CardDef.GrantsSelfStatBonusWhileOwnSidekickActive's remarks -
+    // same "GetCard then check the gate" shape as
+    // SelfStatBonusWhileNamedCardActive just above, gated on
+    // HasActiveSidekick instead of another card's own board presence.
+    private static OwnSidekickStatBonus? SelfStatBonusWhileOwnSidekickActive(GameState state, DieInstance die)
+    {
+        var grant = GetCard(state, die)?.GrantsSelfStatBonusWhileOwnSidekickActive;
+        return grant is not null && HasActiveSidekick(state, die.ControllerId) ? grant : null;
+    }
+
+    // See CardDef.GrantsNamedCardSupport's remarks - same same-controller
+    // active-granter scan shape as StaticTeamBonusFor, matched against
+    // the RECEIVING die's own CardDef.Name instead of an affiliation/
+    // keyword. Consulted for the stat half here; TurnEngine.Purchase
+    // does its own equivalent scan for the purchase-discount half, since
+    // that happens before any die instance exists to call this with.
+    private static NamedCardSupport? NamedCardSupportFor(GameState state, DieInstance die)
+    {
+        if (die.Zone is not (Zone.FieldZone or Zone.AttackZone)) return null;
+        var dieCardId = die.VirtualCardId ?? die.CardId;
+        var dieName = dieCardId is not null ? state.CardCatalog.GetValueOrDefault(dieCardId)?.Name : null;
+        if (dieName is null) return null;
+
+        var granterCards = state.DiceIn(die.ControllerId, Zone.FieldZone)
+            .Concat(state.DiceIn(die.ControllerId, Zone.AttackZone))
+            .Select(d => GetCard(state, d))
+            .Where(card => card is not null)
+            .Distinct();
+
+        return granterCards.Select(c => c!.GrantsNamedCardSupport).FirstOrDefault(s => s?.CardName == dieName);
+    }
+
     // Whether this die's own card carries the named affiliation (e.g.
     // "Monster" for keyword Experience's own earning condition). Printed
     // only - nothing grants an affiliation the way Darkseid grants Swarm.
@@ -307,12 +359,16 @@ public static class DieStats
             .Where(card => card is not null)
             .Distinct();
 
+        var dieCardId = die.VirtualCardId ?? die.CardId;
+
         var attack = 0;
         var defense = 0;
         foreach (var card in granterCards)
         {
             if (card!.GrantsStaticTeamBonus is not { } bonus) continue;
             if (bonus.RequiredAffiliation is { } affiliation && !HasAffiliation(state, die, affiliation)) continue;
+            if (bonus.RequiredKeyword is { } keyword && !HasKeyword(state, die, keyword)) continue;
+            if (bonus.ExcludeSelf && dieCardId is not null && dieCardId == card.Id) continue;
             attack += bonus.AttackDelta;
             defense += bonus.DefenseDelta;
         }
@@ -357,8 +413,10 @@ public static class DieStats
         total += ExperienceBonus(state, die);
         total += LoyaltyBonus(state, die);
         total += SelfStatBonusWhileNamedCardActive(state, die)?.AttackDelta ?? 0;
+        total += SelfStatBonusWhileOwnSidekickActive(state, die)?.AttackDelta ?? 0;
         total += SelfAttackBonusPerMatchingDie(state, die);
         total += TotalOpponentStatDebuff(state, die).AttackDelta;
+        total += NamedCardSupportFor(state, die)?.AttackDelta ?? 0;
         return Math.Max(0, total);
     }
 
@@ -371,7 +429,9 @@ public static class DieStats
         total += ExperienceBonus(state, die);
         total += LoyaltyBonus(state, die);
         total += SelfStatBonusWhileNamedCardActive(state, die)?.DefenseDelta ?? 0;
+        total += SelfStatBonusWhileOwnSidekickActive(state, die)?.DefenseDelta ?? 0;
         total += TotalOpponentStatDebuff(state, die).DefenseDelta;
+        total += NamedCardSupportFor(state, die)?.DefenseDelta ?? 0;
         return Math.Max(0, total);
     }
 

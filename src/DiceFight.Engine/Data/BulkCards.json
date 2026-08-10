@@ -39247,41 +39247,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS024",
-    "name": "Corsair",
-    "subtitle": "Recruiting a Crew",
-    "type": "Character",
-    "purchaseCost": 4,
-    "energyType": "Fist",
-    "dieLimit": 4,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 3,
-        "defense": 4,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 4,
-        "defense": 5,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When fielded, place the next die you purchase this turn into your bag.",
-    "keywords": [],
-    "affiliations": [],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS027",
     "name": "Dark Phoenix",
     "subtitle": "Malevolent",
@@ -39313,44 +39278,6 @@
     "keywords": [],
     "affiliations": [
       "Villains"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS028",
-    "name": "Deadpool",
-    "subtitle": "#1 Draft Pick",
-    "type": "Character",
-    "purchaseCost": 4,
-    "energyType": "Fist",
-    "dieLimit": 4,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 2,
-        "defense": 4,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 0,
-        "attack": 2,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 7,
-        "burstStars": null
-      }
-    ],
-    "rawText": "If this game is in the draft format, at the start of the game pick a card on your team. That card costs 1 less to purchase this game (to a minimum of 1).",
-    "keywords": [],
-    "affiliations": [
-      "X-Men",
-      "Deadpool Affiliation"
     ],
     "isImplemented": false,
     "set": "DPS",
@@ -39542,43 +39469,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS045",
-    "name": "Mystique",
-    "subtitle": "Relentless",
-    "type": "Character",
-    "purchaseCost": 2,
-    "energyType": "Mask",
-    "dieLimit": 4,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 1,
-        "defense": 1,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 0,
-        "attack": 1,
-        "defense": 1,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 1,
-        "defense": 1,
-        "burstStars": 1
-      }
-    ],
-    "rawText": "When Wolverine is active, Mystique gest +2A. Global: Pay Mask Mask. Target character die can\\'t block this turn if it shares a Team Affiliation with a character card on your team.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS047",
     "name": "Professor X",
     "subtitle": "Dreamer",
@@ -39607,43 +39497,6 @@
       }
     ],
     "rawText": "If you spend an X-Men die to field Professor X, Prep a die from your bag. Energize - Move an X-Men die from your Used Pile to your Prep Area.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS049",
-    "name": "Rogue",
-    "subtitle": "Mrs. X",
-    "type": "Character",
-    "purchaseCost": 4,
-    "energyType": "Mask",
-    "dieLimit": 4,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 2,
-        "defense": 3,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 4,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 5,
-        "defense": 6,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When fielded, you may swap Rogue\\'s A with target opposing character die\\'s A.",
     "keywords": [],
     "affiliations": [
       "X-Men"
@@ -39684,80 +39537,6 @@
     "keywords": [],
     "affiliations": [
       "Brotherhood of Mutants"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS056",
-    "name": "Wolverine",
-    "subtitle": "Pure of Heart",
-    "type": "Character",
-    "purchaseCost": 4,
-    "energyType": "Fist",
-    "dieLimit": 4,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 5,
-        "defense": 2,
-        "burstStars": 1
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 6,
-        "defense": 3,
-        "burstStars": 1
-      },
-      {
-        "fieldingCost": 3,
-        "attack": 8,
-        "defense": 4,
-        "burstStars": null
-      }
-    ],
-    "rawText": "If you have no Villains character dice on your team, Wolverine is free to field.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS057",
-    "name": "Angel",
-    "subtitle": "Jean Grey\\'s School",
-    "type": "Character",
-    "purchaseCost": 3,
-    "energyType": "Shield",
-    "dieLimit": 3,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 2,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 3,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 4,
-        "burstStars": null
-      }
-    ],
-    "rawText": "Founder When Angel is active, other character dice with Founder get +1A.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
     ],
     "isImplemented": false,
     "set": "DPS",
@@ -39877,43 +39656,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS062",
-    "name": "Cable",
-    "subtitle": "Bosom Buddies",
-    "type": "Character",
-    "purchaseCost": 4,
-    "energyType": "Bolt",
-    "dieLimit": 3,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 3,
-        "defense": 3,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 5,
-        "defense": 5,
-        "burstStars": null
-      }
-    ],
-    "rawText": "While Cable is active, your Deadpool costs 1 less to purchase (to a minimum of 1) and has +2A.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS064",
     "name": "Corsair",
     "subtitle": "Leading the Starjammers",
@@ -40025,43 +39767,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS071",
-    "name": "Forge",
-    "subtitle": "Support Technician",
-    "type": "Character",
-    "purchaseCost": 4,
-    "energyType": "Bolt",
-    "dieLimit": 3,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 2,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 4,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 4,
-        "defense": 4,
-        "burstStars": null
-      }
-    ],
-    "rawText": "While Forge is active, your opponents must pay 1 more to purchase a die with purchase cost of 2 or less.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS072",
     "name": "Gambit",
     "subtitle": "I Like Solitaire",
@@ -40132,43 +39837,6 @@
     ],
     "affiliations": [
       "Shi\\'ar"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS075",
-    "name": "Jean Grey",
-    "subtitle": "Xavier\\'s Dream",
-    "type": "Character",
-    "purchaseCost": 4,
-    "energyType": "Bolt",
-    "dieLimit": 3,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 3,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 5,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 3,
-        "attack": 6,
-        "defense": 6,
-        "burstStars": null
-      }
-    ],
-    "rawText": "Founder While Jean Grey and one of your Sidekick dice are active, your opponents must pay 1 extra to use a Global Ability.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
     ],
     "isImplemented": false,
     "set": "DPS",
@@ -40314,43 +39982,6 @@
       }
     ],
     "rawText": "During your Attack Step, if Professor X doesn\\'t attack, all of your X-Men character dice get +2A and +2D. If any of your X-Men dice were unblocked, move Professor X to your bag. Energize - Move an X-Men die from your Used Pile to your Prep Area.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS089",
-    "name": "Rogue",
-    "subtitle": "Surveillance Immunity",
-    "type": "Character",
-    "purchaseCost": 3,
-    "energyType": "Mask",
-    "dieLimit": 3,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 2,
-        "defense": 3,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 4,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 5,
-        "defense": 6,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When fielded, send target action die from the Field Zone to your opponent\\'s Used Pile. Fielding Rogue doesn\\'t trigger opposing effects.",
     "keywords": [],
     "affiliations": [
       "X-Men"
@@ -40842,43 +40473,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS115",
-    "name": "Jean Grey",
-    "subtitle": "Marvel Girl",
-    "type": "Character",
-    "purchaseCost": 5,
-    "energyType": "Bolt",
-    "dieLimit": 2,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 3,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 5,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 3,
-        "attack": 6,
-        "defense": 6,
-        "burstStars": null
-      }
-    ],
-    "rawText": "Founder While Jean Grey is active, your opponent must pay 1 extra to use a Golbal Ability.While you have a different X-Men character die in your Field Zone, Jean Grey is free to field.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS116",
     "name": "Jubilee",
     "subtitle": "Fireworks",
@@ -41105,43 +40699,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS124",
-    "name": "Moira",
-    "subtitle": "Strength of Foresight",
-    "type": "Character",
-    "purchaseCost": 3,
-    "energyType": "Shield",
-    "dieLimit": 2,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 0,
-        "defense": 1,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 0,
-        "attack": 1,
-        "defense": 2,
-        "burstStars": 1
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 2,
-        "defense": 2,
-        "burstStars": null
-      }
-    ],
-    "rawText": "Founder While Moira is active, when you field an X-Men character die with purchase cost of 3 or more put a Loyalty Counter on Moira.When fielded, you may send target action die from your opponent\\'s Field Zone in their Used Pile.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS129",
     "name": "Rogue",
     "subtitle": "Unity Squad",
@@ -41209,82 +40766,6 @@
     "rawText": "Awaken: Target sidekick character die gains Deadly.*When you spin up another character die,spin Wolverine up also. Global: Pay Fist. Once per turn, on your turn, Prep a die from your bag",
     "keywords": [
       "Deadly"
-    ],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS137",
-    "name": "Angel",
-    "subtitle": "Xavier\\'s Dream",
-    "type": "Character",
-    "purchaseCost": 3,
-    "energyType": "Shield",
-    "dieLimit": 1,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 2,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 3,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 4,
-        "burstStars": null
-      }
-    ],
-    "rawText": "While Angel is active, your opponent can\\'t target your Sidekick dice with Global Abilities.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS138",
-    "name": "Beast",
-    "subtitle": "Xavier\\'s Dream",
-    "type": "Character",
-    "purchaseCost": 3,
-    "energyType": "Fist",
-    "dieLimit": 1,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 2,
-        "defense": 1,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 2,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 2,
-        "burstStars": null
-      }
-    ],
-    "rawText": "While you have an active Sidekick die, Beast gets +1A.Overcrush",
-    "keywords": [
-      "Overcrush"
     ],
     "affiliations": [
       "X-Men"

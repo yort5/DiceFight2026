@@ -113,6 +113,78 @@ public sealed record CardDef
     // live like the other Grants* fields.
     public bool GrantsIgnoresAbilitiesWhileEngaged { get; init; }
 
+    // Angel ("Xavier's Dream", DPS137): "While Angel is active, your
+    // opponent can't target your Sidekick dice with Global Abilities." A
+    // continuous, granter-active-scan counterpart to Gladiator's own
+    // temporary Global-activated whole-team version - reuses the exact
+    // same Trigger-aware filtering LegalTargets.Query added for Gladiator
+    // (TriggerType.Global), just scoped to Sidekick dice specifically and
+    // gated on this card being active rather than a one-shot Global use.
+    public bool GrantsSidekickImmunityToOpponentGlobalTargeting { get; init; }
+
+    // Beast ("Xavier's Dream", DPS138): "While you have an active
+    // Sidekick die, Beast gets +1A." Iceman/Cyclops's own "Xavier's
+    // Dream" printings share the identical "own active Sidekick" gate,
+    // but on a live A=D relationship and a divided-damage WhenAttacks
+    // respectively - neither fits this flat-delta shape, so only Beast's
+    // is modeled this round (see DieStats.HasActiveSidekick for the
+    // shared board-state check, and DESIGN_LOG for why the other two
+    // stayed out). Same "named card active" condition SHAPE as
+    // ConditionalSelfStatBonus just above, just keyed on "any active
+    // Sidekick" instead of a specific card name - a genuinely different
+    // dimension, not a reuse.
+    public OwnSidekickStatBonus? GrantsSelfStatBonusWhileOwnSidekickActive { get; init; }
+
+    // Wolverine ("Pure of Heart", DPS056): "If you have no Villains
+    // character dice on your team, Wolverine is free to field." Unlike
+    // GrantsFreeFielding (an ACTIVE granter card blessing some OTHER
+    // matching die), this is the card's own SELF-referential fielding
+    // cost, conditioned on the controller's TEAM ROSTER (Player.
+    // TeamCardIds), not board state - checked directly against the die
+    // being fielded's own card in TurnEngine.IsFreeToField, no granter
+    // scan involved (the die isn't even active yet at the moment this is
+    // checked, so it couldn't participate in a granter scan anyway).
+    public string? SelfFreeFieldingUnlessTeamHasAffiliation { get; init; }
+
+    // Jean Grey ("Marvel Girl", DPS115): "While you have a different
+    // X-Men character die in your Field Zone, Jean Grey is free to
+    // field." The board-state counterpart to
+    // SelfFreeFieldingUnlessTeamHasAffiliation just above (roster vs.
+    // live board), same self-referential shape.
+    public string? SelfFreeFieldingWhileOtherActiveAffiliation { get; init; }
+
+    // Forge ("Support Technician", DPS071): "your opponents must pay 1
+    // more to purchase a die with purchase cost of 2 or less." A
+    // continuous, granter-active-scan surcharge on the OPPONENT's own
+    // purchases - the purchase-side mirror of GrantsOpponentStatDebuff's
+    // cross-player shape. See TurnEngine.Purchase for enforcement.
+    public OpponentPurchaseSurcharge? GrantsOpponentPurchaseSurcharge { get; init; }
+
+    // Jean Grey ("Xavier's Dream"/DPS075, "Marvel Girl"/DPS115 - both
+    // printings say "your opponent must pay 1 extra to use a Global
+    // Ability"): a continuous, granter-active-scan surcharge on the
+    // OPPONENT's Global Ability energy cost. Deliberately scoped to
+    // Global only, not Action Dice too (unlike Lilandra's own similar-
+    // sounding text) - Action Die usage has no energy-cost plumbing at
+    // all yet (TurnEngine.UseActionDie takes no energyDieIdsToSpend
+    // parameter), a bigger, still-open gap; see DESIGN_LOG for why
+    // Lilandra's two printings stayed out this round. RequiresOwnActiveSidekick
+    // models "Xavier's Dream"'s own extra "and one of your Sidekick dice
+    // are active" clause - "Marvel Girl" leaves it false (no such
+    // clause). See TurnEngine.UseGlobalAbility for enforcement.
+    public OpponentGlobalSurcharge? GrantsOpponentGlobalSurcharge { get; init; }
+
+    // Cable ("Bosom Buddies", DPS062): "your Deadpool costs 1 less to
+    // purchase (to a minimum of 1) and has +2A." A continuous, granter-
+    // active-scan buff aimed at a SPECIFIC named card (any printing,
+    // matched by CardDef.Name) rather than an affiliation/keyword/whole-
+    // team - genuinely different from GrantsStaticTeamBonus (which never
+    // names a card) or GrantsSelfStatBonusWhileNamedCardActive (which
+    // buffs the GRANTER itself, not some other named card). See
+    // DieStats.EffectiveAttack/EffectiveDefense for the stat half and
+    // TurnEngine.Purchase for the discount half.
+    public NamedCardSupport? GrantsNamedCardSupport { get; init; }
+
     // Psylocke ("Adventurer", DPS048): "While Wolverine is active,
     // Psylocke gains Deadly" - a live, continuously-recomputed SELF
     // keyword grant conditioned on some OTHER named card being active
@@ -185,13 +257,42 @@ public sealed record CardDef
 // player's dice actually receive the bonus - null (every other current
 // user) means every Character die, matching Captain Marvel's own
 // unqualified "your Character dice" text.
-public sealed record StaticTeamBonus(int AttackDelta, int DefenseDelta, string? RequiredAffiliation = null);
+// RequiredKeyword (Angel "Jean Grey's School"/DPS057's own "other
+// character dice with Founder get +1A") is the keyword-scoped
+// counterpart to RequiredAffiliation - "Founder" is modeled as a real
+// KeywordInstance (see the WhenAnotherDieFielded/Cyclops "Founder
+// prefix" status update), not an affiliation, so RequiredAffiliation
+// alone can't express it. ExcludeSelf ("OTHER character dice") skips
+// the bonus for any die of the SAME CARD as the granter - a per-CARD,
+// not per-die-instance, approximation (see DieStats.StaticTeamBonusFor's
+// own remarks for why), acceptable given rule 3.4.5.3's "does not
+// stack" already collapses multiple same-card granters into one
+// contribution anyway.
+public sealed record StaticTeamBonus(
+    int AttackDelta, int DefenseDelta, string? RequiredAffiliation = null,
+    string? RequiredKeyword = null, bool ExcludeSelf = false);
 
 // See CardDef.GrantsSelfKeywordWhileNamedCardActive's remarks.
 public sealed record ConditionalSelfKeywordGrant(string WhileCardNamed, string Keyword);
 
 // See CardDef.GrantsSelfStatBonusWhileNamedCardActive's remarks.
 public sealed record ConditionalSelfStatBonus(string WhileCardNamed, int AttackDelta, int DefenseDelta);
+
+// See CardDef.GrantsSelfStatBonusWhileOwnSidekickActive's remarks.
+public sealed record OwnSidekickStatBonus(int AttackDelta, int DefenseDelta);
+
+// See CardDef.GrantsOpponentPurchaseSurcharge's remarks. MaxPurchaseCost
+// null means every purchase is surcharged, matching how MaxFieldingCost/
+// MaxAttack/MaxDefense elsewhere all use null for "no threshold."
+public sealed record OpponentPurchaseSurcharge(int Amount, int? MaxPurchaseCost = null);
+
+// See CardDef.GrantsOpponentGlobalSurcharge's remarks.
+public sealed record OpponentGlobalSurcharge(int Amount, bool RequiresOwnActiveSidekick = false);
+
+// See CardDef.GrantsNamedCardSupport's remarks. Matched against the
+// RECEIVING die's own CardDef.Name (any printing) - not affiliation,
+// not keyword, a third independent dimension alongside those two.
+public sealed record NamedCardSupport(string CardName, int PurchaseDiscount = 0, int AttackDelta = 0, int DefenseDelta = 0);
 
 // See CardDef.GrantsSelfAttackBonusPerMatchingDie's remarks. CountFilter
 // is a TargetSpec repurposed as a counting filter rather than a real

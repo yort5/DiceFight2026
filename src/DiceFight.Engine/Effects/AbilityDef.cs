@@ -46,7 +46,12 @@ public sealed record FieldedDieMatch(
     TargetOwnership Ownership = TargetOwnership.Any,
     string? RequiredKeyword = null,
     string? AffiliationContains = null,
-    bool ExcludeSelf = false);
+    bool ExcludeSelf = false,
+    // Moira ("Strength of Foresight", DPS124)'s own "purchase cost of 3
+    // or more" - checked against the fielded die's own printed
+    // CardDef.PurchaseCost, the same "live board fact about the fielded
+    // die" shape as RequiredKeyword/AffiliationContains above.
+    int? MinPurchaseCost = null);
 
 // A single authored ability on a card: when it fires, what it costs
 // (rule 3.1.16 - Ability Cost, distinct from energy cost), and what it does.

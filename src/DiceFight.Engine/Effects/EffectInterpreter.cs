@@ -72,6 +72,7 @@ public static class EffectInterpreter
             case MoveDie n: if (!n.Target.IsSelf) yield return n.Target; break;
             case ModifyStat n: if (!n.Target.IsSelf) yield return n.Target; break;
             case SetStat n: if (!n.Target.IsSelf) yield return n.Target; break;
+            case SwapAttack n: if (!n.Target.IsSelf) yield return n.Target; break;
             case Reroll n: if (!n.Target.IsSelf) yield return n.Target; break;
             case RerollAndMoveUnlessCharacter n: if (!n.Target.IsSelf) yield return n.Target; break;
             case Spin n: if (!n.Target.IsSelf) yield return n.Target; break;
@@ -208,6 +209,23 @@ public static class EffectInterpreter
                     var defenseDelta = setStat.Defense is { } defense ? defense - DieStats.EffectiveDefense(ctx.State, die) : 0;
                     die.AppliedModifiers.Add(new Modifier(attackDelta, defenseDelta, ctx.SourceDieId ?? "ability"));
                 }
+                break;
+
+            case SwapAttack swapAttack:
+                var swapSource = FindDie(ctx, ctx.SourceDieId
+                    ?? throw new InvalidOperationException("SwapAttack requires a source die."));
+                foreach (var id in Resolve(ctx, swapAttack.Target, cache))
+                {
+                    var other = FindDie(ctx, id);
+                    var sourceAttack = DieStats.EffectiveAttack(ctx.State, swapSource);
+                    var otherAttack = DieStats.EffectiveAttack(ctx.State, other);
+                    swapSource.AppliedModifiers.Add(new Modifier(otherAttack - sourceAttack, 0, ctx.SourceDieId ?? "ability"));
+                    other.AppliedModifiers.Add(new Modifier(sourceAttack - otherAttack, 0, ctx.SourceDieId ?? "ability"));
+                }
+                break;
+
+            case GrantNextPurchaseGoesToBag:
+                ctx.State.PendingNextPurchaseGoesToBag = true;
                 break;
 
             case Spin spin:

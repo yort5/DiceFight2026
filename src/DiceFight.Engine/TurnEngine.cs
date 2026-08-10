@@ -375,6 +375,41 @@ public static class TurnEngine
             state.PendingPurchaseDiscount = null;
         }
 
+        // Cable ("Bosom Buddies", DPS062) - "your Deadpool costs 1 less
+        // to purchase (to a minimum of 1)." Continuous (active-granter
+        // scan), unlike PendingPurchaseDiscount above (one-shot,
+        // consumed) - re-checked fresh every purchase, same shape as
+        // every other Grants*-while-active field.
+        var activeGranters = state.DiceIn(state.ActivePlayerId, Zone.FieldZone)
+            .Concat(state.DiceIn(state.ActivePlayerId, Zone.AttackZone))
+            .Select(d => DieStats.GetCard(state, d))
+            .Where(c => c is not null)
+            .Distinct();
+        foreach (var granter in activeGranters)
+        {
+            if (granter!.GrantsNamedCardSupport is { PurchaseDiscount: > 0 } support && support.CardName == card.Name)
+                effectiveCost = Math.Max(1, effectiveCost - support.PurchaseDiscount);
+        }
+
+        // Forge ("Support Technician", DPS071) - "your opponents must
+        // pay 1 more to purchase a die with purchase cost of 2 or less."
+        // Scanned against the PURCHASER's opponent's active dice (the
+        // granter's own side), same cross-player shape as
+        // GrantsOpponentStatDebuff. Applied after any discounts above,
+        // same order real rules text implies ("costs 1 less" and "pay 1
+        // more" are independent modifiers, not one overriding the other).
+        var opponentGranters = state.DiceIn(state.OpponentOf(state.ActivePlayerId), Zone.FieldZone)
+            .Concat(state.DiceIn(state.OpponentOf(state.ActivePlayerId), Zone.AttackZone))
+            .Select(d => DieStats.GetCard(state, d))
+            .Where(c => c is not null)
+            .Distinct();
+        foreach (var granter in opponentGranters)
+        {
+            if (granter!.GrantsOpponentPurchaseSurcharge is { } surcharge &&
+                (surcharge.MaxPurchaseCost is null || card.PurchaseCost <= surcharge.MaxPurchaseCost))
+                effectiveCost += surcharge.Amount;
+        }
+
         var energyDice = energyDieIdsToSpend.Select(id => FindEnergyDie(state, id)).ToList();
         SpendEnergy(
             state, state.ActivePlayerId, energyDice, effectiveCost, card.EnergyTypes, Zone.OutOfPlay,
@@ -385,7 +420,20 @@ public static class TurnEngine
         // brought the card) is untouched, which matters for community
         // Basic Actions bought by the non-bringing player.
         die.ControllerId = state.ActivePlayerId;
-        die.Zone = Zone.UsedPile; // rule 2.6.2.6
+
+        // Corsair ("Recruiting a Crew", DPS024) - GameState.
+        // PendingNextPurchaseGoesToBag overrides rule 2.6.2.6's normal
+        // Used Pile destination for the very next purchase, then clears.
+        if (state.PendingNextPurchaseGoesToBag)
+        {
+            die.Zone = Zone.Bag;
+            state.PendingNextPurchaseGoesToBag = false;
+        }
+        else
+        {
+            die.Zone = Zone.UsedPile; // rule 2.6.2.6
+        }
+
         var purchaser = state.GetPlayer(state.ActivePlayerId);
         purchaser.PurchasedDieThisTurn = true;
         if (card.Type == CardType.Character) purchaser.PurchasedCharacterDieThisTurn = true;
@@ -467,6 +515,31 @@ public static class TurnEngine
         var cardId = die.VirtualCardId ?? die.CardId;
         if (cardId is null || !state.CardCatalog.TryGetValue(cardId, out var card)) return false;
 
+        // Wolverine ("Pure of Heart", DPS056) - "if you have no Villains
+        // character dice on your team, Wolverine is free to field." A
+        // SELF-referential check against the controller's own roster
+        // (Player.TeamCardIds), not a granter scan - the die being
+        // fielded isn't active yet, so it couldn't participate in one.
+        if (card.SelfFreeFieldingUnlessTeamHasAffiliation is { } excludedAffiliation)
+        {
+            var teamHasIt = state.GetPlayer(die.ControllerId).TeamCardIds.Any(id =>
+                state.CardCatalog.TryGetValue(id, out var teamCard) && teamCard.Affiliations.Contains(excludedAffiliation));
+            if (!teamHasIt) return true;
+        }
+
+        // Jean Grey ("Marvel Girl", DPS115) - "while you have a
+        // different X-Men character die in your Field Zone, Jean Grey is
+        // free to field." The board-state counterpart to the roster
+        // check above - "different" is automatic here since the die
+        // being fielded isn't in the Field/Attack Zone yet.
+        if (card.SelfFreeFieldingWhileOtherActiveAffiliation is { } requiredAffiliation)
+        {
+            var hasOtherActive = state.DiceIn(die.ControllerId, Zone.FieldZone)
+                .Concat(state.DiceIn(die.ControllerId, Zone.AttackZone))
+                .Any(d => DieStats.HasAffiliation(state, d, requiredAffiliation));
+            if (hasOtherActive) return true;
+        }
+
         var granterCards = state.DiceIn(state.ActivePlayerId, Zone.FieldZone)
             .Concat(state.DiceIn(state.ActivePlayerId, Zone.AttackZone))
             .Select(d => DieStats.GetCard(state, d))
@@ -522,6 +595,7 @@ public static class TurnEngine
         if (filter.RequiredKeyword is { } keyword && !DieStats.HasKeyword(state, fieldedDie, keyword)) return false;
         if (filter.AffiliationContains is { } affiliation &&
             (fieldedCard is null || !fieldedCard.Affiliations.Contains(affiliation))) return false;
+        if (filter.MinPurchaseCost is { } minCost && (fieldedCard is null || fieldedCard.PurchaseCost < minCost)) return false;
         return true;
     }
 
@@ -698,14 +772,35 @@ public static class TurnEngine
         if (ability.OncePerTurn && state.GlobalsUsedThisTurn.Contains(cardId))
             throw new InvalidOperationException($"{card.Name}'s Global ability can only be used once per turn.");
 
+        // Jean Grey ("Xavier's Dream"/DPS075, "Marvel Girl"/DPS115) -
+        // "your opponent must pay 1 extra to use a Global Ability."
+        // Scanned against the USER's opponent's active dice (the
+        // granter's own side) - RequiresOwnActiveSidekick gates on the
+        // GRANTER's controller having an active Sidekick ("Xavier's
+        // Dream"'s own extra "and one of your Sidekick dice are active"
+        // clause), not the user's.
+        var opponentOfUserId = state.OpponentOf(playerId);
+        var surchargeGranters = state.DiceIn(opponentOfUserId, Zone.FieldZone)
+            .Concat(state.DiceIn(opponentOfUserId, Zone.AttackZone))
+            .Select(d => DieStats.GetCard(state, d))
+            .Where(c => c is not null)
+            .Distinct();
+        var requiredEnergyAmount = cost.Amount;
+        foreach (var granter in surchargeGranters)
+        {
+            if (granter!.GrantsOpponentGlobalSurcharge is not { } surcharge) continue;
+            if (surcharge.RequiresOwnActiveSidekick && !DieStats.HasActiveSidekick(state, opponentOfUserId)) continue;
+            requiredEnergyAmount += surcharge.Amount;
+        }
+
         var energyDice = energyDieIdsToSpend.Select(id => FindPlayerEnergyDie(state, playerId, id)).ToList();
         // Rule 2.6.1.1/2.6.1.2 - the Active player's spent energy goes Out
         // of Play; the Inactive player's goes straight to the Used Pile,
         // since Out of Play doesn't exist on their turn (rule 1.5.8.5).
         var destination = playerId == state.ActivePlayerId ? Zone.OutOfPlay : Zone.UsedPile;
         SpendEnergy(
-            state, playerId, energyDice, cost.Amount, cost.RequiredType is { } t ? [t] : [], destination,
-            () => $"Not enough energy offered to pay for {card.Name}'s Global ability (needs {cost.Amount}).",
+            state, playerId, energyDice, requiredEnergyAmount, cost.RequiredType is { } t ? [t] : [], destination,
+            () => $"Not enough energy offered to pay for {card.Name}'s Global ability (needs {requiredEnergyAmount}).",
             requiredType => $"{card.Name}'s Global ability requires at least one {requiredType} energy.");
 
         if (ability.OncePerTurn) state.GlobalsUsedThisTurn.Add(cardId);
@@ -1215,6 +1310,7 @@ public static class TurnEngine
         state.MustAttackThisTurn.Clear();
         state.CantBlockThisTurn.Clear();
         state.PendingPurchaseDiscount = null;
+        state.PendingNextPurchaseGoesToBag = false;
         state.UsedDamageRedirectThisTurn.Clear();
         state.BlankedDieIds.Clear();
         state.BlankedControllerIds.Clear();

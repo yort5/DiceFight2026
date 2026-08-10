@@ -143,6 +143,13 @@ public sealed class GameState
     // duration statement.
     public PendingPurchaseDiscount? PendingPurchaseDiscount { get; set; }
 
+    // Corsair ("Recruiting a Crew", DPS024) - see GrantNextPurchaseGoesToBag's
+    // own remarks. Same one-shot, not-player-keyed shape as
+    // PendingPurchaseDiscount just above (Purchase is always the Active
+    // player's own Main Step action, so there's no cross-player
+    // ambiguity to key against) - cleared in CleanUp if never used.
+    public bool PendingNextPurchaseGoesToBag { get; set; }
+
     // Colossus ("Organic Steel", DPS063) - "the first time one of your
     // character dice would take damage each turn, [...]." A player-id
     // set (not a bool) since it's tracked per-controller, same "who,"

@@ -67,6 +67,13 @@ public static class SampleCards
         OpponentStatDebuff? grantsOpponentStatDebuff = null,
         bool grantsFirstDamageRedirectToSelf = false,
         bool grantsIgnoresAbilitiesWhileEngaged = false,
+        bool grantsSidekickImmunityToOpponentGlobalTargeting = false,
+        OwnSidekickStatBonus? grantsSelfStatBonusWhileOwnSidekickActive = null,
+        string? selfFreeFieldingUnlessTeamHasAffiliation = null,
+        string? selfFreeFieldingWhileOtherActiveAffiliation = null,
+        OpponentPurchaseSurcharge? grantsOpponentPurchaseSurcharge = null,
+        OpponentGlobalSurcharge? grantsOpponentGlobalSurcharge = null,
+        NamedCardSupport? grantsNamedCardSupport = null,
         bool isImplemented = true,
         string? set = null) => new()
     {
@@ -92,6 +99,13 @@ public static class SampleCards
         GrantsOpponentStatDebuff = grantsOpponentStatDebuff,
         GrantsFirstDamageRedirectToSelf = grantsFirstDamageRedirectToSelf,
         GrantsIgnoresAbilitiesWhileEngaged = grantsIgnoresAbilitiesWhileEngaged,
+        GrantsSidekickImmunityToOpponentGlobalTargeting = grantsSidekickImmunityToOpponentGlobalTargeting,
+        GrantsSelfStatBonusWhileOwnSidekickActive = grantsSelfStatBonusWhileOwnSidekickActive,
+        SelfFreeFieldingUnlessTeamHasAffiliation = selfFreeFieldingUnlessTeamHasAffiliation,
+        SelfFreeFieldingWhileOtherActiveAffiliation = selfFreeFieldingWhileOtherActiveAffiliation,
+        GrantsOpponentPurchaseSurcharge = grantsOpponentPurchaseSurcharge,
+        GrantsOpponentGlobalSurcharge = grantsOpponentGlobalSurcharge,
+        GrantsNamedCardSupport = grantsNamedCardSupport,
         IsImplemented = isImplemented,
         Set = set
     };
@@ -2273,6 +2287,254 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 0, Attack: 7, Defense: 7)
         ], set: "DPS");
 
+    // Deadpool, "#1 Draft Pick" - the printed text only ever does anything
+    // "if this game is in the draft format," and this project has no
+    // draft-format concept at all (no deckbuilding metadata beyond a
+    // fixed 10-card team) - so the ability can never trigger under any
+    // game mode this engine actually supports. Authored vanilla, same as
+    // any other card whose full printed text has nothing to model yet,
+    // rather than faking a condition that's always false.
+    public static readonly CardDef DeadpoolDraftPick = Character(
+        "DPS028", "Deadpool", "#1 Draft Pick", dieLimit: 4,
+        "If this game is in the draft format, at the start of the game pick a card on your team. That " +
+        "card costs 1 less to purchase this game (to a minimum of 1).",
+        purchaseCost: 4, energyType: EnergyType.Fist,
+        affiliations: ["X-Men", "Deadpool Affiliation"],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 4),
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 5),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 7)
+        ], set: "DPS");
+
+    // Wolverine, "Pure of Heart" - the first user of
+    // SelfFreeFieldingUnlessTeamHasAffiliation (new this round - see its
+    // own remarks for why this doesn't fit the existing granter-active-
+    // scan GrantsFreeFielding shape).
+    public static readonly CardDef WolverinePureOfHeart = Character(
+        "DPS056", "Wolverine", "Pure of Heart", dieLimit: 4,
+        "If you have no Villains character dice on your team, Wolverine is free to field.",
+        purchaseCost: 4, energyType: EnergyType.Fist,
+        affiliations: ["X-Men"],
+        selfFreeFieldingUnlessTeamHasAffiliation: "Villains",
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 2, BurstStars: 1),
+            new CharacterFace(FieldingCost: 2, Attack: 6, Defense: 3, BurstStars: 1),
+            new CharacterFace(FieldingCost: 3, Attack: 8, Defense: 4)
+        ], set: "DPS");
+
+    // Corsair, "Recruiting a Crew" - the first user of
+    // GrantNextPurchaseGoesToBag (new this round).
+    public static readonly CardDef CorsairRecruitingACrew = Character(
+        "DPS024", "Corsair", "Recruiting a Crew", dieLimit: 4,
+        "When fielded, place the next die you purchase this turn into your bag.",
+        purchaseCost: 4, energyType: EnergyType.Fist,
+        abilities: [new AbilityDef(TriggerType.WhenFielded, Cost: null, Effect: new GrantNextPurchaseGoesToBag())],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 3, Defense: 4),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 5),
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 5)
+        ], set: "DPS");
+
+    // Rogue, "Surveillance Immunity" - the first user of
+    // TargetSpec.ActionDie (new this round). "Fielding Rogue doesn't
+    // trigger opposing effects" is left unmodeled - there's no general
+    // "this specific fielding is invisible to reactive triggers"
+    // mechanism yet (WhenAnotherDieFielded always fires for every
+    // fielding), a narrower and rarer gap than the main effect.
+    public static readonly CardDef RogueSurveillanceImmunity = Character(
+        "DPS089", "Rogue", "Surveillance Immunity", dieLimit: 3,
+        "When fielded, send target action die from the Field Zone to your opponent's Used Pile. Fielding " +
+        "Rogue doesn't trigger opposing effects.",
+        purchaseCost: 3, energyType: EnergyType.Mask,
+        affiliations: ["X-Men"],
+        abilities: [new AbilityDef(TriggerType.WhenFielded, Cost: null,
+            Effect: new MoveDie(TargetSpec.ActionDie("target action die", TargetOwnership.Opposing), Zone.UsedPile))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 3),
+            new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 5),
+            new CharacterFace(FieldingCost: 2, Attack: 5, Defense: 6)
+        ], set: "DPS");
+
+    // Rogue, "Mrs. X" - the first user of SwapAttack (new this round).
+    // "You may" simplified to "always swap" (house convention).
+    public static readonly CardDef RogueMrsX = Character(
+        "DPS049", "Rogue", "Mrs. X", dieLimit: 4,
+        "When fielded, you may swap Rogue's A with target opposing character die's A.",
+        purchaseCost: 4, energyType: EnergyType.Mask,
+        affiliations: ["X-Men"],
+        abilities: [new AbilityDef(TriggerType.WhenFielded, Cost: null,
+            Effect: new SwapAttack(TargetSpec.CharacterDie("target opposing character die", TargetOwnership.Opposing)))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 3),
+            new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 5),
+            new CharacterFace(FieldingCost: 2, Attack: 5, Defense: 6)
+        ], set: "DPS");
+
+    // Angel, "Jean Grey's School" - the first user of StaticTeamBonus.
+    // RequiredKeyword/ExcludeSelf (new this round). "Founder" is a real
+    // KeywordInstance (see the WhenAnotherDieFielded status update), so
+    // Angel carries it too, both as its own printed keyword and as the
+    // filter its own static bonus checks against OTHER dice.
+    public static readonly CardDef AngelJeanGreysSchool = Character(
+        "DPS057", "Angel", "Jean Grey's School", dieLimit: 3,
+        "Founder When Angel is active, other character dice with Founder get +1A.",
+        purchaseCost: 3, energyType: EnergyType.Shield,
+        affiliations: ["X-Men"],
+        keywords: [new KeywordInstance("Founder")],
+        grantsStaticTeamBonus: new StaticTeamBonus(AttackDelta: 1, DefenseDelta: 0, RequiredKeyword: "Founder", ExcludeSelf: true),
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 4)
+        ], set: "DPS");
+
+    // Mystique, "Relentless" - the first user of
+    // TargetSpec.MatchesOwnTeamAffiliation (new this round). The +2A
+    // half reuses the existing GrantsSelfStatBonusWhileNamedCardActive
+    // primitive (Moira's own "+1D while Wolverine is active" printing
+    // already uses the identical shape).
+    public static readonly CardDef MystiqueRelentless = Character(
+        "DPS045", "Mystique", "Relentless", dieLimit: 4,
+        "When Wolverine is active, Mystique gets +2A. Global: Pay Mask Mask. Target character die can't " +
+        "block this turn if it shares a Team Affiliation with a character card on your team.",
+        purchaseCost: 2, energyType: EnergyType.Mask,
+        affiliations: ["X-Men"],
+        grantsSelfStatBonusWhileNamedCardActive: new ConditionalSelfStatBonus("Wolverine", AttackDelta: 2, DefenseDelta: 0),
+        abilities: [
+            new AbilityDef(TriggerType.Global, Cost: null,
+                Effect: new CantBlock(new TargetSpec(
+                    TargetOwnership.Any, CharacterDiceOnly: true, TargetSpec.DefaultZones, RequiredEnergyType: null,
+                    Count: 1, "target character die", MatchesOwnTeamAffiliation: true)),
+                EnergyCost: new EnergyCost(2, EnergyType.Mask))
+        ],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 1),
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 1),
+            new CharacterFace(FieldingCost: 2, Attack: 1, Defense: 1, BurstStars: 1)
+        ], set: "DPS");
+
+    // Cable, "Bosom Buddies" - the first user of GrantsNamedCardSupport
+    // (new this round).
+    public static readonly CardDef CableBosomBuddies = Character(
+        "DPS062", "Cable", "Bosom Buddies", dieLimit: 3,
+        "While Cable is active, your Deadpool costs 1 less to purchase (to a minimum of 1) and has +2A.",
+        purchaseCost: 4, energyType: EnergyType.Bolt,
+        affiliations: ["X-Men"],
+        grantsNamedCardSupport: new NamedCardSupport("Deadpool", PurchaseDiscount: 1, AttackDelta: 2),
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 2),
+            new CharacterFace(FieldingCost: 2, Attack: 3, Defense: 3),
+            new CharacterFace(FieldingCost: 2, Attack: 5, Defense: 5)
+        ], set: "DPS");
+
+    // Beast, "Xavier's Dream" - the first user of
+    // GrantsSelfStatBonusWhileOwnSidekickActive (new this round; see its
+    // own remarks for why Iceman/Cyclops's own "Xavier's Dream"
+    // printings, which share the identical gate, aren't included here).
+    public static readonly CardDef BeastXaviersDream = Character(
+        "DPS138", "Beast", "Xavier's Dream", dieLimit: 1,
+        "While you have an active Sidekick die, Beast gets +1A. Overcrush",
+        purchaseCost: 3, energyType: EnergyType.Fist,
+        affiliations: ["X-Men"],
+        keywords: [new KeywordInstance("Overcrush")],
+        grantsSelfStatBonusWhileOwnSidekickActive: new OwnSidekickStatBonus(AttackDelta: 1, DefenseDelta: 0),
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 1),
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 2)
+        ], set: "DPS");
+
+    // Forge, "Support Technician" - the first user of
+    // GrantsOpponentPurchaseSurcharge (new this round).
+    public static readonly CardDef ForgeSupportTechnician = Character(
+        "DPS071", "Forge", "Support Technician", dieLimit: 3,
+        "While Forge is active, your opponents must pay 1 more to purchase a die with purchase cost of 2 " +
+        "or less.",
+        purchaseCost: 4, energyType: EnergyType.Bolt,
+        affiliations: ["X-Men"],
+        grantsOpponentPurchaseSurcharge: new OpponentPurchaseSurcharge(Amount: 1, MaxPurchaseCost: 2),
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 2),
+            new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 4)
+        ], set: "DPS");
+
+    // Jean Grey, "Xavier's Dream" - the first user of
+    // GrantsOpponentGlobalSurcharge (new this round), with its own extra
+    // "and one of your Sidekick dice are active" clause modeled via
+    // OpponentGlobalSurcharge.RequiresOwnActiveSidekick.
+    public static readonly CardDef JeanGreyXaviersDream = Character(
+        "DPS075", "Jean Grey", "Xavier's Dream", dieLimit: 3,
+        "Founder While Jean Grey and one of your Sidekick dice are active, your opponents must pay 1 " +
+        "extra to use a Global Ability.",
+        purchaseCost: 4, energyType: EnergyType.Bolt,
+        affiliations: ["X-Men"],
+        keywords: [new KeywordInstance("Founder")],
+        grantsOpponentGlobalSurcharge: new OpponentGlobalSurcharge(Amount: 1, RequiresOwnActiveSidekick: true),
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3),
+            new CharacterFace(FieldingCost: 2, Attack: 5, Defense: 5),
+            new CharacterFace(FieldingCost: 3, Attack: 6, Defense: 6)
+        ], set: "DPS");
+
+    // Jean Grey, "Marvel Girl" - the same GrantsOpponentGlobalSurcharge
+    // as "Xavier's Dream" above, without the Sidekick clause, plus the
+    // first user of SelfFreeFieldingWhileOtherActiveAffiliation (new
+    // this round).
+    public static readonly CardDef JeanGreyMarvelGirl = Character(
+        "DPS115", "Jean Grey", "Marvel Girl", dieLimit: 2,
+        "Founder While Jean Grey is active, your opponent must pay 1 extra to use a Global Ability. While " +
+        "you have a different X-Men character die in your Field Zone, Jean Grey is free to field.",
+        purchaseCost: 5, energyType: EnergyType.Bolt,
+        affiliations: ["X-Men"],
+        keywords: [new KeywordInstance("Founder")],
+        grantsOpponentGlobalSurcharge: new OpponentGlobalSurcharge(Amount: 1),
+        selfFreeFieldingWhileOtherActiveAffiliation: "X-Men",
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3),
+            new CharacterFace(FieldingCost: 2, Attack: 5, Defense: 5),
+            new CharacterFace(FieldingCost: 3, Attack: 6, Defense: 6)
+        ], set: "DPS");
+
+    // Angel, "Xavier's Dream" - the first user of
+    // GrantsSidekickImmunityToOpponentGlobalTargeting (new this round).
+    public static readonly CardDef AngelXaviersDream = Character(
+        "DPS137", "Angel", "Xavier's Dream", dieLimit: 3,
+        "While Angel is active, your opponent can't target your Sidekick dice with Global Abilities.",
+        purchaseCost: 3, energyType: EnergyType.Shield,
+        affiliations: ["X-Men"],
+        grantsSidekickImmunityToOpponentGlobalTargeting: true,
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 4)
+        ], set: "DPS");
+
+    // Moira, "Strength of Foresight" - the first user of
+    // FieldedDieMatch.MinPurchaseCost (new this round); the WhenFielded
+    // half reuses TargetSpec.ActionDie (Rogue "Surveillance Immunity"'s
+    // own new primitive above), just scoped to Zone.FieldZone on the
+    // opposing side instead of Zone.AttackZone-agnostic.
+    public static readonly CardDef MoiraStrengthOfForesight = Character(
+        "DPS124", "Moira", "Strength of Foresight", dieLimit: 3,
+        "Founder While Moira is active, when you field an X-Men character die with purchase cost of 3 or " +
+        "more put a Loyalty Counter on Moira. When fielded, you may send target action die from your " +
+        "opponent's Field Zone in their Used Pile.",
+        purchaseCost: 3, energyType: EnergyType.Shield,
+        affiliations: ["X-Men"],
+        keywords: [new KeywordInstance("Founder")],
+        abilities: [
+            new AbilityDef(TriggerType.WhenAnotherDieFielded, Cost: null, Effect: new GrantLoyaltyCounter(),
+                FieldedFilter: new FieldedDieMatch(Ownership: TargetOwnership.Own, AffiliationContains: "X-Men", MinPurchaseCost: 3)),
+            new AbilityDef(TriggerType.WhenFielded, Cost: null,
+                Effect: new MoveDie(TargetSpec.ActionDie("target action die", TargetOwnership.Opposing, zones: [Zone.FieldZone]), Zone.UsedPile))
+        ],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3),
+            new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 4)
+        ], set: "DPS");
+
     // Supreme Intelligence, "Kree Science Council" - purely a Loyalty
     // grant, no other text. NameContains is a real substring match here
     // ("a card with Kree in its name"), unlike Gladiator's "When Lilandra
@@ -2595,7 +2857,11 @@ public static class SampleCards
             MystiqueTaughtByMagneto, IcemanFrozenFistsOfFury,
             RonanTheAccuserNoMercy, EmmaFrostManipulative, EmmaFrostFinesse, SentinelToken, MasterMoldEndlessSentinels,
             VulcanAggession, ColossusOrganicSteel, VulcanPowerSuppression, MisterSinisterMutantSupremacist,
-            GladiatorPsiResistance, GladiatorMajestorKallark
+            GladiatorPsiResistance, GladiatorMajestorKallark,
+            DeadpoolDraftPick, WolverinePureOfHeart, CorsairRecruitingACrew, RogueSurveillanceImmunity,
+            RogueMrsX, AngelJeanGreysSchool, MystiqueRelentless, CableBosomBuddies, BeastXaviersDream,
+            ForgeSupportTechnician, JeanGreyXaviersDream, JeanGreyMarvelGirl, AngelXaviersDream,
+            MoiraStrengthOfForesight
         ];
 
         // Hand-curated cards win on id collision - shouldn't happen in

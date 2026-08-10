@@ -3598,4 +3598,402 @@ public class TwoTeamsDemoTests
         Assert.Equal(jamilahBaseAttack + 1, DieStats.EffectiveAttack(state, jamilah));
         Assert.Equal(jamilahBaseDefense + 1, DieStats.EffectiveDefense(state, jamilah));
     }
+
+    [Fact]
+    public void WolverinePureOfHeart_IsFreeToField_WhenTeamHasNoVillains()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.WolverinePureOfHeart.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var wolverineDie = FindUnpurchased(state, "teamA", SampleCards.WolverinePureOfHeart.Id);
+        wolverineDie.Zone = Zone.ReservePool;
+        wolverineDie.Status = DieStatus.Character;
+        wolverineDie.Level = 1; // printed fielding cost 1 - would normally require energy
+
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, wolverineDie.Id, energyDieIdsToSpend: []); // no exception - free
+
+        Assert.Equal(Zone.FieldZone, wolverineDie.Zone);
+    }
+
+    [Fact]
+    public void WolverinePureOfHeart_CostsNormally_WhenTeamHasAVillain()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.WolverinePureOfHeart.Id, SampleCards.MisterSinisterMutantSupremacist.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var wolverineDie = FindUnpurchased(state, "teamA", SampleCards.WolverinePureOfHeart.Id);
+        wolverineDie.Zone = Zone.ReservePool;
+        wolverineDie.Status = DieStatus.Character;
+        wolverineDie.Level = 1;
+
+        var queue = new AbilityQueue();
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            TurnEngine.Field(state, queue, wolverineDie.Id, energyDieIdsToSpend: []));
+        Assert.Contains("Not enough energy", ex.Message);
+    }
+
+    [Fact]
+    public void CorsairRecruitingACrew_SendsOnlyTheNextPurchase_ToTheBagInsteadOfTheUsedPile()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.CorsairRecruitingACrew.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var corsairDie = FindUnpurchased(state, "teamA", SampleCards.CorsairRecruitingACrew.Id);
+        corsairDie.Zone = Zone.FieldZone;
+        corsairDie.Status = DieStatus.Character;
+        corsairDie.Level = 1;
+
+        var queue = new AbilityQueue();
+        var ability = SampleCards.CorsairRecruitingACrew.Abilities.Single(a => a.Trigger == TriggerType.WhenFielded);
+        EffectInterpreter.Execute(ability.Effect, new EffectContext(state, "teamA", corsairDie.Id, _ => []));
+        Assert.True(state.PendingNextPurchaseGoesToBag);
+
+        var energy = GiveWildEnergy(state, "teamA", SampleCards.Dazzler.PurchaseCost);
+        var dazzlerDie = FindUnpurchased(state, "teamA", SampleCards.Dazzler.Id);
+        TurnEngine.Purchase(state, dazzlerDie.Id, energy.Select(d => d.Id).ToList());
+
+        Assert.Equal(Zone.Bag, dazzlerDie.Zone);
+        Assert.False(state.PendingNextPurchaseGoesToBag); // consumed
+
+        var secondEnergy = GiveWildEnergy(state, "teamA", SampleCards.BlackWidow.PurchaseCost);
+        var secondDie = FindUnpurchased(state, "teamA", SampleCards.BlackWidow.Id);
+        TurnEngine.Purchase(state, secondDie.Id, secondEnergy.Select(d => d.Id).ToList());
+
+        Assert.Equal(Zone.UsedPile, secondDie.Zone); // back to normal
+    }
+
+    [Fact]
+    public void RogueSurveillanceImmunity_SendsTargetActionDie_ToOpponentsUsedPile()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.RogueSurveillanceImmunity.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var opposingActionDie = new DieInstance
+        {
+            Id = "teamB-lab-test-1", CardId = SampleCards.LabTest.Id,
+            OwnerId = "teamB", ControllerId = "teamB", Zone = Zone.FieldZone, Status = DieStatus.Action,
+        };
+        state.Dice.Add(opposingActionDie);
+
+        var opposingCharacter = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        opposingCharacter.Zone = Zone.FieldZone;
+        opposingCharacter.Status = DieStatus.Character;
+        opposingCharacter.Level = 1;
+
+        var rogueDie = FindUnpurchased(state, "teamA", SampleCards.RogueSurveillanceImmunity.Id);
+        rogueDie.Zone = Zone.FieldZone;
+        rogueDie.Status = DieStatus.Character;
+        rogueDie.Level = 1;
+
+        var ability = SampleCards.RogueSurveillanceImmunity.Abilities.Single(a => a.Trigger == TriggerType.WhenFielded);
+        var spec = ((MoveDie)ability.Effect).Target;
+
+        // Test the gate: a character die is never a legal Action-die target.
+        var legal = LegalTargets.Query(state, "teamA", spec);
+        Assert.DoesNotContain(opposingCharacter.Id, legal);
+        Assert.Contains(opposingActionDie.Id, legal);
+
+        EffectInterpreter.Execute(ability.Effect, new EffectContext(state, "teamA", rogueDie.Id, _ => [opposingActionDie.Id]));
+
+        Assert.Equal(Zone.UsedPile, opposingActionDie.Zone);
+        Assert.Equal("teamB", opposingActionDie.ControllerId);
+    }
+
+    [Fact]
+    public void RogueMrsX_SwapsItsOwnAttack_WithTheTargetsAttack()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.RogueMrsX.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var rogueDie = FindUnpurchased(state, "teamA", SampleCards.RogueMrsX.Id);
+        rogueDie.Zone = Zone.FieldZone;
+        rogueDie.Status = DieStatus.Character;
+        rogueDie.Level = 1; // real printed 2A
+
+        var opposingTarget = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id); // placeholder level-3 face: 4A
+        opposingTarget.Zone = Zone.FieldZone;
+        opposingTarget.Status = DieStatus.Character;
+        opposingTarget.Level = 3;
+
+        var rogueAttackBefore = DieStats.EffectiveAttack(state, rogueDie);
+        var targetAttackBefore = DieStats.EffectiveAttack(state, opposingTarget);
+        Assert.NotEqual(rogueAttackBefore, targetAttackBefore); // otherwise the swap would be a no-op test
+
+        var ability = SampleCards.RogueMrsX.Abilities.Single(a => a.Trigger == TriggerType.WhenFielded);
+        EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, "teamA", rogueDie.Id, _ => [opposingTarget.Id]));
+
+        Assert.Equal(targetAttackBefore, DieStats.EffectiveAttack(state, rogueDie));
+        Assert.Equal(rogueAttackBefore, DieStats.EffectiveAttack(state, opposingTarget));
+    }
+
+    [Fact]
+    public void AngelJeanGreysSchool_BoostsOtherFounderDice_ButNotItself_OrNonFounders()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.AngelJeanGreysSchool.Id, SampleCards.JeanGreyMarvelGirl.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var angelDie = FindUnpurchased(state, "teamA", SampleCards.AngelJeanGreysSchool.Id);
+        angelDie.Zone = Zone.FieldZone; angelDie.Status = DieStatus.Character; angelDie.Level = 1;
+        var angelBaseAttack = DieStats.EffectiveAttack(state, angelDie);
+
+        var otherFounder = FindUnpurchased(state, "teamA", SampleCards.JeanGreyMarvelGirl.Id); // also Founder
+        otherFounder.Zone = Zone.FieldZone; otherFounder.Status = DieStatus.Character; otherFounder.Level = 1;
+        var otherFounderBaseAttack = SampleCards.JeanGreyMarvelGirl.Levels[0].Attack;
+
+        var nonFounder = FindUnpurchased(state, "teamA", SampleCards.BlackWidow.Id);
+        nonFounder.Zone = Zone.FieldZone; nonFounder.Status = DieStatus.Character; nonFounder.Level = 1;
+        var nonFounderBaseAttack = DieStats.EffectiveAttack(state, nonFounder);
+
+        Assert.Equal(angelBaseAttack, DieStats.EffectiveAttack(state, angelDie)); // "other" - excludes itself
+        Assert.Equal(otherFounderBaseAttack + 1, DieStats.EffectiveAttack(state, otherFounder));
+        Assert.Equal(nonFounderBaseAttack, DieStats.EffectiveAttack(state, nonFounder)); // not a Founder - unaffected
+    }
+
+    [Fact]
+    public void MystiqueRelentless_GetsPlus2Attack_WhileWolverineIsActive()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.MystiqueRelentless.Id, SampleCards.WolverinePureOfHeart.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var mystiqueDie = FindUnpurchased(state, "teamA", SampleCards.MystiqueRelentless.Id);
+        mystiqueDie.Zone = Zone.FieldZone; mystiqueDie.Status = DieStatus.Character; mystiqueDie.Level = 1;
+        var baseAttack = DieStats.EffectiveAttack(state, mystiqueDie);
+
+        var wolverineDie = FindUnpurchased(state, "teamA", SampleCards.WolverinePureOfHeart.Id);
+        wolverineDie.Zone = Zone.FieldZone; wolverineDie.Status = DieStatus.Character; wolverineDie.Level = 1;
+
+        Assert.Equal(baseAttack + 2, DieStats.EffectiveAttack(state, mystiqueDie));
+    }
+
+    [Fact]
+    public void MystiqueRelentlessGlobal_PreventsBlocking_OnlyForADieSharingATeamAffiliation()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.MystiqueRelentless.Id], // Team A's roster now includes an X-Men card
+            extraTeamBCardIds: [SampleCards.RogueMrsX.Id]); // X-Men, so it shares an affiliation with Team A's roster
+
+        var sharesAffiliation = FindUnpurchased(state, "teamB", SampleCards.RogueMrsX.Id);
+        sharesAffiliation.Zone = Zone.FieldZone; sharesAffiliation.Status = DieStatus.Character; sharesAffiliation.Level = 1;
+
+        var doesNotShare = FindUnpurchased(state, "teamB", SampleCards.Groot.Id); // no affiliation at all
+        doesNotShare.Zone = Zone.FieldZone; doesNotShare.Status = DieStatus.Character; doesNotShare.Level = 1;
+
+        var mystiqueGlobal = SampleCards.MystiqueRelentless.Abilities.Single(a => a.Trigger == TriggerType.Global);
+        var spec = ((CantBlock)mystiqueGlobal.Effect).Target;
+
+        // Test the gate directly first: LegalTargets.Query itself excludes
+        // the non-matching die, not just "nothing happened to choose it."
+        var legal = LegalTargets.Query(state, "teamA", spec);
+        Assert.Contains(sharesAffiliation.Id, legal);
+        Assert.DoesNotContain(doesNotShare.Id, legal);
+
+        var energy = GiveWildEnergy(state, "teamA", 2);
+        var queue = new AbilityQueue();
+        TurnEngine.UseGlobalAbility(state, queue, SampleCards.MystiqueRelentless.Id, "teamA", energy.Select(d => d.Id).ToList());
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [sharesAffiliation.Id])));
+
+        Assert.Contains(sharesAffiliation.Id, state.CantBlockThisTurn);
+        Assert.DoesNotContain(doesNotShare.Id, state.CantBlockThisTurn);
+    }
+
+    [Fact]
+    public void CableBosomBuddies_DiscountsAndBuffs_YourDeadpool()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.CableBosomBuddies.Id, SampleCards.DeadpoolDraftPick.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var cableDie = FindUnpurchased(state, "teamA", SampleCards.CableBosomBuddies.Id);
+        cableDie.Zone = Zone.FieldZone; cableDie.Status = DieStatus.Character; cableDie.Level = 1;
+
+        var deadpoolDie = FindUnpurchased(state, "teamA", SampleCards.DeadpoolDraftPick.Id);
+        var energy = GiveWildEnergy(state, "teamA", SampleCards.DeadpoolDraftPick.PurchaseCost - 1);
+        TurnEngine.Purchase(state, deadpoolDie.Id, energy.Select(d => d.Id).ToList()); // 1 less than printed cost
+
+        Assert.Equal(Zone.UsedPile, deadpoolDie.Zone); // succeeded - the discount really applied
+
+        deadpoolDie.Zone = Zone.ReservePool;
+        deadpoolDie.Status = DieStatus.Character;
+        deadpoolDie.Level = 1;
+        var fieldQueue = new AbilityQueue();
+        TurnEngine.Field(state, fieldQueue, deadpoolDie.Id, energyDieIdsToSpend: []); // level-1 fielding cost 0
+        Assert.Equal(SampleCards.DeadpoolDraftPick.Levels[0].Attack + 2, DieStats.EffectiveAttack(state, deadpoolDie));
+    }
+
+    [Fact]
+    public void BeastXaviersDream_GetsPlus1Attack_OnlyWhileAnOwnSidekickIsActive()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.BeastXaviersDream.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var beastDie = FindUnpurchased(state, "teamA", SampleCards.BeastXaviersDream.Id);
+        beastDie.Zone = Zone.FieldZone; beastDie.Status = DieStatus.Character; beastDie.Level = 1;
+        var baseAttack = DieStats.EffectiveAttack(state, beastDie);
+
+        var sidekick = state.DiceIn("teamA", Zone.Bag).First();
+        sidekick.Zone = Zone.FieldZone;
+        sidekick.Status = DieStatus.SidekickCharacter;
+        sidekick.Level = 1;
+
+        Assert.Equal(baseAttack + 1, DieStats.EffectiveAttack(state, beastDie));
+
+        sidekick.Zone = Zone.PrepArea; // no longer active
+        Assert.Equal(baseAttack, DieStats.EffectiveAttack(state, beastDie));
+    }
+
+    [Fact]
+    public void ForgeSupportTechnician_SurchargesOpponentsCheapPurchases_ButNotExpensiveOnes()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.ForgeSupportTechnician.Id], // Forge's controller is teamA
+            extraTeamBCardIds: [SampleCards.HarleyQuinn.Id, SampleCards.CaptainMarvel.Id]);
+        state.ActivePlayerId = "teamB"; // teamB is Forge's controller's "opponent"
+
+        var forgeDie = FindUnpurchased(state, "teamA", SampleCards.ForgeSupportTechnician.Id);
+        forgeDie.Zone = Zone.FieldZone; forgeDie.Status = DieStatus.Character; forgeDie.Level = 1;
+
+        var cheapDie = FindUnpurchased(state, "teamB", SampleCards.HarleyQuinn.Id); // purchase cost 1
+        Assert.True(SampleCards.HarleyQuinn.PurchaseCost <= 2);
+        var exactEnergy = GiveWildEnergy(state, "teamB", SampleCards.HarleyQuinn.PurchaseCost);
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            TurnEngine.Purchase(state, cheapDie.Id, exactEnergy.Select(d => d.Id).ToList()));
+        Assert.Contains("Not enough energy", ex.Message);
+
+        var extraEnergy = GiveWildEnergy(state, "teamB", 1);
+        TurnEngine.Purchase(state, cheapDie.Id, exactEnergy.Concat(extraEnergy).Select(d => d.Id).ToList());
+        Assert.Equal(Zone.UsedPile, cheapDie.Zone); // the +1 surcharge really was required
+
+        var expensiveDie = FindUnpurchased(state, "teamB", SampleCards.CaptainMarvel.Id);
+        Assert.True(SampleCards.CaptainMarvel.PurchaseCost > 2);
+        var normalEnergy = GiveWildEnergy(state, "teamB", SampleCards.CaptainMarvel.PurchaseCost);
+        TurnEngine.Purchase(state, expensiveDie.Id, normalEnergy.Select(d => d.Id).ToList()); // no surcharge
+        Assert.Equal(Zone.UsedPile, expensiveDie.Zone);
+    }
+
+    [Fact]
+    public void JeanGreyXaviersDream_SurchargesOpponentsGlobalUse_OnlyWithAnActiveSidekick()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.JeanGreyXaviersDream.Id]);
+        state.ActivePlayerId = "teamB"; // Jean Grey's controller is teamA, so teamB is "your opponent"
+
+        var jeanGreyDie = FindUnpurchased(state, "teamA", SampleCards.JeanGreyXaviersDream.Id);
+        jeanGreyDie.Zone = Zone.FieldZone; jeanGreyDie.Status = DieStatus.Character; jeanGreyDie.Level = 1;
+
+        var exactEnergy = GiveWildEnergy(state, "teamB", 1); // Falcon's Global costs 1, no Jean Grey Sidekick yet
+        var queue = new AbilityQueue();
+        TurnEngine.UseGlobalAbility(state, queue, SampleCards.Falcon.Id, "teamB", exactEnergy.Select(d => d.Id).ToList());
+        Assert.Contains(SampleCards.Falcon.Id, state.GlobalsUsedThisTurn); // succeeded with no surcharge
+
+        // Reset and prove the surcharge kicks in once Jean Grey's own side has an active Sidekick.
+        state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.JeanGreyXaviersDream.Id]);
+        state.ActivePlayerId = "teamB";
+        jeanGreyDie = FindUnpurchased(state, "teamA", SampleCards.JeanGreyXaviersDream.Id);
+        jeanGreyDie.Zone = Zone.FieldZone; jeanGreyDie.Status = DieStatus.Character; jeanGreyDie.Level = 1;
+        var teamASidekick = state.DiceIn("teamA", Zone.Bag).First();
+        teamASidekick.Zone = Zone.FieldZone; teamASidekick.Status = DieStatus.SidekickCharacter; teamASidekick.Level = 1;
+
+        var insufficientEnergy = GiveWildEnergy(state, "teamB", 1);
+        var queue2 = new AbilityQueue();
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            TurnEngine.UseGlobalAbility(state, queue2, SampleCards.Falcon.Id, "teamB", insufficientEnergy.Select(d => d.Id).ToList()));
+        Assert.Contains("Not enough energy", ex.Message);
+
+        var extra = GiveWildEnergy(state, "teamB", 1);
+        TurnEngine.UseGlobalAbility(
+            state, queue2, SampleCards.Falcon.Id, "teamB", insufficientEnergy.Concat(extra).Select(d => d.Id).ToList());
+        Assert.False(queue2.IsEmpty); // the Global really went through with the surcharge paid
+    }
+
+    [Fact]
+    public void JeanGreyMarvelGirl_SurchargesOpponentsGlobalUse_UnconditionallyWhileActive()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.JeanGreyMarvelGirl.Id]);
+        state.ActivePlayerId = "teamB";
+
+        var jeanGreyDie = FindUnpurchased(state, "teamA", SampleCards.JeanGreyMarvelGirl.Id);
+        jeanGreyDie.Zone = Zone.FieldZone; jeanGreyDie.Status = DieStatus.Character; jeanGreyDie.Level = 1;
+
+        var insufficientEnergy = GiveWildEnergy(state, "teamB", 1); // Falcon's Global normally costs 1
+        var queue = new AbilityQueue();
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            TurnEngine.UseGlobalAbility(state, queue, SampleCards.Falcon.Id, "teamB", insufficientEnergy.Select(d => d.Id).ToList()));
+        Assert.Contains("Not enough energy", ex.Message);
+    }
+
+    [Fact]
+    public void JeanGreyMarvelGirl_IsFreeToField_WhileADifferentXMenDieIsActive()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.JeanGreyMarvelGirl.Id, SampleCards.WolverinePureOfHeart.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var otherXMen = FindUnpurchased(state, "teamA", SampleCards.WolverinePureOfHeart.Id);
+        otherXMen.Zone = Zone.FieldZone; otherXMen.Status = DieStatus.Character; otherXMen.Level = 1;
+
+        var jeanGreyDie = FindUnpurchased(state, "teamA", SampleCards.JeanGreyMarvelGirl.Id);
+        jeanGreyDie.Zone = Zone.ReservePool;
+        jeanGreyDie.Status = DieStatus.Character;
+        jeanGreyDie.Level = 1; // printed fielding cost 1 - would normally require energy
+
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, jeanGreyDie.Id, energyDieIdsToSpend: []); // no exception - free
+
+        Assert.Equal(Zone.FieldZone, jeanGreyDie.Zone);
+    }
+
+    [Fact]
+    public void AngelXaviersDream_ProtectsOwnSidekicks_FromOpponentGlobalTargeting_ButNotOtherTriggers()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.AngelXaviersDream.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var angelDie = FindUnpurchased(state, "teamA", SampleCards.AngelXaviersDream.Id);
+        angelDie.Zone = Zone.FieldZone; angelDie.Status = DieStatus.Character; angelDie.Level = 1;
+
+        var sidekick = state.DiceIn("teamA", Zone.Bag).First();
+        sidekick.Zone = Zone.FieldZone; sidekick.Status = DieStatus.SidekickCharacter; sidekick.Level = 1;
+
+        var spec = TargetSpec.Sidekick("target Sidekick", TargetOwnership.Opposing);
+
+        Assert.DoesNotContain(sidekick.Id, LegalTargets.Query(state, "teamB", spec, TriggerType.Global));
+        Assert.Contains(sidekick.Id, LegalTargets.Query(state, "teamB", spec, TriggerType.WhenFielded));
+        Assert.Contains(sidekick.Id, LegalTargets.Query(state, "teamB", spec)); // no trigger info at all
+    }
+
+    [Fact]
+    public void MoiraStrengthOfForesight_GrantsALoyaltyCounter_OnlyForACostlyXMenFielding()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.MoiraStrengthOfForesight.Id, SampleCards.WolverinePureOfHeart.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var moiraDie = FindUnpurchased(state, "teamA", SampleCards.MoiraStrengthOfForesight.Id);
+        moiraDie.Zone = Zone.FieldZone; moiraDie.Status = DieStatus.Character; moiraDie.Level = 1;
+
+        var costlyXMen = FindUnpurchased(state, "teamA", SampleCards.WolverinePureOfHeart.Id); // X-Men, cost 4
+        Assert.True(SampleCards.WolverinePureOfHeart.PurchaseCost >= 3);
+        costlyXMen.Zone = Zone.ReservePool; costlyXMen.Status = DieStatus.Character; costlyXMen.Level = 1;
+
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, costlyXMen.Id, energyDieIdsToSpend: [.. GiveWildEnergy(state, "teamA", 2).Select(d => d.Id)]);
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [])));
+
+        Assert.Equal(1, state.LoyaltyCounters.GetValueOrDefault(SampleCards.MoiraStrengthOfForesight.Id));
+
+        var nonXMen = FindUnpurchased(state, "teamA", SampleCards.BlackWidow.Id);
+        nonXMen.Zone = Zone.ReservePool; nonXMen.Status = DieStatus.Character; nonXMen.Level = 1;
+        var queue2 = new AbilityQueue();
+        TurnEngine.Field(state, queue2, nonXMen.Id, energyDieIdsToSpend: [.. GiveWildEnergy(state, "teamA", 2).Select(d => d.Id)]);
+        queue2.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [])));
+
+        Assert.Equal(1, state.LoyaltyCounters.GetValueOrDefault(SampleCards.MoiraStrengthOfForesight.Id)); // unchanged
+    }
 }

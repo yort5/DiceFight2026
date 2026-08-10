@@ -5517,3 +5517,140 @@ this round), and `npm run build` all clean. Re-ran
 round's five new cards: Colossus "Organic Steel", Vulcan "Power
 Suppression", Mister Sinister "Mutant Supremacist", and both Gladiator
 printings).
+
+## Status update — fourteen more DPS cards, mostly small self-contained primitives
+
+Fourteen more DPS cards, picked this round for being reachable with one
+narrow, well-scoped new primitive each (or none at all) rather than the
+deeper cross-cutting gaps the last two rounds tackled. Most of these
+primitives are genuinely small - a single new CardDef field consulted
+at one call site - so they're grouped below by shape rather than each
+getting its own paragraph.
+
+**Self-referential fielding conditions** - `CardDef.
+SelfFreeFieldingUnlessTeamHasAffiliation` (Wolverine "Pure of Heart"/
+DPS056 - "if you have no Villains character dice on your team") and
+`SelfFreeFieldingWhileOtherActiveAffiliation` (Jean Grey "Marvel Girl"/
+DPS115 - "while you have a different X-Men character die in your Field
+Zone") both needed a genuinely different shape from the existing
+`GrantsFreeFielding` (an ACTIVE granter card blessing some OTHER
+matching die): here the card grants free fielding to ITSELF, checked
+against the controller's team roster or live board state, not another
+die's active-granter scan - the die being fielded isn't active yet, so
+it couldn't participate in one anyway. Checked directly in `TurnEngine.
+IsFreeToField` against the die's own card.
+
+**Cross-player surcharges** - `GrantsOpponentPurchaseSurcharge` (Forge
+"Support Technician"/DPS071 - "your opponents must pay 1 more to
+purchase a die with purchase cost of 2 or less," enforced in
+`TurnEngine.Purchase`) and `GrantsOpponentGlobalSurcharge` (both Jean
+Grey printings' "your opponent must pay 1 extra to use a Global
+Ability," enforced in `TurnEngine.UseGlobalAbility`) are the purchase-
+and Global-cost mirrors of `GrantsOpponentStatDebuff`'s already-
+established cross-player scan shape. Deliberately did NOT build the
+Action-Die-usage half of this (Lilandra "Freedom Fighter"/DPS078 and
+"Majestrix"/DPS145 both tax Action Die use too) - `TurnEngine.
+UseActionDie` has no energy-cost plumbing at all today (Action dice are
+just free to use), and retrofitting that is a bigger, more invasive
+change than this round's remaining budget justified; both Lilandra
+cards stayed vanilla rather than modeling half their text.
+`OpponentGlobalSurcharge.RequiresOwnActiveSidekick` models "Xavier's
+Dream"'s own extra "and one of your Sidekick dice are active" clause,
+reusing a new `DieStats.HasActiveSidekick` helper that Beast's own card
+(below) also needed.
+
+**A named-card support buff** - `GrantsNamedCardSupport` (Cable "Bosom
+Buddies"/DPS062 - "your Deadpool costs 1 less to purchase and has
++2A") buffs a card matched by NAME rather than affiliation/keyword/
+whole-team, a genuinely different targeting dimension from
+`GrantsStaticTeamBonus` (never names a card) or
+`GrantsSelfStatBonusWhileNamedCardActive` (buffs the GRANTER, not some
+other named card). Stat half consulted in `DieStats.EffectiveAttack/
+EffectiveDefense`; discount half in `TurnEngine.Purchase`.
+
+**Keyword-scoped and board-state-gated static bonuses** -
+`StaticTeamBonus` gained `RequiredKeyword`/`ExcludeSelf` (Angel "Jean
+Grey's School"/DPS057 - "other character dice with Founder get +1A" -
+"Founder" is a real `KeywordInstance`, not an affiliation, so the
+existing `RequiredAffiliation` filter couldn't express it; `ExcludeSelf`
+is a per-CARD, not per-die-instance, approximation - acceptable given
+rule 3.4.5.3's "does not stack" already collapses same-card granters
+into one contribution). `GrantsSelfStatBonusWhileOwnSidekickActive`
+(Beast "Xavier's Dream"/DPS138 - "+1A while you have an active Sidekick
+die") is the same "named card active" SHAPE as the existing
+`GrantsSelfStatBonusWhileNamedCardActive`, just keyed on "any active
+Sidekick" instead of a specific card name. Iceman and Cyclops's own
+"Xavier's Dream" printings share the identical Sidekick gate but land on
+a live A=D relationship and a divided-damage `WhenAttacks` respectively
+- neither fits this flat-delta shape, so both stayed out this round
+(still open).
+
+**New TargetSpec dimensions** - `ActionDiceOnly` (Rogue "Surveillance
+Immunity"/DPS089's "target action die" - matches `DieStatus.Action`
+specifically, the Action-die counterpart to `CharacterDiceOnly`; also
+reused by Moira "Strength of Foresight"/DPS124's own near-identical
+"send target action die from your opponent's Field Zone" half) and
+`MatchesOwnTeamAffiliation` (Mystique "Relentless"/DPS045's Global -
+"target character die can't block this turn if it shares a Team
+Affiliation with a character card on your team" - resolved against the
+ability CONTROLLER's own live `Player.TeamCardIds` at query time,
+unlike `RequiredAffiliations`' fixed authoring-time list). Mystique's
+own "+2A while Wolverine is active" half needed no new primitive at all
+- it's the same shape Moira's "If It's Real" printing already
+established, and Wolverine "Pure of Heart" (this round) happens to be
+the only CardDef actually named "Wolverine" in the catalog right now,
+so it's what makes that condition (and Psylocke/Kitty Pryde's own
+older "while Wolverine is active" text) observably true in a real game
+for the first time.
+
+**A new effect node** - `SwapAttack` (Rogue "Mrs. X"/DPS049 - "swap
+Rogue's A with target opposing character die's A") snapshots both
+dice's current `EffectiveAttack` before either changes and applies the
+swap as two ordinary `Modifier`s, the same "snapshot to an ordinary
+Modifier expiring at Clean Up" shape `SetStat` already established,
+just exchanging two live values instead of setting one to a fixed
+number. `GrantNextPurchaseGoesToBag` (Corsair "Recruiting a Crew"/
+DPS024 - "place the next die you purchase this turn into your bag")
+is a one-shot flag (`GameState.PendingNextPurchaseGoesToBag`), the same
+consumed-on-first-matching-purchase lifecycle as the existing
+`GrantNextPurchaseDiscount`/`PendingPurchaseDiscount`, just overriding
+the purchased die's destination zone instead of its cost.
+
+**Reusing the Gladiator-round machinery** - Angel ("Xavier's Dream",
+DPS137)'s "your opponent can't target your Sidekick dice with Global
+Abilities" is a continuous, granter-active-scan counterpart to
+Gladiator's own temporary Global-activated whole-team immunity from two
+rounds ago - it reuses the exact same `TriggerType`-aware filtering
+`LegalTargets.Query` gained for Gladiator, just scoped to Sidekick dice
+and gated on board presence (`GrantsSidekickImmunityToOpponentGlobalTargeting`,
+checked via a new `DieStats.SidekicksAreImmuneToOpponentGlobalTargeting`)
+rather than a one-shot activation.
+
+**No new primitive needed** - Deadpool "#1 Draft Pick" (DPS028)'s full
+printed text only ever does anything "if this game is in the draft
+format," and this project has no draft-format concept at all (no
+deckbuilding metadata beyond a fixed 10-card team), so the condition can
+never be true under any game mode this engine actually supports -
+authored vanilla rather than faking an always-false condition. Moira
+"Strength of Foresight" (DPS124) needed one small extension instead,
+`FieldedDieMatch.MinPurchaseCost` (its own "when you field an X-Men
+character die with purchase cost of 3 or more" half, reusing the
+existing `WhenAnotherDieFielded`/`GrantLoyaltyCounter` machinery already
+established for Jean Grey/Magneto/Supreme Intelligence's own Loyalty
+grants), plus the `ActionDiceOnly` TargetSpec above for its WhenFielded
+half.
+
+Tests (17 new) exercise the real gate throughout, following the same
+"test the trigger's real firing mechanism, not a shortcut" standard as
+every round before - real `TurnEngine.Field`/`Purchase`/
+`UseGlobalAbility` calls for every cost/fielding-condition check
+(including the "insufficient energy without the surcharge, sufficient
+with it" shape for both surcharge cards), `LegalTargets.Query` called
+directly to prove a targeting exclusion before also proving it through
+a full ability execution, and a genuine before/after `EffectiveAttack`
+comparison (captured before either die's stat changes, a mistake this
+project has made and fixed before) for the swap and static-bonus cases.
+
+Verified: `dotnet build`, `dotnet test` (427/427 - 17 new cases), and
+`npm run build` all clean. Re-ran `scripts/import_bulk_cards.py`
+(126 → 140 hand-curated).

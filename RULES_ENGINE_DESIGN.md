@@ -381,6 +381,35 @@ here rather than assuming which approach they'd want.
     printings, "Psi Resistance"/DPS033 and "Majestor Kallark"/DPS113) -
     see the "damage redirection, ability-blanking, and targeting
     immunity" status update for the full design writeup of each.
+    Fourteen more DPS cards landed the next round, each needing at most
+    one small, narrowly-scoped new primitive: two self-referential
+    fielding conditions (`SelfFreeFieldingUnlessTeamHasAffiliation`/
+    `SelfFreeFieldingWhileOtherActiveAffiliation` - Wolverine "Pure of
+    Heart"/DPS056, Jean Grey "Marvel Girl"/DPS115), two cross-player
+    surcharges (`GrantsOpponentPurchaseSurcharge`/
+    `GrantsOpponentGlobalSurcharge` - Forge "Support Technician"/DPS071,
+    both Jean Grey printings), a named-card support buff
+    (`GrantsNamedCardSupport` - Cable "Bosom Buddies"/DPS062),
+    `StaticTeamBonus.RequiredKeyword`/`ExcludeSelf` (Angel "Jean Grey's
+    School"/DPS057) and `GrantsSelfStatBonusWhileOwnSidekickActive`
+    (Beast "Xavier's Dream"/DPS138), two new `TargetSpec` dimensions
+    (`ActionDiceOnly`/`MatchesOwnTeamAffiliation` - Rogue "Surveillance
+    Immunity"/DPS089, Moira "Strength of Foresight"/DPS124, Mystique
+    "Relentless"/DPS045), a new effect node pair (`SwapAttack`/
+    `GrantNextPurchaseGoesToBag` - Rogue "Mrs. X"/DPS049, Corsair
+    "Recruiting a Crew"/DPS024), and a reuse of Gladiator's own
+    `TriggerType`-aware `LegalTargets.Query` filtering for a continuous,
+    granter-active-scan Sidekick-targeting immunity (Angel "Xavier's
+    Dream"/DPS137). Deadpool "#1 Draft Pick" (DPS028) needed nothing at
+    all - its whole printed text is conditioned on a draft format this
+    project doesn't model, so it's vanilla by simple absence of any true
+    condition. Still open: Lilandra's two printings (need Action-Die
+    usage cost plumbing, which doesn't exist at all yet - Action dice
+    are currently just free to use), and Iceman/Cyclops's own "Xavier's
+    Dream" printings (share Beast's "own active Sidekick" gate but land
+    on a live A=D relationship and a divided-damage `WhenAttacks`
+    respectively, neither fitting the flat-delta shape built for Beast)
+    - see the "fourteen more DPS cards" status update.
 
 ## Implemented keywords
 

@@ -62,11 +62,35 @@ public sealed record TargetSpec(
     // Sabretooth "Do I Smell... Weakness?" (DPS091)'s "opposing character
     // die with 2D or less" - the defense-side counterpart to MaxAttack,
     // same "live EffectiveDefense, not printed face" convention.
-    int? MaxDefense = null)
+    int? MaxDefense = null,
+    // Rogue ("Surveillance Immunity", DPS089)'s "target action die" -
+    // the Action-die counterpart to CharacterDiceOnly, matching
+    // DieStatus.Action specifically (a Continuous Action die sitting in
+    // the Field Zone per rule 2.6.4.2 - the only way an Action die is
+    // ever a legal target in the first place). Independent of
+    // CharacterDiceOnly rather than a third enum value, matching how
+    // SidekicksOnly is its own independent bool alongside it.
+    bool ActionDiceOnly = false,
+    // Mystique ("Relentless", DPS045)'s own Global - "target character
+    // die can't block this turn if it shares a Team Affiliation with a
+    // character card on your team." Unlike RequiredAffiliations (a fixed
+    // list baked in at authoring time), this is resolved against the
+    // ability CONTROLLER's own live roster (Player.TeamCardIds) at query
+    // time, since which affiliations are "on your team" depends on which
+    // team you brought, not the card text itself.
+    bool MatchesOwnTeamAffiliation = false)
 {
     // Rule 3.3.4/3.3.5 - only dice in the Field Zone (which includes the
     // Attack Zone) may be targeted, unless otherwise stated.
     public static readonly IReadOnlyList<Model.Zone> DefaultZones = [Model.Zone.FieldZone, Model.Zone.AttackZone];
+
+    // See ActionDiceOnly's own remarks.
+    public static TargetSpec ActionDie(
+        string description,
+        TargetOwnership ownership = TargetOwnership.Any,
+        IReadOnlyList<Model.Zone>? zones = null) =>
+        new(ownership, CharacterDiceOnly: false, zones ?? [Model.Zone.FieldZone], RequiredEnergyType: null,
+            Count: 1, description, ActionDiceOnly: true);
 
     public static TargetSpec CharacterDie(
         string description,
@@ -442,6 +466,28 @@ public sealed record BlankTargetText(TargetSpec Target) : EffectNode;
 // own trigger type - WhenUsed is that shape, see its own remarks in
 // Enums.cs).
 public sealed record GrantSelfTargetingImmunityFromActionAndGlobal : EffectNode;
+
+// Rogue ("Mrs. X", DPS049) - "you may swap Rogue's A with target
+// opposing character die's A." "You may" simplified to "always swap"
+// (house convention). Implemented as two SetStat-shaped snapshots
+// (each die's EffectiveAttack captured before either changes, then
+// applied to the OTHER) rather than a literal value exchange on the
+// underlying face, so it expires the same "until end of turn" way any
+// other Applied modifier does (rule 3.4.3.9) - matching SetStat's own
+// snapshot-to-an-ordinary-Modifier shape. Self-only on the ability side
+// (always the source die) - Target is the single opposing die to swap
+// with.
+public sealed record SwapAttack(TargetSpec Target) : EffectNode;
+
+// Corsair ("Recruiting a Crew", DPS024) - "place the next die you
+// purchase this turn into your bag" (instead of the Used Pile it would
+// normally go to per rule 2.6.2.6). Same one-shot, consumed-on-first-
+// matching-purchase shape as GrantNextPurchaseDiscount (GameState.
+// PendingPurchaseDiscount) - see GameState.PendingNextPurchaseGoesToBag
+// and TurnEngine.Purchase for where it's actually consumed. No target/
+// parameter at all, unlike the discount version - there's no amount or
+// required-type to narrow, every purchase this turn qualifies.
+public sealed record GrantNextPurchaseGoesToBag : EffectNode;
 
 // Starfire's Global ("if you purchased a die this turn, Prep a die from
 // your bag") - the "if you..." check is against turn-scoped state
