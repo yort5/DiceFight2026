@@ -40099,43 +40099,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS070",
-    "name": "Emma Frost",
-    "subtitle": "Manipulative",
-    "type": "Character",
-    "purchaseCost": 5,
-    "energyType": "Shield",
-    "dieLimit": 3,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 4,
-        "defense": 6,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 5,
-        "defense": 7,
-        "burstStars": null
-      }
-    ],
-    "rawText": "While Emma Frost is active, at the start of your opponent\\'s Attack Step, reroll target character die they control.",
-    "keywords": [],
-    "affiliations": [
-      "Hellfire Club"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS071",
     "name": "Forge",
     "subtitle": "Support Technician",
@@ -40503,41 +40466,6 @@
     "affiliations": [
       "X-Men"
     ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS090",
-    "name": "Ronan the Accuser",
-    "subtitle": "No Mercy",
-    "type": "Character",
-    "purchaseCost": 6,
-    "energyType": "Bolt",
-    "dieLimit": 3,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 5,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 6,
-        "defense": 7,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 8,
-        "defense": 8,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When fielded, each player KOs a character die they control.",
-    "keywords": [],
-    "affiliations": [],
     "isImplemented": false,
     "set": "DPS",
     "abilityTemplate": null
@@ -40980,44 +40908,6 @@
     "keywords": [],
     "affiliations": [
       "Villains"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS110",
-    "name": "Emma Frost",
-    "subtitle": "Finesse",
-    "type": "Character",
-    "purchaseCost": 5,
-    "energyType": "Shield",
-    "dieLimit": 2,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 4,
-        "defense": 6,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 5,
-        "defense": 7,
-        "burstStars": null
-      }
-    ],
-    "rawText": "While Emma Frost is Active, at the start of your opponents Attack Step, reroll 2 target Fist character dice your oppoenent controls. Those showing character faces are returned to the Field Zone, those on energy faces are sent to the Reserve Pool.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men",
-      "Hellfire Club"
     ],
     "isImplemented": false,
     "set": "DPS",
@@ -41472,41 +41362,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS135",
-    "name": "Vulcan",
-    "subtitle": "Aggession",
-    "type": "Character",
-    "purchaseCost": 6,
-    "energyType": "Fist",
-    "dieLimit": 2,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 3,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 4,
-        "defense": 4,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 6,
-        "defense": 5,
-        "burstStars": null
-      }
-    ],
-    "rawText": "While Vulcan is active, your opponent\\'s non-fist characters get -2D. Global: Pay Fist. Target character die must attack this turn.",
-    "keywords": [],
-    "affiliations": [],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS136",
     "name": "Wolverine",
     "subtitle": "Trainer",
@@ -41802,43 +41657,6 @@
     "keywords": [],
     "affiliations": [
       "Shi\\'ar"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS147",
-    "name": "Master Mold",
-    "subtitle": "Endless Sentinels",
-    "type": "Character",
-    "purchaseCost": 6,
-    "energyType": "Shield",
-    "dieLimit": 1,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 5,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 6,
-        "defense": 6,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 3,
-        "attack": 8,
-        "defense": 8,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When fielded, when Master Mold attacks, or when Master Mold is KO\\'d, place a Sentinel token with 5A and 5D into the Field Zone.",
-    "keywords": [],
-    "affiliations": [
-      "Villains"
     ],
     "isImplemented": false,
     "set": "DPS",

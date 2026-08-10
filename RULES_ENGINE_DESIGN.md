@@ -296,8 +296,28 @@ here rather than assuming which approach they'd want.
     Attack-Step trigger hook, a cross-player static debuff, ability-
     blanking, spawning a token die not backed by any card, damage
     redirection, and a temporary Global-activated targeting-immunity
-    shape distinct from Kitty Pryde's own continuous one). Also now
-    real: `SpinToEnergyFace` ("spin [a/
+    shape distinct from Kitty Pryde's own continuous one). **Update: four
+    of those closed in the very next round** - `OpponentKOsOwnCharacterDie`
+    (Ronan "No Mercy"/DPS090 - turns out `GameState.PendingChoice`
+    already generalizes to "the opponent answers" with zero new
+    plumbing, since `ControllerId` on it was never actually enforced
+    against the submitting player), `TriggerType.
+    StartOfOpponentsAttackStep` (both Emma Frost printings, fired from a
+    newly-optional-queue-param `TurnEngine.EnterAttackStep`),
+    `PlaceToken`/`CardType.Token` (Master Mold "Endless Sentinels" -
+    caught a real pre-existing bug along the way: `DieStats.GetFace`/
+    `GetMaxLevel` both checked `CardId is null` alone instead of
+    `VirtualCardId ?? CardId`, so a die with only a `VirtualCardId` -
+    never exercised before now - silently got the bare 1A/1D Sidekick
+    face instead of its real stats), and `CardDef.
+    GrantsOpponentStatDebuff` (Vulcan "Aggession," the cross-player
+    mirror of `GrantsStaticTeamBonus`) - see the "tackling the deeper
+    gaps" status update, including why the other three (damage
+    redirection, ability-blanking, Gladiator's temporary team-wide
+    targeting immunity) stayed deliberately unattempted: each would
+    touch several existing call sites at once, where a partial version
+    risks silently-wrong behavior elsewhere rather than just missing one
+    card. Also now real: `SpinToEnergyFace` ("spin [a/
     target] die to its single/an energy face," reusing `PlaceholderDiceRoller`'s
     own Character-die energy-face formula) and `TargetSpec.RequiredLevel`
     ("target opposing level 1 character die") - Magik ("Better than

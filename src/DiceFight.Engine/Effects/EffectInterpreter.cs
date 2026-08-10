@@ -370,6 +370,54 @@ public static class EffectInterpreter
                 }
                 break;
 
+            case OpponentKOsOwnCharacterDie:
+            {
+                var opponentId = ctx.State.OpponentOf(ctx.ControllerId);
+                var candidates = ctx.State.DiceIn(opponentId, Zone.FieldZone)
+                    .Concat(ctx.State.DiceIn(opponentId, Zone.AttackZone))
+                    .Where(d => d.Status is DieStatus.Character or DieStatus.SidekickCharacter)
+                    .ToList();
+                if (candidates.Count == 0) break; // rule 3.1.10 - "if able"
+
+                if (candidates.Count == 1)
+                {
+                    // No real choice among which - resolves immediately,
+                    // same as Corrupt's own single-candidate case.
+                    if (DieStats.ForceKO(ctx.State, candidates[0], ctx.Roller))
+                        TurnEngine.ResolveKOReactions(ctx.State, ctx.Queue, [candidates[0].Id]);
+                    break;
+                }
+
+                ctx.State.PendingChoice = new PendingChoice
+                {
+                    ControllerId = opponentId,
+                    Description = "Choose one of your own character dice to KO.",
+                    CandidateDieIds = candidates.Select(d => d.Id).ToList(),
+                    AllowMultiple = false,
+                    Resolve = chosenIds =>
+                    {
+                        var chosen = candidates.First(d => d.Id == chosenIds[0]);
+                        if (DieStats.ForceKO(ctx.State, chosen, ctx.Roller))
+                            TurnEngine.ResolveKOReactions(ctx.State, ctx.Queue, [chosen.Id]);
+                    }
+                };
+                break;
+            }
+
+            case PlaceToken placeToken:
+                ctx.State.Dice.Add(new DieInstance
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    CardId = null,
+                    VirtualCardId = placeToken.TokenCardId,
+                    OwnerId = ctx.ControllerId,
+                    ControllerId = ctx.ControllerId,
+                    Zone = Zone.FieldZone,
+                    Status = DieStatus.Character,
+                    Level = 1
+                });
+                break;
+
             case ForceBlock forceBlock:
                 foreach (var id in Resolve(ctx, forceBlock.Target, cache))
                     ctx.State.MustBlockThisTurn.Add(id);

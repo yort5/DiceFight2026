@@ -5305,3 +5305,112 @@ would be its own round.
 Verified: `dotnet build`, `dotnet test` (388/388 - 16 new cases), and
 `npm run build` all clean. Re-ran `scripts/import_bulk_cards.py`
 (106 → 116 hand-curated).
+
+## Status update — tackling the deeper gaps: opponent choice, opponent's-turn triggers, tokens, cross-player debuffs
+
+Ninth batch this session, closing four of the eight gaps flagged as
+"each its own round" at the end of the previous update - the user asked
+to tackle them directly rather than keep mining shallower cards.
+
+**OpponentKOsOwnCharacterDie** - Ronan the Accuser "No Mercy" (DPS090)'s
+"each player KOs a character die they control." The ability controller's
+own half is just an ordinary `Ko(Own)` elsewhere in the same `Sequence`
+(answered the normal way); this node handles only the opponent's own,
+otherwise-unanswerable choice. Turns out `GameState.PendingChoice`
+already generalizes to this with zero new plumbing - `ControllerId` on
+that record was never actually enforced against the submitting player
+at the API layer (confirmed by reading `GamesController.
+ResolvePendingChoice` - it validates the chosen ids against
+`CandidateDieIds` but never checks who's asking), so setting it to the
+opponent instead of the ability's own controller was the whole fix.
+"If able" (rule 3.1.10) - silently a no-op if the opponent has no active
+character die; a single remaining candidate resolves immediately, same
+as `Corrupt`'s own single-candidate shortcut.
+
+**TriggerType.StartOfOpponentsAttackStep** - both Emma Frost printings'
+"at the start of your opponent's Attack Step, [...]." `TurnEngine.
+EnterAttackStep` gained an optional `AbilityQueue? queue = null`
+parameter (every existing caller - 11 test call sites plus the API -
+keeps working unchanged, since most games have no such card in play);
+when supplied, it fires the trigger for every active die controlled by
+whoever ISN'T the player whose Attack Step just started - a fixed
+relationship, unlike `WhenAnotherDieKOd`/`WhenAnotherDieFielded`, so no
+per-card filter object was needed. The API's own `/enter-attack-step`
+endpoint now drains a real queue too (a new optional `TargetDieIds` on
+its request body). Emma Frost "Finesse" (DPS110)'s own "reroll 2 [...];
+those on character faces are returned to the Field Zone, those on
+energy faces go to the Reserve Pool" needed no new primitive at all -
+that's exactly `RerollAndMoveUnlessCharacter`'s existing shape (a
+character-face lander is simply left alone, which for a die already
+sitting in the Field Zone *is* "returned" there).
+
+**PlaceToken + CardType.Token** - Master Mold "Endless Sentinels"
+(DPS147)'s "place a Sentinel token with 5A and 5D into the Field Zone."
+A brand new `DieInstance` (fresh `Guid`, `CardId` null, `VirtualCardId`
+pointing at a real `SentinelToken` `CardDef` registered in the catalog)
+rather than a purely synthetic die, so every existing stat/keyword
+lookup treats it exactly like a printed Character die. `CardType.Token`
+is a new enum value purely so `CardsController` can filter it out of
+the public `/api/cards` listing - a token was never a real card a team
+could be built from. **Caught a real, previously-unexercised bug while
+wiring this up**: `DieStats.GetFace`/`GetMaxLevel` both checked
+`die.CardId is null` alone to decide "is this a bare Sidekick," falling
+through to the hardcoded 1A/1D `SidekickFace` - correct for every die
+that existed before today, but wrong for a token (`CardId` null by
+design, real stats only reachable via `VirtualCardId`). `VirtualCardId`
+was already flagged as "left as a stub" for Copying (rule 3.10) and
+evidently never previously exercised by anything with `CardId: null`.
+Fixed both call sites to check `VirtualCardId ?? CardId` instead, the
+same fallback every other consulting site already used.
+
+**CardDef.GrantsOpponentStatDebuff** - Vulcan "Aggession" (DPS135)'s
+"your opponent's non-fist characters get -2D." The cross-player mirror
+of `GrantsStaticTeamBonus` (that field's own granter scan is always
+same-controller - see `DieStats.StaticTeamBonusFor`) - a new
+`TotalOpponentStatDebuff` helper scans the RECEIVING die's own
+opponent's active dice for a granter instead, with `ExcludedEnergyType`
+as the (first) exclude-shaped filter dimension in this codebase, the
+opposite sense from `RequiredAffiliations`/`RequiredEnergyType`
+elsewhere. The card's own Global reuses `ForceAttack`, the exact
+primitive Vulcan's own "Ruler of the Imperium" printing already uses.
+
+Tests (9 new) exercise the real path throughout: Ronan's own tests cover
+all three shapes (a real multi-candidate `PendingChoice` resolved via
+`.Resolve(...)`, the "if able" no-op, and the single-candidate immediate
+resolution); Emma Frost's tests drive the real `TurnEngine.
+EnterAttackStep(state, queue)` gate; Master Mold's tests place a token
+via `WhenFielded` and prove `WhenAttacks`/`WhenKOd` each place another
+(going through the real `Ko`/`DeclareAttackers` paths rather than
+calling the internal KO-reaction method directly, since that's not
+visible outside the engine assembly); Vulcan's tests capture baseline
+defense values BEFORE fielding Vulcan (a real mistake caught the first
+time through: measuring "before" after Vulcan was already active just
+re-measured the debuffed value) to prove the debuff, the Fist exclusion,
+and the same-side non-application all independently.
+
+**Still open, deliberately not attempted this round** - genuinely
+larger, cross-cutting changes each touching multiple existing call
+sites, where a partial version would risk silently-wrong behavior
+elsewhere in the engine rather than just missing one card: a damage-
+redirect mechanism (Colossus "Organic Steel" - would need every damage-
+application site, combat and ability alike, to consult a live redirect
+target first), an ability-blanking mechanism (Vulcan "Power
+Suppression," Mister Sinister "Mutant Supremacist" - would need
+`HasKeyword`/every static-bonus lookup/`EnqueueTriggered` to all
+consult a "is this die's text currently blanked" check), and a
+temporary Global-activated whole-team targeting-immunity distinct from
+Kitty Pryde's own continuous, self-only, all-ability-types shape (both
+Gladiator printings - "can't be the target of Action Dice or Global
+Abilities," specifically, which needs `EffectContext`/`TargetSpec` to
+know what KIND of ability is currently resolving, a dimension that
+doesn't exist anywhere in the interpreter today). "Who caused this KO"
+tracking (Deathbird "Usurper") was also reconsidered and set aside
+again - the combat-damage KO path batches multiple simultaneous KOs
+from both sides at once with no per-die damage-source attribution
+today, so attributing "who caused it" correctly there is a bigger
+change than the one remaining card justifies right now.
+
+Verified: `dotnet build`, `dotnet test` (397/397 - 9 new cases), and
+`npm run build` all clean. Re-ran `scripts/import_bulk_cards.py`
+(120 → 121 hand-curated; the Sentinel token isn't a real sheet card so
+it doesn't move that count on its own).

@@ -120,6 +120,36 @@ public static class DieStats
         return matchCount * grant.AttackPerMatch;
     }
 
+    // See CardDef.GrantsOpponentStatDebuff's remarks - scans `die`'s
+    // OWN OPPONENT's active dice for a granter (the cross-player mirror
+    // of StaticTeamBonusFor's same-controller scan), accumulating across
+    // multiple granters the same way that method does.
+    private static OpponentStatDebuff TotalOpponentStatDebuff(GameState state, DieInstance die)
+    {
+        if (die.Zone is not (Zone.FieldZone or Zone.AttackZone)) return new OpponentStatDebuff(0, 0);
+
+        var dieCardId = die.VirtualCardId ?? die.CardId;
+        var dieCard = dieCardId is not null ? state.CardCatalog.GetValueOrDefault(dieCardId) : null;
+
+        var grantingCardIds = state.DiceIn(state.OpponentOf(die.ControllerId), Zone.FieldZone)
+            .Concat(state.DiceIn(state.OpponentOf(die.ControllerId), Zone.AttackZone))
+            .Select(d => d.VirtualCardId ?? d.CardId)
+            .Where(id => id is not null)
+            .Distinct();
+
+        var attack = 0;
+        var defense = 0;
+        foreach (var cardId in grantingCardIds)
+        {
+            if (!state.CardCatalog.TryGetValue(cardId!, out var card) || card.GrantsOpponentStatDebuff is not { } debuff)
+                continue;
+            if (debuff.ExcludedEnergyType is { } excluded && (dieCard?.EnergyTypes.Contains(excluded) ?? false)) continue;
+            attack += debuff.AttackDelta;
+            defense += debuff.DefenseDelta;
+        }
+        return new OpponentStatDebuff(attack, defense);
+    }
+
     // Whether this die's own card carries the named affiliation (e.g.
     // "Monster" for keyword Experience's own earning condition). Printed
     // only - nothing grants an affiliation the way Darkseid grants Swarm.
@@ -218,18 +248,32 @@ public static class DieStats
         return die.Level - oldLevel;
     }
 
-    private static int GetMaxLevel(GameState state, DieInstance die) =>
-        die.CardId is null ? 1 : Math.Max(1, state.CardCatalog[die.VirtualCardId ?? die.CardId].Levels.Count);
+    // Same VirtualCardId-vs-CardId fix as GetFace just above, for the
+    // same reason.
+    private static int GetMaxLevel(GameState state, DieInstance die)
+    {
+        var cardId = die.VirtualCardId ?? die.CardId;
+        return cardId is null ? 1 : Math.Max(1, state.CardCatalog[cardId].Levels.Count);
+    }
 
     public static readonly CharacterFace SidekickFace = new(FieldingCost: 0, Attack: 1, Defense: 1);
 
     // Rule 1.6.8 - a rolled Sidekick Character die is always level 1.
+    // Real bug found authoring Master Mold's own Sentinel token (the
+    // first die anywhere with CardId null but a real VirtualCardId -
+    // Copying, rule 3.10, was "left as a stub" per VirtualCardId's own
+    // remarks and evidently never actually exercised): this used to
+    // check `die.CardId is null` alone, so a token die (CardId null by
+    // design - see PlaceToken) always fell through to the bare
+    // SidekickFace (1A/1D) instead of ever consulting its VirtualCardId,
+    // silently discarding its real printed stats.
     public static CharacterFace GetFace(GameState state, DieInstance die)
     {
-        if (die.CardId is null)
+        var cardId = die.VirtualCardId ?? die.CardId;
+        if (cardId is null)
             return SidekickFace;
 
-        var card = state.CardCatalog[die.VirtualCardId ?? die.CardId];
+        var card = state.CardCatalog[cardId];
         var index = Math.Clamp(die.Level - 1, 0, Math.Max(0, card.Levels.Count - 1));
         return card.Levels.Count > 0 ? card.Levels[index] : SidekickFace;
     }
@@ -307,6 +351,7 @@ public static class DieStats
         total += LoyaltyBonus(state, die);
         total += SelfStatBonusWhileNamedCardActive(state, die)?.AttackDelta ?? 0;
         total += SelfAttackBonusPerMatchingDie(state, die);
+        total += TotalOpponentStatDebuff(state, die).AttackDelta;
         return Math.Max(0, total);
     }
 
@@ -319,6 +364,7 @@ public static class DieStats
         total += ExperienceBonus(state, die);
         total += LoyaltyBonus(state, die);
         total += SelfStatBonusWhileNamedCardActive(state, die)?.DefenseDelta ?? 0;
+        total += TotalOpponentStatDebuff(state, die).DefenseDelta;
         return Math.Max(0, total);
     }
 

@@ -385,6 +385,30 @@ public sealed record Conditional(
 // TargetSpec to express "both players, no chooser, silently skip if none."
 public sealed record FieldSidekickForEachPlayer : EffectNode;
 
+// Ronan the Accuser ("No Mercy", DPS090) - "each player KOs a character
+// die they control." The ability's own controller's half is just an
+// ordinary Ko(TargetSpec.CharacterDie(..., Own)) elsewhere in the same
+// Sequence (their choice answers through the normal ResolveTargets
+// pipeline like any other target); this node is only the OPPONENT's
+// half, since nothing about the opponent's own choice can be answered
+// through the ability CONTROLLER's ResolveTargets closure - it needs
+// GameState.PendingChoice, same "can't be answered in the same request"
+// shape Corrupt/RedrawFromBag already use, just with PendingChoice.
+// ControllerId set to the OPPONENT instead of the ability's own
+// controller. "If able" (rule 3.1.10) - silently a no-op if the
+// opponent has no active character die at all.
+public sealed record OpponentKOsOwnCharacterDie : EffectNode;
+
+// Master Mold ("Endless Sentinels", DPS147) - "place a Sentinel token
+// with 5A and 5D into the Field Zone." Creates a brand new DieInstance
+// on the fly (CardId null, VirtualCardId pointing at a real
+// CardType.Token CardDef registered in the catalog so GameState.
+// CardCatalog lookups/DieStats work exactly like any other Character
+// die), owned/controlled by the ability's controller, already on its
+// (only) character face in the Field Zone. No TargetSpec at all - there
+// is no target, just an unconditional creation.
+public sealed record PlaceToken(string TokenCardId) : EffectNode;
+
 // Starfire's Global ("if you purchased a die this turn, Prep a die from
 // your bag") - the "if you..." check is against turn-scoped state
 // (Player.PurchasedDieThisTurn), not a die's condition, so like

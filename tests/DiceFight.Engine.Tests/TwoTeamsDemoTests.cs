@@ -1826,6 +1826,265 @@ public class TwoTeamsDemoTests
     }
 
     [Fact]
+    public void FieldingRonanTheAccuserNoMercy_BothPlayersKOOwnDie_OpponentViaPendingChoice()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.RonanTheAccuserNoMercy.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var ownDie = state.DiceIn("teamA", Zone.Bag).First();
+        ownDie.Zone = Zone.FieldZone;
+        ownDie.Status = DieStatus.SidekickCharacter;
+        ownDie.Level = 1;
+
+        var opponentDie1 = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        opponentDie1.Zone = Zone.FieldZone; opponentDie1.Status = DieStatus.Character; opponentDie1.Level = 1;
+        var opponentDie2 = FindUnpurchased(state, "teamB", SampleCards.Groot.Id);
+        opponentDie2.Zone = Zone.FieldZone; opponentDie2.Status = DieStatus.Character; opponentDie2.Level = 1;
+
+        var ronanDie = FindUnpurchased(state, "teamA", SampleCards.RonanTheAccuserNoMercy.Id);
+        ronanDie.Zone = Zone.FieldZone;
+        ronanDie.Status = DieStatus.Character;
+        ronanDie.Level = 1;
+
+        var ability = SampleCards.RonanTheAccuserNoMercy.Abilities.Single(a => a.Trigger == TriggerType.WhenFielded);
+        EffectInterpreter.Execute(ability.Effect, new EffectContext(state, "teamA", ronanDie.Id, _ => [ownDie.Id]));
+
+        Assert.Equal(Zone.PrepArea, ownDie.Zone); // the controller's own half already happened
+
+        var pending = state.PendingChoice;
+        Assert.NotNull(pending);
+        Assert.Equal("teamB", pending!.ControllerId); // the OPPONENT answers this one
+        Assert.Contains(opponentDie1.Id, pending.CandidateDieIds);
+        Assert.Contains(opponentDie2.Id, pending.CandidateDieIds);
+
+        pending.Resolve([opponentDie2.Id]);
+
+        Assert.Equal(Zone.PrepArea, opponentDie2.Zone); // the opponent's own chosen die
+        Assert.Equal(Zone.FieldZone, opponentDie1.Zone); // untouched
+    }
+
+    [Fact]
+    public void FieldingRonanTheAccuserNoMercy_OpponentHasNoCharacterDice_SkipsSilently()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.RonanTheAccuserNoMercy.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var ownDie = state.DiceIn("teamA", Zone.Bag).First();
+        ownDie.Zone = Zone.FieldZone;
+        ownDie.Status = DieStatus.SidekickCharacter;
+        ownDie.Level = 1;
+
+        var ronanDie = FindUnpurchased(state, "teamA", SampleCards.RonanTheAccuserNoMercy.Id);
+        ronanDie.Zone = Zone.FieldZone;
+        ronanDie.Status = DieStatus.Character;
+        ronanDie.Level = 1;
+
+        var ability = SampleCards.RonanTheAccuserNoMercy.Abilities.Single(a => a.Trigger == TriggerType.WhenFielded);
+        EffectInterpreter.Execute(ability.Effect, new EffectContext(state, "teamA", ronanDie.Id, _ => [ownDie.Id]));
+
+        Assert.Equal(Zone.PrepArea, ownDie.Zone);
+        Assert.Null(state.PendingChoice); // "if able" - opponent had nothing to KO
+    }
+
+    [Fact]
+    public void FieldingRonanTheAccuserNoMercy_OpponentHasExactlyOneDie_ResolvesImmediately()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.RonanTheAccuserNoMercy.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var ownDie = state.DiceIn("teamA", Zone.Bag).First();
+        ownDie.Zone = Zone.FieldZone;
+        ownDie.Status = DieStatus.SidekickCharacter;
+        ownDie.Level = 1;
+
+        var opponentDie = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        opponentDie.Zone = Zone.FieldZone;
+        opponentDie.Status = DieStatus.Character;
+        opponentDie.Level = 1;
+
+        var ronanDie = FindUnpurchased(state, "teamA", SampleCards.RonanTheAccuserNoMercy.Id);
+        ronanDie.Zone = Zone.FieldZone;
+        ronanDie.Status = DieStatus.Character;
+        ronanDie.Level = 1;
+
+        var ability = SampleCards.RonanTheAccuserNoMercy.Abilities.Single(a => a.Trigger == TriggerType.WhenFielded);
+        EffectInterpreter.Execute(ability.Effect, new EffectContext(state, "teamA", ronanDie.Id, _ => [ownDie.Id]));
+
+        Assert.Equal(Zone.PrepArea, ownDie.Zone);
+        Assert.Equal(Zone.PrepArea, opponentDie.Zone); // no real choice among one - resolves immediately
+        Assert.Null(state.PendingChoice);
+    }
+
+    [Fact]
+    public void EmmaFrostManipulative_FiresOffRealEnterAttackStepGate_RerollsOpponentTarget()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.EmmaFrostManipulative.Id]);
+        state.ActivePlayerId = "teamB"; // teamB is about to attack; Emma Frost's controller (teamA) reacts
+
+        var emmaDie = FindUnpurchased(state, "teamA", SampleCards.EmmaFrostManipulative.Id);
+        emmaDie.Zone = Zone.FieldZone;
+        emmaDie.Status = DieStatus.Character;
+        emmaDie.Level = 1;
+
+        var target = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        target.Zone = Zone.FieldZone;
+        target.Status = DieStatus.Character;
+        target.Level = 1;
+
+        var queue = new AbilityQueue();
+        TurnEngine.EnterAttackStep(state, queue);
+
+        Assert.Equal(1, queue.Count);
+        Assert.Equal(TriggerType.StartOfOpponentsAttackStep, queue.Pending[0].Trigger);
+
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(
+                state, ability.ControllerId, ability.SourceDieId, _ => [target.Id],
+                Roller: new FixedRoller(DieStatus.Energy, 1))));
+
+        Assert.Equal(DieStatus.Energy, target.Status); // rerolled off its character face
+    }
+
+    [Fact]
+    public void EmmaFrostFinesse_RerollsAFistTarget_SendingAnEnergyLanderToTheReservePool()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.EmmaFrostFinesse.Id],
+            extraTeamBCardIds: [SampleCards.SabretoothDoISmellWeakness.Id]);
+        state.ActivePlayerId = "teamB";
+
+        var emmaDie = FindUnpurchased(state, "teamA", SampleCards.EmmaFrostFinesse.Id);
+        emmaDie.Zone = Zone.FieldZone;
+        emmaDie.Status = DieStatus.Character;
+        emmaDie.Level = 1;
+
+        var fistTarget = FindUnpurchased(state, "teamB", SampleCards.SabretoothDoISmellWeakness.Id); // Fist energy type
+        fistTarget.Zone = Zone.FieldZone;
+        fistTarget.Status = DieStatus.Character;
+        fistTarget.Level = 1;
+
+        var queue = new AbilityQueue();
+        TurnEngine.EnterAttackStep(state, queue);
+        Assert.Equal(1, queue.Count);
+
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(
+                state, ability.ControllerId, ability.SourceDieId, _ => [fistTarget.Id],
+                Roller: new FixedRoller(DieStatus.Energy, 1))));
+
+        Assert.Equal(Zone.ReservePool, fistTarget.Zone); // landed on an energy face
+    }
+
+    [Fact]
+    public void FieldingMasterMoldEndlessSentinels_PlacesARealSentinelToken()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.MasterMoldEndlessSentinels.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var masterMoldDie = FindUnpurchased(state, "teamA", SampleCards.MasterMoldEndlessSentinels.Id);
+        masterMoldDie.Zone = Zone.FieldZone;
+        masterMoldDie.Status = DieStatus.Character;
+        masterMoldDie.Level = 1;
+
+        var ability = SampleCards.MasterMoldEndlessSentinels.Abilities.Single(a => a.Trigger == TriggerType.WhenFielded);
+        EffectInterpreter.Execute(ability.Effect, new EffectContext(state, "teamA", masterMoldDie.Id, _ => []));
+
+        var token = state.DiceIn("teamA", Zone.FieldZone).Single(d => d.VirtualCardId == SampleCards.SentinelToken.Id);
+        Assert.Equal(DieStatus.Character, token.Status);
+        Assert.Equal(5, DieStats.EffectiveAttack(state, token));
+        Assert.Equal(5, DieStats.EffectiveDefense(state, token));
+    }
+
+    [Fact]
+    public void MasterMoldEndlessSentinels_AlsoPlacesTokens_WhenItAttacksAndWhenItsKOd()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.MasterMoldEndlessSentinels.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var masterMoldDie = FindUnpurchased(state, "teamA", SampleCards.MasterMoldEndlessSentinels.Id);
+        masterMoldDie.Zone = Zone.FieldZone;
+        masterMoldDie.Status = DieStatus.Character;
+        masterMoldDie.Level = 1;
+
+        state.CurrentStep = TurnStep.Attack;
+        state.AttackSubStep = AttackSubStep.DeclareAttackers;
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [masterMoldDie.Id]);
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [])));
+
+        Assert.Single(state.DiceIn("teamA", Zone.FieldZone), d => d.VirtualCardId == SampleCards.SentinelToken.Id);
+
+        // Ko's own case already funnels through TurnEngine.ResolveKOReactions
+        // internally - going through the public EffectInterpreter/Ko path
+        // here instead of calling that internal method directly.
+        var koQueue = new AbilityQueue();
+        EffectInterpreter.Execute(
+            new Ko(TargetSpec.Self), new EffectContext(state, "teamA", masterMoldDie.Id, _ => [], Queue: koQueue));
+        koQueue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [])));
+
+        Assert.Equal(2, state.DiceIn("teamA", Zone.FieldZone).Count(d => d.VirtualCardId == SampleCards.SentinelToken.Id));
+    }
+
+    [Fact]
+    public void VulcanAggession_DebuffsOnlyOpponentsNonFistCharacters()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.VulcanAggession.Id],
+            extraTeamBCardIds: [SampleCards.SabretoothDoISmellWeakness.Id]); // Fist energy type
+
+        var nonFistOpponent = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id); // PlaceholderEnergy: Mask
+        nonFistOpponent.Zone = Zone.FieldZone;
+        nonFistOpponent.Status = DieStatus.Character;
+        nonFistOpponent.Level = 1;
+        var nonFistDefenseBefore = DieStats.EffectiveDefense(state, nonFistOpponent); // Vulcan not fielded yet
+
+        var fistOpponent = FindUnpurchased(state, "teamB", SampleCards.SabretoothDoISmellWeakness.Id);
+        fistOpponent.Zone = Zone.FieldZone;
+        fistOpponent.Status = DieStatus.Character;
+        fistOpponent.Level = 1;
+        var fistDefenseBefore = DieStats.EffectiveDefense(state, fistOpponent);
+
+        var ownNonFistDie = state.DiceIn("teamA", Zone.Bag).First();
+        ownNonFistDie.Zone = Zone.FieldZone;
+        ownNonFistDie.Status = DieStatus.SidekickCharacter;
+        ownNonFistDie.Level = 1;
+        var ownDefenseBefore = DieStats.EffectiveDefense(state, ownNonFistDie);
+
+        var vulcanDie = FindUnpurchased(state, "teamA", SampleCards.VulcanAggession.Id);
+        vulcanDie.Zone = Zone.FieldZone;
+        vulcanDie.Status = DieStatus.Character;
+        vulcanDie.Level = 1;
+
+        Assert.Equal(nonFistDefenseBefore - 2, DieStats.EffectiveDefense(state, nonFistOpponent)); // debuffed
+        Assert.Equal(fistDefenseBefore, DieStats.EffectiveDefense(state, fistOpponent)); // excluded - Fist
+        Assert.Equal(ownDefenseBefore, DieStats.EffectiveDefense(state, ownNonFistDie)); // own side, unaffected
+    }
+
+    [Fact]
+    public void UsingVulcanAggessionGlobal_ForcesTargetToAttack()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.VulcanAggession.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var target = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        target.Zone = Zone.FieldZone;
+        target.Status = DieStatus.Character;
+        target.Level = 1;
+
+        var energy = GiveWildEnergy(state, "teamA", 1);
+        var queue = new AbilityQueue();
+        TurnEngine.UseGlobalAbility(state, queue, SampleCards.VulcanAggession.Id, "teamA", energy.Select(d => d.Id).ToList());
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [target.Id])));
+
+        Assert.Contains(target.Id, state.MustAttackThisTurn);
+    }
+
+    [Fact]
     public void UsingStarfireGlobalAbility_PrepsADieFromBag_IfYouPurchasedADieThisTurn()
     {
         var state = BuildTwoTeamGame();

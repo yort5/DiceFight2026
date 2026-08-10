@@ -118,10 +118,12 @@ public sealed class GamesController(GameStore store) : ControllerBase
     }
 
     [HttpPost("{gameId}/enter-attack-step")]
-    public ActionResult<GameStateDto> EnterAttackStep(string gameId)
+    public ActionResult<GameStateDto> EnterAttackStep(string gameId, [FromBody] EnterAttackStepRequest? request = null)
     {
         var state = RequireNoPendingChoice(gameId);
-        TurnEngine.EnterAttackStep(state);
+        var queue = new AbilityQueue();
+        TurnEngine.EnterAttackStep(state, queue);
+        Drain(state, queue, request?.TargetDieIds);
         return Ok(GameStateDto.From(gameId, state));
     }
 

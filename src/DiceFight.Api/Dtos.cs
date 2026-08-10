@@ -94,6 +94,10 @@ public sealed record UseActionDieRequest(string DieId, IReadOnlyList<string>? Ta
 public sealed record ResolveContinuousDieRequest(string DieId, IReadOnlyList<string>? TargetDieIds);
 public sealed record UseGlobalAbilityRequest(
     string CardId, string PlayerId, IReadOnlyList<string> EnergyDieIds, IReadOnlyList<string>? TargetDieIds);
+// TargetDieIds feeds TriggerType.StartOfOpponentsAttackStep reactions
+// (both Emma Frost printings) - optional/nullable body since most games
+// have no such card in play and the client shouldn't have to send one.
+public sealed record EnterAttackStepRequest(IReadOnlyList<string>? TargetDieIds = null);
 public sealed record RerollRequest(IReadOnlyList<string> RerollDieIds);
 // TargetDieIds feeds Call Out's WhenAttacks-triggered SetCallOutTarget
 // effect (see GamesController.DeclareAttackers's Drain call) - null/empty

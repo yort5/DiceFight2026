@@ -82,7 +82,16 @@ public enum CardType
     Character,
     Action,
     BasicAction,
-    EpicBasicAction
+    EpicBasicAction,
+
+    // Master Mold ("Endless Sentinels", DPS147) - a die created by an
+    // ability (EffectNode.PlaceToken), not backed by any real printed
+    // card. Still needs a real CardDef entry (fixed stats via
+    // CharacterFace) for GameState.CardCatalog lookups/DieStats to work
+    // like any other Character die - CardsController filters this type
+    // out of the public /api/cards listing specifically so a token never
+    // shows up as something a team can be built from.
+    Token
 }
 
 // Rule 1.6.4/1.6.5 - what a rolled die's face represents. Unrolled dice
@@ -260,7 +269,15 @@ public enum TriggerType
     // Teamwatch scan (both react to the same "a Character die entered
     // the Field Zone" moment, just with a per-card filter here instead of
     // Teamwatch's hardcoded "same affiliation" rule).
-    WhenAnotherDieFielded
+    WhenAnotherDieFielded,
+
+    // "While active, at the start of your opponent's Attack Step, [...]"
+    // (both Emma Frost printings, DPS070/DPS110) - fired from
+    // TurnEngine.EnterAttackStep for every active die controlled by
+    // whoever ISN'T the player entering the Attack Step; a fixed
+    // relationship (unlike WhenAnotherDieKOd/WhenAnotherDieFielded), so
+    // no per-card filter object exists for this one.
+    StartOfOpponentsAttackStep
 }
 
 // Rule 2.2.3 - the five steps of a turn, in fixed order (2.2.4 - cannot

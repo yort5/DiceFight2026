@@ -76,6 +76,20 @@ public sealed record CardDef
     // TurnEngine.Field's own IsFreeToField for where this is consulted.
     public FreeFieldingGrant? GrantsFreeFielding { get; init; }
 
+    // Vulcan ("Aggession", DPS135): "your opponent's non-fist characters
+    // get -2D." The cross-player counterpart to GrantsStaticTeamBonus -
+    // that field's own granter scan is always same-controller (see
+    // DieStats.StaticTeamBonusFor), so this is a genuinely different
+    // shape, not a reuse of it. ExcludedEnergyType ("non-fist") is an
+    // EXCLUDE filter on the RECEIVING die's own energy type, the
+    // opposite sense from RequiredAffiliations elsewhere in this file -
+    // still just one dimension, so a positive "RequiredEnergyType"
+    // wasn't reused here on purpose (this card's own text is a
+    // negation, and there's no current need to support both senses at
+    // once). See DieStats.EffectiveAttack/EffectiveDefense for where
+    // this is actually applied live.
+    public OpponentStatDebuff? GrantsOpponentStatDebuff { get; init; }
+
     // Psylocke ("Adventurer", DPS048): "While Wolverine is active,
     // Psylocke gains Deadly" - a live, continuously-recomputed SELF
     // keyword grant conditioned on some OTHER named card being active
@@ -160,6 +174,9 @@ public sealed record ConditionalSelfStatBonus(string WhileCardNamed, int AttackD
 // is a TargetSpec repurposed as a counting filter rather than a real
 // choice - LegalTargets.Query still does the actual matching.
 public sealed record SelfAttackBonusPerMatchingDie(TargetSpec CountFilter, int AttackPerMatch);
+
+// See CardDef.GrantsOpponentStatDebuff's remarks.
+public sealed record OpponentStatDebuff(int AttackDelta, int DefenseDelta, EnergyType? ExcludedEnergyType = null);
 
 // See CardDef.GrantsFreeFielding's remarks. Both filters are independent
 // (an implicit AND if both are set) - only one is ever set by any current

@@ -995,13 +995,31 @@ public static class TurnEngine
     }
 
     // Rule 2.6.7.1(3)/2.6.7.2 - the active player chooses to attack or not
-    // at the end of the Main Step.
-    public static void EnterAttackStep(GameState state)
+    // at the end of the Main Step. queue is optional (defaults null, a
+    // no-op) so every existing caller that doesn't care about
+    // TriggerType.StartOfOpponentsAttackStep reactions (most games have
+    // no such card in play) doesn't need to start passing one.
+    public static void EnterAttackStep(GameState state, AbilityQueue? queue = null)
     {
         if (state.CurrentStep != TurnStep.Main)
             throw new InvalidOperationException("Must be in the Main Step to enter the Attack Step.");
         state.CurrentStep = TurnStep.Attack;
         state.AttackSubStep = AttackSubStep.DeclareAttackers;
+
+        if (queue is null) return;
+
+        // Both Emma Frost printings (DPS070/DPS110) - "at the start of
+        // your opponent's Attack Step, [...]." The active player IS the
+        // one whose Attack Step just started, so the reacting side is
+        // always the OTHER player - a fixed relationship, unlike
+        // WhenAnotherDieKOd/WhenAnotherDieFielded's own per-card filter,
+        // so no filter object is needed here at all.
+        var reactingPlayerId = state.OpponentOf(state.ActivePlayerId);
+        foreach (var die in state.DiceIn(reactingPlayerId, Zone.FieldZone)
+            .Concat(state.DiceIn(reactingPlayerId, Zone.AttackZone)).ToList())
+        {
+            EnqueueTriggered(state, queue, die, TriggerType.StartOfOpponentsAttackStep);
+        }
     }
 
     public static void SkipAttackStep(GameState state)

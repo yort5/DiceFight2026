@@ -64,6 +64,7 @@ public static class SampleCards
         SelfAttackBonusPerMatchingDie? grantsSelfAttackBonusPerMatchingDie = null,
         string? cannotBeTargetedByOpponentWhileNamedCardActive = null,
         FreeFieldingGrant? grantsFreeFielding = null,
+        OpponentStatDebuff? grantsOpponentStatDebuff = null,
         bool isImplemented = true,
         string? set = null) => new()
     {
@@ -86,6 +87,7 @@ public static class SampleCards
         GrantsSelfAttackBonusPerMatchingDie = grantsSelfAttackBonusPerMatchingDie,
         CannotBeTargetedByOpponentWhileNamedCardActive = cannotBeTargetedByOpponentWhileNamedCardActive,
         GrantsFreeFielding = grantsFreeFielding,
+        GrantsOpponentStatDebuff = grantsOpponentStatDebuff,
         IsImplemented = isImplemented,
         Set = set
     };
@@ -2039,6 +2041,123 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 6)
         ], set: "DPS");
 
+    // Ronan the Accuser, "No Mercy" - the first card to use
+    // OpponentKOsOwnCharacterDie (new this pass): "each player KOs a
+    // character die they control" splits into the ability controller's
+    // own ordinary Ko(Own) choice (answered the normal way) and this new
+    // node for the opponent's own, otherwise-unanswerable, choice.
+    public static readonly CardDef RonanTheAccuserNoMercy = Character(
+        "DPS090", "Ronan the Accuser", "No Mercy", dieLimit: 3,
+        "When fielded, each player KOs a character die they control.",
+        purchaseCost: 6, energyType: EnergyType.Bolt,
+        abilities: [new AbilityDef(TriggerType.WhenFielded, Cost: null,
+            Effect: new Sequence([
+                new Ko(TargetSpec.CharacterDie("a character die you control", TargetOwnership.Own)),
+                new OpponentKOsOwnCharacterDie()
+            ]))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 5),
+            new CharacterFace(FieldingCost: 1, Attack: 6, Defense: 7),
+            new CharacterFace(FieldingCost: 2, Attack: 8, Defense: 8)
+        ], set: "DPS");
+
+    // Emma Frost, "Manipulative" - the first card to use
+    // TriggerType.StartOfOpponentsAttackStep (new this pass, fired from
+    // TurnEngine.EnterAttackStep).
+    public static readonly CardDef EmmaFrostManipulative = Character(
+        "DPS070", "Emma Frost", "Manipulative", dieLimit: 3,
+        "While Emma Frost is active, at the start of your opponent's Attack Step, reroll target character " +
+        "die they control.",
+        purchaseCost: 5, energyType: EnergyType.Shield,
+        affiliations: ["Hellfire Club"],
+        abilities: [new AbilityDef(TriggerType.StartOfOpponentsAttackStep, Cost: null,
+            Effect: new Reroll(TargetSpec.CharacterDie("target character die they control", TargetOwnership.Opposing)))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 5),
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 6),
+            new CharacterFace(FieldingCost: 2, Attack: 5, Defense: 7)
+        ], set: "DPS");
+
+    // Emma Frost, "Finesse" - StartOfOpponentsAttackStep's second user;
+    // "those showing character faces are returned to the Field Zone,
+    // those on energy faces are sent to the Reserve Pool" is exactly
+    // RerollAndMoveUnlessCharacter's existing shape with ToZone:
+    // ReservePool - a character-face lander is simply left alone by that
+    // primitive, which for a die already sitting in the Field Zone
+    // *is* "returned to the Field Zone." No new primitive needed.
+    public static readonly CardDef EmmaFrostFinesse = Character(
+        "DPS110", "Emma Frost", "Finesse", dieLimit: 2,
+        "While Emma Frost is Active, at the start of your opponents Attack Step, reroll 2 target Fist " +
+        "character dice your oppoenent controls. Those showing character faces are returned to the Field " +
+        "Zone, those on energy faces are sent to the Reserve Pool.",
+        purchaseCost: 5, energyType: EnergyType.Shield,
+        affiliations: ["X-Men", "Hellfire Club"],
+        abilities: [new AbilityDef(TriggerType.StartOfOpponentsAttackStep, Cost: null,
+            Effect: new RerollAndMoveUnlessCharacter(
+                TargetSpec.CharacterDie(
+                    "2 target Fist character dice your opponent controls", TargetOwnership.Opposing,
+                    energyType: EnergyType.Fist, count: 2),
+                Zone.ReservePool))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 5),
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 6),
+            new CharacterFace(FieldingCost: 2, Attack: 5, Defense: 7)
+        ], set: "DPS");
+
+    // A Sentinel token's own "card" - see PlaceToken/CardType.Token's own
+    // remarks for why this needs a real (but hidden-from-browsing)
+    // CardCatalog entry rather than being purely synthetic.
+    public static readonly CardDef SentinelToken = new()
+    {
+        Id = "TOKEN-SENTINEL",
+        Name = "Sentinel",
+        Subtitle = "Token",
+        Type = CardType.Token,
+        PurchaseCost = 0,
+        DieLimit = 0,
+        Levels = [new CharacterFace(FieldingCost: 0, Attack: 5, Defense: 5)],
+        RawText = "5A/5D token.",
+        IsImplemented = true
+    };
+
+    // Master Mold, "Endless Sentinels" - the first card to use PlaceToken
+    // (new this pass, alongside CardType.Token/SentinelToken above).
+    public static readonly CardDef MasterMoldEndlessSentinels = Character(
+        "DPS147", "Master Mold", "Endless Sentinels", dieLimit: 1,
+        "When fielded, when Master Mold attacks, or when Master Mold is KO'd, place a Sentinel token with " +
+        "5A and 5D into the Field Zone.",
+        purchaseCost: 6, energyType: EnergyType.Shield,
+        affiliations: ["Villains"],
+        abilities: [
+            new AbilityDef(TriggerType.WhenFielded, Cost: null, Effect: new PlaceToken(SentinelToken.Id)),
+            new AbilityDef(TriggerType.WhenAttacks, Cost: null, Effect: new PlaceToken(SentinelToken.Id)),
+            new AbilityDef(TriggerType.WhenKOd, Cost: null, Effect: new PlaceToken(SentinelToken.Id))
+        ],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 5),
+            new CharacterFace(FieldingCost: 2, Attack: 6, Defense: 6),
+            new CharacterFace(FieldingCost: 3, Attack: 8, Defense: 8)
+        ], set: "DPS");
+
+    // Vulcan, "Aggession" - the first card to use
+    // CardDef.GrantsOpponentStatDebuff (new this pass); the Global reuses
+    // ForceAttack, the same primitive Vulcan's own "Ruler of the
+    // Imperium" printing already established.
+    public static readonly CardDef VulcanAggession = Character(
+        "DPS135", "Vulcan", "Aggession", dieLimit: 2,
+        "While Vulcan is active, your opponent's non-fist characters get -2D. Global: Pay Fist. Target " +
+        "character die must attack this turn.",
+        purchaseCost: 6, energyType: EnergyType.Fist,
+        grantsOpponentStatDebuff: new OpponentStatDebuff(AttackDelta: 0, DefenseDelta: -2, ExcludedEnergyType: EnergyType.Fist),
+        abilities: [new AbilityDef(TriggerType.Global, Cost: null,
+            Effect: new ForceAttack(TargetSpec.CharacterDie("target character die")),
+            EnergyCost: new EnergyCost(1, EnergyType.Fist))],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 3, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 4),
+            new CharacterFace(FieldingCost: 1, Attack: 6, Defense: 5)
+        ], set: "DPS");
+
     // Supreme Intelligence, "Kree Science Council" - purely a Loyalty
     // grant, no other text. NameContains is a real substring match here
     // ("a card with Kree in its name"), unlike Gladiator's "When Lilandra
@@ -2358,7 +2477,9 @@ public static class SampleCards
             JubileeRebelliousNature, CyclopsFirstClass, JubileeXMenFieldLeader,
             JubileeThingsNeverChange, KittyPrydeHeadmistress, CorsairCriminalRecord, PhoenixPsionicMaelstrom,
             DarkPhoenixEnemyOfTheShiar, MagikWielderOfTheSoulsword, TakeCover, DeadpoolCollectThis,
-            MystiqueTaughtByMagneto, IcemanFrozenFistsOfFury
+            MystiqueTaughtByMagneto, IcemanFrozenFistsOfFury,
+            RonanTheAccuserNoMercy, EmmaFrostManipulative, EmmaFrostFinesse, SentinelToken, MasterMoldEndlessSentinels,
+            VulcanAggession
         ];
 
         // Hand-curated cards win on id collision - shouldn't happen in
