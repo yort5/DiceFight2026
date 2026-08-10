@@ -80,6 +80,10 @@ public static class SampleCards
         SelfPurchaseDiscountIfOpponentHasAffiliation? grantsSelfPurchaseDiscountIfOpponentHasAffiliation = null,
         OpponentAbilityBlankGrant? grantsOpponentAbilityBlankWhileActive = null,
         bool grantsPrepInsteadOfUsedPileIfPurchasedWithSameNameEnergy = false,
+        bool grantsSelfPrepWhenSpentAsEnergyForFielding = false,
+        SelfPrepFromBagIfFieldedWithEnergy? grantsSelfPrepFromBagIfFieldedWithEnergy = null,
+        IReadOnlyList<string>? grantsAffiliationsToSidekicks = null,
+        bool selfAttackEqualsDefenseWhileOwnSidekickActive = false,
         bool isImplemented = true,
         string? set = null) => new()
     {
@@ -118,6 +122,10 @@ public static class SampleCards
         GrantsSelfPurchaseDiscountIfOpponentHasAffiliation = grantsSelfPurchaseDiscountIfOpponentHasAffiliation,
         GrantsOpponentAbilityBlankWhileActive = grantsOpponentAbilityBlankWhileActive,
         GrantsPrepInsteadOfUsedPileIfPurchasedWithSameNameEnergy = grantsPrepInsteadOfUsedPileIfPurchasedWithSameNameEnergy,
+        GrantsSelfPrepWhenSpentAsEnergyForFielding = grantsSelfPrepWhenSpentAsEnergyForFielding,
+        GrantsSelfPrepFromBagIfFieldedWithEnergy = grantsSelfPrepFromBagIfFieldedWithEnergy,
+        GrantsAffiliationsToSidekicks = grantsAffiliationsToSidekicks ?? [],
+        SelfAttackEqualsDefenseWhileOwnSidekickActive = selfAttackEqualsDefenseWhileOwnSidekickActive,
         IsImplemented = isImplemented,
         Set = set
     };
@@ -2982,6 +2990,115 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 2)
         ], set: "DPS");
 
+    // Bishop, "I'm Back" - the first user of
+    // GrantsSelfPrepWhenSpentAsEnergyForFielding (new this round).
+    public static readonly CardDef BishopImBack = Character(
+        "DPS059", "Bishop", "I'm Back", dieLimit: 3,
+        "If you spend this die as energy to field a character die, add this die to your Prep Area.",
+        purchaseCost: 4, energyType: EnergyType.Shield,
+        affiliations: ["X-Men"],
+        grantsSelfPrepWhenSpentAsEnergyForFielding: true,
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 5),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 6),
+            new CharacterFace(FieldingCost: 2, Attack: 5, Defense: 6)
+        ], set: "DPS");
+
+    // Iceman, "Xavier's Dream" - the first user of
+    // SelfAttackEqualsDefenseWhileOwnSidekickActive (new this round).
+    public static readonly CardDef IcemanXaviersDream = Character(
+        "DPS142", "Iceman", "Xavier's Dream", dieLimit: 1,
+        "Founder While you have a Sidekick die active, Iceman's A is equal to his D.",
+        purchaseCost: 4, energyType: EnergyType.Bolt,
+        affiliations: ["X-Men"],
+        keywords: [new KeywordInstance("Founder")],
+        selfAttackEqualsDefenseWhileOwnSidekickActive: true,
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 4),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 6),
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 6)
+        ], set: "DPS");
+
+    // Iceman, "Mr Ice Guy" - the first user of StaticTeamBonus.
+    // SidekicksOnly (new this round); the Energize half reuses Cable
+    // "High Stakes"'s own DoublePrintedAttackOfEach with a single chosen
+    // target instead of MatchAll.
+    public static readonly CardDef IcemanMrIceGuy = Character(
+        "DPS114", "Iceman", "Mr Ice Guy", dieLimit: 2,
+        "Founder Energize - Double target character die's printed A until the end of turn. While " +
+        "Iceman is active, your Sidekick dice get +1A.",
+        purchaseCost: 4, energyType: EnergyType.Bolt,
+        affiliations: ["X-Men"],
+        keywords: [new KeywordInstance("Founder"), new KeywordInstance("Energize")],
+        grantsStaticTeamBonus: new StaticTeamBonus(AttackDelta: 1, DefenseDelta: 0, SidekicksOnly: true),
+        abilities: [new AbilityDef(TriggerType.Energize, Cost: null,
+            Effect: new DoublePrintedAttackOfEach(TargetSpec.CharacterDie("target character die")))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 4),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 6),
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 6)
+        ], set: "DPS");
+
+    // Emma Frost, "Influential" - the first user of
+    // GrantsAffiliationsToSidekicks (new this round), alongside
+    // StaticTeamBonus.SidekicksOnly (Iceman "Mr Ice Guy" above).
+    public static readonly CardDef EmmaFrostInfluential = Character(
+        "DPS030", "Emma Frost", "Influential", dieLimit: 4,
+        "While Emma Frost is active, your Sidekick dice get +1A and +1D, and gain the Hellfire Club " +
+        "affiliation.",
+        purchaseCost: 4, energyType: EnergyType.Shield,
+        affiliations: ["Hellfire Club"],
+        grantsStaticTeamBonus: new StaticTeamBonus(AttackDelta: 1, DefenseDelta: 1, SidekicksOnly: true),
+        grantsAffiliationsToSidekicks: ["Hellfire Club"],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 5),
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 6),
+            new CharacterFace(FieldingCost: 2, Attack: 5, Defense: 7)
+        ], set: "DPS");
+
+    // Forge, "More Than Firepower" - the first user of
+    // GrantsSelfPrepFromBagIfFieldedWithEnergy (new this round, checked
+    // procedurally in TurnEngine.Field rather than through the ability
+    // queue - see the field's own remarks).
+    public static readonly CardDef ForgeMoreThanFirepower = Character(
+        "DPS031", "Forge", "More Than Firepower", dieLimit: 4,
+        "When fielded, if you spent Bolt energy to field Forge, Prep a die from your bag.",
+        purchaseCost: 3, energyType: EnergyType.Bolt,
+        affiliations: ["X-Men"],
+        grantsSelfPrepFromBagIfFieldedWithEnergy: new SelfPrepFromBagIfFieldedWithEnergy(RequiredEnergyType: EnergyType.Bolt),
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 2),
+            new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 4)
+        ], set: "DPS");
+
+    // Professor X, "Dreamer" - the second user of
+    // GrantsSelfPrepFromBagIfFieldedWithEnergy (Forge above is the
+    // first), this time the RequiredAffiliation half; the Energize half
+    // reuses existing MoveDie/RequiredAffiliations primitives.
+    public static readonly CardDef ProfessorXDreamer = Character(
+        "DPS047", "Professor X", "Dreamer", dieLimit: 4,
+        "If you spend an X-Men die to field Professor X, Prep a die from your bag. Energize - Move an " +
+        "X-Men die from your Used Pile to your Prep Area.",
+        purchaseCost: 5, energyType: EnergyType.Mask,
+        affiliations: ["X-Men"],
+        keywords: [new KeywordInstance("Energize")],
+        grantsSelfPrepFromBagIfFieldedWithEnergy: new SelfPrepFromBagIfFieldedWithEnergy(RequiredAffiliation: "X-Men"),
+        abilities: [new AbilityDef(TriggerType.Energize, Cost: null,
+            // AnyDie + RequiredAffiliations, not CharacterDie - a Used
+            // Pile die is always unrolled (rule 1.6.8), same gap
+            // ProfessorXUncannyLeadership's own identical Energize text
+            // already worked around.
+            Effect: new MoveDie(
+                TargetSpec.AnyDie("an X-Men die from your Used Pile", TargetOwnership.Own,
+                    zones: [Zone.UsedPile], requiredAffiliations: ["X-Men"]),
+                Zone.PrepArea))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 5),
+            new CharacterFace(FieldingCost: 2, Attack: 1, Defense: 7),
+            new CharacterFace(FieldingCost: 3, Attack: 1, Defense: 9)
+        ], set: "DPS");
+
     // Supreme Intelligence, "Kree Science Council" - purely a Loyalty
     // grant, no other text. NameContains is a real substring match here
     // ("a card with Kree in its name"), unlike Gladiator's "When Lilandra
@@ -3313,7 +3430,9 @@ public static class SampleCards
             DarkPhoenixMalevolent, CableHighStakes, GambitILikeSolitaire, CyclopsUtopiaRealized,
             MutantResearchProgram, LivingTheDream,
             ColossusPiotr, DKenShiarCivilWar, BishopTimeTraveller, BlinkExilesTeamLeader, Radicalization,
-            TightRanks, GreetingsFromKrakoa, JubileeFireworks, BeastFirstClass
+            TightRanks, GreetingsFromKrakoa, JubileeFireworks, BeastFirstClass,
+            BishopImBack, IcemanXaviersDream, IcemanMrIceGuy, EmmaFrostInfluential,
+            ForgeMoreThanFirepower, ProfessorXDreamer
         ];
 
         // Hand-curated cards win on id collision - shouldn't happen in

@@ -5859,3 +5859,92 @@ the effect" bar.
 Verified: `dotnet build`, `dotnet test` (471/471 - 19 new cases), and
 `npm run build` all clean. Re-ran `scripts/import_bulk_cards.py`
 (150 → 159 hand-curated).
+
+## Status update — six more DPS cards, plus one abandoned mid-build
+
+Six more DPS cards, several sharing new primitives; one card (Corsair
+"Back from Outer Space", DPS139) was fully built - a new per-controller
+KO counter, a new EffectCondition, and a new self-referential Prep
+node - then DELETED again once testing exposed a real architectural
+mismatch, worth recording since it's the first time this project has
+built something and then backed it out rather than shipping a
+best-effort version.
+
+**Corsair "Back from Outer Space" - built, then reverted.** The sheet's
+raw text ("If 4 or more of your character dice were KO'd this turn, you
+may Prep a Corsair die from this card") has no trigger phrase at all.
+Read initially as `TriggerType.WhenKOd` (Corsair reacting to its own
+KO, fitting the "Back from Outer Space" flavor better than an
+`EndOfYourTurn` check, which would require Corsair to still be ACTIVE
+to fire - directly contradicting a card about reacting to its own
+demise). Writing the test exposed the real problem: DPS139 has
+`dieLimit: 1` - only one physical copy of this exact printing exists in
+the whole game - so "Prep A CORSAIR DIE from this card" upon its own KO
+can only ever refer to ITSELF, and rule 1.5.3.2 already sends a KO'd
+die to the Prep Area unconditionally, making the ability's own text
+genuinely redundant under that reading. The alternative reading (a
+continuously-available check on an INACTIVE die sitting in the Used
+Pile) doesn't fit this engine's architecture at all - every trigger
+scan here (EndOfYourTurn, WhenAnotherDieFielded/Attacks, Teamwatch, ...)
+only ever inspects ACTIVE dice's own abilities, by design, matching
+real Dice Masters rules that a card's printed text only applies while
+a die of it is active (or for specific roster-level checks that don't
+need activity at all - Wolverine "Pure of Heart"'s own team-roster
+check, for example). Rather than ship a guessed interpretation that
+provably can't be exercised in any real game state, the card, its
+`GameState.OwnCharacterDiceKOdThisTurn` counter, its
+`EffectCondition.OwnCharacterDiceKOdThisTurnAtLeast`, and its
+`PrepDieOfSourceCard` node were all removed again - the project's
+「build it, test it, and be willing to walk it back if the test proves
+the premise wrong」discipline working as intended, rather than "we
+already wrote it, ship it anyway."
+
+**Two Sidekick-scoped static grants, both new dimensions on existing
+mechanisms** - `StaticTeamBonus.SidekicksOnly` (Iceman "Mr Ice Guy"/
+DPS114 and Emma Frost "Influential"/DPS030, both "your Sidekick dice
+get +1A[/+1D]") and `CardDef.GrantsAffiliationsToSidekicks` (Emma
+Frost's own "...and gain the Hellfire Club affiliation" - the
+affiliation counterpart to the existing `GrantsToSidekicks`, which only
+ever granted keywords). Iceman "Mr Ice Guy"'s own Energize half needed
+no new primitive at all - it reuses Cable "High Stakes"'s own
+`DoublePrintedAttackOfEach` with a single chosen target instead of
+`MatchAll`.
+
+**A live full-override stat relationship** -
+`CardDef.SelfAttackEqualsDefenseWhileOwnSidekickActive` (Iceman
+"Xavier's Dream"/DPS142 - "Iceman's A is equal to his D") short-
+circuits `DieStats.EffectiveAttack` entirely rather than adding a
+delta, the first CardDef-driven field to do so; safe against recursion
+since `EffectiveDefense` never calls back into `EffectiveAttack`.
+
+**Two self-referential energy-source checks, resolved directly in
+`TurnEngine.Field` rather than through the ability queue** -
+`CardDef.GrantsSelfPrepWhenSpentAsEnergyForFielding` (Bishop "I'm
+Back"/DPS059 - about the SPENT ENERGY die's own destination, checked
+per-die) and `CardDef.GrantsSelfPrepFromBagIfFieldedWithEnergy` (Forge
+"More Than Firepower"/DPS031's own Bolt-energy-type check, Professor X
+"Dreamer"/DPS047's own X-Men-affiliation check - about the FIELDED
+die's own follow-up effect). Both bypass `AbilityDef`/`AbilityQueue`
+entirely, the same "no external target choice needed, so there's
+nothing a queue round-trip would add" reasoning `TurnEngine.CleanUp`'s
+own self-contained `EndOfYourTurn` effects already established -
+neither needed the "energy type/affiliation spent" info to survive
+past the single `Field` call it's computed in, so there was no need to
+thread it through `EffectContext`. Professor X's own Energize half
+reuses `ProfessorXUncannyLeadership`'s exact `AnyDie`+`RequiredAffiliations`
+pattern for "an X-Men die from your Used Pile" (a Used Pile die is
+always unrolled per rule 1.6.8, so `TargetSpec.CharacterDie`'s
+`CharacterDiceOnly` filter can never match one - a gap this project hit
+and fixed once already).
+
+A real test-authoring mistake caught twice in one round (again): both
+new Sidekick-scoped static-bonus tests originally captured their
+"before" baseline AFTER the granting die was already fielded, silently
+re-measuring the buffed value - the same class of mistake this project
+has now caught and fixed four or five times across different rounds.
+Fixed by moving the baseline capture before the granter is fielded, in
+both tests.
+
+Verified: `dotnet build`, `dotnet test` (481/481 - 10 new cases), and
+`npm run build` all clean. Re-ran `scripts/import_bulk_cards.py`
+(159 → 165 hand-curated).

@@ -469,6 +469,27 @@ here rather than assuming which approach they'd want.
     "Time Traveller"/DPS099, deliberately NOT gated on an active die -
     see the status update for why). See the "nine more DPS cards"
     status update for the full writeup.
+    Six more DPS cards landed the round after that: two new Sidekick-
+    scoped static grants (`StaticTeamBonus.SidekicksOnly`, `CardDef.
+    GrantsAffiliationsToSidekicks` - Iceman "Mr Ice Guy"/DPS114, Emma
+    Frost "Influential"/DPS030), a live full-override stat relationship
+    (`CardDef.SelfAttackEqualsDefenseWhileOwnSidekickActive` - Iceman
+    "Xavier's Dream"/DPS142, the first field to short-circuit
+    `DieStats.EffectiveAttack` entirely rather than add a delta), and
+    two self-referential energy-source checks resolved directly in
+    `TurnEngine.Field` rather than through the ability queue
+    (`GrantsSelfPrepWhenSpentAsEnergyForFielding` - Bishop "I'm Back"/
+    DPS059; `GrantsSelfPrepFromBagIfFieldedWithEnergy` - Forge "More
+    Than Firepower"/DPS031, Professor X "Dreamer"/DPS047). Also notable:
+    Corsair "Back from Outer Space" (DPS139) was fully built - a new
+    per-controller KO counter, EffectCondition, and Prep node - then
+    DELETED again once its own test exposed a real architectural
+    mismatch (its `dieLimit: 1` makes "Prep a Corsair die from this
+    card" upon its own KO redundant with rule 1.5.3.2's own default, and
+    the only OTHER reading needs a die to react while inactive, which
+    nothing in this engine supports) - see the "six more DPS cards"
+    status update for the full story, including why reverting was the
+    right call rather than shipping a guessed interpretation.
 
 ## Implemented keywords
 

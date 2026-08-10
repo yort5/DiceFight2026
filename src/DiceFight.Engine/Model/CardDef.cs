@@ -236,6 +236,32 @@ public sealed record CardDef
     // the spent dice's own card NAME against this card's Name.
     public bool GrantsPrepInsteadOfUsedPileIfPurchasedWithSameNameEnergy { get; init; }
 
+    // Bishop ("I'm Back", DPS059): "if you spend THIS DIE as energy to
+    // field a character die, add this die to your Prep Area." Unlike
+    // GrantsPrepInsteadOfUsedPileIfPurchasedWithSameNameEnergy just
+    // above (about the PURCHASED die's own destination), this is about
+    // the ENERGY die's own destination - checked per-spent-die in
+    // TurnEngine.Field, overriding wherever SpendEnergy just put it.
+    public bool GrantsSelfPrepWhenSpentAsEnergyForFielding { get; init; }
+
+    // See CardDef.SelfPrepFromBagIfFieldedWithEnergy's own remarks
+    // (Forge "More Than Firepower"/DPS031, Professor X "Dreamer"/
+    // DPS047).
+    public SelfPrepFromBagIfFieldedWithEnergy? GrantsSelfPrepFromBagIfFieldedWithEnergy { get; init; }
+
+    // Emma Frost ("Influential", DPS030): "...and gain the Hellfire Club
+    // affiliation." The affiliation counterpart to GrantsToSidekicks
+    // (keywords) - same "granter must be active, grantee just needs to
+    // count as a Sidekick right now" shape, checked in DieStats.
+    // HasAffiliation.
+    public IReadOnlyList<string> GrantsAffiliationsToSidekicks { get; init; } = [];
+
+    // Iceman ("Xavier's Dream", DPS142): "while you have a Sidekick die
+    // active, Iceman's A is equal to his D." A full LIVE override, not
+    // an additive bonus - see DieStats.EffectiveAttack for where this
+    // short-circuits the normal face+modifiers accumulation entirely.
+    public bool SelfAttackEqualsDefenseWhileOwnSidekickActive { get; init; }
+
     // Psylocke ("Adventurer", DPS048): "While Wolverine is active,
     // Psylocke gains Deadly" - a live, continuously-recomputed SELF
     // keyword grant conditioned on some OTHER named card being active
@@ -319,9 +345,22 @@ public sealed record CardDef
 // own remarks for why), acceptable given rule 3.4.5.3's "does not
 // stack" already collapses multiple same-card granters into one
 // contribution anyway.
+// SidekicksOnly (Iceman "Mr Ice Guy"/DPS114, Emma Frost "Influential"/
+// DPS030 - both "your Sidekick dice get +1A[/+1D]") is a fourth
+// independent scope alongside RequiredAffiliation/RequiredKeyword/
+// ExcludeSelf, checked via DieStats.CountsAsSidekick rather than a
+// card-level filter - no current printing combines it with the other
+// three, but nothing stops one from doing so.
 public sealed record StaticTeamBonus(
     int AttackDelta, int DefenseDelta, string? RequiredAffiliation = null,
-    string? RequiredKeyword = null, bool ExcludeSelf = false);
+    string? RequiredKeyword = null, bool ExcludeSelf = false, bool SidekicksOnly = false);
+
+// See CardDef.GrantsSelfPrepFromBagIfFieldedWithEnergy's remarks. Only
+// one of RequiredEnergyType/RequiredAffiliation is ever set by any
+// current printing (Forge's own Bolt-energy-type check vs. Professor
+// X's own X-Men-affiliation check), same "independent, whichever's set"
+// shape as FreeFieldingGrant's own two filters.
+public sealed record SelfPrepFromBagIfFieldedWithEnergy(EnergyType? RequiredEnergyType = null, string? RequiredAffiliation = null);
 
 // See CardDef.GrantsSelfKeywordWhileNamedCardActive's remarks.
 public sealed record ConditionalSelfKeywordGrant(string WhileCardNamed, string Keyword);

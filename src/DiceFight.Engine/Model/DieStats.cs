@@ -255,9 +255,15 @@ public static class DieStats
         if (die.AppliedAffiliations.Contains(affiliation)) return true; // Radicalization (DPS012)'s own Global grant
 
         var cardId = die.VirtualCardId ?? die.CardId;
-        return cardId is not null
-            && state.CardCatalog.TryGetValue(cardId, out var card)
-            && card.Affiliations.Contains(affiliation);
+        if (cardId is not null && state.CardCatalog.TryGetValue(cardId, out var card) && card.Affiliations.Contains(affiliation))
+            return true;
+
+        // Emma Frost ("Influential", DPS030) - "your Sidekick dice...
+        // gain the Hellfire Club affiliation" - same active-granter-scan
+        // shape as HasKeyword's own GrantsToSidekicks check just below.
+        if (!CountsAsSidekick(state, die)) return false;
+        var granters = state.DiceIn(die.ControllerId, Zone.FieldZone).Concat(state.DiceIn(die.ControllerId, Zone.AttackZone));
+        return granters.Any(granter => GetCard(state, granter)?.GrantsAffiliationsToSidekicks.Contains(affiliation) ?? false);
     }
 
     // Keyword Strike - "On the turn you field a Character die with
@@ -403,6 +409,7 @@ public static class DieStats
             if (card!.GrantsStaticTeamBonus is not { } bonus) continue;
             if (bonus.RequiredAffiliation is { } affiliation && !HasAffiliation(state, die, affiliation)) continue;
             if (bonus.RequiredKeyword is { } keyword && !HasKeyword(state, die, keyword)) continue;
+            if (bonus.SidekicksOnly && !CountsAsSidekick(state, die)) continue;
             if (bonus.ExcludeSelf && dieCardId is not null && dieCardId == card.Id) continue;
             attack += bonus.AttackDelta;
             defense += bonus.DefenseDelta;
@@ -441,6 +448,14 @@ public static class DieStats
     // Rule 3.6.1/3.6.4 - combine all Applied/Static modifiers, clamp at zero.
     public static int EffectiveAttack(GameState state, DieInstance die)
     {
+        // Iceman ("Xavier's Dream", DPS142) - "while you have a Sidekick
+        // die active, Iceman's A is equal to his D." A full override,
+        // not an additive bonus - short-circuits the normal face+
+        // modifiers accumulation below entirely. Safe against recursion:
+        // EffectiveDefense never calls back into EffectiveAttack.
+        if ((GetCard(state, die)?.SelfAttackEqualsDefenseWhileOwnSidekickActive ?? false) && HasActiveSidekick(state, die.ControllerId))
+            return EffectiveDefense(state, die);
+
         var face = GetFace(state, die);
         var total = face.Attack + die.AppliedModifiers.Sum(m => m.AttackDelta);
         if (HasStrikeBonus(state, die)) total += 2;

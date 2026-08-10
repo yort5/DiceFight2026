@@ -39165,80 +39165,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS030",
-    "name": "Emma Frost",
-    "subtitle": "Influential",
-    "type": "Character",
-    "purchaseCost": 4,
-    "energyType": "Shield",
-    "dieLimit": 4,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 4,
-        "defense": 6,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 5,
-        "defense": 7,
-        "burstStars": null
-      }
-    ],
-    "rawText": "While Emma Frost is active, your Sidekick dice get +1A and +1D, and gain the Hellfire Club affiliation.",
-    "keywords": [],
-    "affiliations": [
-      "Hellfire Club"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS031",
-    "name": "Forge",
-    "subtitle": "More Than Firepower",
-    "type": "Character",
-    "purchaseCost": 3,
-    "energyType": "Bolt",
-    "dieLimit": 4,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 2,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 4,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 4,
-        "defense": 4,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When fielded, if you spent Bolt energy to field Forge, Prep a die from your bag.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS039",
     "name": "Madelyne Pryor",
     "subtitle": "Dark Influence",
@@ -39350,43 +39276,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS047",
-    "name": "Professor X",
-    "subtitle": "Dreamer",
-    "type": "Character",
-    "purchaseCost": 5,
-    "energyType": "Mask",
-    "dieLimit": 4,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 1,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 1,
-        "defense": 7,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 3,
-        "attack": 1,
-        "defense": 9,
-        "burstStars": null
-      }
-    ],
-    "rawText": "If you spend an X-Men die to field Professor X, Prep a die from your bag. Energize - Move an X-Men die from your Used Pile to your Prep Area.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS051",
     "name": "Sabretooth",
     "subtitle": "Am I Interrupting?",
@@ -39418,43 +39307,6 @@
     "keywords": [],
     "affiliations": [
       "Brotherhood of Mutants"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS059",
-    "name": "Bishop",
-    "subtitle": "I\\'m Back",
-    "type": "Character",
-    "purchaseCost": 4,
-    "energyType": "Shield",
-    "dieLimit": 3,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 2,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 6,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 5,
-        "defense": 6,
-        "burstStars": null
-      }
-    ],
-    "rawText": "If you spend this die as energy to field a character die, add this die to your Prep Area.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
     ],
     "isImplemented": false,
     "set": "DPS",
@@ -39945,43 +39797,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS114",
-    "name": "Iceman",
-    "subtitle": "Mr Ice Guy",
-    "type": "Character",
-    "purchaseCost": 4,
-    "energyType": "Bolt",
-    "dieLimit": 2,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 2,
-        "defense": 4,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 6,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 4,
-        "defense": 6,
-        "burstStars": null
-      }
-    ],
-    "rawText": "Founder Energize - Double target character die\\'s printed A until the end of turn.While Iceman is active, your Sidekick dice get +1A.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS117",
     "name": "Kitty Pryde",
     "subtitle": "Just Passing Through",
@@ -40275,43 +40090,6 @@
       }
     ],
     "rawText": "While you have a Sidekick die active, when Cyclops attacks deal X damage divided how you choose among any number of target character dice, where X is the number of your character dice in the Field Zone.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS142",
-    "name": "Iceman",
-    "subtitle": "Xavier\\'s Dream",
-    "type": "Character",
-    "purchaseCost": 4,
-    "energyType": "Bolt",
-    "dieLimit": 1,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 2,
-        "defense": 4,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 6,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 4,
-        "defense": 6,
-        "burstStars": null
-      }
-    ],
-    "rawText": "FounderWhile you have a Sidekick die active, Iceman\\'s A is equal to his D.",
     "keywords": [],
     "affiliations": [
       "X-Men"

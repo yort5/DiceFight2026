@@ -4995,4 +4995,231 @@ public class TwoTeamsDemoTests
 
         Assert.DoesNotContain(queue.Pending, a => a.Trigger == TriggerType.WhenAnotherDieAttacks);
     }
+
+    [Fact]
+    public void BishopImBack_PrepsItself_WhenSpentAsFieldingEnergy()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.BishopImBack.Id, SampleCards.RogueMrsX.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var bishopEnergy = FindUnpurchased(state, "teamA", SampleCards.BishopImBack.Id);
+        bishopEnergy.Zone = Zone.ReservePool;
+        bishopEnergy.Status = DieStatus.Energy;
+        bishopEnergy.EnergyKind = EnergyKind.Wild;
+        bishopEnergy.EnergyAmount = 1;
+
+        var fieldedDie = FindUnpurchased(state, "teamA", SampleCards.RogueMrsX.Id);
+        fieldedDie.Zone = Zone.ReservePool; fieldedDie.Status = DieStatus.Character; fieldedDie.Level = 1; // printed fielding cost 1
+
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, fieldedDie.Id, [bishopEnergy.Id]);
+
+        Assert.Equal(Zone.PrepArea, bishopEnergy.Zone);
+    }
+
+    [Fact]
+    public void BishopImBack_DoesNotPrep_EnergyThatIsNotItself()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.BishopImBack.Id, SampleCards.RogueMrsX.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var plainEnergy = GiveWildEnergy(state, "teamA", 1);
+
+        var fieldedDie = FindUnpurchased(state, "teamA", SampleCards.RogueMrsX.Id);
+        fieldedDie.Zone = Zone.ReservePool; fieldedDie.Status = DieStatus.Character; fieldedDie.Level = 1;
+
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, fieldedDie.Id, plainEnergy.Select(d => d.Id).ToList());
+
+        Assert.NotEqual(Zone.PrepArea, plainEnergy[0].Zone); // ordinary destination (Out of Play) instead
+    }
+
+    [Fact]
+    public void IcemanXaviersDream_AttackEqualsDefense_OnlyWhileAnOwnSidekickIsActive()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.IcemanXaviersDream.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var icemanDie = FindUnpurchased(state, "teamA", SampleCards.IcemanXaviersDream.Id);
+        icemanDie.Zone = Zone.FieldZone; icemanDie.Status = DieStatus.Character; icemanDie.Level = 2; // printed 3A/6D - genuinely differ
+        var defenseBefore = DieStats.EffectiveDefense(state, icemanDie);
+        Assert.NotEqual(defenseBefore, DieStats.EffectiveAttack(state, icemanDie)); // sanity: differ without a Sidekick
+
+        var sidekick = state.DiceIn("teamA", Zone.Bag).First();
+        sidekick.Zone = Zone.FieldZone; sidekick.Status = DieStatus.SidekickCharacter; sidekick.Level = 1;
+
+        Assert.Equal(defenseBefore, DieStats.EffectiveAttack(state, icemanDie));
+
+        sidekick.Zone = Zone.PrepArea; // no longer active
+        Assert.NotEqual(defenseBefore, DieStats.EffectiveAttack(state, icemanDie));
+    }
+
+    [Fact]
+    public void IcemanMrIceGuy_BuffsSidekicksOnly_WhileActive()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.IcemanMrIceGuy.Id]);
+        state.ActivePlayerId = "teamA";
+
+        // Baselines captured BEFORE Iceman is active - a real mistake
+        // this project has made and fixed before (measuring "before"
+        // after the buff is already live just re-measures the buffed
+        // value).
+        var sidekick = state.DiceIn("teamA", Zone.Bag).First();
+        sidekick.Zone = Zone.FieldZone; sidekick.Status = DieStatus.SidekickCharacter; sidekick.Level = 1;
+        var sidekickBaseAttack = DieStats.EffectiveAttack(state, sidekick);
+
+        var nonSidekick = FindUnpurchased(state, "teamA", SampleCards.BlackWidow.Id);
+        nonSidekick.Zone = Zone.FieldZone; nonSidekick.Status = DieStatus.Character; nonSidekick.Level = 1;
+        var nonSidekickBaseAttack = DieStats.EffectiveAttack(state, nonSidekick);
+
+        var icemanDie = FindUnpurchased(state, "teamA", SampleCards.IcemanMrIceGuy.Id);
+        icemanDie.Zone = Zone.FieldZone; icemanDie.Status = DieStatus.Character; icemanDie.Level = 1;
+
+        Assert.Equal(sidekickBaseAttack + 1, DieStats.EffectiveAttack(state, sidekick));
+        Assert.Equal(nonSidekickBaseAttack, DieStats.EffectiveAttack(state, nonSidekick)); // unaffected - not a Sidekick
+    }
+
+    [Fact]
+    public void IcemanMrIceGuyEnergize_FiresOffRealGate_DoublesTargetsPrintedAttack()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.IcemanMrIceGuy.Id]);
+        state.ActivePlayerId = "teamA";
+        state.CurrentStep = TurnStep.RollAndReroll;
+
+        var icemanDie = FindUnpurchased(state, "teamA", SampleCards.IcemanMrIceGuy.Id);
+        icemanDie.Zone = Zone.ReservePool;
+        icemanDie.Status = DieStatus.Energy;
+        icemanDie.EnergyKind = EnergyKind.Generic;
+        icemanDie.EnergyAmount = 2; // double energy - Energize's own trigger condition
+
+        var target = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        target.Zone = Zone.FieldZone; target.Status = DieStatus.Character; target.Level = 3;
+        var printedAttack = SampleCards.Falcon.Levels[2].Attack;
+        var baseAttack = DieStats.EffectiveAttack(state, target);
+
+        var queue = new AbilityQueue();
+        TurnEngine.Reroll(state, queue, new FixedRoller(DieStatus.Energy, 1), []);
+        Assert.Equal(1, queue.Count);
+        Assert.Equal(TriggerType.Energize, queue.Pending[0].Trigger);
+
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [target.Id])));
+
+        Assert.Equal(baseAttack + printedAttack, DieStats.EffectiveAttack(state, target));
+    }
+
+    [Fact]
+    public void EmmaFrostInfluential_BuffsAndGrantsAffiliation_ToSidekicksOnly_WhileActive()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.EmmaFrostInfluential.Id]);
+        state.ActivePlayerId = "teamA";
+
+        // Baselines captured BEFORE Emma Frost is active - see
+        // IcemanMrIceGuy_BuffsSidekicksOnly_WhileActive's own remarks.
+        var sidekick = state.DiceIn("teamA", Zone.Bag).First();
+        sidekick.Zone = Zone.FieldZone; sidekick.Status = DieStatus.SidekickCharacter; sidekick.Level = 1;
+        var baseAttack = DieStats.EffectiveAttack(state, sidekick);
+        var baseDefense = DieStats.EffectiveDefense(state, sidekick);
+
+        var nonSidekick = FindUnpurchased(state, "teamA", SampleCards.BlackWidow.Id);
+        nonSidekick.Zone = Zone.FieldZone; nonSidekick.Status = DieStatus.Character; nonSidekick.Level = 1;
+
+        var emmaDie = FindUnpurchased(state, "teamA", SampleCards.EmmaFrostInfluential.Id);
+        emmaDie.Zone = Zone.FieldZone; emmaDie.Status = DieStatus.Character; emmaDie.Level = 1;
+
+        Assert.Equal(baseAttack + 1, DieStats.EffectiveAttack(state, sidekick));
+        Assert.Equal(baseDefense + 1, DieStats.EffectiveDefense(state, sidekick));
+        Assert.True(DieStats.HasAffiliation(state, sidekick, "Hellfire Club"));
+        Assert.False(DieStats.HasAffiliation(state, nonSidekick, "Hellfire Club")); // not a Sidekick
+    }
+
+    [Fact]
+    public void ForgeMoreThanFirepower_FiresOffRealFieldingGate_WhenFieldedWithBoltEnergy()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.ForgeMoreThanFirepower.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var forgeDie = FindUnpurchased(state, "teamA", SampleCards.ForgeMoreThanFirepower.Id);
+        forgeDie.Zone = Zone.ReservePool; forgeDie.Status = DieStatus.Character; forgeDie.Level = 1; // printed fielding cost 1
+
+        var boltEnergy = state.DiceIn("teamA", Zone.Bag).First();
+        boltEnergy.Zone = Zone.ReservePool;
+        boltEnergy.Status = DieStatus.Energy;
+        boltEnergy.EnergyKind = EnergyKind.Specific;
+        boltEnergy.ProvidedEnergyType = EnergyType.Bolt;
+        boltEnergy.EnergyAmount = 1;
+
+        var prepCountBefore = state.DiceIn("teamA", Zone.PrepArea).Count();
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, forgeDie.Id, [boltEnergy.Id]);
+
+        Assert.Equal(prepCountBefore + 1, state.DiceIn("teamA", Zone.PrepArea).Count());
+    }
+
+    [Fact]
+    public void ForgeMoreThanFirepower_DoesNotPrep_WhenFieldedWithNonBoltEnergy()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.ForgeMoreThanFirepower.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var forgeDie = FindUnpurchased(state, "teamA", SampleCards.ForgeMoreThanFirepower.Id);
+        forgeDie.Zone = Zone.ReservePool; forgeDie.Status = DieStatus.Character; forgeDie.Level = 1;
+
+        var wildEnergy = GiveWildEnergy(state, "teamA", 1); // Wild - not a real Bolt-typed die
+
+        var prepCountBefore = state.DiceIn("teamA", Zone.PrepArea).Count();
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, forgeDie.Id, wildEnergy.Select(d => d.Id).ToList());
+
+        Assert.Equal(prepCountBefore, state.DiceIn("teamA", Zone.PrepArea).Count());
+    }
+
+    [Fact]
+    public void ProfessorXDreamer_FiresOffRealFieldingGate_WhenFieldedWithXMenEnergy()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.ProfessorXDreamer.Id, SampleCards.RogueMrsX.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var profXDie = FindUnpurchased(state, "teamA", SampleCards.ProfessorXDreamer.Id);
+        profXDie.Zone = Zone.ReservePool; profXDie.Status = DieStatus.Character; profXDie.Level = 1; // printed fielding cost 1
+
+        var xMenEnergy = FindUnpurchased(state, "teamA", SampleCards.RogueMrsX.Id);
+        xMenEnergy.Zone = Zone.ReservePool;
+        xMenEnergy.Status = DieStatus.Energy;
+        xMenEnergy.EnergyKind = EnergyKind.Wild;
+        xMenEnergy.EnergyAmount = 1;
+
+        var prepCountBefore = state.DiceIn("teamA", Zone.PrepArea).Count();
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, profXDie.Id, [xMenEnergy.Id]);
+
+        Assert.Equal(prepCountBefore + 1, state.DiceIn("teamA", Zone.PrepArea).Count());
+    }
+
+    [Fact]
+    public void ProfessorXDreamerEnergize_FiresOffRealGate_MovesAnXMenDieFromUsedPileToPrepArea()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.ProfessorXDreamer.Id, SampleCards.RogueMrsX.Id]);
+        state.ActivePlayerId = "teamA";
+        state.CurrentStep = TurnStep.RollAndReroll;
+
+        var profXDie = FindUnpurchased(state, "teamA", SampleCards.ProfessorXDreamer.Id);
+        profXDie.Zone = Zone.ReservePool;
+        profXDie.Status = DieStatus.Energy;
+        profXDie.EnergyKind = EnergyKind.Generic;
+        profXDie.EnergyAmount = 2;
+
+        var usedPileXMen = FindUnpurchased(state, "teamA", SampleCards.RogueMrsX.Id);
+        usedPileXMen.Zone = Zone.UsedPile;
+
+        var queue = new AbilityQueue();
+        TurnEngine.Reroll(state, queue, new FixedRoller(DieStatus.Energy, 1), []);
+        Assert.Equal(1, queue.Count);
+        Assert.Equal(TriggerType.Energize, queue.Pending[0].Trigger);
+
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [usedPileXMen.Id])));
+
+        Assert.Equal(Zone.PrepArea, usedPileXMen.Zone);
+    }
 }

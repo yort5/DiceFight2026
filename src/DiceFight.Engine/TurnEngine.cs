@@ -501,8 +501,43 @@ public static class TurnEngine
 
         ResolveWhenXMenEnergySpentOnGlobalOrField(state, queue, state.ActivePlayerId, energyDice);
 
+        // Bishop ("I'm Back", DPS059) - "if you spend THIS DIE as energy
+        // to field a character die, add this die to your Prep Area."
+        // Per-spent-die, not per-fielding - overrides wherever SpendEnergy
+        // just put each qualifying energy die (Zone.OutOfPlay above).
+        foreach (var spent in energyDice)
+        {
+            var spentCardId = spent.VirtualCardId ?? spent.CardId;
+            if (spentCardId is not null && state.CardCatalog.TryGetValue(spentCardId, out var spentCard) &&
+                spentCard.GrantsSelfPrepWhenSpentAsEnergyForFielding)
+            {
+                spent.Zone = Zone.PrepArea;
+            }
+        }
+
         die.Zone = Zone.FieldZone;
         state.FieldedThisTurn.Add(die.Id); // keyword Strike's own "fielded this turn" check
+
+        // Forge ("More Than Firepower", DPS031)/Professor X ("Dreamer",
+        // DPS047) - "when fielded, if you spent [Bolt energy/an X-Men
+        // die] to field [this card], Prep a die from your bag." A SELF-
+        // referential check against the energy actually spent, resolved
+        // directly here (bypassing the ability queue entirely, like
+        // GameState.CleanUp's own self-contained EndOfYourTurn effects) -
+        // "Prep a die from your bag" needs no external target choice, so
+        // there's nothing an AbilityDef/queue round-trip would add.
+        if (DieStats.GetCard(state, die)?.GrantsSelfPrepFromBagIfFieldedWithEnergy is { } prepGrant)
+        {
+            var qualifies = energyDice.Any(d =>
+                (prepGrant.RequiredEnergyType is { } requiredType &&
+                 d.EnergyKind == EnergyKind.Specific && d.ProvidedEnergyType == requiredType) ||
+                (prepGrant.RequiredAffiliation is { } requiredAffiliation && DieStats.HasAffiliation(state, d, requiredAffiliation)));
+            if (qualifies)
+            {
+                var drawn = DrawFromBag(state, state.ActivePlayerId, 1, null);
+                if (drawn.Count > 0) drawn[0].Zone = Zone.PrepArea;
+            }
+        }
 
         // Rule 2.6.3.6 - "when fielded" fires immediately upon entering the Field Zone.
         EnqueueTriggered(state, queue, die, TriggerType.WhenFielded);
