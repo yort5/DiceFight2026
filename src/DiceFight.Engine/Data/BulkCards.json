@@ -38953,22 +38953,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS004",
-    "name": "Greetings from Krakoa",
-    "subtitle": "Basic Action Card",
-    "type": "BasicAction",
-    "purchaseCost": 3,
-    "energyType": null,
-    "dieLimit": 3,
-    "levels": [],
-    "rawText": "Spin up each character whose card has a Loyalty Counter. Each of your dice that spins up gets +2A.",
-    "keywords": [],
-    "affiliations": [],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS007",
     "name": "Making the Team",
     "subtitle": "Basic Action Card",
@@ -39017,22 +39001,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS012",
-    "name": "Radicalization",
-    "subtitle": "Basic Action Card",
-    "type": "BasicAction",
-    "purchaseCost": 3,
-    "energyType": null,
-    "dieLimit": 3,
-    "levels": [],
-    "rawText": "Deal 3 damage to target X-Men or Brotherhood of Mutants character die. **Also, KO target Sidekick character die. Global: Pay Shield. Target character die gains X-Men or Brotherhood of Mutants (until end of turn).",
-    "keywords": [],
-    "affiliations": [],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS015",
     "name": "The Front Line",
     "subtitle": "Basic Action Card",
@@ -39042,22 +39010,6 @@
     "dieLimit": 3,
     "levels": [],
     "rawText": "Unblocked attacking character dice gain +3A until end of turn.Global: Pay Fist. Target opposing character die can\\'t block this turn unless opponent pays 1 life.",
-    "keywords": [],
-    "affiliations": [],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS016",
-    "name": "Tight Ranks",
-    "subtitle": "Basic Action Card",
-    "type": "BasicAction",
-    "purchaseCost": 3,
-    "energyType": null,
-    "dieLimit": 3,
-    "levels": [],
-    "rawText": "If you have at least 3 active character dice that share a Team Affiliation, KO target character die.Global: Pay Shield. Target character die with at least one Loyalty Counter gets -2A and -2D.",
     "keywords": [],
     "affiliations": [],
     "isImplemented": false,
@@ -39472,43 +39424,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS058",
-    "name": "Beast",
-    "subtitle": "First Class",
-    "type": "Character",
-    "purchaseCost": 3,
-    "energyType": "Fist",
-    "dieLimit": 3,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 2,
-        "defense": 1,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 2,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 2,
-        "burstStars": null
-      }
-    ],
-    "rawText": "Founder While Beast is active, when a character die with Founder attacks, Prep a die from your bag.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS059",
     "name": "Bishop",
     "subtitle": "I\\'m Back",
@@ -39538,45 +39453,6 @@
     ],
     "rawText": "If you spend this die as energy to field a character die, add this die to your Prep Area.",
     "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS060",
-    "name": "Blink",
-    "subtitle": "Exiles Team Leader",
-    "type": "Character",
-    "purchaseCost": 4,
-    "energyType": "Mask",
-    "dieLimit": 3,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 1,
-        "defense": 3,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 2,
-        "defense": 3,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 5,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When Blink attacks with at least 2 other X-Men character dice, each of your X-Men character dice in the Field Zone gains Infiltrate.",
-    "keywords": [
-      "Infiltrate"
-    ],
     "affiliations": [
       "X-Men"
     ],
@@ -39883,43 +39759,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS099",
-    "name": "Bishop",
-    "subtitle": "Time Traveller",
-    "type": "Character",
-    "purchaseCost": 3,
-    "energyType": "Shield",
-    "dieLimit": 2,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 2,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 6,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 5,
-        "defense": 6,
-        "burstStars": null
-      }
-    ],
-    "rawText": "If you only use energy from Bishop dice to purchase a character die, Prep that die instead of adding it to your Used Pile",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS100",
     "name": "Blink",
     "subtitle": "Warp Portals",
@@ -39988,43 +39827,6 @@
     "keywords": [],
     "affiliations": [
       "Brotherhood of Mutants"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS103",
-    "name": "Colossus",
-    "subtitle": "Piotr",
-    "type": "Character",
-    "purchaseCost": 6,
-    "energyType": "Fist",
-    "dieLimit": 2,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 4,
-        "defense": 4,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 6,
-        "defense": 5,
-        "burstStars": 1
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 8,
-        "defense": 7,
-        "burstStars": 1
-      }
-    ],
-    "rawText": "While Colossus is active, at the end of your turn, each of your level 2 or 3 character dice deals your opponent 2 damage (not 2 damage per Colossus die)",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
     ],
     "isImplemented": false,
     "set": "DPS",
@@ -40171,43 +39973,6 @@
       }
     ],
     "rawText": "Founder Energize - Double target character die\\'s printed A until the end of turn.While Iceman is active, your Sidekick dice get +1A.",
-    "keywords": [],
-    "affiliations": [
-      "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS116",
-    "name": "Jubilee",
-    "subtitle": "Fireworks",
-    "type": "Character",
-    "purchaseCost": 3,
-    "energyType": "Bolt",
-    "dieLimit": 2,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 2,
-        "defense": 1,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 3,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 4,
-        "defense": 3,
-        "burstStars": null
-      }
-    ],
-    "rawText": "While Jubilee is active, when you spend energy from an [X-Men] die to use a Global Ability or field a character, deal 1 damage to target opponent or character die.",
     "keywords": [],
     "affiliations": [
       "X-Men"
@@ -40513,44 +40278,6 @@
     "keywords": [],
     "affiliations": [
       "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS141",
-    "name": "D\\'Ken",
-    "subtitle": "Shi\\'ar Civil War",
-    "type": "Character",
-    "purchaseCost": 6,
-    "energyType": "Shield",
-    "dieLimit": 1,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 4,
-        "defense": 4,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 5,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 6,
-        "defense": 6,
-        "burstStars": null
-      }
-    ],
-    "rawText": "While D\\'Ken is active, opposing character dice with Purchase Cost of 3 or less lose their abilities and are free to field.",
-    "keywords": [],
-    "affiliations": [
-      "Villains",
-      "Shi\\'ar"
     ],
     "isImplemented": false,
     "set": "DPS",

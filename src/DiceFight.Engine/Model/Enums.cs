@@ -277,7 +277,27 @@ public enum TriggerType
     // whoever ISN'T the player entering the Attack Step; a fixed
     // relationship (unlike WhenAnotherDieKOd/WhenAnotherDieFielded), so
     // no per-card filter object exists for this one.
-    StartOfOpponentsAttackStep
+    StartOfOpponentsAttackStep,
+
+    // "While active, when [a die matching some filter] attacks, [my
+    // card] reacts" - Beast "First Class"/DPS058 ("a character die with
+    // Founder attacks"). Same WhenAnotherDieKOd/WhenAnotherDieFielded
+    // shape, one trigger point later in a die's turn: AbilityDef.
+    // AttackedFilter (an AttackedDieMatch) is the per-card data,
+    // CombatEngine.DeclareAttackers' own attacker loop is the shared
+    // reactive scan, fired right alongside that same loop's existing
+    // WhenAttacks EnqueueTriggered call for the attacker's own ability.
+    WhenAnotherDieAttacks,
+
+    // "While active, when you spend energy from an X-Men die to use a
+    // Global Ability or field a character, [...]" - Jubilee "Fireworks"/
+    // DPS116. A fixed relationship (no per-card filter object needed -
+    // "X-Men" is baked into the check itself), same precedent as
+    // StartOfOpponentsAttackStep just above - only one printing needs
+    // this shape today. See TurnEngine.
+    // ResolveWhenXMenEnergySpentOnGlobalOrField, called from both
+    // UseGlobalAbility and Field right after SpendEnergy succeeds.
+    WhenXMenEnergySpentOnGlobalOrField
 }
 
 // Rule 2.2.3 - the five steps of a turn, in fixed order (2.2.4 - cannot

@@ -78,7 +78,17 @@ public sealed record TargetSpec(
     // ability CONTROLLER's own live roster (Player.TeamCardIds) at query
     // time, since which affiliations are "on your team" depends on which
     // team you brought, not the card text itself.
-    bool MatchesOwnTeamAffiliation = false)
+    bool MatchesOwnTeamAffiliation = false,
+    // Tight Ranks (DPS016)'s own Global - "target character die with at
+    // least one Loyalty Counter" - checked via DieStats.LoyaltyBonus (the
+    // same per-card counter Greetings from Krakoa/DPS004 also filters on)
+    // rather than a fixed count, since "at least one" is just "> 0."
+    bool RequiresLoyaltyCounter = false,
+    // Colossus ("Piotr", DPS103)'s own "level 2 or 3 character dice" -
+    // the minimum-threshold counterpart to RequiredLevel (an exact
+    // match) and MaxAttack/MaxDefense (upper thresholds) - checked
+    // against the die's own current Level, not a stat.
+    int? MinLevel = null)
 {
     // Rule 3.3.4/3.3.5 - only dice in the Field Zone (which includes the
     // Attack Zone) may be targeted, unless otherwise stated.
@@ -103,10 +113,13 @@ public sealed record TargetSpec(
         IReadOnlyList<string>? requiredAffiliations = null,
         bool matchAll = false,
         int? requiredLevel = null,
-        int? maxDefense = null) =>
+        int? maxDefense = null,
+        bool requiresLoyaltyCounter = false,
+        int? minLevel = null) =>
         new(ownership, CharacterDiceOnly: true, zones ?? DefaultZones, energyType, count, description,
             Optional: optional, MaxAttack: maxAttack, RequiredAffiliations: requiredAffiliations, MatchAll: matchAll,
-            RequiredLevel: requiredLevel, MaxDefense: maxDefense);
+            RequiredLevel: requiredLevel, MaxDefense: maxDefense, RequiresLoyaltyCounter: requiresLoyaltyCounter,
+            MinLevel: minLevel);
 
     // optional: true models "you MAY target up to Count" (any number,
     // including zero, is a legal chosen count) rather than rule 3.3.11's
@@ -175,6 +188,21 @@ public sealed record DealDamage(int Amount, TargetSpec Target) : EffectNode;
 // "+1A/+1D for each OTHER active Villain" printing) - just not scripted
 // yet.
 public sealed record DealDamagePerActiveAffiliate(TargetSpec Target) : EffectNode;
+
+// Colossus ("Piotr", DPS103) - "each of your level 2 or 3 character dice
+// deals your opponent 2 damage (not 2 damage per Colossus die)." Unlike
+// DealDamagePerActiveAffiliate (amount = a live affiliate COUNT),
+// AmountPerMatch is a fixed per-match multiplier against CountFilter's
+// own count - same "TargetSpec repurposed as a counting filter, not a
+// real choice" shape CardDef.GrantsSelfAttackBonusPerMatchingDie already
+// established (Count/Description/Optional on CountFilter are ignored,
+// same as there). The card's own "(not 2 damage per Colossus die)"
+// parenthetical is just clarifying the multiplier is fixed at 2
+// regardless of how many Colossus dice are active - LegalTargets.Query
+// (via CountFilter) already only ever counts the LEVEL-matching dice,
+// never Colossus dice themselves as a separate multiplier, so there's
+// nothing extra to guard against here.
+public sealed record DealDamagePerMatchingDie(TargetSpec CountFilter, int AmountPerMatch, TargetSpec Target) : EffectNode;
 public sealed record Ko(TargetSpec Target) : EffectNode;
 // Keyword Sacrifice - "Sacrificed Character dice are moved from the
 // Field Zone to Out of Play or the Used Pile, as applicable." Distinct
@@ -276,7 +304,14 @@ public sealed record Reroll(TargetSpec Target) : EffectNode;
 // own printing has none).
 public sealed record RerollAndMoveUnlessCharacter(
     TargetSpec Target, Model.Zone ToZone, int DamagePerMovedToOpponent = 0) : EffectNode;
-public sealed record Spin(TargetSpec Target, int LevelDelta) : EffectNode;
+// AttackBonusPerActualSpinUp (Greetings from Krakoa/DPS004's own "each of
+// your dice that spins up gets +2A") folds a per-die follow-up into the
+// same node, same "DamagePerMovedToOpponent" shape RerollAndMoveUnlessCharacter
+// uses just above - only a die that ACTUALLY moved up (DieStats.SpinLevel's
+// real return value, same check CheckAwaken already relies on) gets the
+// bonus, not every resolved die regardless of whether it was already
+// maxed. Zero (the default) means no such follow-up exists.
+public sealed record Spin(TargetSpec Target, int LevelDelta, int AttackBonusPerActualSpinUp = 0) : EffectNode;
 // "Spin [a/target] die to its [single/an] energy face" (Professor X
 // "Uncanny Leadership"/DPS127, Iceman "Icy Interference"/DPS034) - a
 // direct conversion, not a level-delta the way Spin above is (rule
@@ -432,6 +467,24 @@ public enum EffectCondition
     // is the ability's own source die (TargetSpec.Self), not ignored,
     // since "no OTHER" needs to know which die to exclude from the count.
     OnlyCharacterFieldedThisTurn,
+
+    // Tight Ranks (DPS016) - "if you have at least 3 active character
+    // dice that share a Team Affiliation." Unlike every other count
+    // condition above, this doesn't name a specific affiliation - it's
+    // true if ANY one affiliation is shared by enough active dice, so
+    // it groups the controller's own active dice by affiliation and
+    // checks whether any group meets CountParam, rather than taking an
+    // AffiliationParam at all.
+    OwnActiveDiceShareAnyAffiliationAtLeast,
+
+    // Blink ("Exiles Team Leader", DPS060) - "when Blink attacks WITH AT
+    // LEAST 2 OTHER X-Men character dice." The Attack-Zone, exclude-self
+    // counterpart to OwnActiveAffiliationOrKeywordCountAtLeast (that one
+    // spans Field+Attack Zone and never excludes the resolved die) -
+    // dieId IS used here (to exclude it), same shape as
+    // OnlyCharacterFieldedThisTurn. AffiliationParam/CountParam same as
+    // the sibling condition above.
+    OwnOtherAttackingAffiliateCountAtLeast,
 }
 
 // Rule 3.1.17's "if you do" / "if [x], then [y]" pattern (e.g. Shocking
@@ -595,3 +648,16 @@ public sealed record GrantNextPurchaseDiscount(int Amount, Model.CardType? Requi
 // already resolves purely from state (Overcrush, etc.) - doesn't grant
 // anything that needs its own AbilityDef wired up too.
 public sealed record GrantKeyword(TargetSpec Target, string Keyword) : EffectNode;
+
+// Radicalization (DPS012)'s own Global - "target character die gains
+// X-Men or Brotherhood of Mutants (until end of turn)." The affiliation
+// counterpart to GrantKeyword just above - same Applied-ability lifetime
+// (DieInstance.AppliedAffiliations, rule 3.4.3.9), just for affiliations,
+// which DieStats.HasAffiliation and every LegalTargets.Query affiliation
+// filter already consult. Affiliations (plural, "X-Men OR Brotherhood of
+// Mutants") rather than a single string - the card's own "or" is a
+// choice of which ONE to grant, so this grants every listed one, and
+// the ability's own target choice is what narrows to one printing's
+// worth of text; a caller wanting "grant only one of several" chooses
+// via a shorter list instead of a new field.
+public sealed record GrantAffiliation(TargetSpec Target, IReadOnlyList<string> Affiliations) : EffectNode;

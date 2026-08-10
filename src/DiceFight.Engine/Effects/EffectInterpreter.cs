@@ -58,6 +58,7 @@ public static class EffectInterpreter
                 break;
             case DealDamage n: if (!n.Target.IsSelf) yield return n.Target; break;
             case DealDamagePerActiveAffiliate n: if (!n.Target.IsSelf) yield return n.Target; break;
+            case DealDamagePerMatchingDie n: if (!n.Target.IsSelf) yield return n.Target; break;
             case Ko n: if (!n.Target.IsSelf) yield return n.Target; break;
             case Sacrifice n: if (!n.Target.IsSelf) yield return n.Target; break;
             case ForceBlock n: if (!n.Target.IsSelf) yield return n.Target; break;
@@ -83,6 +84,7 @@ public static class EffectInterpreter
             case FieldDie n: if (!n.Target.IsSelf) yield return n.Target; break;
             case BlankTargetText n: if (!n.Target.IsSelf) yield return n.Target; break;
             case GrantKeyword n: if (!n.Target.IsSelf) yield return n.Target; break;
+            case GrantAffiliation n: if (!n.Target.IsSelf) yield return n.Target; break;
             case Conditional n:
                 if (!n.CheckTarget.IsSelf) yield return n.CheckTarget;
                 foreach (var spec in CollectTargetSpecs(n.Then))
@@ -148,6 +150,28 @@ public static class EffectInterpreter
                 var amount = ActiveAffiliateCount(ctx);
                 var koIds = new List<string>();
                 foreach (var id in Resolve(ctx, perAffiliate.Target, cache))
+                {
+                    if (ctx.State.IsPlayerId(id))
+                    {
+                        ctx.State.GetPlayer(id).Life -= amount;
+                        continue;
+                    }
+
+                    var die = FindDie(ctx, id);
+                    var recipient = DieStats.ApplyDamage(ctx.State, die, amount);
+                    if (recipient is not null && DieStats.TryResolveKO(ctx.State, recipient, ctx.Roller))
+                        koIds.Add(recipient.Id);
+                }
+                TurnEngine.ResolveKOReactions(ctx.State, ctx.Queue, koIds);
+                break;
+            }
+
+            case DealDamagePerMatchingDie perMatch:
+            {
+                var matchCount = LegalTargets.Query(ctx.State, ctx.ControllerId, perMatch.CountFilter).Count;
+                var amount = matchCount * perMatch.AmountPerMatch;
+                var koIds = new List<string>();
+                foreach (var id in Resolve(ctx, perMatch.Target, cache))
                 {
                     if (ctx.State.IsPlayerId(id))
                     {
@@ -251,6 +275,9 @@ public static class EffectInterpreter
                     // point in TurnEngine.UseActionDie.
                     if (ctx.Queue is not null)
                         TurnEngine.CheckAwaken(ctx.State, ctx.Queue, die, actualDelta);
+
+                    if (actualDelta > 0 && spin.AttackBonusPerActualSpinUp != 0)
+                        die.AppliedModifiers.Add(new Modifier(spin.AttackBonusPerActualSpinUp, 0, ctx.SourceDieId ?? "ability"));
                 }
                 break;
 
@@ -691,6 +718,16 @@ public static class EffectInterpreter
                 }
                 break;
 
+            case GrantAffiliation grantAffiliation:
+                foreach (var id in Resolve(ctx, grantAffiliation.Target, cache))
+                {
+                    var die = FindDie(ctx, id);
+                    foreach (var affiliation in grantAffiliation.Affiliations)
+                        if (!die.AppliedAffiliations.Contains(affiliation))
+                            die.AppliedAffiliations.Add(affiliation);
+                }
+                break;
+
             default:
                 throw new NotSupportedException($"Unhandled effect node: {node.GetType().Name}");
         }
@@ -820,6 +857,19 @@ public static class EffectInterpreter
         // state-only conditions above), since "no OTHER" needs to exclude it from the count.
         EffectCondition.OnlyCharacterFieldedThisTurn => ctx.State.FieldedThisTurn.Contains(dieId)
             && ctx.State.Dice.Count(d => ctx.State.FieldedThisTurn.Contains(d.Id) && d.ControllerId == ctx.ControllerId) == 1,
+        // dieId is unused here - see EffectCondition.OwnActiveDiceShareAnyAffiliationAtLeast's own remarks.
+        EffectCondition.OwnActiveDiceShareAnyAffiliationAtLeast => conditional.CountParam is { } shareThreshold
+            && ctx.State.DiceIn(ctx.ControllerId, Zone.FieldZone).Concat(ctx.State.DiceIn(ctx.ControllerId, Zone.AttackZone))
+                .Select(d => DieStats.GetCard(ctx.State, d))
+                .Where(c => c is not null)
+                .SelectMany(c => c!.Affiliations)
+                .GroupBy(a => a)
+                .Any(g => g.Count() >= shareThreshold),
+        // See EffectCondition.OwnOtherAttackingAffiliateCountAtLeast's own remarks - dieId IS used to exclude self.
+        EffectCondition.OwnOtherAttackingAffiliateCountAtLeast => conditional.AffiliationParam is { } attackAffiliation
+            && conditional.CountParam is { } attackThreshold
+            && ctx.State.DiceIn(ctx.ControllerId, Zone.AttackZone)
+                .Count(d => d.Id != dieId && DieStats.HasAffiliation(ctx.State, d, attackAffiliation)) >= attackThreshold,
         _ => throw new NotSupportedException($"Unhandled effect condition: {conditional.When}")
     };
 

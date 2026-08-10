@@ -28,8 +28,41 @@ public static class DieStats
     {
         if (state.BlankedDieIds.Contains(die.Id) || state.BlankedControllerIds.Contains(die.ControllerId))
             return null;
+        if (IsBlankedByOpposingContinuousGrant(state, die))
+            return null;
         var cardId = die.VirtualCardId ?? die.CardId;
         return cardId is not null ? state.CardCatalog.GetValueOrDefault(cardId) : null;
+    }
+
+    // D'Ken ("Shi'ar Civil War", DPS141) - "opposing character dice with
+    // Purchase Cost of 3 or less lose their abilities." A continuous,
+    // cross-player extension of the same blanking choke point above -
+    // checked directly inside GetCard so every consulting site
+    // (HasKeyword, StaticTeamBonusFor, etc.) automatically respects it
+    // without its own changes. The granter scan deliberately uses the
+    // raw CardCatalog, not GetCard, to sidestep a theoretical mutual-
+    // blanking recursion (two opposing "blank the opponent" cards
+    // checking each other) - a die that's itself blanked couldn't grant
+    // this text either in the real rules, but that double-blanked-
+    // granter edge case isn't worth the recursion risk to model exactly.
+    private static bool IsBlankedByOpposingContinuousGrant(GameState state, DieInstance die)
+    {
+        var dieCardId = die.VirtualCardId ?? die.CardId;
+        if (dieCardId is null || !state.CardCatalog.TryGetValue(dieCardId, out var dieCard)) return false;
+
+        var opponentId = state.OpponentOf(die.ControllerId);
+        var granters = state.DiceIn(opponentId, Zone.FieldZone).Concat(state.DiceIn(opponentId, Zone.AttackZone))
+            .Select(d => (d.VirtualCardId ?? d.CardId) is { } gid ? state.CardCatalog.GetValueOrDefault(gid) : null)
+            .Where(c => c is not null)
+            .Distinct();
+
+        foreach (var granter in granters)
+        {
+            if (granter!.GrantsOpponentAbilityBlankWhileActive is not { } grant) continue;
+            if (grant.MaxPurchaseCost is { } maxCost && dieCard.PurchaseCost > maxCost) continue;
+            return true;
+        }
+        return false;
     }
 
     // Whether the die currently has the named keyword - either printed on
@@ -219,6 +252,8 @@ public static class DieStats
     // only - nothing grants an affiliation the way Darkseid grants Swarm.
     public static bool HasAffiliation(GameState state, DieInstance die, string affiliation)
     {
+        if (die.AppliedAffiliations.Contains(affiliation)) return true; // Radicalization (DPS012)'s own Global grant
+
         var cardId = die.VirtualCardId ?? die.CardId;
         return cardId is not null
             && state.CardCatalog.TryGetValue(cardId, out var card)

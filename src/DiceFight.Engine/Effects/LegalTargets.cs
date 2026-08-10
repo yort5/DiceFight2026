@@ -64,19 +64,22 @@ public static class LegalTargets
         if (spec.MaxDefense is { } maxDefense)
             candidates = candidates.Where(d => DieStats.EffectiveDefense(state, d) <= maxDefense);
 
+        // DieStats.HasAffiliation, not a raw CardCatalog lookup - Radicalization
+        // (DPS012)'s own Global grants a temporary affiliation
+        // (DieInstance.AppliedAffiliations) that a target filter like
+        // this one needs to respect, same as everywhere else "does this
+        // die have affiliation X" is asked.
         if (spec.RequiredAffiliations is { } requiredAffiliations)
-        {
-            candidates = candidates.Where(d =>
-            {
-                var cardId = d.VirtualCardId ?? d.CardId;
-                return cardId is not null
-                    && state.CardCatalog.TryGetValue(cardId, out var card)
-                    && card.Affiliations.Any(requiredAffiliations.Contains);
-            });
-        }
+            candidates = candidates.Where(d => requiredAffiliations.Any(a => DieStats.HasAffiliation(state, d, a)));
 
         if (spec.RequiredLevel is { } requiredLevel)
             candidates = candidates.Where(d => d.Level == requiredLevel);
+
+        if (spec.MinLevel is { } minLevel)
+            candidates = candidates.Where(d => d.Level >= minLevel);
+
+        if (spec.RequiresLoyaltyCounter)
+            candidates = candidates.Where(d => DieStats.LoyaltyBonus(state, d) > 0);
 
         if (spec.MatchesOwnTeamAffiliation)
         {
@@ -84,13 +87,7 @@ public static class LegalTargets
                 .Where(id => state.CardCatalog.ContainsKey(id))
                 .SelectMany(id => state.CardCatalog[id].Affiliations)
                 .ToHashSet();
-            candidates = candidates.Where(d =>
-            {
-                var cardId = d.VirtualCardId ?? d.CardId;
-                return cardId is not null
-                    && state.CardCatalog.TryGetValue(cardId, out var card)
-                    && card.Affiliations.Any(ownTeamAffiliations.Contains);
-            });
+            candidates = candidates.Where(d => ownTeamAffiliations.Any(a => DieStats.HasAffiliation(state, d, a)));
         }
 
         if (spec.SidekicksOnly)

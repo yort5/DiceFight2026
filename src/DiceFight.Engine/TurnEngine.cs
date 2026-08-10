@@ -456,6 +456,10 @@ public static class TurnEngine
             die.Zone = Zone.Bag;
             state.PendingNextPurchaseGoesToBag = false;
         }
+        else if (card.Type == CardType.Character && energyDice.Count > 0 && IsPurchaseGrantingPrepOverride(state, energyDice))
+        {
+            die.Zone = Zone.PrepArea;
+        }
         else
         {
             die.Zone = Zone.UsedPile; // rule 2.6.2.6
@@ -494,6 +498,8 @@ public static class TurnEngine
         SpendEnergy(
             state, state.ActivePlayerId, energyDice, fieldingCost, [], Zone.OutOfPlay,
             () => $"Not enough energy offered to field {DisplayName(state, die)} (needs {fieldingCost}).");
+
+        ResolveWhenXMenEnergySpentOnGlobalOrField(state, queue, state.ActivePlayerId, energyDice);
 
         die.Zone = Zone.FieldZone;
         state.FieldedThisTurn.Add(die.Id); // keyword Strike's own "fielded this turn" check
@@ -586,7 +592,48 @@ public static class TurnEngine
             if (grant.MaxFieldingCost is { } maxCost && fieldingCost > maxCost) continue;
             return true;
         }
+
+        // D'Ken ("Shi'ar Civil War", DPS141) - "...and are free to
+        // field," bundled with the same card's own ability-blank grant
+        // (see CardDef.GrantsOpponentAbilityBlankWhileActive's remarks) -
+        // the granter here is on the OPPOSING side of the die being
+        // fielded, unlike the same-side scan just above.
+        var opposingGranterCards = state.DiceIn(state.OpponentOf(state.ActivePlayerId), Zone.FieldZone)
+            .Concat(state.DiceIn(state.OpponentOf(state.ActivePlayerId), Zone.AttackZone))
+            .Select(d => DieStats.GetCard(state, d))
+            .Where(c => c is not null)
+            .Distinct();
+
+        foreach (var opposingGranterCard in opposingGranterCards)
+        {
+            if (opposingGranterCard!.GrantsOpponentAbilityBlankWhileActive is not { AlsoFreeToField: true } grant) continue;
+            if (grant.MaxPurchaseCost is { } maxPurchaseCost && card.PurchaseCost > maxPurchaseCost) continue;
+            return true;
+        }
         return false;
+    }
+
+    // Bishop ("Time Traveller", DPS099) - "if you only use energy from
+    // Bishop dice to purchase a character die, [...]." Checks the
+    // PURCHASER's own roster (Player.TeamCardIds), not an active die -
+    // see CardDef.GrantsPrepInsteadOfUsedPileIfPurchasedWithSameNameEnergy's
+    // own remarks for why - then matches the SPENT energy's own card
+    // name against whichever roster card actually grants this (in
+    // practice always "Bishop," but resolved from the granter's own
+    // Name rather than hardcoded).
+    private static bool IsPurchaseGrantingPrepOverride(GameState state, List<DieInstance> energyDice)
+    {
+        var granterNames = state.GetPlayer(state.ActivePlayerId).TeamCardIds
+            .Select(id => state.CardCatalog.GetValueOrDefault(id))
+            .Where(c => c is not null && c.GrantsPrepInsteadOfUsedPileIfPurchasedWithSameNameEnergy)
+            .Select(c => c!.Name)
+            .ToHashSet();
+        if (granterNames.Count == 0) return false;
+
+        return energyDice.All(d =>
+            (d.VirtualCardId ?? d.CardId) is { } cardId &&
+            state.CardCatalog.TryGetValue(cardId, out var energyCard) &&
+            granterNames.Contains(energyCard.Name));
     }
 
     // Rogue ("Unity Squad", DPS129) - "your X-Men character dice cost 1
@@ -656,6 +703,55 @@ public static class TurnEngine
             (fieldedCard is null || !fieldedCard.Affiliations.Contains(affiliation))) return false;
         if (filter.MinPurchaseCost is { } minCost && (fieldedCard is null || fieldedCard.PurchaseCost < minCost)) return false;
         return true;
+    }
+
+    // TriggerType.WhenAnotherDieAttacks - same WhenAnotherDieFielded/
+    // WhenAnotherDieKOd shape, reacting to an attack declaration instead;
+    // called from CombatEngine.DeclareAttackers' own attacker loop right
+    // alongside its existing WhenAttacks EnqueueTriggered call, once per
+    // attacking die.
+    internal static void ResolveWhenAnotherDieAttacks(GameState state, AbilityQueue queue, DieInstance attackingDie)
+    {
+        var attackingCardId = attackingDie.VirtualCardId ?? attackingDie.CardId;
+        var attackingCard = attackingCardId is not null ? state.CardCatalog.GetValueOrDefault(attackingCardId) : null;
+
+        foreach (var reactor in state.Dice.Where(d => d.Zone is Zone.FieldZone or Zone.AttackZone).ToList())
+        {
+            if (DieStats.GetCard(state, reactor) is not { } reactorCard) continue;
+
+            foreach (var ability in reactorCard.Abilities.Where(a => a.Trigger == TriggerType.WhenAnotherDieAttacks))
+            {
+                var filter = ability.AttackedFilter
+                    ?? throw new InvalidOperationException($"{reactorCard.Name}'s WhenAnotherDieAttacks ability has no AttackedFilter.");
+                if (!MatchesAttackedFilter(state, filter, attackingDie, attackingCard, reactor)) continue;
+
+                queue.Enqueue(reactor.Id, reactor.ControllerId, TriggerType.WhenAnotherDieAttacks, ability.Effect);
+            }
+        }
+    }
+
+    private static bool MatchesAttackedFilter(
+        GameState state, AttackedDieMatch filter, DieInstance attackingDie, CardDef? attackingCard, DieInstance reactor)
+    {
+        if (filter.ExcludeSelf && attackingDie.Id == reactor.Id) return false;
+        if (filter.Ownership == TargetOwnership.Own && attackingDie.ControllerId != reactor.ControllerId) return false;
+        if (filter.Ownership == TargetOwnership.Opposing && attackingDie.ControllerId == reactor.ControllerId) return false;
+        if (filter.RequiredKeyword is { } keyword && !DieStats.HasKeyword(state, attackingDie, keyword)) return false;
+        if (filter.AffiliationContains is { } affiliation &&
+            (attackingCard is null || !attackingCard.Affiliations.Contains(affiliation))) return false;
+        return true;
+    }
+
+    // TriggerType.WhenXMenEnergySpentOnGlobalOrField - see its own
+    // remarks in Enums.cs. Called from UseGlobalAbility/Field right
+    // after SpendEnergy succeeds, with the exact energy dice just spent.
+    internal static void ResolveWhenXMenEnergySpentOnGlobalOrField(
+        GameState state, AbilityQueue queue, string controllerId, IReadOnlyList<DieInstance> spentEnergyDice)
+    {
+        if (!spentEnergyDice.Any(d => DieStats.HasAffiliation(state, d, "X-Men"))) return;
+
+        foreach (var reactor in state.DiceIn(controllerId, Zone.FieldZone).Concat(state.DiceIn(controllerId, Zone.AttackZone)).ToList())
+            EnqueueTriggered(state, queue, reactor, TriggerType.WhenXMenEnergySpentOnGlobalOrField);
     }
 
     // Rule 2.6.4 - Use Action Dice Abilities, one of the four Main Step
@@ -861,6 +957,8 @@ public static class TurnEngine
             state, playerId, energyDice, requiredEnergyAmount, cost.RequiredType is { } t ? [t] : [], destination,
             () => $"Not enough energy offered to pay for {card.Name}'s Global ability (needs {requiredEnergyAmount}).",
             requiredType => $"{card.Name}'s Global ability requires at least one {requiredType} energy.");
+
+        ResolveWhenXMenEnergySpentOnGlobalOrField(state, queue, playerId, energyDice);
 
         if (ability.OncePerTurn) state.GlobalsUsedThisTurn.Add(cardId);
 
@@ -1281,6 +1379,7 @@ public static class TurnEngine
         {
             die.AppliedModifiers.Clear();
             die.AppliedKeywords.Clear();
+            die.AppliedAffiliations.Clear();
         }
 
         // Rule 2.8.3 - Action dice left on their action face in the Reserve

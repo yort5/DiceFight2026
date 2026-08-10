@@ -219,6 +219,23 @@ public sealed record CardDef
     // own condition" shape as SelfFreeFieldingUnlessTeamHasAffiliation.
     public SelfPurchaseDiscountIfOpponentHasAffiliation? GrantsSelfPurchaseDiscountIfOpponentHasAffiliation { get; init; }
 
+    // D'Ken ("Shi'ar Civil War", DPS141): "opposing character dice with
+    // Purchase Cost of 3 or less lose their abilities." A continuous,
+    // cross-player counterpart to Mister Sinister's one-shot/attack-
+    // triggered blanks - see DieStats.GetCard's own
+    // IsBlankedByOpposingContinuousGrant for the enforcement choke point.
+    public OpponentAbilityBlankGrant? GrantsOpponentAbilityBlankWhileActive { get; init; }
+
+    // Bishop ("Time Traveller", DPS099): "if you only use energy from
+    // Bishop dice to purchase a character die, Prep that die instead of
+    // adding it to your Used Pile." A SELF-referential check against the
+    // energy actually spent (not a granter scan, and not gated on an
+    // active die of this specific printing - the text describes a
+    // property of Bishop-named energy itself, not a "while active"
+    // ability) - see TurnEngine.Purchase for enforcement, which matches
+    // the spent dice's own card NAME against this card's Name.
+    public bool GrantsPrepInsteadOfUsedPileIfPurchasedWithSameNameEnergy { get; init; }
+
     // Psylocke ("Adventurer", DPS048): "While Wolverine is active,
     // Psylocke gains Deadly" - a live, continuously-recomputed SELF
     // keyword grant conditioned on some OTHER named card being active
@@ -337,6 +354,14 @@ public sealed record MinimumBlockersRequirement(int MinBlockers, string? Require
 // See CardDef.GrantsSelfPurchaseDiscountIfOpponentHasAffiliation's remarks.
 public sealed record SelfPurchaseDiscountIfOpponentHasAffiliation(string OpponentAffiliation, int Amount);
 
+// See CardDef.GrantsOpponentAbilityBlankWhileActive's remarks.
+// AlsoFreeToField models D'Ken's own "...and are free to field" half -
+// bundled into the same record (rather than a second field elsewhere)
+// since both halves apply to the exact same qualifying set of opposing
+// dice (MaxPurchaseCost); see TurnEngine.IsFreeToField for the second
+// enforcement site this same grant is checked at.
+public sealed record OpponentAbilityBlankGrant(int? MaxPurchaseCost = null, bool AlsoFreeToField = false);
+
 // See CardDef.GrantsSelfAttackBonusPerMatchingDie's remarks. CountFilter
 // is a TargetSpec repurposed as a counting filter rather than a real
 // choice - LegalTargets.Query still does the actual matching.
@@ -349,7 +374,12 @@ public sealed record OpponentStatDebuff(int AttackDelta, int DefenseDelta, Energ
 // (an implicit AND if both are set) - only one is ever set by any current
 // printing, matching how a real card's text only ever states one
 // restriction, but nothing stops a future card needing both at once.
-public sealed record FreeFieldingGrant(string? RequiredAffiliation = null, int? MaxFieldingCost = null);
+// D'Ken ("Shi'ar Civil War", DPS141)'s own "...are free to field" half
+// is the first user of MaxPurchaseCost - a THIRD independent filter
+// alongside RequiredAffiliation/MaxFieldingCost (checked against the
+// card's own printed PurchaseCost, not the specific face's fielding
+// cost MaxFieldingCost already covers).
+public sealed record FreeFieldingGrant(string? RequiredAffiliation = null, int? MaxFieldingCost = null, int? MaxPurchaseCost = null);
 
 // See GameState.PendingPurchaseDiscount's remarks. RequiredType null
 // means any purchase qualifies (Dark Phoenix's own "your next die");

@@ -75,6 +75,14 @@ public sealed class DieInstance
     // GrantKeyword effect node for how a die ends up in this list.
     public List<string> AppliedKeywords { get; } = [];
 
+    // Radicalization (DPS012)'s own Global - "target character die gains
+    // X-Men or Brotherhood of Mutants (until end of turn)." Same Applied-
+    // ability shape and lifetime as AppliedKeywords just above (rule
+    // 3.4.3.9), just for affiliations instead of keywords - see
+    // DieStats.HasAffiliation for where this is actually consulted, and
+    // the GrantAffiliation effect node for how a die ends up in this list.
+    public List<string> AppliedAffiliations { get; } = [];
+
     public List<DieInstance> AttachedGear { get; } = [];
 
     // The raw, zone-independent physical fact: no card, not virtual
@@ -124,5 +132,6 @@ public sealed class DieInstance
         BurstStars = null;
         AppliedModifiers.Clear();
         AppliedKeywords.Clear();
+        AppliedAffiliations.Clear();
     }
 }

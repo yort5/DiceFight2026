@@ -436,6 +436,39 @@ here rather than assuming which approach they'd want.
     apparently never once actually fired correctly before the fix. See
     the "ten more DPS cards" status update for the full list and the
     Damage-resets-to-0-on-KO test-authoring trap it caught again.
+    Nine more DPS cards landed the round after that, with larger-than-
+    usual shared machinery: a third member of the `WhenAnotherDieKOd`/
+    `WhenAnotherDieFielded` reactive-trigger family
+    (`TriggerType.WhenAnotherDieAttacks`/`AttackedDieMatch`, scanned from
+    `CombatEngine.DeclareAttackers` - Beast "First Class"/DPS058), a
+    second, narrower reactive mechanism with no per-card filter object
+    (`TriggerType.WhenXMenEnergySpentOnGlobalOrField`, checked directly
+    in `UseGlobalAbility`/`Field` - Jubilee "Fireworks"/DPS116), a THIRD
+    dimension on `DieStats.GetCard`'s own blanking choke point
+    (`IsBlankedByOpposingContinuousGrant`, a continuous cross-player
+    blank distinct from Mister Sinister's one-shot/attack-triggered ones
+    - D'Ken "Shi'ar Civil War"/DPS141, bundled with a new
+    `FreeFieldingGrant.MaxPurchaseCost`), and a temporary affiliation
+    grant (`DieInstance.AppliedAffiliations`, the affiliation
+    counterpart to the existing `AppliedKeywords` - Radicalization/
+    DPS012), which also caught `LegalTargets.Query`'s own affiliation
+    filters bypassing `DieStats.HasAffiliation` with raw `CardCatalog`
+    lookups (fixed, so a granted affiliation now actually matters to
+    other cards' targeting). Also now real: `TargetSpec.
+    RequiresLoyaltyCounter` (closing the "has a Loyalty Counter"
+    targeting gap flagged several rounds back - Tight Ranks/DPS016 and
+    Greetings from Krakoa/DPS004), `EffectCondition.
+    OwnActiveDiceShareAnyAffiliationAtLeast` (Tight Ranks' own "share A
+    Team Affiliation," not one specific one) and
+    `OwnOtherAttackingAffiliateCountAtLeast` (Blink "Exiles Team
+    Leader"/DPS060), `Spin.AttackBonusPerActualSpinUp` (Greetings from
+    Krakoa's own "each die that spins up" follow-up, gated on the real
+    `SpinLevel` return value), `DealDamagePerMatchingDie`/`TargetSpec.
+    MinLevel` (Colossus "Piotr"/DPS103), and
+    `GrantsPrepInsteadOfUsedPileIfPurchasedWithSameNameEnergy` (Bishop
+    "Time Traveller"/DPS099, deliberately NOT gated on an active die -
+    see the status update for why). See the "nine more DPS cards"
+    status update for the full writeup.
 
 ## Implemented keywords
 

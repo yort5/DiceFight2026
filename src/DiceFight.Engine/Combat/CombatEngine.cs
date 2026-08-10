@@ -52,6 +52,11 @@ public static class CombatEngine
 
             // Rule 2.7.1.2 - "when attacks" fires for each attacking die.
             TurnEngine.EnqueueTriggered(state, queue, die, TriggerType.WhenAttacks);
+
+            // Beast ("First Class", DPS058) - "when a character die with
+            // Founder attacks, [...]" - a team-wide reactive scan, same
+            // shape as TurnEngine.Field's own WhenAnotherDieFielded scan.
+            TurnEngine.ResolveWhenAnotherDieAttacks(state, queue, die);
         }
 
         // Keyword Range - "When one or more Character dice with Range

@@ -5750,3 +5750,112 @@ enough Defense to survive the hit instead.
 Verified: `dotnet build`, `dotnet test` (452/452 - 25 new cases, plus 2
 regression cases for the Magneto Idealist bug fix), and `npm run build`
 all clean. Re-ran `scripts/import_bulk_cards.py` (140 → 150 hand-curated).
+
+## Status update — nine more DPS cards: two new general reactive triggers, a third blanking dimension, and a temporary affiliation grant
+
+Nine more DPS cards, several needing genuinely reusable new machinery
+rather than single-card fields - this round's new primitives skew
+larger than most, but each is designed to carry future cards too, not
+just the one that justified it.
+
+**A new general reactive trigger family member** -
+`TriggerType.WhenAnotherDieAttacks`/`AttackedDieMatch` (Beast "First
+Class", DPS058 - "when a character die with Founder attacks, [...]")
+is the third member of the `WhenAnotherDieKOd`/`WhenAnotherDieFielded`
+family: same per-card filter-as-data shape, this time scanned from
+`CombatEngine.DeclareAttackers`' own attacker loop rather than a KO or
+Field call site. `Ownership.Own` matches Cyclops "First Class"
+(DPS025)'s own `WhenAnotherDieFielded` precedent for the identical
+"a character die with Founder" text.
+
+**A second new reactive mechanism, narrower by design** - Jubilee
+"Fireworks" (DPS116)'s "when you spend energy from an X-Men die to use
+a Global Ability or field a character, [...]" needed a new
+`TriggerType.WhenXMenEnergySpentOnGlobalOrField`, checked directly in
+`TurnEngine.UseGlobalAbility`/`Field` right after `SpendEnergy`
+succeeds (both already have the exact spent-energy-dice list in scope).
+Deliberately has no per-card filter object, unlike the
+`WhenAnother*`/`AttackedDieMatch` family above - "X-Men" is baked into
+the check itself, the same precedent `StartOfOpponentsAttackStep`
+already set for a "only one printing needs this shape" trigger.
+
+**A third dimension on `DieStats.GetCard`'s blanking choke point** -
+D'Ken ("Shi'ar Civil War", DPS141)'s "opposing character dice with
+Purchase Cost of 3 or less lose their abilities and are free to field"
+is a CONTINUOUS, cross-player blank (unlike Mister Sinister's one-shot/
+attack-triggered blanks from two rounds back) - enforced by a new
+`IsBlankedByOpposingContinuousGrant` check inside `GetCard` itself, so
+every consulting site automatically respects it. The granter scan
+deliberately bypasses `GetCard` (a raw `CardCatalog` lookup instead) to
+sidestep a theoretical mutual-blanking recursion between two opposing
+"blank the opponent" cards - documented as an accepted edge case, not
+fixed. The free-fielding half is bundled into the same
+`OpponentAbilityBlankGrant` record (`AlsoFreeToField`) rather than a
+second field, since both halves apply to the exact same qualifying set;
+`FreeFieldingGrant` also gained a third independent filter,
+`MaxPurchaseCost`, though D'Ken's own version doesn't use that record
+(the qualifying set is checked once, shared by both halves).
+
+**A temporary affiliation grant** - Radicalization (DPS012)'s Global
+("target character die gains X-Men or Brotherhood of Mutants until end
+of turn") needed `DieInstance.AppliedAffiliations`, the affiliation
+counterpart to the existing `AppliedKeywords` (same rule 3.4.3.9
+lifetime, cleared at the same two points - `ResetToUnrolled` and Clean
+Up). `DieStats.HasAffiliation` now checks it, and - a real "leftover
+duplicate raw check" caught along the way - `LegalTargets.Query`'s own
+`RequiredAffiliations`/`MatchesOwnTeamAffiliation` filters were still
+doing their own raw `CardCatalog` lookups instead of calling
+`HasAffiliation`, which would have silently ignored a granted
+affiliation for every OTHER card's targeting; both fixed to route
+through the shared choke point.
+
+**Two new count-shaped primitives, immediately shared** -
+`EffectCondition.OwnActiveDiceShareAnyAffiliationAtLeast` (Tight Ranks,
+DPS016 - "if you have at least 3 active character dice that SHARE a
+Team Affiliation" - groups the controller's own active dice by
+affiliation and checks whether any group meets the threshold, unlike
+every prior count condition which names a specific affiliation) and
+`TargetSpec.RequiresLoyaltyCounter` (Tight Ranks' own Global AND
+Greetings from Krakoa/DPS004, both filtering on `DieStats.LoyaltyBonus
+> 0`) closed the "has a Loyalty Counter" targeting gap flagged several
+rounds back. `Spin` also gained `AttackBonusPerActualSpinUp` (Greetings
+from Krakoa's "each of your dice that spins up gets +2A" - only a die
+that ACTUALLY moved, via the same real `SpinLevel` return value
+`CheckAwaken` already relies on, gets the bonus), and
+`EffectCondition.OwnOtherAttackingAffiliateCountAtLeast` (Blink "Exiles
+Team Leader", DPS060 - "attacks WITH AT LEAST 2 OTHER X-Men," the
+Attack-Zone/exclude-self counterpart to the existing
+`OwnActiveAffiliationOrKeywordCountAtLeast`).
+
+**`DealDamagePerMatchingDie`** (Colossus "Piotr", DPS103, alongside the
+new `TargetSpec.MinLevel`) is the fixed-multiplier counterpart to the
+existing `DealDamagePerActiveAffiliate` (a live count instead of a
+fixed number). Its `EndOfYourTurn` ability needed its "your opponent"
+target built directly with `MatchAll: true` rather than the ordinary
+`TargetSpec.Player` factory - `TurnEngine`'s own `EndOfYourTurn` loop
+resolves every ability through a hardcoded `_ => []` resolver
+(documented there as only safe for abilities needing no real target
+choice), and `MatchAll` is what sidesteps needing one at all.
+
+**`GrantsPrepInsteadOfUsedPileIfPurchasedWithSameNameEnergy`** (Bishop
+"Time Traveller", DPS099) is a SELF-referential check against the
+purchaser's own roster and the actual energy spent - not gated on an
+active die, since the text describes a property of Bishop-named energy
+itself, not a "while active" ability (a deliberate, documented
+departure from this file's usual "the granter must be active"
+convention, since no other reading fit the printed text).
+
+Tests (19 new) exercise the real gate throughout - `CombatEngine.
+DeclareAttackers` for both new attack-triggered mechanisms (Beast,
+Blink), `TurnEngine.UseGlobalAbility`/`Field` for Jubilee's reactive
+damage, `TurnEngine.Purchase` for Bishop's energy-source check and
+D'Ken's cross-player free-fielding, and `TurnEngine.CleanUp` for both
+Colossus's `EndOfYourTurn` damage and Radicalization's affiliation
+grant actually expiring. `LegalTargets.Query` called directly to prove
+Tight Ranks' Loyalty-Counter gate before also proving it through a full
+ability execution, matching the established "test the gate, not just
+the effect" bar.
+
+Verified: `dotnet build`, `dotnet test` (471/471 - 19 new cases), and
+`npm run build` all clean. Re-ran `scripts/import_bulk_cards.py`
+(150 → 159 hand-curated).

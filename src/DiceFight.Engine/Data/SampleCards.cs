@@ -78,6 +78,8 @@ public static class SampleCards
         MinimumBlockersRequirement? grantsMinimumBlockersRequirement = null,
         int? selfFirstPurchaseSurcharge = null,
         SelfPurchaseDiscountIfOpponentHasAffiliation? grantsSelfPurchaseDiscountIfOpponentHasAffiliation = null,
+        OpponentAbilityBlankGrant? grantsOpponentAbilityBlankWhileActive = null,
+        bool grantsPrepInsteadOfUsedPileIfPurchasedWithSameNameEnergy = false,
         bool isImplemented = true,
         string? set = null) => new()
     {
@@ -114,6 +116,8 @@ public static class SampleCards
         GrantsMinimumBlockersRequirement = grantsMinimumBlockersRequirement,
         SelfFirstPurchaseSurcharge = selfFirstPurchaseSurcharge,
         GrantsSelfPurchaseDiscountIfOpponentHasAffiliation = grantsSelfPurchaseDiscountIfOpponentHasAffiliation,
+        GrantsOpponentAbilityBlankWhileActive = grantsOpponentAbilityBlankWhileActive,
+        GrantsPrepInsteadOfUsedPileIfPurchasedWithSameNameEnergy = grantsPrepInsteadOfUsedPileIfPurchasedWithSameNameEnergy,
         IsImplemented = isImplemented,
         Set = set
     };
@@ -2784,6 +2788,200 @@ public static class SampleCards
                 CountParam: 3))],
         purchaseCost: 4, set: "DPS");
 
+    // Colossus, "Piotr" - the first user of DealDamagePerMatchingDie and
+    // TargetSpec.MinLevel (both new this round). The Target uses MatchAll
+    // (not the ordinary TargetSpec.Player factory) since TurnEngine's own
+    // EndOfYourTurn loop resolves every ability with a hardcoded `_ => []`
+    // resolver (documented there as safe only for abilities needing no
+    // real target choice) - MatchAll sidesteps that entirely by not
+    // needing a caller-supplied choice at all, matching "your opponent"
+    // not really being a decision in the first place.
+    public static readonly CardDef ColossusPiotr = Character(
+        "DPS103", "Colossus", "Piotr", dieLimit: 2,
+        "While Colossus is active, at the end of your turn, each of your level 2 or 3 character dice " +
+        "deals your opponent 2 damage (not 2 damage per Colossus die)",
+        purchaseCost: 6, energyType: EnergyType.Fist,
+        affiliations: ["X-Men"],
+        abilities: [new AbilityDef(TriggerType.EndOfYourTurn, Cost: null,
+            Effect: new DealDamagePerMatchingDie(
+                CountFilter: TargetSpec.CharacterDie("your level 2 or 3 character dice", TargetOwnership.Own, minLevel: 2),
+                AmountPerMatch: 2,
+                Target: new TargetSpec(
+                    TargetOwnership.Opposing, CharacterDiceOnly: false, EligibleZones: [], RequiredEnergyType: null,
+                    Count: 1, "your opponent", PlayersAllowed: true, MatchAll: true)))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 4),
+            new CharacterFace(FieldingCost: 1, Attack: 6, Defense: 5, BurstStars: 1),
+            new CharacterFace(FieldingCost: 2, Attack: 8, Defense: 7, BurstStars: 1)
+        ], set: "DPS");
+
+    // D'Ken, "Shi'ar Civil War" - the first user of
+    // GrantsOpponentAbilityBlankWhileActive (new this round) - a
+    // continuous, cross-player extension of DieStats.GetCard's own
+    // blanking choke point (see its own remarks), bundling the "lose
+    // their abilities" and "are free to field" halves into one grant
+    // since both apply to the same qualifying set of opposing dice.
+    public static readonly CardDef DKenShiarCivilWar = Character(
+        "DPS141", "D'Ken", "Shi'ar Civil War", dieLimit: 1,
+        "While D'Ken is active, opposing character dice with Purchase Cost of 3 or less lose their " +
+        "abilities and are free to field.",
+        purchaseCost: 6, energyType: EnergyType.Shield,
+        affiliations: ["Villains", "Shi'ar"],
+        grantsOpponentAbilityBlankWhileActive: new OpponentAbilityBlankGrant(MaxPurchaseCost: 3, AlsoFreeToField: true),
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 4, Defense: 4),
+            new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 5),
+            new CharacterFace(FieldingCost: 2, Attack: 6, Defense: 6)
+        ], set: "DPS");
+
+    // Bishop, "Time Traveller" - the first user of
+    // GrantsPrepInsteadOfUsedPileIfPurchasedWithSameNameEnergy (new this
+    // round).
+    public static readonly CardDef BishopTimeTraveller = Character(
+        "DPS099", "Bishop", "Time Traveller", dieLimit: 2,
+        "If you only use energy from Bishop dice to purchase a character die, Prep that die instead of " +
+        "adding it to your Used Pile",
+        purchaseCost: 3, energyType: EnergyType.Shield,
+        affiliations: ["X-Men"],
+        grantsPrepInsteadOfUsedPileIfPurchasedWithSameNameEnergy: true,
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 5),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 6),
+            new CharacterFace(FieldingCost: 2, Attack: 5, Defense: 6)
+        ], set: "DPS");
+
+    // Blink, "Exiles Team Leader" - the first user of
+    // EffectCondition.OwnOtherAttackingAffiliateCountAtLeast (new this
+    // round). Infiltrate is a GRANTED keyword here (via GrantKeyword),
+    // not printed on Blink's own card - unlike the bulk sheet's own
+    // naive keyword scan, which mis-attributed it as printed (the same
+    // class of parsing trap Magik's own granted keyword hit before).
+    public static readonly CardDef BlinkExilesTeamLeader = Character(
+        "DPS060", "Blink", "Exiles Team Leader", dieLimit: 3,
+        "When Blink attacks with at least 2 other X-Men character dice, each of your X-Men character " +
+        "dice in the Field Zone gains Infiltrate.",
+        purchaseCost: 4, energyType: EnergyType.Mask,
+        affiliations: ["X-Men"],
+        abilities: [new AbilityDef(TriggerType.WhenAttacks, Cost: null,
+            Effect: new Conditional(
+                TargetSpec.Self, EffectCondition.OwnOtherAttackingAffiliateCountAtLeast,
+                Then: new GrantKeyword(
+                    TargetSpec.CharacterDie("each of your X-Men character dice in the Field Zone",
+                        TargetOwnership.Own, zones: [Zone.FieldZone], requiredAffiliations: ["X-Men"], matchAll: true),
+                    "Infiltrate"),
+                AffiliationParam: "X-Men", CountParam: 2))],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 3),
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 3),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 5)
+        ], set: "DPS");
+
+    // Radicalization - the first user of GrantAffiliation/
+    // DieInstance.AppliedAffiliations (new this round); the burst-KO
+    // follow-up reuses the existing OnDoubleBurstFace/Conditional
+    // machinery Rally/Take Cover already established.
+    public static readonly CardDef Radicalization = BasicAction(
+        "DPS012", "Radicalization",
+        "Deal 3 damage to target X-Men or Brotherhood of Mutants character die. **Also, KO target " +
+        "Sidekick character die. Global: Pay Shield. Target character die gains X-Men or Brotherhood " +
+        "of Mutants (until end of turn).",
+        abilities: [
+            new AbilityDef(TriggerType.WhenUsed, Cost: null,
+                Effect: new Sequence([
+                    new DealDamage(3, TargetSpec.CharacterDie(
+                        "target X-Men or Brotherhood of Mutants character die",
+                        requiredAffiliations: ["X-Men", "Brotherhood of Mutants"])),
+                    new Conditional(TargetSpec.Self, EffectCondition.OnDoubleBurstFace,
+                        Then: new Ko(TargetSpec.Sidekick("target Sidekick character die")))
+                ])),
+            new AbilityDef(TriggerType.Global, Cost: null,
+                Effect: new GrantAffiliation(
+                    TargetSpec.CharacterDie("target character die"), ["X-Men", "Brotherhood of Mutants"]),
+                EnergyCost: new EnergyCost(1, EnergyType.Shield))
+        ],
+        purchaseCost: 3, set: "DPS");
+
+    // Tight Ranks - the first user of
+    // EffectCondition.OwnActiveDiceShareAnyAffiliationAtLeast and
+    // TargetSpec.RequiresLoyaltyCounter (both new this round).
+    public static readonly CardDef TightRanks = BasicAction(
+        "DPS016", "Tight Ranks",
+        "If you have at least 3 active character dice that share a Team Affiliation, KO target " +
+        "character die. Global: Pay Shield. Target character die with at least one Loyalty Counter " +
+        "gets -2A and -2D.",
+        abilities: [
+            new AbilityDef(TriggerType.WhenUsed, Cost: null,
+                Effect: new Conditional(
+                    TargetSpec.Self, EffectCondition.OwnActiveDiceShareAnyAffiliationAtLeast,
+                    Then: new Ko(TargetSpec.CharacterDie("target character die")),
+                    CountParam: 3)),
+            new AbilityDef(TriggerType.Global, Cost: null,
+                Effect: new ModifyStat(
+                    TargetSpec.CharacterDie("target character die with at least one Loyalty Counter", requiresLoyaltyCounter: true),
+                    AttackDelta: -2, DefenseDelta: -2),
+                EnergyCost: new EnergyCost(1, EnergyType.Shield))
+        ],
+        purchaseCost: 3, set: "DPS");
+
+    // Greetings from Krakoa - the first user of Spin.
+    // AttackBonusPerActualSpinUp (new this round), alongside
+    // TargetSpec.RequiresLoyaltyCounter (Tight Ranks above). Scoped to
+    // TargetOwnership.Own throughout (both the spin and the +2A) - the
+    // printed text doesn't say "your" on the spin half, but the +2A half
+    // explicitly does, and applying the spin to an opponent's Loyalty-
+    // Countered dice while only buffing your own would need the effect
+    // to track ownership per-die separately, which Spin's own shape
+    // doesn't support; scoping the whole thing to your own dice is the
+    // simpler, more common-case-faithful reading.
+    public static readonly CardDef GreetingsFromKrakoa = BasicAction(
+        "DPS004", "Greetings from Krakoa",
+        "Spin up each character whose card has a Loyalty Counter. Each of your dice that spins up " +
+        "gets +2A.",
+        abilities: [new AbilityDef(TriggerType.WhenUsed, Cost: null,
+            Effect: new Spin(
+                TargetSpec.CharacterDie("each of your characters whose card has a Loyalty Counter",
+                    TargetOwnership.Own, requiresLoyaltyCounter: true, matchAll: true),
+                LevelDelta: 1, AttackBonusPerActualSpinUp: 2))],
+        purchaseCost: 3, set: "DPS");
+
+    // Jubilee, "Fireworks" - the first user of
+    // TriggerType.WhenXMenEnergySpentOnGlobalOrField (new this round).
+    public static readonly CardDef JubileeFireworks = Character(
+        "DPS116", "Jubilee", "Fireworks", dieLimit: 2,
+        "While Jubilee is active, when you spend energy from an [X-Men] die to use a Global Ability " +
+        "or field a character, deal 1 damage to target opponent or character die.",
+        purchaseCost: 3, energyType: EnergyType.Bolt,
+        affiliations: ["X-Men"],
+        abilities: [new AbilityDef(TriggerType.WhenXMenEnergySpentOnGlobalOrField, Cost: null,
+            Effect: new DealDamage(1, TargetSpec.CharacterDieOrPlayer("target opponent or character die", TargetOwnership.Opposing)))],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 1),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3),
+            new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 3)
+        ], set: "DPS");
+
+    // Beast, "First Class" - the first user of
+    // TriggerType.WhenAnotherDieAttacks/AttackedDieMatch (both new this
+    // round, the CombatEngine.DeclareAttackers-scanned mirror of
+    // WhenAnotherDieFielded/FieldedDieMatch) - Ownership.Own matches
+    // Cyclops "First Class" (DPS025)'s own WhenAnotherDieFielded
+    // precedent for the identical "a character die with Founder" shape.
+    public static readonly CardDef BeastFirstClass = Character(
+        "DPS058", "Beast", "First Class", dieLimit: 3,
+        "Founder While Beast is active, when a character die with Founder attacks, Prep a die from " +
+        "your bag.",
+        purchaseCost: 3, energyType: EnergyType.Fist,
+        affiliations: ["X-Men"],
+        keywords: [new KeywordInstance("Founder")],
+        abilities: [new AbilityDef(TriggerType.WhenAnotherDieAttacks, Cost: null,
+            Effect: new PrepFromBag(),
+            AttackedFilter: new AttackedDieMatch(TargetOwnership.Own, RequiredKeyword: "Founder"))],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 1),
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 2)
+        ], set: "DPS");
+
     // Supreme Intelligence, "Kree Science Council" - purely a Loyalty
     // grant, no other text. NameContains is a real substring match here
     // ("a card with Kree in its name"), unlike Gladiator's "When Lilandra
@@ -3113,7 +3311,9 @@ public static class SampleCards
             MoiraStrengthOfForesight,
             RogueUnitySquad, MagnetoVisionary, WolverineHardenedByMadripoor, BeastCombatReady,
             DarkPhoenixMalevolent, CableHighStakes, GambitILikeSolitaire, CyclopsUtopiaRealized,
-            MutantResearchProgram, LivingTheDream
+            MutantResearchProgram, LivingTheDream,
+            ColossusPiotr, DKenShiarCivilWar, BishopTimeTraveller, BlinkExilesTeamLeader, Radicalization,
+            TightRanks, GreetingsFromKrakoa, JubileeFireworks, BeastFirstClass
         ];
 
         // Hand-curated cards win on id collision - shouldn't happen in

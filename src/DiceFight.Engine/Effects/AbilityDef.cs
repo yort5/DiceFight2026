@@ -53,6 +53,17 @@ public sealed record FieldedDieMatch(
     // die" shape as RequiredKeyword/AffiliationContains above.
     int? MinPurchaseCost = null);
 
+// TriggerType.WhenAnotherDieAttacks's own filter - same shape as
+// FieldedDieMatch/KOdDieMatch, for "when [a die matching this] attacks."
+// RequiredKeyword (Beast "First Class"/DPS058's own "a character die
+// with Founder attacks") checks DieStats.HasKeyword, same as
+// FieldedDieMatch's own.
+public sealed record AttackedDieMatch(
+    TargetOwnership Ownership = TargetOwnership.Any,
+    string? RequiredKeyword = null,
+    string? AffiliationContains = null,
+    bool ExcludeSelf = false);
+
 // A single authored ability on a card: when it fires, what it costs
 // (rule 3.1.16 - Ability Cost, distinct from energy cost), and what it does.
 // Cost and Effects are both effect trees so a cost like "KO one of your
@@ -74,4 +85,7 @@ public sealed record AbilityDef(
     KOdDieMatch? KOdFilter = null,
     // Only meaningful for Trigger == WhenAnotherDieFielded - same
     // "always required" reasoning as KOdFilter above.
-    FieldedDieMatch? FieldedFilter = null);
+    FieldedDieMatch? FieldedFilter = null,
+    // Only meaningful for Trigger == WhenAnotherDieAttacks - same
+    // "always required" reasoning as KOdFilter/FieldedFilter above.
+    AttackedDieMatch? AttackedFilter = null);
