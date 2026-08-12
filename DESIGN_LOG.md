@@ -5948,3 +5948,149 @@ both tests.
 Verified: `dotnet build`, `dotnet test` (481/481 - 10 new cases), and
 `npm run build` all clean. Re-ran `scripts/import_bulk_cards.py`
 (159 → 165 hand-curated).
+
+## Status update — deeper abilities: ability-vs-combat damage, the multi-block default, and five more DPS cards
+
+Per the user's own request ("let's start working though those deeper
+abilities"), this round deliberately stopped picking off easy cards and
+went after several architectural gaps flagged across many previous
+rounds instead.
+
+**Ability-vs-combat damage distinction.** `DieStats.ApplyDamage` had
+one signature since the very first round; it never had any way to tell
+"a die hit me in combat" from "an ability dealt me damage," or to know
+which player controlled the ability doing the dealing. Both were
+needed for real card text (Mystique's own reduction is "opposing
+*ability*" damage specifically; Dark Phoenix's own trigger is "an
+opposing *character die* damages" her, i.e. combat only). Rather than a
+discriminated-union type, `ApplyDamage` just gained two independent
+optional params: `sourceDie` (the real attacking/blocking `DieInstance`
+- only ever passed from `CombatEngine.ResolveFastOrSlowDamage`'s two
+real combat-wave call sites) and `abilityControllerId` (only ever
+passed from `EffectInterpreter`'s three damage-dealing cases:
+`DealDamage`, `DealDamagePerActiveAffiliate`, `DealDamagePerMatchingDie`).
+Neither caller family needed to enforce the other's absence, so two
+independent nullable params were simpler than one union. A new private
+helper, `ReduceForDefensiveGrants`, is the single choke point every
+"reduce/prevent/retaliate against damage" card now goes through -
+called right at the top of `ApplyDamage`, before the existing
+redirector logic:
+
+- `CardDef.GrantsOwnDamageReductionFromOpponentAbilities` (int) -
+  Mystique ("Freedom Force", DPS085) - "while Mystique is active,
+  reduce damage from opposing character abilities by 1." Gated on
+  `abilityControllerId == state.OpponentOf(die.ControllerId)` - the
+  ability's controller must be the recipient's opponent, i.e. genuinely
+  "opposing." Simplified from "opposing *character* abilities" to
+  "opposing abilities" full stop - nothing at this choke point
+  currently distinguishes a Basic/Action ability's damage from a
+  Character's own, and no other card needs that distinction yet.
+- `CardDef.GrantsPreventsNonCombatDamageToOtherOwnDice` (bool) - Mister
+  Sinister ("Biologist", DPS148) - "prevent non-combat damage dealt to
+  your other character dice." Gated on `sourceDie is null` (no combat
+  die involved - the general "was this combat" signal) AND the
+  recipient's own card id differing from the granter's (the "other"
+  qualifier, checked by card id the same way every other ExcludeSelf
+  shape in this file already works).
+- `CardDef.GrantsRetaliatesEqualDamageToOpponentWhenDamagedByOpponent`
+  (bool) - Dark Phoenix ("Destructive Force", DPS107) - "when an
+  opposing character die damages Dark Phoenix, she deals that much
+  damage to each opponent." This is the engine's first WhenDamaged-
+  shaped effect, and deliberately NOT built as a real
+  `AbilityDef`/`TriggerType.WhenDamaged`/`AbilityQueue` round-trip -
+  "each opponent" is a fixed single player in this 2-player engine, so
+  there's no real target CHOICE for a queue to exist for. Injected
+  directly inside `ApplyDamage` itself instead, gated on
+  `sourceDie is not null && sourceDie.ControllerId != die.ControllerId`
+  (a real opposing combat die caused this), checked against the
+  ORIGINAL amount before Mystique/Sinister-style reduction (the more
+  literal reading of "that much," though no card combines both yet so
+  either reading would currently pass every test). This is the same
+  "engine-provided fixed effect, no queue round-trip needed" shape
+  keyword Attune's own built-in 1-damage effect already established -
+  just with a live amount instead of a fixed 1.
+
+**The multi-block default, enforced for the first time.** Rule
+2.7.2.4 - "each Character die may block only one attacking Character
+die, unless a card effect states otherwise" - turns out to have never
+actually been checked anywhere in this engine, in any previous round:
+a blocker could always be assigned to any number of attackers in
+`CombatAssignment` with zero validation. `CombatEngine.DeclareBlockers`
+now also calls a new `ValidateBlockerCapacity`, which counts how many
+attackers each blocker id was assigned across the whole
+`CombatAssignment` and throws if any blocker exceeds its allowed count
+(`CardDef.GrantsBlocksMultipleAttackers` - an `int?`, defaulting to 1
+via `?? 1` - the first and, for now, only exception). Blob ("Immovable",
+DPS101 - "each of your Blob dice may block 3 character dice instead of
+1") is the first card to set it.
+
+**"Who caused this KO," closed for the combat-scoped case - without
+building real per-hit damage-source attribution.** This has been an
+open gap flagged for several rounds now (general damage-source
+tracking would be a much bigger, riskier investment - touching every
+damage call site at once). Both of this round's KO-reaction cards
+turned out to need much less than that:
+
+- Deathbird ("Usurper", DPS069) - "while Deathbird is active, when you
+  KO an opposing character die with 3D or greater, deal 3 damage to
+  your opponent" - needs NO real attribution at all. Any KO discovered
+  during one `CombatEngine.ResolveFastOrSlowDamage` call is inherently
+  caused by "the other side" within that method's own scope - there's
+  no ambiguity to resolve. `CardDef.
+  GrantsDamageWhenOpposingHighDefenseDieIsKOdInCombat` is checked
+  against a `defenseBeforeKO` value captured before `TryResolveKO`
+  runs (since a real KO resets `Damage` via `ForceKO`'s own
+  `ResetToUnrolled`, defense read AFTER the KO would be meaningless -
+  the same reset-to-zero shape flagged in earlier rounds' KO-scan
+  code), and against an active-granter scan of the KO'd die's own
+  opponent.
+- Blob's own second clause ("when Blob KO's an opponent's Sidekick die,
+  return it to your opponent's bag," `CardDef.
+  GrantsReturnsKOdOpposingSidekickToBag`) is a genuine simplification,
+  not exact attribution: it uses ENGAGEMENT instead - was the KO'd
+  Sidekick engaged in combat with an active Blob-grant die this wave -
+  reusing the exact per-engagement `HashSet<string>` scan shape
+  `RecordDeadlyEngagements`/`RecordVulcanTextBlanking` already
+  established for their own per-engagement grants. Close enough for
+  every real game shape (a Sidekick engaged with Blob that dies from
+  some OTHER source in the same combat wave is a vanishingly rare edge
+  case this doesn't handle "correctly," but neither did any prior
+  precedent in this codebase for a similar shape).
+
+One more small primitive along the way: `TargetSpec.MinPurchaseCost`
+(an `int?` filter in `LegalTargets.Query`, checked against
+`CardCatalog[cardId].PurchaseCost`) - Mystique's own WhenKOd clause
+("you may move a Brotherhood of Mutants die with purchase cost 4 or
+more from your Used Pile to your Prep Area").
+
+**Three real test-authoring bugs caught while writing these tests -
+all the same root mistake, in three different tests.** Both Mystique's
+"own-side, no reduction" test and Mister Sinister's "not protected
+himself" test originally dealt EXACTLY the target's own defense in
+damage, which immediately KO's the target - and `ForceKO`'s own
+`ResetToUnrolled` resets `Damage` back to 0, so asserting a bare
+`Damage` field afterward silently measures the wrong thing (0 instead
+of the amount actually dealt). This is the same mistake class flagged
+in earlier rounds' status updates, caught here for a third, fourth, and
+fifth time across three different new tests - fixed by dealing an
+amount strictly below the target's defense in each case, so the target
+survives and its `Damage` field means what the test says it means. A
+fourth, unrelated bug: the Deathbird "not active" negative test tried
+to `FindUnpurchased` Falcon against Team A's own roster - Falcon is
+actually a Team B card (`TeamBCharacterIds`, not `TeamACharacterIds`) -
+fixed by swapping in Black Widow (a real Team A card) as the attacker
+instead.
+
+Five new cards landed: Mystique ("Freedom Force", DPS085), Mister
+Sinister ("Biologist", DPS148), Dark Phoenix ("Destructive Force",
+DPS107), Blob ("Immovable", DPS101), and Deathbird ("Usurper", DPS069).
+Every new mechanism above is exercised through the real firing
+mechanism - `CombatEngine.DeclareAttackers`/`DeclareBlockers`/
+`AssignCombatDamage` for the three combat-triggered cards, real
+`EffectInterpreter.Execute` calls for Mystique's WhenKOd and Mister
+Sinister's Global - not a synthetic shortcut anywhere, per this
+project's own "test the gate, not just the effect" standard.
+
+Verified: `dotnet build`, `dotnet test` (496/496 - 15 new cases), and
+`npm run build` all clean. Re-ran `scripts/import_bulk_cards.py`
+(165 → 170 hand-curated).

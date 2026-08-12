@@ -88,7 +88,12 @@ public sealed record TargetSpec(
     // the minimum-threshold counterpart to RequiredLevel (an exact
     // match) and MaxAttack/MaxDefense (upper thresholds) - checked
     // against the die's own current Level, not a stat.
-    int? MinLevel = null)
+    int? MinLevel = null,
+    // Mystique ("Freedom Force", DPS085)'s own "purchase cost 4 or
+    // more" - the TargetSpec counterpart to FieldedDieMatch's own
+    // MinPurchaseCost, checked against the die's own printed
+    // CardDef.PurchaseCost.
+    int? MinPurchaseCost = null)
 {
     // Rule 3.3.4/3.3.5 - only dice in the Field Zone (which includes the
     // Attack Zone) may be targeted, unless otherwise stated.
@@ -130,9 +135,9 @@ public sealed record TargetSpec(
     // availability.
     public static TargetSpec AnyDie(
         string description, TargetOwnership ownership, IReadOnlyList<Model.Zone> zones, int count = 1,
-        bool optional = false, IReadOnlyList<string>? requiredAffiliations = null) =>
+        bool optional = false, IReadOnlyList<string>? requiredAffiliations = null, int? minPurchaseCost = null) =>
         new(ownership, CharacterDiceOnly: false, zones, RequiredEnergyType: null, count, description,
-            Optional: optional, RequiredAffiliations: requiredAffiliations);
+            Optional: optional, RequiredAffiliations: requiredAffiliations, MinPurchaseCost: minPurchaseCost);
 
     // "target player or Character die" card text (e.g. Attune) - a single
     // choice between the two, not two separate targets. LegalTargets

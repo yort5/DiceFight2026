@@ -262,6 +262,49 @@ public sealed record CardDef
     // short-circuits the normal face+modifiers accumulation entirely.
     public bool SelfAttackEqualsDefenseWhileOwnSidekickActive { get; init; }
 
+    // Mystique ("Freedom Force", DPS085): "reduce damage from opposing
+    // character abilities by 1." See DieStats.ApplyDamage's own remarks
+    // for the choke point and the simplification this makes.
+    public int GrantsOwnDamageReductionFromOpponentAbilities { get; init; }
+
+    // Mister Sinister ("Biologist", DPS148): "prevent non-combat damage
+    // dealt to your other character dice." See DieStats.ApplyDamage.
+    public bool GrantsPreventsNonCombatDamageToOtherOwnDice { get; init; }
+
+    // Dark Phoenix ("Destructive Force", DPS107): "when an opposing
+    // character die damages Dark Phoenix, she deals that much damage to
+    // each opponent." See DieStats.ApplyDamage - injected directly there
+    // rather than through an AbilityDef/AbilityQueue round-trip, since
+    // "each opponent" (a fixed player, not a choice) needs no external
+    // target resolution.
+    public bool GrantsRetaliatesEqualDamageToOpponentWhenDamagedByOpponent { get; init; }
+
+    // Blob ("Immovable", DPS101): "each of your Blob dice may block 3
+    // character dice instead of 1." Rule 2.7.2.4's own default ("each
+    // Character die may block only one attacking Character die, unless
+    // a card effect states otherwise") was never actually enforced
+    // anywhere in this engine before this card - see
+    // CombatEngine.ValidateBlockerCapacity for both the new default
+    // check and this grant's own exception to it. Null means "use the
+    // rule's own default of 1," not "no restriction" - every die is
+    // subject to this cap, granted or not.
+    public int? GrantsBlocksMultipleAttackers { get; init; }
+
+    // Blob ("Immovable", DPS101): "when Blob KO's an opponent's Sidekick
+    // die, return it to your opponent's bag." See CombatEngine.
+    // ResolveFastOrSlowDamage's own engagement-based approximation of
+    // "KO'd by Blob" (no general damage-source attribution exists in
+    // this engine).
+    public bool GrantsReturnsKOdOpposingSidekickToBag { get; init; }
+
+    // Deathbird ("Usurper", DPS069): "while Deathbird is active, when
+    // you KO an opposing character die with 3D or greater, deal 3
+    // damage to your opponent." See CombatEngine.
+    // ResolveFastOrSlowDamage - "who caused this KO" needs no real
+    // attribution here, since within one combat resolution a KO'd die
+    // was always caused by whoever's on the OTHER side.
+    public bool GrantsDamageWhenOpposingHighDefenseDieIsKOdInCombat { get; init; }
+
     // Psylocke ("Adventurer", DPS048): "While Wolverine is active,
     // Psylocke gains Deadly" - a live, continuously-recomputed SELF
     // keyword grant conditioned on some OTHER named card being active

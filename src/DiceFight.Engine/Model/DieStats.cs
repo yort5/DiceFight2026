@@ -498,9 +498,52 @@ public static class DieStats
     // the RETURNED die, and fold it into whatever zone-scoped scan
     // they'd otherwise run, since a redirect target isn't guaranteed to
     // already be in that zone.
-    public static DieInstance? ApplyDamage(GameState state, DieInstance die, int amount)
+    //
+    // sourceDie (Mystique "Freedom Force"/DPS085, Mister Sinister
+    // "Biologist"/DPS148, Dark Phoenix "Destructive Force"/DPS107) - the
+    // die that dealt this damage, ONLY for real die-vs-die COMBAT damage
+    // (CombatEngine's own three call sites - the attacker or blocker
+    // dealing its own EffectiveAttack). Left null for every ability-
+    // driven DealDamage/DealDamagePerActiveAffiliate/DealDamagePerMatchingDie
+    // call site (Range included - a Range die's own damage is scripted
+    // as a keyword effect, not a combat clash) - "non-combat" for Mister
+    // Sinister's own text reads as "sourceDie is null" specifically, not
+    // "not a Character die's own attack," matching the card text's own
+    // "combat" vs. everything-else framing. abilityControllerId is the
+    // mirror for ability-driven damage - the ability's own controller,
+    // needed for Mystique's own "opposing" check since nothing else at
+    // this choke point otherwise knows who caused a given DealDamage.
+    // Exactly one of the two is ever non-null in practice (combat damage
+    // has a real die but no "ability controller" of its own; ability
+    // damage has a controller but no die-vs-die clash) - both nullable
+    // rather than one exhaustive discriminated union since no caller
+    // needs to enforce that mutual exclusion today.
+    public static DieInstance? ApplyDamage(
+        GameState state, DieInstance die, int amount, DieInstance? sourceDie = null, string? abilityControllerId = null)
     {
         if (amount <= 0) return die;
+
+        amount = ReduceForDefensiveGrants(state, die, amount, sourceDie, abilityControllerId);
+        if (amount <= 0) return die;
+
+        // Dark Phoenix ("Destructive Force", DPS107) - "when an opposing
+        // character die damages Dark Phoenix, she deals that much damage
+        // to each opponent." No real target choice ("each opponent," a
+        // fixed set of exactly one player in this engine) - injected
+        // directly here, the same "engine-provided fixed effect, no
+        // AbilityDef/queue round-trip needed" shape keyword Attune's own
+        // built-in 1-damage effect already uses, just with a live amount
+        // instead of a fixed 1. Checked against the ORIGINAL amount
+        // (before any reduction above), matching "that much damage"
+        // reading the amount actually dealt to Dark Phoenix, not a
+        // separately-reduced echo of it - reasonable either way since no
+        // current card combines both, but this is the more literal
+        // reading of "that much."
+        if (sourceDie is not null && sourceDie.ControllerId != die.ControllerId &&
+            (GetCard(state, die)?.GrantsRetaliatesEqualDamageToOpponentWhenDamagedByOpponent ?? false))
+        {
+            state.GetPlayer(state.OpponentOf(die.ControllerId)).Life -= amount;
+        }
 
         var redirector = FindDamageRedirector(state, die);
         if (redirector is null)
@@ -520,6 +563,50 @@ public static class DieStats
 
         redirector.Damage += amount;
         return redirector;
+    }
+
+    // Mystique ("Freedom Force", DPS085) - "reduce damage from opposing
+    // character abilities by 1" (simplified to "opposing abilities,"
+    // dropping the "character" qualifier - nothing at this choke point
+    // currently distinguishes a Basic/Action ability's damage from a
+    // Character's own, and no other card needs that distinction yet).
+    // Mister Sinister ("Biologist", DPS148) - "prevent non-combat damage
+    // dealt to your OTHER character dice" (excludes Mister Sinister's
+    // own die, checked by card id like every other "other character
+    // dice" ExcludeSelf shape in this file). Both are granter-active
+    // scans against the RECIPIENT's own side (Mystique's own controller
+    // must match the recipient's controller - it's THEIR dice being
+    // protected).
+    private static int ReduceForDefensiveGrants(
+        GameState state, DieInstance die, int amount, DieInstance? sourceDie, string? abilityControllerId)
+    {
+        if (die.Zone is not (Zone.FieldZone or Zone.AttackZone)) return amount;
+
+        var dieCardId = die.VirtualCardId ?? die.CardId;
+        var granterCards = state.DiceIn(die.ControllerId, Zone.FieldZone)
+            .Concat(state.DiceIn(die.ControllerId, Zone.AttackZone))
+            .Select(d => (Card: GetCard(state, d), Die: d))
+            .Where(g => g.Card is not null)
+            .ToList();
+
+        if (abilityControllerId is not null && abilityControllerId == state.OpponentOf(die.ControllerId))
+        {
+            var reduction = granterCards.Select(g => g.Card!.GrantsOwnDamageReductionFromOpponentAbilities)
+                .Where(r => r > 0)
+                .Distinct()
+                .Sum();
+            amount = Math.Max(0, amount - reduction);
+        }
+
+        if (sourceDie is null && amount > 0)
+        {
+            var prevents = granterCards.Any(g =>
+                g.Card!.GrantsPreventsNonCombatDamageToOtherOwnDice &&
+                (dieCardId is null || g.Die.CardId != dieCardId));
+            if (prevents) amount = 0;
+        }
+
+        return amount;
     }
 
     private static DieInstance? FindDamageRedirector(GameState state, DieInstance die)

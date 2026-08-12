@@ -190,6 +190,7 @@ public static class CombatEngine
         ValidateCallOuts(state, assignment);
         ValidateObscure(state, assignment);
         ValidateMinimumBlockers(state, assignment);
+        ValidateBlockerCapacity(state, assignment);
 
         foreach (var id in blockerDieIds)
         {
@@ -526,6 +527,40 @@ public static class CombatEngine
         }
     }
 
+    // Rule 2.7.2.4 - "each Character die may block only one attacking
+    // Character die, unless a card effect states otherwise." Never
+    // actually enforced anywhere in this engine before Blob ("Immovable",
+    // DPS101)'s own "may block 3 character dice instead of 1" - a
+    // multi-attacker capacity grant only makes sense to model once the
+    // DEFAULT it's an exception to also exists, so both landed together.
+    // Counts how many DISTINCT attackers each blocker id appears against
+    // across the whole assignment (a blocker assigned to the same
+    // attacker twice isn't meaningful - CombatAssignment doesn't
+    // de-duplicate, but LegalTargets/caller-side validation elsewhere
+    // already prevents that from being a real scenario).
+    private static void ValidateBlockerCapacity(GameState state, CombatAssignment assignment)
+    {
+        var attackerCountByBlocker = new Dictionary<string, int>();
+        foreach (var attacker in state.DiceIn(state.ActivePlayerId, Zone.AttackZone))
+        {
+            foreach (var blockerId in assignment.BlockersOf(attacker.Id))
+                attackerCountByBlocker[blockerId] = attackerCountByBlocker.GetValueOrDefault(blockerId) + 1;
+        }
+
+        foreach (var (blockerId, attackerCount) in attackerCountByBlocker)
+        {
+            if (attackerCount <= 1) continue;
+
+            var blocker = FindDie(state, blockerId);
+            var maxAttackers = DieStats.GetCard(state, blocker)?.GrantsBlocksMultipleAttackers ?? 1;
+            if (attackerCount > maxAttackers)
+            {
+                throw new InvalidOperationException(
+                    $"{DisplayName(state, blocker)} can only block {maxAttackers} character die(s) at once.");
+            }
+        }
+    }
+
     // Rule 2.7.4 (assign) and 2.7.6 (resolve KOs, return survivors).
     // attackerDamageSplits: for each blocked attacker, how its total attack
     // value (which must be assigned in full - 2.7.4.3.4) is split across
@@ -674,12 +709,24 @@ public static class CombatEngine
         // Attack-Zone-wide scan rather than relying on that scan alone.
         var damagedRecipients = new List<DieInstance>();
 
+        // Blob ("Immovable", DPS101) - "when Blob KO's an opponent's
+        // Sidekick die, return it to your opponent's bag." Same per-
+        // engagement scan shape as RecordDeadlyEngagements/
+        // RecordVulcanTextBlanking (a die counts as "KO'd by Blob" if
+        // it's engaged with an active Blob-grant die this combat, not
+        // via true per-hit damage-source attribution - close enough for
+        // how this text is actually used, and avoids needing a general
+        // "who dealt the killing blow" tracker).
+        var engagedWithReturnsSidekickGrantIds = new HashSet<string>();
+
         foreach (var attacker in state.DiceIn(state.ActivePlayerId, Zone.AttackZone).ToList())
         {
             var liveBlockerIds = assignment.BlockersOf(attacker.Id)
                 .Where(id => FindDie(state, id).Zone == Zone.AttackZone)
                 .ToList();
             if (liveBlockerIds.Count == 0) continue;
+
+            var attackerHasReturnsSidekickGrant = DieStats.GetCard(state, attacker)?.GrantsReturnsKOdOpposingSidekickToBag ?? false;
 
             if (DieStats.HasKeyword(state, attacker, "Fast") == fast &&
                 attackerDamageSplits.TryGetValue(attacker.Id, out var split))
@@ -688,10 +735,17 @@ public static class CombatEngine
                 {
                     if (split.TryGetValue(blockerId, out var dealt) && dealt > 0)
                     {
-                        var recipient = DieStats.ApplyDamage(state, FindDie(state, blockerId), dealt);
+                        var recipient = DieStats.ApplyDamage(state, FindDie(state, blockerId), dealt, sourceDie: attacker);
                         if (recipient is not null) damagedRecipients.Add(recipient);
                     }
                 }
+            }
+
+            foreach (var blockerId in liveBlockerIds)
+            {
+                if (attackerHasReturnsSidekickGrant) engagedWithReturnsSidekickGrantIds.Add(blockerId);
+                if (DieStats.GetCard(state, FindDie(state, blockerId))?.GrantsReturnsKOdOpposingSidekickToBag ?? false)
+                    engagedWithReturnsSidekickGrantIds.Add(attacker.Id);
             }
 
             // Rule 2.7.4.3.6/2.7.4.3.7 - each blocker deals its full attack
@@ -702,7 +756,7 @@ public static class CombatEngine
                 var blocker = FindDie(state, blockerId);
                 if (DieStats.HasKeyword(state, blocker, "Fast") == fast)
                 {
-                    var recipient = DieStats.ApplyDamage(state, attacker, DieStats.EffectiveAttack(state, blocker));
+                    var recipient = DieStats.ApplyDamage(state, attacker, DieStats.EffectiveAttack(state, blocker), sourceDie: blocker);
                     if (recipient is not null) damagedRecipients.Add(recipient);
                 }
             }
@@ -718,7 +772,32 @@ public static class CombatEngine
             .ToList();
         foreach (var die in koScanCandidates)
         {
-            if (DieStats.TryResolveKO(state, die, roller)) koIds.Add(die.Id);
+            // Deathbird ("Usurper", DPS069) - "while Deathbird is active,
+            // when YOU KO an opposing character die with 3D or greater,
+            // deal 3 damage to your opponent." No per-die attribution
+            // needed at all: within this method's own scope, any die
+            // KO'd here was necessarily KO'd BY combat damage from the
+            // opposing side (there's no third party), so "you" is simply
+            // whichever side that opposes the KO'd die's own controller.
+            // Captured before TryResolveKO's own ForceKO resets Defense-
+            // relevant state (Level/face) back to an unrolled die.
+            var defenseBeforeKO = DieStats.EffectiveDefense(state, die);
+            if (!DieStats.TryResolveKO(state, die, roller)) continue;
+
+            koIds.Add(die.Id);
+
+            if (engagedWithReturnsSidekickGrantIds.Contains(die.Id) && die.IsSidekick)
+                die.Zone = Zone.Bag; // "your opponent's bag" - already the KO'd die's own controller/zone owner
+
+            if (defenseBeforeKO >= 3)
+            {
+                var opponentOfKOdDie = state.OpponentOf(die.ControllerId);
+                var hasActiveDeathbird = state.DiceIn(opponentOfKOdDie, Zone.FieldZone)
+                    .Concat(state.DiceIn(opponentOfKOdDie, Zone.AttackZone))
+                    .Any(d => DieStats.GetCard(state, d)?.GrantsDamageWhenOpposingHighDefenseDieIsKOdInCombat ?? false);
+                if (hasActiveDeathbird)
+                    state.GetPlayer(die.ControllerId).Life -= 3;
+            }
         }
 
         // Rule 2.7.6.5 ("when KO'd" fires for each die KO'd this way) and

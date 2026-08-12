@@ -39386,44 +39386,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS069",
-    "name": "Deathbird",
-    "subtitle": "Usurper",
-    "type": "Character",
-    "purchaseCost": 3,
-    "energyType": "Shield",
-    "dieLimit": 3,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 1,
-        "defense": 1,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 0,
-        "attack": 1,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 4,
-        "burstStars": null
-      }
-    ],
-    "rawText": "While Deathbird is active, when you KO an opposing character die with 3D or greater, deal 3 damage to your opponent.",
-    "keywords": [],
-    "affiliations": [
-      "Villains",
-      "Shi\\'ar"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS073",
     "name": "Gladiator",
     "subtitle": "The Empire Must Stand",
@@ -39494,43 +39456,6 @@
     "keywords": [],
     "affiliations": [
       "Shi\\'ar"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS085",
-    "name": "Mystique",
-    "subtitle": "Freedom Force",
-    "type": "Character",
-    "purchaseCost": 2,
-    "energyType": "Mask",
-    "dieLimit": 3,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 1,
-        "defense": 1,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 0,
-        "attack": 1,
-        "defense": 1,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 1,
-        "defense": 1,
-        "burstStars": 1
-      }
-    ],
-    "rawText": "When Mystique is active, reduce damage from opposing character abilities by 1. When Mystique is KO\\'d, you may move a Brotherhood of Mutants die with purchase cost 4 or more from your Used Pile to your Prep Area.",
-    "keywords": [],
-    "affiliations": [
-      "Brotherhood of Mutants"
     ],
     "isImplemented": false,
     "set": "DPS",
@@ -39648,43 +39573,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS101",
-    "name": "Blob",
-    "subtitle": "Immovable",
-    "type": "Character",
-    "purchaseCost": 4,
-    "energyType": "Shield",
-    "dieLimit": 2,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 1,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 1,
-        "defense": 6,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 1,
-        "defense": 8,
-        "burstStars": null
-      }
-    ],
-    "rawText": "Each of your Blob dice may block 3 character dice instead of 1. When Blob KO\\'s an opponents Sidekick die, return it to your opponents bag.",
-    "keywords": [],
-    "affiliations": [
-      "Brotherhood of Mutants"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS106",
     "name": "D\\'Ken",
     "subtitle": "M\\'Kraan Crystal",
@@ -39717,43 +39605,6 @@
     "affiliations": [
       "Villains",
       "Shi\\'ar"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS107",
-    "name": "Dark Phoenix",
-    "subtitle": "Destructive Force",
-    "type": "Character",
-    "purchaseCost": 5,
-    "energyType": "Bolt",
-    "dieLimit": 2,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 5,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 7,
-        "defense": 7,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 3,
-        "attack": 8,
-        "defense": 8,
-        "burstStars": null
-      }
-    ],
-    "rawText": "Whan an opposing character die damages Dark Phoenix, she deals that much damage to each opponenent. Global: Pay Bolt and KO one of your character dice. The next die you purchase this turn costs 2 less (to a minimum of 1).",
-    "keywords": [],
-    "affiliations": [
-      "Villains"
     ],
     "isImplemented": false,
     "set": "DPS",
@@ -40130,45 +39981,6 @@
     "keywords": [],
     "affiliations": [
       "Shi\\'ar"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS148",
-    "name": "Mister Sinister",
-    "subtitle": "Biologist",
-    "type": "Character",
-    "purchaseCost": 6,
-    "energyType": "Bolt",
-    "dieLimit": 1,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 4,
-        "defense": 1,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 5,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 6,
-        "defense": 3,
-        "burstStars": null
-      }
-    ],
-    "rawText": "While Mister Sinister is active, prevent non-combat damage dealt to your other character dice.Global: Pay 3. Target character die gains Overcrush.",
-    "keywords": [
-      "Overcrush"
-    ],
-    "affiliations": [
-      "Villains"
     ],
     "isImplemented": false,
     "set": "DPS",

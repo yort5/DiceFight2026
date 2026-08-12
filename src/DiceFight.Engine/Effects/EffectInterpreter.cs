@@ -134,7 +134,7 @@ public static class EffectInterpreter
                     }
 
                     var die = FindDie(ctx, id);
-                    var recipient = DieStats.ApplyDamage(ctx.State, die, dealDamage.Amount);
+                    var recipient = DieStats.ApplyDamage(ctx.State, die, dealDamage.Amount, abilityControllerId: ctx.ControllerId);
                     // Ability damage KOs immediately rather than waiting
                     // for a simultaneous batch check - abilities resolve
                     // one at a time (rule 3.2.2), unlike combat damage.
@@ -158,7 +158,7 @@ public static class EffectInterpreter
                     }
 
                     var die = FindDie(ctx, id);
-                    var recipient = DieStats.ApplyDamage(ctx.State, die, amount);
+                    var recipient = DieStats.ApplyDamage(ctx.State, die, amount, abilityControllerId: ctx.ControllerId);
                     if (recipient is not null && DieStats.TryResolveKO(ctx.State, recipient, ctx.Roller))
                         koIds.Add(recipient.Id);
                 }
@@ -180,7 +180,7 @@ public static class EffectInterpreter
                     }
 
                     var die = FindDie(ctx, id);
-                    var recipient = DieStats.ApplyDamage(ctx.State, die, amount);
+                    var recipient = DieStats.ApplyDamage(ctx.State, die, amount, abilityControllerId: ctx.ControllerId);
                     if (recipient is not null && DieStats.TryResolveKO(ctx.State, recipient, ctx.Roller))
                         koIds.Add(recipient.Id);
                 }

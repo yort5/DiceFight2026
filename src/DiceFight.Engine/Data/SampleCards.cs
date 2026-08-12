@@ -84,6 +84,12 @@ public static class SampleCards
         SelfPrepFromBagIfFieldedWithEnergy? grantsSelfPrepFromBagIfFieldedWithEnergy = null,
         IReadOnlyList<string>? grantsAffiliationsToSidekicks = null,
         bool selfAttackEqualsDefenseWhileOwnSidekickActive = false,
+        int grantsOwnDamageReductionFromOpponentAbilities = 0,
+        bool grantsPreventsNonCombatDamageToOtherOwnDice = false,
+        bool grantsRetaliatesEqualDamageToOpponentWhenDamagedByOpponent = false,
+        int? grantsBlocksMultipleAttackers = null,
+        bool grantsReturnsKOdOpposingSidekickToBag = false,
+        bool grantsDamageWhenOpposingHighDefenseDieIsKOdInCombat = false,
         bool isImplemented = true,
         string? set = null) => new()
     {
@@ -126,6 +132,12 @@ public static class SampleCards
         GrantsSelfPrepFromBagIfFieldedWithEnergy = grantsSelfPrepFromBagIfFieldedWithEnergy,
         GrantsAffiliationsToSidekicks = grantsAffiliationsToSidekicks ?? [],
         SelfAttackEqualsDefenseWhileOwnSidekickActive = selfAttackEqualsDefenseWhileOwnSidekickActive,
+        GrantsOwnDamageReductionFromOpponentAbilities = grantsOwnDamageReductionFromOpponentAbilities,
+        GrantsPreventsNonCombatDamageToOtherOwnDice = grantsPreventsNonCombatDamageToOtherOwnDice,
+        GrantsRetaliatesEqualDamageToOpponentWhenDamagedByOpponent = grantsRetaliatesEqualDamageToOpponentWhenDamagedByOpponent,
+        GrantsBlocksMultipleAttackers = grantsBlocksMultipleAttackers,
+        GrantsReturnsKOdOpposingSidekickToBag = grantsReturnsKOdOpposingSidekickToBag,
+        GrantsDamageWhenOpposingHighDefenseDieIsKOdInCombat = grantsDamageWhenOpposingHighDefenseDieIsKOdInCombat,
         IsImplemented = isImplemented,
         Set = set
     };
@@ -3099,6 +3111,120 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 3, Attack: 1, Defense: 9)
         ], set: "DPS");
 
+    // Mystique, "Freedom Force" - the first user of
+    // GrantsOwnDamageReductionFromOpponentAbilities (new this round -
+    // see DieStats.ApplyDamage's own remarks for the "ability vs.
+    // combat" distinction this needed). The WhenKOd half is the first
+    // user of TargetSpec.MinPurchaseCost.
+    public static readonly CardDef MystiqueFreedomForce = Character(
+        "DPS085", "Mystique", "Freedom Force", dieLimit: 3,
+        "When Mystique is active, reduce damage from opposing character abilities by 1. When Mystique " +
+        "is KO'd, you may move a Brotherhood of Mutants die with purchase cost 4 or more from your " +
+        "Used Pile to your Prep Area.",
+        purchaseCost: 2, energyType: EnergyType.Mask,
+        affiliations: ["Brotherhood of Mutants"],
+        grantsOwnDamageReductionFromOpponentAbilities: 1,
+        abilities: [new AbilityDef(TriggerType.WhenKOd, Cost: null,
+            Effect: new MoveDie(
+                TargetSpec.AnyDie(
+                    "a Brotherhood of Mutants die with purchase cost 4 or more from your Used Pile",
+                    TargetOwnership.Own, zones: [Zone.UsedPile], requiredAffiliations: ["Brotherhood of Mutants"],
+                    minPurchaseCost: 4),
+                Zone.PrepArea))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 1),
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 1),
+            new CharacterFace(FieldingCost: 2, Attack: 1, Defense: 1, BurstStars: 1)
+        ], set: "DPS");
+
+    // Mister Sinister, "Biologist" - the first user of
+    // GrantsPreventsNonCombatDamageToOtherOwnDice (new this round).
+    public static readonly CardDef MisterSinisterBiologist = Character(
+        "DPS148", "Mister Sinister", "Biologist", dieLimit: 1,
+        "While Mister Sinister is active, prevent non-combat damage dealt to your other character " +
+        "dice. Global: Pay 3. Target character die gains Overcrush.",
+        purchaseCost: 6, energyType: EnergyType.Bolt,
+        affiliations: ["Villains"],
+        keywords: [new KeywordInstance("Overcrush")],
+        grantsPreventsNonCombatDamageToOtherOwnDice: true,
+        abilities: [new AbilityDef(TriggerType.Global, Cost: null,
+            Effect: new GrantKeyword(TargetSpec.CharacterDie("target character die"), "Overcrush"),
+            EnergyCost: new EnergyCost(3))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 1),
+            new CharacterFace(FieldingCost: 2, Attack: 5, Defense: 2),
+            new CharacterFace(FieldingCost: 2, Attack: 6, Defense: 3)
+        ], set: "DPS");
+
+    // Dark Phoenix, "Destructive Force" - the first user of
+    // GrantsRetaliatesEqualDamageToOpponentWhenDamagedByOpponent (new
+    // this round - the first WhenDamaged-shaped text this engine models,
+    // via direct injection in DieStats.ApplyDamage rather than a real
+    // AbilityDef/TriggerType.WhenDamaged, since "each opponent" needs no
+    // external target choice - see ApplyDamage's own remarks). The
+    // Global reuses DarkPhoenixEnemyOfTheShiar's own
+    // Ko+GrantNextPurchaseDiscount Sequence verbatim (both Dark Phoenix
+    // printings that have this Global share identical text).
+    public static readonly CardDef DarkPhoenixDestructiveForce = Character(
+        "DPS107", "Dark Phoenix", "Destructive Force", dieLimit: 2,
+        "When an opposing character die damages Dark Phoenix, she deals that much damage to each " +
+        "opponent. Global: Pay Bolt and KO one of your character dice. The next die you purchase this " +
+        "turn costs 2 less (to a minimum of 1).",
+        purchaseCost: 5, energyType: EnergyType.Bolt,
+        affiliations: ["Villains"],
+        grantsRetaliatesEqualDamageToOpponentWhenDamagedByOpponent: true,
+        abilities: [new AbilityDef(TriggerType.Global, Cost: null,
+            Effect: new Sequence([
+                new Ko(TargetSpec.CharacterDie("one of your character dice", TargetOwnership.Own)),
+                new GrantNextPurchaseDiscount(2)
+            ]),
+            EnergyCost: new EnergyCost(1, EnergyType.Bolt))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 5),
+            new CharacterFace(FieldingCost: 2, Attack: 7, Defense: 7),
+            new CharacterFace(FieldingCost: 3, Attack: 8, Defense: 8)
+        ], set: "DPS");
+
+    // Blob, "Immovable" - the first user of GrantsBlocksMultipleAttackers
+    // and GrantsReturnsKOdOpposingSidekickToBag (both new this round;
+    // see CombatEngine.ValidateBlockerCapacity/ResolveFastOrSlowDamage's
+    // own remarks - the former also closes a real pre-existing gap,
+    // rule 2.7.2.4's own "each Character die may block only one
+    // attacking Character die" default was never actually enforced
+    // anywhere in this engine before this card).
+    public static readonly CardDef BlobImmovable = Character(
+        "DPS101", "Blob", "Immovable", dieLimit: 2,
+        "Each of your Blob dice may block 3 character dice instead of 1. When Blob KO's an opponent's " +
+        "Sidekick die, return it to your opponent's bag.",
+        purchaseCost: 4, energyType: EnergyType.Shield,
+        affiliations: ["Brotherhood of Mutants"],
+        grantsBlocksMultipleAttackers: 3,
+        grantsReturnsKOdOpposingSidekickToBag: true,
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 5),
+            new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 6),
+            new CharacterFace(FieldingCost: 2, Attack: 1, Defense: 8)
+        ], set: "DPS");
+
+    // Deathbird, "Usurper" - the first user of
+    // GrantsDamageWhenOpposingHighDefenseDieIsKOdInCombat (new this
+    // round - closes the "who caused this KO" gap flagged several
+    // rounds back, at least for the combat-scoped case; see
+    // CombatEngine.ResolveFastOrSlowDamage's own remarks for why no
+    // real per-die attribution was needed here after all).
+    public static readonly CardDef DeathbirdUsurper = Character(
+        "DPS069", "Deathbird", "Usurper", dieLimit: 3,
+        "While Deathbird is active, when you KO an opposing character die with 3D or greater, deal 3 " +
+        "damage to your opponent.",
+        purchaseCost: 3, energyType: EnergyType.Shield,
+        affiliations: ["Villains", "Shi'ar"],
+        grantsDamageWhenOpposingHighDefenseDieIsKOdInCombat: true,
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 1),
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 4)
+        ], set: "DPS");
+
     // Supreme Intelligence, "Kree Science Council" - purely a Loyalty
     // grant, no other text. NameContains is a real substring match here
     // ("a card with Kree in its name"), unlike Gladiator's "When Lilandra
@@ -3432,7 +3558,8 @@ public static class SampleCards
             ColossusPiotr, DKenShiarCivilWar, BishopTimeTraveller, BlinkExilesTeamLeader, Radicalization,
             TightRanks, GreetingsFromKrakoa, JubileeFireworks, BeastFirstClass,
             BishopImBack, IcemanXaviersDream, IcemanMrIceGuy, EmmaFrostInfluential,
-            ForgeMoreThanFirepower, ProfessorXDreamer
+            ForgeMoreThanFirepower, ProfessorXDreamer,
+            MystiqueFreedomForce, MisterSinisterBiologist, DarkPhoenixDestructiveForce, BlobImmovable, DeathbirdUsurper
         ];
 
         // Hand-curated cards win on id collision - shouldn't happen in

@@ -81,6 +81,17 @@ public static class LegalTargets
         if (spec.RequiresLoyaltyCounter)
             candidates = candidates.Where(d => DieStats.LoyaltyBonus(state, d) > 0);
 
+        if (spec.MinPurchaseCost is { } minPurchaseCost)
+        {
+            candidates = candidates.Where(d =>
+            {
+                var cardId = d.VirtualCardId ?? d.CardId;
+                return cardId is not null
+                    && state.CardCatalog.TryGetValue(cardId, out var card)
+                    && card.PurchaseCost >= minPurchaseCost;
+            });
+        }
+
         if (spec.MatchesOwnTeamAffiliation)
         {
             var ownTeamAffiliations = state.GetPlayer(requestingControllerId).TeamCardIds

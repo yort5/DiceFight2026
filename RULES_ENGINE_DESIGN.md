@@ -490,6 +490,63 @@ here rather than assuming which approach they'd want.
     nothing in this engine supports) - see the "six more DPS cards"
     status update for the full story, including why reverting was the
     right call rather than shipping a guessed interpretation.
+    **Deeper-abilities round**: rather than more easy cards, closed
+    several longstanding architectural gaps flagged across many
+    previous rounds. `DieStats.ApplyDamage` gained two independent
+    optional params - `sourceDie` (the real attacking/blocking die, only
+    passed from `CombatEngine`'s two real combat-wave call sites) and
+    `abilityControllerId` (only passed from `EffectInterpreter`'s three
+    damage-dealing cases) - giving the engine, for the first time, a
+    real way to tell combat damage from ability damage and know an
+    ability's controller, without a discriminated-union type neither
+    caller family needed. `CardDef.GrantsOwnDamageReductionFromOpponentAbilities`/
+    `GrantsPreventsNonCombatDamageToOtherOwnDice`/
+    `GrantsRetaliatesEqualDamageToOpponentWhenDamagedByOpponent` all
+    consume this split at `ApplyDamage`'s new `ReduceForDefensiveGrants`
+    choke point - Mystique ("Freedom Force", DPS085), Mister Sinister
+    ("Biologist", DPS148), and Dark Phoenix ("Destructive Force",
+    DPS107) respectively. Dark Phoenix's own text is this engine's first
+    WhenDamaged-shaped effect, deliberately NOT built as a real
+    `AbilityDef`/`TriggerType.WhenDamaged`/queue round-trip - "deals that
+    much damage to each opponent" has no real target choice (a fixed
+    single player in a 2-player engine), so it's injected directly
+    inside `ApplyDamage` itself, the same "engine-provided fixed effect"
+    shape keyword Attune's own built-in 1-damage effect already
+    established, just with a live amount. Also closed: rule 2.7.2.4's
+    own multi-block default ("each Character die may block only one
+    attacking Character die, unless a card effect states otherwise") had
+    never actually been enforced anywhere in the engine before this
+    round - any blocker could always be assigned to any number of
+    attackers with zero validation. `CombatEngine.ValidateBlockerCapacity`
+    is the first real enforcement of it, with `CardDef.
+    GrantsBlocksMultipleAttackers` (Blob "Immovable", DPS101 - "may block
+    3 character dice instead of 1") as its first exception. Also closed,
+    for the combat-scoped case: the "who caused this KO" attribution gap
+    flagged several rounds back - solved WITHOUT building general
+    per-hit damage-source attribution, by recognizing neither card
+    actually needs it. Deathbird ("Usurper", DPS069 - "when you KO an
+    opposing character die with 3D or greater, deal 3 damage to your
+    opponent") needs NO attribution at all, since any KO discovered
+    within one `CombatEngine.ResolveFastOrSlowDamage` call is inherently
+    caused by "the other side" within that method's own scope
+    (`CardDef.GrantsDamageWhenOpposingHighDefenseDieIsKOdInCombat`).
+    Blob's own second clause ("when Blob KO's an opponent's Sidekick
+    die, return it to your opponent's bag",
+    `CardDef.GrantsReturnsKOdOpposingSidekickToBag`) uses
+    ENGAGEMENT-based tracking instead - was the KO'd Sidekick engaged in
+    combat with an active Blob-grant die this wave - reusing the exact
+    per-engagement scan shape `RecordDeadlyEngagements`/
+    `RecordVulcanTextBlanking` already established. One more primitive:
+    `TargetSpec.MinPurchaseCost` (Mystique's own WhenKOd clause - "a
+    Brotherhood of Mutants die with purchase cost 4 or more"). See the
+    "deeper abilities: ability-vs-combat damage, multi-block, and five
+    more DPS cards" status update for the full writeup, including three
+    real test-authoring bugs it caught along the way (asserting a bare
+    `Damage` field on a die that the test's own damage amount had just
+    KO'd, silently reset to 0 by `ForceKO`'s `ResetToUnrolled` - the same
+    mistake class flagged before, now caught a third/fourth/fifth time
+    in three different tests in one round) and a wrong-team lookup
+    (`FindUnpurchased` against the wrong sample team's roster).
 
 ## Implemented keywords
 

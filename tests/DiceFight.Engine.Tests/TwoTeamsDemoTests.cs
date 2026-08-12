@@ -5222,4 +5222,447 @@ public class TwoTeamsDemoTests
 
         Assert.Equal(Zone.PrepArea, usedPileXMen.Zone);
     }
+
+    // --- Deeper-abilities round: ability-vs-combat damage distinction,
+    // the multi-block default rule, WhenDamaged-via-injection, and the
+    // "who caused this KO" simplifications (Blob/Deathbird). Each test
+    // exercises the real firing mechanism (CombatEngine's own
+    // DeclareAttackers/DeclareBlockers/AssignCombatDamage, or a real
+    // EffectInterpreter.Execute call) rather than asserting on the
+    // helper methods directly.
+
+    [Fact]
+    public void MystiqueFreedomForce_ReducesOpposingAbilityDamage_ByOne_WhileActive()
+    {
+        var state = BuildTwoTeamGame(extraTeamBCardIds: [SampleCards.MystiqueFreedomForce.Id]);
+
+        var mystiqueDie = FindUnpurchased(state, "teamB", SampleCards.MystiqueFreedomForce.Id);
+        mystiqueDie.Zone = Zone.FieldZone;
+        mystiqueDie.Status = DieStatus.Character;
+        mystiqueDie.Level = 1;
+
+        var target = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        target.Zone = Zone.FieldZone;
+        target.Status = DieStatus.Character;
+        target.Level = 3; // 4A/4D - survives the reduced hit
+
+        var spec = TargetSpec.CharacterDie("target character die");
+        EffectInterpreter.Execute(
+            new DealDamage(4, spec), new EffectContext(state, "teamA", SourceDieId: null, _ => [target.Id]));
+
+        Assert.Equal(3, target.Damage); // 4 - 1 reduction (teamA is opposing Mystique's controller, teamB)
+    }
+
+    [Fact]
+    public void MystiqueFreedomForce_DoesNotReduce_OwnSideAbilityDamage()
+    {
+        var state = BuildTwoTeamGame(extraTeamBCardIds: [SampleCards.MystiqueFreedomForce.Id]);
+
+        var mystiqueDie = FindUnpurchased(state, "teamB", SampleCards.MystiqueFreedomForce.Id);
+        mystiqueDie.Zone = Zone.FieldZone;
+        mystiqueDie.Status = DieStatus.Character;
+        mystiqueDie.Level = 1;
+
+        var target = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        target.Zone = Zone.FieldZone;
+        target.Status = DieStatus.Character;
+        target.Level = 3;
+
+        var spec = TargetSpec.CharacterDie("target character die");
+        EffectInterpreter.Execute(
+            new DealDamage(3, spec), new EffectContext(state, "teamB", SourceDieId: null, _ => [target.Id]));
+
+        Assert.Equal(3, target.Damage); // no reduction - the damage's own side, not "opposing" (3, not 4, so the 4D target survives to show a real Damage value instead of being KO'd and reset)
+    }
+
+    [Fact]
+    public void MystiqueFreedomForceWhenKOd_MovesAQualifyingBrotherhoodDie_FromUsedPileToPrepArea()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds:
+            [SampleCards.MystiqueFreedomForce.Id, SampleCards.MagnetoVisionary.Id, SampleCards.RogueMrsX.Id]);
+
+        var mystiqueDie = FindUnpurchased(state, "teamA", SampleCards.MystiqueFreedomForce.Id);
+        mystiqueDie.Zone = Zone.FieldZone;
+        mystiqueDie.Status = DieStatus.Character;
+        mystiqueDie.Level = 1;
+
+        var qualifying = FindUnpurchased(state, "teamA", SampleCards.MagnetoVisionary.Id); // Brotherhood, cost 5
+        qualifying.Zone = Zone.UsedPile;
+
+        var nonQualifying = FindUnpurchased(state, "teamA", SampleCards.RogueMrsX.Id); // not Brotherhood
+        nonQualifying.Zone = Zone.UsedPile;
+
+        var ability = SampleCards.MystiqueFreedomForce.Abilities.Single(a => a.Trigger == TriggerType.WhenKOd);
+        var legalTargets = LegalTargets.Query(state, "teamA", ((MoveDie)ability.Effect).Target);
+        Assert.Contains(qualifying.Id, legalTargets);
+        Assert.DoesNotContain(nonQualifying.Id, legalTargets);
+
+        EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, "teamA", mystiqueDie.Id, _ => [qualifying.Id]));
+
+        Assert.Equal(Zone.PrepArea, qualifying.Zone);
+        Assert.Equal(Zone.UsedPile, nonQualifying.Zone); // untouched
+    }
+
+    [Fact]
+    public void MisterSinisterBiologist_PreventsNonCombatDamage_ToOtherOwnDice_ButNotItself()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.MisterSinisterBiologist.Id]);
+
+        var sinisterDie = FindUnpurchased(state, "teamA", SampleCards.MisterSinisterBiologist.Id);
+        sinisterDie.Zone = Zone.FieldZone;
+        sinisterDie.Status = DieStatus.Character;
+        sinisterDie.Level = 3; // 6A/3D - the max face; dealt less than 3D below so it survives to show a real Damage value
+
+        var otherOwnDie = FindUnpurchased(state, "teamA", SampleCards.BlackWidow.Id);
+        otherOwnDie.Zone = Zone.FieldZone;
+        otherOwnDie.Status = DieStatus.Character;
+        otherOwnDie.Level = 3;
+
+        var spec = TargetSpec.CharacterDie("target character die");
+        EffectInterpreter.Execute(
+            new DealDamage(3, spec), new EffectContext(state, "teamB", SourceDieId: null, _ => [otherOwnDie.Id]));
+        Assert.Equal(0, otherOwnDie.Damage); // fully prevented - non-combat damage to another own die
+
+        EffectInterpreter.Execute(
+            new DealDamage(2, spec), new EffectContext(state, "teamB", SourceDieId: null, _ => [sinisterDie.Id]));
+        Assert.Equal(2, sinisterDie.Damage); // NOT protected - "other" excludes Mister Sinister himself
+    }
+
+    [Fact]
+    public void MisterSinisterBiologist_DoesNotPrevent_CombatDamage()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.MisterSinisterBiologist.Id]);
+        state.ActivePlayerId = "teamB";
+
+        var sinisterDie = FindUnpurchased(state, "teamA", SampleCards.MisterSinisterBiologist.Id);
+        sinisterDie.Zone = Zone.FieldZone;
+        sinisterDie.Status = DieStatus.Character;
+        sinisterDie.Level = 1;
+
+        var otherOwnDie = FindUnpurchased(state, "teamA", SampleCards.BlackWidow.Id);
+        otherOwnDie.Zone = Zone.FieldZone;
+        otherOwnDie.Status = DieStatus.Character;
+        otherOwnDie.Level = 3; // enough defense to survive and show real Damage
+
+        var attacker = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        attacker.Zone = Zone.FieldZone;
+        attacker.Status = DieStatus.Character;
+        attacker.Level = 2; // 2A/3D placeholder
+
+        TurnEngine.EnterAttackStep(state);
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attacker.Id, otherOwnDie.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [otherOwnDie.Id]);
+
+        var splits = new Dictionary<string, IReadOnlyDictionary<string, int>>
+        {
+            [attacker.Id] = new Dictionary<string, int> { [otherOwnDie.Id] = 2 }
+        };
+        CombatEngine.AssignCombatDamage(state, queue, assignment, splits);
+
+        Assert.Equal(2, otherOwnDie.Damage); // real combat damage - unaffected by Mister Sinister's non-combat text
+    }
+
+    [Fact]
+    public void MisterSinisterBiologistGlobal_GrantsOvercrush()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.MisterSinisterBiologist.Id]);
+
+        var target = FindUnpurchased(state, "teamA", SampleCards.BlackWidow.Id);
+        target.Zone = Zone.FieldZone;
+        target.Status = DieStatus.Character;
+        target.Level = 1;
+        Assert.False(DieStats.HasKeyword(state, target, "Overcrush"));
+
+        var ability = SampleCards.MisterSinisterBiologist.Abilities.Single(a => a.Trigger == TriggerType.Global);
+        EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, "teamA", SourceDieId: null, _ => [target.Id]));
+
+        Assert.True(DieStats.HasKeyword(state, target, "Overcrush"));
+    }
+
+    [Fact]
+    public void DarkPhoenixDestructiveForce_RetaliatesForRealCombatDamage_FromAnOpposingCharacter()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.DarkPhoenixDestructiveForce.Id]);
+        state.ActivePlayerId = "teamB";
+
+        var dpDie = FindUnpurchased(state, "teamA", SampleCards.DarkPhoenixDestructiveForce.Id);
+        dpDie.Zone = Zone.FieldZone;
+        dpDie.Status = DieStatus.Character;
+        dpDie.Level = 3; // 8A/8D - survives
+
+        var attacker = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        attacker.Zone = Zone.FieldZone;
+        attacker.Status = DieStatus.Character;
+        attacker.Level = 3; // 4A/4D placeholder
+
+        TurnEngine.EnterAttackStep(state);
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attacker.Id, dpDie.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [dpDie.Id]);
+
+        var teamBLifeBefore = state.GetPlayer("teamB").Life;
+        var splits = new Dictionary<string, IReadOnlyDictionary<string, int>>
+        {
+            [attacker.Id] = new Dictionary<string, int> { [dpDie.Id] = 4 }
+        };
+        CombatEngine.AssignCombatDamage(state, queue, assignment, splits);
+
+        Assert.Equal(4, dpDie.Damage);
+        // Dark Phoenix (teamA) deals 4 to "each opponent" - teamB, the
+        // attacking player who dealt the damage in the first place.
+        Assert.Equal(teamBLifeBefore - 4, state.GetPlayer("teamB").Life);
+    }
+
+    [Fact]
+    public void DarkPhoenixDestructiveForce_DoesNotRetaliate_ForNonCombatAbilityDamage()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.DarkPhoenixDestructiveForce.Id]);
+
+        var dpDie = FindUnpurchased(state, "teamA", SampleCards.DarkPhoenixDestructiveForce.Id);
+        dpDie.Zone = Zone.FieldZone;
+        dpDie.Status = DieStatus.Character;
+        dpDie.Level = 3;
+
+        var teamBLifeBefore = state.GetPlayer("teamB").Life;
+        var spec = TargetSpec.CharacterDie("target character die");
+        EffectInterpreter.Execute(
+            new DealDamage(3, spec), new EffectContext(state, "teamB", SourceDieId: null, _ => [dpDie.Id]));
+
+        Assert.Equal(3, dpDie.Damage);
+        Assert.Equal(teamBLifeBefore, state.GetPlayer("teamB").Life); // no retaliation - ability damage, not combat
+    }
+
+    [Fact]
+    public void BlobImmovable_CanBlockThreeAttackersAtOnce()
+    {
+        var state = BuildTwoTeamGame(extraTeamBCardIds: [SampleCards.BlobImmovable.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var blobDie = FindUnpurchased(state, "teamB", SampleCards.BlobImmovable.Id);
+        blobDie.Zone = Zone.FieldZone;
+        blobDie.Status = DieStatus.Character;
+        blobDie.Level = 3; // 1A/8D
+
+        var teamABag = state.DiceIn("teamA", Zone.Bag).ToList();
+        var attacker1 = teamABag[0]; attacker1.Zone = Zone.FieldZone; attacker1.Status = DieStatus.SidekickCharacter;
+        var attacker2 = teamABag[1]; attacker2.Zone = Zone.FieldZone; attacker2.Status = DieStatus.SidekickCharacter;
+        var attacker3 = teamABag[2]; attacker3.Zone = Zone.FieldZone; attacker3.Status = DieStatus.SidekickCharacter;
+
+        TurnEngine.EnterAttackStep(state);
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker1.Id, attacker2.Id, attacker3.Id]);
+
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attacker1.Id, blobDie.Id);
+        assignment.AssignBlocker(attacker2.Id, blobDie.Id);
+        assignment.AssignBlocker(attacker3.Id, blobDie.Id);
+        // blockerDieIds lists each distinct blocker once, not once per assignment.
+        CombatEngine.DeclareBlockers(state, assignment, [blobDie.Id]);
+
+        Assert.Equal(3, assignment.BlockersOf(attacker1.Id).Count + assignment.BlockersOf(attacker2.Id).Count +
+                         assignment.BlockersOf(attacker3.Id).Count);
+    }
+
+    [Fact]
+    public void NormalBlocker_CannotBlockMoreThanOneAttacker()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamA";
+
+        var blocker = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        blocker.Zone = Zone.FieldZone;
+        blocker.Status = DieStatus.Character;
+        blocker.Level = 3;
+
+        var teamABag = state.DiceIn("teamA", Zone.Bag).ToList();
+        var attacker1 = teamABag[0]; attacker1.Zone = Zone.FieldZone; attacker1.Status = DieStatus.SidekickCharacter;
+        var attacker2 = teamABag[1]; attacker2.Zone = Zone.FieldZone; attacker2.Status = DieStatus.SidekickCharacter;
+
+        TurnEngine.EnterAttackStep(state);
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker1.Id, attacker2.Id]);
+
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attacker1.Id, blocker.Id);
+        assignment.AssignBlocker(attacker2.Id, blocker.Id);
+
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            CombatEngine.DeclareBlockers(state, assignment, [blocker.Id]));
+        Assert.Contains("can only block", ex.Message);
+    }
+
+    [Fact]
+    public void BlobImmovable_ReturnsKOdOpposingSidekick_ToItsOwnersBag()
+    {
+        var state = BuildTwoTeamGame(extraTeamBCardIds: [SampleCards.BlobImmovable.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var blobDie = FindUnpurchased(state, "teamB", SampleCards.BlobImmovable.Id);
+        blobDie.Zone = Zone.FieldZone;
+        blobDie.Status = DieStatus.Character;
+        blobDie.Level = 3; // 1A/8D
+
+        var sidekickAttacker = state.DiceIn("teamA", Zone.Bag).First();
+        sidekickAttacker.Zone = Zone.FieldZone;
+        sidekickAttacker.Status = DieStatus.SidekickCharacter; // 1A/1D
+
+        TurnEngine.EnterAttackStep(state);
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [sidekickAttacker.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(sidekickAttacker.Id, blobDie.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [blobDie.Id]);
+
+        var splits = new Dictionary<string, IReadOnlyDictionary<string, int>>
+        {
+            [sidekickAttacker.Id] = new Dictionary<string, int> { [blobDie.Id] = 1 }
+        };
+        CombatEngine.AssignCombatDamage(state, queue, assignment, splits);
+
+        // Blob's own 1A KO's the Sidekick's 1D - returned to teamA's bag, not Prep Area.
+        Assert.Equal(Zone.Bag, sidekickAttacker.Zone);
+        Assert.Equal("teamA", sidekickAttacker.ControllerId);
+    }
+
+    [Fact]
+    public void BlobImmovable_DoesNotReturnNonSidekickDice_ToBag()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.MystiqueFreedomForce.Id], extraTeamBCardIds: [SampleCards.BlobImmovable.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var blobDie = FindUnpurchased(state, "teamB", SampleCards.BlobImmovable.Id);
+        blobDie.Zone = Zone.FieldZone;
+        blobDie.Status = DieStatus.Character;
+        blobDie.Level = 3; // 1A/8D
+
+        // A real character card with 1D (not a bare Sidekick) - Blob's 1A still KO's it.
+        var attacker = FindUnpurchased(state, "teamA", SampleCards.MystiqueFreedomForce.Id);
+        attacker.Zone = Zone.FieldZone;
+        attacker.Status = DieStatus.Character;
+        attacker.Level = 1; // 1A/1D
+
+        TurnEngine.EnterAttackStep(state);
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attacker.Id, blobDie.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [blobDie.Id]);
+
+        var splits = new Dictionary<string, IReadOnlyDictionary<string, int>>
+        {
+            [attacker.Id] = new Dictionary<string, int> { [blobDie.Id] = 1 }
+        };
+        CombatEngine.AssignCombatDamage(state, queue, assignment, splits);
+
+        Assert.Equal(Zone.PrepArea, attacker.Zone); // KO'd normally - not a Sidekick, no bag-return
+    }
+
+    [Fact]
+    public void DeathbirdUsurper_FiresOffRealCombatGate_DealsDamage_WhenCausingAHighDefenseOpposingKO()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.DeathbirdUsurper.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var deathbirdDie = FindUnpurchased(state, "teamA", SampleCards.DeathbirdUsurper.Id);
+        deathbirdDie.Zone = Zone.FieldZone;
+        deathbirdDie.Status = DieStatus.Character;
+        deathbirdDie.Level = 3; // 3A/4D
+
+        var opposingHighDefense = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        opposingHighDefense.Zone = Zone.FieldZone;
+        opposingHighDefense.Status = DieStatus.Character;
+        opposingHighDefense.Level = 2; // placeholder 2A/3D - meets "3D or greater"
+
+        TurnEngine.EnterAttackStep(state);
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [deathbirdDie.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(deathbirdDie.Id, opposingHighDefense.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [opposingHighDefense.Id]);
+
+        var teamBLifeBefore = state.GetPlayer("teamB").Life;
+        var splits = new Dictionary<string, IReadOnlyDictionary<string, int>>
+        {
+            [deathbirdDie.Id] = new Dictionary<string, int> { [opposingHighDefense.Id] = 3 }
+        };
+        CombatEngine.AssignCombatDamage(state, queue, assignment, splits);
+
+        Assert.Equal(Zone.PrepArea, opposingHighDefense.Zone); // KO'd (3 damage >= 3D)
+        Assert.Equal(teamBLifeBefore - 3, state.GetPlayer("teamB").Life);
+    }
+
+    [Fact]
+    public void DeathbirdUsurper_DoesNotFire_ForALowDefenseOpposingKO()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.DeathbirdUsurper.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var deathbirdDie = FindUnpurchased(state, "teamA", SampleCards.DeathbirdUsurper.Id);
+        deathbirdDie.Zone = Zone.FieldZone;
+        deathbirdDie.Status = DieStatus.Character;
+        deathbirdDie.Level = 3; // 3A/4D
+
+        var lowDefense = state.DiceIn("teamB", Zone.Bag).First();
+        lowDefense.Zone = Zone.FieldZone;
+        lowDefense.Status = DieStatus.SidekickCharacter; // 1A/1D
+
+        TurnEngine.EnterAttackStep(state);
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [deathbirdDie.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(deathbirdDie.Id, lowDefense.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [lowDefense.Id]);
+
+        var teamBLifeBefore = state.GetPlayer("teamB").Life;
+        var splits = new Dictionary<string, IReadOnlyDictionary<string, int>>
+        {
+            [deathbirdDie.Id] = new Dictionary<string, int> { [lowDefense.Id] = 3 }
+        };
+        CombatEngine.AssignCombatDamage(state, queue, assignment, splits);
+
+        Assert.Equal(Zone.PrepArea, lowDefense.Zone); // KO'd
+        Assert.Equal(teamBLifeBefore, state.GetPlayer("teamB").Life); // but defense < 3 - no Deathbird reaction
+    }
+
+    [Fact]
+    public void DeathbirdUsurper_DoesNotFire_WhenNotActive()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.DeathbirdUsurper.Id]);
+        state.ActivePlayerId = "teamA";
+
+        // Deathbird's card is owned but left sitting Unpurchased - never fielded, so not active.
+        var attacker = FindUnpurchased(state, "teamA", SampleCards.BlackWidow.Id);
+        attacker.Zone = Zone.FieldZone;
+        attacker.Status = DieStatus.Character;
+        attacker.Level = 3; // 3A/3D
+
+        var opposingHighDefense = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        opposingHighDefense.Zone = Zone.FieldZone;
+        opposingHighDefense.Status = DieStatus.Character;
+        opposingHighDefense.Level = 2; // placeholder 2A/3D - meets "3D or greater"
+
+        TurnEngine.EnterAttackStep(state);
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attacker.Id, opposingHighDefense.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [opposingHighDefense.Id]);
+
+        var teamBLifeBefore = state.GetPlayer("teamB").Life;
+        var splits = new Dictionary<string, IReadOnlyDictionary<string, int>>
+        {
+            [attacker.Id] = new Dictionary<string, int> { [opposingHighDefense.Id] = 3 }
+        };
+        CombatEngine.AssignCombatDamage(state, queue, assignment, splits);
+
+        Assert.Equal(teamBLifeBefore, state.GetPlayer("teamB").Life); // no active Deathbird - no reaction
+    }
 }
