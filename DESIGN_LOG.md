@@ -6094,3 +6094,117 @@ project's own "test the gate, not just the effect" standard.
 Verified: `dotnet build`, `dotnet test` (496/496 - 15 new cases), and
 `npm run build` all clean. Re-ran `scripts/import_bulk_cards.py`
 (165 → 170 hand-curated).
+
+## Status update — WhenDamaged wired for real, Lilandra's Action-Die tax, and the double-energy-face simplification
+
+Continuing straight into the remaining deeper gaps, per the user's own
+direction: skip Rush for now, default the Magneto/Mystique "opponent
+chooses the face" text to the double energy face rather than building
+real opponent-choice machinery, and do Lilandra plus a real WhenDamaged
+card next.
+
+**`TriggerType.WhenDamaged`, wired for real.** This trigger point has
+existed in the `TriggerType` enum since early in the project but was
+never actually fired from anywhere - Dark Phoenix's own retaliation
+(previous round) deliberately bypassed it by injecting directly into
+`DieStats.ApplyDamage`, since her text needed no real target choice.
+Wiring it up for real needed two pieces:
+
+- `TurnEngine.ResolveWhenDamagedReactions(state, queue, damagedDieIds)` -
+  the same "enqueue one `AbilityDef` per matching die" shape every other
+  reactive scan in this file already uses (`ResolveKOReactions` was the
+  direct template). Called from every real damage-application call site:
+  `CombatEngine.ResolveFastOrSlowDamage`'s own combat wave (using the
+  same `damagedRecipients` list already collected there for the KO
+  scan), and all three of `EffectInterpreter`'s damage-dealing cases
+  (`DealDamage`, `DealDamagePerActiveAffiliate`, `DealDamagePerMatchingDie`).
+  Deliberately NOT wired from Range's own `ApplyDamage` call
+  (`CombatEngine.ApplyRangeDamageAndResolveKOs`) - matching that site's
+  existing opt-out from the ability-vs-combat-damage split too (Range's
+  damage is a scripted keyword effect, not something any current card
+  needs WhenDamaged to fire from).
+- A real correctness fix inside `DieStats.ApplyDamage` itself, found
+  while wiring the above: its two "there's nothing to apply" early-outs
+  (`amount <= 0` from the start, or reduced/prevented to 0 by
+  `ReduceForDefensiveGrants`) used to `return die` - the SAME object a
+  genuinely-successful hit against `die` itself would also return. Every
+  existing caller only ever checked "is the return non-null" to decide
+  whether to run a KO check, so this ambiguity was harmless there (a
+  no-op call can't newly cross a defense threshold). For WhenDamaged it's
+  a real bug: a zero-amount or fully-prevented call would have looked
+  exactly like a real hit and fired a reaction for a die that was never
+  actually damaged. Both branches now return `null` instead, matching
+  the redirect-voided case that already did.
+
+Firestar ("Amazing Friend," ASM117) is the first card that actually
+needs this wired up rather than injected - "when Firestar takes damage,
+deal 1 damage to target character or player" is a genuine choice
+(character OR player), unlike Dark Phoenix's fixed "each opponent."
+Deliberately pulled in from Amazing Spider-Man rather than DPS - no
+remaining unimplemented DPS card has this WhenDamaged-with-a-real-choice
+shape, and the whole point of this round was giving the primitive a
+real test subject, not stretching a DPS card's text to fit.
+
+**Lilandra's two printings, both needing Action-Die usage-cost
+plumbing that didn't exist at all.** `TurnEngine.UseActionDie` had no
+cost concept whatsoever before this - a die is already paid for at
+purchase, so using it later was always free. Both Lilandra cards tax
+that:
+
+- "Freedom Fighter" (DPS078) - "your opponent must spend 1 to use each
+  Action Die." `UseActionDie` now takes an optional
+  `energyDieIdsToSpend` param and a new granter-side scan (`CardDef.
+  GrantsOpponentActionDieEnergySurcharge`), mirroring
+  `UseGlobalAbility`'s own `GrantsOpponentGlobalSurcharge` shape exactly
+  (including "stacks per distinct active granter card, not per printed
+  amount," and paid through the same `SpendEnergy` choke point). Since
+  Action-Die use had no other cost to add onto, the surcharge IS the
+  entire cost here, not an addition to one - and a rejected attempt
+  (insufficient energy offered) throws before anything else about the
+  die's own use happens, matching `UseGlobalAbility`'s existing
+  "rejected payment doesn't burn the use" behavior.
+- "Majestrix" (DPS145) - "your opponent must pay 2 life to use an
+  Action Die or Global Ability." A genuinely different payment kind -
+  life, not energy - and covering BOTH usage points, not just one.
+  `CardDef.GrantsOpponentPaysLifeToUseActionOrGlobal` is checked in both
+  `UseActionDie` and the existing `UseGlobalAbility`, deducted
+  automatically rather than through the chosen-dice payment flow - "must
+  pay" reads as mandatory, not something the user can decline just to
+  avoid the tax.
+
+**Magneto/Mystique's "opponent's choice of energy face," simplified per
+the user's own explicit call rather than built as real opponent-choice
+machinery.** Both "Master of Magnetism" (DPS121) and "She Walks Among
+Us" (DPS149) read "...to an energy face of your opponent's choice" -
+the SPUN die's own controller (not the ability's) would need to answer
+a `PendingChoice`, a real, separate primitive this engine doesn't have.
+Per the user's instruction, both just always spin to the double energy
+face instead - reusing `SpinToEnergyFace`'s existing `Amount` param
+(already built for Professor X/Iceman's own single-face use of the same
+node, just passed `Amount: 2` here) rather than adding anything new.
+Magneto's own Global text ("if you have NO dice in your Prep Area...")
+is Magneto "Visionary"'s existing `Conditional`+`PrepAreaEmpty` Global
+shape with the Then/Else branches simply swapped (Visionary's own text
+is the opposite polarity - "if you have ANY dice in your Prep Area").
+
+Five new cards landed: Firestar ("Amazing Friend," ASM117), Lilandra
+("Freedom Fighter," DPS078, and "Majestrix," DPS145), and Magneto
+("Master of Magnetism," DPS121)/Mystique ("She Walks Among Us," DPS149).
+Every new mechanism is exercised through its real firing mechanism -
+`CombatEngine`'s real combat calls and `EffectInterpreter.Execute` for
+Firestar's two WhenDamaged paths, real `TurnEngine.UseActionDie`/
+`UseGlobalAbility` calls (including a real insufficient-payment
+rejection) for both Lilandra printings, and `TurnEngine.Field`'s real
+Teamwatch scan for Magneto/Mystique - not a synthetic shortcut anywhere.
+One test-authoring miss caught along the way: the first draft of both
+Teamwatch tests fielded a same-controller die with NO affiliation in
+common with the Teamwatch holder (Black Widow, unaffiliated in this
+roster), silently failing to trigger Teamwatch at all - rule 2.6.3's
+own scan in `TurnEngine.Field` requires a SHARED affiliation, not just
+"a different character die," which the test's own Assert.Contains
+failure caught immediately; fixed by fielding a different Brotherhood
+of Mutants die (Magneto "Visionary") instead.
+
+Verified: `dotnet build`, `dotnet test` (503/503 - 7 new cases), and
+`npm run build` all clean. Re-ran `scripts/import_bulk_cards.py`
+(170 → 175 hand-curated).

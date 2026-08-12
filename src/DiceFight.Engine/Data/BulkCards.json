@@ -11174,43 +11174,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "ASM117",
-    "name": "Firestar",
-    "subtitle": "Amazing Friend",
-    "type": "Character",
-    "purchaseCost": 5,
-    "energyType": "Bolt",
-    "dieLimit": 2,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 4,
-        "defense": 4,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 3,
-        "attack": 5,
-        "defense": 4,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When Firestar takes damage, deal 1 damage to target character or player.",
-    "keywords": [],
-    "affiliations": [
-      "Spider-Friends"
-    ],
-    "isImplemented": false,
-    "set": "ASM",
-    "abilityTemplate": null
-  },
-  {
     "id": "ASM118",
     "name": "Gladiator",
     "subtitle": "Strontian",
@@ -39425,43 +39388,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS078",
-    "name": "Lilandra",
-    "subtitle": "Freedom Fighter",
-    "type": "Character",
-    "purchaseCost": 4,
-    "energyType": "Shield",
-    "dieLimit": 3,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 3,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 5,
-        "defense": 6,
-        "burstStars": null
-      }
-    ],
-    "rawText": "While Lilandra is active, your oppoent must spend 1 to use each Action Die.",
-    "keywords": [],
-    "affiliations": [
-      "Shi\\'ar"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS087",
     "name": "Professor X",
     "subtitle": "House of X",
@@ -39763,43 +39689,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS121",
-    "name": "Magneto",
-    "subtitle": "Master of Magnetism",
-    "type": "Character",
-    "purchaseCost": 5,
-    "energyType": "Mask",
-    "dieLimit": 2,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 4,
-        "defense": 4,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 5,
-        "defense": 7,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 3,
-        "attack": 6,
-        "defense": 8,
-        "burstStars": null
-      }
-    ],
-    "rawText": "Teamwatch - Spin Target opposing character die to an energy face of your opponts choice. Global: PayMask. Once per turn, during your turn, if you have no dice in your Prep Area, you may draw a die and place it in your prep area.",
-    "keywords": [],
-    "affiliations": [
-      "Brotherhood of Mutants"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS123",
     "name": "Mister Sinister",
     "subtitle": "Dark Experimentation",
@@ -39944,81 +39833,6 @@
     "keywords": [],
     "affiliations": [
       "X-Men"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS145",
-    "name": "Lilandra",
-    "subtitle": "Majestrix",
-    "type": "Character",
-    "purchaseCost": 5,
-    "energyType": "Shield",
-    "dieLimit": 1,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 3,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 5,
-        "defense": 6,
-        "burstStars": null
-      }
-    ],
-    "rawText": "Wile Lilandra is active, your opponent must pay 2 life to use an Action Die or Global Ability.",
-    "keywords": [],
-    "affiliations": [
-      "Shi\\'ar"
-    ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS149",
-    "name": "Mystique",
-    "subtitle": "She Walks Among Us",
-    "type": "Character",
-    "purchaseCost": 3,
-    "energyType": "Mask",
-    "dieLimit": 1,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 1,
-        "defense": 1,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 0,
-        "attack": 1,
-        "defense": 1,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 1,
-        "defense": 1,
-        "burstStars": 1
-      }
-    ],
-    "rawText": "Teamwatch - Spin target opposing character die to an energy face of your opponent\\'s choice",
-    "keywords": [],
-    "affiliations": [
-      "Brotherhood of Mutants",
-      "Villains"
     ],
     "isImplemented": false,
     "set": "DPS",

@@ -547,6 +547,52 @@ here rather than assuming which approach they'd want.
     mistake class flagged before, now caught a third/fourth/fifth time
     in three different tests in one round) and a wrong-team lookup
     (`FindUnpurchased` against the wrong sample team's roster).
+    **`TriggerType.WhenDamaged`, wired for real.** Genuinely unfired from
+    anywhere in the engine since the trigger point was first named (see
+    the "Turn engine" design section's own `WhenDamagedAbilities` marker)
+    - Dark Phoenix's own retaliation deliberately bypassed it (no real
+    target choice needed for "each opponent"). `TurnEngine.
+    ResolveWhenDamagedReactions` is the real queue-based wiring, called
+    from every genuine damage-application call site (`CombatEngine.
+    ResolveFastOrSlowDamage`'s combat wave, `EffectInterpreter`'s
+    `DealDamage`/`DealDamagePerActiveAffiliate`/`DealDamagePerMatchingDie`)
+    - deliberately NOT from Range's own `ApplyDamage` call, matching that
+    site's existing opt-out from the ability-vs-combat split too. Needed
+    one real correctness fix to `DieStats.ApplyDamage` itself: its two
+    "nothing to do" early-outs used to return the original `die`
+    unchanged (harmless for the existing KO-check callers, which just
+    re-evaluate an unchanged `Damage` value), but that made a genuine
+    no-op indistinguishable from "this die really took damage" - now
+    both return `null`, like the redirect-voided case already did.
+    Firestar ("Amazing Friend," ASM117 - deliberately pulled in from
+    Amazing Spider-Man rather than DPS, since no unimplemented DPS card
+    has this shape) is the first real consumer: "when Firestar takes
+    damage, deal 1 damage to target character or player" - the genuine
+    "real choice" (character OR player) that finally needed this wired
+    up instead of injected. Also landed: both Lilandra printings' own
+    Action-Die usage-cost text, closing the gap flagged two entries up -
+    `TurnEngine.UseActionDie` had no cost concept at all before this
+    (Action dice were simply free to use); it now takes an optional
+    `energyDieIdsToSpend` and a new granter-side scan (`CardDef.
+    GrantsOpponentActionDieEnergySurcharge` - "Freedom Fighter"/DPS078's
+    own "opponent must spend 1," mirroring `UseGlobalAbility`'s own
+    `GrantsOpponentGlobalSurcharge` shape) alongside a genuinely different
+    payment kind (`CardDef.GrantsOpponentPaysLifeToUseActionOrGlobal` -
+    "Majestrix"/DPS145's own "pay 2 life," a mandatory automatic
+    deduction rather than a chosen-energy payment, checked in BOTH
+    `UseActionDie` and `UseGlobalAbility` since her text taxes either).
+    Finally, Magneto ("Master of Magnetism"/DPS121) and Mystique ("She
+    Walks Among Us"/DPS149) both read "...to an energy face of your
+    opponent's choice" - real opponent-choice-of-face machinery (a
+    `PendingChoice` asked of the SPUN die's own controller rather than
+    the ability's) doesn't exist and would be a genuinely separate
+    primitive; per the user's own call, simplified to always land on the
+    double energy face instead, reusing `SpinToEnergyFace`'s existing
+    `Amount` param (already built for Professor X/Iceman's own single-
+    face use of the same node) - a rational opponent facing this choice
+    would almost always take the higher-value double face anyway. See
+    the "WhenDamaged wired for real, Lilandra's Action-Die tax, and the
+    double-energy-face simplification" status update.
 
 ## Implemented keywords
 

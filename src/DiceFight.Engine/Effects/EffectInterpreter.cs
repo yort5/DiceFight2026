@@ -121,6 +121,7 @@ public static class EffectInterpreter
             case DealDamage dealDamage:
             {
                 var koIds = new List<string>();
+                var damagedIds = new List<string>();
                 foreach (var id in Resolve(ctx, dealDamage.Target, cache))
                 {
                     // A TargetSpec.CharacterDieOrPlayer resolution can be
@@ -135,12 +136,15 @@ public static class EffectInterpreter
 
                     var die = FindDie(ctx, id);
                     var recipient = DieStats.ApplyDamage(ctx.State, die, dealDamage.Amount, abilityControllerId: ctx.ControllerId);
+                    if (recipient is null) continue;
+                    damagedIds.Add(recipient.Id);
                     // Ability damage KOs immediately rather than waiting
                     // for a simultaneous batch check - abilities resolve
                     // one at a time (rule 3.2.2), unlike combat damage.
-                    if (recipient is not null && DieStats.TryResolveKO(ctx.State, recipient, ctx.Roller))
+                    if (DieStats.TryResolveKO(ctx.State, recipient, ctx.Roller))
                         koIds.Add(recipient.Id);
                 }
+                TurnEngine.ResolveWhenDamagedReactions(ctx.State, ctx.Queue, damagedIds);
                 TurnEngine.ResolveKOReactions(ctx.State, ctx.Queue, koIds);
                 break;
             }
@@ -149,6 +153,7 @@ public static class EffectInterpreter
             {
                 var amount = ActiveAffiliateCount(ctx);
                 var koIds = new List<string>();
+                var damagedIds = new List<string>();
                 foreach (var id in Resolve(ctx, perAffiliate.Target, cache))
                 {
                     if (ctx.State.IsPlayerId(id))
@@ -159,9 +164,12 @@ public static class EffectInterpreter
 
                     var die = FindDie(ctx, id);
                     var recipient = DieStats.ApplyDamage(ctx.State, die, amount, abilityControllerId: ctx.ControllerId);
-                    if (recipient is not null && DieStats.TryResolveKO(ctx.State, recipient, ctx.Roller))
+                    if (recipient is null) continue;
+                    damagedIds.Add(recipient.Id);
+                    if (DieStats.TryResolveKO(ctx.State, recipient, ctx.Roller))
                         koIds.Add(recipient.Id);
                 }
+                TurnEngine.ResolveWhenDamagedReactions(ctx.State, ctx.Queue, damagedIds);
                 TurnEngine.ResolveKOReactions(ctx.State, ctx.Queue, koIds);
                 break;
             }
@@ -171,6 +179,7 @@ public static class EffectInterpreter
                 var matchCount = LegalTargets.Query(ctx.State, ctx.ControllerId, perMatch.CountFilter).Count;
                 var amount = matchCount * perMatch.AmountPerMatch;
                 var koIds = new List<string>();
+                var damagedIds = new List<string>();
                 foreach (var id in Resolve(ctx, perMatch.Target, cache))
                 {
                     if (ctx.State.IsPlayerId(id))
@@ -181,9 +190,12 @@ public static class EffectInterpreter
 
                     var die = FindDie(ctx, id);
                     var recipient = DieStats.ApplyDamage(ctx.State, die, amount, abilityControllerId: ctx.ControllerId);
-                    if (recipient is not null && DieStats.TryResolveKO(ctx.State, recipient, ctx.Roller))
+                    if (recipient is null) continue;
+                    damagedIds.Add(recipient.Id);
+                    if (DieStats.TryResolveKO(ctx.State, recipient, ctx.Roller))
                         koIds.Add(recipient.Id);
                 }
+                TurnEngine.ResolveWhenDamagedReactions(ctx.State, ctx.Queue, damagedIds);
                 TurnEngine.ResolveKOReactions(ctx.State, ctx.Queue, koIds);
                 break;
             }

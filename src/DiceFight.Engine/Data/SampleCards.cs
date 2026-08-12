@@ -90,6 +90,8 @@ public static class SampleCards
         int? grantsBlocksMultipleAttackers = null,
         bool grantsReturnsKOdOpposingSidekickToBag = false,
         bool grantsDamageWhenOpposingHighDefenseDieIsKOdInCombat = false,
+        int grantsOpponentActionDieEnergySurcharge = 0,
+        int grantsOpponentPaysLifeToUseActionOrGlobal = 0,
         bool isImplemented = true,
         string? set = null) => new()
     {
@@ -138,6 +140,8 @@ public static class SampleCards
         GrantsBlocksMultipleAttackers = grantsBlocksMultipleAttackers,
         GrantsReturnsKOdOpposingSidekickToBag = grantsReturnsKOdOpposingSidekickToBag,
         GrantsDamageWhenOpposingHighDefenseDieIsKOdInCombat = grantsDamageWhenOpposingHighDefenseDieIsKOdInCombat,
+        GrantsOpponentActionDieEnergySurcharge = grantsOpponentActionDieEnergySurcharge,
+        GrantsOpponentPaysLifeToUseActionOrGlobal = grantsOpponentPaysLifeToUseActionOrGlobal,
         IsImplemented = isImplemented,
         Set = set
     };
@@ -3225,6 +3229,110 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 4)
         ], set: "DPS");
 
+    // Firestar, "Amazing Friend" (ASM117, not DPS - deliberately pulled in
+    // from Amazing Spider-Man to give TriggerType.WhenDamaged a real
+    // consumer). WhenDamaged was a genuinely unwired trigger point in this
+    // engine before this card (see TurnEngine.ResolveWhenDamagedReactions'
+    // own remarks) - Dark Phoenix's own retaliation bypassed it entirely
+    // since her text needed no real target choice, but "deal 1 damage to
+    // target character OR PLAYER" is a real one, so this is the first card
+    // that actually needs the queue-based trigger wired up for real.
+    public static readonly CardDef FirestarAmazingFriend = Character(
+        "ASM117", "Firestar", "Amazing Friend", dieLimit: 2,
+        "When Firestar takes damage, deal 1 damage to target character or player.",
+        purchaseCost: 5, energyType: EnergyType.Bolt,
+        affiliations: ["Spider-Friends"],
+        abilities: [new AbilityDef(TriggerType.WhenDamaged, Cost: null,
+            Effect: new DealDamage(1, TargetSpec.CharacterDieOrPlayer("target character or player")))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 2),
+            new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 4),
+            new CharacterFace(FieldingCost: 3, Attack: 5, Defense: 4)
+        ], set: "ASM");
+
+    // Lilandra, "Freedom Fighter" (DPS078) - "your opponent must spend 1
+    // to use each Action Die." The first card needing real energy-cost
+    // plumbing on Action-Die use at all (TurnEngine.UseActionDie had none
+    // before this - see its own remarks); no AbilityDef at all, since the
+    // whole effect is the surcharge itself, enforced directly at the
+    // engine choke point rather than through the ability queue.
+    public static readonly CardDef LilandraFreedomFighter = Character(
+        "DPS078", "Lilandra", "Freedom Fighter", dieLimit: 4,
+        "While Lilandra is active, your opponent must spend 1 to use each Action Die.",
+        purchaseCost: 4, energyType: EnergyType.Shield,
+        affiliations: ["Shi'ar"],
+        grantsOpponentActionDieEnergySurcharge: 1,
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 3),
+            new CharacterFace(FieldingCost: 2, Attack: 3, Defense: 4),
+            new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 5)
+        ], set: "DPS");
+
+    // Lilandra, "Majestrix" (DPS145) - "your opponent must pay 2 life to
+    // use an Action Die or Global Ability." A mandatory LIFE tax instead
+    // of an energy one, covering BOTH usage points - see TurnEngine.
+    // UseActionDie/UseGlobalAbility's own matching halves.
+    public static readonly CardDef LilandraMajestrix = Character(
+        "DPS145", "Lilandra", "Majestrix", dieLimit: 4,
+        "While Lilandra is active, your opponent must pay 2 life to use an Action Die or Global Ability.",
+        purchaseCost: 5, energyType: EnergyType.Shield,
+        affiliations: ["Shi'ar"],
+        grantsOpponentPaysLifeToUseActionOrGlobal: 2,
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 4),
+            new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 5),
+            new CharacterFace(FieldingCost: 3, Attack: 5, Defense: 6)
+        ], set: "DPS");
+
+    // Magneto, "Master of Magnetism" (DPS121) and Mystique, "She Walks
+    // Among Us" (DPS149) both read "...to an energy face of your
+    // opponent's choice" - real opponent-choice-of-face machinery (a
+    // PendingChoice asked of the SPUN die's own controller, not the
+    // ability's) doesn't exist in this engine and would be a real,
+    // separate primitive. Per the user's own call, simplified instead to
+    // always land on the double energy face (SpinToEnergyFace's existing
+    // `Amount` param, already built for Professor X/Iceman's own single-
+    // face use of the same node) - a rational opponent facing this choice
+    // would almost always take the higher-value double face anyway, so
+    // this is a deliberate approximation, not a guessed default.
+    public static readonly CardDef MagnetoMasterOfMagnetism = Character(
+        "DPS121", "Magneto", "Master of Magnetism", dieLimit: 4,
+        "Teamwatch - Spin target opposing character die to an energy face of your opponent's choice. Global: " +
+        "Pay Mask. Once per turn, during your turn, if you have no dice in your Prep Area, you may draw a die " +
+        "and place it in your Prep Area.",
+        purchaseCost: 5, energyType: EnergyType.Mask,
+        affiliations: ["Brotherhood of Mutants"],
+        keywords: [new KeywordInstance("Teamwatch")],
+        abilities: [
+            new AbilityDef(TriggerType.Teamwatch, Cost: null,
+                Effect: new SpinToEnergyFace(
+                    TargetSpec.CharacterDie("target opposing character die", TargetOwnership.Opposing), Amount: 2)),
+            new AbilityDef(TriggerType.Global, Cost: null,
+                Effect: new Conditional(
+                    TargetSpec.Self, EffectCondition.PrepAreaEmpty, Then: new PrepFromBag(), Else: new Sequence([])),
+                EnergyCost: new EnergyCost(1, EnergyType.Mask), OncePerTurn: true)
+        ],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 4),
+            new CharacterFace(FieldingCost: 2, Attack: 5, Defense: 7),
+            new CharacterFace(FieldingCost: 3, Attack: 6, Defense: 8)
+        ], set: "DPS");
+
+    public static readonly CardDef MystiqueSheWalksAmongUs = Character(
+        "DPS149", "Mystique", "She Walks Among Us", dieLimit: 1,
+        "Teamwatch - Spin target opposing character die to an energy face of your opponent's choice.",
+        purchaseCost: 3, energyType: EnergyType.Mask,
+        affiliations: ["Brotherhood of Mutants", "Villains"],
+        keywords: [new KeywordInstance("Teamwatch")],
+        abilities: [new AbilityDef(TriggerType.Teamwatch, Cost: null,
+            Effect: new SpinToEnergyFace(
+                TargetSpec.CharacterDie("target opposing character die", TargetOwnership.Opposing), Amount: 2))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 1),
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 1),
+            new CharacterFace(FieldingCost: 2, Attack: 1, Defense: 1, BurstStars: 1)
+        ], set: "DPS");
+
     // Supreme Intelligence, "Kree Science Council" - purely a Loyalty
     // grant, no other text. NameContains is a real substring match here
     // ("a card with Kree in its name"), unlike Gladiator's "When Lilandra
@@ -3559,7 +3667,8 @@ public static class SampleCards
             TightRanks, GreetingsFromKrakoa, JubileeFireworks, BeastFirstClass,
             BishopImBack, IcemanXaviersDream, IcemanMrIceGuy, EmmaFrostInfluential,
             ForgeMoreThanFirepower, ProfessorXDreamer,
-            MystiqueFreedomForce, MisterSinisterBiologist, DarkPhoenixDestructiveForce, BlobImmovable, DeathbirdUsurper
+            MystiqueFreedomForce, MisterSinisterBiologist, DarkPhoenixDestructiveForce, BlobImmovable, DeathbirdUsurper,
+            FirestarAmazingFriend, LilandraFreedomFighter, LilandraMajestrix, MagnetoMasterOfMagnetism, MystiqueSheWalksAmongUs
         ];
 
         // Hand-curated cards win on id collision - shouldn't happen in

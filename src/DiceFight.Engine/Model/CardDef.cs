@@ -305,6 +305,22 @@ public sealed record CardDef
     // was always caused by whoever's on the OTHER side.
     public bool GrantsDamageWhenOpposingHighDefenseDieIsKOdInCombat { get; init; }
 
+    // Lilandra ("Freedom Fighter", DPS078): "while Lilandra is active,
+    // your opponent must spend 1 to use each Action Die." A pure
+    // surcharge on top of Action-Die use, which otherwise has no cost
+    // concept at all in this engine - see TurnEngine.UseActionDie for
+    // the new energy-payment plumbing this needed, mirroring
+    // UseGlobalAbility's own GrantsOpponentGlobalSurcharge shape
+    // (including "stacks per distinct active granter card").
+    public int GrantsOpponentActionDieEnergySurcharge { get; init; }
+
+    // Lilandra ("Majestrix", DPS145): "your opponent must pay 2 life to
+    // use an Action Die or Global Ability." A mandatory LIFE cost, not an
+    // energy one - there's no way to decline using the die just to dodge
+    // it, so this is deducted automatically rather than paid through the
+    // usual chosen-dice flow. See TurnEngine.UseActionDie/UseGlobalAbility.
+    public int GrantsOpponentPaysLifeToUseActionOrGlobal { get; init; }
+
     // Psylocke ("Adventurer", DPS048): "While Wolverine is active,
     // Psylocke gains Deadly" - a live, continuously-recomputed SELF
     // keyword grant conditioned on some OTHER named card being active

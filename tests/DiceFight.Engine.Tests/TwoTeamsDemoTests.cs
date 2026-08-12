@@ -5665,4 +5665,227 @@ public class TwoTeamsDemoTests
 
         Assert.Equal(teamBLifeBefore, state.GetPlayer("teamB").Life); // no active Deathbird - no reaction
     }
+
+    // --- Second deeper-abilities round: TriggerType.WhenDamaged wired
+    // for real (Firestar), Action-Die usage-cost plumbing (both Lilandra
+    // printings), and the Magneto/Mystique "opponent chooses the energy
+    // face" simplification (always the double face).
+
+    [Fact]
+    public void FirestarAmazingFriend_WhenDamagedByRealCombat_FiresARealChoiceOfTargetPlayer()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.FirestarAmazingFriend.Id]);
+        state.ActivePlayerId = "teamB";
+
+        var firestarDie = FindUnpurchased(state, "teamA", SampleCards.FirestarAmazingFriend.Id);
+        firestarDie.Zone = Zone.FieldZone;
+        firestarDie.Status = DieStatus.Character;
+        firestarDie.Level = 3; // 5A/4D - survives
+
+        var attacker = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        attacker.Zone = Zone.FieldZone;
+        attacker.Status = DieStatus.Character;
+        attacker.Level = 2; // 2A/3D placeholder
+
+        TurnEngine.EnterAttackStep(state);
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attacker.Id, firestarDie.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [firestarDie.Id]);
+
+        var splits = new Dictionary<string, IReadOnlyDictionary<string, int>>
+        {
+            [attacker.Id] = new Dictionary<string, int> { [firestarDie.Id] = 2 }
+        };
+        CombatEngine.AssignCombatDamage(state, queue, assignment, splits);
+
+        // Only the die that was actually damaged AND has the ability reacts.
+        Assert.Contains(queue.Pending, a => a.Trigger == TriggerType.WhenDamaged && a.SourceDieId == firestarDie.Id);
+        Assert.DoesNotContain(queue.Pending, a => a.Trigger == TriggerType.WhenDamaged && a.SourceDieId == attacker.Id);
+
+        var teamBLifeBefore = state.GetPlayer("teamB").Life;
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => ["teamB"])));
+
+        Assert.Equal(teamBLifeBefore - 1, state.GetPlayer("teamB").Life); // real choice: targeted the player
+    }
+
+    [Fact]
+    public void FirestarAmazingFriend_WhenDamagedByAbilityDamage_AlsoFires_ChoosingACharacterTarget()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.FirestarAmazingFriend.Id]);
+
+        var firestarDie = FindUnpurchased(state, "teamA", SampleCards.FirestarAmazingFriend.Id);
+        firestarDie.Zone = Zone.FieldZone;
+        firestarDie.Status = DieStatus.Character;
+        firestarDie.Level = 3;
+
+        var otherTarget = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        otherTarget.Zone = Zone.FieldZone;
+        otherTarget.Status = DieStatus.Character;
+        otherTarget.Level = 3; // 4A/4D - survives Firestar's own 1-damage reaction
+
+        var queue = new AbilityQueue();
+        var spec = TargetSpec.CharacterDie("target character die");
+        EffectInterpreter.Execute(
+            new DealDamage(2, spec),
+            new EffectContext(state, "teamB", SourceDieId: null, _ => [firestarDie.Id], Queue: queue));
+
+        Assert.Contains(queue.Pending, a => a.Trigger == TriggerType.WhenDamaged && a.SourceDieId == firestarDie.Id);
+
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [otherTarget.Id])));
+
+        Assert.Equal(1, otherTarget.Damage); // real choice: targeted the character die this time
+    }
+
+    [Fact]
+    public void LilandraFreedomFighter_TaxesOpponentActionDieUse_WithRealEnergyPayment()
+    {
+        var state = BuildTwoTeamGame(extraTeamBCardIds: [SampleCards.LilandraFreedomFighter.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var lilandraDie = FindUnpurchased(state, "teamB", SampleCards.LilandraFreedomFighter.Id);
+        lilandraDie.Zone = Zone.FieldZone;
+        lilandraDie.Status = DieStatus.Character;
+        lilandraDie.Level = 1;
+
+        var actionDie = FindUnpurchased(state, "teamA", SampleCards.ShockingGrasp.Id);
+        actionDie.Zone = Zone.ReservePool;
+        actionDie.Status = DieStatus.Action;
+
+        var queue = new AbilityQueue();
+
+        // No energy offered for the surcharge - rejected before anything else happens.
+        Assert.Throws<InvalidOperationException>(() => TurnEngine.UseActionDie(state, queue, actionDie.Id));
+        Assert.Equal(Zone.ReservePool, actionDie.Zone); // the rejected attempt didn't burn the use
+
+        var surchargeEnergy = GiveWildEnergy(state, "teamA", 1);
+        TurnEngine.UseActionDie(state, queue, actionDie.Id, energyDieIdsToSpend: surchargeEnergy.Select(d => d.Id).ToList());
+
+        Assert.Equal(Zone.OutOfPlay, surchargeEnergy[0].Zone); // the surcharge itself was really spent
+        Assert.Equal(Zone.OutOfPlay, actionDie.Zone); // and the die's own use proceeded
+    }
+
+    [Fact]
+    public void LilandraFreedomFighter_DoesNotTaxActionDieUse_WhenNotActive()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamA";
+
+        var actionDie = FindUnpurchased(state, "teamA", SampleCards.ShockingGrasp.Id);
+        actionDie.Zone = Zone.ReservePool;
+        actionDie.Status = DieStatus.Action;
+
+        var queue = new AbilityQueue();
+        TurnEngine.UseActionDie(state, queue, actionDie.Id); // no energy offered, no Lilandra active - succeeds
+
+        Assert.Equal(Zone.OutOfPlay, actionDie.Zone);
+    }
+
+    [Fact]
+    public void LilandraMajestrix_TaxesOpponentActionDieAndGlobalAbilityUse_WithRealLifeLoss()
+    {
+        var state = BuildTwoTeamGame(extraTeamBCardIds: [SampleCards.LilandraMajestrix.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var lilandraDie = FindUnpurchased(state, "teamB", SampleCards.LilandraMajestrix.Id);
+        lilandraDie.Zone = Zone.FieldZone;
+        lilandraDie.Status = DieStatus.Character;
+        lilandraDie.Level = 1;
+
+        var actionDie = FindUnpurchased(state, "teamA", SampleCards.ShockingGrasp.Id);
+        actionDie.Zone = Zone.ReservePool;
+        actionDie.Status = DieStatus.Action;
+
+        var queue = new AbilityQueue();
+        var teamALifeBeforeAction = state.GetPlayer("teamA").Life;
+        TurnEngine.UseActionDie(state, queue, actionDie.Id); // no energy needed - it's a life tax, not an energy one
+        Assert.Equal(teamALifeBeforeAction - 2, state.GetPlayer("teamA").Life);
+
+        // Falcon's own Global (a real teamB card - rule 2.6.5.2 lets either
+        // player activate any Global ability, same precedent the existing
+        // Distraction test already relies on).
+        var globalEnergy = GiveWildEnergy(state, "teamA", 1);
+        var teamALifeBeforeGlobal = state.GetPlayer("teamA").Life;
+        TurnEngine.UseGlobalAbility(state, queue, SampleCards.Falcon.Id, "teamA", globalEnergy.Select(d => d.Id).ToList());
+        Assert.Equal(teamALifeBeforeGlobal - 2, state.GetPlayer("teamA").Life);
+    }
+
+    [Fact]
+    public void MagnetoMasterOfMagnetismTeamwatch_FiresOffRealFieldScan_SpinsOpposingDieToDoubleEnergyFace()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.MagnetoMasterOfMagnetism.Id, SampleCards.MagnetoVisionary.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var magnetoDie = FindUnpurchased(state, "teamA", SampleCards.MagnetoMasterOfMagnetism.Id);
+        magnetoDie.Zone = Zone.FieldZone;
+        magnetoDie.Status = DieStatus.Character;
+        magnetoDie.Level = 1;
+
+        var opposingTarget = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        opposingTarget.Zone = Zone.FieldZone;
+        opposingTarget.Status = DieStatus.Character;
+        opposingTarget.Level = 2;
+
+        // Field a DIFFERENT Brotherhood of Mutants character die - Teamwatch
+        // needs a shared affiliation with the fielded die, not just "any
+        // different character" (TurnEngine.Field's own Teamwatch scan).
+        var otherOwnDie = FindUnpurchased(state, "teamA", SampleCards.MagnetoVisionary.Id);
+        otherOwnDie.Zone = Zone.ReservePool;
+        otherOwnDie.Status = DieStatus.Character;
+        otherOwnDie.Level = 1; // fielding cost 1
+
+        var queue = new AbilityQueue();
+        var fieldEnergy = GiveWildEnergy(state, "teamA", 1);
+        TurnEngine.Field(state, queue, otherOwnDie.Id, energyDieIdsToSpend: fieldEnergy.Select(d => d.Id).ToList());
+
+        Assert.Contains(queue.Pending, a => a.Trigger == TriggerType.Teamwatch && a.SourceDieId == magnetoDie.Id);
+
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [opposingTarget.Id])));
+
+        Assert.Equal(DieStatus.Energy, opposingTarget.Status);
+        Assert.Equal(2, opposingTarget.EnergyAmount); // simplified "opponent's choice" -> always the double face
+    }
+
+    [Fact]
+    public void MystiqueSheWalksAmongUsTeamwatch_FiresOffRealFieldScan_SpinsOpposingDieToDoubleEnergyFace()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.MystiqueSheWalksAmongUs.Id, SampleCards.MagnetoVisionary.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var mystiqueDie = FindUnpurchased(state, "teamA", SampleCards.MystiqueSheWalksAmongUs.Id);
+        mystiqueDie.Zone = Zone.FieldZone;
+        mystiqueDie.Status = DieStatus.Character;
+        mystiqueDie.Level = 1;
+
+        var opposingTarget = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        opposingTarget.Zone = Zone.FieldZone;
+        opposingTarget.Status = DieStatus.Character;
+        opposingTarget.Level = 2;
+
+        // Field a DIFFERENT Brotherhood of Mutants character die - Teamwatch
+        // needs a shared affiliation with the fielded die (TurnEngine.
+        // Field's own Teamwatch scan), not just "any different character."
+        var otherOwnDie = FindUnpurchased(state, "teamA", SampleCards.MagnetoVisionary.Id);
+        otherOwnDie.Zone = Zone.ReservePool;
+        otherOwnDie.Status = DieStatus.Character;
+        otherOwnDie.Level = 1; // fielding cost 1
+
+        var queue = new AbilityQueue();
+        var fieldEnergy = GiveWildEnergy(state, "teamA", 1);
+        TurnEngine.Field(state, queue, otherOwnDie.Id, energyDieIdsToSpend: fieldEnergy.Select(d => d.Id).ToList());
+
+        Assert.Contains(queue.Pending, a => a.Trigger == TriggerType.Teamwatch && a.SourceDieId == mystiqueDie.Id);
+
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [opposingTarget.Id])));
+
+        Assert.Equal(DieStatus.Energy, opposingTarget.Status);
+        Assert.Equal(2, opposingTarget.EnergyAmount);
+    }
 }

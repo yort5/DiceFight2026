@@ -521,10 +521,17 @@ public static class DieStats
     public static DieInstance? ApplyDamage(
         GameState state, DieInstance die, int amount, DieInstance? sourceDie = null, string? abilityControllerId = null)
     {
-        if (amount <= 0) return die;
+        // Both early-outs return null, not `die` - every caller treats a
+        // non-null return as "this die really took damage" (TurnEngine.
+        // ResolveWhenDamagedReactions' own gate, most recently), so a
+        // no-op call (already <=0, or fully reduced/prevented to 0 by
+        // ReduceForDefensiveGrants) has to be indistinguishable from
+        // "nothing happened" rather than looking like `die` itself was
+        // the real recipient of a real hit.
+        if (amount <= 0) return null;
 
         amount = ReduceForDefensiveGrants(state, die, amount, sourceDie, abilityControllerId);
-        if (amount <= 0) return die;
+        if (amount <= 0) return null;
 
         // Dark Phoenix ("Destructive Force", DPS107) - "when an opposing
         // character die damages Dark Phoenix, she deals that much damage

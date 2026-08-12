@@ -792,7 +792,8 @@ public static class TurnEngine
     // Rule 2.6.4 - Use Action Dice Abilities, one of the four Main Step
     // game actions (also usable in the Attack Step's Action/Global window,
     // rule 2.7.3.1). Only the Active player may use Action dice (2.6.4.1).
-    public static void UseActionDie(GameState state, AbilityQueue queue, string dieId)
+    public static void UseActionDie(
+        GameState state, AbilityQueue queue, string dieId, IReadOnlyList<string>? energyDieIdsToSpend = null)
     {
         if (!InMainOrAttackActionWindow(state))
             throw new InvalidOperationException("Action dice can only be used during the Main Step or the Attack Step's Action/Global window.");
@@ -804,6 +805,42 @@ public static class TurnEngine
         var cardId = die.VirtualCardId ?? die.CardId;
         var card = cardId is not null ? state.CardCatalog.GetValueOrDefault(cardId) : null;
         var isContinuous = DieStats.HasKeyword(state, die, "Continuous");
+
+        // Lilandra ("Freedom Fighter", DPS078/"Majestrix", DPS145) - Action
+        // dice otherwise have no cost concept at all in this engine (a die
+        // was already paid for at purchase; using it later is normally
+        // free), so both of Lilandra's own surcharges are the ENTIRE cost
+        // here, not an addition to one. Scanned against the USER's
+        // opponent's active dice, same granter-side shape UseGlobalAbility's
+        // own GrantsOpponentGlobalSurcharge already established (including
+        // "stacks per distinct active granter card, not per printed
+        // amount"). The energy half needs the user to actually offer
+        // payment; the life half ("Majestrix") is a mandatory, automatic
+        // deduction - there's no way to decline using the die just to
+        // dodge it.
+        var opponentOfUserId = state.OpponentOf(die.ControllerId);
+        var actionDieOpponentGranters = state.DiceIn(opponentOfUserId, Zone.FieldZone)
+            .Concat(state.DiceIn(opponentOfUserId, Zone.AttackZone))
+            .Select(d => DieStats.GetCard(state, d))
+            .Where(c => c is not null)
+            .Distinct()
+            .ToList();
+        var actionDieSurcharge = actionDieOpponentGranters.Sum(c => c!.GrantsOpponentActionDieEnergySurcharge);
+        if (actionDieSurcharge > 0)
+        {
+            var surchargeEnergyDice = (energyDieIdsToSpend ?? [])
+                .Select(id => FindPlayerEnergyDie(state, die.ControllerId, id)).ToList();
+            // Always Out of Play, not Used Pile - unlike UseGlobalAbility
+            // (either player), only the Active player can ever use an
+            // Action die at all (already checked above), so rule 1.5.8.5's
+            // Inactive-player exception never applies here.
+            SpendEnergy(
+                state, die.ControllerId, surchargeEnergyDice, actionDieSurcharge, [], Zone.OutOfPlay,
+                () => $"Not enough energy offered to use {DisplayName(state, die)} (needs {actionDieSurcharge} extra).");
+        }
+
+        var actionDieLifeTax = actionDieOpponentGranters.Sum(c => c!.GrantsOpponentPaysLifeToUseActionOrGlobal);
+        if (actionDieLifeTax > 0) state.GetPlayer(die.ControllerId).Life -= actionDieLifeTax;
 
         // Rule 2.6.4.2 - a Continuous Action die's own ability does NOT
         // run here; moving it to the Field Zone IS "using" it (see below),
@@ -974,7 +1011,8 @@ public static class TurnEngine
             .Concat(state.DiceIn(opponentOfUserId, Zone.AttackZone))
             .Select(d => DieStats.GetCard(state, d))
             .Where(c => c is not null)
-            .Distinct();
+            .Distinct()
+            .ToList();
         var requiredEnergyAmount = cost.Amount;
         foreach (var granter in surchargeGranters)
         {
@@ -982,6 +1020,13 @@ public static class TurnEngine
             if (surcharge.RequiresOwnActiveSidekick && !DieStats.HasActiveSidekick(state, opponentOfUserId)) continue;
             requiredEnergyAmount += surcharge.Amount;
         }
+
+        // Lilandra ("Majestrix", DPS145) - "your opponent must pay 2 life
+        // to use an Action Die OR Global Ability." See UseActionDie's own
+        // matching half; a mandatory, automatic life deduction, not
+        // something paid through the chosen-energy-dice flow below.
+        var globalLifeTax = surchargeGranters.Sum(c => c!.GrantsOpponentPaysLifeToUseActionOrGlobal);
+        if (globalLifeTax > 0) state.GetPlayer(playerId).Life -= globalLifeTax;
 
         var energyDice = energyDieIdsToSpend.Select(id => FindPlayerEnergyDie(state, playerId, id)).ToList();
         // Rule 2.6.1.1/2.6.1.2 - the Active player's spent energy goes Out
@@ -1205,6 +1250,31 @@ public static class TurnEngine
     // than a required param, so KO call sites that don't have one (tests,
     // mostly, plus any CleanUp caller that doesn't pass one) don't need
     // to fake one.
+    // TriggerType.WhenDamaged - genuinely unwired anywhere in the engine
+    // before this (see the "Turn engine" design doc section's own
+    // WhenDamagedAbilities marker, and Dark Phoenix's own retaliation,
+    // which deliberately bypassed this entirely since "each opponent"
+    // needed no real target choice). Firestar ("Amazing Friend") is the
+    // first card whose own WhenDamaged text - "deal 1 damage to target
+    // character or player" - actually needs one, so this exists now:
+    // the same "enqueue one AbilityDef per matching die" shape every
+    // other reactive scan in this file already uses. Called from every
+    // real damage-application call site (CombatEngine's own combat wave,
+    // EffectInterpreter's DealDamage family) with whichever dice actually
+    // took damage that resolution - deliberately NOT wired from Range's
+    // own ApplyDamage call, matching that call site's existing choice to
+    // stay out of the ability-vs-combat-damage split too (Range's damage
+    // is a scripted keyword effect, not a die-vs-die clash or a
+    // controller-attributable ability - no card needs it to fire
+    // WhenDamaged yet either). queue may be null, same as ResolveKOReactions.
+    internal static void ResolveWhenDamagedReactions(GameState state, AbilityQueue? queue, IReadOnlyList<string> damagedDieIds)
+    {
+        if (queue is null || damagedDieIds.Count == 0) return;
+
+        foreach (var id in damagedDieIds)
+            EnqueueTriggered(state, queue, FindDie(state, id), TriggerType.WhenDamaged);
+    }
+
     internal static void ResolveKOReactions(GameState state, AbilityQueue? queue, IReadOnlyList<string> koDieIds)
     {
         if (queue is null || koDieIds.Count == 0) return;

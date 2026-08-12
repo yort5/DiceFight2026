@@ -762,6 +762,15 @@ public static class CombatEngine
             }
         }
 
+        // TriggerType.WhenDamaged - captured before the KO scan below so
+        // a die that's KO'd this same wave still gets its own reaction
+        // enqueued (it genuinely was damaged first); GetCard still
+        // resolves correctly off a KO'd die's CardId either way (KO only
+        // resets Status/Level, not CardId), but there's no reason to rely
+        // on that when the natural call order already avoids it.
+        TurnEngine.ResolveWhenDamagedReactions(
+            state, queue, damagedRecipients.Select(d => d.Id).Distinct().ToList());
+
         // Rule 2.7.6.1 - simultaneous KO of anything at/over its defense
         // among whoever just took damage this wave (Regenerate, if the die
         // has it, intercepts inside TryResolveKO).
