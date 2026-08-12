@@ -1644,6 +1644,7 @@ public static class TurnEngine
                 EffectInterpreter.Execute(ability.Effect, new EffectContext(state, activeId, die.Id, _ => [], Roller: roller, Trigger: ability.Trigger));
         }
         state.AnyCharacterKOdThisTurn = false;
+        state.CharacterDiceKOdThisTurnByController.Clear();
 
         // Rule 1.2.3(3) - the once-per-turn Epic Basic Action limit resets.
         state.EpicBasicActionUsedThisTurn = false;

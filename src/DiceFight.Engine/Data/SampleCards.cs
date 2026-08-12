@@ -2459,6 +2459,45 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 5)
         ], set: "DPS");
 
+    // Corsair, "Back from Outer Space" (DPS139) - built once before,
+    // then reverted when its own test exposed dieLimit: 1 made "Prep a
+    // Corsair die from this card" redundant with rule 1.5.3.2's own
+    // default KO destination (see the "six more DPS cards, plus one
+    // abandoned mid-build" status update). The user has since confirmed
+    // the sheet's dieLimit was wrong data - really 4, not 1 - which
+    // resolves the exact mismatch that caused the revert: with up to 4
+    // physical copies, "a Corsair die from this card" can mean one of
+    // the OTHER (up to 3) copies sitting dormant in the Bag/Used Pile/
+    // Unpurchased, a real and distinct effect from the die that's
+    // already heading to the Prep Area on its own. Rebuilt with the same
+    // shape as before - TriggerType.WhenKOd (Corsair reacting to its own
+    // KO, the only trigger phrase that fits a card with no explicit
+    // timing text and that needs to fire even though Corsair itself just
+    // left the board), EffectCondition.OwnCharacterDiceKOdThisTurnAtLeast
+    // (new this pass) for the "4 or more of your character dice" count,
+    // and PrepDie (already general - Shocking Grasp's own "you may Prep
+    // THIS die" just happens to pass TargetSpec.Self) with a new
+    // TargetSpec.RequiredCardId (new this pass) filter for "from this
+    // card" - deliberately zoned to Bag/UsedPile/Unpurchased, not Prep
+    // Area, since a die already there needs no help.
+    public static readonly CardDef CorsairBackFromOuterSpace = Character(
+        "DPS139", "Corsair", "Back from Outer Space", dieLimit: 4,
+        "If 4 or more of your character dice were KO'd this turn, you may Prep a Corsair die from this card." +
+        "Deadly",
+        purchaseCost: 5, energyType: EnergyType.Fist,
+        keywords: [new KeywordInstance("Deadly")],
+        abilities: [new AbilityDef(TriggerType.WhenKOd, Cost: null,
+            Effect: new Conditional(TargetSpec.Self, EffectCondition.OwnCharacterDiceKOdThisTurnAtLeast,
+                Then: new PrepDie(TargetSpec.AnyDie(
+                    "a Corsair die from this card", TargetOwnership.Own,
+                    zones: [Zone.Bag, Zone.UsedPile, Zone.Unpurchased], optional: true, requiredCardId: "DPS139")),
+                CountParam: 4))],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 3, Defense: 4),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 5),
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 5)
+        ], set: "DPS");
+
     // Rogue, "Surveillance Immunity" - the first user of
     // TargetSpec.ActionDie (new this round). "Fielding Rogue doesn't
     // trigger opposing effects" is left unmodeled - there's no general
@@ -3757,7 +3796,7 @@ public static class SampleCards
             ForgeMoreThanFirepower, ProfessorXDreamer,
             MystiqueFreedomForce, MisterSinisterBiologist, DarkPhoenixDestructiveForce, BlobImmovable, DeathbirdUsurper,
             FirestarAmazingFriend, LilandraFreedomFighter, LilandraMajestrix, MagnetoMasterOfMagnetism, MystiqueSheWalksAmongUs,
-            MisterSinisterGeneticist, OrganicSteelPreventDamage, DampeningCollar
+            MisterSinisterGeneticist, OrganicSteelPreventDamage, DampeningCollar, CorsairBackFromOuterSpace
         ];
 
         // Hand-curated cards win on id collision - shouldn't happen in

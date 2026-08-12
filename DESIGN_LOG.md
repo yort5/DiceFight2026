@@ -6355,3 +6355,58 @@ distinction), then the rest of the 27-card gap list, skipping DPS039
 
 Verified: `dotnet build`, `dotnet test` (517/517 - 4 new cases), and
 `npm run build` all clean.
+
+## Status update — Corsair "Back from Outer Space" (DPS139), rebuilt after
+a dieLimit data-error fix
+
+Corsair ("Back from Outer Space," DPS139) was built once before (a
+per-controller KO counter, an `EffectCondition`, and a self-referential
+Prep node), then reverted - see the "six more DPS cards, plus one
+abandoned mid-build" status update - because the sheet's `dieLimit: 1`
+made its own "Prep a Corsair die from this card" text redundant with
+rule 1.5.3.2's default KO destination (with only one physical copy
+possible, "a Corsair die from this card" upon its own KO could only mean
+itself, which was already headed to the Prep Area regardless). The user
+has since confirmed that `dieLimit` was simply wrong sheet data - the
+real value is 4, not 1 - which resolves the exact mismatch: with up to 4
+copies, the ability can now mean one of the OTHER (up to 3) copies
+sitting dormant in the Bag/Used Pile/Unpurchased, a real, distinct
+effect from the die already auto-Prepped by its own KO.
+
+Rebuilt with the same shape as the original attempt:
+- **`TriggerType.WhenKOd`** (already existed) - Corsair reacting to its
+  own KO is still the only trigger phrase that fits (no explicit timing
+  text, and it needs to fire even though Corsair itself just left the
+  board - ruling out `EndOfYourTurn`, which requires the source die to
+  still be active).
+- **`EffectCondition.OwnCharacterDiceKOdThisTurnAtLeast`** (new) - "4 or
+  more of your character dice were KO'd this turn," backed by a new
+  `GameState.CharacterDiceKOdThisTurnByController` dictionary
+  (per-controller count, incremented at the same `DieStats.ForceKO`
+  choke point `AnyCharacterKOdThisTurn`'s own unscoped bool already
+  uses, reset alongside it at Clean Up).
+- **`TargetSpec.RequiredCardId`** (new) - "from this card," a fixed
+  CardId baked in at authoring time (known statically when writing the
+  `CardDef` - no need for a dynamic "same as the ability's own source
+  card" lookup or any `LegalTargets.Query` signature change). Zoned to
+  `Bag`/`UsedPile`/`Unpurchased` only, deliberately excluding `PrepArea`
+  - a die already there needs no help.
+- **`PrepDie`** itself needed no changes at all - already a general
+  `TargetSpec`-driven node (Shocking Grasp's own "you may Prep THIS die"
+  just happens to pass `TargetSpec.Self`), not the bespoke "self-
+  referential Prep node" the original attempt described building fresh.
+
+Tested through a real `Ko` effect (not a manually-enqueued trigger) so
+the actual `TurnEngine.ResolveKOReactions` scan fires `WhenKOd` for
+real, plus a real `DieStats.ForceKO`-driven KO count rather than setting
+the counter directly - matches the "test the gate, not just the effect"
+bar. A second test proves the upfront target-resolution convention (rule
+3.2.5 - every `Conditional` branch's targets resolve before the
+condition is even checked) still calls the resolver even when the
+condition is false, just never acts on the answer.
+
+Re-ran `scripts/import_bulk_cards.py` (175 → 179 hand-curated, 4 new:
+DPS043, DPS010, DPS002, DPS139).
+
+Verified: `dotnet build`, `dotnet test` (519/519 - 2 new cases), and
+`npm run build` all clean.

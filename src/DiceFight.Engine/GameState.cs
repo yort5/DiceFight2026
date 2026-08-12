@@ -110,6 +110,14 @@ public sealed class GameState
     // narrowing).
     public bool AnyCharacterKOdThisTurn { get; set; }
 
+    // Corsair ("Back from Outer Space", DPS139) - "if 4 or more of YOUR
+    // character dice were KO'd this turn, [...]." The per-CONTROLLER
+    // counterpart to AnyCharacterKOdThisTurn just above (that one's an
+    // unscoped bool; this needs both a real count and to know whose
+    // side each KO was on) - incremented at the same DieStats.ForceKO
+    // choke point, reset alongside AnyCharacterKOdThisTurn at Clean Up.
+    public Dictionary<string, int> CharacterDiceKOdThisTurnByController { get; } = [];
+
     // Keyword Experience Tokens - the first persistent, cross-turn,
     // per-CARD (not per-die, not per-turn) counter this engine has
     // needed. CardDef is otherwise static/immutable data ("never

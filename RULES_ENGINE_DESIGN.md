@@ -614,6 +614,16 @@ here rather than assuming which approach they'd want.
     grant checked in `DieStats.SpinLevel`, and a second Continuous
     lifecycle, `TurnEngine.OpponentResolveContinuousDie`, for the
     opponent-paid removal). All four DPS Continuous cards are done.
+    Corsair ("Back from Outer Space," DPS139) is also real now, rebuilt
+    after the user confirmed its `dieLimit` was wrong sheet data (really
+    4, not 1) - the fix resolves the exact architectural mismatch that
+    got the original attempt reverted (see the "six more DPS cards, plus
+    one abandoned mid-build" status update for that history, and the
+    "Corsair 'Back from Outer Space' (DPS139), rebuilt after a dieLimit
+    data-error fix" status update for the rebuild). Remaining per the
+    user's own ordering: the rest of the 27-card gap list from the
+    "Dark Phoenix Saga, first pass" status update, skipping DPS039
+    (needs Rush, deliberately deferred).
 
 ## Implemented keywords
 

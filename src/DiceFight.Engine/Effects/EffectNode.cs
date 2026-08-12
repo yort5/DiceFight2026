@@ -101,7 +101,15 @@ public sealed record TargetSpec(
     // a character face (DieStatus.SidekickCharacter) still satisfies
     // it - see DieStats.CountsAsSidekick, the same predicate
     // SidekicksOnly itself already queries.
-    bool ExcludeSidekicks = false)
+    bool ExcludeSidekicks = false,
+    // Corsair ("Back from Outer Space", DPS139)'s own "Prep a Corsair
+    // die from this card" - a fixed CardId baked in at authoring time
+    // (the ability's own source die's card, known statically when the
+    // CardDef is written), unlike MatchesOwnTeamAffiliation's live
+    // per-query lookup. Checked against a candidate's own VirtualCardId
+    // ?? CardId, same precedence every other card-identity check here
+    // already uses.
+    string? RequiredCardId = null)
 {
     // Rule 3.3.4/3.3.5 - only dice in the Field Zone (which includes the
     // Attack Zone) may be targeted, unless otherwise stated.
@@ -144,9 +152,11 @@ public sealed record TargetSpec(
     // availability.
     public static TargetSpec AnyDie(
         string description, TargetOwnership ownership, IReadOnlyList<Model.Zone> zones, int count = 1,
-        bool optional = false, IReadOnlyList<string>? requiredAffiliations = null, int? minPurchaseCost = null) =>
+        bool optional = false, IReadOnlyList<string>? requiredAffiliations = null, int? minPurchaseCost = null,
+        string? requiredCardId = null) =>
         new(ownership, CharacterDiceOnly: false, zones, RequiredEnergyType: null, count, description,
-            Optional: optional, RequiredAffiliations: requiredAffiliations, MinPurchaseCost: minPurchaseCost);
+            Optional: optional, RequiredAffiliations: requiredAffiliations, MinPurchaseCost: minPurchaseCost,
+            RequiredCardId: requiredCardId);
 
     // "target player or Character die" card text (e.g. Attune) - a single
     // choice between the two, not two separate targets. LegalTargets
@@ -495,6 +505,14 @@ public enum EffectCondition
     // OWN roster (Player.TeamCardIds), unlike DieStats.LoyaltyBonus
     // (one specific card's own count). CountParam is the threshold.
     OwnTeamWideLoyaltyCounterCountAtLeast,
+
+    // Corsair ("Back from Outer Space", DPS139) - "if 4 or more of your
+    // character dice were KO'd this turn." GameState.
+    // CharacterDiceKOdThisTurnByController's own per-controller count
+    // (the counterpart to NoCharacterKOdThisTurn's unscoped bool above,
+    // which can't tell whose side a KO was on or how many). CountParam
+    // is the threshold.
+    OwnCharacterDiceKOdThisTurnAtLeast,
 
     // Gambit ("I Like Solitaire", DPS072) - "if you have fielded no
     // other character dice this turn." Same GameState.FieldedThisTurn

@@ -4667,6 +4667,67 @@ public class TwoTeamsDemoTests
     }
 
     [Fact]
+    public void CorsairBackFromOuterSpace_WhenKOd_MayPrepAnotherCorsairDie_IfFourOrMoreCharacterDiceKOdThisTurn()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.CorsairBackFromOuterSpace.Id]);
+
+        // Real KO count via the real choke point (DieStats.ForceKO), not
+        // a manually-set counter - matches "test the gate, not just the
+        // effect."
+        foreach (var filler in state.DiceIn("teamA", Zone.Bag).Take(4).ToList())
+        {
+            filler.Zone = Zone.FieldZone; filler.Status = DieStatus.SidekickCharacter; filler.Level = 1;
+            DieStats.ForceKO(state, filler);
+        }
+        Assert.Equal(4, state.CharacterDiceKOdThisTurnByController["teamA"]);
+
+        var corsairDie = FindUnpurchased(state, "teamA", SampleCards.CorsairBackFromOuterSpace.Id);
+        corsairDie.Zone = Zone.FieldZone; corsairDie.Status = DieStatus.Character; corsairDie.Level = 1;
+        // A second, still-dormant Corsair copy (dieLimit 4) - the real
+        // "from this card" target once the first copy is KO'd below.
+        var dormantCorsair = FindUnpurchased(state, "teamA", SampleCards.CorsairBackFromOuterSpace.Id);
+        Assert.Equal(Zone.Unpurchased, dormantCorsair.Zone);
+
+        var queue = new AbilityQueue();
+        // A real Ko effect (not a manually-enqueued trigger) - exercises
+        // the actual TurnEngine.ResolveKOReactions scan that fires
+        // WhenKOd for real.
+        EffectInterpreter.Execute(
+            new Ko(TargetSpec.Self), new EffectContext(state, "teamA", corsairDie.Id, _ => [], Queue: queue));
+
+        Assert.Contains(queue.Pending, a => a.Trigger == TriggerType.WhenKOd && a.SourceDieId == corsairDie.Id);
+
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [dormantCorsair.Id], Queue: queue)));
+
+        Assert.Equal(Zone.PrepArea, dormantCorsair.Zone);
+    }
+
+    [Fact]
+    public void CorsairBackFromOuterSpace_WhenKOd_DoesNothing_WithFewerThanFourCharacterDiceKOdThisTurn()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.CorsairBackFromOuterSpace.Id]);
+
+        var corsairDie = FindUnpurchased(state, "teamA", SampleCards.CorsairBackFromOuterSpace.Id);
+        corsairDie.Zone = Zone.FieldZone; corsairDie.Status = DieStatus.Character; corsairDie.Level = 1;
+        var dormantCorsair = FindUnpurchased(state, "teamA", SampleCards.CorsairBackFromOuterSpace.Id);
+
+        var queue = new AbilityQueue();
+        EffectInterpreter.Execute(
+            new Ko(TargetSpec.Self), new EffectContext(state, "teamA", corsairDie.Id, _ => [], Queue: queue));
+        // Rule 3.2.5 - every branch's targets are resolved upfront
+        // regardless of which one the condition actually picks (see
+        // EffectInterpreter.Execute's own remarks), so the resolver still
+        // gets asked here; the condition being false just means the
+        // resolved choice is never acted on.
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [dormantCorsair.Id], Queue: queue)));
+
+        Assert.Equal(Zone.Unpurchased, dormantCorsair.Zone); // untouched - condition was false
+    }
+
+    [Fact]
     public void OrganicSteelPreventDamage_PreventsUpToTwoDamage_ToTargetDie()
     {
         var state = BuildTwoTeamGame();

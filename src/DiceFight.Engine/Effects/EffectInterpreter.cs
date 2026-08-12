@@ -895,6 +895,9 @@ public static class EffectInterpreter
         EffectCondition.OwnTeamWideLoyaltyCounterCountAtLeast => conditional.CountParam is { } loyaltyThreshold
             && ctx.State.GetPlayer(ctx.ControllerId).TeamCardIds.Sum(id => ctx.State.LoyaltyCounters.GetValueOrDefault(id))
                 >= loyaltyThreshold,
+        // dieId is unused here - see EffectCondition.OwnCharacterDiceKOdThisTurnAtLeast's own remarks.
+        EffectCondition.OwnCharacterDiceKOdThisTurnAtLeast => conditional.CountParam is { } koThreshold
+            && ctx.State.CharacterDiceKOdThisTurnByController.GetValueOrDefault(ctx.ControllerId) >= koThreshold,
         // See EffectCondition.OnlyCharacterFieldedThisTurn's own remarks - dieId IS used here (unlike most
         // state-only conditions above), since "no OTHER" needs to exclude it from the count.
         EffectCondition.OnlyCharacterFieldedThisTurn => ctx.State.FieldedThisTurn.Contains(dieId)

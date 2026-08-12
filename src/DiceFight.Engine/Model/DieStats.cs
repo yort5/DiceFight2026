@@ -728,7 +728,13 @@ public static class DieStats
         // were KO'd that turn" - any character or Sidekick die, either
         // player's, same choke point as the Experience check above.
         if (die.Status is DieStatus.Character or DieStatus.SidekickCharacter)
+        {
             state.AnyCharacterKOdThisTurn = true;
+            // Corsair ("Back from Outer Space", DPS139) - per-controller
+            // count, same choke point.
+            state.CharacterDiceKOdThisTurnByController[die.ControllerId] =
+                state.CharacterDiceKOdThisTurnByController.GetValueOrDefault(die.ControllerId) + 1;
+        }
 
         die.Zone = Zone.PrepArea; // rule 1.5.3.2
         die.ResetToUnrolled(); // also covers rule 3.4.5.4 - modifier lifetime ends when the die leaves the Field Zone

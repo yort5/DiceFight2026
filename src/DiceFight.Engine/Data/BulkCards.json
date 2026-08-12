@@ -38884,22 +38884,6 @@
     "abilityTemplate": null
   },
   {
-    "id": "DPS002",
-    "name": "Dampening Collar",
-    "subtitle": "Basic Action Card",
-    "type": "BasicAction",
-    "purchaseCost": 4,
-    "energyType": null,
-    "dieLimit": 3,
-    "levels": [],
-    "rawText": "Continuous: Opposing character dice can\\'t spin up. Your opponent may return an X-Men character die they control to its card to move this die from the Field Zone to its card.",
-    "keywords": [],
-    "affiliations": [],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
     "id": "DPS003",
     "name": "Explosion",
     "subtitle": "Basic Action Card",
@@ -38941,22 +38925,6 @@
     "dieLimit": 3,
     "levels": [],
     "rawText": "Swap target character die in the Field Zone with target non-sidekick character dice in that player\\'s Used Pile. Spin that character die to level 1. (This does not trigger \"when fielded\" effects.) Global: Pay Mask.Spin one of your character die down a level to spin another target character die up a level.",
-    "keywords": [],
-    "affiliations": [],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS010",
-    "name": "Organic Steel",
-    "subtitle": "Basic Action Card",
-    "type": "BasicAction",
-    "purchaseCost": 3,
-    "energyType": null,
-    "dieLimit": 3,
-    "levels": [],
-    "rawText": "Continuous: Prevent up to 2 damage to target character die and move this die to your Used Pile. If you have an active X-Men character, also gain 1 life.",
     "keywords": [],
     "affiliations": [],
     "isImplemented": false,
@@ -39158,45 +39126,6 @@
     "rawText": "While Madelyne Pryor is active, opposing character dice can\\'t use Rush.",
     "keywords": [],
     "affiliations": [],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS043",
-    "name": "Mister Sinister",
-    "subtitle": "Geneticist",
-    "type": "Character",
-    "purchaseCost": 5,
-    "energyType": "Bolt",
-    "dieLimit": 4,
-    "levels": [
-      {
-        "fieldingCost": 1,
-        "attack": 4,
-        "defense": 1,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 5,
-        "defense": 2,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 2,
-        "attack": 6,
-        "defense": 3,
-        "burstStars": null
-      }
-    ],
-    "rawText": "When fielded, KO up to 2 target Sidekick dice. When Mister Sinister KOs an opposing character, you may pay 1 life. If you do, your opponent loses 1 life. Global: Pay Bolt Bolt. Target non-Sidekick character die gains Deadly.",
-    "keywords": [
-      "Deadly"
-    ],
-    "affiliations": [
-      "Villains"
-    ],
     "isImplemented": false,
     "set": "DPS",
     "abilityTemplate": null
@@ -39760,43 +39689,6 @@
     "affiliations": [
       "X-Men"
     ],
-    "isImplemented": false,
-    "set": "DPS",
-    "abilityTemplate": null
-  },
-  {
-    "id": "DPS139",
-    "name": "Corsair",
-    "subtitle": "Back from Outer Space",
-    "type": "Character",
-    "purchaseCost": 5,
-    "energyType": "Fist",
-    "dieLimit": 1,
-    "levels": [
-      {
-        "fieldingCost": 0,
-        "attack": 3,
-        "defense": 4,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 3,
-        "defense": 5,
-        "burstStars": null
-      },
-      {
-        "fieldingCost": 1,
-        "attack": 4,
-        "defense": 5,
-        "burstStars": null
-      }
-    ],
-    "rawText": "If 4 or more of your character dice were KO\\'d this turn, you may Prep a Corsair die from this card.Deadly",
-    "keywords": [
-      "Deadly"
-    ],
-    "affiliations": [],
     "isImplemented": false,
     "set": "DPS",
     "abilityTemplate": null
