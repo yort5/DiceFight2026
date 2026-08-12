@@ -4667,6 +4667,93 @@ public class TwoTeamsDemoTests
     }
 
     [Fact]
+    public void BishopTorturedTimeline_BlocksOpponentCausedRerollAndLevelSpin_ButNotOwnControllersOwn()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.BishopTorturedTimeline.Id]);
+
+        var bishopDie = FindUnpurchased(state, "teamA", SampleCards.BishopTorturedTimeline.Id);
+        bishopDie.Zone = Zone.FieldZone; bishopDie.Status = DieStatus.Character; bishopDie.Level = 2;
+
+        // Opponent-caused level spin - blocked, both directions.
+        Assert.Equal(0, DieStats.SpinLevel(state, bishopDie, +1, initiatorControllerId: "teamB"));
+        Assert.Equal(2, bishopDie.Level);
+        Assert.Equal(0, DieStats.SpinLevel(state, bishopDie, -1, initiatorControllerId: "teamB"));
+        Assert.Equal(2, bishopDie.Level);
+
+        // Own-controller-caused spin - unaffected.
+        Assert.Equal(1, DieStats.SpinLevel(state, bishopDie, +1, initiatorControllerId: "teamA"));
+        Assert.Equal(3, bishopDie.Level);
+
+        // Opponent-caused reroll - blocked via the real Reroll EffectNode/ApplyRoll choke point.
+        var roller = new FixedRoller(DieStatus.Character, 1);
+        EffectInterpreter.Execute(
+            new Reroll(TargetSpec.Self), new EffectContext(state, "teamB", bishopDie.Id, _ => [], Roller: roller));
+        Assert.Equal(3, bishopDie.Level); // untouched - a real reroll would have reset it to level 1
+
+        // Own-controller-caused reroll - goes through normally.
+        EffectInterpreter.Execute(
+            new Reroll(TargetSpec.Self), new EffectContext(state, "teamA", bishopDie.Id, _ => [], Roller: roller));
+        Assert.Equal(1, bishopDie.Level);
+    }
+
+    [Fact]
+    public void WolverineToughForTheKids_BlocksOpponentSpinToEnergyFaceAndReroll_OnlyWithThreeDistinctActiveXMen()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds:
+            [SampleCards.WolverineToughForTheKids.Id, SampleCards.GambitUnlessIGotSomeoneToPlayWith.Id, SampleCards.KittyPrydeRightOfPassage.Id]);
+
+        var wolverineDie = FindUnpurchased(state, "teamA", SampleCards.WolverineToughForTheKids.Id);
+        wolverineDie.Zone = Zone.FieldZone; wolverineDie.Status = DieStatus.Character; wolverineDie.Level = 1;
+
+        // Only 1 distinct active X-Men (Wolverine itself) - protection doesn't apply yet.
+        EffectInterpreter.Execute(
+            new SpinToEnergyFace(TargetSpec.Self, Amount: 1), new EffectContext(state, "teamB", wolverineDie.Id, _ => []));
+        Assert.Equal(DieStatus.Energy, wolverineDie.Status);
+        wolverineDie.Status = DieStatus.Character; wolverineDie.Level = 1; // reset for the next assertion
+
+        // Level-spin was never part of this card's protection at all (it names
+        // SpinToEnergyFace specifically, not the ordinary level spin) - unaffected
+        // regardless of the affiliate count.
+        Assert.Equal(1, DieStats.SpinLevel(state, wolverineDie, +1, initiatorControllerId: "teamB"));
+        wolverineDie.Level = 1;
+
+        // Field 2 more distinct X-Men - now 3 total (Wolverine + Gambit + Kitty Pryde).
+        var gambitDie = FindUnpurchased(state, "teamA", SampleCards.GambitUnlessIGotSomeoneToPlayWith.Id);
+        gambitDie.Zone = Zone.FieldZone; gambitDie.Status = DieStatus.Character; gambitDie.Level = 1;
+        var kittyDie = FindUnpurchased(state, "teamA", SampleCards.KittyPrydeRightOfPassage.Id);
+        kittyDie.Zone = Zone.FieldZone; kittyDie.Status = DieStatus.Character; kittyDie.Level = 1;
+
+        EffectInterpreter.Execute(
+            new SpinToEnergyFace(TargetSpec.Self, Amount: 1), new EffectContext(state, "teamB", wolverineDie.Id, _ => []));
+        Assert.Equal(DieStatus.Character, wolverineDie.Status); // blocked - still a character face
+
+        var roller = new FixedRoller(DieStatus.Energy, 1);
+        EffectInterpreter.Execute(
+            new Reroll(TargetSpec.Self), new EffectContext(state, "teamB", wolverineDie.Id, _ => [], Roller: roller));
+        Assert.Equal(DieStatus.Character, wolverineDie.Status); // blocked - still a character face
+    }
+
+    [Fact]
+    public void WolverineToughForTheKidsGlobal_PrepsADieFromBag_OncePerTurn()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.WolverineToughForTheKids.Id]);
+
+        var energy = GiveWildEnergy(state, "teamA", 1);
+        var queue = new AbilityQueue();
+        var prepAreaCountBefore = state.DiceIn("teamA", Zone.PrepArea).Count();
+        TurnEngine.UseGlobalAbility(state, queue, SampleCards.WolverineToughForTheKids.Id, "teamA", energy.Select(d => d.Id).ToList());
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [], Random: new Random(1))));
+
+        Assert.Equal(prepAreaCountBefore + 1, state.DiceIn("teamA", Zone.PrepArea).Count());
+
+        var moreEnergy = GiveWildEnergy(state, "teamA", 1);
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            TurnEngine.UseGlobalAbility(state, queue, SampleCards.WolverineToughForTheKids.Id, "teamA", moreEnergy.Select(d => d.Id).ToList()));
+        Assert.Contains("once per turn", ex.Message);
+    }
+
+    [Fact]
     public void CorsairBackFromOuterSpace_WhenKOd_MayPrepAnotherCorsairDie_IfFourOrMoreCharacterDiceKOdThisTurn()
     {
         var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.CorsairBackFromOuterSpace.Id]);

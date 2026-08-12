@@ -864,7 +864,7 @@ public static class TurnEngine
             .Where(d => DieStats.HasKeyword(state, d, "Amplify"))
             .ToList())
         {
-            var actualDelta = DieStats.SpinLevel(state, amplified, +1);
+            var actualDelta = DieStats.SpinLevel(state, amplified, +1, initiatorControllerId: state.ActivePlayerId);
             CheckAwaken(state, queue, amplified, actualDelta);
         }
 

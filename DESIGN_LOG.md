@@ -6410,3 +6410,62 @@ DPS043, DPS010, DPS002, DPS139).
 
 Verified: `dotnet build`, `dotnet test` (519/519 - 2 new cases), and
 `npm run build` all clean.
+
+## Status update — Bishop "Tortured Timeline" (DPS019) and Wolverine
+"Tough for the Kids" (DPS152), a new reroll/spin protection primitive
+
+First pair from the remaining 22-card DPS gap list (skipping DPS039/
+Rush per the user's own call). Both cards protect a die from a specific
+opponent-caused effect - "can't be rerolled," "can't be spun up or
+down," "can't be spun to an energy face" - but Bishop and Wolverine each
+name a DIFFERENT subset: Bishop blocks reroll + level-spin (both
+directions); Wolverine blocks reroll + `SpinToEnergyFace` specifically
+(a different mechanism than level-spin), and only conditionally ("if
+you have at least 3 different active X-Men").
+
+**One new `CardDef` field, `RerollOrSpinProtection?
+GrantsRerollOrSpinProtection`**, with three independent bool flags
+(`ProtectsReroll`/`ProtectsLevelSpin`/`ProtectsEnergyFaceSpin`) plus an
+optional `RequiresDistinctActiveAffiliation`/`Count` pair (null = always
+active, matching Bishop; set = live-checked every time, matching
+Wolverine) - one record covers both cards precisely rather than
+collapsing them into a single "protected from spin" bool that would
+have overstated Bishop (never actually named SpinToEnergyFace) or
+understated Wolverine (conditional, and doesn't protect level-spin at
+all). `DieStats.IsProtectedFromOpponentRerollOrSpin(state, die,
+initiatorControllerId, mechanism)` is the shared check, called from the
+three real per-mechanism choke points:
+- `DieStats.SpinLevel` (level-spin) - gained a new optional
+  `initiatorControllerId` parameter (whoever is CAUSING the spin, not
+  necessarily the die's own controller); every existing call site
+  (Amplify, both Energy Drain directions, the generic `Spin` EffectNode)
+  updated to pass its own real initiator, not just left at the new
+  default.
+- `EffectInterpreter`'s own `SpinToEnergyFace` case (energy-face-spin).
+- `EffectInterpreter.ApplyRoll` (reroll) - the private helper already
+  shared by `Reroll`/`RerollAndMoveUnlessCharacter`/`DrawAndChooseOneToRoll`'s
+  own "roll one of the drawn dice" branch.
+
+Distinctly NOT checked in `LegalTargets.Query` (unlike
+`CannotBeTargetedByOpponentWhileNamedCardActive`) - these protections
+are narrower than "can't be targeted at all" (Bishop/Wolverine can still
+be damaged, KO'd, etc. by an opponent), and `LegalTargets` has no way to
+know which specific downstream `EffectNode` a resolved id will feed into.
+
+Wolverine's own Global ("Pay Fist. Once per turn, on your turn, Prep a
+die from your bag") needed no new primitive at all - reuses the
+existing `PrepFromBag` node (Bishop "I'm Back"'s own "Prep a die from
+your bag" - a random draw, not a chosen target, matching the card
+text's lack of "target") and `AbilityDef.OncePerTurn` (Falcon's own
+flag).
+
+Tests exercise the real choke points directly (`DieStats.SpinLevel`
+with an explicit `initiatorControllerId`, `EffectInterpreter.Execute`
+with real `Reroll`/`SpinToEnergyFace` nodes) rather than a synthetic
+shortcut, plus one proving Wolverine's own affiliate count is live
+(protection absent at 1 distinct active X-Men, present once a real 2
+more are fielded to reach 3) and another that level-spin stays
+unaffected for Wolverine specifically (the mechanism it doesn't name).
+
+Verified: `dotnet build`, `dotnet test` (522/522 - 3 new cases), and
+`npm run build` all clean.

@@ -620,10 +620,14 @@ here rather than assuming which approach they'd want.
     got the original attempt reverted (see the "six more DPS cards, plus
     one abandoned mid-build" status update for that history, and the
     "Corsair 'Back from Outer Space' (DPS139), rebuilt after a dieLimit
-    data-error fix" status update for the rebuild). Remaining per the
-    user's own ordering: the rest of the 27-card gap list from the
-    "Dark Phoenix Saga, first pass" status update, skipping DPS039
-    (needs Rush, deliberately deferred).
+    data-error fix" status update for the rebuild). Now working through
+    the rest of the 27-card gap list from the "Dark Phoenix Saga, first
+    pass" status update, skipping DPS039 (needs Rush, deliberately
+    deferred) - Bishop ("Tortured Timeline," DPS019) and Wolverine
+    ("Tough for the Kids," DPS152) are done, a new `RerollOrSpinProtection`
+    primitive (see the "Bishop 'Tortured Timeline' (DPS019) and Wolverine
+    'Tough for the Kids' (DPS152), a new reroll/spin protection
+    primitive" status update).
 
 ## Implemented keywords
 

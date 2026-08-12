@@ -148,6 +148,49 @@ public static class DieStats
             otherCard.Name == namedCard);
     }
 
+    public enum RerollOrSpinMechanism { Reroll, LevelSpin, EnergyFaceSpin }
+
+    // Bishop ("Tortured Timeline", DPS019)/Wolverine ("Tough for the
+    // Kids", DPS152) - "can't be [rerolled/spun] by your opponent."
+    // Narrower than IsProtectedFromOpponentTargeting just above (only
+    // blocks the specific mechanism named, not every kind of opposing
+    // effect) - checked by DieStats.SpinLevel, EffectInterpreter's own
+    // SpinToEnergyFace case, and EffectInterpreter.ApplyRoll, not
+    // LegalTargets, since those are the real single choke points every
+    // reroll/spin already funnels through regardless of which EffectNode
+    // (or non-ability source, like Amplify/Energy Drain) caused it.
+    // initiatorControllerId is whoever is CAUSING the reroll/spin, not
+    // necessarily the die's own controller - null means "not caused by
+    // any particular controller" (never opposing, so never blocked).
+    public static bool IsProtectedFromOpponentRerollOrSpin(
+        GameState state, DieInstance die, string? initiatorControllerId, RerollOrSpinMechanism mechanism)
+    {
+        if (initiatorControllerId is null || initiatorControllerId != state.OpponentOf(die.ControllerId)) return false;
+
+        var grant = GetCard(state, die)?.GrantsRerollOrSpinProtection;
+        if (grant is null) return false;
+
+        var mechanismMatches = mechanism switch
+        {
+            RerollOrSpinMechanism.Reroll => grant.ProtectsReroll,
+            RerollOrSpinMechanism.LevelSpin => grant.ProtectsLevelSpin,
+            RerollOrSpinMechanism.EnergyFaceSpin => grant.ProtectsEnergyFaceSpin,
+            _ => false
+        };
+        if (!mechanismMatches) return false;
+
+        if (grant.RequiresDistinctActiveAffiliation is not { } affiliation) return true; // unconditional
+
+        var distinctAffiliateCards = state.DiceIn(die.ControllerId, Zone.FieldZone)
+            .Concat(state.DiceIn(die.ControllerId, Zone.AttackZone))
+            .Where(d => HasAffiliation(state, d, affiliation))
+            .Select(d => d.VirtualCardId ?? d.CardId)
+            .Where(id => id is not null)
+            .Distinct()
+            .Count();
+        return distinctAffiliateCards >= grant.RequiresDistinctActiveAffiliationCount!.Value;
+    }
+
     // See CardDef.GrantsSelfAttackBonusPerMatchingDie's remarks -
     // LegalTargets.Query does the actual counting, reusing whichever
     // TargetSpec dimensions (ownership, zone, RequiredAffiliations,
@@ -340,9 +383,18 @@ public static class DieStats
     // otherwise), so callers that care whether a spin *really* moved the
     // die up (Awaken) can tell a no-op from a real spin without
     // re-deriving the before/after levels themselves.
-    public static int SpinLevel(GameState state, DieInstance die, int delta)
+    // initiatorControllerId - see IsProtectedFromOpponentRerollOrSpin's
+    // own remarks (whoever is CAUSING this spin, not necessarily the
+    // die's own controller; null if not attributable to a particular
+    // controller, e.g. Regenerate's own internal face reset never calls
+    // this at all). Bishop's own protection is checked here regardless
+    // of delta's sign ("spin a Bishop die up OR down").
+    public static int SpinLevel(GameState state, DieInstance die, int delta, string? initiatorControllerId = null)
     {
         if (die.Status is not (DieStatus.Character or DieStatus.SidekickCharacter)) return 0;
+
+        if (IsProtectedFromOpponentRerollOrSpin(state, die, initiatorControllerId, RerollOrSpinMechanism.LevelSpin))
+            return 0;
 
         // Dampening Collar (DPS002) - "opposing character dice can't
         // spin up." Checked here, the single choke point every spin-UP

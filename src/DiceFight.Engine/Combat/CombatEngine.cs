@@ -364,11 +364,11 @@ public static class CombatEngine
             {
                 var blocker = FindDie(state, blockerId);
                 if (attackerDrainAmount > 0)
-                    DieStats.SpinLevel(state, blocker, -attackerDrainAmount);
+                    DieStats.SpinLevel(state, blocker, -attackerDrainAmount, initiatorControllerId: attacker.ControllerId);
 
                 var blockerDrainAmount = DieStats.EnergyDrainAmount(state, blocker);
                 if (blockerDrainAmount > 0)
-                    DieStats.SpinLevel(state, attacker, -blockerDrainAmount);
+                    DieStats.SpinLevel(state, attacker, -blockerDrainAmount, initiatorControllerId: blocker.ControllerId);
             }
         }
     }

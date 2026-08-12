@@ -290,7 +290,7 @@ public static class EffectInterpreter
                 foreach (var id in Resolve(ctx, spin.Target, cache))
                 {
                     var die = FindDie(ctx, id);
-                    var actualDelta = DieStats.SpinLevel(ctx.State, die, spin.LevelDelta);
+                    var actualDelta = DieStats.SpinLevel(ctx.State, die, spin.LevelDelta, initiatorControllerId: ctx.ControllerId);
 
                     // Keyword Awaken fires for ANY spin-up of 1+ levels,
                     // whatever caused it - not just Amplify's own trigger
@@ -307,6 +307,12 @@ public static class EffectInterpreter
                 foreach (var id in Resolve(ctx, spinToEnergy.Target, cache))
                 {
                     var die = FindDie(ctx, id);
+                    // Wolverine ("Tough for the Kids", DPS152) - "can't
+                    // be spun to an energy face... by your opponent."
+                    if (DieStats.IsProtectedFromOpponentRerollOrSpin(
+                            ctx.State, die, ctx.ControllerId, DieStats.RerollOrSpinMechanism.EnergyFaceSpin))
+                        continue;
+
                     var cardId = die.VirtualCardId ?? die.CardId;
                     var energyType = cardId is not null && ctx.State.CardCatalog.TryGetValue(cardId, out var spunCard)
                         ? spunCard.EnergyTypes.FirstOrDefault()
@@ -941,6 +947,12 @@ public static class EffectInterpreter
     // for" reasoning DrawDice's own remarks already explain.
     private static void ApplyRoll(EffectContext ctx, DieInstance die)
     {
+        // Bishop ("Tortured Timeline", DPS019)/Wolverine ("Tough for the
+        // Kids", DPS152) - "can't be rerolled by your opponent."
+        if (DieStats.IsProtectedFromOpponentRerollOrSpin(
+                ctx.State, die, ctx.ControllerId, DieStats.RerollOrSpinMechanism.Reroll))
+            return;
+
         var cardId = die.VirtualCardId ?? die.CardId;
         var card = cardId is not null ? ctx.State.CardCatalog.GetValueOrDefault(cardId) : null;
         var result = ctx.Roller!.Roll(die, card);

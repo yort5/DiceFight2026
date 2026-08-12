@@ -92,6 +92,7 @@ public static class SampleCards
         bool grantsDamageWhenOpposingHighDefenseDieIsKOdInCombat = false,
         int grantsOpponentActionDieEnergySurcharge = 0,
         int grantsOpponentPaysLifeToUseActionOrGlobal = 0,
+        RerollOrSpinProtection? grantsRerollOrSpinProtection = null,
         bool isImplemented = true,
         string? set = null) => new()
     {
@@ -142,6 +143,7 @@ public static class SampleCards
         GrantsDamageWhenOpposingHighDefenseDieIsKOdInCombat = grantsDamageWhenOpposingHighDefenseDieIsKOdInCombat,
         GrantsOpponentActionDieEnergySurcharge = grantsOpponentActionDieEnergySurcharge,
         GrantsOpponentPaysLifeToUseActionOrGlobal = grantsOpponentPaysLifeToUseActionOrGlobal,
+        GrantsRerollOrSpinProtection = grantsRerollOrSpinProtection,
         IsImplemented = isImplemented,
         Set = set
     };
@@ -3133,6 +3135,55 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 2)
         ], set: "DPS");
 
+    // Bishop, "Tortured Timeline" (DPS019) - the first user of
+    // GrantsRerollOrSpinProtection (new this pass - see DieStats.
+    // IsProtectedFromOpponentRerollOrSpin). Unconditional: blocks
+    // opponent-caused reroll and level-spin (up OR down), but not
+    // SpinToEnergyFace (Wolverine "Tough for the Kids"/DPS152's own
+    // printing is the one that names that mechanism instead). No
+    // AbilityDef needed - purely a passive, always-on grant.
+    public static readonly CardDef BishopTorturedTimeline = Character(
+        "DPS019", "Bishop", "Tortured Timeline", dieLimit: 4,
+        "Opposing effects can't cause Bishop to be rerolled, or cause you to spin a Bishop die up or down.",
+        purchaseCost: 4, energyType: EnergyType.Shield,
+        affiliations: ["X-Men"],
+        grantsRerollOrSpinProtection: new RerollOrSpinProtection(
+            ProtectsReroll: true, ProtectsLevelSpin: true, ProtectsEnergyFaceSpin: false),
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 5),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 6),
+            new CharacterFace(FieldingCost: 2, Attack: 5, Defense: 6)
+        ], set: "DPS");
+
+    // Wolverine, "Tough for the Kids" (DPS152) - GrantsRerollOrSpin
+    // Protection's second user, this time conditional (Regenerate is
+    // already built - see DieStats.HasKeyword) and naming a DIFFERENT
+    // spin mechanism than Bishop above (SpinToEnergyFace, not the
+    // ordinary level-up/down). Global reuses PrepFromBag (Bishop "I'm
+    // Back"'s own already-established "Prep a die from your bag" node) -
+    // no target choice in the card text (no "target die"), just a
+    // random draw-and-Prep, same as every other PrepFromBag user.
+    public static readonly CardDef WolverineToughForTheKids = Character(
+        "DPS152", "Wolverine", "Tough for the Kids", dieLimit: 1,
+        "Regenerate *If you have at least 3 different active X-Men, Wolverine can't be spun to an energy " +
+        "face or rerolled by your opponent. Global: Pay Fist. Once per turn, on your turn, Prep a die from " +
+        "your bag.",
+        purchaseCost: 5, energyType: EnergyType.Fist,
+        affiliations: ["X-Men"],
+        keywords: [new KeywordInstance("Regenerate")],
+        grantsRerollOrSpinProtection: new RerollOrSpinProtection(
+            ProtectsReroll: true, ProtectsLevelSpin: false, ProtectsEnergyFaceSpin: true,
+            RequiresDistinctActiveAffiliation: "X-Men", RequiresDistinctActiveAffiliationCount: 3),
+        abilities: [new AbilityDef(TriggerType.Global, Cost: null,
+            Effect: new PrepFromBag(),
+            EnergyCost: new EnergyCost(1, EnergyType.Fist),
+            OncePerTurn: true)],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 2, BurstStars: 1),
+            new CharacterFace(FieldingCost: 2, Attack: 6, Defense: 3, BurstStars: 1),
+            new CharacterFace(FieldingCost: 3, Attack: 8, Defense: 4)
+        ], set: "DPS");
+
     // Bishop, "I'm Back" - the first user of
     // GrantsSelfPrepWhenSpentAsEnergyForFielding (new this round).
     public static readonly CardDef BishopImBack = Character(
@@ -3796,7 +3847,8 @@ public static class SampleCards
             ForgeMoreThanFirepower, ProfessorXDreamer,
             MystiqueFreedomForce, MisterSinisterBiologist, DarkPhoenixDestructiveForce, BlobImmovable, DeathbirdUsurper,
             FirestarAmazingFriend, LilandraFreedomFighter, LilandraMajestrix, MagnetoMasterOfMagnetism, MystiqueSheWalksAmongUs,
-            MisterSinisterGeneticist, OrganicSteelPreventDamage, DampeningCollar, CorsairBackFromOuterSpace
+            MisterSinisterGeneticist, OrganicSteelPreventDamage, DampeningCollar, CorsairBackFromOuterSpace,
+            BishopTorturedTimeline, WolverineToughForTheKids
         ];
 
         // Hand-curated cards win on id collision - shouldn't happen in

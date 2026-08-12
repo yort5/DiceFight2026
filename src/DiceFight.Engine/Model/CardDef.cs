@@ -385,6 +385,27 @@ public sealed record CardDef
     // are community property (rule 2.6.2.1).
     public string? OpponentMayRemoveByReturningAffiliateToCard { get; init; }
 
+    // Bishop ("Tortured Timeline", DPS019): "Opposing effects can't cause
+    // Bishop to be rerolled, or cause you to spin a Bishop die up or
+    // down" (ProtectsReroll + ProtectsLevelSpin, unconditional). Wolverine
+    // ("Tough for the Kids", DPS152): "If you have at least 3 different
+    // active X-Men, Wolverine can't be spun to an energy face or
+    // rerolled by your opponent" (ProtectsReroll + ProtectsEnergyFaceSpin,
+    // gated on RequiresDistinctActiveAffiliation/Count) - a DIFFERENT
+    // spin mechanism than Bishop's (SpinToEnergyFace, not the ordinary
+    // level-up/down SpinLevel), so this is one record with independent
+    // per-mechanism flags rather than a single "protected from spin"
+    // bool, to stay faithful to which specific mechanism each real card
+    // actually names. See DieStats.IsProtectedFromOpponentRerollOrSpin
+    // (checked at DieStats.SpinLevel, EffectInterpreter's own
+    // SpinToEnergyFace case, and EffectInterpreter.ApplyRoll - the real
+    // single choke points every reroll/spin already funnels through) for
+    // enforcement. Narrower than CannotBeTargetedByOpponentWhileNamedCard
+    // Active - only blocks these specific mechanisms, not every kind of
+    // opposing effect (Bishop/Wolverine can still be damaged, KO'd, etc.
+    // by an opponent).
+    public RerollOrSpinProtection? GrantsRerollOrSpinProtection { get; init; }
+
     // Whether this card's FULL printed text is correctly modeled -
     // scripted via AbilityDef, built entirely into the engine (a pure
     // keyword like Deadly/Infiltrate needs no AbilityDef at all), or
@@ -455,6 +476,15 @@ public sealed record ConditionalSelfStatBonus(string WhileCardNamed, int AttackD
 
 // See CardDef.GrantsSelfStatBonusWhileOwnSidekickActive's remarks.
 public sealed record OwnSidekickStatBonus(int AttackDelta, int DefenseDelta);
+
+// See CardDef.GrantsRerollOrSpinProtection's own remarks. The
+// RequiresDistinctActiveAffiliation*/Count pair is null for an
+// unconditional grant (Bishop); when set, Count is the number of
+// DISTINCT cards (not dice) sharing that affiliation that must be
+// active on the protected die's own controller's side (Wolverine).
+public sealed record RerollOrSpinProtection(
+    bool ProtectsReroll, bool ProtectsLevelSpin, bool ProtectsEnergyFaceSpin,
+    string? RequiresDistinctActiveAffiliation = null, int? RequiresDistinctActiveAffiliationCount = null);
 
 // See CardDef.GrantsOpponentPurchaseSurcharge's remarks. MaxPurchaseCost
 // null means every purchase is surcharged, matching how MaxFieldingCost/
