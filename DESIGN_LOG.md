@@ -6536,3 +6536,32 @@ for real.
 
 Verified: `dotnet build`, `dotnet test` (527/527 - 8 new cases), and
 `npm run build` all clean.
+
+## Status update — Wolverine "Trainer" (DPS136), a new sympathetic-spin
+primitive
+
+"When you spin up another character die, spin Wolverine up also" is the
+same "every real spin-up source funnels through here alike" shape
+Awaken's own `TurnEngine.CheckAwaken` already established, just a
+different reaction - so it's a sibling function, `TurnEngine.
+CheckSympatheticSpin`, called alongside `CheckAwaken` at the same two
+call sites (Amplify, the generic `Spin` EffectNode), backed by one new
+`CardDef.GrantsSpinsUpInSympathyWithOwnCharacterDice` bool. "Another"
+excludes the die that actually spun up (a sympathizer never reacts to
+its own spin); the sympathetic spin itself is self-caused (own
+controller, never an opponent), so Bishop/Wolverine "Tough for the
+Kids"'s own opponent-only protections never block it. Recursive by
+design - a sympathizer's own resulting spin-up can itself trigger
+Awaken or further sympathy elsewhere on the board (a real, if rare,
+multi-card cascade), always terminating because `SpinLevel`'s own
+max-level clamp eventually zeroes `actualLevelDelta` for every die in
+the chain. The card's other two clauses (Awaken granting Deadly to a
+Sidekick, the Global) needed nothing new - identical shapes to this
+card's own "Tough for the Kids" printing.
+
+Tests exercise the sympathy through a real `Spin` EffectNode (not a
+direct `SpinLevel` call), and separately confirm Wolverine's own spin
+doesn't double-trigger itself.
+
+Verified: `dotnet build`, `dotnet test` (530/530 - 3 new cases), and
+`npm run build` all clean.

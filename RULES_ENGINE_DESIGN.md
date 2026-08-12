@@ -634,7 +634,10 @@ here rather than assuming which approach they'd want.
     own status update for why "any player" isn't buildable without new
     cross-target-dependency plumbing). See the "Gladiator 'The Empire
     Must Stand' (DPS073), Making the Team (DPS007), and Mutation
-    (DPS009)" status update.
+    (DPS009)" status update. Wolverine ("Trainer," DPS136) is also done -
+    a new `TurnEngine.CheckSympatheticSpin` primitive, sibling to
+    `CheckAwaken`, for "when you spin up another character die, spin
+    this one up also" (see that card's own status update).
 
 ## Implemented keywords
 

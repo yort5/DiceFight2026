@@ -406,6 +406,14 @@ public sealed record CardDef
     // by an opponent).
     public RerollOrSpinProtection? GrantsRerollOrSpinProtection { get; init; }
 
+    // Wolverine ("Trainer", DPS136): "When you spin up another character
+    // die, spin Wolverine up also." Checked by TurnEngine.
+    // CheckSympatheticSpin, called from every real spin-up source
+    // alongside CheckAwaken (Amplify, the generic Spin EffectNode) - "up
+    // also" reads as a fixed +1, the same default every other spin-up
+    // primitive here uses absent a stated amount.
+    public bool GrantsSpinsUpInSympathyWithOwnCharacterDice { get; init; }
+
     // Whether this card's FULL printed text is correctly modeled -
     // scripted via AbilityDef, built entirely into the engine (a pure
     // keyword like Deadly/Infiltrate needs no AbilityDef at all), or

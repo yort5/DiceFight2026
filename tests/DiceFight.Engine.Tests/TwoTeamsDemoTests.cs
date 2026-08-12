@@ -4754,6 +4754,58 @@ public class TwoTeamsDemoTests
     }
 
     [Fact]
+    public void WolverineTrainer_SpinsUpInSympathy_WhenAnotherOwnCharacterDieSpinsUp()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.WolverineTrainer.Id]);
+
+        var wolverineDie = FindUnpurchased(state, "teamA", SampleCards.WolverineTrainer.Id);
+        wolverineDie.Zone = Zone.FieldZone; wolverineDie.Status = DieStatus.Character; wolverineDie.Level = 1;
+
+        var otherDie = FindUnpurchased(state, "teamA", SampleCards.Apocalypse.Id);
+        otherDie.Zone = Zone.FieldZone; otherDie.Status = DieStatus.Character; otherDie.Level = 1;
+
+        var queue = new AbilityQueue();
+        EffectInterpreter.Execute(
+            new Spin(TargetSpec.Self, LevelDelta: +1),
+            new EffectContext(state, "teamA", otherDie.Id, _ => [], Queue: queue));
+
+        Assert.Equal(2, otherDie.Level);
+        Assert.Equal(2, wolverineDie.Level); // sympathetic spin-up, real choke point (TurnEngine.CheckSympatheticSpin)
+    }
+
+    [Fact]
+    public void WolverineTrainer_DoesNotSpinItself_OnItsOwnSpinUp()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.WolverineTrainer.Id]);
+
+        var wolverineDie = FindUnpurchased(state, "teamA", SampleCards.WolverineTrainer.Id);
+        wolverineDie.Zone = Zone.FieldZone; wolverineDie.Status = DieStatus.Character; wolverineDie.Level = 1;
+
+        var queue = new AbilityQueue();
+        EffectInterpreter.Execute(
+            new Spin(TargetSpec.Self, LevelDelta: +1),
+            new EffectContext(state, "teamA", wolverineDie.Id, _ => [], Queue: queue));
+
+        // "Another" excludes itself - only the requested +1 happened, not a doubled +2.
+        Assert.Equal(2, wolverineDie.Level);
+    }
+
+    [Fact]
+    public void WolverineTrainerAwaken_GrantsDeadly_ToTargetSidekick()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.WolverineTrainer.Id]);
+
+        var sidekick = state.DiceIn("teamA", Zone.Bag).First();
+        sidekick.Zone = Zone.FieldZone; sidekick.Status = DieStatus.SidekickCharacter; sidekick.Level = 1;
+        Assert.False(DieStats.HasKeyword(state, sidekick, "Deadly"));
+
+        var ability = SampleCards.WolverineTrainer.Abilities.Single(a => a.Trigger == TriggerType.Awaken);
+        EffectInterpreter.Execute(ability.Effect, new EffectContext(state, "teamA", SourceDieId: null, _ => [sidekick.Id]));
+
+        Assert.True(DieStats.HasKeyword(state, sidekick, "Deadly"));
+    }
+
+    [Fact]
     public void MakingTheTeam_FieldsForFree_WhenTheRollLandsOnACharacterFace()
     {
         var state = BuildTwoTeamGame();

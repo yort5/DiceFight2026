@@ -301,7 +301,10 @@ public static class EffectInterpreter
                     // whatever caused it - not just Amplify's own trigger
                     // point in TurnEngine.UseActionDie.
                     if (ctx.Queue is not null)
+                    {
                         TurnEngine.CheckAwaken(ctx.State, ctx.Queue, die, actualDelta);
+                        TurnEngine.CheckSympatheticSpin(ctx.State, ctx.Queue, die, actualDelta);
+                    }
 
                     if (actualDelta > 0 && spin.AttackBonusPerActualSpinUp != 0)
                         die.AppliedModifiers.Add(new Modifier(spin.AttackBonusPerActualSpinUp, 0, ctx.SourceDieId ?? "ability"));

@@ -292,6 +292,35 @@ public static class TurnEngine
             EnqueueTriggered(state, queue, die, TriggerType.Awaken);
     }
 
+    // Wolverine ("Trainer", DPS136) - "when you spin up another character
+    // die, spin Wolverine up also." Same "every real spin-up source
+    // funnels through here alike" shape as CheckAwaken just above -
+    // called from the same sites, alongside it, not merged into it (the
+    // two keywords are independent; a die could have either, both, or
+    // neither). "Another" excludes the die that actually spun up (the
+    // sympathizer only reacts to something ELSE spinning); self-caused
+    // (own controller, never an opponent), so none of Bishop/Wolverine
+    // "Tough for the Kids"'s own opponent-only reroll/spin protections
+    // ever apply to a sympathetic spin. Recursive - a sympathizer's own
+    // spin-up can itself trigger Awaken/further sympathy (real, if rare,
+    // multi-card cascades) - safe and always terminating, since SpinLevel's
+    // own max-level clamp eventually zeroes actualLevelDelta for every
+    // die in the cascade.
+    internal static void CheckSympatheticSpin(GameState state, AbilityQueue queue, DieInstance die, int actualLevelDelta)
+    {
+        if (actualLevelDelta <= 0) return;
+
+        foreach (var sympathizer in state.DiceIn(die.ControllerId, Zone.FieldZone)
+            .Concat(state.DiceIn(die.ControllerId, Zone.AttackZone))
+            .Where(d => d.Id != die.Id && (DieStats.GetCard(state, d)?.GrantsSpinsUpInSympathyWithOwnCharacterDice ?? false))
+            .ToList())
+        {
+            var sympathyDelta = DieStats.SpinLevel(state, sympathizer, +1, initiatorControllerId: sympathizer.ControllerId);
+            CheckAwaken(state, queue, sympathizer, sympathyDelta);
+            CheckSympatheticSpin(state, queue, sympathizer, sympathyDelta);
+        }
+    }
+
     private static void ApplyRoll(GameState state, IDiceRoller roller, DieInstance die)
     {
         var cardId = die.VirtualCardId ?? die.CardId;
@@ -866,6 +895,7 @@ public static class TurnEngine
         {
             var actualDelta = DieStats.SpinLevel(state, amplified, +1, initiatorControllerId: state.ActivePlayerId);
             CheckAwaken(state, queue, amplified, actualDelta);
+            CheckSympatheticSpin(state, queue, amplified, actualDelta);
         }
 
         // Keyword Attune - "While a Character die you control with Attune

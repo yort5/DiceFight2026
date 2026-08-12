@@ -93,6 +93,7 @@ public static class SampleCards
         int grantsOpponentActionDieEnergySurcharge = 0,
         int grantsOpponentPaysLifeToUseActionOrGlobal = 0,
         RerollOrSpinProtection? grantsRerollOrSpinProtection = null,
+        bool grantsSpinsUpInSympathyWithOwnCharacterDice = false,
         bool isImplemented = true,
         string? set = null) => new()
     {
@@ -144,6 +145,7 @@ public static class SampleCards
         GrantsOpponentActionDieEnergySurcharge = grantsOpponentActionDieEnergySurcharge,
         GrantsOpponentPaysLifeToUseActionOrGlobal = grantsOpponentPaysLifeToUseActionOrGlobal,
         GrantsRerollOrSpinProtection = grantsRerollOrSpinProtection,
+        GrantsSpinsUpInSympathyWithOwnCharacterDice = grantsSpinsUpInSympathyWithOwnCharacterDice,
         IsImplemented = isImplemented,
         Set = set
     };
@@ -3273,6 +3275,33 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 3, Attack: 8, Defense: 4)
         ], set: "DPS");
 
+    // Wolverine, "Trainer" (DPS136) - the first user of GrantsSpinsUp
+    // InSympathyWithOwnCharacterDice (new this pass - see TurnEngine.
+    // CheckSympatheticSpin). The Global is the identical PrepFromBag/
+    // OncePerTurn shape as this card's own "Tough for the Kids"
+    // printing above.
+    public static readonly CardDef WolverineTrainer = Character(
+        "DPS136", "Wolverine", "Trainer", dieLimit: 2,
+        "Awaken: Target sidekick character die gains Deadly.*When you spin up another character die,spin " +
+        "Wolverine up also. Global: Pay Fist. Once per turn, on your turn, Prep a die from your bag",
+        purchaseCost: 4, energyType: EnergyType.Fist,
+        affiliations: ["X-Men"],
+        keywords: [new KeywordInstance("Deadly"), new KeywordInstance("Awaken")],
+        grantsSpinsUpInSympathyWithOwnCharacterDice: true,
+        abilities: [
+            new AbilityDef(TriggerType.Awaken, Cost: null,
+                Effect: new GrantKeyword(TargetSpec.Sidekick("target sidekick character die"), "Deadly")),
+            new AbilityDef(TriggerType.Global, Cost: null,
+                Effect: new PrepFromBag(),
+                EnergyCost: new EnergyCost(1, EnergyType.Fist),
+                OncePerTurn: true)
+        ],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 2, BurstStars: 1),
+            new CharacterFace(FieldingCost: 2, Attack: 6, Defense: 3, BurstStars: 1),
+            new CharacterFace(FieldingCost: 3, Attack: 8, Defense: 4)
+        ], set: "DPS");
+
     // Bishop, "I'm Back" - the first user of
     // GrantsSelfPrepWhenSpentAsEnergyForFielding (new this round).
     public static readonly CardDef BishopImBack = Character(
@@ -3937,7 +3966,8 @@ public static class SampleCards
             MystiqueFreedomForce, MisterSinisterBiologist, DarkPhoenixDestructiveForce, BlobImmovable, DeathbirdUsurper,
             FirestarAmazingFriend, LilandraFreedomFighter, LilandraMajestrix, MagnetoMasterOfMagnetism, MystiqueSheWalksAmongUs,
             MisterSinisterGeneticist, OrganicSteelPreventDamage, DampeningCollar, CorsairBackFromOuterSpace,
-            BishopTorturedTimeline, WolverineToughForTheKids, MakingTheTeam, Mutation, GladiatorTheEmpireMustStand
+            BishopTorturedTimeline, WolverineToughForTheKids, MakingTheTeam, Mutation, GladiatorTheEmpireMustStand,
+            WolverineTrainer
         ];
 
         // Hand-curated cards win on id collision - shouldn't happen in
