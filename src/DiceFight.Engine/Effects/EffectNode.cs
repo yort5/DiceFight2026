@@ -109,7 +109,15 @@ public sealed record TargetSpec(
     // per-query lookup. Checked against a candidate's own VirtualCardId
     // ?? CardId, same precedence every other card-identity check here
     // already uses.
-    string? RequiredCardId = null)
+    string? RequiredCardId = null,
+    // Making the Team (DPS007)'s own "a character die from your Used
+    // Pile" - a dormant-zone die is always Status.Unrolled (rule 1.6.8),
+    // so CharacterDiceOnly's live-Status check can't express "the card
+    // itself is a Character card" the way it can for an active die; this
+    // is the dormant-zone counterpart, a live CardCatalog lookup against
+    // the candidate's own printed CardType, same "look past the
+    // meaningless dormant Status" shape MinPurchaseCost already uses.
+    bool RequiredCharacterCardType = false)
 {
     // Rule 3.3.4/3.3.5 - only dice in the Field Zone (which includes the
     // Attack Zone) may be targeted, unless otherwise stated.
@@ -153,10 +161,10 @@ public sealed record TargetSpec(
     public static TargetSpec AnyDie(
         string description, TargetOwnership ownership, IReadOnlyList<Model.Zone> zones, int count = 1,
         bool optional = false, IReadOnlyList<string>? requiredAffiliations = null, int? minPurchaseCost = null,
-        string? requiredCardId = null) =>
+        string? requiredCardId = null, bool requiredCharacterCardType = false) =>
         new(ownership, CharacterDiceOnly: false, zones, RequiredEnergyType: null, count, description,
             Optional: optional, RequiredAffiliations: requiredAffiliations, MinPurchaseCost: minPurchaseCost,
-            RequiredCardId: requiredCardId);
+            RequiredCardId: requiredCardId, RequiredCharacterCardType: requiredCharacterCardType);
 
     // "target player or Character die" card text (e.g. Attune) - a single
     // choice between the two, not two separate targets. LegalTargets
@@ -335,6 +343,29 @@ public sealed record Reroll(TargetSpec Target) : EffectNode;
 // own printing has none).
 public sealed record RerollAndMoveUnlessCharacter(
     TargetSpec Target, Model.Zone ToZone, int DamagePerMovedToOpponent = 0) : EffectNode;
+// Making the Team (DPS007) - "Roll a character die from your Used Pile.
+// If it rolls a character face, field it for free. Otherwise, Prep
+// it." Same "roll target, branch on whether the result IS a character
+// face" shape as RerollAndMoveUnlessCharacter just above, but that node
+// only acts on the non-character branch (leaves a character result
+// wherever it started) - this one needs BOTH branches to actively move
+// the die (Field Zone vs Prep Area), so it's its own node rather than
+// an addition to that one.
+public sealed record RollAndFieldOrPrep(TargetSpec Target) : EffectNode;
+// Mutation (DPS009) - "Swap target character die in the Field Zone with
+// target non-Sidekick character die in [the same player's] Used Pile.
+// Spin that character die to level 1." Two independently-resolved
+// targets swap zones directly, the Used Pile die landing at
+// UsedPileDieLevel (the card's own "spin to level 1"), the Field Zone
+// die landing unrolled in the Used Pile - explicitly NOT triggering
+// WhenFielded (the card's own parenthetical), matching FieldDie's
+// already-established "ability-driven fielding doesn't re-fire
+// WhenFielded" convention. Both targets deliberately scoped to
+// TargetOwnership.Own at the authoring site (see SampleCards.Mutation's
+// own remarks for why the raw text's "any player" reading isn't
+// buildable without real cross-target-dependency plumbing this engine
+// doesn't have).
+public sealed record SwapFieldAndUsedPileDice(TargetSpec FieldTarget, TargetSpec UsedPileTarget, int UsedPileDieLevel) : EffectNode;
 // AttackBonusPerActualSpinUp (Greetings from Krakoa/DPS004's own "each of
 // your dice that spins up gets +2A") folds a per-die follow-up into the
 // same node, same "DamagePerMovedToOpponent" shape RerollAndMoveUnlessCharacter

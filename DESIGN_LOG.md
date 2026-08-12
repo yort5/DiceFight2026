@@ -6469,3 +6469,70 @@ unaffected for Wolverine specifically (the mechanism it doesn't name).
 
 Verified: `dotnet build`, `dotnet test` (522/522 - 3 new cases), and
 `npm run build` all clean.
+
+## Status update — Gladiator "The Empire Must Stand" (DPS073), Making the
+Team (DPS007), and Mutation (DPS009)
+
+Gladiator needed nothing new at all - its "when Lilandra is KO'd, put a
+Loyalty Counter on Gladiator's card" is exactly the `KOdDieMatch
+(NameContains: "Lilandra")` + `GrantLoyaltyCounter` shape Magneto's own
+printing already established (that field's own remarks literally
+anticipated this card as the `NameContains` example), and its Global is
+byte-for-byte the same `GrantSelfTargetingImmunityFromActionAndGlobal`
+shape as this card's other two printings ("Pay Fist when you attack" in
+the raw text read as timing color, not a new restriction - Globals are
+already usable during either window per rule 2.6.5.9, and the other two
+printings' identical Global text has no such qualifier).
+
+Making the Team and Mutation both needed a new `TargetSpec.
+RequiredCharacterCardType` filter: "a character die from your Used
+Pile" can't use `CharacterDiceOnly`'s live-Status check, since a
+dormant-zone die is always `Status.Unrolled` (rule 1.6.8) regardless of
+what card it is - this is a live `CardCatalog` lookup against the
+candidate's own printed `CardType`, the same "look past the meaningless
+dormant Status" shape `MinPurchaseCost` already uses. It also turned out
+to double as "exclude bare Sidekicks for free" (a Sidekick die's own
+`CardId` is always null, so the lookup fails them automatically) - handy
+for Mutation's own "non-Sidekick character die" text, no separate filter
+needed.
+
+**Making the Team** - one new node, `RollAndFieldOrPrep`: rolls the
+target, then branches on whether the result is a character face (Field
+Zone, keeping the rolled level) or not (Prep Area, reset to unrolled).
+Close to the existing `RerollAndMoveUnlessCharacter` but not quite the
+same shape - that one only acts on the non-character branch (leaves a
+character result wherever it started); this card needs BOTH branches to
+actively move the die.
+
+**Mutation** - one new node, `SwapFieldAndUsedPileDice`: two
+independently-resolved targets swap zones directly (Field Zone <->
+lands in the Used Pile unrolled), the Used Pile die coming in at a
+fixed level (the card's own "spin to level 1"), explicitly not firing
+`WhenFielded` (matching `FieldDie`'s already-established "ability-driven
+fielding doesn't re-trigger WhenFielded" convention - no new decision
+needed there). **Deliberate scope cut**: the raw text's first target
+("target character die in the Field Zone") names no ownership at all,
+cross-referenced against "that player's Used Pile" for the second -
+i.e., the real card can plausibly target either player's Field Zone die
+and its OWNER's own Used Pile. This engine's targeting pipeline resolves
+every `TargetSpec` in an ability tree independently (rule 3.2.5 - no
+cross-target dependency exists anywhere), so a second target's legal
+candidates can't be constrained by which controller a DIFFERENT,
+separately-chosen target turns out to belong to without new plumbing.
+Simplified to `TargetOwnership.Own` for both targets instead - still
+models the card's real core effect (recycling one of your own active
+characters for a stronger dormant one), just narrower than the literal
+"any player" reading; flagged here rather than silently narrowed. The
+Global ("spin one down to spin another up") needed nothing new - two
+independently-targeted plain `Spin` nodes in a `Sequence`, since it's a
+fixed 1-level trade, not a proportional transfer.
+
+Tests exercise `RollAndFieldOrPrep` through both branches with a real
+`FixedRoller`, `SwapFieldAndUsedPileDice` through `LegalTargets.Query`
+directly (proving the bare-Sidekick exclusion) before a full execution,
+and Gladiator's Loyalty grant through a real `Ko` effect (not a
+manually-enqueued trigger) so the actual `WhenAnotherDieKOd` scan fires
+for real.
+
+Verified: `dotnet build`, `dotnet test` (527/527 - 8 new cases), and
+`npm run build` all clean.

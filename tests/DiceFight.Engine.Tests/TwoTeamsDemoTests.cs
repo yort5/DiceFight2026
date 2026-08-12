@@ -4754,6 +4754,118 @@ public class TwoTeamsDemoTests
     }
 
     [Fact]
+    public void MakingTheTeam_FieldsForFree_WhenTheRollLandsOnACharacterFace()
+    {
+        var state = BuildTwoTeamGame();
+
+        var used = FindUnpurchased(state, "teamA", SampleCards.Apocalypse.Id);
+        used.Zone = Zone.UsedPile; used.ResetToUnrolled();
+
+        var ability = SampleCards.MakingTheTeam.Abilities.Single(a => a.Trigger == TriggerType.WhenUsed);
+        EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(state, "teamA", SourceDieId: null, _ => [used.Id], Roller: new FixedRoller(DieStatus.Character, 2)));
+
+        Assert.Equal(Zone.FieldZone, used.Zone);
+        Assert.Equal(DieStatus.Character, used.Status);
+        Assert.Equal(2, used.Level); // keeps the rolled level, not a fixed level 1
+    }
+
+    [Fact]
+    public void MakingTheTeam_PrepsInstead_WhenTheRollDoesNotLandOnACharacterFace()
+    {
+        var state = BuildTwoTeamGame();
+
+        var used = FindUnpurchased(state, "teamA", SampleCards.Apocalypse.Id);
+        used.Zone = Zone.UsedPile; used.ResetToUnrolled();
+
+        var ability = SampleCards.MakingTheTeam.Abilities.Single(a => a.Trigger == TriggerType.WhenUsed);
+        EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(state, "teamA", SourceDieId: null, _ => [used.Id], Roller: new FixedRoller(DieStatus.Energy, 1)));
+
+        Assert.Equal(Zone.PrepArea, used.Zone);
+        Assert.Equal(DieStatus.Unrolled, used.Status);
+    }
+
+    [Fact]
+    public void Mutation_SwapsFieldAndUsedPileDice_AndExcludesBareSidekicksFromTheUsedPileTarget()
+    {
+        var state = BuildTwoTeamGame();
+
+        var fieldDie = FindUnpurchased(state, "teamA", SampleCards.Apocalypse.Id);
+        fieldDie.Zone = Zone.FieldZone; fieldDie.Status = DieStatus.Character; fieldDie.Level = 3;
+
+        var usedPileCharacter = FindUnpurchased(state, "teamA", SampleCards.Beast.Id);
+        usedPileCharacter.Zone = Zone.UsedPile; usedPileCharacter.ResetToUnrolled();
+
+        var usedPileSidekick = state.DiceIn("teamA", Zone.Bag).First();
+        usedPileSidekick.Zone = Zone.UsedPile;
+
+        var ability = SampleCards.Mutation.Abilities.Single(a => a.Trigger == TriggerType.WhenUsed);
+        var usedPileSpec = ((SwapFieldAndUsedPileDice)ability.Effect).UsedPileTarget;
+        var legal = LegalTargets.Query(state, "teamA", usedPileSpec);
+        Assert.Contains(usedPileCharacter.Id, legal);
+        Assert.DoesNotContain(usedPileSidekick.Id, legal); // bare Sidekick - no CardId, fails RequiredCharacterCardType
+
+        EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(state, "teamA", SourceDieId: null,
+                spec => spec.Description.Contains("Field Zone") ? [fieldDie.Id] : [usedPileCharacter.Id]));
+
+        Assert.Equal(Zone.UsedPile, fieldDie.Zone);
+        Assert.Equal(DieStatus.Unrolled, fieldDie.Status);
+        Assert.Equal(Zone.FieldZone, usedPileCharacter.Zone);
+        Assert.Equal(DieStatus.Character, usedPileCharacter.Status);
+        Assert.Equal(1, usedPileCharacter.Level);
+    }
+
+    [Fact]
+    public void MutationGlobal_SpinsOneCharacterDown_AndAnotherUp()
+    {
+        var state = BuildTwoTeamGame();
+
+        var downDie = FindUnpurchased(state, "teamA", SampleCards.Apocalypse.Id);
+        downDie.Zone = Zone.FieldZone; downDie.Status = DieStatus.Character; downDie.Level = 2;
+        var upDie = FindUnpurchased(state, "teamA", SampleCards.Beast.Id);
+        upDie.Zone = Zone.FieldZone; upDie.Status = DieStatus.Character; upDie.Level = 1;
+
+        var ability = SampleCards.Mutation.Abilities.Single(a => a.Trigger == TriggerType.Global);
+        var callCount = 0;
+        EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(state, "teamA", SourceDieId: null, _ => callCount++ == 0 ? [downDie.Id] : [upDie.Id]));
+
+        Assert.Equal(1, downDie.Level);
+        Assert.Equal(2, upDie.Level);
+    }
+
+    [Fact]
+    public void GladiatorTheEmpireMustStand_WhenLilandraIsKOd_GrantsALoyaltyCounter()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.GladiatorTheEmpireMustStand.Id, SampleCards.LilandraPolitician.Id]);
+
+        var lilandraDie = FindUnpurchased(state, "teamA", SampleCards.LilandraPolitician.Id);
+        lilandraDie.Zone = Zone.FieldZone; lilandraDie.Status = DieStatus.Character; lilandraDie.Level = 1;
+
+        var gladiatorDie = FindUnpurchased(state, "teamA", SampleCards.GladiatorTheEmpireMustStand.Id);
+        gladiatorDie.Zone = Zone.FieldZone; gladiatorDie.Status = DieStatus.Character; gladiatorDie.Level = 1;
+
+        Assert.Equal(0, state.LoyaltyCounters.GetValueOrDefault(SampleCards.GladiatorTheEmpireMustStand.Id));
+
+        var queue = new AbilityQueue();
+        // A real Ko effect (not a manually-enqueued trigger) - exercises
+        // the actual WhenAnotherDieKOd scan for real.
+        EffectInterpreter.Execute(
+            new Ko(TargetSpec.Self), new EffectContext(state, "teamA", lilandraDie.Id, _ => [], Queue: queue));
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [], Queue: queue)));
+
+        Assert.Equal(1, state.LoyaltyCounters.GetValueOrDefault(SampleCards.GladiatorTheEmpireMustStand.Id));
+    }
+
+    [Fact]
     public void CorsairBackFromOuterSpace_WhenKOd_MayPrepAnotherCorsairDie_IfFourOrMoreCharacterDiceKOdThisTurn()
     {
         var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.CorsairBackFromOuterSpace.Id]);

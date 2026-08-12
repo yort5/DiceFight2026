@@ -627,7 +627,14 @@ here rather than assuming which approach they'd want.
     ("Tough for the Kids," DPS152) are done, a new `RerollOrSpinProtection`
     primitive (see the "Bishop 'Tortured Timeline' (DPS019) and Wolverine
     'Tough for the Kids' (DPS152), a new reroll/spin protection
-    primitive" status update).
+    primitive" status update). Also done: Gladiator ("The Empire Must
+    Stand," DPS073 - no new primitives needed), Making the Team (DPS007),
+    and Mutation (DPS009, with a deliberate `TargetOwnership.Own`
+    simplification on both of its main-effect targets - see that card's
+    own status update for why "any player" isn't buildable without new
+    cross-target-dependency plumbing). See the "Gladiator 'The Empire
+    Must Stand' (DPS073), Making the Team (DPS007), and Mutation
+    (DPS009)" status update.
 
 ## Implemented keywords
 

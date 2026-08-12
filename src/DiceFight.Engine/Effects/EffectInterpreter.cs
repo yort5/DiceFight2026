@@ -78,6 +78,11 @@ public static class EffectInterpreter
             case DoublePrintedAttackOfEach n: if (!n.Target.IsSelf) yield return n.Target; break;
             case Reroll n: if (!n.Target.IsSelf) yield return n.Target; break;
             case RerollAndMoveUnlessCharacter n: if (!n.Target.IsSelf) yield return n.Target; break;
+            case RollAndFieldOrPrep n: if (!n.Target.IsSelf) yield return n.Target; break;
+            case SwapFieldAndUsedPileDice n:
+                if (!n.FieldTarget.IsSelf) yield return n.FieldTarget;
+                if (!n.UsedPileTarget.IsSelf) yield return n.UsedPileTarget;
+                break;
             case Spin n: if (!n.Target.IsSelf) yield return n.Target; break;
             case SpinToEnergyFace n: if (!n.Target.IsSelf) yield return n.Target; break;
             case SpinToCharacterLevel n: if (!n.Target.IsSelf) yield return n.Target; break;
@@ -432,6 +437,42 @@ public static class EffectInterpreter
                     var damagedOpponent = ctx.State.GetPlayer(ctx.State.OpponentOf(ctx.ControllerId));
                     damagedOpponent.Life -= rerollAndMove.DamagePerMovedToOpponent * movedCount;
                 }
+                break;
+            }
+
+            case RollAndFieldOrPrep rollAndFieldOrPrep:
+                foreach (var id in Resolve(ctx, rollAndFieldOrPrep.Target, cache))
+                {
+                    if (ctx.Roller is null) continue;
+                    var die = FindDie(ctx, id);
+                    ApplyRoll(ctx, die);
+                    if (die.Status is DieStatus.Character or DieStatus.SidekickCharacter)
+                    {
+                        die.Zone = Zone.FieldZone; // "field it for free" - keeps the rolled level, unlike FieldDie's fixed Level
+                    }
+                    else
+                    {
+                        die.Zone = Zone.PrepArea;
+                        die.ResetToUnrolled();
+                    }
+                }
+                break;
+
+            case SwapFieldAndUsedPileDice swap:
+            {
+                var fieldIds = Resolve(ctx, swap.FieldTarget, cache);
+                var usedPileIds = Resolve(ctx, swap.UsedPileTarget, cache);
+                if (fieldIds.Count == 0 || usedPileIds.Count == 0) break; // rule 3.1.10 - no legal target on one side
+
+                var fieldDie = FindDie(ctx, fieldIds[0]);
+                var usedPileDie = FindDie(ctx, usedPileIds[0]);
+
+                fieldDie.Zone = Zone.UsedPile;
+                fieldDie.ResetToUnrolled();
+
+                usedPileDie.Status = usedPileDie.IsSidekick ? DieStatus.SidekickCharacter : DieStatus.Character;
+                usedPileDie.Level = swap.UsedPileDieLevel;
+                usedPileDie.Zone = Zone.FieldZone;
                 break;
             }
 

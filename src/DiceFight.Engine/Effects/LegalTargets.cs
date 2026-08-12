@@ -110,6 +110,17 @@ public static class LegalTargets
         if (spec.RequiredCardId is { } requiredCardId)
             candidates = candidates.Where(d => (d.VirtualCardId ?? d.CardId) == requiredCardId);
 
+        if (spec.RequiredCharacterCardType)
+        {
+            candidates = candidates.Where(d =>
+            {
+                var cardId = d.VirtualCardId ?? d.CardId;
+                return cardId is not null
+                    && state.CardCatalog.TryGetValue(cardId, out var card)
+                    && card.Type == CardType.Character;
+            });
+        }
+
         if (spec.RequiredEnergyType is { } energyType)
         {
             candidates = candidates.Where(d =>

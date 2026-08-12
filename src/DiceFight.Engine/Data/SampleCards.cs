@@ -1216,6 +1216,60 @@ public static class SampleCards
         opponentMayRemoveByReturningAffiliateToCard: "X-Men",
         set: "DPS");
 
+    // Making the Team (DPS007) - the first user of RollAndFieldOrPrep
+    // (new this pass). "A character die from your Used Pile" needs
+    // TargetSpec.AnyDie + RequiredCharacterCardType (new this pass), not
+    // CharacterDie's own CharacterDiceOnly - a Used Pile die is always
+    // Status.Unrolled (rule 1.6.8), so the live-Status check can't tell
+    // a dormant Character card from a dormant Basic Action the way it
+    // can for an active die.
+    public static readonly CardDef MakingTheTeam = BasicAction(
+        "DPS007", "Making the Team",
+        "Roll a character die from your Used Pile. If it rolls a character face, field it for free. " +
+        "Otherwise, Prep it.",
+        abilities: [new AbilityDef(TriggerType.WhenUsed, Cost: null,
+            Effect: new RollAndFieldOrPrep(TargetSpec.AnyDie(
+                "a character die from your Used Pile", TargetOwnership.Own, zones: [Zone.UsedPile],
+                requiredCharacterCardType: true)))],
+        purchaseCost: 3, set: "DPS");
+
+    // Mutation (DPS009) - the first user of SwapFieldAndUsedPileDice
+    // (new this pass - see its own remarks, including the deliberate
+    // TargetOwnership.Own simplification on both targets). The Used
+    // Pile target needs the same RequiredCharacterCardType filter
+    // Making the Team's own above does (a dormant die's Status can't
+    // express "non-Sidekick character card" via the live-Status check),
+    // which also happens to exclude bare Sidekicks automatically (their
+    // own CardId is always null, so RequiredCharacterCardType's own
+    // "does this cardId map to a Character-type card" check already
+    // fails them - no separate ExcludeSidekicks needed). Global reuses
+    // the plain Spin node twice for two independently-chosen targets -
+    // "spin one down to spin another up" is a compound two-target
+    // effect (a fixed 1-level trade), not a proportional transfer, so
+    // no new primitive needed there at all.
+    public static readonly CardDef Mutation = BasicAction(
+        "DPS009", "Mutation",
+        "Swap target character die in the Field Zone with target non-sidekick character dice in that " +
+        "player's Used Pile. Spin that character die to level 1. (This does not trigger \"when fielded\" " +
+        "effects.) Global: Pay Mask.Spin one of your character die down a level to spin another target " +
+        "character die up a level.",
+        abilities: [
+            new AbilityDef(TriggerType.WhenUsed, Cost: null,
+                Effect: new SwapFieldAndUsedPileDice(
+                    TargetSpec.CharacterDie("target character die in the Field Zone", TargetOwnership.Own, zones: [Zone.FieldZone]),
+                    TargetSpec.AnyDie(
+                        "target non-Sidekick character die in your Used Pile", TargetOwnership.Own,
+                        zones: [Zone.UsedPile], requiredCharacterCardType: true),
+                    UsedPileDieLevel: 1)),
+            new AbilityDef(TriggerType.Global, Cost: null,
+                Effect: new Sequence([
+                    new Spin(TargetSpec.CharacterDie("one of your character dice", TargetOwnership.Own), LevelDelta: -1),
+                    new Spin(TargetSpec.CharacterDie("another target character die", TargetOwnership.Own), LevelDelta: +1)
+                ]),
+                EnergyCost: new EnergyCost(1, EnergyType.Mask))
+        ],
+        purchaseCost: 3, set: "DPS");
+
     // Rally - the first burst-conditional Basic Action (see
     // EffectCondition.OnDoubleBurstFace/DieInstance.BurstStars's own
     // remarks for the plumbing this needed): "Move up to 2 Sidekick
@@ -2384,6 +2438,41 @@ public static class SampleCards
         abilities: [
             new AbilityDef(TriggerType.WhenFielded, Cost: null,
                 Effect: new MoveDie(TargetSpec.CharacterDie("target opposing character die", TargetOwnership.Opposing), Zone.Intimidated)),
+            new AbilityDef(TriggerType.Global, Cost: null,
+                Effect: new GrantSelfTargetingImmunityFromActionAndGlobal(),
+                EnergyCost: new EnergyCost(1, EnergyType.Fist))
+        ],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 5, Defense: 5),
+            new CharacterFace(FieldingCost: 1, Attack: 6, Defense: 6),
+            new CharacterFace(FieldingCost: 0, Attack: 7, Defense: 7)
+        ], set: "DPS");
+
+    // Gladiator, "The Empire Must Stand" (DPS073) - needed no new
+    // primitives at all. "When Lilandra is KO'd, put a Loyalty Counter
+    // on Gladiator's card" is exactly the KOdDieMatch(NameContains:
+    // "Lilandra") + GrantLoyaltyCounter shape Magneto's own "when one of
+    // your Mask character dice is KO'd" already established (see that
+    // field's own remarks, which literally anticipate this card as the
+    // NameContains example). The Global reuses the identical
+    // GrantSelfTargetingImmunityFromActionAndGlobal shape as this
+    // card's own "Psi Resistance"/"Majestor Kallark" printings - the raw
+    // text's "Pay Fist when you attack" is read as flavor/timing color
+    // (Globals are already usable during the Main Step or the Attack
+    // Step's Action/Global window per rule 2.6.5.9, same as every other
+    // Global; the other two Gladiator printings' own identical Global
+    // text has no such qualifier at all), not a genuine new restriction.
+    public static readonly CardDef GladiatorTheEmpireMustStand = Character(
+        "DPS073", "Gladiator", "The Empire Must Stand", dieLimit: 3,
+        "Overcrush When Lilandra is KO'd, put a Loyalty Counter on Gladiator's card. (Loyalty Counters give " +
+        "character +1A and +1D.) Global: Pay Fist when you attack. Your character dice can't be the target " +
+        "of Action Dice or Global Abilities (until the end of turn).",
+        purchaseCost: 6, energyType: EnergyType.Fist,
+        affiliations: ["Shi'ar"],
+        keywords: [new KeywordInstance("Overcrush")],
+        abilities: [
+            new AbilityDef(TriggerType.WhenAnotherDieKOd, Cost: null, Effect: new GrantLoyaltyCounter(),
+                KOdFilter: new KOdDieMatch(NameContains: "Lilandra")),
             new AbilityDef(TriggerType.Global, Cost: null,
                 Effect: new GrantSelfTargetingImmunityFromActionAndGlobal(),
                 EnergyCost: new EnergyCost(1, EnergyType.Fist))
@@ -3848,7 +3937,7 @@ public static class SampleCards
             MystiqueFreedomForce, MisterSinisterBiologist, DarkPhoenixDestructiveForce, BlobImmovable, DeathbirdUsurper,
             FirestarAmazingFriend, LilandraFreedomFighter, LilandraMajestrix, MagnetoMasterOfMagnetism, MystiqueSheWalksAmongUs,
             MisterSinisterGeneticist, OrganicSteelPreventDamage, DampeningCollar, CorsairBackFromOuterSpace,
-            BishopTorturedTimeline, WolverineToughForTheKids
+            BishopTorturedTimeline, WolverineToughForTheKids, MakingTheTeam, Mutation, GladiatorTheEmpireMustStand
         ];
 
         // Hand-curated cards win on id collision - shouldn't happen in
