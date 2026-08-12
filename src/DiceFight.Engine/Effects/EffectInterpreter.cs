@@ -56,6 +56,7 @@ public static class EffectInterpreter
                 foreach (var spec in CollectTargetSpecs(step))
                     yield return spec;
                 break;
+            case PreventDamage n: if (!n.Target.IsSelf) yield return n.Target; break;
             case DealDamage n: if (!n.Target.IsSelf) yield return n.Target; break;
             case DealDamagePerActiveAffiliate n: if (!n.Target.IsSelf) yield return n.Target; break;
             case DealDamagePerMatchingDie n: if (!n.Target.IsSelf) yield return n.Target; break;
@@ -92,6 +93,10 @@ public static class EffectInterpreter
                 if (n.Else is not null)
                     foreach (var spec in CollectTargetSpecs(n.Else))
                         yield return spec;
+                break;
+            case MayPayLife n:
+                foreach (var spec in CollectTargetSpecs(n.Then))
+                    yield return spec;
                 break;
         }
     }
@@ -199,6 +204,11 @@ public static class EffectInterpreter
                 TurnEngine.ResolveKOReactions(ctx.State, ctx.Queue, koIds);
                 break;
             }
+
+            case PreventDamage preventDamage:
+                foreach (var id in Resolve(ctx, preventDamage.Target, cache))
+                    FindDie(ctx, id).PendingDamagePrevention = preventDamage.Amount;
+                break;
 
             case Ko ko:
             {
@@ -443,6 +453,26 @@ public static class EffectInterpreter
                 else if (conditional.Else is not null)
                     Execute(conditional.Else, ctx, cache);
                 break;
+
+            case MayPayLife mayPayLife:
+            {
+                var sourceDieId = ctx.SourceDieId
+                    ?? throw new InvalidOperationException("MayPayLife needs a source die to stand in as its PendingChoice candidate.");
+                ctx.State.PendingChoice = new PendingChoice
+                {
+                    ControllerId = ctx.ControllerId,
+                    Description = $"You may pay {mayPayLife.Amount} life.",
+                    CandidateDieIds = [sourceDieId],
+                    AllowMultiple = true,
+                    Resolve = chosenIds =>
+                    {
+                        if (chosenIds.Count == 0) return; // declined
+                        ctx.State.GetPlayer(ctx.ControllerId).Life -= mayPayLife.Amount;
+                        Execute(mayPayLife.Then, ctx, cache);
+                    }
+                };
+                break;
+            }
 
             case FieldSidekickForEachPlayer:
                 foreach (var playerId in new[] { ctx.ControllerId, ctx.State.OpponentOf(ctx.ControllerId) })

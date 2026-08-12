@@ -693,8 +693,8 @@ public class CombatEngineTests
         assignment.AssignBlocker(deadlyAttacker.Id, blocker.Id);
         CombatEngine.DeclareBlockers(state, assignment, [blocker.Id]);
 
-        Assert.Contains(blocker.Id, state.DeadlyEngagedDieIds);
-        Assert.DoesNotContain(deadlyAttacker.Id, state.DeadlyEngagedDieIds); // the Deadly die itself isn't engaged with itself
+        Assert.Contains(blocker.Id, state.DeadlyEngagedDieIds.Keys);
+        Assert.DoesNotContain(deadlyAttacker.Id, state.DeadlyEngagedDieIds.Keys); // the Deadly die itself isn't engaged with itself
     }
 
     [Fact]
@@ -710,8 +710,8 @@ public class CombatEngineTests
         assignment.AssignBlocker(plainAttacker.Id, deadlyBlocker.Id);
         CombatEngine.DeclareBlockers(state, assignment, [deadlyBlocker.Id]);
 
-        Assert.Contains(plainAttacker.Id, state.DeadlyEngagedDieIds);
-        Assert.DoesNotContain(deadlyBlocker.Id, state.DeadlyEngagedDieIds);
+        Assert.Contains(plainAttacker.Id, state.DeadlyEngagedDieIds.Keys);
+        Assert.DoesNotContain(deadlyBlocker.Id, state.DeadlyEngagedDieIds.Keys);
     }
 
     [Fact]
@@ -733,8 +733,8 @@ public class CombatEngineTests
         // (via the Deadly one) - but the two blockers are never engaged
         // with each other (rule 2.7.2.3 is attacker<->blocker, not
         // blocker<->blocker), so the plain co-blocker is not.
-        Assert.Contains(plainAttacker.Id, state.DeadlyEngagedDieIds);
-        Assert.DoesNotContain(plainCoBlocker.Id, state.DeadlyEngagedDieIds);
+        Assert.Contains(plainAttacker.Id, state.DeadlyEngagedDieIds.Keys);
+        Assert.DoesNotContain(plainCoBlocker.Id, state.DeadlyEngagedDieIds.Keys);
     }
 
     [Fact]
@@ -788,7 +788,7 @@ public class CombatEngineTests
         assignment.AssignBlocker(attacker.Id, deadlyBlocker.Id);
         CombatEngine.DeclareBlockers(state, assignment, [deadlyBlocker.Id]);
 
-        Assert.Contains(attacker.Id, state.DeadlyEngagedDieIds); // recorded already, before any damage
+        Assert.Contains(attacker.Id, state.DeadlyEngagedDieIds.Keys); // recorded already, before any damage
 
         var splits = new Dictionary<string, IReadOnlyDictionary<string, int>>
         {
@@ -828,7 +828,7 @@ public class CombatEngineTests
         assignment.AssignBlocker(attacker.Id, deadlyBlocker.Id);
         CombatEngine.DeclareBlockers(state, assignment, [deadlyBlocker.Id]);
 
-        Assert.Contains(attacker.Id, state.DeadlyEngagedDieIds);
+        Assert.Contains(attacker.Id, state.DeadlyEngagedDieIds.Keys);
 
         // Simulate some other ability pulling the attacker out of combat
         // entirely, well before Assign Combat Damage even runs.

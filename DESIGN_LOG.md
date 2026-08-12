@@ -6208,3 +6208,94 @@ of Mutants die (Magneto "Visionary") instead.
 Verified: `dotnet build`, `dotnet test` (503/503 - 7 new cases), and
 `npm run build` all clean. Re-ran `scripts/import_bulk_cards.py`
 (170 → 175 hand-curated).
+
+## Status update — Mister Sinister "Geneticist," Organic Steel, and two
+new reusable primitives (KO-source-attribution, MayPayLife)
+
+Continuing the DPS pass per the user's own prioritization: Mister
+Sinister ("Geneticist," DPS043) next, then the two remaining Continuous
+Basic Actions. Both cards turned out to need real new primitives, not
+just new `AbilityDef`s wired to existing plumbing - flagged to the user
+before building (three separate design questions, all three answered
+"build it for real" rather than simplified or deferred).
+
+**`TargetSpec.ExcludeSidekicks`** (small, unblocks other queued cards
+too) - "target non-Sidekick character die" (Mister Sinister's own
+Global, also Hawkman/Orion's own text per a `BulkCards.json` grep) isn't
+expressible by `CharacterDiceOnly` alone, since a Sidekick die currently
+showing a character face (`DieStatus.SidekickCharacter`) still satisfies
+it. The negation counterpart to the existing `SidekicksOnly` filter,
+checked in `LegalTargets.Query` the same way.
+
+**`TriggerType.WhenKOsOpposingCharacter` + `TurnEngine.
+ResolveKOReactions`'s new `koSourceDieIds` parameter** - "when [this
+die] KOs an opposing character, [effect]," the mirror image of the
+already-built `WhenAnotherDieKOd` (that one's card knows which OTHER die
+was KO'd; this one's card knows it CAUSED a KO). Needed real per-KO
+source attribution, which nothing in the engine tracked before now:
+- `CombatEngine.ResolveFastOrSlowDamage` and `ApplyRangeDamageAndResolveKOs`
+  both now build a recipient-id → contributing-source-ids map alongside
+  their existing damage application (keyed by the actual, post-redirect
+  recipient), passed through to `ResolveKOReactions`. Simultaneous
+  multi-source damage (e.g. two blockers sharing one attacker) means
+  more than one die can legitimately be "the" cause of a single KO -
+  every contributing source fires its own reaction independently, same
+  "simultaneous means all of them" reasoning Deadly/Retaliation's own
+  simultaneity resolution already uses.
+- `GameState.DeadlyEngagedDieIds` changed shape, from a flat `HashSet
+  <string>` (just "was this die engaged with *a* Deadly die") to
+  `Dictionary<string, HashSet<string>>` (engaged die id → the specific
+  Deadly die id(s) responsible) - the old shape had already thrown away
+  exactly the information WhenKOsOpposingCharacter needs for a Deadly-
+  Clean-Up KO. `CombatEngine.RecordDeadlyEngagements` and `TurnEngine.
+  CleanUp`'s own Deadly-KO loop both updated accordingly; every existing
+  test seeding this collection directly (`TurnEngineTests`,
+  `CombatEngineTests`, `TwoTeamsDemoTests`) updated to the new shape.
+- Only wired at the three real KO call sites above (combat/Range/Deadly)
+  where every koId is guaranteed to have actually been a Character die
+  at the moment of KO - deliberately NOT wired into `EffectInterpreter`'s
+  general `Ko` effect case (which can also KO a plain Sidekick, e.g.
+  Mister Sinister's own WhenFielded clause), matching the card text's
+  own "character," not "die."
+
+**`MayPayLife(Amount, Then)`** - "you may pay X life. If you do, Y." A
+real yes/no decision (unlike `SwapAttack`'s own "you may" text, which
+the house convention already collapses to always-happens when the
+choice is inconsequential - not the case here, since declining is a
+real, consequential choice). Reuses the existing `PendingChoice`/
+`ResolvePendingChoice` machinery rather than adding a parallel boolean-
+choice type and its own API/DTO surface: since life isn't dice-backed,
+the ability's own source die id stands in as the PendingChoice's sole
+"candidate" purely as a token - `AllowMultiple: true` with that single
+candidate means the answer is either `[]` (decline) or `[sourceDieId]`
+(accept), the same "a single candidate is still a real yes/no, not
+something to auto-skip" shape `RedrawFromBag` already established.
+
+**`PreventDamage(Amount, Target)`** - Organic Steel (DPS010)'s "prevent
+up to 2 damage to target character die." A one-shot shield
+(`DieInstance.PendingDamagePrevention`) consumed by the target's very
+next real damage instance, whatever that amount turns out to be, then
+gone - not a running total, and distinct from the existing passive/
+always-on `GrantsOwnDamageReductionFromOpponentAbilities` granter
+mechanism. Checked in `DieStats.ApplyDamage` before the passive-grants
+reduction (more specific effect first); cleared at Clean Up in case it's
+never actually consumed. Organic Steel's own "if you have an active
+X-Men character, also gain 1 life" clause needed no new primitive -
+reuses `OwnActiveAffiliationOrKeywordCountAtLeast` (Mutant Research
+Program's own "at least 2 active Founder" shape) at threshold 1.
+
+Three cards landed this round: Mister Sinister ("Geneticist," DPS043 -
+all three clauses, including the previously-flagged KO/pay-life one),
+Organic Steel (DPS010), all exercised through their real firing
+mechanisms (`CombatEngine.AssignCombatDamage` for the WhenKOsOpposing
+Character combat test, `TurnEngine.CleanUp` for its Deadly-KO
+counterpart and the ownership-filter edge case, direct `EffectInterpreter.
+Execute` + `PendingChoice.Resolve` for MayPayLife's own accept/decline
+branches) rather than synthetic shortcuts. `DPS002` (Dampening Collar)
+deliberately not yet done - its own opponent-triggered removal doesn't
+fit the existing Continuous lifecycle at all (see the next status
+update); doing Organic Steel first since it's the more straightforward
+of the two.
+
+Verified: `dotnet build`, `dotnet test` (513/513 - 10 new cases), and
+`npm run build` all clean.

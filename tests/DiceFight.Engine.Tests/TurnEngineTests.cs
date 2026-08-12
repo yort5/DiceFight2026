@@ -1103,7 +1103,7 @@ public class TurnEngineTests
         var engaged = state.DiceIn("p1", Zone.Bag).First();
         engaged.Zone = Zone.FieldZone;
         engaged.Status = DieStatus.SidekickCharacter;
-        state.DeadlyEngagedDieIds.Add(engaged.Id);
+        state.DeadlyEngagedDieIds[engaged.Id] = ["deadly-source"];
 
         state.CurrentStep = TurnStep.CleanUp;
         TurnEngine.CleanUp(state);
@@ -1138,7 +1138,7 @@ public class TurnEngineTests
             Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
         };
         state.Dice.Add(engaged);
-        state.DeadlyEngagedDieIds.Add(engaged.Id);
+        state.DeadlyEngagedDieIds[engaged.Id] = ["deadly-source"];
         state.CurrentStep = TurnStep.CleanUp;
 
         var queue = new AbilityQueue();
@@ -1159,7 +1159,7 @@ public class TurnEngineTests
         var engaged = state.DiceIn("p1", Zone.Bag).First();
         engaged.Zone = Zone.FieldZone;
         engaged.Status = DieStatus.SidekickCharacter;
-        state.DeadlyEngagedDieIds.Add(engaged.Id); // the only bookkeeping Deadly leaves behind
+        state.DeadlyEngagedDieIds[engaged.Id] = ["deadly-source"]; // the only bookkeeping Deadly leaves behind
 
         state.CurrentStep = TurnStep.CleanUp;
         TurnEngine.CleanUp(state);
@@ -1187,7 +1187,7 @@ public class TurnEngineTests
             Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
         };
         state.Dice.Add(engaged);
-        state.DeadlyEngagedDieIds.Add(engaged.Id);
+        state.DeadlyEngagedDieIds[engaged.Id] = ["deadly-source"];
 
         state.CurrentStep = TurnStep.CleanUp;
         TurnEngine.CleanUp(state, new FixedRoller(DieStatus.Character, 2));

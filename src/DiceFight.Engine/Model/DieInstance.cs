@@ -85,6 +85,15 @@ public sealed class DieInstance
 
     public List<DieInstance> AttachedGear { get; } = [];
 
+    // Organic Steel (DPS010)'s own "prevent up to 2 damage to target
+    // character die" - a one-shot shield consumed by the very next real
+    // damage instance this die takes (DieStats.ApplyDamage), whatever
+    // that amount turns out to be; not a running total that survives
+    // multiple hits. Cleared at Clean Up (same "until end of turn"
+    // default every other temporary Applied-style effect here already
+    // uses) in case it's never actually consumed by any damage this turn.
+    public int PendingDamagePrevention { get; set; }
+
     // The raw, zone-independent physical fact: no card, not virtual
     // energy. Keyword Ally muddies this - an Ally Character die IS a real
     // card, so this is always false for one, even while the Field Zone
@@ -133,5 +142,6 @@ public sealed class DieInstance
         AppliedModifiers.Clear();
         AppliedKeywords.Clear();
         AppliedAffiliations.Clear();
+        PendingDamagePrevention = 0;
     }
 }

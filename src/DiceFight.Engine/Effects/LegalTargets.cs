@@ -104,6 +104,9 @@ public static class LegalTargets
         if (spec.SidekicksOnly)
             candidates = candidates.Where(d => DieStats.CountsAsSidekick(state, d));
 
+        if (spec.ExcludeSidekicks)
+            candidates = candidates.Where(d => !DieStats.CountsAsSidekick(state, d));
+
         if (spec.RequiredEnergyType is { } energyType)
         {
             candidates = candidates.Where(d =>

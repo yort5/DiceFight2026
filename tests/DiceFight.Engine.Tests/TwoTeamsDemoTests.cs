@@ -3034,7 +3034,7 @@ public class TwoTeamsDemoTests
         // Blocker's 2D easily absorbs 1 damage - survives combat outright.
         Assert.DoesNotContain(blocker.Id, result.KOdDieIds);
         Assert.Equal(Zone.FieldZone, blocker.Zone);
-        Assert.Contains(blocker.Id, state.DeadlyEngagedDieIds); // recorded at Declare Blockers regardless
+        Assert.Contains(blocker.Id, state.DeadlyEngagedDieIds.Keys); // recorded at Declare Blockers regardless
 
         TurnEngine.CleanUp(state);
 
@@ -4575,6 +4575,69 @@ public class TwoTeamsDemoTests
     }
 
     [Fact]
+    public void OrganicSteelPreventDamage_PreventsUpToTwoDamage_ToTargetDie()
+    {
+        var state = BuildTwoTeamGame();
+        state.ActivePlayerId = "teamA";
+
+        var target = FindUnpurchased(state, "teamA", SampleCards.BlackWidow.Id);
+        target.Zone = Zone.FieldZone; target.Status = DieStatus.Character; target.Level = 1;
+
+        var ability = SampleCards.OrganicSteelPreventDamage.Abilities.Single(a => a.Trigger == TriggerType.ContinuousResolve);
+        EffectInterpreter.Execute(ability.Effect, new EffectContext(state, "teamA", SourceDieId: null, _ => [target.Id]));
+
+        // 3 damage against a 2-damage shield - 2 is prevented, 1 gets through.
+        DieStats.ApplyDamage(state, target, 3);
+        Assert.Equal(1, target.Damage);
+        Assert.Equal(0, target.PendingDamagePrevention);
+    }
+
+    [Fact]
+    public void OrganicSteelPreventDamage_ShieldIsSingleUse_NotARunningTotal()
+    {
+        var state = BuildTwoTeamGame();
+
+        var target = FindUnpurchased(state, "teamA", SampleCards.BlackWidow.Id);
+        target.Zone = Zone.FieldZone; target.Status = DieStatus.Character; target.Level = 1;
+
+        var ability = SampleCards.OrganicSteelPreventDamage.Abilities.Single(a => a.Trigger == TriggerType.ContinuousResolve);
+        EffectInterpreter.Execute(ability.Effect, new EffectContext(state, "teamA", SourceDieId: null, _ => [target.Id]));
+
+        DieStats.ApplyDamage(state, target, 1); // fully absorbed by the shield (up to 2 available)
+        Assert.Equal(0, target.Damage);
+
+        DieStats.ApplyDamage(state, target, 1); // shield is already spent - this one lands for real
+        Assert.Equal(1, target.Damage);
+    }
+
+    [Fact]
+    public void OrganicSteelPreventDamage_GainsLife_OnlyWithAnActiveXMenCharacter()
+    {
+        var withXMen = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.GambitUnlessIGotSomeoneToPlayWith.Id]);
+        withXMen.ActivePlayerId = "teamA";
+        var xMenDie = FindUnpurchased(withXMen, "teamA", SampleCards.GambitUnlessIGotSomeoneToPlayWith.Id);
+        xMenDie.Zone = Zone.FieldZone; xMenDie.Status = DieStatus.Character; xMenDie.Level = 1;
+        var target = FindUnpurchased(withXMen, "teamA", SampleCards.BlackWidow.Id);
+        target.Zone = Zone.FieldZone; target.Status = DieStatus.Character; target.Level = 1;
+        withXMen.GetPlayer("teamA").Life -= 5; // room to gain back to - GainLife caps at StartingLife
+        var lifeBefore = withXMen.GetPlayer("teamA").Life;
+
+        var ability = SampleCards.OrganicSteelPreventDamage.Abilities.Single(a => a.Trigger == TriggerType.ContinuousResolve);
+        EffectInterpreter.Execute(ability.Effect, new EffectContext(withXMen, "teamA", SourceDieId: null, _ => [target.Id]));
+        Assert.Equal(lifeBefore + 1, withXMen.GetPlayer("teamA").Life);
+
+        var withoutXMen = BuildTwoTeamGame();
+        withoutXMen.ActivePlayerId = "teamA";
+        var target2 = FindUnpurchased(withoutXMen, "teamA", SampleCards.BlackWidow.Id);
+        target2.Zone = Zone.FieldZone; target2.Status = DieStatus.Character; target2.Level = 1;
+        withoutXMen.GetPlayer("teamA").Life -= 5;
+        var lifeBefore2 = withoutXMen.GetPlayer("teamA").Life;
+
+        EffectInterpreter.Execute(ability.Effect, new EffectContext(withoutXMen, "teamA", SourceDieId: null, _ => [target2.Id]));
+        Assert.Equal(lifeBefore2, withoutXMen.GetPlayer("teamA").Life);
+    }
+
+    [Fact]
     public void ColossusPiotr_DealsDamagePerLevel2Or3CharacterDie_AtEndOfTurn()
     {
         var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.ColossusPiotr.Id]);
@@ -5382,6 +5445,164 @@ public class TwoTeamsDemoTests
             ability.Effect, new EffectContext(state, "teamA", SourceDieId: null, _ => [target.Id]));
 
         Assert.True(DieStats.HasKeyword(state, target, "Overcrush"));
+    }
+
+    [Fact]
+    public void MisterSinisterGeneticist_WhenFielded_KOsUpToTwoTargetSidekicks()
+    {
+        var state = BuildTwoTeamGame();
+
+        var sidekick1 = state.DiceIn("teamB", Zone.Bag).First();
+        sidekick1.Zone = Zone.FieldZone;
+        var sidekick2 = state.DiceIn("teamB", Zone.Bag).Skip(1).First();
+        sidekick2.Zone = Zone.FieldZone;
+
+        var ability = SampleCards.MisterSinisterGeneticist.Abilities.Single(a => a.Trigger == TriggerType.WhenFielded);
+        EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, "teamA", SourceDieId: null, _ => [sidekick1.Id, sidekick2.Id]));
+
+        Assert.Equal(Zone.PrepArea, sidekick1.Zone);
+        Assert.Equal(Zone.PrepArea, sidekick2.Zone);
+    }
+
+    [Fact]
+    public void MisterSinisterGeneticist_WhenFielded_KOingFewerThanTwo_IsAllowed()
+    {
+        var state = BuildTwoTeamGame();
+
+        var sidekick = state.DiceIn("teamB", Zone.Bag).First();
+        sidekick.Zone = Zone.FieldZone;
+
+        var ability = SampleCards.MisterSinisterGeneticist.Abilities.Single(a => a.Trigger == TriggerType.WhenFielded);
+        // "up to 2" - choosing zero is a legal answer (Optional: true).
+        EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, "teamA", SourceDieId: null, _ => []));
+
+        Assert.Equal(Zone.FieldZone, sidekick.Zone);
+    }
+
+    [Fact]
+    public void MisterSinisterGeneticistGlobal_GrantsDeadly_ButNotToSidekicks()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.MisterSinisterGeneticist.Id]);
+
+        var target = FindUnpurchased(state, "teamA", SampleCards.BlackWidow.Id);
+        target.Zone = Zone.FieldZone;
+        target.Status = DieStatus.Character;
+        target.Level = 1;
+        Assert.False(DieStats.HasKeyword(state, target, "Deadly"));
+
+        var ability = SampleCards.MisterSinisterGeneticist.Abilities.Single(a => a.Trigger == TriggerType.Global);
+        EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, "teamA", SourceDieId: null, _ => [target.Id]));
+
+        Assert.True(DieStats.HasKeyword(state, target, "Deadly"));
+
+        var sidekick = state.DiceIn("teamA", Zone.Bag).First();
+        sidekick.Zone = Zone.FieldZone;
+        var legalTargets = LegalTargets.Query(
+            state, "teamA",
+            ((GrantKeyword)ability.Effect).Target,
+            TriggerType.Global);
+        Assert.DoesNotContain(sidekick.Id, legalTargets);
+    }
+
+    [Fact]
+    public void MisterSinisterGeneticist_FiresWhenKOsOpposingCharacter_ForARealCombatKO()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.MisterSinisterGeneticist.Id],
+            extraTeamBCardIds: [SampleCards.BlackWidow.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var sinisterDie = FindUnpurchased(state, "teamA", SampleCards.MisterSinisterGeneticist.Id);
+        sinisterDie.Zone = Zone.FieldZone; sinisterDie.Status = DieStatus.Character; sinisterDie.Level = 3; // 6A/3D
+
+        var blocker = FindUnpurchased(state, "teamB", SampleCards.BlackWidow.Id);
+        blocker.Zone = Zone.FieldZone; blocker.Status = DieStatus.Character; blocker.Level = 1; // 3A/1D - dies to 6A
+
+        TurnEngine.EnterAttackStep(state);
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [sinisterDie.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(sinisterDie.Id, blocker.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [blocker.Id]);
+
+        var splits = new Dictionary<string, IReadOnlyDictionary<string, int>>
+        {
+            [sinisterDie.Id] = new Dictionary<string, int> { [blocker.Id] = DieStats.EffectiveAttack(state, sinisterDie) }
+        };
+        CombatEngine.AssignCombatDamage(state, queue, assignment, splits);
+
+        Assert.Contains(
+            queue.Pending, a => a.Trigger == TriggerType.WhenKOsOpposingCharacter && a.SourceDieId == sinisterDie.Id);
+    }
+
+    [Fact]
+    public void MisterSinisterGeneticist_DoesNotFireWhenKOsOpposingCharacter_ForAnOwnDieKO()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.MisterSinisterGeneticist.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var sinisterDie = FindUnpurchased(state, "teamA", SampleCards.MisterSinisterGeneticist.Id);
+        sinisterDie.Zone = Zone.FieldZone; sinisterDie.Status = DieStatus.Character; sinisterDie.Level = 3;
+
+        var ownAlly = FindUnpurchased(state, "teamA", SampleCards.BlackWidow.Id);
+        ownAlly.Zone = Zone.FieldZone; ownAlly.Status = DieStatus.Character; ownAlly.Level = 1;
+
+        // Contrived (real DeclareBlockers only ever engages OPPOSING
+        // dice, so this never happens via normal play) - seeded directly
+        // to exercise the ownership check in isolation, same "seed
+        // DeadlyEngagedDieIds directly" shape TurnEngineTests' own
+        // CleanUp tests already use.
+        state.DeadlyEngagedDieIds[ownAlly.Id] = [sinisterDie.Id];
+        state.CurrentStep = TurnStep.CleanUp;
+
+        var queue = new AbilityQueue();
+        TurnEngine.CleanUp(state, roller: null, queue: queue);
+
+        // Same controller (Mister Sinister's own team) - "an OPPOSING
+        // character" never matches, no matter what the source map claims.
+        Assert.DoesNotContain(queue.Pending, a => a.Trigger == TriggerType.WhenKOsOpposingCharacter);
+    }
+
+    [Fact]
+    public void MayPayLife_AcceptingThePayment_RunsThenAndDeductsLife()
+    {
+        var state = BuildTwoTeamGame();
+        var ability = new AbilityDef(TriggerType.WhenKOsOpposingCharacter, Cost: null,
+            Effect: new MayPayLife(1, new LoseLife(1, TargetOwnership.Opposing)));
+
+        var ownLifeBefore = state.GetPlayer("teamA").Life;
+        var opponentLifeBefore = state.GetPlayer("teamB").Life;
+
+        EffectInterpreter.Execute(ability.Effect, new EffectContext(state, "teamA", "some-source-die", _ => []));
+
+        Assert.NotNull(state.PendingChoice);
+        Assert.Equal(["some-source-die"], state.PendingChoice!.CandidateDieIds);
+        Assert.True(state.PendingChoice.AllowMultiple);
+
+        state.PendingChoice.Resolve(["some-source-die"]); // accept
+
+        Assert.Equal(ownLifeBefore - 1, state.GetPlayer("teamA").Life);
+        Assert.Equal(opponentLifeBefore - 1, state.GetPlayer("teamB").Life);
+    }
+
+    [Fact]
+    public void MayPayLife_Declining_DoesNothing()
+    {
+        var state = BuildTwoTeamGame();
+        var ability = new AbilityDef(TriggerType.WhenKOsOpposingCharacter, Cost: null,
+            Effect: new MayPayLife(1, new LoseLife(1, TargetOwnership.Opposing)));
+
+        var ownLifeBefore = state.GetPlayer("teamA").Life;
+        var opponentLifeBefore = state.GetPlayer("teamB").Life;
+
+        EffectInterpreter.Execute(ability.Effect, new EffectContext(state, "teamA", "some-source-die", _ => []));
+        state.PendingChoice!.Resolve([]); // decline
+
+        Assert.Equal(ownLifeBefore, state.GetPlayer("teamA").Life);
+        Assert.Equal(opponentLifeBefore, state.GetPlayer("teamB").Life);
     }
 
     [Fact]

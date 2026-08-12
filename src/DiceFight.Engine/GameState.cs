@@ -52,13 +52,19 @@ public sealed class GameState
     // specific die - enforced by TurnEngine.Field; reset in CleanUp.
     public HashSet<string> CantFieldCharacterDiceThisTurn { get; } = [];
 
-    // Keyword Deadly - die ids engaged (rule 2.7.2.3) with a Deadly die
-    // this combat; recorded by CombatEngine.DeclareBlockers at the
-    // moment of engagement (not at combat damage - rule Appendix 1
-    // Deadly, clarification 1), resolved (KO'd) and cleared by
-    // TurnEngine.CleanUp regardless of what happened to either die in
-    // between. Turn-scoped like MustBlockThisTurn/CallOutTargets.
-    public HashSet<string> DeadlyEngagedDieIds { get; } = [];
+    // Keyword Deadly - engaged die id -> the Deadly die id(s) (rule
+    // 2.7.2.3) it was engaged with this combat; recorded by CombatEngine.
+    // DeclareBlockers at the moment of engagement (not at combat damage -
+    // rule Appendix 1 Deadly, clarification 1), resolved (KO'd) and
+    // cleared by TurnEngine.CleanUp regardless of what happened to either
+    // die in between. Turn-scoped like MustBlockThisTurn/CallOutTargets.
+    // Keyed to a SET of Deadly die ids, not a flat "was engaged at all"
+    // bool (the shape before Mister Sinister/DPS043's own WhenKOsOpposing
+    // Character needed real source attribution) - an engaged die could in
+    // principle be simultaneously engaged with more than one Deadly die
+    // (e.g. one attacker blocked by several Deadly dice at once), and
+    // every one of them is a real cause of the eventual Clean Up KO.
+    public Dictionary<string, HashSet<string>> DeadlyEngagedDieIds { get; } = [];
 
     // Keyword Call Out - attacker die id -> the opposing Character die it
     // targeted when it attacked (set by the SetCallOutTarget effect,

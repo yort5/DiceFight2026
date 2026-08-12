@@ -93,7 +93,15 @@ public sealed record TargetSpec(
     // more" - the TargetSpec counterpart to FieldedDieMatch's own
     // MinPurchaseCost, checked against the die's own printed
     // CardDef.PurchaseCost.
-    int? MinPurchaseCost = null)
+    int? MinPurchaseCost = null,
+    // Mister Sinister ("Geneticist", DPS043)'s own Global - "target
+    // non-Sidekick character die." The negation counterpart to
+    // SidekicksOnly (a positive-only filter): CharacterDiceOnly alone
+    // doesn't exclude Sidekicks, since a Sidekick die currently showing
+    // a character face (DieStatus.SidekickCharacter) still satisfies
+    // it - see DieStats.CountsAsSidekick, the same predicate
+    // SidekicksOnly itself already queries.
+    bool ExcludeSidekicks = false)
 {
     // Rule 3.3.4/3.3.5 - only dice in the Field Zone (which includes the
     // Attack Zone) may be targeted, unless otherwise stated.
@@ -120,11 +128,12 @@ public sealed record TargetSpec(
         int? requiredLevel = null,
         int? maxDefense = null,
         bool requiresLoyaltyCounter = false,
-        int? minLevel = null) =>
+        int? minLevel = null,
+        bool excludeSidekicks = false) =>
         new(ownership, CharacterDiceOnly: true, zones ?? DefaultZones, energyType, count, description,
             Optional: optional, MaxAttack: maxAttack, RequiredAffiliations: requiredAffiliations, MatchAll: matchAll,
             RequiredLevel: requiredLevel, MaxDefense: maxDefense, RequiresLoyaltyCounter: requiresLoyaltyCounter,
-            MinLevel: minLevel);
+            MinLevel: minLevel, ExcludeSidekicks: excludeSidekicks);
 
     // optional: true models "you MAY target up to Count" (any number,
     // including zero, is a legal chosen count) rather than rule 3.3.11's
@@ -181,6 +190,13 @@ public sealed record TargetSpec(
             Count: 1, Description: "self", IsSelf: true);
 }
 
+// Organic Steel (DPS010) - "Prevent up to 2 damage to target character
+// die." A one-shot shield (DieInstance.PendingDamagePrevention) consumed
+// by the target's very next real damage instance (see DieStats.
+// ApplyDamage), not a running passive reduction like CardDef.
+// GrantsOwnDamageReductionFromOpponentAbilities (that's an always-on
+// per-card grant; this is a targeted, player-activated one-time effect).
+public sealed record PreventDamage(int Amount, TargetSpec Target) : EffectNode;
 public sealed record DealDamage(int Amount, TargetSpec Target) : EffectNode;
 // Keyword Retaliation's Black Manta ("Deep Sea Deviant") printing:
 // "deal 1 damage to your opponent for each of your active Villains" -
@@ -359,6 +375,21 @@ public sealed record LoseLife(int Amount, TargetOwnership Whose = TargetOwnershi
 // Rule 2.9.1's "switch life totals" card text (e.g. Cosmic Cube) - simple
 // enough to be its own primitive rather than a generic "set stat" node.
 public sealed record SwapLife : EffectNode;
+
+// Mister Sinister ("Geneticist", DPS043) - "you may pay 1 life. If you
+// do, [Then]." A REAL yes/no decision (unlike SwapAttack's own "you may"
+// text, which the house convention collapses to always-happens when the
+// choice is inconsequential - see its remarks), so this always pauses
+// for an answer via GameState.PendingChoice - same "AllowMultiple: true
+// with a single candidate is a genuine yes/no, not something to skip"
+// shape RedrawFromBag's own single-candidate case already established.
+// There's no die actually being spent to pay life (rule 1.1's life
+// total isn't dice-backed), so this reuses the ability's own source die
+// id as the PendingChoice's sole "candidate" purely as a stand-in token -
+// chosen means yes, empty means no - rather than adding a parallel
+// boolean-choice type and its own API/DTO surface alongside the existing
+// die-id-shaped one.
+public sealed record MayPayLife(int Amount, EffectNode Then) : EffectNode;
 
 // An ordered sequence, per rule 3.1.7 - non-global abilities with multiple
 // effects resolve sequentially in text-box order.

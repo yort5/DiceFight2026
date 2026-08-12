@@ -530,6 +530,18 @@ public static class DieStats
         // the real recipient of a real hit.
         if (amount <= 0) return null;
 
+        // Organic Steel (DPS010) - a one-shot shield consumed by the very
+        // next real damage instance, whatever the amount, then gone -
+        // checked before ReduceForDefensiveGrants's own passive/always-on
+        // reductions since it's the more specific, player-activated effect.
+        if (die.PendingDamagePrevention > 0)
+        {
+            var prevented = Math.Min(amount, die.PendingDamagePrevention);
+            amount -= prevented;
+            die.PendingDamagePrevention = 0;
+            if (amount <= 0) return null;
+        }
+
         amount = ReduceForDefensiveGrants(state, die, amount, sourceDie, abilityControllerId);
         if (amount <= 0) return null;
 

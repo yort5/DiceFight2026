@@ -258,6 +258,23 @@ public enum TriggerType
     // through, alongside WhenKOd and Retaliation.
     WhenAnotherDieKOd,
 
+    // "When [this die] KOs an opposing character, [my card] reacts" -
+    // Mister Sinister ("Geneticist", DPS043)'s "you may pay 1 life. If
+    // you do, your opponent loses 1 life." The mirror image of
+    // WhenAnotherDieKOd (that one reacts to a die's OWN card knowing
+    // which OTHER die was KO'd; this one reacts to a die's OWN card
+    // knowing it was the CAUSE of a KO), so it fires from the source die
+    // that caused the KO, not the KO'd die. TurnEngine.ResolveKOReactions
+    // takes an optional koSourceDieIds map (koId -> every die whose
+    // damage/effect contributed to it) precisely to support this -
+    // simultaneous multi-source damage (e.g. two blockers on one
+    // attacker) means more than one die can legitimately be "the" cause
+    // of a single KO, so every contributing source fires its own
+    // reaction independently, same "simultaneous means all of them,
+    // not a strict single winner" reasoning Deadly/Retaliation's own
+    // simultaneity already uses elsewhere.
+    WhenKOsOpposingCharacter,
+
     // "While active, when you field [a die matching some filter], [my
     // card] reacts" - Cyclops "First Class"/DPS025 (filtered to Founder-
     // keyword dice), Jubilee "X-Men Field Leader"/DPS143 (unfiltered -

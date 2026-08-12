@@ -592,7 +592,22 @@ here rather than assuming which approach they'd want.
     face use of the same node) - a rational opponent facing this choice
     would almost always take the higher-value double face anyway. See
     the "WhenDamaged wired for real, Lilandra's Action-Die tax, and the
-    double-energy-face simplification" status update.
+    double-energy-face simplification" status update. Next up per the
+    user: Mister Sinister ("Geneticist," DPS043) is now fully real,
+    including the "when Mister Sinister KOs an opposing character, you
+    may pay 1 life..." clause originally flagged as needing new
+    machinery - it got that machinery (`TriggerType.
+    WhenKOsOpposingCharacter` + real per-KO source attribution, and a
+    general `MayPayLife` "you may pay X, if you do Y" primitive) rather
+    than being simplified or dropped. Organic Steel (DPS010, the more
+    straightforward of the two remaining Continuous cards) is also real
+    now, via a new one-shot `PreventDamage` shield primitive. Dampening
+    Collar (DPS002) is still open - its own opponent-triggered removal
+    doesn't fit the existing Continuous lifecycle (`TurnEngine.
+    ResolveContinuousDie` hardcodes "only the controller, always to the
+    Used Pile") at all, a bigger lifecycle change than Organic Steel
+    needed. See the "Mister Sinister 'Geneticist,' Organic Steel, and
+    two new reusable primitives" status update.
 
 ## Implemented keywords
 

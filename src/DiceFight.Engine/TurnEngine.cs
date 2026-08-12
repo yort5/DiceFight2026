@@ -1275,7 +1275,9 @@ public static class TurnEngine
             EnqueueTriggered(state, queue, FindDie(state, id), TriggerType.WhenDamaged);
     }
 
-    internal static void ResolveKOReactions(GameState state, AbilityQueue? queue, IReadOnlyList<string> koDieIds)
+    internal static void ResolveKOReactions(
+        GameState state, AbilityQueue? queue, IReadOnlyList<string> koDieIds,
+        IReadOnlyDictionary<string, IReadOnlyList<string>>? koSourceDieIds = null)
     {
         if (queue is null || koDieIds.Count == 0) return;
 
@@ -1287,6 +1289,36 @@ public static class TurnEngine
 
         foreach (var koId in koDieIds)
             ResolveWhenAnotherDieKOd(state, queue, FindDie(state, koId));
+
+        if (koSourceDieIds is not null)
+            foreach (var koId in koDieIds)
+                ResolveWhenKOsOpposingCharacter(state, queue, koId, koSourceDieIds);
+    }
+
+    // Mister Sinister ("Geneticist", DPS043) - "when [this die] KOs an
+    // opposing character, [effect]." Fires from the SOURCE die(s) that
+    // caused koId's KO (see TriggerType.WhenKOsOpposingCharacter's own
+    // remarks for why more than one source is possible), not from the
+    // KO'd die itself - the mirror image of ResolveWhenAnotherDieKOd
+    // just above (that one's card knows which OTHER die was KO'd; this
+    // one's card knows it caused the KO). Only wired at call sites where
+    // every koId is guaranteed to have actually been a Character die at
+    // the moment of KO (combat/Range/Deadly - see each call site's own
+    // remarks), not the general ability-driven Ko effect, which can also
+    // KO a plain Sidekick - matching the card text's own "character," not
+    // "die."
+    private static void ResolveWhenKOsOpposingCharacter(
+        GameState state, AbilityQueue queue, string koId, IReadOnlyDictionary<string, IReadOnlyList<string>> koSourceDieIds)
+    {
+        if (!koSourceDieIds.TryGetValue(koId, out var sourceIds)) return;
+        var koDie = FindDie(state, koId);
+
+        foreach (var sourceId in sourceIds.Distinct())
+        {
+            var sourceDie = state.Dice.FirstOrDefault(d => d.Id == sourceId);
+            if (sourceDie is null || sourceDie.ControllerId == koDie.ControllerId) continue;
+            EnqueueTriggered(state, queue, sourceDie, TriggerType.WhenKOsOpposingCharacter);
+        }
     }
 
     // Keyword Retaliation - "If a character you control with Retaliation
@@ -1443,12 +1475,19 @@ public static class TurnEngine
         // same shared ResolveKOReactions every other KO site uses, once
         // `queue` is actually supplied by the caller.
         var deadlyKoIds = new List<string>();
-        foreach (var id in state.DeadlyEngagedDieIds)
+        // Mister Sinister ("Geneticist", DPS043) - TriggerType.
+        // WhenKOsOpposingCharacter's own source attribution for Deadly
+        // KOs: every Deadly die id this engaged die was recorded against
+        // (GameState.DeadlyEngagedDieIds' own value set) is a real cause.
+        var deadlyKoSourceDieIds = new Dictionary<string, IReadOnlyList<string>>();
+        foreach (var (id, deadlySourceIds) in state.DeadlyEngagedDieIds)
         {
-            if (DieStats.ForceKO(state, FindDie(state, id), roller)) deadlyKoIds.Add(id);
+            if (!DieStats.ForceKO(state, FindDie(state, id), roller)) continue;
+            deadlyKoIds.Add(id);
+            deadlyKoSourceDieIds[id] = deadlySourceIds.ToList();
         }
         state.DeadlyEngagedDieIds.Clear();
-        ResolveKOReactions(state, queue, deadlyKoIds);
+        ResolveKOReactions(state, queue, deadlyKoIds, deadlyKoSourceDieIds);
 
         // Keyword Intimidate - "remove target opposing Character die from
         // the Field Zone until end of turn." No tracked set needed (unlike
@@ -1485,6 +1524,7 @@ public static class TurnEngine
             die.AppliedModifiers.Clear();
             die.AppliedKeywords.Clear();
             die.AppliedAffiliations.Clear();
+            die.PendingDamagePrevention = 0;
         }
 
         // Rule 2.8.3 - Action dice left on their action face in the Reserve

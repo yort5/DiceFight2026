@@ -140,11 +140,21 @@ public static class CombatEngine
         GameState state, AbilityQueue queue, IReadOnlyList<(string RangeDieId, string TargetDieId)> assignments, IDiceRoller? roller)
     {
         var recipients = new List<DieInstance>();
+        // Mister Sinister ("Geneticist", DPS043) - TriggerType.
+        // WhenKOsOpposingCharacter's own source attribution, same "keyed
+        // by the actual (post-redirect) recipient" shape the combat-damage
+        // wave's own damageSourcesByRecipient uses.
+        var damageSourcesByRecipient = new Dictionary<string, HashSet<string>>();
         foreach (var (rangeDieId, targetDieId) in assignments)
         {
-            var amount = DieStats.RangeAmount(state, FindDie(state, rangeDieId));
-            var recipient = DieStats.ApplyDamage(state, FindDie(state, targetDieId), amount);
-            if (recipient is not null) recipients.Add(recipient);
+            var rangeDie = FindDie(state, rangeDieId);
+            var amount = DieStats.RangeAmount(state, rangeDie);
+            var recipient = DieStats.ApplyDamage(state, FindDie(state, targetDieId), amount, sourceDie: rangeDie);
+            if (recipient is null) continue;
+            recipients.Add(recipient);
+            if (!damageSourcesByRecipient.TryGetValue(recipient.Id, out var sources))
+                damageSourcesByRecipient[recipient.Id] = sources = [];
+            sources.Add(rangeDieId);
         }
 
         var koIds = new List<string>();
@@ -160,7 +170,10 @@ public static class CombatEngine
         // KO is just as real a KO as a combat-damage one, and now goes
         // through the same shared reaction path (TurnEngine.
         // ResolveKOReactions) the combat-damage wave below already uses.
-        TurnEngine.ResolveKOReactions(state, queue, koIds);
+        var koSourceDieIds = koIds
+            .Where(damageSourcesByRecipient.ContainsKey)
+            .ToDictionary(id => id, IReadOnlyList<string> (id) => damageSourcesByRecipient[id].ToList());
+        TurnEngine.ResolveKOReactions(state, queue, koIds, koSourceDieIds);
     }
 
     // Rule 2.7.2 - the Inactive player assigns blockers (if any).
@@ -374,15 +387,22 @@ public static class CombatEngine
     // each other.
     private static void RecordDeadlyEngagements(GameState state, CombatAssignment assignment)
     {
+        static void Mark(GameState state, string engagedId, string deadlyId)
+        {
+            if (!state.DeadlyEngagedDieIds.TryGetValue(engagedId, out var sources))
+                state.DeadlyEngagedDieIds[engagedId] = sources = [];
+            sources.Add(deadlyId);
+        }
+
         foreach (var attacker in state.DiceIn(state.ActivePlayerId, Zone.AttackZone))
         {
             var attackerIsDeadly = DieStats.HasKeyword(state, attacker, "Deadly");
             foreach (var blockerId in assignment.BlockersOf(attacker.Id))
             {
                 if (attackerIsDeadly)
-                    state.DeadlyEngagedDieIds.Add(blockerId);
+                    Mark(state, blockerId, attacker.Id);
                 if (DieStats.HasKeyword(state, FindDie(state, blockerId), "Deadly"))
-                    state.DeadlyEngagedDieIds.Add(attacker.Id);
+                    Mark(state, attacker.Id, blockerId);
             }
         }
     }
@@ -709,6 +729,20 @@ public static class CombatEngine
         // Attack-Zone-wide scan rather than relying on that scan alone.
         var damagedRecipients = new List<DieInstance>();
 
+        // Mister Sinister ("Geneticist", DPS043) - TriggerType.
+        // WhenKOsOpposingCharacter's own source attribution: recipient die
+        // id -> every die whose damage landed on it this wave. Keyed by
+        // the ACTUAL recipient (post-redirect, same as damagedRecipients
+        // itself), not the original target - a redirected hit's real
+        // "victim" for KO purposes is wherever the damage actually landed.
+        var damageSourcesByRecipient = new Dictionary<string, HashSet<string>>();
+        void RecordSource(DieInstance recipient, DieInstance source)
+        {
+            if (!damageSourcesByRecipient.TryGetValue(recipient.Id, out var sources))
+                damageSourcesByRecipient[recipient.Id] = sources = [];
+            sources.Add(source.Id);
+        }
+
         // Blob ("Immovable", DPS101) - "when Blob KO's an opponent's
         // Sidekick die, return it to your opponent's bag." Same per-
         // engagement scan shape as RecordDeadlyEngagements/
@@ -736,7 +770,11 @@ public static class CombatEngine
                     if (split.TryGetValue(blockerId, out var dealt) && dealt > 0)
                     {
                         var recipient = DieStats.ApplyDamage(state, FindDie(state, blockerId), dealt, sourceDie: attacker);
-                        if (recipient is not null) damagedRecipients.Add(recipient);
+                        if (recipient is not null)
+                        {
+                            damagedRecipients.Add(recipient);
+                            RecordSource(recipient, attacker);
+                        }
                     }
                 }
             }
@@ -757,7 +795,11 @@ public static class CombatEngine
                 if (DieStats.HasKeyword(state, blocker, "Fast") == fast)
                 {
                     var recipient = DieStats.ApplyDamage(state, attacker, DieStats.EffectiveAttack(state, blocker), sourceDie: blocker);
-                    if (recipient is not null) damagedRecipients.Add(recipient);
+                    if (recipient is not null)
+                    {
+                        damagedRecipients.Add(recipient);
+                        RecordSource(recipient, blocker);
+                    }
                 }
             }
         }
@@ -819,7 +861,10 @@ public static class CombatEngine
         // KO'd simultaneously by combat damage do not trigger each
         // other), regardless of which order the wave happened to
         // process dice in.
-        TurnEngine.ResolveKOReactions(state, queue, koIds);
+        var koSourceDieIds = koIds
+            .Where(damageSourcesByRecipient.ContainsKey)
+            .ToDictionary(id => id, IReadOnlyList<string> (id) => damageSourcesByRecipient[id].ToList());
+        TurnEngine.ResolveKOReactions(state, queue, koIds, koSourceDieIds);
 
         return koIds;
     }

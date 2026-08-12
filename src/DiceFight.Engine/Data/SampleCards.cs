@@ -1166,6 +1166,30 @@ public static class SampleCards
                 "a character die in your Reserve Pool", TargetOwnership.Own, zones: [Zone.ReservePool])))],
         purchaseCost: 2, set: "DPS");
 
+    // Organic Steel (DPS010) - the first user of PreventDamage (new this
+    // pass): "Prevent up to 2 damage to target character die and move
+    // this die to your Used Pile" is the same "controller sends this die
+    // to the Used Pile to trigger the effect" ContinuousResolve shape Lab
+    // Test above already established - the "and move this die to your
+    // Used Pile" clause is TurnEngine.ResolveContinuousDie's own
+    // unconditional job, not something this card's own Effect tree
+    // repeats. "If you have an active X-Men character, also gain 1 life"
+    // reuses OwnActiveAffiliationOrKeywordCountAtLeast exactly like
+    // Mutant Research Program's own "at least 2 active Founder" check,
+    // just at threshold 1.
+    public static readonly CardDef OrganicSteelPreventDamage = BasicAction(
+        "DPS010", "Organic Steel",
+        "Continuous: Prevent up to 2 damage to target character die and move this die to your Used Pile. If " +
+        "you have an active X-Men character, also gain 1 life.",
+        keywords: [new KeywordInstance("Continuous")],
+        abilities: [new AbilityDef(TriggerType.ContinuousResolve, Cost: null,
+            Effect: new Sequence([
+                new PreventDamage(2, TargetSpec.CharacterDie("target character die")),
+                new Conditional(TargetSpec.Self, EffectCondition.OwnActiveAffiliationOrKeywordCountAtLeast,
+                    Then: new GainLife(1), AffiliationParam: "X-Men", CountParam: 1)
+            ]))],
+        purchaseCost: 3, set: "DPS");
+
     // Rally - the first burst-conditional Basic Action (see
     // EffectCondition.OnDoubleBurstFace/DieInstance.BurstStars's own
     // remarks for the plumbing this needed): "Move up to 2 Sidekick
@@ -1410,6 +1434,46 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 5),
             new CharacterFace(FieldingCost: 2, Attack: 6, Defense: 6),
             new CharacterFace(FieldingCost: 3, Attack: 8, Defense: 8)
+        ], set: "DPS");
+
+    // Mister Sinister, "Geneticist" (DPS043) - WhenFielded KO up to 2
+    // Sidekicks (Ko + TargetSpec.Sidekick's existing "up to N" idiom,
+    // Optional: true), a Global reusing the same GrantKeyword/Deadly
+    // shape as this card's own "Biologist" printing (just gated on two
+    // Bolt energy and TargetSpec's new ExcludeSidekicks filter for
+    // "target non-Sidekick character die"), and the first real user of
+    // both TriggerType.WhenKOsOpposingCharacter and MayPayLife (both new
+    // this pass, built specifically for this card's third clause - "When
+    // Mister Sinister KOs an opposing character, you may pay 1 life. If
+    // you do, your opponent loses 1 life"): WhenKOsOpposingCharacter
+    // fires from Mister Sinister's own die whenever it's a recorded KO
+    // source (combat/Range/Deadly - see TurnEngine.ResolveKOReactions'
+    // own koSourceDieIds plumbing) against an opposing character; MayPay
+    // Life is the real yes/no "you may pay X, if you do, Y" choice
+    // (see its own remarks for why this isn't collapsed to always-happens
+    // the way SwapAttack's inconsequential "you may" is).
+    public static readonly CardDef MisterSinisterGeneticist = Character(
+        "DPS043", "Mister Sinister", "Geneticist", dieLimit: 4,
+        "When fielded, KO up to 2 target Sidekick dice. When Mister Sinister KOs an opposing character, you may " +
+        "pay 1 life. If you do, your opponent loses 1 life. Global: Pay Bolt Bolt. Target non-Sidekick character " +
+        "die gains Deadly.",
+        purchaseCost: 5, energyType: EnergyType.Bolt,
+        affiliations: ["Villains"],
+        keywords: [new KeywordInstance("Deadly")],
+        abilities: [
+            new AbilityDef(TriggerType.WhenFielded, Cost: null,
+                Effect: new Ko(TargetSpec.Sidekick("up to 2 target Sidekick dice", count: 2, optional: true))),
+            new AbilityDef(TriggerType.WhenKOsOpposingCharacter, Cost: null,
+                Effect: new MayPayLife(1, new LoseLife(1, TargetOwnership.Opposing))),
+            new AbilityDef(TriggerType.Global, Cost: null,
+                Effect: new GrantKeyword(
+                    TargetSpec.CharacterDie("target non-Sidekick character die", excludeSidekicks: true), "Deadly"),
+                EnergyCost: new EnergyCost(2, EnergyType.Bolt))
+        ],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 1),
+            new CharacterFace(FieldingCost: 2, Attack: 5, Defense: 2),
+            new CharacterFace(FieldingCost: 2, Attack: 6, Defense: 3)
         ], set: "DPS");
 
     // Phoenix, "Eternal Flame" - MatchAll's second user, combined with
@@ -3668,7 +3732,8 @@ public static class SampleCards
             BishopImBack, IcemanXaviersDream, IcemanMrIceGuy, EmmaFrostInfluential,
             ForgeMoreThanFirepower, ProfessorXDreamer,
             MystiqueFreedomForce, MisterSinisterBiologist, DarkPhoenixDestructiveForce, BlobImmovable, DeathbirdUsurper,
-            FirestarAmazingFriend, LilandraFreedomFighter, LilandraMajestrix, MagnetoMasterOfMagnetism, MystiqueSheWalksAmongUs
+            FirestarAmazingFriend, LilandraFreedomFighter, LilandraMajestrix, MagnetoMasterOfMagnetism, MystiqueSheWalksAmongUs,
+            MisterSinisterGeneticist, OrganicSteelPreventDamage
         ];
 
         // Hand-curated cards win on id collision - shouldn't happen in
