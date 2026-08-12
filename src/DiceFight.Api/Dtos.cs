@@ -92,6 +92,10 @@ public sealed record UseActionDieRequest(string DieId, IReadOnlyList<string>? Ta
 // (having been "used" earlier via UseActionDieRequest) rather than one
 // still in the Reserve Pool. See TurnEngine.ResolveContinuousDie.
 public sealed record ResolveContinuousDieRequest(string DieId, IReadOnlyList<string>? TargetDieIds);
+// Dampening Collar (DPS002)'s own opponent-paid removal - the OPPONENT
+// of a Continuous die's controller returns one of their own affiliated
+// dice to force it off the field. See TurnEngine.OpponentResolveContinuousDie.
+public sealed record OpponentResolveContinuousDieRequest(string DieId, string AffiliateDieIdToReturn);
 public sealed record UseGlobalAbilityRequest(
     string CardId, string PlayerId, IReadOnlyList<string> EnergyDieIds, IReadOnlyList<string>? TargetDieIds);
 // TargetDieIds feeds TriggerType.StartOfOpponentsAttackStep reactions

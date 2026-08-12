@@ -152,7 +152,9 @@ public static class SampleCards
         bool isImplemented = true,
         int? purchaseCost = null,
         IReadOnlyList<KeywordInstance>? keywords = null,
-        string? set = null) => new()
+        string? set = null,
+        bool grantsPreventsOpponentCharacterDiceFromSpinningUp = false,
+        string? opponentMayRemoveByReturningAffiliateToCard = null) => new()
     {
         Id = id,
         Name = name,
@@ -169,7 +171,9 @@ public static class SampleCards
         Keywords = keywords ?? [],
         Abilities = abilities ?? [],
         IsImplemented = isImplemented,
-        Set = set
+        Set = set,
+        GrantsPreventsOpponentCharacterDiceFromSpinningUp = grantsPreventsOpponentCharacterDiceFromSpinningUp,
+        OpponentMayRemoveByReturningAffiliateToCard = opponentMayRemoveByReturningAffiliateToCard
     };
 
     // ---- Team A: 10 characters + 3 Basic Actions ----
@@ -1189,6 +1193,26 @@ public static class SampleCards
                     Then: new GainLife(1), AffiliationParam: "X-Men", CountParam: 1)
             ]))],
         purchaseCost: 3, set: "DPS");
+
+    // Dampening Collar (DPS002) - the first user of both
+    // GrantsPreventsOpponentCharacterDiceFromSpinningUp and
+    // OpponentMayRemoveByReturningAffiliateToCard (new this pass - see
+    // DieStats.SpinLevel/TurnEngine.OpponentResolveContinuousDie). No
+    // AbilityDef needed at all - both clauses are continuous, field-
+    // driven bespoke grants (the same "bool CardDef field, no AbilityDef"
+    // shape Deathbird's own grant already established), not a one-shot
+    // effect a ContinuousResolve ability would run - this card has no
+    // "send this die to your Used Pile to..." text of its own the way
+    // Lab Test/Organic Steel above do.
+    public static readonly CardDef DampeningCollar = BasicAction(
+        "DPS002", "Dampening Collar",
+        "Continuous: Opposing character dice can't spin up. Your opponent may return an X-Men character die " +
+        "they control to its card to move this die from the Field Zone to its card.",
+        keywords: [new KeywordInstance("Continuous")],
+        purchaseCost: 4,
+        grantsPreventsOpponentCharacterDiceFromSpinningUp: true,
+        opponentMayRemoveByReturningAffiliateToCard: "X-Men",
+        set: "DPS");
 
     // Rally - the first burst-conditional Basic Action (see
     // EffectCondition.OnDoubleBurstFace/DieInstance.BurstStars's own
@@ -3733,7 +3757,7 @@ public static class SampleCards
             ForgeMoreThanFirepower, ProfessorXDreamer,
             MystiqueFreedomForce, MisterSinisterBiologist, DarkPhoenixDestructiveForce, BlobImmovable, DeathbirdUsurper,
             FirestarAmazingFriend, LilandraFreedomFighter, LilandraMajestrix, MagnetoMasterOfMagnetism, MystiqueSheWalksAmongUs,
-            MisterSinisterGeneticist, OrganicSteelPreventDamage
+            MisterSinisterGeneticist, OrganicSteelPreventDamage, DampeningCollar
         ];
 
         // Hand-curated cards win on id collision - shouldn't happen in

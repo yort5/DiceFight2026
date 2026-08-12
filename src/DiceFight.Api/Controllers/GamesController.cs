@@ -107,6 +107,18 @@ public sealed class GamesController(GameStore store) : ControllerBase
         return Ok(GameStateDto.From(gameId, state));
     }
 
+    // Dampening Collar (DPS002) - no ability queue involved (see
+    // TurnEngine.OpponentResolveContinuousDie's own remarks on why this
+    // isn't "using" the die), so no Drain call here, unlike every other
+    // action-taking endpoint in this file.
+    [HttpPost("{gameId}/opponent-resolve-continuous-die")]
+    public ActionResult<GameStateDto> OpponentResolveContinuousDie(string gameId, [FromBody] OpponentResolveContinuousDieRequest request)
+    {
+        var state = RequireNoPendingChoice(gameId);
+        TurnEngine.OpponentResolveContinuousDie(state, request.DieId, request.AffiliateDieIdToReturn);
+        return Ok(GameStateDto.From(gameId, state));
+    }
+
     [HttpPost("{gameId}/use-global-ability")]
     public ActionResult<GameStateDto> UseGlobalAbility(string gameId, [FromBody] UseGlobalAbilityRequest request)
     {

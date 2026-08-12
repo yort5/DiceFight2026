@@ -343,6 +343,21 @@ public static class DieStats
     public static int SpinLevel(GameState state, DieInstance die, int delta)
     {
         if (die.Status is not (DieStatus.Character or DieStatus.SidekickCharacter)) return 0;
+
+        // Dampening Collar (DPS002) - "opposing character dice can't
+        // spin up." Checked here, the single choke point every spin-UP
+        // already funnels through (Amplify, keyword Awaken/Global Spin
+        // effects), so every source is blocked uniformly - only gates
+        // delta > 0; Energy Drain's own spin-DOWN is unaffected.
+        if (delta > 0)
+        {
+            var opponentId = state.OpponentOf(die.ControllerId);
+            var blocked = state.DiceIn(opponentId, Zone.FieldZone)
+                .Concat(state.DiceIn(opponentId, Zone.AttackZone))
+                .Any(d => GetCard(state, d)?.GrantsPreventsOpponentCharacterDiceFromSpinningUp ?? false);
+            if (blocked) return 0;
+        }
+
         var maxLevel = GetMaxLevel(state, die);
         var oldLevel = die.Level;
         die.Level = Math.Clamp(die.Level + delta, 1, maxLevel);

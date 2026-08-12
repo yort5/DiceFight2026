@@ -6299,3 +6299,59 @@ of the two.
 
 Verified: `dotnet build`, `dotnet test` (513/513 - 10 new cases), and
 `npm run build` all clean.
+
+## Status update — Dampening Collar (DPS002), a real opponent-triggered
+Continuous removal path
+
+Closes out the DPS Continuous set (all four now real: Lab Test/Living
+the Dream previously, Organic Steel and now Dampening Collar). Dampening
+Collar ("Continuous: Opposing character dice can't spin up. Your
+opponent may return an X-Men character die they control to its card to
+move this die from the Field Zone to its card") is meaningfully
+different from every other Continuous card so far: it has no "send this
+die to your Used Pile to [x]" text of its own at all - its passive
+effect runs continuously while it sits in the Field Zone, and the only
+way it ever LEAVES is the OPPONENT choosing to pay a cost, not the
+controller resolving it normally. Two new `CardDef` fields, both
+deliberately narrow (this shape, not a general framework) rather than a
+new AbilityDef primitive, since neither clause is a one-shot effect an
+`EffectNode` tree would run:
+
+- **`GrantsPreventsOpponentCharacterDiceFromSpinningUp`** - checked in
+  `DieStats.SpinLevel`, the single choke point every spin-UP in the
+  engine already funnels through (Amplify, keyword Awaken, every Global/
+  keyword `Spin` effect), so this blocks every current and future spin-
+  up source uniformly with one check, not a per-source patch. Only gates
+  `delta > 0` - Energy Drain's own spin-down is untouched, matching the
+  card text's own "can't spin up," not "can't spin."
+- **`OpponentMayRemoveByReturningAffiliateToCard`** (the required
+  affiliation, e.g. "X-Men") + new `TurnEngine.
+  OpponentResolveContinuousDie(state, continuousDieId,
+  affiliateDieIdToReturn)` - a second, genuinely different Continuous
+  lifecycle alongside the existing `ResolveContinuousDie`: the OPPONENT
+  of the die's controller triggers it (not the controller), no
+  `ContinuousResolve` reaction fires (this isn't "using" the die, it's
+  being forced off), and the destination is the die's own card (`Zone.
+  Unpurchased` - "to its card," not the Used Pile). Both the Continuous
+  die and the affiliate paid to remove it land in `Zone.Unpurchased` -
+  since Dampening Collar is a Basic Action (community property, rule
+  2.6.2.1), it's re-purchasable by either player afterward, the same
+  destination/re-purchase shape `Purchase()`'s own Epic-Basic-Action-
+  return already established (the affiliate keeps its original `OwnerId`
+  so only its own owner can buy it back, per the non-community rule for
+  Character cards). Exposed at the API layer too
+  (`POST {gameId}/opponent-resolve-continuous-die`), mirroring the
+  existing `resolve-continuous-die` endpoint - no web client UI for
+  either endpoint yet (a pre-existing, still-open gap, not new to this
+  card).
+
+All four Continuous cards are now real. `DPS002`'s dieLimit note from
+earlier in this pass doesn't apply here (that was Corsair/DPS139, not
+this card) - next up per the user's own ordering: Corsair ("Back from
+Outer Space," DPS139, dieLimit corrected to 4 per the user - the
+original bulk-sheet dieLimit of 1 was wrong data, not a real rules
+distinction), then the rest of the 27-card gap list, skipping DPS039
+(Rush).
+
+Verified: `dotnet build`, `dotnet test` (517/517 - 4 new cases), and
+`npm run build` all clean.

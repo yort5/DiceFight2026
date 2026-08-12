@@ -359,6 +359,32 @@ public sealed record CardDef
     // WHOLE team) and aren't covered by this field.
     public string? CannotBeTargetedByOpponentWhileNamedCardActive { get; init; }
 
+    // Dampening Collar (DPS002): "Continuous: Opposing character dice
+    // can't spin up." Active-granter scan, same "does the controller
+    // have a matching die sitting active in the Field/Attack Zone" shape
+    // every other Grants* field already uses - "active" here just means
+    // "in the Field Zone" (this is a Continuous Action die, Status.
+    // Action, not a Character die, but the zone-based granter scan
+    // doesn't care about Status). See DieStats.SpinLevel, the single
+    // choke point every spin-UP in the engine already funnels through
+    // (Amplify, keyword Awaken/Global Spin effects) - checked there so
+    // this blocks every current and future spin-up source uniformly,
+    // not just one.
+    public bool GrantsPreventsOpponentCharacterDiceFromSpinningUp { get; init; }
+
+    // Dampening Collar (DPS002): "Your opponent may return an X-Men
+    // character die they control to its card to move this die from the
+    // Field Zone to its card." The required affiliation the returned die
+    // must have (e.g. "X-Men") - null for every card without this
+    // opponent-paid removal option. A genuinely different Continuous
+    // lifecycle from TurnEngine.ResolveContinuousDie's own "controller
+    // only, always to the Used Pile" default (see TurnEngine.
+    // OpponentResolveContinuousDie): the OPPONENT chooses to trigger it,
+    // and this die goes to its own card (Zone.Unpurchased), not the Used
+    // Pile - re-purchasable by either player again since Basic Actions
+    // are community property (rule 2.6.2.1).
+    public string? OpponentMayRemoveByReturningAffiliateToCard { get; init; }
+
     // Whether this card's FULL printed text is correctly modeled -
     // scripted via AbilityDef, built entirely into the engine (a pure
     // keyword like Deadly/Infiltrate needs no AbilityDef at all), or

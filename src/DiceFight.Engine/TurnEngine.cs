@@ -964,6 +964,51 @@ public static class TurnEngine
         die.Zone = Zone.UsedPile;
     }
 
+    // Dampening Collar (DPS002) - "Your opponent may return an X-Men
+    // character die they control to its card to move this die from the
+    // Field Zone to its card." A genuinely different Continuous removal
+    // path from ResolveContinuousDie just above: the OPPONENT of the
+    // Continuous die's own controller triggers it (not the controller),
+    // and the die goes to its own card (Zone.Unpurchased - "to its
+    // card"), not the Used Pile. No ContinuousResolve reaction fires
+    // here - unlike the controller's own ordinary resolution, this isn't
+    // "using" the die at all, it's being forcibly removed. Same "no
+    // explicit playerId parameter" convention as ResolveContinuousDie -
+    // the acting player is inferred from the affiliate die's own
+    // ControllerId, validated against it below.
+    public static void OpponentResolveContinuousDie(GameState state, string continuousDieId, string affiliateDieIdToReturn)
+    {
+        if (!InMainOrAttackActionWindow(state))
+            throw new InvalidOperationException(
+                "A Continuous Action die can only be resolved during the Main Step or the Attack Step's Action/Global window.");
+
+        var die = FindDie(state, continuousDieId);
+        if (die.Zone != Zone.FieldZone || !DieStats.HasKeyword(state, die, "Continuous"))
+            throw new InvalidOperationException($"{DisplayName(state, die)} is not a Continuous Action die sitting in the Field Zone.");
+
+        var requiredAffiliation = DieStats.GetCard(state, die)?.OpponentMayRemoveByReturningAffiliateToCard
+            ?? throw new InvalidOperationException($"{DisplayName(state, die)} has no opponent-paid removal option.");
+
+        var affiliate = FindDie(state, affiliateDieIdToReturn);
+        if (affiliate.ControllerId != state.OpponentOf(die.ControllerId))
+            throw new InvalidOperationException($"{DisplayName(state, affiliate)} is not controlled by {DisplayName(state, die)}'s opponent.");
+        if (affiliate.Status is not (DieStatus.Character or DieStatus.SidekickCharacter))
+            throw new InvalidOperationException($"{DisplayName(state, affiliate)} is not an active character die.");
+        if (!DieStats.HasAffiliation(state, affiliate, requiredAffiliation))
+            throw new InvalidOperationException($"{DisplayName(state, affiliate)} is not {requiredAffiliation}-affiliated.");
+
+        // "return... to its card" - Zone.Unpurchased, not the Used Pile;
+        // Basic Actions are community property (rule 2.6.2.1), so this
+        // die (and the affiliate paid to trigger it) are both re-
+        // purchasable by either player afterward, same destination
+        // Purchase()'s own Epic-Basic-Action-return precedent already
+        // uses.
+        affiliate.Zone = Zone.Unpurchased;
+        affiliate.ResetToUnrolled();
+        die.Zone = Zone.Unpurchased;
+        die.ResetToUnrolled();
+    }
+
     // Rule 2.6.5 - Use Global Abilities. Available to either player during
     // the Main Step or the Attack Step's Action/Global window (2.6.5.9),
     // regardless of who owns the card the ability is printed on (2.6.5.2) -

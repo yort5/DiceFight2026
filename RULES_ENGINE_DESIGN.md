@@ -607,7 +607,13 @@ here rather than assuming which approach they'd want.
     ResolveContinuousDie` hardcodes "only the controller, always to the
     Used Pile") at all, a bigger lifecycle change than Organic Steel
     needed. See the "Mister Sinister 'Geneticist,' Organic Steel, and
-    two new reusable primitives" status update.
+    two new reusable primitives" status update. **Update**: Dampening
+    Collar is also real now - see the "Dampening Collar (DPS002), a real
+    opponent-triggered Continuous removal path" status update for the
+    two new bespoke `CardDef` fields this needed (a spin-up-prevention
+    grant checked in `DieStats.SpinLevel`, and a second Continuous
+    lifecycle, `TurnEngine.OpponentResolveContinuousDie`, for the
+    opponent-paid removal). All four DPS Continuous cards are done.
 
 ## Implemented keywords
 

@@ -4575,6 +4575,98 @@ public class TwoTeamsDemoTests
     }
 
     [Fact]
+    public void DampeningCollar_PreventsOpposingCharacterDice_FromSpinningUp_ButNotOwnDice()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.DampeningCollar.Id],
+            extraTeamBCardIds: [SampleCards.BlackWidow.Id]);
+
+        var collarDie = FindUnpurchased(state, "teamA", SampleCards.DampeningCollar.Id);
+        collarDie.Zone = Zone.FieldZone; collarDie.Status = DieStatus.Action;
+
+        var opposingDie = FindUnpurchased(state, "teamB", SampleCards.BlackWidow.Id);
+        opposingDie.Zone = Zone.FieldZone; opposingDie.Status = DieStatus.Character; opposingDie.Level = 1;
+        Assert.Equal(0, DieStats.SpinLevel(state, opposingDie, +1));
+        Assert.Equal(1, opposingDie.Level);
+
+        var ownDie = FindUnpurchased(state, "teamA", SampleCards.BlackWidow.Id);
+        ownDie.Zone = Zone.FieldZone; ownDie.Status = DieStatus.Character; ownDie.Level = 1;
+        Assert.Equal(1, DieStats.SpinLevel(state, ownDie, +1)); // not opposing Dampening Collar's own controller
+        Assert.Equal(2, ownDie.Level);
+
+        // Spin-DOWN is unaffected either way - only "spin up" is blocked.
+        // (opposingDie is already floored at level 1, so spin the level-2
+        // ownDie back down instead to prove the block is direction-specific,
+        // not a blanket freeze.)
+        Assert.Equal(-1, DieStats.SpinLevel(state, ownDie, -1));
+        Assert.Equal(1, ownDie.Level);
+    }
+
+    [Fact]
+    public void OpponentResolveContinuousDie_RemovesDampeningCollar_ByReturningAnXMenDieToItsCard()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.DampeningCollar.Id],
+            extraTeamBCardIds: [SampleCards.GambitUnlessIGotSomeoneToPlayWith.Id, SampleCards.BlackWidow.Id]);
+        state.CurrentStep = TurnStep.Main;
+        state.ActivePlayerId = "teamA"; // opponent (teamB) can still act - no priority-passing modeled yet
+
+        var collarDie = FindUnpurchased(state, "teamA", SampleCards.DampeningCollar.Id);
+        collarDie.Zone = Zone.FieldZone; collarDie.Status = DieStatus.Action;
+
+        var xMenDie = FindUnpurchased(state, "teamB", SampleCards.GambitUnlessIGotSomeoneToPlayWith.Id);
+        xMenDie.Zone = Zone.FieldZone; xMenDie.Status = DieStatus.Character; xMenDie.Level = 1;
+
+        TurnEngine.OpponentResolveContinuousDie(state, collarDie.Id, xMenDie.Id);
+
+        Assert.Equal(Zone.Unpurchased, collarDie.Zone);
+        Assert.Equal(Zone.Unpurchased, xMenDie.Zone);
+        Assert.Equal(DieStatus.Unrolled, xMenDie.Status);
+
+        // The prevention is gone along with the die.
+        var stillOpposing = FindUnpurchased(state, "teamB", SampleCards.BlackWidow.Id);
+        stillOpposing.Zone = Zone.FieldZone; stillOpposing.Status = DieStatus.Character; stillOpposing.Level = 1;
+        Assert.Equal(1, DieStats.SpinLevel(state, stillOpposing, +1));
+    }
+
+    [Fact]
+    public void OpponentResolveContinuousDie_RejectsANonXMenAffiliate()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.DampeningCollar.Id],
+            extraTeamBCardIds: [SampleCards.BlackWidow.Id]);
+        state.CurrentStep = TurnStep.Main;
+
+        var collarDie = FindUnpurchased(state, "teamA", SampleCards.DampeningCollar.Id);
+        collarDie.Zone = Zone.FieldZone; collarDie.Status = DieStatus.Action;
+
+        var nonXMenDie = FindUnpurchased(state, "teamB", SampleCards.BlackWidow.Id); // no affiliations at all
+        nonXMenDie.Zone = Zone.FieldZone; nonXMenDie.Status = DieStatus.Character; nonXMenDie.Level = 1;
+
+        var ex = Assert.Throws<InvalidOperationException>(
+            () => TurnEngine.OpponentResolveContinuousDie(state, collarDie.Id, nonXMenDie.Id));
+        Assert.Contains("X-Men", ex.Message);
+        Assert.Equal(Zone.FieldZone, collarDie.Zone); // untouched - the attempt was rejected
+    }
+
+    [Fact]
+    public void OpponentResolveContinuousDie_RejectsADieControlledByTheSamePlayer()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.DampeningCollar.Id, SampleCards.GambitUnlessIGotSomeoneToPlayWith.Id]);
+        state.CurrentStep = TurnStep.Main;
+
+        var collarDie = FindUnpurchased(state, "teamA", SampleCards.DampeningCollar.Id);
+        collarDie.Zone = Zone.FieldZone; collarDie.Status = DieStatus.Action;
+
+        var ownXMenDie = FindUnpurchased(state, "teamA", SampleCards.GambitUnlessIGotSomeoneToPlayWith.Id);
+        ownXMenDie.Zone = Zone.FieldZone; ownXMenDie.Status = DieStatus.Character; ownXMenDie.Level = 1;
+
+        var ex = Assert.Throws<InvalidOperationException>(
+            () => TurnEngine.OpponentResolveContinuousDie(state, collarDie.Id, ownXMenDie.Id));
+        Assert.Contains("opponent", ex.Message);
+    }
+
+    [Fact]
     public void OrganicSteelPreventDamage_PreventsUpToTwoDamage_ToTargetDie()
     {
         var state = BuildTwoTeamGame();
