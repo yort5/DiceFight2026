@@ -94,6 +94,7 @@ public static class SampleCards
         int grantsOpponentPaysLifeToUseActionOrGlobal = 0,
         RerollOrSpinProtection? grantsRerollOrSpinProtection = null,
         bool grantsSpinsUpInSympathyWithOwnCharacterDice = false,
+        bool grantsGainLifeWhenOpponentTargetsOwnCharacterDie = false,
         bool isImplemented = true,
         string? set = null) => new()
     {
@@ -146,6 +147,7 @@ public static class SampleCards
         GrantsOpponentPaysLifeToUseActionOrGlobal = grantsOpponentPaysLifeToUseActionOrGlobal,
         GrantsRerollOrSpinProtection = grantsRerollOrSpinProtection,
         GrantsSpinsUpInSympathyWithOwnCharacterDice = grantsSpinsUpInSympathyWithOwnCharacterDice,
+        GrantsGainLifeWhenOpponentTargetsOwnCharacterDie = grantsGainLifeWhenOpponentTargetsOwnCharacterDie,
         IsImplemented = isImplemented,
         Set = set
     };
@@ -2766,6 +2768,26 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 4)
         ], set: "DPS");
 
+    // Angel, "Air Support" (DPS097) - the first user of
+    // GrantsGainLifeWhenOpponentTargetsOwnCharacterDie (new this pass -
+    // see EffectInterpreter.Resolve's own remarks on the shared choke
+    // point this is checked at, and the accepted "counts an untaken
+    // Conditional branch's own target choice too" approximation). No
+    // AbilityDef needed - a passive, always-on grant, same shape as this
+    // card's own "Xavier's Dream" printing's Global-targeting immunity.
+    public static readonly CardDef AngelAirSupport = Character(
+        "DPS097", "Angel", "Air Support", dieLimit: 2,
+        "Founder While Angel is active, when an opponent targets one of your character dice, gain 1 life.",
+        purchaseCost: 4, energyType: EnergyType.Shield,
+        affiliations: ["X-Men"],
+        keywords: [new KeywordInstance("Founder")],
+        grantsGainLifeWhenOpponentTargetsOwnCharacterDie: true,
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 4)
+        ], set: "DPS");
+
     // Moira, "Strength of Foresight" - the first user of
     // FieldedDieMatch.MinPurchaseCost (new this round); the WhenFielded
     // half reuses TargetSpec.ActionDie (Rogue "Surveillance Immunity"'s
@@ -2990,6 +3012,36 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 1, Attack: 6, Defense: 4)
         ], set: "DPS");
 
+    // Cyclops, "Xavier's Dream" (DPS140) - the first user of
+    // EffectCondition.OwnSidekickActive and DividedDamageAmongChosenTargets
+    // (both new this pass - see their own remarks, including
+    // DividedDamageAmongChosenTargets' deliberate "split evenly, not a
+    // fully arbitrary player-assigned amount" simplification). X's own
+    // live count reuses DealDamagePerMatchingDie's "CountFilter" idiom,
+    // scoped to Zone.FieldZone only - same "the attacking die has
+    // already left the Field Zone by the time WhenAttacks resolves"
+    // reasoning this card's own "Utopia Realized" printing's
+    // OwnCharacterDiceInFieldZoneAtLeast condition already established.
+    public static readonly CardDef CyclopsXaviersDream = Character(
+        "DPS140", "Cyclops", "Xavier's Dream", dieLimit: 1,
+        "While you have a Sidekick die active, when Cyclops attacks deal X damage divided how you choose " +
+        "among any number of target character dice, where X is the number of your character dice in the " +
+        "Field Zone.",
+        purchaseCost: 6, energyType: EnergyType.Bolt,
+        affiliations: ["X-Men"],
+        abilities: [new AbilityDef(TriggerType.WhenAttacks, Cost: null,
+            Effect: new Conditional(
+                TargetSpec.Self, EffectCondition.OwnSidekickActive,
+                Then: new DividedDamageAmongChosenTargets(
+                    TargetSpec.CharacterDie("your character dice in the Field Zone", TargetOwnership.Own,
+                        zones: [Zone.FieldZone], matchAll: true),
+                    TargetSpec.CharacterDie("any number of target character dice", TargetOwnership.Any))))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 3),
+            new CharacterFace(FieldingCost: 1, Attack: 6, Defense: 4)
+        ], set: "DPS");
+
     // Mutant Research Program - the first user of
     // EffectCondition.OwnActiveAffiliationOrKeywordCountAtLeast alongside
     // Wolverine "Hardened by Madripoor" above; "draw and roll N dice" is
@@ -3072,6 +3124,42 @@ public static class SampleCards
         purchaseCost: 6, energyType: EnergyType.Shield,
         affiliations: ["Villains", "Shi'ar"],
         grantsOpponentAbilityBlankWhileActive: new OpponentAbilityBlankGrant(MaxPurchaseCost: 3, AlsoFreeToField: true),
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 4, Defense: 4),
+            new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 5),
+            new CharacterFace(FieldingCost: 2, Attack: 6, Defense: 6)
+        ], set: "DPS");
+
+    // D'Ken, "M'Kraan Crystal" (DPS106) - the WhenAttacks clause reuses
+    // Falcon's own "Prep a Sidekick from your Used Pile" shape (PrepDie +
+    // a real chosen TargetSpec, not PrepFromBag's random draw - Used
+    // Pile contents are visible/known, unlike the bag, so "Prep a die
+    // from your Used Pile" with no "target" wording still means a real
+    // choice here, same reading Falcon's own Teamwatch text already
+    // established). The second clause - "while a D'Ken die is in your
+    // Used Pile, you take no more than 7 damage during an opponent's
+    // turn (further damage dealt to you is reduced to 0)" - is
+    // deliberately left out, isImplemented: false: it's a real player-
+    // life damage CAP, distinct from every existing damage-reduction
+    // mechanism here (those all reduce damage to a DIE, via DieStats.
+    // ApplyDamage's single choke point - no such choke point exists for
+    // damage dealt directly to a PLAYER; `.Life -=` is written at 14
+    // independent call sites across TurnEngine/CombatEngine/
+    // EffectInterpreter, several of which are voluntary payments - life
+    // taxes, MayPayLife - that must NOT be capped as "damage," so this
+    // isn't a drop-in reuse of an existing pattern the way most other
+    // partial cards in this file are). Worth a real design pass of its
+    // own rather than a rushed/wrong implementation - see the "Scripting
+    // policy" note at the top of this file.
+    public static readonly CardDef DKenMKraanCrystal = Character(
+        "DPS106", "D'Ken", "M'Kraan Crystal", dieLimit: 2,
+        "When D'Ken attacks, Prep a die from your Used Pile. While a D'Ken die is in your Used Pile, you " +
+        "take no more than 7 damage during an opponent's turn (further damage dealt to you is reduced to 0).",
+        purchaseCost: 5, energyType: EnergyType.Shield,
+        affiliations: ["Villains", "Shi'ar"],
+        abilities: [new AbilityDef(TriggerType.WhenAttacks, Cost: null,
+            Effect: new PrepDie(TargetSpec.AnyDie("a die from your Used Pile", TargetOwnership.Own, zones: [Zone.UsedPile])))],
+        isImplemented: false,
         levels: [
             new CharacterFace(FieldingCost: 0, Attack: 4, Defense: 4),
             new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 5),
@@ -3967,7 +4055,7 @@ public static class SampleCards
             FirestarAmazingFriend, LilandraFreedomFighter, LilandraMajestrix, MagnetoMasterOfMagnetism, MystiqueSheWalksAmongUs,
             MisterSinisterGeneticist, OrganicSteelPreventDamage, DampeningCollar, CorsairBackFromOuterSpace,
             BishopTorturedTimeline, WolverineToughForTheKids, MakingTheTeam, Mutation, GladiatorTheEmpireMustStand,
-            WolverineTrainer
+            WolverineTrainer, AngelAirSupport, DKenMKraanCrystal, CyclopsXaviersDream
         ];
 
         // Hand-curated cards win on id collision - shouldn't happen in

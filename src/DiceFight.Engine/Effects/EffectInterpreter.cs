@@ -764,6 +764,45 @@ public static class EffectInterpreter
                 break;
             }
 
+            case DividedDamageAmongChosenTargets divided:
+            {
+                var amount = LegalTargets.Query(ctx.State, ctx.ControllerId, divided.CountFilter).Count;
+                var legalTargets = LegalTargets.Query(ctx.State, ctx.ControllerId, divided.Target);
+                if (amount <= 0 || legalTargets.Count == 0) break;
+
+                ctx.State.PendingChoice = new PendingChoice
+                {
+                    ControllerId = ctx.ControllerId,
+                    Description = divided.Target.Description,
+                    CandidateDieIds = legalTargets,
+                    AllowMultiple = true,
+                    Resolve = chosenIds =>
+                    {
+                        if (chosenIds.Count == 0) return;
+
+                        var koIds = new List<string>();
+                        var damagedIds = new List<string>();
+                        var baseShare = amount / chosenIds.Count;
+                        var remainder = amount % chosenIds.Count;
+                        for (var i = 0; i < chosenIds.Count; i++)
+                        {
+                            var share = baseShare + (i < remainder ? 1 : 0); // remainder to the first-chosen
+                            if (share <= 0) continue;
+
+                            var die = FindDie(ctx, chosenIds[i]);
+                            var recipient = DieStats.ApplyDamage(ctx.State, die, share, abilityControllerId: ctx.ControllerId);
+                            if (recipient is null) continue;
+                            damagedIds.Add(recipient.Id);
+                            if (DieStats.TryResolveKO(ctx.State, recipient, ctx.Roller))
+                                koIds.Add(recipient.Id);
+                        }
+                        TurnEngine.ResolveWhenDamagedReactions(ctx.State, ctx.Queue, damagedIds);
+                        TurnEngine.ResolveKOReactions(ctx.State, ctx.Queue, koIds);
+                    }
+                };
+                break;
+            }
+
             case PrepFromBagIfPurchasedThisTurn purchasedThisTurn:
                 var purchaser = ctx.State.GetPlayer(ctx.ControllerId);
                 if (purchasedThisTurn.CharacterOnly ? purchaser.PurchasedCharacterDieThisTurn : purchaser.PurchasedDieThisTurn)
@@ -903,6 +942,32 @@ public static class EffectInterpreter
             result = chosen.Count > spec.Count ? chosen.Take(spec.Count).ToList() : chosen;
         }
 
+        // Angel ("Air Support", DPS097) - "when an opponent targets one
+        // of your character dice, gain 1 life." A caveat: rule 3.2.5
+        // resolves every branch of a Conditional upfront, so an untaken
+        // branch's own target choice still counts as "targeted" here
+        // even though nothing ultimately happens to that die - a minor,
+        // rare over-fire, the same class of approximation this engine
+        // already accepts elsewhere (Blob's own "engaged with" KO
+        // attribution, Deathbird's side-level-only combat-KO check)
+        // rather than threading real per-branch execution status back
+        // into this shared, upfront resolution pass.
+        foreach (var id in result)
+        {
+            if (ctx.State.IsPlayerId(id)) continue;
+            var targetedDie = ctx.State.Dice.FirstOrDefault(d => d.Id == id);
+            if (targetedDie is null || targetedDie.ControllerId == ctx.ControllerId) continue;
+            if (targetedDie.Status is not (DieStatus.Character or DieStatus.SidekickCharacter)) continue;
+
+            var hasActiveAngel = ctx.State.DiceIn(targetedDie.ControllerId, Zone.FieldZone)
+                .Concat(ctx.State.DiceIn(targetedDie.ControllerId, Zone.AttackZone))
+                .Any(d => DieStats.GetCard(ctx.State, d)?.GrantsGainLifeWhenOpponentTargetsOwnCharacterDie ?? false);
+            if (!hasActiveAngel) continue;
+
+            var gainingPlayer = ctx.State.GetPlayer(targetedDie.ControllerId);
+            gainingPlayer.Life = Math.Min(Player.StartingLife, gainingPlayer.Life + 1);
+        }
+
         cache[spec] = result;
         return result;
     }
@@ -935,6 +1000,10 @@ public static class EffectInterpreter
         EffectCondition.OwnCharacterDiceInFieldZoneAtLeast => conditional.CountParam is { } ownThreshold
             && ctx.State.DiceIn(ctx.ControllerId, Zone.FieldZone)
                 .Count(d => d.Status is DieStatus.Character or DieStatus.SidekickCharacter) >= ownThreshold,
+        // dieId is unused here - see EffectCondition.OwnSidekickActive's own remarks.
+        EffectCondition.OwnSidekickActive => ctx.State.DiceIn(ctx.ControllerId, Zone.FieldZone)
+            .Concat(ctx.State.DiceIn(ctx.ControllerId, Zone.AttackZone))
+            .Any(d => DieStats.CountsAsSidekick(ctx.State, d)),
         // dieId is unused here - see EffectCondition.OwnActiveAffiliationOrKeywordCountAtLeast's own remarks.
         EffectCondition.OwnActiveAffiliationOrKeywordCountAtLeast => conditional.AffiliationParam is { } matchName
             && conditional.CountParam is { } matchThreshold

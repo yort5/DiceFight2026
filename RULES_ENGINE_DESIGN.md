@@ -637,7 +637,18 @@ here rather than assuming which approach they'd want.
     (DPS009)" status update. Wolverine ("Trainer," DPS136) is also done -
     a new `TurnEngine.CheckSympatheticSpin` primitive, sibling to
     `CheckAwaken`, for "when you spin up another character die, spin
-    this one up also" (see that card's own status update).
+    this one up also" (see that card's own status update). Angel ("Air
+    Support," DPS097) and Cyclops ("Xavier's Dream," DPS140) are done too
+    - a new `EffectInterpreter.Resolve`-level "opponent targeted my die"
+    check, and a new `DividedDamageAmongChosenTargets` primitive (with a
+    deliberate even-split simplification of "divided how you choose" -
+    see that card's own status update). D'Ken ("M'Kraan Crystal," DPS106)
+    is partial - its WhenAttacks clause is real, its player-life damage
+    cap is deliberately left `isImplemented: false` pending a real design
+    pass (no existing single choke point for player life loss the way
+    `DieStats.ApplyDamage` is for die damage). See the "Angel 'Air
+    Support' (DPS097), D'Ken 'M'Kraan Crystal' (DPS106, partial), and
+    Cyclops 'Xavier's Dream' (DPS140)" status update.
 
 ## Implemented keywords
 

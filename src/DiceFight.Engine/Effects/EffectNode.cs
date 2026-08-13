@@ -242,6 +242,24 @@ public sealed record DealDamagePerActiveAffiliate(TargetSpec Target) : EffectNod
 // never Colossus dice themselves as a separate multiplier, so there's
 // nothing extra to guard against here.
 public sealed record DealDamagePerMatchingDie(TargetSpec CountFilter, int AmountPerMatch, TargetSpec Target) : EffectNode;
+// Cyclops ("Xavier's Dream", DPS140) - "deal X damage divided how you
+// choose among any number of target character dice, where X is [a live
+// count]." X comes from CountFilter, same live-count idiom
+// DealDamagePerMatchingDie's own CountFilter already established. "Any
+// number" bypasses the normal TargetSpec.Count pipeline entirely (same
+// "always pause via PendingChoice over the full legal set, AllowMultiple:
+// true" shape RedrawFromBag already established for genuinely unbounded
+// choices) rather than picking an arbitrary numeric ceiling. SIMPLIFIED:
+// the exact per-target split ("how you choose") is divided as evenly as
+// possible across however many targets are chosen (remainder to the
+// first-chosen), not a fully arbitrary player-assigned split - a real
+// per-target amount chooser (closer to CombatEngine's own
+// attackerDamageSplits shape) would need new interactive-choice
+// infrastructure this engine doesn't have yet, and no other queued card
+// needs it either. Flagged here rather than guessed at silently - the
+// real strategic choice (WHICH dice to hit) is preserved; only the
+// precise split amount is automatic.
+public sealed record DividedDamageAmongChosenTargets(TargetSpec CountFilter, TargetSpec Target) : EffectNode;
 public sealed record Ko(TargetSpec Target) : EffectNode;
 // Keyword Sacrifice - "Sacrificed Character dice are moved from the
 // Field Zone to Out of Play or the Used Pile, as applicable." Distinct
@@ -517,6 +535,15 @@ public enum EffectCondition
     // its own WhenAttacks resolves, matching the card text's literal
     // "in the Field Zone" rather than "active."
     OwnCharacterDiceInFieldZoneAtLeast,
+
+    // Cyclops ("Xavier's Dream", DPS140) - "while you have a Sidekick
+    // die active." DieStats.CountsAsSidekick (Field + Attack Zone, same
+    // "active" scope as every other "while active" check here, unlike
+    // OwnCharacterDiceInFieldZoneAtLeast's own deliberately narrower
+    // Field-Zone-only reading) - a real physical Sidekick OR an Ally-
+    // keyword Character die counts, same as everywhere else that check
+    // is used.
+    OwnSidekickActive,
 
     // Wolverine ("Hardened by Madripoor", DPS096) - "when you have at
     // least 3 active X-Men character dice, Wolverine gains [...]."

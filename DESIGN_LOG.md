@@ -6565,3 +6565,63 @@ doesn't double-trigger itself.
 
 Verified: `dotnet build`, `dotnet test` (530/530 - 3 new cases), and
 `npm run build` all clean.
+
+## Status update — Angel "Air Support" (DPS097), D'Ken "M'Kraan Crystal"
+(DPS106, partial), and Cyclops "Xavier's Dream" (DPS140)
+
+**Angel** - "when an opponent targets one of your character dice, gain
+1 life" needed a real new choke point: `EffectInterpreter.Resolve` (not
+`LegalTargets`, which only knows what's eligible, not what a caller
+actually picked) is where a target CHOICE becomes final, so the new
+`CardDef.GrantsGainLifeWhenOpponentTargetsOwnCharacterDie` check lives
+right there, right before the resolved result is cached and returned -
+covers every ability shape alike (Global, WhenFielded, keyword-driven)
+with one check. Known, accepted imprecision: rule 3.2.5 resolves every
+`Conditional` branch's targets upfront regardless of which one actually
+runs, so an untaken branch's own target choice still counts as
+"targeted" here - the same class of approximation already accepted
+elsewhere (Blob's "engaged with" KO attribution, Deathbird's side-level-
+only combat-KO check). Ran the FULL test suite (not just new cases)
+after this change specifically, since it touches one of the most
+heavily-used functions in the engine - no regressions.
+
+**D'Ken "M'Kraan Crystal"** - only the WhenAttacks half ("Prep a die
+from your Used Pile," reusing Falcon's own "PrepDie + a real chosen
+target, not PrepFromBag's random draw" shape - Used Pile contents are
+visible, unlike the bag) is real. The damage-cap clause ("you take no
+more than 7 damage during an opponent's turn while a D'Ken die is in
+your Used Pile") is deliberately left `isImplemented: false`: unlike
+die damage (which funnels through `DieStats.ApplyDamage`'s single choke
+point), player life loss is written at 14 independent `.Life -=` call
+sites across `TurnEngine`/`CombatEngine`/`EffectInterpreter`, several of
+which are voluntary payments (life taxes, `MayPayLife`) that must NOT
+be capped as "damage" - not a drop-in reuse of an existing pattern the
+way most other partial cards here are, so left for a real design pass
+of its own rather than rushed.
+
+**Cyclops "Xavier's Dream"** - two new pieces: `EffectCondition.
+OwnSidekickActive` (trivial - `DieStats.CountsAsSidekick` over the
+controller's own active dice), and `DividedDamageAmongChosenTargets`
+(the live damage total from a `CountFilter`, same idiom `DealDamagePer
+MatchingDie` already established, applied to an "any number" target
+choice - bypassing the normal `TargetSpec.Count` pipeline entirely via
+the same "always pause via `PendingChoice` over the full legal set"
+shape `RedrawFromBag` already established, rather than picking an
+arbitrary numeric ceiling). **Deliberate simplification**: "divided how
+you choose" splits the total as evenly as possible across however many
+targets get chosen (remainder to the first-chosen) rather than a fully
+arbitrary player-assigned per-target amount - a true "assign any amount
+to any target" chooser would need real new interactive-choice
+infrastructure (closer to `CombatEngine`'s own `attackerDamageSplits`
+shape) that nothing else queued needs yet; the real strategic choice
+(WHICH dice to hit) is preserved, only the exact split amount is
+automatic. One real test-authoring bug caught along the way: the first
+draft of the Cyclops test picked level-1 targets, one of which (Falcon)
+had defense low enough that its 2-damage share KO'd it outright - `Force
+KO` resets `Damage` back to 0 as part of the KO, so the assertion read 0
+even though the damage genuinely applied first (confirmed with a
+temporary debug trace before finding the real cause); fixed by leveling
+the targets up to survive, not by changing the implementation.
+
+Verified: `dotnet build`, `dotnet test` (534/534 - 5 new cases), and
+`npm run build` all clean.

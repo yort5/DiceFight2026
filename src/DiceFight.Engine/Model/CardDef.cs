@@ -414,6 +414,14 @@ public sealed record CardDef
     // primitive here uses absent a stated amount.
     public bool GrantsSpinsUpInSympathyWithOwnCharacterDice { get; init; }
 
+    // Angel ("Air Support", DPS097): "while Angel is active, when an
+    // opponent targets one of your character dice, gain 1 life." Checked
+    // in EffectInterpreter.Resolve, the real single choke point where a
+    // caller's target CHOICE becomes final (not LegalTargets, which only
+    // knows what's eligible, not what was actually picked) - covers
+    // every ability shape alike (Global, WhenFielded, keyword-driven).
+    public bool GrantsGainLifeWhenOpponentTargetsOwnCharacterDie { get; init; }
+
     // Whether this card's FULL printed text is correctly modeled -
     // scripted via AbilityDef, built entirely into the engine (a pure
     // keyword like Deadly/Infiltrate needs no AbilityDef at all), or

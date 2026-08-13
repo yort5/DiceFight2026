@@ -4754,6 +4754,111 @@ public class TwoTeamsDemoTests
     }
 
     [Fact]
+    public void CyclopsXaviersDream_WhenAttacks_DividesDamageAmongChosenTargets()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.CyclopsXaviersDream.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var cyclopsDie = FindUnpurchased(state, "teamA", SampleCards.CyclopsXaviersDream.Id);
+        cyclopsDie.Zone = Zone.FieldZone; cyclopsDie.Status = DieStatus.Character; cyclopsDie.Level = 1;
+
+        var sidekick = state.DiceIn("teamA", Zone.Bag).First();
+        sidekick.Zone = Zone.FieldZone; sidekick.Status = DieStatus.SidekickCharacter; sidekick.Level = 1;
+        var teammate1 = FindUnpurchased(state, "teamA", SampleCards.BlackPanther.Id);
+        teammate1.Zone = Zone.FieldZone; teammate1.Status = DieStatus.Character; teammate1.Level = 1;
+        var teammate2 = FindUnpurchased(state, "teamA", SampleCards.HarleyQuinn.Id);
+        teammate2.Zone = Zone.FieldZone; teammate2.Status = DieStatus.Character; teammate2.Level = 1;
+        // Field Zone character dice once Cyclops itself has left for the Attack Zone: sidekick + 2 teammates = X=3.
+
+        var target1 = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
+        target1.Zone = Zone.FieldZone; target1.Status = DieStatus.Character; target1.Level = 3; // max level - high enough defense to survive 2 damage
+        var target2 = FindUnpurchased(state, "teamB", SampleCards.Groot.Id);
+        target2.Zone = Zone.FieldZone; target2.Status = DieStatus.Character; target2.Level = 3;
+
+        TurnEngine.EnterAttackStep(state);
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [cyclopsDie.Id]);
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [])));
+
+        Assert.NotNull(state.PendingChoice);
+        // TargetOwnership.Any - both opposing AND own character dice are legal candidates.
+        Assert.Contains(target1.Id, state.PendingChoice!.CandidateDieIds);
+        Assert.Contains(target2.Id, state.PendingChoice.CandidateDieIds);
+        Assert.Contains(cyclopsDie.Id, state.PendingChoice.CandidateDieIds);
+        state.PendingChoice.Resolve([target1.Id, target2.Id]); // 3 damage split 2/1, remainder to the first-chosen
+
+        Assert.Equal(2, target1.Damage);
+        Assert.Equal(1, target2.Damage);
+    }
+
+    [Fact]
+    public void DKenMKraanCrystal_WhenAttacks_PrepsAChosenDieFromUsedPile()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.DKenMKraanCrystal.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var dkenDie = FindUnpurchased(state, "teamA", SampleCards.DKenMKraanCrystal.Id);
+        dkenDie.Zone = Zone.FieldZone; dkenDie.Status = DieStatus.Character; dkenDie.Level = 1;
+
+        var usedPileDie = FindUnpurchased(state, "teamA", SampleCards.Beast.Id);
+        usedPileDie.Zone = Zone.UsedPile; usedPileDie.ResetToUnrolled();
+
+        TurnEngine.EnterAttackStep(state);
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [dkenDie.Id]);
+        queue.Drain(ability => EffectInterpreter.Execute(
+            ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [usedPileDie.Id])));
+
+        Assert.Equal(Zone.PrepArea, usedPileDie.Zone);
+    }
+
+    [Fact]
+    public void AngelAirSupport_GainsLife_WhenAnOpponentTargetsAProtectedCharacterDie()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.AngelAirSupport.Id]);
+        state.GetPlayer("teamA").Life -= 5; // room to gain back to - GainLife caps at StartingLife
+
+        var angelDie = FindUnpurchased(state, "teamA", SampleCards.AngelAirSupport.Id);
+        angelDie.Zone = Zone.FieldZone; angelDie.Status = DieStatus.Character; angelDie.Level = 1;
+
+        var protectedDie = FindUnpurchased(state, "teamA", SampleCards.BlackWidow.Id);
+        protectedDie.Zone = Zone.FieldZone; protectedDie.Status = DieStatus.Character; protectedDie.Level = 1;
+
+        var lifeBefore = state.GetPlayer("teamA").Life;
+
+        // A real opposing DealDamage effect targeting the protected die -
+        // exercises the actual EffectInterpreter.Resolve choke point, not
+        // a synthetic shortcut.
+        EffectInterpreter.Execute(
+            new DealDamage(1, TargetSpec.CharacterDie("target character die", TargetOwnership.Opposing)),
+            new EffectContext(state, "teamB", SourceDieId: null, _ => [protectedDie.Id]));
+
+        Assert.Equal(lifeBefore + 1, state.GetPlayer("teamA").Life);
+    }
+
+    [Fact]
+    public void AngelAirSupport_DoesNotGainLife_WhenItsOwnControllerTargetsItsOwnDice()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.AngelAirSupport.Id]);
+        state.GetPlayer("teamA").Life -= 5;
+
+        var angelDie = FindUnpurchased(state, "teamA", SampleCards.AngelAirSupport.Id);
+        angelDie.Zone = Zone.FieldZone; angelDie.Status = DieStatus.Character; angelDie.Level = 1;
+
+        var ownDie = FindUnpurchased(state, "teamA", SampleCards.BlackWidow.Id);
+        ownDie.Zone = Zone.FieldZone; ownDie.Status = DieStatus.Character; ownDie.Level = 1;
+
+        var lifeBefore = state.GetPlayer("teamA").Life;
+
+        EffectInterpreter.Execute(
+            new DealDamage(1, TargetSpec.CharacterDie("target character die", TargetOwnership.Own)),
+            new EffectContext(state, "teamA", SourceDieId: null, _ => [ownDie.Id]));
+
+        Assert.Equal(lifeBefore, state.GetPlayer("teamA").Life); // own controller targeting own die - no gain
+    }
+
+    [Fact]
     public void WolverineTrainer_SpinsUpInSympathy_WhenAnotherOwnCharacterDieSpinsUp()
     {
         var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.WolverineTrainer.Id]);
