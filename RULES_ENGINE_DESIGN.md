@@ -648,7 +648,22 @@ here rather than assuming which approach they'd want.
     pass (no existing single choke point for player life loss the way
     `DieStats.ApplyDamage` is for die damage). See the "Angel 'Air
     Support' (DPS097), D'Ken 'M'Kraan Crystal' (DPS106, partial), and
-    Cyclops 'Xavier's Dream' (DPS140)" status update.
+    Cyclops 'Xavier's Dream' (DPS140)" status update. **DPS pass
+    complete**, per the user's explicit "push to the end" call: the
+    remaining eight cards (Archnemesis, The Front Line, Moira "It's Not
+    a Dream," Sabretooth "Am I Interrupting?," Corsair "Leading the
+    Starjammers," Lilandra "Grand Admiral of the Guard," Madelyne Pryor
+    "Aspiring," Mister Sinister "Dark Experimentation") are all real now,
+    several with documented deliberate scope cuts; four (D'Ken
+    "Obsessed," Blink "Warp Portals," Forge "Reverse Engineer,"
+    Explosion) are deliberately `isImplemented: false`, each needing a
+    genuinely new class of engine capability (an interrupt/cancel
+    primitive, commandeering an ability under a different controller, an
+    open-ended energy-spend loop) - see the "the rest of the DPS gap
+    list" status update for exactly what each is missing. This closes
+    out the entire "Dark Phoenix Saga, first pass" 27-card breakdown
+    except DPS039 (needs Rush, deliberately deferred at the user's own
+    direction from the start of this pass).
 
 ## Implemented keywords
 

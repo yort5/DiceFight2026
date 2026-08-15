@@ -110,6 +110,20 @@ public static class LegalTargets
         if (spec.RequiredCardId is { } requiredCardId)
             candidates = candidates.Where(d => (d.VirtualCardId ?? d.CardId) == requiredCardId);
 
+        if (spec.NameContains is { } nameFragment)
+        {
+            candidates = candidates.Where(d =>
+            {
+                var cardId = d.VirtualCardId ?? d.CardId;
+                return cardId is not null
+                    && state.CardCatalog.TryGetValue(cardId, out var card)
+                    && card.Name.Contains(nameFragment, StringComparison.OrdinalIgnoreCase);
+            });
+        }
+
+        if (spec.RequiresUnblockedAttacker)
+            candidates = candidates.Where(d => state.UnblockedAttackerIds.Contains(d.Id));
+
         if (spec.RequiredCharacterCardType)
         {
             candidates = candidates.Where(d =>

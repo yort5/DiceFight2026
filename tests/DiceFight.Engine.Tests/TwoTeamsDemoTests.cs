@@ -4754,6 +4754,268 @@ public class TwoTeamsDemoTests
     }
 
     [Fact]
+    public void Archnemesis_DealsMutualDamageEqualToEachDiesOwnAttack()
+    {
+        var state = BuildTwoTeamGame(extraTeamBCardIds: [SampleCards.Beast.Id]);
+
+        // Level 1 (placeholder stats: 1A/2D) - defense comfortably
+        // survives the other's 1 damage, so neither is KO'd (a KO would
+        // reset Damage back to 0 via ForceKO, defeating the assertions
+        // below - the same trap the Cyclops test above already hit).
+        var ownDie = FindUnpurchased(state, "teamA", SampleCards.Apocalypse.Id);
+        ownDie.Zone = Zone.FieldZone; ownDie.Status = DieStatus.Character; ownDie.Level = 1;
+        var opposingDie = FindUnpurchased(state, "teamB", SampleCards.Beast.Id);
+        opposingDie.Zone = Zone.FieldZone; opposingDie.Status = DieStatus.Character; opposingDie.Level = 1;
+
+        var ownAttack = DieStats.EffectiveAttack(state, ownDie);
+        var opposingAttack = DieStats.EffectiveAttack(state, opposingDie);
+
+        var ability = SampleCards.Archnemesis.Abilities.Single(a => a.Trigger == TriggerType.WhenUsed);
+        EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(state, "teamA", SourceDieId: null,
+                spec => spec.Ownership == TargetOwnership.Own ? [ownDie.Id] : [opposingDie.Id]));
+
+        Assert.Equal(opposingAttack, ownDie.Damage); // took damage equal to the OTHER die's attack
+        Assert.Equal(ownAttack, opposingDie.Damage);
+    }
+
+    [Fact]
+    public void ArchnemesisGlobal_SetsDefenseEqualToOwnAttack()
+    {
+        var state = BuildTwoTeamGame();
+
+        var die = FindUnpurchased(state, "teamA", SampleCards.Apocalypse.Id);
+        die.Zone = Zone.FieldZone; die.Status = DieStatus.Character; die.Level = 1;
+        var attack = DieStats.EffectiveAttack(state, die);
+        Assert.NotEqual(attack, DieStats.EffectiveDefense(state, die)); // sanity - attack/defense differ at level 1
+
+        var ability = SampleCards.Archnemesis.Abilities.Single(a => a.Trigger == TriggerType.Global);
+        EffectInterpreter.Execute(ability.Effect, new EffectContext(state, "teamA", SourceDieId: null, _ => [die.Id]));
+
+        Assert.Equal(attack, DieStats.EffectiveDefense(state, die));
+        Assert.Equal(attack, DieStats.EffectiveAttack(state, die)); // attack itself untouched
+    }
+
+    [Fact]
+    public void TheFrontLine_BuffsOnlyUnblockedAttackers()
+    {
+        var state = BuildTwoTeamGame(extraTeamBCardIds: [SampleCards.BlackWidow.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var unblocked = FindUnpurchased(state, "teamA", SampleCards.Apocalypse.Id);
+        unblocked.Zone = Zone.FieldZone; unblocked.Status = DieStatus.Character; unblocked.Level = 1;
+        var blocked = FindUnpurchased(state, "teamA", SampleCards.Beast.Id);
+        blocked.Zone = Zone.FieldZone; blocked.Status = DieStatus.Character; blocked.Level = 1;
+        var blocker = FindUnpurchased(state, "teamB", SampleCards.BlackWidow.Id);
+        blocker.Zone = Zone.FieldZone; blocker.Status = DieStatus.Character; blocker.Level = 1;
+
+        TurnEngine.EnterAttackStep(state);
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [unblocked.Id, blocked.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(blocked.Id, blocker.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [blocker.Id]);
+
+        var unblockedAttackBefore = DieStats.EffectiveAttack(state, unblocked);
+        var blockedAttackBefore = DieStats.EffectiveAttack(state, blocked);
+
+        var ability = SampleCards.TheFrontLine.Abilities.Single(a => a.Trigger == TriggerType.WhenUsed);
+        // MatchAll - no choice needed; a resolver that throws proves so.
+        EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(state, "teamA", SourceDieId: null,
+                _ => throw new InvalidOperationException("MatchAll shouldn't ask for a choice")));
+
+        Assert.Equal(unblockedAttackBefore + 3, DieStats.EffectiveAttack(state, unblocked));
+        Assert.Equal(blockedAttackBefore, DieStats.EffectiveAttack(state, blocked)); // untouched - it has a blocker
+    }
+
+    [Fact]
+    public void MoiraItsNotADream_RerollsOpponentsFieldedContinuousDie_ToActionFaceOrUsedPile()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.MoiraItsNotADream.Id],
+            extraTeamBCardIds: [SampleCards.LabTest.Id]);
+        state.ActivePlayerId = "teamB";
+        state.CurrentStep = TurnStep.Main;
+
+        var moiraDie = FindUnpurchased(state, "teamA", SampleCards.MoiraItsNotADream.Id);
+        moiraDie.Zone = Zone.FieldZone; moiraDie.Status = DieStatus.Character; moiraDie.Level = 1;
+
+        var labTestDie = FindUnpurchased(state, "teamB", SampleCards.LabTest.Id);
+        labTestDie.Zone = Zone.ReservePool; labTestDie.Status = DieStatus.Action;
+
+        var queue = new AbilityQueue();
+        // Rolls an action face - lands in the Field Zone after all (the
+        // "they may field it normally" clause, simplified to always).
+        TurnEngine.UseActionDie(state, queue, labTestDie.Id, roller: new FixedRoller(DieStatus.Action, 0));
+        Assert.Equal(Zone.FieldZone, labTestDie.Zone);
+        Assert.Equal(DieStatus.Action, labTestDie.Status);
+
+        var labTestDie2 = FindUnpurchased(state, "teamB", SampleCards.LabTest.Id);
+        labTestDie2.Zone = Zone.ReservePool; labTestDie2.Status = DieStatus.Action;
+        // Rolls a non-action face - sent to the Used Pile instead.
+        TurnEngine.UseActionDie(state, queue, labTestDie2.Id, roller: new FixedRoller(DieStatus.Energy, 1));
+        Assert.Equal(Zone.UsedPile, labTestDie2.Zone);
+        Assert.Equal(DieStatus.Unrolled, labTestDie2.Status);
+    }
+
+    [Fact]
+    public void SabretoothAmIInterrupting_WhenFielded_KOsTargetWolverineDie_ByNameAcrossAnyPrinting()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.SabretoothAmIInterrupting.Id, SampleCards.WolverineTrainer.Id]);
+
+        var wolverineDie = FindUnpurchased(state, "teamA", SampleCards.WolverineTrainer.Id);
+        wolverineDie.Zone = Zone.FieldZone; wolverineDie.Status = DieStatus.Character; wolverineDie.Level = 1;
+        var nonWolverineDie = FindUnpurchased(state, "teamA", SampleCards.Beast.Id);
+        nonWolverineDie.Zone = Zone.FieldZone; nonWolverineDie.Status = DieStatus.Character; nonWolverineDie.Level = 1;
+
+        var ability = SampleCards.SabretoothAmIInterrupting.Abilities.Single(a => a.Trigger == TriggerType.WhenFielded);
+        var legal = LegalTargets.Query(state, "teamA", ((Ko)ability.Effect).Target);
+        Assert.Contains(wolverineDie.Id, legal);
+        Assert.DoesNotContain(nonWolverineDie.Id, legal);
+
+        EffectInterpreter.Execute(ability.Effect, new EffectContext(state, "teamA", SourceDieId: null, _ => [wolverineDie.Id]));
+        Assert.Equal(Zone.PrepArea, wolverineDie.Zone);
+    }
+
+    [Fact]
+    public void CorsairLeadingTheStarjammers_MirrorsItsOwnStatIncrease_OntoAnOwnSidekick()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.CorsairLeadingTheStarjammers.Id]);
+
+        var corsairDie = FindUnpurchased(state, "teamA", SampleCards.CorsairLeadingTheStarjammers.Id);
+        corsairDie.Zone = Zone.FieldZone; corsairDie.Status = DieStatus.Character; corsairDie.Level = 1;
+        var sidekick = state.DiceIn("teamA", Zone.Bag).First();
+        sidekick.Zone = Zone.FieldZone; sidekick.Status = DieStatus.SidekickCharacter; sidekick.Level = 1;
+
+        var sidekickAttackBefore = DieStats.EffectiveAttack(state, sidekick);
+
+        EffectInterpreter.Execute(
+            new ModifyStat(TargetSpec.Self, AttackDelta: 2, DefenseDelta: null),
+            new EffectContext(state, "teamA", corsairDie.Id, _ => []));
+
+        Assert.Equal(sidekickAttackBefore + 2, DieStats.EffectiveAttack(state, sidekick));
+    }
+
+    [Fact]
+    public void LilandraGrandAdmiralOfTheGuard_RerollsUnblockedAttacker_ToPrepAreaIfCharacterFace()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.LilandraGrandAdmiralOfTheGuard.Id]);
+        state.ActivePlayerId = "teamA";
+
+        var lilandraDie = FindUnpurchased(state, "teamA", SampleCards.LilandraGrandAdmiralOfTheGuard.Id);
+        lilandraDie.Zone = Zone.FieldZone; lilandraDie.Status = DieStatus.Character; lilandraDie.Level = 1;
+        var attacker = FindUnpurchased(state, "teamA", SampleCards.Apocalypse.Id);
+        attacker.Zone = Zone.FieldZone; attacker.Status = DieStatus.Character; attacker.Level = 1;
+
+        TurnEngine.EnterAttackStep(state);
+        var queue = new AbilityQueue();
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        var assignment = new CombatAssignment();
+        CombatEngine.DeclareBlockers(state, assignment, []); // unblocked
+
+        var splits = new Dictionary<string, IReadOnlyDictionary<string, int>>();
+        CombatEngine.AssignCombatDamage(state, queue, assignment, splits, new FixedRoller(DieStatus.Character, 2));
+
+        Assert.Equal(Zone.PrepArea, attacker.Zone); // rerolled to a character face - Prep Area, not Out of Play/Used Pile
+        Assert.Equal(DieStatus.Character, attacker.Status);
+        Assert.Equal(2, attacker.Level);
+    }
+
+    [Fact]
+    public void MadelynePryorAspiring_PrepsTwoOwnDice_WhenOpponentDrawsAnExtraSwarmDie()
+    {
+        var state = BuildTwoTeamGame(
+            extraTeamACardIds: [SampleCards.MadelynePryorAspiring.Id],
+            extraTeamBCardIds: [SampleCards.Parademon.Id]); // Parademon - a real Swarm-keyword card
+        state.ActivePlayerId = "teamB";
+        state.IsFirstTurn = false;
+        state.CurrentStep = TurnStep.ClearAndDraw;
+
+        var madelyneDie = FindUnpurchased(state, "teamA", SampleCards.MadelynePryorAspiring.Id);
+        madelyneDie.Zone = Zone.FieldZone; madelyneDie.Status = DieStatus.Character; madelyneDie.Level = 1;
+
+        var activeSwarmDie = FindUnpurchased(state, "teamB", SampleCards.Parademon.Id);
+        activeSwarmDie.Zone = Zone.FieldZone; activeSwarmDie.Status = DieStatus.Character; activeSwarmDie.Level = 1;
+        Assert.True(DieStats.HasKeyword(state, activeSwarmDie, "Swarm"));
+
+        // Deterministically guarantee the Swarm bonus actually fires:
+        // clear teamB's bag down to exactly ONE more Parademon copy (a
+        // single-candidate draw has no randomness to control), so the
+        // initial 4-die draw pulls it for certain and sets swarmTrigger
+        // Count = 1. That same draw necessarily empties the bag - the
+        // bonus draw it triggers relies on DrawFromBag's own "refill
+        // from the Used Pile if the bag runs dry" fallback, so a couple
+        // of filler dice are seeded there instead of the bag.
+        foreach (var d in state.DiceIn("teamB", Zone.Bag).ToList())
+            d.Zone = Zone.Unpurchased;
+        var bagCopy = FindUnpurchased(state, "teamB", SampleCards.Parademon.Id);
+        bagCopy.Zone = Zone.Bag;
+        // 4 filler dice in the Used Pile - the initial 4-die draw's OWN
+        // "refill from the Used Pile when the bag runs dry" fallback
+        // consumes the bag's single Parademon copy plus 3 of these
+        // (DrawFromBag's real behavior, confirmed empirically for this
+        // exact setup/seed), leaving exactly 1 filler behind for the
+        // Swarm bonus draw to then pick up.
+        foreach (var (cardId, count) in new[] { (SampleCards.Falcon.Id, 2), (SampleCards.FranklinsGalactus.Id, 2) })
+        {
+            for (var i = 0; i < count; i++)
+            {
+                var filler = FindUnpurchased(state, "teamB", cardId);
+                filler.Zone = Zone.UsedPile;
+                filler.ResetToUnrolled();
+            }
+        }
+
+        var prepAreaCountBefore = state.DiceIn("teamA", Zone.PrepArea).Count();
+        TurnEngine.ClearAndDraw(state, new Random(1));
+
+        Assert.Equal(prepAreaCountBefore + 2, state.DiceIn("teamA", Zone.PrepArea).Count());
+    }
+
+    [Fact]
+    public void MisterSinisterDarkExperimentation_WhenAttacks_MayPayLifeForPlus3Attack()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.MisterSinisterDarkExperimentation.Id]);
+
+        var sinisterDie = FindUnpurchased(state, "teamA", SampleCards.MisterSinisterDarkExperimentation.Id);
+        sinisterDie.Zone = Zone.FieldZone; sinisterDie.Status = DieStatus.Character; sinisterDie.Level = 1;
+        var attackBefore = DieStats.EffectiveAttack(state, sinisterDie);
+        var lifeBefore = state.GetPlayer("teamA").Life;
+
+        var ability = SampleCards.MisterSinisterDarkExperimentation.Abilities.Single(a => a.Trigger == TriggerType.WhenAttacks);
+        EffectInterpreter.Execute(ability.Effect, new EffectContext(state, "teamA", sinisterDie.Id, _ => []));
+        state.PendingChoice!.Resolve([sinisterDie.Id]); // accept
+
+        Assert.Equal(lifeBefore - 2, state.GetPlayer("teamA").Life);
+        Assert.Equal(attackBefore + 3, DieStats.EffectiveAttack(state, sinisterDie));
+    }
+
+    [Fact]
+    public void MisterSinisterDarkExperimentationGlobal_FieldsOneSidekick_AndPrepsAnother()
+    {
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.MisterSinisterDarkExperimentation.Id]);
+
+        var sidekickToField = state.DiceIn("teamA", Zone.Bag).First();
+        sidekickToField.Zone = Zone.UsedPile; sidekickToField.ResetToUnrolled();
+        var sidekickToPrep = state.DiceIn("teamA", Zone.Bag).First();
+        sidekickToPrep.Zone = Zone.UsedPile; sidekickToPrep.ResetToUnrolled();
+
+        var ability = SampleCards.MisterSinisterDarkExperimentation.Abilities.Single(a => a.Trigger == TriggerType.Global);
+        EffectInterpreter.Execute(
+            ability.Effect,
+            new EffectContext(state, "teamA", SourceDieId: null,
+                spec => spec.Description.EndsWith("to field") ? [sidekickToField.Id] : [sidekickToPrep.Id]));
+
+        Assert.Equal(Zone.FieldZone, sidekickToField.Zone);
+        Assert.Equal(DieStatus.SidekickCharacter, sidekickToField.Status);
+        Assert.Equal(Zone.PrepArea, sidekickToPrep.Zone);
+    }
+
+    [Fact]
     public void CyclopsXaviersDream_WhenAttacks_DividesDamageAmongChosenTargets()
     {
         var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.CyclopsXaviersDream.Id]);

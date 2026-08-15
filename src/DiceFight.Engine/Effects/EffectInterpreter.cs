@@ -57,6 +57,11 @@ public static class EffectInterpreter
                     yield return spec;
                 break;
             case PreventDamage n: if (!n.Target.IsSelf) yield return n.Target; break;
+            case MutualDamageEqualToOwnAttack n:
+                if (!n.TargetA.IsSelf) yield return n.TargetA;
+                if (!n.TargetB.IsSelf) yield return n.TargetB;
+                break;
+            case SetDefenseEqualToOwnAttack n: if (!n.Target.IsSelf) yield return n.Target; break;
             case DealDamage n: if (!n.Target.IsSelf) yield return n.Target; break;
             case DealDamagePerActiveAffiliate n: if (!n.Target.IsSelf) yield return n.Target; break;
             case DealDamagePerMatchingDie n: if (!n.Target.IsSelf) yield return n.Target; break;
@@ -215,6 +220,48 @@ public static class EffectInterpreter
                     FindDie(ctx, id).PendingDamagePrevention = preventDamage.Amount;
                 break;
 
+            case MutualDamageEqualToOwnAttack mutual:
+            {
+                var aIds = Resolve(ctx, mutual.TargetA, cache);
+                var bIds = Resolve(ctx, mutual.TargetB, cache);
+                if (aIds.Count == 0 || bIds.Count == 0) break; // rule 3.1.10 - no legal target on one side
+
+                var dieA = FindDie(ctx, aIds[0]);
+                var dieB = FindDie(ctx, bIds[0]);
+                // Both amounts captured before either application runs -
+                // true simultaneity (rule 3.1.7), not a sequential trade.
+                var attackA = DieStats.EffectiveAttack(ctx.State, dieA);
+                var attackB = DieStats.EffectiveAttack(ctx.State, dieB);
+
+                var koIds = new List<string>();
+                var damagedIds = new List<string>();
+                var recipientA = DieStats.ApplyDamage(ctx.State, dieA, attackB, sourceDie: dieB, abilityControllerId: ctx.ControllerId);
+                if (recipientA is not null)
+                {
+                    damagedIds.Add(recipientA.Id);
+                    if (DieStats.TryResolveKO(ctx.State, recipientA, ctx.Roller)) koIds.Add(recipientA.Id);
+                }
+                var recipientB = DieStats.ApplyDamage(ctx.State, dieB, attackA, sourceDie: dieA, abilityControllerId: ctx.ControllerId);
+                if (recipientB is not null)
+                {
+                    damagedIds.Add(recipientB.Id);
+                    if (DieStats.TryResolveKO(ctx.State, recipientB, ctx.Roller)) koIds.Add(recipientB.Id);
+                }
+
+                TurnEngine.ResolveWhenDamagedReactions(ctx.State, ctx.Queue, damagedIds);
+                TurnEngine.ResolveKOReactions(ctx.State, ctx.Queue, koIds);
+                break;
+            }
+
+            case SetDefenseEqualToOwnAttack setDefenseToAttack:
+                foreach (var id in Resolve(ctx, setDefenseToAttack.Target, cache))
+                {
+                    var die = FindDie(ctx, id);
+                    var defenseDelta = DieStats.EffectiveAttack(ctx.State, die) - DieStats.EffectiveDefense(ctx.State, die);
+                    die.AppliedModifiers.Add(new Modifier(0, defenseDelta, ctx.SourceDieId ?? "ability"));
+                }
+                break;
+
             case Ko ko:
             {
                 var koIds = new List<string>();
@@ -249,8 +296,31 @@ public static class EffectInterpreter
             case ModifyStat modify:
                 foreach (var id in Resolve(ctx, modify.Target, cache))
                 {
-                    FindDie(ctx, id).AppliedModifiers.Add(
+                    var modifiedDie = FindDie(ctx, id);
+                    modifiedDie.AppliedModifiers.Add(
                         new Modifier(modify.AttackDelta ?? 0, modify.DefenseDelta ?? 0, ctx.SourceDieId ?? "ability"));
+
+                    // Corsair ("Leading the Starjammers", DPS064) - "if
+                    // Corsair's A or D is increased by an effect, you
+                    // may increase the A or D of a Sidekick die you
+                    // control by the same amount." Simplified to the
+                    // first available own Sidekick, no real choice -
+                    // avoids a PendingChoice conflict if this single
+                    // ModifyStat call (e.g. a team-wide buff) happens to
+                    // touch more than one Corsair-grant die at once,
+                    // since only one PendingChoice can be pending at a
+                    // time; picking among otherwise-interchangeable
+                    // Sidekicks rarely matters strategically anyway.
+                    if ((modify.AttackDelta > 0 || modify.DefenseDelta > 0) &&
+                        (DieStats.GetCard(ctx.State, modifiedDie)?.GrantsMirrorsOwnStatIncreaseToOwnSidekick ?? false))
+                    {
+                        var sidekick = ctx.State.DiceIn(modifiedDie.ControllerId, Zone.FieldZone)
+                            .Concat(ctx.State.DiceIn(modifiedDie.ControllerId, Zone.AttackZone))
+                            .FirstOrDefault(d => d.Id != modifiedDie.Id && DieStats.CountsAsSidekick(ctx.State, d));
+                        sidekick?.AppliedModifiers.Add(new Modifier(
+                            Math.Max(modify.AttackDelta ?? 0, 0), Math.Max(modify.DefenseDelta ?? 0, 0),
+                            ctx.SourceDieId ?? "ability"));
+                    }
                 }
                 break;
 

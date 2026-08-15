@@ -422,6 +422,37 @@ public sealed record CardDef
     // every ability shape alike (Global, WhenFielded, keyword-driven).
     public bool GrantsGainLifeWhenOpponentTargetsOwnCharacterDie { get; init; }
 
+    // Moira ("It's Not a Dream", DPS044): "while Moira is active, when
+    // an opponent fields a Continuous Action die, reroll it..." Checked
+    // in TurnEngine.UseActionDie's own Continuous branch - the real
+    // single place a Continuous die ever enters the Field Zone.
+    public bool GrantsRerollsOpponentsFieldedContinuousDie { get; init; }
+
+    // Lilandra ("Grand Admiral of the Guard", DPS118): "if one of your
+    // character dice attacks and is unblocked, reroll them after damage
+    // is dealt. If they land on a character face, put them in your Prep
+    // Area instead of your Used Pile." Checked in CombatEngine.
+    // AssignCombatDamage's own unblocked-attacker branch.
+    public bool GrantsRerollsUnblockedAttackerToPrepAreaIfCharacterFace { get; init; }
+
+    // Corsair ("Leading the Starjammers", DPS064): "if Corsair's A or D
+    // is increased by an effect, you may increase the A or D of a
+    // Sidekick die you control by the same amount." Checked in
+    // EffectInterpreter's own ModifyStat case - see that case's own
+    // remarks for the "auto-pick the first available Sidekick, no real
+    // choice" simplification (avoids a PendingChoice conflict when one
+    // ModifyStat call buffs several dice with this grant at once, e.g. a
+    // team-wide buff that happens to include a Corsair).
+    public bool GrantsMirrorsOwnStatIncreaseToOwnSidekick { get; init; }
+
+    // Madelyne Pryor ("Aspiring", DPS119): "while Madelyne Pryor is
+    // active, if an opponent draws an extra die during their Clear and
+    // Draw Step, Prep 2 dice from your bag." Checked in TurnEngine.
+    // ClearAndDraw against its own swarmBonusDice (keyword Swarm is the
+    // only source of "extra" Clear and Draw draws this engine models -
+    // see that method's own remarks).
+    public bool GrantsPrepsTwoOwnDiceWhenOpponentDrawsExtraDuringClearAndDraw { get; init; }
+
     // Whether this card's FULL printed text is correctly modeled -
     // scripted via AbilityDef, built entirely into the engine (a pure
     // keyword like Deadly/Infiltrate needs no AbilityDef at all), or

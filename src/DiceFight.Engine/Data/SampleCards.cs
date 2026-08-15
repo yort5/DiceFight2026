@@ -95,6 +95,10 @@ public static class SampleCards
         RerollOrSpinProtection? grantsRerollOrSpinProtection = null,
         bool grantsSpinsUpInSympathyWithOwnCharacterDice = false,
         bool grantsGainLifeWhenOpponentTargetsOwnCharacterDie = false,
+        bool grantsRerollsOpponentsFieldedContinuousDie = false,
+        bool grantsRerollsUnblockedAttackerToPrepAreaIfCharacterFace = false,
+        bool grantsMirrorsOwnStatIncreaseToOwnSidekick = false,
+        bool grantsPrepsTwoOwnDiceWhenOpponentDrawsExtraDuringClearAndDraw = false,
         bool isImplemented = true,
         string? set = null) => new()
     {
@@ -148,6 +152,10 @@ public static class SampleCards
         GrantsRerollOrSpinProtection = grantsRerollOrSpinProtection,
         GrantsSpinsUpInSympathyWithOwnCharacterDice = grantsSpinsUpInSympathyWithOwnCharacterDice,
         GrantsGainLifeWhenOpponentTargetsOwnCharacterDie = grantsGainLifeWhenOpponentTargetsOwnCharacterDie,
+        GrantsRerollsOpponentsFieldedContinuousDie = grantsRerollsOpponentsFieldedContinuousDie,
+        GrantsRerollsUnblockedAttackerToPrepAreaIfCharacterFace = grantsRerollsUnblockedAttackerToPrepAreaIfCharacterFace,
+        GrantsMirrorsOwnStatIncreaseToOwnSidekick = grantsMirrorsOwnStatIncreaseToOwnSidekick,
+        GrantsPrepsTwoOwnDiceWhenOpponentDrawsExtraDuringClearAndDraw = grantsPrepsTwoOwnDiceWhenOpponentDrawsExtraDuringClearAndDraw,
         IsImplemented = isImplemented,
         Set = set
     };
@@ -1274,6 +1282,71 @@ public static class SampleCards
         ],
         purchaseCost: 3, set: "DPS");
 
+    // Archnemesis (DPS001) - the first user of MutualDamageEqualToOwnAttack
+    // and SetDefenseEqualToOwnAttack (both new this pass - see their own
+    // remarks).
+    public static readonly CardDef Archnemesis = BasicAction(
+        "DPS001", "Archnemesis",
+        "Target character die you control and target opposing character die deal damage to each other " +
+        "equal to their A. Global: Pay Shield. Target character die has D equal to it's A (until end of turn).",
+        abilities: [
+            new AbilityDef(TriggerType.WhenUsed, Cost: null,
+                Effect: new MutualDamageEqualToOwnAttack(
+                    TargetSpec.CharacterDie("target character die you control", TargetOwnership.Own),
+                    TargetSpec.CharacterDie("target opposing character die", TargetOwnership.Opposing))),
+            new AbilityDef(TriggerType.Global, Cost: null,
+                Effect: new SetDefenseEqualToOwnAttack(TargetSpec.CharacterDie("target character die")),
+                EnergyCost: new EnergyCost(1, EnergyType.Shield))
+        ],
+        purchaseCost: 4, set: "DPS");
+
+    // The Front Line (DPS015) - the first user of GameState.
+    // UnblockedAttackerIds/TargetSpec.RequiresUnblockedAttacker (new this
+    // pass - see their own remarks). Global SIMPLIFIED: "can't block this
+    // turn unless opponent pays 1 life" drops the "unless" escape hatch -
+    // modeled as a flat CantBlock instead. A real "unless" here would
+    // need CombatEngine.DeclareBlockers to accept a caller-supplied "I'm
+    // paying life to block anyway despite this restriction" signal (new
+    // API surface reaching the GamesController endpoint too), not a
+    // drop-in reuse of anything that exists - flagged rather than
+    // guessed at. This makes the Global strictly stronger than the real
+    // card (no counter-play), a real, documented rules deviation.
+    public static readonly CardDef TheFrontLine = BasicAction(
+        "DPS015", "The Front Line",
+        "Unblocked attacking character dice gain +3A until end of turn.Global: Pay Fist. Target opposing " +
+        "character die can't block this turn unless opponent pays 1 life.",
+        abilities: [
+            new AbilityDef(TriggerType.WhenUsed, Cost: null,
+                Effect: new ModifyStat(
+                    TargetSpec.CharacterDie("unblocked attacking character dice", TargetOwnership.Own,
+                        zones: [Zone.AttackZone], matchAll: true, requiresUnblockedAttacker: true),
+                    AttackDelta: 3, DefenseDelta: null)),
+            new AbilityDef(TriggerType.Global, Cost: null,
+                Effect: new CantBlock(TargetSpec.CharacterDie("target opposing character die", TargetOwnership.Opposing)),
+                EnergyCost: new EnergyCost(1, EnergyType.Fist))
+        ],
+        purchaseCost: 5, set: "DPS");
+
+    // Explosion (DPS003) - deliberately left isImplemented: false. Three
+    // real gaps, none a drop-in reuse of an existing primitive: (1) "deal
+    // 2 damage to EACH PLAYER and character die" needs a true "hit both
+    // players AND every die on the board at once" effect - nothing here
+    // combines TargetSpec.MatchAll's die-side sweep with a simultaneous
+    // both-players hit; (2) "you may also spend any number of Bolt
+    // energy, for each that you do deal 1 damage to target character
+    // die" is a real spend-an-arbitrary-amount-for-a-scaling-effect
+    // choice, a shape nothing here models (TurnEngine.SpendEnergy always
+    // pays a fixed cost, never an open-ended "as much as you want");
+    // (3) the burst-conditional "+1 additional damage to each recipient
+    // of step 1" needs to know exactly who step 1 actually hit, which
+    // (1) would need to expose. Left vanilla rather than guessed at.
+    public static readonly CardDef Explosion = BasicAction(
+        "DPS003", "Explosion",
+        "Deal 2 damage to each player and character die. You may also spend any number of Bolt energy, " +
+        "for each that you do you may deal 1 damage to target character die. ** Deal 1 additional damage " +
+        "to each player and character die that Explosion deals damage to.",
+        purchaseCost: 4, isImplemented: false, set: "DPS");
+
     // Rally - the first burst-conditional Basic Action (see
     // EffectCondition.OnDoubleBurstFace/DieInstance.BurstStars's own
     // remarks for the plumbing this needed): "Move up to 2 Sidekick
@@ -1716,6 +1789,24 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 2)
         ], set: "DPS");
 
+    // Moira, "It's Not a Dream" (DPS044) - the first user of
+    // GrantsRerollsOpponentsFieldedContinuousDie (new this pass - see
+    // TurnEngine.UseActionDie's own Continuous branch, and its remarks
+    // on the "they may field it normally" -> always-happens
+    // simplification). No AbilityDef needed - a passive, always-on grant.
+    public static readonly CardDef MoiraItsNotADream = Character(
+        "DPS044", "Moira", "It's Not a Dream", dieLimit: 4,
+        "While Moira is active, when an opponent fields a Continuous Action die, reroll it. If it lands " +
+        "on an action face, they may field it normally. Otherwise, send it to the Used Pile.",
+        purchaseCost: 2, energyType: EnergyType.Shield,
+        affiliations: ["X-Men"],
+        grantsRerollsOpponentsFieldedContinuousDie: true,
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 0, Defense: 1),
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 2, BurstStars: 1),
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 2)
+        ], set: "DPS");
+
     // Deathbird, "War of Kings" - the first card to use CantBlock (new
     // this pass): GameState.CantBlockThisTurn, the restriction mirror of
     // ForceBlock/MustBlockThisTurn - enforced by CombatEngine.
@@ -1857,6 +1948,31 @@ public static class SampleCards
         grantsSelfAttackBonusPerMatchingDie: new SelfAttackBonusPerMatchingDie(
             TargetSpec.CharacterDie("opposing character die with 2D or less", TargetOwnership.Opposing, maxDefense: 2),
             AttackPerMatch: 1),
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3),
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 4),
+            new CharacterFace(FieldingCost: 2, Attack: 5, Defense: 4)
+        ], set: "DPS");
+
+    // Sabretooth, "Am I Interrupting?" (DPS051) - the first user of
+    // TargetSpec.NameContains (new this pass). Only the "target
+    // Wolverine character die" half is modeled - the "OR any character
+    // die with a 'While Wolverine is active' ability" half needs
+    // targeting by matching a card's own raw ability TEXT for a phrase,
+    // not a structured property this engine's data model has anywhere
+    // (TargetSpec filters are all real fields - affiliation, energy
+    // type, keyword, card id - never free text). Left out rather than
+    // guessed at; a real card this excludes today: Psylocke
+    // ("Adventurer", DPS048)'s own "gains Deadly while Wolverine is
+    // active."
+    public static readonly CardDef SabretoothAmIInterrupting = Character(
+        "DPS051", "Sabretooth", "Am I Interrupting?", dieLimit: 4,
+        "When fielded, KO target Wolverine characer die, or any character die with a \"While Wolverine is " +
+        "active\" ability.",
+        purchaseCost: 4, energyType: EnergyType.Fist,
+        affiliations: ["Brotherhood of Mutants"],
+        abilities: [new AbilityDef(TriggerType.WhenFielded, Cost: null,
+            Effect: new Ko(TargetSpec.CharacterDie("target Wolverine character die", nameContains: "Wolverine")))],
         levels: [
             new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3),
             new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 4),
@@ -2070,6 +2186,23 @@ public static class SampleCards
                     "2 target Villains character dice", requiredAffiliations: ["Villains"], count: 2)),
                 Else: new Ko(TargetSpec.CharacterDie("target Villains character die", requiredAffiliations: ["Villains"])),
                 CountParam: 4))],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 3, Defense: 4),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 5),
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 5)
+        ], set: "DPS");
+
+    // Corsair, "Leading the Starjammers" (DPS064) - the first user of
+    // GrantsMirrorsOwnStatIncreaseToOwnSidekick (new this pass - see
+    // EffectInterpreter's own ModifyStat case for the enforcement and
+    // its "auto-pick the first Sidekick, no real choice" simplification
+    // remarks). No AbilityDef needed - a passive, always-on grant.
+    public static readonly CardDef CorsairLeadingTheStarjammers = Character(
+        "DPS064", "Corsair", "Leading the Starjammers", dieLimit: 3,
+        "If Corsair's A or D is increasedby an effect, you may increase the A or D of a Sidekick die you " +
+        "control by the same amount.",
+        purchaseCost: 4, energyType: EnergyType.Fist,
+        grantsMirrorsOwnStatIncreaseToOwnSidekick: true,
         levels: [
             new CharacterFace(FieldingCost: 0, Attack: 3, Defense: 4),
             new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 5),
@@ -3130,6 +3263,31 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 2, Attack: 6, Defense: 6)
         ], set: "DPS");
 
+    // D'Ken, "Obsessed" (DPS066) - deliberately left isImplemented: false.
+    // "If you take combat damage this turn" is a real, buildable per-
+    // player per-turn flag (not attempted here only because the second
+    // half makes it useless in isolation - see next). "You may use an
+    // action die from EITHER PLAYER'S Used Pile" needs TurnEngine.
+    // UseActionDie's own validation reworked to source from Zone.
+    // UsedPile (not just the caller's own Zone.ReservePool) and
+    // potentially the OPPONENT's dice too - a real rework of that
+    // method's core eligibility check, not a bespoke bool grant checked
+    // alongside it the way this pass's other UseActionDie hook (Moira)
+    // was. Left vanilla rather than a half-working "tracks the trigger
+    // but can't do anything with it" implementation.
+    public static readonly CardDef DKenObsessed = Character(
+        "DPS066", "D'Ken", "Obsessed", dieLimit: 3,
+        "While D'Ken is active, if you take combat damage this turn you may use an action die from either " +
+        "player's Used Pile.",
+        purchaseCost: 4, energyType: EnergyType.Shield,
+        affiliations: ["Villains", "Shi'ar"],
+        isImplemented: false,
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 4, Defense: 4),
+            new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 5),
+            new CharacterFace(FieldingCost: 2, Attack: 6, Defense: 6)
+        ], set: "DPS");
+
     // D'Ken, "M'Kraan Crystal" (DPS106) - the WhenAttacks clause reuses
     // Falcon's own "Prep a Sidekick from your Used Pile" shape (PrepDie +
     // a real chosen TargetSpec, not PrepFromBag's random draw - Used
@@ -3202,6 +3360,31 @@ public static class SampleCards
                         TargetOwnership.Own, zones: [Zone.FieldZone], requiredAffiliations: ["X-Men"], matchAll: true),
                     "Infiltrate"),
                 AffiliationParam: "X-Men", CountParam: 2))],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 3),
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 3),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 5)
+        ], set: "DPS");
+
+    // Blink, "Warp Portals" (DPS100) - deliberately left isImplemented:
+    // false. "You may pay Mask and 1 life to CANCEL that Global Ability"
+    // needs a real interrupt/cancellation primitive - the ability to
+    // stop an already-invoked Global from resolving its effect at all -
+    // which doesn't exist anywhere in this engine (TurnEngine.
+    // UseGlobalAbility has no such hook, and "cancel" is a different
+    // shape from every existing "reduce/prevent/redirect" mechanism,
+    // none of which stop an ability from running in the first place).
+    // Would also need a genuinely new "pay energy AND life together" cost
+    // shape (MayPayLife only handles life) and its own once-per-turn
+    // tracking independent of the opponent's own Global usage. Left
+    // vanilla rather than a guessed-at partial.
+    public static readonly CardDef BlinkWarpPortals = Character(
+        "DPS100", "Blink", "Warp Portals", dieLimit: 2,
+        "While Blink is active, once per turn when your opponent uses a Global Ability you may pay Mask " +
+        "and 1 life to cancel that Global Ability.",
+        purchaseCost: 4, energyType: EnergyType.Mask,
+        affiliations: ["X-Men"],
+        isImplemented: false,
         levels: [
             new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 3),
             new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 3),
@@ -3472,6 +3655,30 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 4)
         ], set: "DPS");
 
+    // Forge, "Reverse Engineer" (DPS111) - deliberately left
+    // isImplemented: false. "Roll it. If it shows an action face you may
+    // use it's effect" means COMMANDEERING an opponent's Action die's
+    // own ability - running the die's card's Effect tree with Forge's
+    // controller as ctx.ControllerId instead of the die's real
+    // controller. Nothing in this engine's EffectContext/AbilityQueue
+    // pipeline supports resolving a card's ability under a DIFFERENT
+    // controller than whoever actually owns/used the die - a real,
+    // deep change to how abilities are attributed, not a bespoke bool
+    // grant the way this pass's other reactive hooks were. Left vanilla
+    // rather than guessed at.
+    public static readonly CardDef ForgeReverseEngineer = Character(
+        "DPS111", "Forge", "Reverse Engineer", dieLimit: 2,
+        "While Forge is active, if an opponent uses an action die, roll it. If it shows an action face " +
+        "you may use it's effect.",
+        purchaseCost: 4, energyType: EnergyType.Bolt,
+        affiliations: ["X-Men"],
+        isImplemented: false,
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 2),
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 2),
+            new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 4)
+        ], set: "DPS");
+
     // Professor X, "Dreamer" - the second user of
     // GrantsSelfPrepFromBagIfFieldedWithEnergy (Forge above is the
     // first), this time the RequiredAffiliation half; the Energize half
@@ -3538,6 +3745,49 @@ public static class SampleCards
         abilities: [new AbilityDef(TriggerType.Global, Cost: null,
             Effect: new GrantKeyword(TargetSpec.CharacterDie("target character die"), "Overcrush"),
             EnergyCost: new EnergyCost(3))],
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 1),
+            new CharacterFace(FieldingCost: 2, Attack: 5, Defense: 2),
+            new CharacterFace(FieldingCost: 2, Attack: 6, Defense: 3)
+        ], set: "DPS");
+
+    // Mister Sinister, "Dark Experimentation" (DPS123) - "after blockers
+    // are declared" read the same way Gladiator ("The Empire Must
+    // Stand", DPS073)'s own "Pay Fist WHEN YOU ATTACK" was earlier this
+    // pass: descriptive timing color, not a distinct new sub-step-scoped
+    // trigger this engine would need to build - modeled as a plain
+    // WhenAttacks reusing MayPayLife (already built for Mister Sinister
+    // "Geneticist"/DPS043's own third clause) for "you may pay 2 life
+    // and have him gain +3A." The Global's two Sidekick-from-Used-Pile
+    // actions reuse FieldDie/PrepDie against TargetSpec.Sidekick, same
+    // shape already established elsewhere (Falcon's own Teamwatch Prep,
+    // rule 2.6.3's "ability-driven fielding is free by default" note).
+    public static readonly CardDef MisterSinisterDarkExperimentation = Character(
+        "DPS123", "Mister Sinister", "Dark Experimentation", dieLimit: 2,
+        "When Mister Sinister attacks, after blockers are declared, you may pay 2 life and have him gain " +
+        "+3A Global: Pay 2. Field a Sidekick from your Used Pile, Prep a Sidekick from your Used Pile.",
+        purchaseCost: 5, energyType: EnergyType.Bolt,
+        affiliations: ["Villains"],
+        abilities: [
+            new AbilityDef(TriggerType.WhenAttacks, Cost: null,
+                Effect: new MayPayLife(2, new ModifyStat(TargetSpec.Self, AttackDelta: 3, DefenseDelta: null))),
+            new AbilityDef(TriggerType.Global, Cost: null,
+                // Two DELIBERATELY different Description strings, even
+                // though the underlying TargetSpec is otherwise
+                // identical - Execute's own upfront resolution caches by
+                // structural TargetSpec equality (rule 3.2.5's "resolved
+                // once, shared" idiom for a genuinely repeated
+                // reference), which would otherwise make "Field a
+                // Sidekick" and "Prep another Sidekick" resolve to the
+                // SAME chosen die - wrong here, since the card means two
+                // independent choices, not one shared reference the way
+                // Shocking Grasp's own repeated target is.
+                Effect: new Sequence([
+                    new FieldDie(TargetSpec.Sidekick("a Sidekick die from your Used Pile to field", TargetOwnership.Own, zones: [Zone.UsedPile]), Free: true),
+                    new PrepDie(TargetSpec.Sidekick("a Sidekick die from your Used Pile to prep", TargetOwnership.Own, zones: [Zone.UsedPile]))
+                ]),
+                EnergyCost: new EnergyCost(2))
+        ],
         levels: [
             new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 1),
             new CharacterFace(FieldingCost: 2, Attack: 5, Defense: 2),
@@ -3668,6 +3918,25 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 3, Attack: 5, Defense: 6)
         ], set: "DPS");
 
+    // Lilandra, "Grand Admiral of the Guard" (DPS118) - the first user
+    // of GrantsRerollsUnblockedAttackerToPrepAreaIfCharacterFace (new
+    // this pass - see CombatEngine.AssignCombatDamage's own unblocked-
+    // attacker branch). No AbilityDef needed - a passive, always-on
+    // grant.
+    public static readonly CardDef LilandraGrandAdmiralOfTheGuard = Character(
+        "DPS118", "Lilandra", "Grand Admiral of the Guard", dieLimit: 2,
+        "While Lilandra is active, if one of your character dice attacks and is unblocked, reroll them " +
+        "after damage is dealt. If they land on a character face, put them in your Prep Area instead of " +
+        "your Used Pile.",
+        purchaseCost: 6, energyType: EnergyType.Shield,
+        affiliations: ["Shi'ar"],
+        grantsRerollsUnblockedAttackerToPrepAreaIfCharacterFace: true,
+        levels: [
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3),
+            new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 5),
+            new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 6)
+        ], set: "DPS");
+
     // Magneto, "Master of Magnetism" (DPS121) and Mystique, "She Walks
     // Among Us" (DPS149) both read "...to an energy face of your
     // opponent's choice" - real opponent-choice-of-face machinery (a
@@ -3747,6 +4016,24 @@ public static class SampleCards
         affiliations: ["Brotherhood of Mutants"],
         abilities: [new AbilityDef(TriggerType.WhenAnotherDieKOd, Cost: null, Effect: new GrantLoyaltyCounter(),
             KOdFilter: new KOdDieMatch(TargetOwnership.Own, AffiliationContains: "Brotherhood of Mutants", ExcludeSelf: true))],
+        levels: [
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 3),
+            new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 4),
+            new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 4)
+        ], set: "DPS");
+
+    // Madelyne Pryor, "Aspiring" (DPS119) - the first user of
+    // GrantsPrepsTwoOwnDiceWhenOpponentDrawsExtraDuringClearAndDraw (new
+    // this pass - see TurnEngine.ClearAndDraw's own swarmBonusDice hook).
+    // No AbilityDef needed - a passive, always-on grant.
+    public static readonly CardDef MadelynePryorAspiring = Character(
+        "DPS119", "Madelyne Pryor", "Aspiring", dieLimit: 2,
+        "While Madelyne Pryor is active, if an opponent draws an extra die during their Clear and Draw " +
+        "Step, Prep 2 dice from your bag (no matter how many extra dice your opponent draws, you only " +
+        "Prep 2 dice).",
+        purchaseCost: 3, energyType: EnergyType.Mask,
+        affiliations: ["Brotherhood of Mutants", "Hellfire Club"],
+        grantsPrepsTwoOwnDiceWhenOpponentDrawsExtraDuringClearAndDraw: true,
         levels: [
             new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 3),
             new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 4),
@@ -4055,7 +4342,10 @@ public static class SampleCards
             FirestarAmazingFriend, LilandraFreedomFighter, LilandraMajestrix, MagnetoMasterOfMagnetism, MystiqueSheWalksAmongUs,
             MisterSinisterGeneticist, OrganicSteelPreventDamage, DampeningCollar, CorsairBackFromOuterSpace,
             BishopTorturedTimeline, WolverineToughForTheKids, MakingTheTeam, Mutation, GladiatorTheEmpireMustStand,
-            WolverineTrainer, AngelAirSupport, DKenMKraanCrystal, CyclopsXaviersDream
+            WolverineTrainer, AngelAirSupport, DKenMKraanCrystal, CyclopsXaviersDream,
+            Archnemesis, TheFrontLine, Explosion, MoiraItsNotADream, SabretoothAmIInterrupting,
+            CorsairLeadingTheStarjammers, DKenObsessed, BlinkWarpPortals, ForgeReverseEngineer,
+            LilandraGrandAdmiralOfTheGuard, MadelynePryorAspiring, MisterSinisterDarkExperimentation
         ];
 
         // Hand-curated cards win on id collision - shouldn't happen in

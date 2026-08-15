@@ -220,6 +220,17 @@ public static class CombatEngine
         RecordVulcanTextBlanking(state, assignment);
         ResolveEnergyDrain(state, assignment);
 
+        // The Front Line (DPS015)/Lilandra ("Grand Admiral of the
+        // Guard", DPS118) - GameState.UnblockedAttackerIds' own real
+        // source of truth, same "no blockers assigned" check the
+        // Infiltrate scan just below already uses.
+        state.UnblockedAttackerIds.Clear();
+        foreach (var attacker in state.DiceIn(state.ActivePlayerId, Zone.AttackZone))
+        {
+            if (assignment.BlockersOf(attacker.Id).Count == 0)
+                state.UnblockedAttackerIds.Add(attacker.Id);
+        }
+
         // Keyword Infiltrate carves out a real sub-window here, strictly
         // before the Action/Global window opens - but only when there's
         // actually a decision to make (rule text: "you may choose" - an
@@ -625,7 +636,38 @@ public static class CombatEngine
                 // against an opposing Character die, and an unblocked
                 // attacker has none.
                 inactivePlayer.Life -= attack;
-                attacker.Zone = Zone.OutOfPlay;
+
+                // Lilandra ("Grand Admiral of the Guard", DPS118) - "if
+                // one of your character dice attacks and is unblocked,
+                // reroll them after damage is dealt. If they land on a
+                // character face, put them in your Prep Area instead of
+                // your Used Pile." Only the character-face branch is
+                // special - the non-character branch just follows the
+                // same Out of Play -> (Clean Up) -> Used Pile path an
+                // unblocked attacker always takes anyway.
+                var hasActiveLilandra = roller is not null && state.DiceIn(attacker.ControllerId, Zone.FieldZone)
+                    .Concat(state.DiceIn(attacker.ControllerId, Zone.AttackZone))
+                    .Any(d => DieStats.GetCard(state, d)?.GrantsRerollsUnblockedAttackerToPrepAreaIfCharacterFace ?? false);
+                if (hasActiveLilandra)
+                {
+                    var attackerCardId = attacker.VirtualCardId ?? attacker.CardId;
+                    var attackerCard = attackerCardId is not null ? state.CardCatalog.GetValueOrDefault(attackerCardId) : null;
+                    var result = roller!.Roll(attacker, attackerCard);
+                    if (result.Status is DieStatus.Character or DieStatus.SidekickCharacter)
+                    {
+                        attacker.Status = result.Status;
+                        attacker.Level = result.Level;
+                        attacker.Zone = Zone.PrepArea;
+                    }
+                    else
+                    {
+                        attacker.Zone = Zone.OutOfPlay;
+                    }
+                }
+                else
+                {
+                    attacker.Zone = Zone.OutOfPlay;
+                }
                 continue;
             }
 

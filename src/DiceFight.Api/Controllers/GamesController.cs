@@ -92,7 +92,7 @@ public sealed class GamesController(GameStore store) : ControllerBase
     {
         var state = RequireNoPendingChoice(gameId);
         var queue = new AbilityQueue();
-        TurnEngine.UseActionDie(state, queue, request.DieId);
+        TurnEngine.UseActionDie(state, queue, request.DieId, roller: new PlaceholderDiceRoller(new Random()));
         Drain(state, queue, request.TargetDieIds);
         return Ok(GameStateDto.From(gameId, state));
     }

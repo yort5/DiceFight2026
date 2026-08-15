@@ -136,6 +136,27 @@ public static class TurnEngine
                 swarmBonusDice.AddRange(DrawFromBag(state, activeId, 1, random));
         }
 
+        // Madelyne Pryor ("Aspiring", DPS119) - "if an opponent draws an
+        // extra die during their Clear and Draw Step, Prep 2 dice from
+        // your bag (no matter how many extra dice your opponent draws,
+        // you only Prep 2 dice)." Keyword Swarm's own bonus pull is the
+        // only source of "extra" Clear and Draw draws this engine models
+        // (rule 2.3.3's first-turn 4th die is a fixed, unconditional
+        // part of setup, not an "extra" reaction to anything) - a real,
+        // if narrow, live signal rather than a synthetic counter.
+        if (swarmBonusDice.Count > 0)
+        {
+            var opponentOfActive = state.OpponentOf(activeId);
+            var hasActiveMadelynePryor = state.DiceIn(opponentOfActive, Zone.FieldZone)
+                .Concat(state.DiceIn(opponentOfActive, Zone.AttackZone))
+                .Any(d => DieStats.GetCard(state, d)?.GrantsPrepsTwoOwnDiceWhenOpponentDrawsExtraDuringClearAndDraw ?? false);
+            if (hasActiveMadelynePryor)
+            {
+                foreach (var toPrep in DrawFromBag(state, opponentOfActive, 2, random))
+                    toPrep.Zone = Zone.PrepArea;
+            }
+        }
+
         if (queue is not null)
         {
             foreach (var die in drawn.Concat(swarmBonusDice))
@@ -822,7 +843,8 @@ public static class TurnEngine
     // game actions (also usable in the Attack Step's Action/Global window,
     // rule 2.7.3.1). Only the Active player may use Action dice (2.6.4.1).
     public static void UseActionDie(
-        GameState state, AbilityQueue queue, string dieId, IReadOnlyList<string>? energyDieIdsToSpend = null)
+        GameState state, AbilityQueue queue, string dieId, IReadOnlyList<string>? energyDieIdsToSpend = null,
+        IDiceRoller? roller = null)
     {
         if (!InMainOrAttackActionWindow(state))
             throw new InvalidOperationException("Action dice can only be used during the Main Step or the Attack Step's Action/Global window.");
@@ -936,7 +958,41 @@ public static class TurnEngine
 
         if (isContinuous)
         {
-            die.Zone = Zone.FieldZone; // rule 2.6.4.2
+            // Moira ("It's Not a Dream", DPS044) - "while Moira is
+            // active, when an opponent fields a Continuous Action die,
+            // reroll it. If it lands on an action face, they may field
+            // it normally. Otherwise, send it to the Used Pile." "They
+            // may field it normally" simplified to always-happens (the
+            // house convention already used for inconsequential "you
+            // may" text - declining to field a die you already
+            // committed to use is never rational, matching SwapAttack's
+            // own precedent). roller: null gracefully skips this check
+            // (same "roller optional" convention as everywhere else a
+            // reroll might not have one available) and falls through to
+            // the normal unconditional fielding below.
+            var opponentOfUser = state.OpponentOf(die.ControllerId);
+            var hasActiveMoira = roller is not null && state.DiceIn(opponentOfUser, Zone.FieldZone)
+                .Concat(state.DiceIn(opponentOfUser, Zone.AttackZone))
+                .Any(d => DieStats.GetCard(state, d)?.GrantsRerollsOpponentsFieldedContinuousDie ?? false);
+            if (hasActiveMoira)
+            {
+                var result = roller!.Roll(die, card);
+                if (result.Status == DieStatus.Action)
+                {
+                    die.Status = result.Status;
+                    die.BurstStars = result.BurstStars;
+                    die.Zone = Zone.FieldZone;
+                }
+                else
+                {
+                    die.Zone = Zone.UsedPile;
+                    die.ResetToUnrolled();
+                }
+            }
+            else
+            {
+                die.Zone = Zone.FieldZone; // rule 2.6.4.2
+            }
         }
         else if (card?.Type == CardType.EpicBasicAction)
         {

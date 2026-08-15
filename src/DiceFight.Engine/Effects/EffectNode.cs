@@ -110,6 +110,18 @@ public sealed record TargetSpec(
     // ?? CardId, same precedence every other card-identity check here
     // already uses.
     string? RequiredCardId = null,
+    // Sabretooth ("Am I Interrupting?", DPS051) - "target Wolverine
+    // character die" (matches ANY Wolverine printing, unlike
+    // RequiredCardId's exact single-card match) - substring match
+    // against the candidate's own printed CardDef.Name, same "contains,
+    // case-insensitive" shape KOdDieMatch.NameContains already uses for
+    // reactive triggers, just for active targeting instead.
+    string? NameContains = null,
+    // The Front Line (DPS015) - "unblocked attacking character dice."
+    // Checked against GameState.UnblockedAttackerIds (populated by
+    // CombatEngine.DeclareBlockers at the moment blockers are declared -
+    // see its own remarks), not derivable from Zone/Status alone.
+    bool RequiresUnblockedAttacker = false,
     // Making the Team (DPS007)'s own "a character die from your Used
     // Pile" - a dormant-zone die is always Status.Unrolled (rule 1.6.8),
     // so CharacterDiceOnly's live-Status check can't express "the card
@@ -145,11 +157,14 @@ public sealed record TargetSpec(
         int? maxDefense = null,
         bool requiresLoyaltyCounter = false,
         int? minLevel = null,
-        bool excludeSidekicks = false) =>
+        bool excludeSidekicks = false,
+        string? nameContains = null,
+        bool requiresUnblockedAttacker = false) =>
         new(ownership, CharacterDiceOnly: true, zones ?? DefaultZones, energyType, count, description,
             Optional: optional, MaxAttack: maxAttack, RequiredAffiliations: requiredAffiliations, MatchAll: matchAll,
             RequiredLevel: requiredLevel, MaxDefense: maxDefense, RequiresLoyaltyCounter: requiresLoyaltyCounter,
-            MinLevel: minLevel, ExcludeSidekicks: excludeSidekicks);
+            MinLevel: minLevel, ExcludeSidekicks: excludeSidekicks, NameContains: nameContains,
+            RequiresUnblockedAttacker: requiresUnblockedAttacker);
 
     // optional: true models "you MAY target up to Count" (any number,
     // including zero, is a legal chosen count) rather than rule 3.3.11's
@@ -215,6 +230,20 @@ public sealed record TargetSpec(
 // GrantsOwnDamageReductionFromOpponentAbilities (that's an always-on
 // per-card grant; this is a targeted, player-activated one-time effect).
 public sealed record PreventDamage(int Amount, TargetSpec Target) : EffectNode;
+// Archnemesis (DPS001) - "target character die you control and target
+// opposing character die deal damage to each other equal to their A."
+// Both amounts are captured from each die's own EffectiveAttack BEFORE
+// either damage application runs (true rule 3.1.7 simultaneity - dieA
+// still deals its own captured attack to dieB even if dieB's damage
+// happens to KO dieA first in resolution order).
+public sealed record MutualDamageEqualToOwnAttack(TargetSpec TargetA, TargetSpec TargetB) : EffectNode;
+// Archnemesis (DPS001)'s own Global - "target character die has D equal
+// to its A (until end of turn)." Same Applied-modifier shape SetStat
+// already uses, just with Defense computed live from the target's own
+// current EffectiveAttack instead of a fixed authored int - SetStat's
+// own Defense field can't express "whatever this die's attack happens
+// to be right now."
+public sealed record SetDefenseEqualToOwnAttack(TargetSpec Target) : EffectNode;
 public sealed record DealDamage(int Amount, TargetSpec Target) : EffectNode;
 // Keyword Retaliation's Black Manta ("Deep Sea Deviant") printing:
 // "deal 1 damage to your opponent for each of your active Villains" -

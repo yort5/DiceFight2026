@@ -6625,3 +6625,131 @@ the targets up to survive, not by changing the implementation.
 
 Verified: `dotnet build`, `dotnet test` (534/534 - 5 new cases), and
 `npm run build` all clean.
+
+## Status update — the rest of the DPS gap list: 8 more cards real, 4
+deliberately left vanilla, closing out the "Dark Phoenix Saga, first
+pass" list entirely (skipping only DPS039/Rush, per the user's own call)
+
+The user asked to push all the way to the end of the list. Eight real
+cards landed, each with its own new (but bounded) primitive; four -
+D'Ken "Obsessed" (DPS066), Blink "Warp Portals" (DPS100), Forge
+"Reverse Engineer" (DPS111), Explosion (DPS003) - were deliberately left
+`isImplemented: false`, each needing a genuinely new class of engine
+capability (an interrupt/cancellation primitive, commandeering an
+ability under a different controller, an open-ended energy-for-effect
+spend loop) too large to build well in this pass; each has a code
+comment explaining exactly what's missing and why, matching this file's
+own "Scripting policy" - refusing to ship a guessed-at partial rather
+than a real implementation.
+
+**Archnemesis (DPS001)** - two new nodes: `MutualDamageEqualToOwnAttack`
+(both dice's attack values captured before either damage application
+runs - true rule 3.1.7 simultaneity, not a sequential trade) and
+`SetDefenseEqualToOwnAttack` (the `SetStat` shape, just computed live
+from the target's own current `EffectiveAttack` instead of a fixed
+authored int).
+
+**The Front Line (DPS015)** - new `GameState.UnblockedAttackerIds` +
+`TargetSpec.RequiresUnblockedAttacker`, populated by `CombatEngine.
+DeclareBlockers` the moment blockers are assigned (the same "no
+blockers" check the existing Infiltrate window scan already computes,
+just persisted for later querying - `CombatAssignment` itself is a
+transient, caller-supplied parameter nothing else could otherwise see).
+**Deliberate rules deviation**: the Global's "can't block... unless
+opponent pays 1 life" escape hatch is dropped - modeled as a flat
+`CantBlock`. A real "unless" needs `CombatEngine.DeclareBlockers` (and
+the `GamesController` endpoint above it) to accept a caller-supplied
+"I'm paying life to block anyway" signal that doesn't exist; strictly
+stronger than the real card, flagged rather than silently guessed.
+
+**Moira "It's Not a Dream" (DPS044)** - `TurnEngine.UseActionDie` gained
+an optional `IDiceRoller? roller` parameter (previously none - Action
+dice were never re-rolled after their own Roll & Reroll Step), used to
+reroll an opponent's Continuous die the moment it tries to enter the
+Field Zone (`CardDef.GrantsRerollsOpponentsFieldedContinuousDie`). "They
+may field it normally" simplified to always-happens (declining a die
+you already committed to use is never rational - the same house
+convention `SwapAttack`'s own inconsequential "you may" already uses).
+The API's `use-action-die` endpoint now supplies a real
+`PlaceholderDiceRoller`, same as every other roll-consuming endpoint.
+
+**Sabretooth "Am I Interrupting?" (DPS051)** - new `TargetSpec.
+NameContains` (substring match against a candidate's own card name, the
+active-targeting counterpart to `KOdDieMatch.NameContains`'s reactive
+one) for "target Wolverine character die," matching any Wolverine
+printing. The card's OR-clause ("or any character die with a 'While
+Wolverine is active' ability") is left out - targeting by matching a
+card's own raw ability TEXT for a phrase isn't a structured property
+this engine's `TargetSpec` has anywhere (every filter is a real field:
+affiliation, energy type, keyword, card id, never free text) -
+Psylocke ("Adventurer," DPS048) is the one real card this excludes.
+
+**Corsair "Leading the Starjammers" (DPS064)** - hooked directly into
+`EffectInterpreter`'s own `ModifyStat` case (the main "an effect
+increases A or D" mechanism): if the modified die carries `CardDef.
+GrantsMirrorsOwnStatIncreaseToOwnSidekick` and the delta was positive,
+the FIRST available own Sidekick gets the same bump automatically - no
+real player choice, since a genuine chooser here risks colliding with
+another pending choice if one `ModifyStat` call happens to buff several
+Corsair-grant dice at once (e.g. a team-wide buff), and only one
+`PendingChoice` can be open at a time.
+
+**Lilandra "Grand Admiral of the Guard" (DPS118)** - hooked into
+`CombatEngine.AssignCombatDamage`'s own unblocked-attacker branch
+(`CardDef.GrantsRerollsUnblockedAttackerToPrepAreaIfCharacterFace`):
+rerolls right there before the attacker would otherwise go Out of Play:
+character face -> Prep Area, anything else -> the normal Out of Play ->
+(Clean Up) -> Used Pile path unchanged.
+
+**Madelyne Pryor "Aspiring" (DPS119)** - hooked into `TurnEngine.
+ClearAndDraw` against its own pre-existing `swarmBonusDice` (keyword
+Swarm's bonus pull is the only source of "extra" Clear and Draw draws
+this engine already tracks - a real live signal, not a synthetic
+counter built just for this card). Capped at exactly 2 Preps regardless
+of how many bonus dice were actually drawn, matching the card's own
+parenthetical. The test for this one needed real care to get
+deterministic: `DrawFromBag`'s "refill from the Used Pile when the bag
+runs dry" fallback means a naive 2-extra-copy setup gets fully consumed
+by the INITIAL draw before the bonus draw ever runs, silently starving
+it - worked around with a single guaranteed-drawn bag copy plus enough
+Used-Pile filler seeded so refill leaves genuine leftovers, verified
+empirically against the test's own fixed `Random` seed (temporary debug
+`throw`, not `Console.Error.WriteLine` - this test host doesn't surface
+captured stderr, a real environment quirk worth remembering).
+
+**Mister Sinister "Dark Experimentation" (DPS123)** - "after blockers
+are declared" read the same way Gladiator's own "Pay Fist when you
+attack" was read earlier this pass: descriptive timing color, not a new
+sub-step-scoped trigger - modeled as plain `WhenAttacks` reusing
+`MayPayLife` (already built for Mister Sinister "Geneticist"'s own
+third clause) for "pay 2 life, gain +3A." The Global's two Sidekick-
+from-Used-Pile actions needed one real fix: both `TargetSpec`s were
+originally byte-for-byte identical, which `Execute`'s own upfront
+resolution cache (keyed by structural `TargetSpec` equality, rule
+3.2.5's intentional "resolved once, shared" idiom for a genuinely
+repeated reference) would have collapsed into ONE shared chosen die for
+both the Field and the Prep step - wrong here, since the card means two
+independent choices. Fixed by giving each a distinct Description
+string, the same fix `Mutation`'s own Global needed earlier this pass
+for the identical reason.
+
+One more test-authoring trap repeated (and caught) from the Cyclops
+round: `Archnemesis`'s own mutual-damage test originally used level-3
+dice, whose placeholder stats happen to KO each other outright (4A into
+4D) - `ForceKO` resets `Damage` back to 0 as part of the KO, silently
+defeating a raw-`Damage` assertion. Fixed by leveling down to where
+defense comfortably survives, not by touching the implementation.
+
+Re-ran `scripts/import_bulk_cards.py` (179 → 200 hand-curated - the 8
+real cards plus the 4 left `isImplemented: false`, since the import
+script excludes by id regardless of implementation status).
+
+This closes out the "Dark Phoenix Saga, first pass" gap list from
+DESIGN_LOG's own original breakdown - every card is now either real,
+correctly vanilla by design (Deadpool "#1 Draft Pick"), or a
+transparently-documented partial/omission, except DPS039 (needs Rush,
+deliberately deferred per the user's own call at the start of this
+pass).
+
+Verified: `dotnet build`, `dotnet test` (544/544 - 21 new cases), and
+`npm run build` all clean.

@@ -66,6 +66,16 @@ public sealed class GameState
     // every one of them is a real cause of the eventual Clean Up KO.
     public Dictionary<string, HashSet<string>> DeadlyEngagedDieIds { get; } = [];
 
+    // The Front Line (DPS015)/Lilandra ("Grand Admiral of the Guard",
+    // DPS118) - "unblocked attacking character dice." Populated by
+    // CombatEngine.DeclareBlockers right after blockers are assigned
+    // (overwritten fresh each time, not accumulated - only meaningful
+    // for the combat currently in the Action/Global window), since
+    // CombatAssignment itself is a caller-supplied, non-persisted
+    // parameter that nothing outside CombatEngine's own method calls
+    // could otherwise query.
+    public HashSet<string> UnblockedAttackerIds { get; } = [];
+
     // Keyword Call Out - attacker die id -> the opposing Character die it
     // targeted when it attacked (set by the SetCallOutTarget effect,
     // enforced by CombatEngine.DeclareBlockers). Scoped to one combat:
