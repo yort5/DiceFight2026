@@ -6753,3 +6753,62 @@ pass).
 
 Verified: `dotnet build`, `dotnet test` (544/544 - 21 new cases), and
 `npm run build` all clean.
+
+## Status update: /teambuilder's built team now starts a real digital game
+
+Closes the "still not done" callout at the end of the "team selection on
+/teambuilder" entry and next-steps item #13 in `RULES_ENGINE_DESIGN.md`:
+`GamesController.Create` no longer always uses the two curated rosters.
+
+**Backend**: `Create` now takes an optional `CreateGameRequest
+{ TeamCardIds }`. Omitted or empty -> unchanged fallback (curated Team A
+vs Team B, so the web client's original "New Game" button and anything
+else already depending on that default keeps working). Non-empty ->
+that list becomes Team A, and a new `RandomTeamBuilder` (`DiceFight.
+Engine/TeamBuilding/RandomTeamBuilder.cs`) generates Team B by drawing
+only from `IsImplemented` catalog cards, since there's no opponent-
+selection UI and an unscripted opponent card would just sit there doing
+nothing. It mirrors the same construction shape the web Team Builder's
+own "Strict rules" checkbox already enforces (<=8 unique-named
+Character/Action cards, <=20 dice by summed `DieLimit`, exactly 2 Basic
+Actions) - kept in sync by hand the same way `TeamLinkCodec`'s C#/
+TypeScript ports already are, not shared code, since the two run in
+different languages.
+
+**Deliberately NOT threading through per-card die counts.** The web
+Team Builder lets you pick e.g. "2 of this 4-die-limit card," but
+`Player.TeamCardIds` is just a flat unique-card-id list and `TeamSetup`
+already always instantiates a card's full `DieLimit` regardless of team
+size (see that file's own long-standing remarks - team-construction
+legality, next-steps item #4, is a known, separate, unenforced gap).
+Extending `TeamCardIds`/`TeamSetup` to carry partial counts would be
+real, separate engine work, not a natural side effect of this feature -
+so "Start Game" sends only the set of selected card ids; every card
+starts at its full die limit exactly like the two curated rosters
+always have.
+
+**Frontend handoff**: `Root.tsx` swaps `<TeamBuilderPage>` for `<App>`
+entirely on route change (no shared React state), so there's no direct
+way to hand a freshly-created `GameState` from one to the other.
+Bridged with a small `gameHandoff.ts` (sessionStorage, not localStorage
+- a stale pending game from a closed tab shouldn't resurrect itself
+later): `TeamBuilderPage`'s new "Start Game with This Team" button
+calls `api.createGame(cardIds)`, stashes the response, and navigates to
+`/game`; `App`'s `game` state reads it back via a lazy `useState`
+initializer on first render, then the entry is consumed (removed) so a
+later refresh doesn't replay it. The button is disabled when the team
+is empty or currently over any construction cap (reusing the sidebar's
+existing `violations` check) - being under a cap (e.g. only 5/8 cards)
+is allowed, same "only over the cap is illegal" stance the sidebar
+already took for an in-progress team.
+
+Verified end-to-end in a real headless-Chromium session (not just
+`dotnet build`/`npm run build`): built a specific 5-card team in
+`/teambuilder`, clicked Start Game, and confirmed on `/game` that Team
+A's unpurchased roster was exactly those 5 cards at their real die
+limits, Team B's roster was a different randomly-generated set
+including 2 Basic Actions, and the old "New Game (Team A vs Team B)"
+button still produces the original curated matchup - no console errors
+in either path. `dotnet test` 547/547 (3 new `RandomTeamBuilderTests`
+cases, run against the real catalog rather than a synthetic one so
+"ran out of implemented cards to draw from" would actually surface).

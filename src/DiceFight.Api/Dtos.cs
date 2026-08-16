@@ -81,6 +81,9 @@ public sealed record GameStateDto(
 
 // ---- Request bodies ----
 
+// Optional - see GamesController.Create's own remarks for the fallback
+// (curated Team A/B) when this is omitted or TeamCardIds is empty.
+public sealed record CreateGameRequest(IReadOnlyList<string>? TeamCardIds = null);
 public sealed record PurchaseRequest(string DieId, IReadOnlyList<string> EnergyDieIds);
 // TargetDieIds feeds a WhenFielded ability that needs one (Intimidate,
 // Dazzler, God Emperor Doom, Polaris) - see GamesController.Field's Drain

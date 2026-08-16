@@ -19,7 +19,11 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
 export const api = {
   getCards: () => request<CardDef[]>("/cards"),
-  createGame: () => request<GameState>("/games", { method: "POST" }),
+  createGame: (teamCardIds?: string[]) =>
+    request<GameState>("/games", {
+      method: "POST",
+      body: JSON.stringify({ teamCardIds: teamCardIds && teamCardIds.length > 0 ? teamCardIds : null }),
+    }),
   getGame: (id: string) => request<GameState>(`/games/${id}`),
 
   advanceStep: (id: string) => request<GameState>(`/games/${id}/advance-step`, { method: "POST" }),

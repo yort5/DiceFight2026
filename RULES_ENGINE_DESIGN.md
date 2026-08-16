@@ -150,10 +150,15 @@ here rather than assuming which approach they'd want.
     (see the "team selection on /teambuilder" status update):
     `?team=<id>:<count>,<id>:<count>,...`, a "Strict rules" checkbox
     enforcing rules 2.1.1/2.1.3-2.1.5 by default with an override, and
-    a "Copy team link" round-trip. Still not done: wiring a built team
-    into actually starting a digital game - `GamesController.Create`
-    is untouched, still always the two curated rosters. Natural next
-    increment.
+    a "Copy team link" round-trip. ~~Wiring a built team into actually
+    starting a digital game~~ - done (see the "/teambuilder's built
+    team now starts a real digital game" status update):
+    `GamesController.Create` accepts an optional custom Team A roster,
+    and a new `RandomTeamBuilder` generates a legal-shaped opposing
+    Team B from `IsImplemented` cards. Per-card die COUNTS still aren't
+    threaded through (every card starts at its full `DieLimit`,
+    matching `TeamSetup`'s existing, separately-tracked limitation -
+    see next-steps item #4).
 14. ~~A Discord bot~~ - card lookup (`/card`) and Teambuilder-link
     preview (`/team`) done, re-implemented (not copied) from the
     user's separate community bot - see the "a Discord bot" status

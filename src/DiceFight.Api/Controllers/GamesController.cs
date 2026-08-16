@@ -4,6 +4,7 @@ using DiceFight.Engine.Data;
 using DiceFight.Engine.Effects;
 using DiceFight.Engine.Model;
 using DiceFight.Engine.Queueing;
+using DiceFight.Engine.TeamBuilding;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DiceFight.Api.Controllers;
@@ -12,18 +13,35 @@ namespace DiceFight.Api.Controllers;
 [Route("api/games")]
 public sealed class GamesController(GameStore store) : ControllerBase
 {
-    // Always the two curated sample teams for now - real team building/
-    // selection is a separate, later feature.
+    // With no body (or an empty TeamCardIds), falls back to the two
+    // curated sample teams as before - keeps the web client's original
+    // "New Game (Team A vs Team B)" button working unchanged. A non-empty
+    // TeamCardIds (from /teambuilder's "Start Game", see TeamBuilderPage.
+    // tsx) becomes Team A instead; unknown ids are silently dropped by
+    // TeamSetup itself, same trust-boundary shape as everywhere else in
+    // this controller. Team B is always a fresh RandomTeamBuilder roster
+    // drawn from IsImplemented cards in that case - there's no opponent
+    // selection UI, and an unscripted opponent card would just sit there
+    // doing nothing.
     [HttpPost]
-    public ActionResult<GameStateDto> Create()
+    public ActionResult<GameStateDto> Create([FromBody] CreateGameRequest? request = null)
     {
         var catalog = SampleCards.BuildCatalog();
         var teamA = new Player { Id = "teamA", Name = "Team A" };
-        teamA.TeamCardIds.AddRange(SampleCards.TeamACharacterIds);
-        teamA.TeamCardIds.AddRange(SampleCards.TeamABasicActionIds);
         var teamB = new Player { Id = "teamB", Name = "Team B" };
-        teamB.TeamCardIds.AddRange(SampleCards.TeamBCharacterIds);
-        teamB.TeamCardIds.AddRange(SampleCards.TeamBBasicActionIds);
+
+        if (request?.TeamCardIds is { Count: > 0 } customTeam)
+        {
+            teamA.TeamCardIds.AddRange(customTeam);
+            teamB.TeamCardIds.AddRange(RandomTeamBuilder.Build(catalog, new Random()));
+        }
+        else
+        {
+            teamA.TeamCardIds.AddRange(SampleCards.TeamACharacterIds);
+            teamA.TeamCardIds.AddRange(SampleCards.TeamABasicActionIds);
+            teamB.TeamCardIds.AddRange(SampleCards.TeamBCharacterIds);
+            teamB.TeamCardIds.AddRange(SampleCards.TeamBBasicActionIds);
+        }
 
         var state = GameState.NewGame(catalog, teamA, teamB);
         var gameId = store.Create(state);

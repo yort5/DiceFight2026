@@ -1,5 +1,6 @@
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { api } from "./api";
+import { stashPendingGame } from "./gameHandoff";
 import { navigate } from "./router";
 import { SET_NAMES } from "./sets";
 import type { CardDef } from "./types";
@@ -157,6 +158,8 @@ export function TeamBuilderPage() {
   const [team, setTeam] = useState<Map<string, number>>(new Map());
   const [strictRules, setStrictRules] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [starting, setStarting] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
 
   useEffect(() => {
     api.getCards().then(setCards).catch((e) => setError(String(e)));
@@ -250,6 +253,24 @@ export function TeamBuilderPage() {
     await navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  }
+
+  // The opponent (Team B) is always a fresh random roster drawn from
+  // IsImplemented cards server-side (RandomTeamBuilder) - there's no
+  // opponent-selection UI, only a "build your own Team A" one.
+  async function startGame() {
+    setStarting(true);
+    setStartError(null);
+    try {
+      const cardIds = [...characterEntries, ...basicActionEntries].map((e) => e.card.id);
+      const game = await api.createGame(cardIds);
+      stashPendingGame(game);
+      navigate("/game");
+    } catch (e) {
+      setStartError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setStarting(false);
+    }
   }
 
   const allTypes = useMemo(() => [...new Set((cards ?? []).map((c) => c.type))].sort(), [cards]);
@@ -539,6 +560,22 @@ export function TeamBuilderPage() {
           <button onClick={copyTeamLink} disabled={team.size === 0}>
             {copied ? "Copied!" : "Copy team link"}
           </button>
+
+          <button
+            className="team-start-game-button"
+            disabled={team.size === 0 || violations.length > 0 || starting}
+            title={
+              team.size === 0
+                ? "Add some cards first."
+                : violations.length > 0
+                  ? `Fix team violations first: ${violations.join(", ")}`
+                  : undefined
+            }
+            onClick={startGame}
+          >
+            {starting ? "Starting..." : "Start Game with This Team"}
+          </button>
+          {startError && <div className="error">{startError}</div>}
         </div>
       </div>
     </div>

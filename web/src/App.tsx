@@ -5,6 +5,7 @@ import { InfiltrateWindowPanel, RangeWindowPanel, TagOutWindowPanel } from "./At
 import { DamageSplitPanel, DeclareBlockersPanel } from "./CombatPanel";
 import { DeclareAttackersPanel } from "./DeclareAttackersPanel";
 import { dieLabel } from "./dieHelpers";
+import { readPendingGame } from "./gameHandoff";
 import { GlobalAbilitiesPanel, type GlobalAbilityFlow } from "./GlobalAbilitiesPanel";
 import { HowToPlay } from "./HowToPlay";
 import { PendingChoicePanel } from "./PendingChoicePanel";
@@ -15,7 +16,11 @@ import "./App.css";
 
 function App() {
   const [cards, setCards] = useState<CardDef[] | null>(null);
-  const [game, setGame] = useState<GameState | null>(null);
+  // A game started from /teambuilder's "Start Game" arrives via
+  // sessionStorage (see gameHandoff.ts) rather than the "New Game" button
+  // below - lazy initializer so it's picked up on the very first render,
+  // not after a flash of the empty pre-game state.
+  const [game, setGame] = useState<GameState | null>(() => readPendingGame());
   const [selection, setSelection] = useState<Selection>({ primary: null, secondary: [] });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
