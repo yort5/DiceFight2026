@@ -1,0 +1,1858 @@
+[
+ {
+  "id": "DPS029",
+  "name": "Deathbird",
+  "isImplemented": true,
+  "nodes": [],
+  "flags": [],
+  "statuses": [
+   "pure_fit_no_ability"
+  ]
+ },
+ {
+  "id": "DPS052",
+  "name": "StormExtremeWeather",
+  "isImplemented": true,
+  "nodes": [
+   "DealDamage"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS037",
+  "name": "KittyPrydeRightOfPassage",
+  "isImplemented": true,
+  "nodes": [
+   "PrepFromBag"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS046",
+  "name": "PhoenixFirepower",
+  "isImplemented": true,
+  "nodes": [
+   "DealDamage"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS026",
+  "name": "DKenEmperor",
+  "isImplemented": true,
+  "nodes": [
+   "PrepDie"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS050",
+  "name": "RonanTheAccuserTreason",
+  "isImplemented": true,
+  "nodes": [
+   "LoseLife"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS011",
+  "name": "PowerBolt",
+  "isImplemented": true,
+  "nodes": [
+   "DealDamage"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS005",
+  "name": "LabTest",
+  "isImplemented": true,
+  "nodes": [
+   "Reroll"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS010",
+  "name": "OrganicSteelPreventDamage",
+  "isImplemented": true,
+  "nodes": [
+   "Conditional",
+   "GainLife",
+   "PreventDamage",
+   "Sequence"
+  ],
+  "flags": [],
+  "statuses": [
+   "consider",
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS002",
+  "name": "DampeningCollar",
+  "isImplemented": true,
+  "nodes": [],
+  "flags": [
+   "grantsPreventsOpponentCharacterDiceFromSpinningUp",
+   "opponentMayRemoveByReturningAffiliateToCard"
+  ],
+  "statuses": [
+   "fit",
+   "tail"
+  ]
+ },
+ {
+  "id": "DPS007",
+  "name": "MakingTheTeam",
+  "isImplemented": true,
+  "nodes": [
+   "RollAndFieldOrPrep"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS009",
+  "name": "Mutation",
+  "isImplemented": true,
+  "nodes": [
+   "Sequence",
+   "Spin",
+   "SwapFieldAndUsedPileDice"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS001",
+  "name": "Archnemesis",
+  "isImplemented": true,
+  "nodes": [
+   "MutualDamageEqualToOwnAttack",
+   "SetDefenseEqualToOwnAttack"
+  ],
+  "flags": [],
+  "statuses": [
+   "consider"
+  ]
+ },
+ {
+  "id": "DPS015",
+  "name": "TheFrontLine",
+  "isImplemented": true,
+  "nodes": [
+   "CantBlock",
+   "ModifyStat"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS003",
+  "name": "Explosion",
+  "isImplemented": false,
+  "nodes": [],
+  "flags": [],
+  "statuses": [
+   "already_vanilla_in_v1"
+  ]
+ },
+ {
+  "id": "DPS013",
+  "name": "Rally",
+  "isImplemented": true,
+  "nodes": [
+   "Conditional",
+   "MoveDie"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS032",
+  "name": "GambitAceInTheHole",
+  "isImplemented": true,
+  "nodes": [
+   "Conditional",
+   "DrawAndChooseOneToRoll",
+   "DrawDice"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS112",
+  "name": "GambitUnlessIGotSomeoneToPlayWith",
+  "isImplemented": true,
+  "nodes": [
+   "RerollAndMoveUnlessCharacter"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS150",
+  "name": "PsylockeAdvancedTelekineticCombatant",
+  "isImplemented": true,
+  "nodes": [
+   "RerollAndMoveUnlessCharacter"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS132",
+  "name": "StormQueen",
+  "isImplemented": true,
+  "nodes": [
+   "Reroll",
+   "RerollAndMoveUnlessCharacter"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS120",
+  "name": "MagikSorceressOfLimbo",
+  "isImplemented": true,
+  "nodes": [
+   "GrantKeyword",
+   "ModifyStat",
+   "Sequence"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS088",
+  "name": "PsylockeTelepath",
+  "isImplemented": true,
+  "nodes": [
+   "GrantKeyword"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS092",
+  "name": "StormCloudCover",
+  "isImplemented": true,
+  "nodes": [
+   "CantBlock"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS082",
+  "name": "MasterMoldTargetingMutants",
+  "isImplemented": true,
+  "nodes": [
+   "Ko"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS122",
+  "name": "MasterMoldUntoldElectronicExpertise",
+  "isImplemented": true,
+  "nodes": [
+   "Ko"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS042",
+  "name": "MasterMoldInexplicableDurability",
+  "isImplemented": true,
+  "nodes": [
+   "DealDamage"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS043",
+  "name": "MisterSinisterGeneticist",
+  "isImplemented": true,
+  "nodes": [
+   "GrantKeyword",
+   "Ko",
+   "LoseLife",
+   "MayPayLife"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS126",
+  "name": "PhoenixEternalFlame",
+  "isImplemented": true,
+  "nodes": [
+   "CantBlock"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS080",
+  "name": "MagikBetterThanBelasco",
+  "isImplemented": true,
+  "nodes": [
+   "DrawDice"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS127",
+  "name": "ProfessorXUncannyLeadership",
+  "isImplemented": true,
+  "nodes": [
+   "MoveDie",
+   "SpinToEnergyFace"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS034",
+  "name": "IcemanIcyInterference",
+  "isImplemented": true,
+  "nodes": [
+   "SpinToEnergyFace"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS065",
+  "name": "CyclopsDefendingThePhoenix",
+  "isImplemented": true,
+  "nodes": [
+   "DealDamage",
+   "Reroll",
+   "Sequence"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS151",
+  "name": "RogueStrengthAbsorption",
+  "isImplemented": true,
+  "nodes": [
+   "SetStat"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS084",
+  "name": "MoiraIfItsReal",
+  "isImplemented": true,
+  "nodes": [
+   "ModifyStat",
+   "PrepDie"
+  ],
+  "flags": [
+   "grantsSelfStatBonusWhileNamedCardActive"
+  ],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS044",
+  "name": "MoiraItsNotADream",
+  "isImplemented": true,
+  "nodes": [],
+  "flags": [
+   "grantsRerollsOpponentsFieldedContinuousDie"
+  ],
+  "statuses": [
+   "fit",
+   "may_fix_needed"
+  ]
+ },
+ {
+  "id": "DPS109",
+  "name": "DeathbirdWarOfKings",
+  "isImplemented": true,
+  "nodes": [
+   "CantBlock"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS068",
+  "name": "DeadpoolMoreThanAChumpBlocker",
+  "isImplemented": true,
+  "nodes": [
+   "DealDamage"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS130",
+  "name": "RonanTheAccuserNoExceptions",
+  "isImplemented": true,
+  "nodes": [
+   "LoseLife",
+   "Sequence"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS035",
+  "name": "JeanGreyPeacefulCoexistence",
+  "isImplemented": true,
+  "nodes": [
+   "Conditional",
+   "GrantLoyaltyCounter"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit",
+   "newgap"
+  ]
+ },
+ {
+  "id": "DPS041",
+  "name": "Magneto",
+  "isImplemented": true,
+  "nodes": [
+   "Conditional",
+   "GrantLoyaltyCounter",
+   "PrepFromBag"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit",
+   "newgap"
+  ]
+ },
+ {
+  "id": "DPS144",
+  "name": "KittyPrydeExperiencedLeader",
+  "isImplemented": true,
+  "nodes": [],
+  "flags": [
+   "grantsStaticTeamBonus"
+  ],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS091",
+  "name": "SabretoothDoISmellWeakness",
+  "isImplemented": true,
+  "nodes": [],
+  "flags": [
+   "grantsSelfAttackBonusPerMatchingDie"
+  ],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS051",
+  "name": "SabretoothAmIInterrupting",
+  "isImplemented": true,
+  "nodes": [
+   "Ko"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS128",
+  "name": "PsylockeHeiress",
+  "isImplemented": true,
+  "nodes": [
+   "Spin"
+  ],
+  "flags": [
+   "grantsSelfAttackBonusPerMatchingDie"
+  ],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS146",
+  "name": "MagnetoFounderOfTheBrotherhood",
+  "isImplemented": true,
+  "nodes": [
+   "Conditional",
+   "Ko",
+   "PrepFromBag"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS131",
+  "name": "SabretoothYouReadyToParty",
+  "isImplemented": true,
+  "nodes": [
+   "CantBlock",
+   "ModifyStat"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS134",
+  "name": "ToadJourneyIntoMisery",
+  "isImplemented": true,
+  "nodes": [
+   "MoveDie"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS036",
+  "name": "JubileeRebelliousNature",
+  "isImplemented": true,
+  "nodes": [
+   "Conditional",
+   "FieldDie"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS025",
+  "name": "CyclopsFirstClass",
+  "isImplemented": true,
+  "nodes": [
+   "DealDamage"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS143",
+  "name": "JubileeXMenFieldLeader",
+  "isImplemented": true,
+  "nodes": [
+   "DealDamage",
+   "Sequence"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS076",
+  "name": "JubileeThingsNeverChange",
+  "isImplemented": true,
+  "nodes": [],
+  "flags": [
+   "grantsSelfStatBonusWhileNamedCardActive"
+  ],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS077",
+  "name": "KittyPrydeHeadmistress",
+  "isImplemented": true,
+  "nodes": [],
+  "flags": [
+   "cannotBeTargetedByOpponentWhileNamedCardActive",
+   "grantsSelfStatBonusWhileNamedCardActive"
+  ],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS104",
+  "name": "CorsairCriminalRecord",
+  "isImplemented": true,
+  "nodes": [
+   "Conditional",
+   "Ko"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS064",
+  "name": "CorsairLeadingTheStarjammers",
+  "isImplemented": true,
+  "nodes": [],
+  "flags": [
+   "grantsMirrorsOwnStatIncreaseToOwnSidekick"
+  ],
+  "statuses": [
+   "may_fix_needed",
+   "tail"
+  ]
+ },
+ {
+  "id": "DPS086",
+  "name": "PhoenixPsionicMaelstrom",
+  "isImplemented": true,
+  "nodes": [
+   "Conditional",
+   "DealDamage",
+   "Sequence"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS067",
+  "name": "DarkPhoenixEnemyOfTheShiar",
+  "isImplemented": true,
+  "nodes": [
+   "DealDamage",
+   "GrantNextPurchaseDiscount",
+   "Ko",
+   "Sequence"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS040",
+  "name": "MagikWielderOfTheSoulsword",
+  "isImplemented": true,
+  "nodes": [
+   "GrantNextPurchaseDiscount"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS014",
+  "name": "TakeCover",
+  "isImplemented": true,
+  "nodes": [
+   "Conditional",
+   "ModifyStat",
+   "Sequence"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS108",
+  "name": "DeadpoolCollectThis",
+  "isImplemented": true,
+  "nodes": [],
+  "flags": [
+   "grantsFreeFielding"
+  ],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS125",
+  "name": "MystiqueTaughtByMagneto",
+  "isImplemented": true,
+  "nodes": [
+   "FieldDie"
+  ],
+  "flags": [
+   "grantsFreeFielding"
+  ],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS074",
+  "name": "IcemanFrozenFistsOfFury",
+  "isImplemented": true,
+  "nodes": [
+   "Conditional",
+   "DealDamage"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS090",
+  "name": "RonanTheAccuserNoMercy",
+  "isImplemented": true,
+  "nodes": [
+   "Ko",
+   "OpponentKOsOwnCharacterDie",
+   "Sequence"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit",
+   "tail"
+  ]
+ },
+ {
+  "id": "DPS070",
+  "name": "EmmaFrostManipulative",
+  "isImplemented": true,
+  "nodes": [
+   "Reroll"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS110",
+  "name": "EmmaFrostFinesse",
+  "isImplemented": true,
+  "nodes": [
+   "RerollAndMoveUnlessCharacter"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS147",
+  "name": "MasterMoldEndlessSentinels",
+  "isImplemented": true,
+  "nodes": [
+   "PlaceToken"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS135",
+  "name": "VulcanAggession",
+  "isImplemented": true,
+  "nodes": [
+   "ForceAttack"
+  ],
+  "flags": [
+   "grantsOpponentStatDebuff"
+  ],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS063",
+  "name": "ColossusOrganicSteel",
+  "isImplemented": true,
+  "nodes": [],
+  "flags": [
+   "grantsFirstDamageRedirectToSelf"
+  ],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS095",
+  "name": "VulcanPowerSuppression",
+  "isImplemented": true,
+  "nodes": [],
+  "flags": [
+   "grantsIgnoresAbilitiesWhileEngaged"
+  ],
+  "statuses": [
+   "consider"
+  ]
+ },
+ {
+  "id": "DPS083",
+  "name": "MisterSinisterMutantSupremacist",
+  "isImplemented": true,
+  "nodes": [
+   "BlankOpposingTeamText",
+   "BlankTargetText"
+  ],
+  "flags": [],
+  "statuses": [
+   "consider"
+  ]
+ },
+ {
+  "id": "DPS033",
+  "name": "GladiatorPsiResistance",
+  "isImplemented": true,
+  "nodes": [
+   "GrantSelfTargetingImmunityFromActionAndGlobal",
+   "MoveDie"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS073",
+  "name": "GladiatorTheEmpireMustStand",
+  "isImplemented": true,
+  "nodes": [
+   "GrantLoyaltyCounter",
+   "GrantSelfTargetingImmunityFromActionAndGlobal"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit",
+   "newgap"
+  ]
+ },
+ {
+  "id": "DPS113",
+  "name": "GladiatorMajestorKallark",
+  "isImplemented": true,
+  "nodes": [
+   "GrantSelfTargetingImmunityFromActionAndGlobal"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS028",
+  "name": "DeadpoolDraftPick",
+  "isImplemented": true,
+  "nodes": [],
+  "flags": [],
+  "statuses": [
+   "pure_fit_no_ability"
+  ]
+ },
+ {
+  "id": "DPS056",
+  "name": "WolverinePureOfHeart",
+  "isImplemented": true,
+  "nodes": [],
+  "flags": [],
+  "statuses": [
+   "pure_fit_no_ability"
+  ]
+ },
+ {
+  "id": "DPS024",
+  "name": "CorsairRecruitingACrew",
+  "isImplemented": true,
+  "nodes": [
+   "GrantNextPurchaseGoesToBag"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS139",
+  "name": "CorsairBackFromOuterSpace",
+  "isImplemented": true,
+  "nodes": [
+   "Conditional",
+   "PrepDie"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS089",
+  "name": "RogueSurveillanceImmunity",
+  "isImplemented": true,
+  "nodes": [
+   "MoveDie"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS049",
+  "name": "RogueMrsX",
+  "isImplemented": true,
+  "nodes": [
+   "SwapAttack"
+  ],
+  "flags": [],
+  "statuses": [
+   "consider",
+   "may_fix_needed"
+  ]
+ },
+ {
+  "id": "DPS057",
+  "name": "AngelJeanGreysSchool",
+  "isImplemented": true,
+  "nodes": [],
+  "flags": [
+   "grantsStaticTeamBonus"
+  ],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS045",
+  "name": "MystiqueRelentless",
+  "isImplemented": true,
+  "nodes": [
+   "CantBlock"
+  ],
+  "flags": [
+   "grantsSelfStatBonusWhileNamedCardActive"
+  ],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS062",
+  "name": "CableBosomBuddies",
+  "isImplemented": true,
+  "nodes": [],
+  "flags": [
+   "grantsNamedCardSupport"
+  ],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS138",
+  "name": "BeastXaviersDream",
+  "isImplemented": true,
+  "nodes": [],
+  "flags": [
+   "grantsSelfStatBonusWhileOwnSidekickActive"
+  ],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS071",
+  "name": "ForgeSupportTechnician",
+  "isImplemented": true,
+  "nodes": [],
+  "flags": [],
+  "statuses": [
+   "pure_fit_no_ability"
+  ]
+ },
+ {
+  "id": "DPS075",
+  "name": "JeanGreyXaviersDream",
+  "isImplemented": true,
+  "nodes": [],
+  "flags": [
+   "grantsOpponentGlobalSurcharge"
+  ],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS115",
+  "name": "JeanGreyMarvelGirl",
+  "isImplemented": true,
+  "nodes": [],
+  "flags": [
+   "grantsOpponentGlobalSurcharge"
+  ],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS137",
+  "name": "AngelXaviersDream",
+  "isImplemented": true,
+  "nodes": [],
+  "flags": [
+   "grantsSidekickImmunityToOpponentGlobalTargeting"
+  ],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS097",
+  "name": "AngelAirSupport",
+  "isImplemented": true,
+  "nodes": [],
+  "flags": [
+   "grantsGainLifeWhenOpponentTargetsOwnCharacterDie"
+  ],
+  "statuses": [
+   "consider"
+  ]
+ },
+ {
+  "id": "DPS124",
+  "name": "MoiraStrengthOfForesight",
+  "isImplemented": true,
+  "nodes": [
+   "GrantLoyaltyCounter",
+   "MoveDie"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit",
+   "newgap"
+  ]
+ },
+ {
+  "id": "DPS129",
+  "name": "RogueUnitySquad",
+  "isImplemented": true,
+  "nodes": [
+   "ModifyStat"
+  ],
+  "flags": [
+   "grantsFieldingCostReduction"
+  ],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS081",
+  "name": "MagnetoVisionary",
+  "isImplemented": true,
+  "nodes": [
+   "Conditional",
+   "PrepFromBag",
+   "Sequence"
+  ],
+  "flags": [
+   "grantsMinimumBlockersRequirement"
+  ],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS096",
+  "name": "WolverineHardenedByMadripoor",
+  "isImplemented": true,
+  "nodes": [
+   "Conditional",
+   "SpinToCharacterLevel"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS098",
+  "name": "BeastCombatReady",
+  "isImplemented": true,
+  "nodes": [
+   "PrepFromBag"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS027",
+  "name": "DarkPhoenixMalevolent",
+  "isImplemented": true,
+  "nodes": [
+   "Conditional",
+   "DealDamage",
+   "GrantNextPurchaseDiscount",
+   "Ko",
+   "Sequence"
+  ],
+  "flags": [
+   "grantsSelfPurchaseDiscountIfOpponentHasAffiliation"
+  ],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS102",
+  "name": "CableHighStakes",
+  "isImplemented": true,
+  "nodes": [
+   "DoublePrintedAttackOfEach"
+  ],
+  "flags": [],
+  "statuses": [
+   "consider"
+  ]
+ },
+ {
+  "id": "DPS072",
+  "name": "GambitILikeSolitaire",
+  "isImplemented": true,
+  "nodes": [
+   "Conditional",
+   "GrantCantFieldCharacterDiceThisTurn",
+   "RerollAndMoveUnlessCharacter",
+   "Sequence"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit",
+   "tail"
+  ]
+ },
+ {
+  "id": "DPS105",
+  "name": "CyclopsUtopiaRealized",
+  "isImplemented": true,
+  "nodes": [
+   "Conditional",
+   "DealDamage"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS140",
+  "name": "CyclopsXaviersDream",
+  "isImplemented": true,
+  "nodes": [
+   "Conditional",
+   "DividedDamageAmongChosenTargets"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS008",
+  "name": "MutantResearchProgram",
+  "isImplemented": true,
+  "nodes": [
+   "Conditional",
+   "DrawDice"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS006",
+  "name": "LivingTheDream",
+  "isImplemented": true,
+  "nodes": [
+   "Conditional",
+   "GrantKeyword",
+   "ModifyStat",
+   "Sequence"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS103",
+  "name": "ColossusPiotr",
+  "isImplemented": true,
+  "nodes": [
+   "DealDamagePerMatchingDie"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS141",
+  "name": "DKenShiarCivilWar",
+  "isImplemented": true,
+  "nodes": [],
+  "flags": [
+   "grantsOpponentAbilityBlankWhileActive"
+  ],
+  "statuses": [
+   "consider"
+  ]
+ },
+ {
+  "id": "DPS066",
+  "name": "DKenObsessed",
+  "isImplemented": false,
+  "nodes": [],
+  "flags": [],
+  "statuses": [
+   "already_vanilla_in_v1"
+  ]
+ },
+ {
+  "id": "DPS106",
+  "name": "DKenMKraanCrystal",
+  "isImplemented": false,
+  "nodes": [
+   "PrepDie"
+  ],
+  "flags": [],
+  "statuses": [
+   "already_vanilla_in_v1",
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS099",
+  "name": "BishopTimeTraveller",
+  "isImplemented": true,
+  "nodes": [],
+  "flags": [
+   "grantsPrepInsteadOfUsedPileIfPurchasedWithSameNameEnergy"
+  ],
+  "statuses": [
+   "newgap"
+  ]
+ },
+ {
+  "id": "DPS060",
+  "name": "BlinkExilesTeamLeader",
+  "isImplemented": true,
+  "nodes": [
+   "Conditional",
+   "GrantKeyword"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS100",
+  "name": "BlinkWarpPortals",
+  "isImplemented": false,
+  "nodes": [],
+  "flags": [],
+  "statuses": [
+   "already_vanilla_in_v1"
+  ]
+ },
+ {
+  "id": "DPS012",
+  "name": "Radicalization",
+  "isImplemented": true,
+  "nodes": [
+   "Conditional",
+   "DealDamage",
+   "GrantAffiliation",
+   "Ko",
+   "Sequence"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS016",
+  "name": "TightRanks",
+  "isImplemented": true,
+  "nodes": [
+   "Conditional",
+   "Ko",
+   "ModifyStat"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS004",
+  "name": "GreetingsFromKrakoa",
+  "isImplemented": true,
+  "nodes": [
+   "Spin"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS116",
+  "name": "JubileeFireworks",
+  "isImplemented": true,
+  "nodes": [
+   "DealDamage"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS058",
+  "name": "BeastFirstClass",
+  "isImplemented": true,
+  "nodes": [
+   "PrepFromBag"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS019",
+  "name": "BishopTorturedTimeline",
+  "isImplemented": true,
+  "nodes": [],
+  "flags": [
+   "grantsRerollOrSpinProtection"
+  ],
+  "statuses": [
+   "tail"
+  ]
+ },
+ {
+  "id": "DPS152",
+  "name": "WolverineToughForTheKids",
+  "isImplemented": true,
+  "nodes": [
+   "PrepFromBag"
+  ],
+  "flags": [
+   "grantsRerollOrSpinProtection"
+  ],
+  "statuses": [
+   "fit",
+   "tail"
+  ]
+ },
+ {
+  "id": "DPS136",
+  "name": "WolverineTrainer",
+  "isImplemented": true,
+  "nodes": [
+   "GrantKeyword",
+   "PrepFromBag"
+  ],
+  "flags": [
+   "grantsSpinsUpInSympathyWithOwnCharacterDice"
+  ],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS059",
+  "name": "BishopImBack",
+  "isImplemented": true,
+  "nodes": [],
+  "flags": [
+   "grantsSelfPrepWhenSpentAsEnergyForFielding"
+  ],
+  "statuses": [
+   "newgap"
+  ]
+ },
+ {
+  "id": "DPS142",
+  "name": "IcemanXaviersDream",
+  "isImplemented": true,
+  "nodes": [],
+  "flags": [],
+  "statuses": [
+   "pure_fit_no_ability"
+  ]
+ },
+ {
+  "id": "DPS114",
+  "name": "IcemanMrIceGuy",
+  "isImplemented": true,
+  "nodes": [
+   "DoublePrintedAttackOfEach"
+  ],
+  "flags": [
+   "grantsStaticTeamBonus"
+  ],
+  "statuses": [
+   "consider",
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS030",
+  "name": "EmmaFrostInfluential",
+  "isImplemented": true,
+  "nodes": [],
+  "flags": [
+   "grantsAffiliationsToSidekicks",
+   "grantsStaticTeamBonus"
+  ],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS031",
+  "name": "ForgeMoreThanFirepower",
+  "isImplemented": true,
+  "nodes": [],
+  "flags": [
+   "grantsSelfPrepFromBagIfFieldedWithEnergy"
+  ],
+  "statuses": [
+   "newgap"
+  ]
+ },
+ {
+  "id": "DPS111",
+  "name": "ForgeReverseEngineer",
+  "isImplemented": false,
+  "nodes": [],
+  "flags": [],
+  "statuses": [
+   "already_vanilla_in_v1"
+  ]
+ },
+ {
+  "id": "DPS047",
+  "name": "ProfessorXDreamer",
+  "isImplemented": true,
+  "nodes": [
+   "MoveDie"
+  ],
+  "flags": [
+   "grantsSelfPrepFromBagIfFieldedWithEnergy"
+  ],
+  "statuses": [
+   "fit",
+   "newgap"
+  ]
+ },
+ {
+  "id": "DPS085",
+  "name": "MystiqueFreedomForce",
+  "isImplemented": true,
+  "nodes": [
+   "MoveDie"
+  ],
+  "flags": [
+   "grantsOwnDamageReductionFromOpponentAbilities"
+  ],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS148",
+  "name": "MisterSinisterBiologist",
+  "isImplemented": true,
+  "nodes": [
+   "GrantKeyword"
+  ],
+  "flags": [
+   "grantsPreventsNonCombatDamageToOtherOwnDice"
+  ],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS123",
+  "name": "MisterSinisterDarkExperimentation",
+  "isImplemented": true,
+  "nodes": [
+   "FieldDie",
+   "MayPayLife",
+   "ModifyStat",
+   "PrepDie",
+   "Sequence"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS107",
+  "name": "DarkPhoenixDestructiveForce",
+  "isImplemented": true,
+  "nodes": [
+   "GrantNextPurchaseDiscount",
+   "Ko",
+   "Sequence"
+  ],
+  "flags": [
+   "grantsRetaliatesEqualDamageToOpponentWhenDamagedByOpponent"
+  ],
+  "statuses": [
+   "consider",
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS101",
+  "name": "BlobImmovable",
+  "isImplemented": true,
+  "nodes": [],
+  "flags": [
+   "grantsBlocksMultipleAttackers",
+   "grantsReturnsKOdOpposingSidekickToBag"
+  ],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS069",
+  "name": "DeathbirdUsurper",
+  "isImplemented": true,
+  "nodes": [],
+  "flags": [
+   "grantsDamageWhenOpposingHighDefenseDieIsKOdInCombat"
+  ],
+  "statuses": [
+   "newgap"
+  ]
+ },
+ {
+  "id": "DPS078",
+  "name": "LilandraFreedomFighter",
+  "isImplemented": true,
+  "nodes": [],
+  "flags": [
+   "grantsOpponentActionDieEnergySurcharge"
+  ],
+  "statuses": [
+   "newgap"
+  ]
+ },
+ {
+  "id": "DPS145",
+  "name": "LilandraMajestrix",
+  "isImplemented": true,
+  "nodes": [],
+  "flags": [
+   "grantsOpponentPaysLifeToUseActionOrGlobal"
+  ],
+  "statuses": [
+   "consider"
+  ]
+ },
+ {
+  "id": "DPS118",
+  "name": "LilandraGrandAdmiralOfTheGuard",
+  "isImplemented": true,
+  "nodes": [],
+  "flags": [
+   "grantsRerollsUnblockedAttackerToPrepAreaIfCharacterFace"
+  ],
+  "statuses": [
+   "newgap"
+  ]
+ },
+ {
+  "id": "DPS121",
+  "name": "MagnetoMasterOfMagnetism",
+  "isImplemented": true,
+  "nodes": [
+   "Conditional",
+   "PrepFromBag",
+   "Sequence",
+   "SpinToEnergyFace"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS149",
+  "name": "MystiqueSheWalksAmongUs",
+  "isImplemented": true,
+  "nodes": [
+   "SpinToEnergyFace"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS053",
+  "name": "SupremeIntelligence",
+  "isImplemented": true,
+  "nodes": [
+   "GrantLoyaltyCounter"
+  ],
+  "flags": [],
+  "statuses": [
+   "newgap"
+  ]
+ },
+ {
+  "id": "DPS079",
+  "name": "MadelynePryorSisterhood",
+  "isImplemented": true,
+  "nodes": [
+   "GrantLoyaltyCounter"
+  ],
+  "flags": [],
+  "statuses": [
+   "newgap"
+  ]
+ },
+ {
+  "id": "DPS119",
+  "name": "MadelynePryorAspiring",
+  "isImplemented": true,
+  "nodes": [],
+  "flags": [
+   "grantsPrepsTwoOwnDiceWhenOpponentDrawsExtraDuringClearAndDraw"
+  ],
+  "statuses": [
+   "newgap"
+  ]
+ },
+ {
+  "id": "DPS017",
+  "name": "AngelWingsOverTheWorld",
+  "isImplemented": true,
+  "nodes": [
+   "ModifyStat"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS022",
+  "name": "CableIllDoThisAllDay",
+  "isImplemented": true,
+  "nodes": [
+   "Reroll"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS023",
+  "name": "ColossusSkilledPainter",
+  "isImplemented": true,
+  "nodes": [
+   "FieldDie",
+   "Sequence",
+   "Spin"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS054",
+  "name": "ToadSecondaryMutation",
+  "isImplemented": true,
+  "nodes": [
+   "DealDamage",
+   "Spin"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS038",
+  "name": "LilandraPolitician",
+  "isImplemented": true,
+  "nodes": [
+   "PrepFromBagIfPurchasedThisTurn"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS055",
+  "name": "VulcanRulerOfTheImperium",
+  "isImplemented": true,
+  "nodes": [
+   "ForceAttack"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS048",
+  "name": "PsylockeAdventurer",
+  "isImplemented": true,
+  "nodes": [
+   "Spin"
+  ],
+  "flags": [
+   "grantsSelfKeywordWhileNamedCardActive"
+  ],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS061",
+  "name": "BlobMGHDependent",
+  "isImplemented": true,
+  "nodes": [
+   "LoseLife",
+   "MoveDie"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS093",
+  "name": "SupremeIntelligencePsionicCollective",
+  "isImplemented": true,
+  "nodes": [
+   "MoveDie"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ },
+ {
+  "id": "DPS094",
+  "name": "ToadLookingForComradery",
+  "isImplemented": true,
+  "nodes": [
+   "Spin"
+  ],
+  "flags": [],
+  "statuses": [
+   "fit"
+  ]
+ }
+]

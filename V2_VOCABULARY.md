@@ -1564,3 +1564,126 @@ of magnitude bigger than any Phase 0 round so far); worth discussing
 whether it's worth the cost before Phase 8 actually needs the answer,
 versus finding out card-by-card during the real migration the way the
 plan already anticipates.
+
+---
+
+## Part 9 — Full audit: all 145 DPS cards against the v2 vocabulary (2026-08-22)
+
+The user asked to verify the "relatively few gaps" impression against
+the whole pool rather than the ~30-card sample checked so far. Rather
+than manually re-derive a verdict per card (expensive at this scale),
+this was done with a script: parse every `DPS*` `CardDef` out of
+`SampleCards.cs`, extract which `EffectNode` types and `Grants*` flags
+each one uses, and classify each against the same fit/`newgap`/
+`consider`/`tail` categories established across Parts 1-8. The
+classification table itself (which v1 node/flag maps to which v2
+status) is hand-built from everything this session already
+established — the script just applies it at scale instead of re-
+deriving it per card.
+
+**A real bug was caught and fixed along the way**: the first extraction
+pass split the file on each card's declaration line, which
+accidentally swept the *next* card's leading comment into the
+*current* card's text — e.g. Explosion's "deliberately left
+`isImplemented: false`" disclaimer sits between The Front Line's code
+and Explosion's own declaration, so it was misread as The Front Line's
+own status. Fixed by parsing actual statement boundaries (paren-
+balanced from each `CardDef(` to its matching `)`), not text between
+declaration lines. Before the fix: 8 cards misreported as
+`isImplemented: false`. After: 5, which is the real number.
+
+### Headline result
+
+| Bucket | Count | Share |
+|---|---|---|
+| **Fits cleanly** (with the F1-F12 amendments + Part 7/8 corrections already adopted) | **109** | **75%** |
+| New gap, found by this sweep (not previously identified) | 14 | 10% |
+| Already-known deferred item (`Consider` tier — ability-blanking, live-value Amounts, cross-player choice, pay-life-not-energy) | 11 | 8% |
+| Narrow/tail (already catalogued in Parts 2/3/6) | 6 | 4% |
+| Already vanilla in v1 itself — not a v2 regression, same 5 architecturally-hard cards from Part 7 | 5 | 3% |
+
+**This confirms the "relatively few gaps" read, with real numbers
+behind it**: three in four DPS cards need nothing beyond what's
+already been decided. The `Consider`/tail/vanilla buckets (22 cards,
+15%) are all cards already known about, not new surprises — the
+recommended findings from Parts 3-8 are doing real, broad work, not
+just patching the handful of cards that happened to get sampled.
+
+### The 14 new gaps — but they're really 4 root causes, not 14 unrelated ones
+
+1. **Loyalty Counters have no place in the adopted vocabulary at all
+   (6 cards)**: `JeanGreyPeacefulCoexistence` (DPS035), `Magneto`
+   (DPS041), `Gladiator, "The Empire Must Stand"` (DPS073), `Moira,
+   "Strength of Foresight"` (DPS124), `Supreme Intelligence` (DPS053),
+   `Madelyne Pryor, "Sisterhood"` (DPS079). Loyalty is a real,
+   moderately-widespread per-**card** (not per-die) numeric counter
+   system — plus a targeting filter (`RequiresLoyaltyCounter`) and a
+   condition (`OwnTeamWideLoyaltyCounterCountAtLeast`) that read it.
+   Nothing in Appendix A's data model (Appendix B) or effect templates
+   accounts for counters at all — tags are boolean present/absent,
+   counters are numeric and stack. **This is a real correction to
+   earlier work**: round 1's own write-up marked `Gladiator, "The
+   Empire Must Stand"` a clean fit without questioning the
+   `GrantLoyaltyCounter` node it uses — that verdict was too hasty.
+   Given 6+ confirmed users just in DPS (D&D sets' "Experience" tokens
+   are almost certainly the same underlying shape), this is a real
+   candidate for a **Recommended**-tier addition: a per-card counter
+   dict in the data model, a `GrantCounter(TargetFilter, Name, Amount)`
+   effect, and a counter-count Stat/Condition to read it back — not
+   fundamentally hard, just missed until this full sweep.
+2. **Events don't expose what was spent to pay for the thing that just
+   happened (4 cards)**: `Bishop, "Time Traveller"` (DPS099, needs to
+   know which *card* the spent energy came from), `Bishop, "I'm Back"`
+   (DPS059), `Forge, "More Than Firepower"` (DPS031), `Professor X,
+   "Dreamer"` (DPS047, both need to know the *energy type* spent to pay
+   a fielding/purchase cost). `PurchaseMade`/fielding aren't event
+   kinds with rich payloads in the current design — they'd need to
+   carry which specific dice paid for the action, not just that it
+   happened. Real, moderately common (4 confirmed cards), worth adding
+   to the events design when Phase 4 is actually implemented.
+3. **`EventFilter` can't filter by the triggering die's own stat, or
+   by combat-vs-ability cause (1 card)**: `Deathbird, "Usurper"`
+   (DPS069) — "when you KO an opposing die **with 3D or greater**."
+   `TargetFilter` has a stat threshold; `EventFilter` doesn't. Narrow
+   on its own, but pairs naturally with fix #2 above (both are "event
+   payloads need to be richer than currently specced") — worth solving
+   together, not as two separate patches.
+4. **Two more single-card gaps**, each narrow enough to leave for Phase
+   8's tail policy rather than design now: `Lilandra, "Grand Admiral of
+   the Guard"` (DPS118, needs the engine to know an attacker was
+   unblocked at the moment its `DieAttacks` event fires) and `Madelyne
+   Pryor, "Aspiring"` (DPS119, needs to know a draw was an *extra* one,
+   not the normal turn draw). `Lilandra, "Freedom Fighter"` (DPS078)
+   is a fifth, slightly different one — `CostModifier` covers
+   Purchase/Fielding/GlobalEnergy but not "cost to use an Action die,"
+   a 4th cost kind worth adding alongside the other three.
+
+### The `Consider` bucket, at DPS scale
+
+11 cards, all mapping to already-known deferred items — nothing new,
+but useful to see the real distribution: ability-blanking (3: Vulcan
+"Power Suppression," Mister Sinister "Mutant Supremacist," D'Ken
+"Shi'ar Civil War"), the live-value-Amounts family (5: Archnemesis,
+Rogue "Mrs. X," Cable "High Stakes," Iceman "Mr. Ice Guy," Dark
+Phoenix "Destructive Force" — the last three via `DoublePrintedAttackOfEach`,
+each target getting its OWN printed stat as its own delta, same
+"needs a live per-die value" shape as the others), pay-life-not-energy
+(1: `Lilandra, "Majestrix"` — a genuine correction: this card was
+reported "not found anywhere" during the Orange Ban investigation;
+it's real, in our own hand-curated catalog, at DPS145 — a third
+instance of a wrongly-reported-missing card, worth remembering that
+"not found" needs real verification every time, not just a second
+grep), `DieTargeted` (1: Angel "Air Support"), and one not previously
+bucketed (`Organic Steel`'s one-shot damage-prevention shield, `Consider`-
+adjacent, matches Part 3's original write-up).
+
+### Scope note
+
+This is now a complete pass over v1's entire hand-curated DPS set (145
+cards) — the gap this session's earlier "scope honesty" note flagged
+(only ~30 individually checked) is closed. The Orange Ban list itself
+was already fully checked in Parts 6-8. Between the two, essentially
+everything this project has real card text for has now been checked
+against the adopted v2 vocabulary. What's NOT covered: the ~3,600-card
+bulk catalog beyond the Orange Ban list and DPS — no claim is made
+about fit rate there.

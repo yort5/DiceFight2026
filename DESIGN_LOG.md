@@ -7266,3 +7266,53 @@ un-audited against v2 specifically; likely fine on priors from the
 checked sample, but that's an inference, not a verified claim. Written
 up as Part 8 of V2_VOCABULARY.md, including this scope note so a
 future session doesn't overclaim completeness.
+
+## Status update: full 145-card DPS audit against the v2 vocabulary
+
+The user asked to verify the "relatively few gaps" impression at
+scale rather than trust the ~30-card sample checked across Parts 2,
+3, and 6. Did this with a script rather than manual per-card review:
+parse every DPS CardDef out of SampleCards.cs, extract EffectNode/
+Grants* usage, classify against the fit/newgap/consider/tail
+categories already established this session. Saved as
+scripts/analysis/dps_v2_vocabulary_audit_2026-08-22.json.
+
+Caught and fixed a real extraction bug along the way: the first pass
+split the file on declaration lines, which swept each card's
+FOLLOWING card's leading comment into its own text - Explosion's
+"deliberately left isImplemented: false" disclaimer sits between The
+Front Line's code and Explosion's declaration, so it misattributed
+that status to The Front Line. Fixed via proper paren-balanced
+statement boundaries. Before: 8 cards wrongly flagged isImplemented:
+false. After: the real number, 5.
+
+Result: 109/145 (75%) fit cleanly against the adopted vocabulary. 11
+(8%) hit already-known deferred items (ability-blanking, live-value
+Amounts, cross-player choice, pay-life-not-energy) - confirms their
+prevalence rather than surprising. 6 (4%) are narrow tail items
+already catalogued. 5 (3%) are the same architecturally-hard cases
+from Part 7, unchanged from v1's own baseline, not a v2 regression.
+
+14 (10%) are new gaps this sweep found, but they collapse to 4 root
+causes, not 14 unrelated surprises: (1) Loyalty Counters have no
+place in the adopted data model or template list at all - a real,
+6-card-confirmed correction to an earlier too-hasty "fit" verdict
+(round 1 marked Gladiator "The Empire Must Stand" fit without
+questioning the GrantLoyaltyCounter node it uses); (2) events don't
+expose what specifically was spent to pay for a purchase/fielding
+action - 4 confirmed cards (2 Bishop, Forge, Professor X); (3)
+EventFilter can't filter by the triggering die's own stat or by
+combat-vs-ability cause - 1 card (Deathbird), pairs naturally with
+(2); (4) two more narrow singletons plus a CostModifier gap for
+"cost to use an Action die" specifically (Lilandra "Freedom
+Fighter"). Also corrected a THIRD wrongly-reported-missing card:
+Lilandra "Majestrix" (DPS145) was called "not found anywhere" during
+the Orange Ban investigation, but it's real and in our own
+hand-curated catalog - a reminder that "not found" needs real
+verification, not just a second grep.
+
+Written up as Part 9 of V2_VOCABULARY.md. Scope note recorded: this
+closes the earlier "only ~30 cards individually checked" gap - the
+entire 145-card DPS set plus the full Orange Ban list are now both
+completely checked against the adopted v2 vocabulary. Not covered:
+the ~3,600-card bulk catalog beyond those two sources.
