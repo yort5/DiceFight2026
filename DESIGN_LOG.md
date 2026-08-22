@@ -6842,3 +6842,21 @@ while leaving the working v1 engine untouched as the migration
 oracle. No implementation scheduled; next step if picked up is a
 paper spec of the template vocabulary validated against ~20 diverse
 DPS cards.
+
+## Status update: v2 direction chosen, implementation plan written
+
+The user chose Option B from `ARCHITECTURE_REVIEW.md` — a v2 core
+with a closed, simplified template vocabulary — built with an eye
+toward Option C (data-driven dice/energy/rules-config from day one).
+`V2_PLAN.md` (repo root) is the executable plan, written specifically
+for handoff to lower-model implementing sessions: all architectural
+decisions are made in the plan (the 16 effect templates, 6 continuous
+templates, 6 condition kinds, the unified tag model, the 7-query
+pipeline, the 9-event bus), phases 0-9 are small and individually
+verifiable, and the ground rules forbid improvising architecture -
+notably rule 2: the vocabulary is CLOSED, misfit cards go to a tail-
+policy list instead of growing the DSL, and vocabulary changes need
+explicit user sign-off. v1 stays untouched and deployed until Phase 9.
+Phase 0 (paper validation of the vocabulary against 20 real cards,
+with a stop-and-ask threshold) is deliberately the first gate before
+any engine code.
