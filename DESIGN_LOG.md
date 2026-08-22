@@ -7339,3 +7339,41 @@ knows the design sketch is still there if it's ever picked back up.
 
 Both written into V2_VOCABULARY.md Part 10 and V2_PLAN.md's Appendix A
 amendment trail.
+
+## Status update: architect gate review — F14 batch adopted, v2 vocabulary FROZEN
+
+Fable (architect) ran the final pre-implementation review the user
+requested. Three outputs, all in `V2_VOCABULARY.md` Part 11:
+
+**Drift fixed.** Part 10 had claimed Finding 13 (Loyalty Counters)
+was "folded into Part 1" — it wasn't (Part 1 still said 17 templates,
+no GrantCounter, no Counter(name) stat kind). The plan's Phase 5
+template list and Phase 2 GameState task were also missing F13's
+pieces. All fixed; Part 1 is now fully self-consistent with the
+whole F1-F14 chain.
+
+**The banked decision backlog resolved in one batch (F14, user
+signed off).** Adopted: CombatFlag.Unblockable; PerMatch Distinct +
+Unit (Dice|EnergySymbols); Duration.UntilYourNextTurn; CostModifier
+ActionDieUse kind + Currency (Energy|Life); AnsweredBy on
+TargetFilter/MayPay (4 confirming cards — retires the Magneto/
+Mystique "always double-energy" simplification, they're faithful
+now); EventFilter stat threshold; DamageModifier Amplify/Double with
+the ordering rule fixed at adoption ("multipliers before flat
+reductions" — a deliberate house ruling since the physical game
+defines no layering; decided once, never per-card). Deferred INTO the
+ability-blanking spike: named-card lockout (Blob/Drax/Magneto) — its
+hard half is the identical per-die chosen-card memory Shriek's
+blanking needs; one mechanism, two payoffs. Tailed: player-damage
+trigger, unblocked-at-attack payload, extra-draw flag (1 card each).
+
+**Frozen and declared ready.** The spec lands at: 11-field
+TargetFilter (bindings + AnsweredBy), 18 effect templates, 7
+conditions, 6 continuous templates, 10 events, per-card counters,
+ground rules 1-8. ~119/145 (82%) of the DPS set fits cleanly, with
+every remaining card accounted for (spikes / architecturally-alien /
+user-designated alter-or-skip / tail). Verdict: Phase 0 converged —
+the last validation rounds produced only parameter-level additions,
+not structural change. Phase 1 (scaffolding + data model, Appendix B
++ the F13 counter store) is next, executable by any capable session
+per the plan's handoff design.

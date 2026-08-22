@@ -8,22 +8,28 @@ rule 2) — this file records both the adopted vocabulary and, in a
 separate clearly-marked section, proposed-but-not-yet-adopted changes
 found during validation.
 
-Produced by Phase 0 (`V2_PLAN.md`), expanded from 20 to 60 cards at the
-user's request (2026-08-22). Status: **60 cards validated; the amended
-finding set (Part 4) was SIGNED OFF by the user on 2026-08-22 and is
-folded into Part 1 below. Part 1 is the adopted vocabulary.** Parts
-2-3 record the validation evidence against the *pre-amendment*
-vocabulary (their per-card verdicts predate the amendments); Part 4
-records the architect review and what changed at sign-off.
+Produced by Phase 0 (`V2_PLAN.md`) across an extended validation arc:
+20 cards → 60 cards → the Orange Ban list → a scripted audit of the
+full 145-card DPS set. Status: **FROZEN at the 2026-08-22 gate review
+(Part 11), amendment chain F1-F14 all user-signed-off. Part 1 is the
+single authoritative spec; ~82% of the DPS set fits it cleanly.**
+Parts 2-10 are the validation/decision record in chronological order
+(per-card verdicts in early parts predate later amendments); Part 11
+is the freeze. Implementing sessions: code against Part 1, file
+misfits to `V2_TAIL_POLICY.md`, never amend without sign-off.
 
 ---
 
-## Part 1 — The adopted vocabulary (post-sign-off, 2026-08-22)
+## Part 1 — The adopted vocabulary (FROZEN 2026-08-22)
 
-Amendments relative to `V2_PLAN.md` Appendix A are marked **[F#]**
-with the finding that introduced them (see Parts 3-4).
+**This spec is frozen as of the final pre-implementation gate review
+(Part 11).** Further changes route only through the two named design
+spikes (ability-blanking incl. named-card lockout, live-value Amounts)
+or `V2_TAIL_POLICY.md`, each with user sign-off — never ad-hoc during
+implementation. Amendments relative to `V2_PLAN.md` Appendix A are
+marked **[F#]** with the finding that introduced them (Parts 3-11).
 
-### Targets — one filter shape, 10 fields
+### Targets — one filter shape, 11 fields
 
 ```
 TargetFilter {
@@ -32,12 +38,15 @@ TargetFilter {
   Kind: AnyDie | CharacterDie | ActionDie | Player | DieOrPlayer
   Count: int                               // 0 = all matches (no choice)
   Tags: TagQuery?                          // see below
-  Stat: (Attack|Defense|Level|PurchaseCost|FieldingCost, Min?, Max?)?  // ONE threshold [F3]
+  Stat: (Attack|Defense|Level|PurchaseCost|FieldingCost|Counter(name), Min?, Max?)?  // ONE threshold [F3][F13]
   Optional: bool                           // "up to Count" vs "exactly"
   Self: bool                               // bypass: resolve to source die
   BindAs: string?                          // [F9] after resolution, remember chosen dice under this name
   Bound: string?                           // [F9] skip resolution; reuse dice bound earlier this ability.
                                            //      Reserved name "event" = the triggering event's subject die.
+  AnsweredBy: Own | Opposing = Own         // [F14] who answers this choice (PendingChoice routing);
+                                           //      distinct from Ownership, which picks WHICH dice qualify.
+                                           //      Also on MayPay, for opponent-answered "you may" offers.
 }
 TagQuery { AnyOf: string[], NoneOf: string[] }
 ```
@@ -60,21 +69,31 @@ at bind time, giving rule-3.1.7 simultaneity for free).
 ### Amounts
 
 ```
-Amount = Fixed(n) | PerMatch(TargetFilter, multiplier)
+Amount = Fixed(n) | PerMatch(TargetFilter, multiplier,
+                             Distinct: bool = false,        // [F14] count DIFFERENT names/affiliations
+                             Unit: Dice | EnergySymbols = Dice)  // [F14] count matching dice, or energy
+                                                                 //       symbols shown on them
 ```
 
 (A live-context value source — "this die's own stat," "the event's
-damage amount" — is deliberately NOT adopted; it is the Phase 8
+damage amount" — is deliberately NOT adopted; it is the
 live-value-Amounts design spike. See Part 4.)
 
-### Effect templates (17)
+### Durations
+
+```
+Duration = EndOfTurn | UntilYourNextTurn | Permanent   // [F14] middle value new
+```
+
+### Effect templates (18)
 
 DealDamage, KO (param: `TriggersKOAbilities: bool`, false =
 Sacrifice), MoveDie, DrawToZone, FieldDie, Reroll, Spin, SpinToEnergy,
 ModifyStat, GrantTag, LifeChange (signed Amount: positive = gain,
 negative = lose), PurchaseModifier, CombatFlag, Sequence, MayPay,
-Conditional, **DrawAndChooseOne [F6]**. Base parameter list:
-`V2_PLAN.md` Appendix A, plus these adopted amendments:
+Conditional, **DrawAndChooseOne [F6]**, **GrantCounter [F13]**. Base
+parameter list: `V2_PLAN.md` Appendix A, plus these adopted
+amendments:
 
 - **ModifyStat [F5]**: optional `SetAttack: int?` / `SetDefense: int?`,
   each mutually exclusive with its delta field — an absolute snapshot-
@@ -117,6 +136,21 @@ Conditional, **DrawAndChooseOne [F6]**. Base parameter list:
   Spin(Bound:"incoming", SetLevel:1)])`. (Part 4's claim that bindings
   alone closed Mutation was imprecise — the level-set gap survived
   bindings and needed this separate, small addition.)
+- **GrantCounter(TargetFilter, CounterName, Amount) [F13]**: puts
+  numeric counters on the resolved target's own *card* (all copies
+  share the count — a per-`(player, cardId, counterName)` entry on
+  `GameState`, the only card-scoped-not-die-scoped state in the
+  model). Read back via `TargetFilter.Stat`'s `Counter(name)` kind and
+  the ordinary `CountAtLeast` machinery. Covers Loyalty (6+ DPS
+  cards) and almost certainly D&D-set Experience tokens.
+- **CombatFlag [F14]**: flag list gains `Unblockable` (other dice may
+  not choose to block this one — Falcon "Recon"), completing the set:
+  MustBlock | CantBlock | MustAttack | CantAttack | OnlyBlocker |
+  Unblockable.
+- **MayPay [F14]**: gains `AnsweredBy: Own | Opposing = Own` — an
+  opponent-answered offer (Black Widow "Tsarina"'s "your opponent can
+  prevent this by spinning down"), routed through the same
+  `PendingChoice` pipeline to the other player.
 
 ### Conditions (7 kinds)
 
@@ -134,6 +168,21 @@ TargetingProtection — all six gaining **`ActiveWhen: ConditionKind?`
 **DamageModifier gaining `Source: Ability | Combat | Any` [F10]**
 (which damage it intercepts — the ability-vs-combat axis v1's
 `DieStats.ApplyDamage` already proved out).
+
+Further adopted [F14]:
+- **CostModifier**: kind list grows to Purchase | Fielding |
+  GlobalEnergy | **ActionDieUse**, and gains `Currency: Energy | Life
+  = Energy` — covering both the energy tax on using Action dice
+  (Lilandra "Freedom Fighter") and the life tax on Actions/Globals
+  (Lilandra "Majestrix", Jinzo "Trap Destroyer"), all three proven as
+  v1 flags.
+- **DamageModifier**: mode list grows Reduce(n) | RedirectToSelf |
+  PreventNonCombat | **Amplify(n)** | **Double** (Nick Fury "Patch",
+  Cosmic Cube "Energy of the Beyonders", Jerry Lawler). **Ordering
+  rule, fixed here since the physical game has no official layering
+  rule to defer to: multipliers apply before flat reductions** —
+  document at the damage-application choke point and never revisit
+  per-card.
 
 ### Trigger events (10, per Phase 4 design as amended)
 
@@ -156,6 +205,11 @@ energy with symbol count ≥ 2 during Roll & Reroll; Awaken =
 EventFilter for character-level increase, any Cause. Every event's
 payload carries its subject die and event-specific values (DieDamaged
 carries the damage amount — groundwork for the Amounts spike).
+
+**EventFilter [F14]**: gains the same optional `Stat` threshold shape
+as `TargetFilter` (checked against the event's subject die) — for
+reactive triggers like Deathbird "Usurper"'s "when you KO an opposing
+die with 3D or greater."
 
 ---
 
@@ -1743,3 +1797,102 @@ for alteration" is a reasonable product decision independent of the
 technical classification. Recorded as the user's explicit choice, not
 a technical reassessment — if a future session decides to build it
 after all, the design sketch in Part 9's finding #2 is still there.
+
+---
+
+## Part 11 — Architect gate review and spec freeze (Fable, 2026-08-22)
+
+Final review before v2 implementation begins, requested by the user
+after the session's long run of validation rounds, adoptions, and
+corrections. Three outputs: documentation drift found and fixed, the
+outstanding decision backlog resolved in one batch (user signed off),
+and the spec frozen.
+
+### Drift found and fixed
+
+Ten parts of accretion left the authoritative Part 1 out of sync in
+one real way and the plan in two smaller ways — exactly the kind of
+rot that would have confused a fresh implementing session:
+
+1. **Part 10 claimed Finding 13 (Loyalty Counters) was "folded into
+   Part 1" — it wasn't.** Part 1 still said 17 templates, no
+   `GrantCounter`, no `Counter(name)` stat kind. The plan's Appendix A
+   addendum had it; the file implementing sessions actually code
+   against didn't. Fixed — Part 1 now carries all of F13.
+2. **The plan's Phase 5 implementation-order list** didn't include
+   `GrantCounter`, and **Phase 2's `GameState` task** didn't mention
+   the counter store F13 places there (the only card-scoped state in
+   the model — easy for an implementer to miss). Both fixed in
+   `V2_PLAN.md`.
+3. Minor: the Part 4 sign-off record's addendum chain listed F11/F12
+   but not F13; superseded by this part's consolidated record.
+
+### The final batch (F14) — adopted with user sign-off
+
+The decision backlog banked across Parts 6, 8, and 9 ("decide in one
+pass before implementation"), resolved under the session's standing
+bar (multiply-confirmed or trivially cheap → adopt; real design
+surface → spike; single-card → tail):
+
+**Adopted (folded into Part 1 as [F14]):**
+- `CombatFlag.Unblockable` (Falcon "Recon" — completes the flag set).
+- `PerMatch.Distinct` (3 cards counting different names/affiliations).
+- `PerMatch.Unit: Dice | EnergySymbols` (2-3 cards counting Reserve
+  Pool symbols).
+- `Duration.UntilYourNextTurn` (2 cards).
+- `CostModifier` kind `ActionDieUse` + `Currency: Energy | Life` (4
+  cards, all proven v1 flags).
+- `AnsweredBy: Own | Opposing` on `TargetFilter` and `MayPay` (4
+  confirming cards — Ronan "No Mercy," Black Widow "Tsarina," Magneto
+  DPS121, Mystique DPS149; upgrades the latter two from "simplified"
+  to faithful, retiring Part 8 finding #6's deliberate approximation).
+- `EventFilter.Stat` threshold (Deathbird "Usurper").
+- `DamageModifier` modes `Amplify(n)` / `Double` (3 popular cards),
+  with the ordering rule fixed at adoption time: **multipliers before
+  flat reductions** — a deliberate house ruling, since the physical
+  game defines no layering; decided once here so no per-card
+  relitigating.
+
+**Deferred into the ability-blanking spike (scope note added):**
+deny-named-card lockout (Blob "Appetite for Destruction," Drax "The
+Pacifist," Magneto "Magnetic Monster"). Reason: its hard half —
+"choose an opposing card when fielded and REMEMBER the choice" — is
+the identical per-die chosen-card memory Shriek's ability-blanking
+already needs. One mechanism, two payoffs; building lockout alone now
+would preempt half the spike's design space.
+
+**Tailed:** player-life-damage-as-trigger (Hulk "Green Goliath," 1
+card), unblocked-at-attack event payload (Lilandra "Grand Admiral," 1
+card), extra-draw event flag (Madelyne Pryor "Aspiring," 1 card).
+
+### Where the numbers land
+
+With F13 + F14, the full-DPS audit's buckets shift: the six Loyalty
+cards, Deathbird, Lilandra "Freedom Fighter," and Lilandra
+"Majestrix" all flip to fit, and Ronan "No Mercy" leaves the tail —
+**~119/145 (82%) of the DPS set fits the frozen vocabulary cleanly**,
+with the remainder concentrated in: the two spikes (~9 cards:
+ability-blanking family incl. lockout, live-value family), the 5
+architecturally-alien cards (Part 7 — same in v1), the payment-source
+group (4, user-designated alter-or-skip), and ~8 genuine tail
+singletons. Nothing unaccounted for.
+
+### Freeze declaration and readiness verdict
+
+The vocabulary is **frozen** at: 11-field TargetFilter, 18 effect
+templates, 7 conditions, 6 continuous templates (with their adopted
+kinds/modes/gates), 10 events, bindings, and the F1-F14 amendment set.
+Ground rules 1-8 stand. Changes from here route only through the two
+spikes or `V2_TAIL_POLICY.md`, with sign-off — an implementing session
+finding a misfit card during Phases 1-8 files it and moves on (ground
+rule 2), full stop.
+
+**Verdict: ready to implement.** Phase 0 ran far past its original
+20-card design — 60 sampled + the full 145-card DPS audit + the
+Orange Ban list — and the last two rounds produced only consolidations
+and parameter-level additions, not structural changes: the vocabulary
+has converged. Phase 1 (scaffolding + data model) is next; its
+Appendix B blueprint plus F13's GameState counter store are the
+complete data-model input. Per the plan's handoff design, any capable
+session can execute it — the spec now answers the questions it would
+otherwise have had to invent answers for.

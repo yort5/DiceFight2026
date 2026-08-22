@@ -1,23 +1,27 @@
 # DiceFight v2 Core — Implementation Plan
 
-**Status: Phase 0 complete, pending a user decision before Phase 1
-begins in earnest.** Update the checkboxes in the Phase Overview as
-phases complete, and add a one-line note after any phase where reality
-diverged from this plan.
+**Status: Phase 0 complete; vocabulary FROZEN at the 2026-08-22 gate
+review (`V2_VOCABULARY.md` Part 11); Phase 1 is next.** Update the
+checkboxes in the Phase Overview as phases complete, and add a
+one-line note after any phase where reality diverged from this plan.
 
-**Phase 0 outcome (2026-08-22)**: validated against 20 cards, then
-expanded to 60 at the user's request. 28/60 (47%) fit the vocabulary
-as originally specified; an architect review (`V2_VOCABULARY.md` Part
-4) amended the findings after verifying them against v1 code, and the
-user **signed off on the full amended set the same day**: Findings
-1-8 as amended (notably `DieFaceChanged` instead of a roll-only
-event, and `Reroll` fold-in params), target bindings (9),
-DamageModifier source scope (10), and the purchase-cost-floor
-erratum. Projected fit ~45/60 (75%). `V2_VOCABULARY.md` Part 1 is now
-the adopted spec; this plan's Appendix A and phase descriptions carry
-matching amendment notes. Two structural gaps (ability-blanking,
-live-value Amounts) are deferred as named Phase 8 design spikes, each
-hit by 3-4 independent cards. **Phases 1-7 are unblocked.**
+**Phase 0 outcome (2026-08-22, full arc)**: validated against 20
+cards, expanded to 60, then against the community "Orange Ban" list,
+then a scripted audit of the entire 145-card DPS set. The adopted
+amendment chain (F1-F14, `V2_VOCABULARY.md` Parts 4-11 — all
+user-signed-off) lands the frozen spec at: 11-field TargetFilter with
+bindings and AnsweredBy, 18 effect templates, 7 conditions, 6
+continuous templates with ActiveWhen/Source/Amplify, 10 events incl.
+`DieFaceChanged`, per-card counters, and ground rules 1-8 (notably:
+"you may" is always a real choice). **~119/145 (82%) of the DPS set
+fits the frozen vocabulary cleanly**; the remainder is fully
+accounted for: two named design spikes (ability-blanking + named-card
+lockout; live-value Amounts), 5 architecturally-alien cards
+(unchanged from v1), the payment-source group (user-designated
+alter-or-skip), and single-card tail items. `V2_VOCABULARY.md` Part 1
+is the single authoritative spec; implementing sessions code against
+it, file misfits to `V2_TAIL_POLICY.md`, and never amend vocabulary
+without sign-off.
 
 ## Context
 
@@ -152,7 +156,10 @@ purchase, field, pass turn — all constants from `RulesConfig`.
 **Tasks**:
 1. `GameState`: two players, per-die `DieInstance` (id, owner,
    controller, current zone, current face index, applied modifiers
-   list — empty for now), life totals, turn/step tracker. Zones are
+   list — empty for now), life totals, turn/step tracker, and the
+   **card counter store** (per-`(player, cardId, counterName)` int —
+   adopted Finding 13; the only card-scoped-not-die-scoped state in
+   the model, don't attach it to DieInstance). Zones are
    the same nine as v1 (Bag, PrepArea, ReservePool, FieldZone,
    AttackZone, UsedPile, OutOfPlay, plus the DiceFromBag/DiceFromPrep
    staging zones — port v1's staging-zone rationale comment).
@@ -291,12 +298,15 @@ ordering; a self-only trigger doesn't fire for other dice.
    mode, mutually exclusive with LevelDelta), SpinToEnergy, ModifyStat
    (deltas + adopted SetAttack/SetDefense modes), GrantTag, FieldDie,
    PurchaseModifier, CombatFlag, Sequence, MayPay, Conditional,
-   DrawAndChooseOne (adopted 17th template). Amount resolution (Fixed
-   vs PerMatch) is one shared helper. The interpreter's execution
+   DrawAndChooseOne, GrantCounter (adopted 17th and 18th templates).
+   Amount resolution (Fixed vs PerMatch, incl. the adopted Distinct/
+   Unit params) is one shared helper. The interpreter's execution
    context carries the adopted binding table (BindAs/Bound, reserved
    name "event") — build it into TargetFilter resolution from the
    start, and define TargetWasKOd/OnFaceKind evaluation against
-   bindings, not ad-hoc shared state.
+   bindings, not ad-hoc shared state. Choice resolution honors
+   `AnsweredBy` (TargetFilter and MayPay) by routing the PendingChoice
+   to the named player.
 4. Per-template tests: at least one happy path + one "no legal
    target → rule 3.1.10 skip" case each. Conditions: one test per
    ConditionKind.
@@ -359,13 +369,19 @@ KO-triggers-fire-through-combat and aura-affects-combat-stats tests.
 3. **Design spikes (adopted at sign-off — do these BEFORE the batch
    migration reaches the cards that need them):**
    - *Ability-blanking spike* (needed by D'Ken DPS141, Mister Sinister
-     DPS083, Vulcan DPS095): likely shape is the reserved 8th query
-     `AbilitiesActive(die)` consulted by the trigger registry and
-     activation paths, with a continuous + one-shot template pair on
-     top; the spike must also decide whether a blanked die's own
-     continuous templates switch off (v1's answer: yes, via the
-     GetCard choke point — match it). Write the design up in
-     `V2_VOCABULARY.md`, get user sign-off, then implement.
+     DPS083, Vulcan DPS095, Shriek SMC016, and — added at the Part 11
+     freeze — the named-card LOCKOUT family: Blob XFC087, Drax IG107,
+     Magneto AOU139's "can't purchase/field that card" texts, since
+     both families share the same per-die "choose an opposing card
+     when fielded and remember the choice" memory): likely shape is
+     the reserved 8th query `AbilitiesActive(die)` consulted by the
+     trigger registry and activation paths, with a continuous +
+     one-shot template pair on top, plus a lockout continuous template
+     over the same chosen-card mechanism; the spike must also decide
+     whether a blanked die's own continuous templates switch off
+     (v1's answer: yes, via the GetCard choke point — match it). Write
+     the design up in `V2_VOCABULARY.md`, get user sign-off, then
+     implement.
    - *Live-value Amounts spike* (needed by Archnemesis DPS001, Cosmic
      Cube MSW002, Rogue DPS049, Dark Phoenix DPS107): extend `Amount`
      with binding-referencing sources (`StatOf(binding, Attack|
@@ -458,6 +474,22 @@ Closed sets. Changing ANY of these requires user sign-off.
 > technically buildable (event-payload richness, the same shape as
 > `DieDamaged`'s damage amount) — see Part 10's own note on this being
 > a product call, not a technical one.
+>
+> **FINAL ADDENDUM 2026-08-22 — the F14 batch, adopted at the Part 11
+> gate review, and the spec FROZEN:** `CombatFlag.Unblockable`;
+> `PerMatch` gains `Distinct: bool` and `Unit: Dice | EnergySymbols`;
+> `Duration` gains `UntilYourNextTurn`; `CostModifier` gains kind
+> `ActionDieUse` and `Currency: Energy | Life`; `AnsweredBy: Own |
+> Opposing` on `TargetFilter` and `MayPay`; `EventFilter` gains a
+> `Stat` threshold; `DamageModifier` gains `Amplify(n)` / `Double`
+> modes with the fixed ordering rule "multipliers before flat
+> reductions." Named-card lockout deferred INTO the ability-blanking
+> spike (shared chosen-card-memory mechanism); player-damage trigger
+> and two event-payload singletons tailed. The vocabulary is frozen
+> from this point: further changes route only through the two spikes
+> or `V2_TAIL_POLICY.md`, each with user sign-off. `V2_VOCABULARY.md`
+> Part 1 is the single authoritative statement of the frozen spec —
+> the seed sections below are of historical interest only.
 
 ### Targets — one filter shape, 8 fields
 
