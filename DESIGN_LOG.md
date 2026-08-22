@@ -6937,3 +6937,50 @@ Adopting all 8 recommended findings would bring the fit rate to 43/60
 (72%). `V2_VOCABULARY.md` now carries the full 60-card writeup
 (Part 3) plus the updated Findings/tally sections. Still awaiting the
 user's sign-off before Phase 4/6 proceed; Phase 1 remains unblocked.
+
+## Status update: architect review of the 60-card Phase 0 findings
+
+Fable (architect) evaluated Sonnet's Part 3 findings at the user's
+request; written up as Part 4 of `V2_VOCABULARY.md`, pending sign-off.
+Bottom line: the fieldwork holds - none of the 8 findings rejected -
+but three technical corrections change the adoption shape, verified
+against v1 code rather than taken on trust:
+
+(1) Finding 1's proposed `DieRolled` event is wrong-shaped: Energize
+requires a DOUBLE energy face (TurnEngine.CheckEnergize:
+EnergyAmount >= 2) and Awaken fires from EVERY spin-up source, not
+just rolls (CheckAwaken's own comment: Amplify, ability-driven spins,
+all funneled through one check "so Awaken can't silently miss a
+source"). A roll-only event would reintroduce the exact
+silently-never-fires bug class v1 already paid for. Amended to
+`DieFaceChanged {PriorFace, NewFace, Cause: Roll|Reroll|Spin|Effect}`.
+
+(2) Finding 8 (OnFaceKind condition) doesn't actually close the
+reroll cards it claims - RerollAndMoveUnlessCharacter is a PER-DIE
+branch over a multi-target reroll, which Sequence+Conditional can't
+express. Amended: adopt the condition AND fold NonCharacterMoveTo/
+DamagePerMoved params into Reroll (5 real v1 users meet the >=5 bar).
+
+(3) The biggest one: Sonnet hit the same cross-step target-reference
+root cause four times (Mutation, Phoenix Psionic Maelstrom, Making
+the Team, and - uncaught - Shocking Grasp, which was counted Fit but
+whose TargetWasKOd is only well-defined with a shared-target
+mechanism) without promoting it to a finding. Elevated to Finding 9:
+target bindings (`BindAs`/`Bound` on TargetFilter, reserved binding
+"event"), which also subsumes Finding 7's EventSubject bool and lays
+the groundwork the deferred live-value-Amounts spike needs (StatOf-
+a-binding captured at bind time resolves Archnemesis's simultaneity).
+
+Also: DamageModifier Source scope promoted from Consider to
+recommended (Finding 10, per Sonnet's own suggestion); Finding 6
+amended to carry a PlayerTarget param (Corrupt draws from the TARGET
+player's bag, not your own); the Phase 3 purchase-cost floor is a
+confirmed plan erratum (floor 1, not 0; fielding floors at 0); all
+Consider-tier deferrals and all 7 tail placements agreed, with the
+ability-blanking spike's likely shape recorded (an 8th query,
+AbilitiesActive) and DieTargeted flagged as a candidate for outright
+rejection at spike time. Projected fit with the amended set: ~45/60.
+
+No phases added/removed/reordered - parameter-level amendment only,
+which is what Phase 0 was for. Awaiting user sign-off before Part 1 /
+Appendix A are amended.

@@ -737,3 +737,183 @@ items as `V2_TAIL_POLICY.md` entries when Phase 8 reaches them.
 
 This is a recommendation, not an adoption - per ground rule 2, the
 user decides.
+
+---
+
+## Part 4 — Architect review of the Round-2 findings (Fable, 2026-08-22)
+
+A design-level evaluation of Part 3, requested by the user. Verdict
+first: **the fieldwork holds up — the sample was well-chosen, the
+triage tiers are correctly drawn, and none of the 8 findings should be
+rejected.** But three technical corrections change how two of them
+should be adopted, and one observation Sonnet made repeatedly without
+promoting it turns out to be the single most valuable change on the
+list. Everything below is **PENDING USER SIGN-OFF** — Part 1 and the
+plan's Appendix A are not yet amended.
+
+### Corrections to the findings as written
+
+**Correction A — Finding 1's `DieRolled` event is the wrong shape;
+it must be `DieFaceChanged`.** Verified against v1 (`TurnEngine.cs`
+`CheckEnergize`/`CheckAwaken`): Energize fires only on a **double**
+energy face (`EnergyAmount >= 2`), so the proposed
+`{FaceKind: Character | Energy}` payload is too coarse to express it.
+Worse, Awaken fires from **every spin-up source alike** — v1's own
+comment: "Amplify above, or EffectInterpreter's Spin case... all
+funneled through this one check so Awaken can't silently miss a source
+some future keyword adds." A roll-only event would re-introduce
+exactly the silently-never-fires bug class v1 already paid to learn
+about (the Awaken/Energize keyword-gate bug in DESIGN_LOG, cited by
+plan ground rule 6). Adopt instead:
+
+```
+DieFaceChanged {
+  Die, PriorFace, NewFace,           // full Face payloads, not kinds
+  Cause: Roll | Reroll | Spin | Effect,
+  Step                                // already standard event context
+}
+```
+
+Energize = filter on NewFace being energy with symbol-count ≥ 2 during
+Roll & Reroll; Awaken = filter on character-level increase with any
+Cause. Same cost to implement as `DieRolled` (one choke point per
+face-mutation site — v1 proves those sites already funnel), strictly
+more correct.
+
+**Correction B — Finding 8 alone does not actually close the cards it
+claims.** `RerollAndMoveUnlessCharacter` is a *per-die* branch over a
+multi-target reroll ("reroll up to 2; EACH that doesn't roll a
+character moves"). `Sequence([Reroll(T), Conditional(OnFaceKind, ...)])`
+can't express "each" — Conditional runs once, not per resolved die.
+And Making the Team needs the branch to act on *the specific die just
+rolled* (a cross-step reference, Correction C's territory). Adopt
+Finding 8's `OnFaceKind` condition (needed for single-die branches),
+**plus** fold the multi-die pattern into `Reroll` itself as two
+optional params: `NonCharacterMoveTo: Zone?` and
+`DamagePerMoved: int` (the Psylocke/Storm printings' "deals 2 damage
+per die moved" rider — 5 total v1 users justify fold-in params under
+the same ≥5-uses bar the original 16 templates met).
+
+**Correction C — the cross-step target reference isn't a misfit
+footnote; it's a ninth finding, and the most valuable one.** Sonnet
+hit the same root cause four separate times — Mutation (#11), Phoenix
+"Psionic Maelstrom" (#24), Making the Team (#15), and, unnoticed,
+Shocking Grasp (#22): that card was counted *Fit*, but its
+`TargetWasKOd` check is only well-defined if the Conditional can refer
+to *the die damaged in step 1*, which is precisely the shared-target
+mechanism #24 was ruled a misfit for lacking. v1 solves this with a
+fragile trick (sharing one `TargetSpec` object reference between
+nodes). v2 should solve it as a first-class, closed mechanism:
+
+```
+TargetFilter gains two fields:
+  BindAs: string?    // after resolution, remember the chosen dice under this name
+  Bound: string?     // skip resolution; reuse the dice previously bound to this name
+Reserved binding "event" = the triggering event's subject die.
+```
+
+This one mechanism: closes #24 and Making the Team outright; closes
+Mutation (#11) when combined with the `SpinToEnergy` level-set inverse
+Appendix A already specifies; makes `TargetWasKOd`'s semantics
+rigorous instead of implicit; and **subsumes Finding 7** — the
+proposed `EventSubject: bool` becomes `Bound: "event"`, one mechanism
+instead of two special cases. It also lays the exact groundwork the
+"live-value Amounts" spike needs: an `Amount` that references a
+binding's stat, *captured at bind time*, is a natural future solution
+to Archnemesis's both-amounts-before-either-applies simultaneity
+requirement — the spike stays deferred, but it lands on prepared
+ground instead of requiring a retrofit.
+
+### Verdicts on the eight findings
+
+| # | Finding | Verdict |
+|---|---|---|
+| 1 | Roll-outcome event | **Adopt, amended** to `DieFaceChanged` (Correction A) |
+| 2 | `ActiveWhen` gate on continuous templates | **Adopt as written** (3 independent cards; conditions are pure state reads, safe to evaluate at query time) |
+| 3 | `FieldingCost` stat kind | **Adopt as written** |
+| 4 | Energy type in the tag set | **Adopt as written**, plus one Phase-1 validation rule: warn when a config's symbol ids collide with its affiliation/keyword strings, since they now share a namespace |
+| 5 | `ModifyStat` absolute-set mode | **Adopt as written** (v1's own ModifyStat/SetStat split is the proof it's a real axis) |
+| 6 | Unified `DrawAndChooseOne` | **Adopt, amended**: needs a `PlayerTarget` param — Corrupt draws from the *target player's* bag (usually the opponent's), DrawAndChooseOneToRoll from your own; without it the merge only covers half its own motivating cards. Honest accounting: this is a 17th template, a shrink only relative to adding both one-offs — still clearly worth it (Corrupt is a multi-set recurring keyword) |
+| 7 | `EventSubject` target flag | **Adopt, subsumed** into Correction C's bindings (`Bound: "event"`) |
+| 8 | `OnFaceKind` condition | **Adopt, amended** per Correction B (condition + `Reroll` fold-in params) |
+
+Plus two promotions:
+
+- **Finding 9 (new): target bindings** (`BindAs`/`Bound`, Correction
+  C). Elevated from Part 3's misfit notes to a recommended adoption.
+- **Finding 10: `DamageModifier` gains `Source: Ability | Combat |
+  Any`.** Sonnet parked this in "Consider" while noting it "could
+  reasonably move to Recommended" — I agree it should: one enum
+  parameter, and the ability-vs-combat damage distinction is already a
+  proven, engine-level rules axis in v1 (`DieStats.ApplyDamage` was
+  specifically reworked to carry it).
+
+### Verdicts on the "Consider" tier — all agreed, with design notes
+
+- **Ability-blanking: agree, defer to a design spike** — but record
+  the likely shape now so the spike starts warm: it is naturally an
+  **8th query**, `AbilitiesActive(die)`, consulted by the trigger
+  registry before firing and by the Global/action activation paths —
+  which means it *composes with* the Phase 3 spine rather than
+  fighting it. The 4 confirming cards' variety (whole-side, single-die,
+  cost-scoped, engagement-scoped) maps cleanly onto "who registers the
+  interceptor," which is evidence the query shape is right. Not
+  adopted now; the spike should also decide blanking's interaction
+  with continuous templates (does a blanked die's own StatAura turn
+  off? v1's answer: yes, via the GetCard choke point — v2 should
+  match).
+- **Live-value Amounts: agree, defer** — with Correction C's bindings
+  explicitly named as the groundwork (see above). The spike's open
+  question shrinks from "design a value-reference system" to "define
+  `StatOf(binding)` / `EventValue` capture semantics."
+- **`DieTargeted` event: agree, defer**, and I'd go further than
+  Sonnet: this one may deserve *rejection* at the spike stage — it
+  couples targeting (a pure query today) to the event stream for one
+  card, and Angel "Air Support" approximated even in v1.
+- **Tail items: agree with all seven placements.** No changes.
+
+### One plan erratum outside the vocabulary
+
+Sonnet's #29 side note is correct and is a plan bug: Phase 3 specifies
+`GetPurchaseCost` "floor 0," but the game's own card text ("costs 2
+less, **to a minimum of 1**") and v1's behavior floor purchase costs
+at **1**. Fielding costs genuinely floor at 0 (printed-0 faces and
+free-fielding exist). The plan text should read: purchase floor 1,
+fielding floor 0.
+
+### Impact on the plan if adopted
+
+No phase is added, removed, or reordered; the architecture is
+unchanged — this is parameter-level amendment, which is exactly what
+Phase 0 existed to produce. Concretely:
+
+- **Phase 1**: +1 validation rule (tag-namespace collisions).
+- **Phase 3**: cost-floor erratum; note `AbilitiesActive` as the
+  reserved 8th query pending its spike.
+- **Phase 4**: 10 events (add `DieFaceChanged`); event payloads must
+  carry the subject die and event-specific values (`DieDamaged`
+  carries the damage amount — free now, groundwork for the Amounts
+  spike).
+- **Phase 5**: 17 templates (+`DrawAndChooseOne`); 7 conditions
+  (+`OnFaceKind`); `ModifyStat` set-mode; `Reroll` fold-in params;
+  binding table in the interpreter's execution context (small: a
+  per-ability-resolution dictionary name → die ids).
+- **Phase 6**: `ActiveWhen` on all six templates; `DamageModifier`
+  source scope.
+- **Phase 8**: two named design spikes (ability-blanking, live-value
+  Amounts) inserted as explicit tasks before the DPS migration batches
+  reach D'Ken/Mister Sinister/Vulcan and Archnemesis/Dark Phoenix
+  respectively.
+
+Projected fit rate with the amended adoption set: **~45/60 (75%)** —
+Sonnet's 43 plus Mutation and Phoenix closed by bindings — and the
+count is now honest where round 2's wasn't quite (Shocking Grasp was
+a latent misfit; bindings make its Fit real).
+
+### Sign-off requested
+
+Adopting: Findings 1–8 as amended above, plus bindings (9) and
+DamageModifier source scope (10), plus the cost-floor erratum. On
+sign-off, Part 1 of this spec and `V2_PLAN.md` (Appendix A + affected
+phase descriptions) get amended to match, and this section's "PENDING"
+marker is cleared.
