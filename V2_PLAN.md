@@ -1,8 +1,19 @@
 # DiceFight v2 Core — Implementation Plan
 
-**Status: Phase 0 not started.** Update the checkboxes in the Phase
-Overview as phases complete, and add a one-line note after any phase
-where reality diverged from this plan.
+**Status: Phase 0 complete, pending a user decision before Phase 1
+begins in earnest.** Update the checkboxes in the Phase Overview as
+phases complete, and add a one-line note after any phase where reality
+diverged from this plan.
+
+**Phase 0 outcome (2026-08-22)**: 13/20 cards fit the vocabulary
+cleanly (above the 12-card stop floor, below the 15-card target). Three
+small, narrowly-justified refinements were found that would bring the
+fit rate to 17/20 - see `V2_VOCABULARY.md`'s "Findings requiring a
+decision." **Awaiting user sign-off on those 3 findings before Phase 4
+(events) and Phase 6 (continuous templates) are implemented**, since
+both phases' own designs are what the findings amend. Phase 1
+(scaffolding/data model) does not depend on the outcome and can proceed
+either way.
 
 ## Context
 
@@ -55,7 +66,7 @@ rather than improvising a different architecture.
 
 | # | Phase | Deliverable | Status |
 |---|---|---|---|
-| 0 | Vocabulary validation on paper | `V2_VOCABULARY.md` + 20 cards re-expressed | [ ] |
+| 0 | Vocabulary validation on paper | `V2_VOCABULARY.md` + 20 cards re-expressed | [x] |
 | 1 | Project scaffolding + data model | `DiceFight.V2` + `DiceFight.V2.Tests` projects; GameConfig/DieDef/CardDef records | [ ] |
 | 2 | Game state, zones, turn machine | Config-driven state + turn steps, no abilities | [ ] |
 | 3 | Query pipeline | Stat/cost/legality queries with modifier interception | [ ] |

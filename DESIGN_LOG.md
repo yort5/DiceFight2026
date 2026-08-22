@@ -6860,3 +6860,44 @@ explicit user sign-off. v1 stays untouched and deployed until Phase 9.
 Phase 0 (paper validation of the vocabulary against 20 real cards,
 with a stop-and-ask threshold) is deliberately the first gate before
 any engine code.
+
+## Status update: v2 Phase 0 complete — vocabulary validated, 3 findings pending sign-off
+
+Executed Phase 0 of `V2_PLAN.md`: re-expressed 20 real v1 cards on
+paper against the closed v2 vocabulary (10 cards v1 scripted with
+common effect nodes, 5 it gave a single-use node, 5 it modeled as a
+bespoke `Grants*` CardDef flag), written up in the new
+`V2_VOCABULARY.md`.
+
+Result: 13/20 fit the vocabulary cleanly as specified in the plan's
+Appendix A - above the 12-card hard-stop floor, below the 15-card
+target. All 10 common-node cards fit at the effect-template level (2
+surfaced a trigger-kind gap, not an effect gap). The hard bucket (v1's
+single-use nodes) was 1/5, as expected. The `Grants*` bucket was 2/5
+clean, with the other 3 collapsing into two shared root causes.
+
+Three specific, narrowly-scoped refinements were found, each
+independently justified by a different real card, not speculative:
+(1) trigger events need a 10th "rolled to a face" kind - Energize and
+Awaken are roll-outcome triggers, not covered by the 9 planned events,
+and these are core keywords, not tail cases; (2) continuous templates
+need an `ActiveWhen` gate reusing the existing 6 Condition kinds -
+found independently on two different cards (Jean Grey "Xavier's
+Dream," Moira "If It's Real"), matching a recurring v1
+`RequiresOwnActiveSidekick`-style pattern; (3) `TargetFilter.Stat`
+is missing `FieldingCost` (Deadpool "Collect THIS!"). Adopting all
+three would bring the fit rate to 17/20. Four other real gaps
+(Archnemesis's "damage equal to own attack," Organic Steel's one-shot
+damage prevention, Making the Team's roll-outcome branch, Mutation's
+swap-and-set-level) were deliberately NOT recommended for adoption -
+each is real but rarer/costlier, better left as future
+`V2_TAIL_POLICY.md` entries when Phase 8 actually reaches those cards
+than built speculatively now.
+
+Per the plan's ground rule 2 (vocabulary changes need explicit user
+sign-off), `V2_PLAN.md` Appendix A / `V2_VOCABULARY.md` were NOT
+amended - the findings are written up as a recommendation only.
+Phase 0's checkbox is marked done; Phase 1 (scaffolding) can proceed
+regardless of the outcome, but Phase 4 (events) and Phase 6
+(continuous templates) should wait for the user's decision on the 3
+findings since those phases' own designs are what the findings amend.
