@@ -276,16 +276,19 @@ ordering; a self-only trigger doesn't fire for other dice.
    yes/no decisions (v1's MayPayLife stand-in-token trick is fine;
    keep it and its comment).
 3. Implement templates in this order (dependency-ish): LifeChange,
-   DealDamage, KO, MoveDie, DrawToZone, Reroll (with its adopted
-   NonCharacterMoveTo/DamagePerMoved params), Spin, SpinToEnergy,
-   ModifyStat (deltas + adopted SetAttack/SetDefense modes), GrantTag,
-   FieldDie, PurchaseModifier, CombatFlag, Sequence, MayPay,
-   Conditional, DrawAndChooseOne (adopted 17th template). Amount
-   resolution (Fixed vs PerMatch) is one shared helper. The
-   interpreter's execution context carries the adopted binding table
-   (BindAs/Bound, reserved name "event") — build it into TargetFilter
-   resolution from the start, and define TargetWasKOd/OnFaceKind
-   evaluation against bindings, not ad-hoc shared state.
+   DealDamage (deltas + adopted `Distribute` flag — resolved as N
+   repeated PendingChoice picks, not a new mechanism), KO, MoveDie,
+   DrawToZone, Reroll (with its adopted NonCharacterMoveTo/
+   DamagePerMoved params), Spin (deltas + adopted `SetLevel` absolute
+   mode, mutually exclusive with LevelDelta), SpinToEnergy, ModifyStat
+   (deltas + adopted SetAttack/SetDefense modes), GrantTag, FieldDie,
+   PurchaseModifier, CombatFlag, Sequence, MayPay, Conditional,
+   DrawAndChooseOne (adopted 17th template). Amount resolution (Fixed
+   vs PerMatch) is one shared helper. The interpreter's execution
+   context carries the adopted binding table (BindAs/Bound, reserved
+   name "event") — build it into TargetFilter resolution from the
+   start, and define TargetWasKOd/OnFaceKind evaluation against
+   bindings, not ad-hoc shared state.
 4. Per-template tests: at least one happy path + one "no legal
    target → rule 3.1.10 skip" case each. Conditions: one test per
    ConditionKind.
@@ -418,6 +421,17 @@ Closed sets. Changing ANY of these requires user sign-off.
 > decision: ability-blanking and live-value Amounts (Phase 8 design
 > spikes), `DieTargeted` (deferred, rejection-leaning), and the seven
 > tail items listed in `V2_VOCABULARY.md`.
+>
+> **ADDENDUM, same day (user-signed-off, `V2_VOCABULARY.md` Part 5):**
+> `DealDamage` gains `Distribute: bool` (resolves Amount as repeated
+> 1-point choices instead of one lump sum — no new choice mechanism,
+> reuses the Phase 5 `PendingChoice` pipeline N times); `Spin` gains
+> `SetLevel: int?`, mutually exclusive with `LevelDelta` (absolute
+> level set, mirroring `ModifyStat`'s `SetAttack`/`SetDefense`, ported
+> from v1's `SpinToCharacterLevel`). Both closed cards a human review
+> of the vocabulary caught — Cyclops's "divided how you choose" and
+> Mutation's level-1 landing — that the card-by-card pass had
+> respectively under-argued and over-claimed as solved.
 
 ### Targets — one filter shape, 8 fields
 

@@ -92,6 +92,31 @@ Conditional, **DrawAndChooseOne [F6]**. Base parameter list:
   ReservePool destination = rolled, per DrawToZone's convention).
   Covers both v1 `Corrupt` (opponent's bag, UsedPile/Bag) and
   `DrawAndChooseOneToRoll` (own bag, ReservePool/Bag).
+- **DealDamage [F11]**: optional `Distribute: bool`. When true, Amount
+  is resolved as repeated 1-point choices from Target instead of one
+  lump application — the player picks a die, it takes 1 damage, the
+  remaining pool decrements, repeat until the pool is exhausted (the
+  same die may be chosen more than once). No new choice mechanism:
+  this reuses the one player-decision pipeline (`PendingChoice`, Phase
+  5) already committed to, just invoked N times instead of once — the
+  client is free to offer a fast "hold to auto-fill the rest evenly"
+  shortcut over the same repeated-choice API. Covers Cyclops, "Xavier's
+  Dream" (DPS140)'s "X damage divided how you choose among any number
+  of target character dice" precisely, preserving the real strategic
+  choice (who takes damage) that the original round-2 write-up
+  approximated away.
+- **Spin [F12]**: optional `SetLevel: int?`, mutually exclusive with
+  `LevelDelta` — sets the target die directly to an absolute character
+  level, ported forward from v1's existing `SpinToCharacterLevel` node
+  (never sampled in Phase 0's 60 cards, so never put through sign-off
+  until now). Mirrors `ModifyStat`'s `SetAttack`/`SetDefense` [F5] —
+  same absolute-vs-delta axis, applied to Level instead of a stat.
+  Combined with target bindings [F9], closes Mutation (DPS009)
+  cleanly: `Sequence([MoveDie(fieldDie, ToZone:UsedPile),
+  MoveDie(usedPileDie, BindAs:"incoming", ToZone:FieldZone),
+  Spin(Bound:"incoming", SetLevel:1)])`. (Part 4's claim that bindings
+  alone closed Mutation was imprecise — the level-set gap survived
+  bindings and needed this separate, small addition.)
 
 ### Conditions (7 kinds)
 
@@ -982,3 +1007,59 @@ to match in the same commit. The deferred items stand as recorded:
 ability-blanking and live-value Amounts are Phase 8 design spikes;
 `DieTargeted` is deferred with a rejection lean; the seven tail items
 await `V2_TAIL_POLICY.md` entries when Phase 8 reaches them.
+
+**Addendum, same day**: reviewing a player-facing summary of this
+document surfaced two more decisions — see Part 5. Both signed off and
+folded into Part 1: `DealDamage.Distribute` [F11] and `Spin.SetLevel`
+[F12].
+
+---
+
+## Part 5 — Post-sign-off refinements from player-facing review (2026-08-22)
+
+The user drafted a short, plain-language summary of Parts 1–4 for
+outside player feedback, and in reviewing it themself flagged two
+items before it went out. Both are now adopted (folded into Part 1
+above); this section is the rationale record.
+
+**Divided/distributed damage.** Cyclops "Xavier's Dream" (DPS140) was
+approximated in Part 2/3 as an automatic even split, on the reasoning
+that a real per-target amount chooser "would need new interactive-
+choice infrastructure this engine doesn't have yet." That premise was
+wrong: the plan already commits (Phase 5 task 2) to routing every
+player decision through one `PendingChoice`-style pipeline. A
+"distribute N points across chosen targets" effect is just that same
+pipeline invoked N times — choose one target, apply 1, decrement,
+repeat — with no new server-side choice mechanism required. The user's
+own proposed UI (tap per point of damage; hold to auto-fill evenly)
+is exactly a fast client-side driver for that same repeated-choice
+API, not a different capability. Adopted as `DealDamage.Distribute`
+[F11]. Evidence caveat, stated plainly rather than inflated: this
+pattern is confirmed by exactly one card in the 60-card sample
+(Cyclops); it wasn't independently reinforced the way most other
+findings were. Adopted anyway because the fix is cheap, reuses
+existing architecture rather than adding to it, and the card text
+itself ("X damage divided how you choose") makes clear the design
+intent was always a real choice, not an approximation — the original
+"no infrastructure for this" reasoning doesn't survive scrutiny.
+
+**Mutation (DPS009).** Flagged by the user as commonly-played and
+worth prioritizing. Part 4's claim that target bindings [F9] alone
+closed this card was re-examined and found imprecise: bindings solve
+the *reference* problem (naming "the die that just moved out of the
+Used Pile" unambiguously across `Sequence` steps) but not the *action*
+needed on it — setting its level to an absolute value (1), which nothing
+in the adopted vocabulary could do; `Spin` was delta-only. v1 already
+has the needed shape as its own node (`SpinToCharacterLevel`), simply
+never sampled into either Phase 0 round, so it never reached a sign-off
+decision on its own. Ported forward as `Spin.SetLevel` [F12], deliberately
+mirroring `ModifyStat`'s already-adopted `SetAttack`/`SetDefense` [F5]
+— same absolute-vs-delta axis, same precedent, applied to Level. With
+both `Spin.SetLevel` and bindings [F9], Mutation's `WhenUsed` ability now
+expresses cleanly; its Global ability (a level-for-level trade between
+two dice) already fit in Part 2 without needing either.
+
+No other findings, verdicts, or tallies in Parts 1–4 change as a
+result of this addendum — these two items were specifically the ones
+a human reviewer caught that the card-by-card pass had either
+under-argued (Cyclops) or over-claimed as solved (Mutation).

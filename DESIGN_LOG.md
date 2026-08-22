@@ -7013,3 +7013,47 @@ the two design-spike tasks (ability-blanking, live-value Amounts)
 with their affected cards named and a write-up -> sign-off ->
 implement flow. Phases 1-7 are now unblocked; next session should
 execute Phase 1.
+
+## Status update: two more vocabulary refinements from human review of the player summary
+
+While drafting a plain-language summary of the v2 vocabulary decision
+for outside player feedback, the user caught two things reviewing it
+themselves, before it went out: the divided-damage approximation
+(Cyclops "Xavier's Dream") gave up too much for no real reason, and
+Mutation (DPS009) - a commonly-played card - was claimed "closed" by
+the prior sign-off when it wasn't quite.
+
+Both investigated and confirmed real:
+
+**Divided damage**: the original "auto-split evenly" approximation
+was justified by "no interactive-choice infrastructure exists for
+this" - but that premise was wrong. The plan already commits to
+routing every player decision through one PendingChoice-style
+pipeline (Phase 5); a real per-target damage allocation is just that
+same pipeline invoked N times (choose a die, apply 1 point, repeat).
+No new mechanism needed. Adopted `DealDamage.Distribute: bool` -
+resolves Amount as repeated 1-point choices instead of one lump sum,
+which also maps directly onto the user's own proposed UI (tap per
+point, hold to auto-fill evenly) as a client-side convenience over
+the same API. Honestly flagged: this pattern is confirmed by exactly
+1 card in the 60-card sample, weaker evidence than most other
+findings, but adopted anyway since the fix is cheap and reuses
+existing architecture.
+
+**Mutation**: re-examined the prior claim that target bindings alone
+closed this card. They solve the reference problem (naming "the die
+that just moved from the Used Pile" across Sequence steps) but not
+the action needed on it - setting its level to an absolute value (1),
+which `Spin` couldn't do (delta-only). v1 already has this exact
+shape as its own node (`SpinToCharacterLevel`), just never sampled
+into either Phase 0 round. Ported forward as `Spin.SetLevel: int?`,
+mirroring the already-adopted ModifyStat absolute-set precedent
+[F5]. Combined with bindings [F9], Mutation's WhenUsed ability now
+expresses cleanly.
+
+Both signed off by the user and folded into `V2_VOCABULARY.md` Part 1
+as [F11]/[F12], with the rationale recorded in a new Part 5 addendum
+(kept separate from Part 4's original architect review so the audit
+trail shows what a human catch added on top of it). `V2_PLAN.md`'s
+Appendix A amendment note and Phase 5 task list updated to match. No
+other findings/verdicts/tallies from Parts 1-4 changed.
