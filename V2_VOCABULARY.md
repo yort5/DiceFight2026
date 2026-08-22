@@ -9,18 +9,21 @@ separate clearly-marked section, proposed-but-not-yet-adopted changes
 found during validation.
 
 Produced by Phase 0 (`V2_PLAN.md`), expanded from 20 to 60 cards at the
-user's request (2026-08-22) to get a statistically firmer read before
-committing. Status: **60 cards validated, 8 refinements recommended
-for sign-off before Phase 4/6 — see "Findings requiring a decision"
-below. Vocabulary NOT yet amended.**
+user's request (2026-08-22). Status: **60 cards validated; the amended
+finding set (Part 4) was SIGNED OFF by the user on 2026-08-22 and is
+folded into Part 1 below. Part 1 is the adopted vocabulary.** Parts
+2-3 record the validation evidence against the *pre-amendment*
+vocabulary (their per-card verdicts predate the amendments); Part 4
+records the architect review and what changed at sign-off.
 
 ---
 
-## Part 1 — The vocabulary (as specified in V2_PLAN.md Appendix A)
+## Part 1 — The adopted vocabulary (post-sign-off, 2026-08-22)
 
-Unchanged from the plan; reproduced here as the working copy.
+Amendments relative to `V2_PLAN.md` Appendix A are marked **[F#]**
+with the finding that introduced them (see Parts 3-4).
 
-### Targets — one filter shape, 8 fields
+### Targets — one filter shape, 10 fields
 
 ```
 TargetFilter {
@@ -29,16 +32,30 @@ TargetFilter {
   Kind: AnyDie | CharacterDie | ActionDie | Player | DieOrPlayer
   Count: int                               // 0 = all matches (no choice)
   Tags: TagQuery?                          // see below
-  Stat: (Attack|Defense|Level|PurchaseCost, Min?, Max?)?   // ONE threshold
+  Stat: (Attack|Defense|Level|PurchaseCost|FieldingCost, Min?, Max?)?  // ONE threshold [F3]
   Optional: bool                           // "up to Count" vs "exactly"
   Self: bool                               // bypass: resolve to source die
+  BindAs: string?                          // [F9] after resolution, remember chosen dice under this name
+  Bound: string?                           // [F9] skip resolution; reuse dice bound earlier this ability.
+                                           //      Reserved name "event" = the triggering event's subject die.
 }
 TagQuery { AnyOf: string[], NoneOf: string[] }
 ```
 
-Tags unify v1's affiliations, keywords, card names, and Sidekick-ness:
-a die's tag set = its card's affiliations + keywords + its card name +
-"sidekick" if applicable + granted tags.
+Tags unify v1's affiliations, keywords, card names, Sidekick-ness,
+**and printed energy type [F4]**: a die's tag set = its card's
+affiliations + keywords + its card name + "sidekick" if applicable +
+its printed energy symbol id + granted tags. (Phase 1 validation warns
+on symbol-id collisions with affiliation/keyword strings, since they
+share a namespace.)
+
+Bindings [F9] live in the interpreter's per-ability-resolution context
+(a name → die-ids dictionary), created by `BindAs` at resolution time
+and read by `Bound`. `TargetWasKOd`-style conditions are defined
+against bindings: the condition's CheckTarget names the binding whose
+dice are examined. Bindings are also the designated groundwork for the
+deferred live-value-Amounts spike (a future `StatOf(binding)` captures
+at bind time, giving rule-3.1.7 simultaneity for free).
 
 ### Amounts
 
@@ -46,29 +63,74 @@ a die's tag set = its card's affiliations + keywords + its card name +
 Amount = Fixed(n) | PerMatch(TargetFilter, multiplier)
 ```
 
-### Effect templates (16)
+(A live-context value source — "this die's own stat," "the event's
+damage amount" — is deliberately NOT adopted; it is the Phase 8
+live-value-Amounts design spike. See Part 4.)
+
+### Effect templates (17)
 
 DealDamage, KO (param: `TriggersKOAbilities: bool`, false =
 Sacrifice), MoveDie, DrawToZone, FieldDie, Reroll, Spin, SpinToEnergy,
 ModifyStat, GrantTag, LifeChange (signed Amount: positive = gain,
 negative = lose), PurchaseModifier, CombatFlag, Sequence, MayPay,
-Conditional. Full parameter list: see `V2_PLAN.md` Appendix A.
+Conditional, **DrawAndChooseOne [F6]**. Base parameter list:
+`V2_PLAN.md` Appendix A, plus these adopted amendments:
 
-### Conditions (6 kinds)
+- **ModifyStat [F5]**: optional `SetAttack: int?` / `SetDefense: int?`,
+  each mutually exclusive with its delta field — an absolute snapshot-
+  to-value (implemented as a computed delta modifier, v1 `SetStat`'s
+  proven approach), not new bookkeeping.
+- **Reroll [F8]**: optional `NonCharacterMoveTo: Zone?` (each rerolled
+  die that lands on a non-character face moves there) and
+  `DamagePerMoved: int` (damage to the opponent per die so moved) —
+  the per-die multi-target pattern (5 v1 users) folded into the node,
+  since Sequence+Conditional cannot express per-die branching.
+- **DrawAndChooseOne(Count, PlayerTarget, ChosenToZone, RestToZone)
+  [F6]**: the target player draws Count dice from their bag; the
+  ability's controller chooses exactly one; it goes to ChosenToZone,
+  the rest to RestToZone (zones relative to the target player;
+  ReservePool destination = rolled, per DrawToZone's convention).
+  Covers both v1 `Corrupt` (opponent's bag, UsedPile/Bag) and
+  `DrawAndChooseOneToRoll` (own bag, ReservePool/Bag).
+
+### Conditions (7 kinds)
 
 CountAtLeast, TargetWasKOd, OnBurstFace, LifeComparison, NoKOsThisTurn,
-TurnFact.
+TurnFact, **OnFaceKind(CharacterFace | EnergyFace) [F8]** — the
+resolved CheckTarget die's current face kind (for branch-on-roll cards
+like Making the Team, typically against a `Bound` die).
 
 ### Continuous templates (6)
 
 StatAura, CostModifier, TagAura, CombatRule, DamageModifier,
-TargetingProtection.
+TargetingProtection — all six gaining **`ActiveWhen: ConditionKind?`
+[F2]** (a live board-state gate reusing the 7 condition kinds; absent
+= unconditionally active while the source die is active), and
+**DamageModifier gaining `Source: Ability | Combat | Any` [F10]**
+(which damage it intercepts — the ability-vs-combat axis v1's
+`DieStats.ApplyDamage` already proved out).
 
-### Trigger events (9, per Phase 4 design)
+### Trigger events (10, per Phase 4 design as amended)
 
 DieFielded, DieKOd, DieDamaged, DieAttacks, DieBlocks, DiceDrawn,
-PurchaseMade, TurnStepEntered, DieUsed — plus paid Global activation
-as its own trigger kind (not an event).
+PurchaseMade, TurnStepEntered, DieUsed, **DieFaceChanged [F1]** — plus
+paid Global activation as its own trigger kind (not an event).
+
+```
+DieFaceChanged {
+  Die, PriorFace, NewFace,        // full Face payloads, not just kinds
+  Cause: Roll | Reroll | Spin | Effect
+}
+```
+
+Emitted from EVERY face-mutation site (roll, reroll, ability spin,
+energy-face spin) — v1's CheckAwaken funnel comment is the design
+precedent: a face-change source that skips emission is the
+silently-never-fires bug class. Energize = EventFilter for NewFace
+energy with symbol count ≥ 2 during Roll & Reroll; Awaken =
+EventFilter for character-level increase, any Cause. Every event's
+payload carries its subject die and event-specific values (DieDamaged
+carries the damage amount — groundwork for the Amounts spike).
 
 ---
 
@@ -748,8 +810,8 @@ triage tiers are correctly drawn, and none of the 8 findings should be
 rejected.** But three technical corrections change how two of them
 should be adopted, and one observation Sonnet made repeatedly without
 promoting it turns out to be the single most valuable change on the
-list. Everything below is **PENDING USER SIGN-OFF** — Part 1 and the
-plan's Appendix A are not yet amended.
+list. **SIGNED OFF by the user 2026-08-22 (full amended set)** — Part
+1 above and the plan's Appendix A now reflect the adopted amendments.
 
 ### Corrections to the findings as written
 
@@ -910,10 +972,13 @@ Sonnet's 43 plus Mutation and Phoenix closed by bindings — and the
 count is now honest where round 2's wasn't quite (Shocking Grasp was
 a latent misfit; bindings make its Fit real).
 
-### Sign-off requested
+### Sign-off record
 
-Adopting: Findings 1–8 as amended above, plus bindings (9) and
-DamageModifier source scope (10), plus the cost-floor erratum. On
-sign-off, Part 1 of this spec and `V2_PLAN.md` (Appendix A + affected
-phase descriptions) get amended to match, and this section's "PENDING"
-marker is cleared.
+The user signed off on the **full amended set** on 2026-08-22:
+Findings 1–8 as amended above, target bindings (9), DamageModifier
+source scope (10), and the cost-floor erratum. Part 1 of this spec and
+`V2_PLAN.md` (Appendix A + affected phase descriptions) were amended
+to match in the same commit. The deferred items stand as recorded:
+ability-blanking and live-value Amounts are Phase 8 design spikes;
+`DieTargeted` is deferred with a rejection lean; the seven tail items
+await `V2_TAIL_POLICY.md` entries when Phase 8 reaches them.

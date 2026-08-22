@@ -6984,3 +6984,32 @@ rejection at spike time. Projected fit with the amended set: ~45/60.
 No phases added/removed/reordered - parameter-level amendment only,
 which is what Phase 0 was for. Awaiting user sign-off before Part 1 /
 Appendix A are amended.
+
+## Status update: v2 vocabulary amendments signed off and applied
+
+The user signed off on the full amended finding set from the
+architect review (Part 4): Findings 1-8 as amended (DieFaceChanged
+event with Cause payload instead of a roll-only event; Reroll fold-in
+params alongside the OnFaceKind condition; DrawAndChooseOne carrying
+a PlayerTarget; plus the as-written adoptions of ActiveWhen,
+FieldingCost stat kind, energy-type-as-tag, and ModifyStat set
+modes), target bindings (BindAs/Bound with reserved "event"),
+DamageModifier Source scope, and the purchase-cost floor-1 erratum.
+
+Applied in this commit: `V2_VOCABULARY.md` Part 1 rewritten as the
+adopted vocabulary (10-field TargetFilter, 17 templates, 7
+conditions, 10 events, gated continuous templates), with the
+amendments marked [F#] back to their findings; Part 4's pending
+markers replaced with a sign-off record. `V2_PLAN.md` amended to
+match: Appendix A carries the ground-rule-2 amendment note (the
+vocabulary file stays authoritative), Phase 1 gains the tag-namespace
+collision validation rule, Phase 3 gets the cost-floor erratum and
+reserves the AbilitiesActive query name for the blanking spike,
+Phase 4's event list is 10 with payload requirements (every
+face-mutation site MUST emit DieFaceChanged - the v1 CheckAwaken
+funnel lesson), Phase 5's task list adds the binding table and the
+17th template, Phase 6 carries ActiveWhen + Source, and Phase 8 gains
+the two design-spike tasks (ability-blanking, live-value Amounts)
+with their affected cards named and a write-up -> sign-off ->
+implement flow. Phases 1-7 are now unblocked; next session should
+execute Phase 1.

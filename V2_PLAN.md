@@ -6,19 +6,18 @@ phases complete, and add a one-line note after any phase where reality
 diverged from this plan.
 
 **Phase 0 outcome (2026-08-22)**: validated against 20 cards, then
-expanded to 60 at the user's request for a firmer read. Final: 28/60
-(47%) fit the vocabulary cleanly as specified. Eight small, mostly
-multiply-confirmed refinements were found that would bring the fit
-rate to 43/60 (72%) - see `V2_VOCABULARY.md`'s "Findings requiring a
-decision." Two bigger, structural-but-real gaps (an "ability-blanking"
-mechanism, and effect Amounts needing a live-value source beyond
-Fixed/PerMatch) were found independently by 3-4 cards each and are
-flagged as design spikes to do *before* Phase 8 reaches the cards that
-need them, not built speculatively now. **Awaiting user sign-off on
-the 8 findings before Phase 4 (events) and Phase 6 (continuous
-templates) are implemented**, since both phases' own designs are what
-the findings amend. Phase 1 (scaffolding/data model) does not depend
-on the outcome and can proceed either way.
+expanded to 60 at the user's request. 28/60 (47%) fit the vocabulary
+as originally specified; an architect review (`V2_VOCABULARY.md` Part
+4) amended the findings after verifying them against v1 code, and the
+user **signed off on the full amended set the same day**: Findings
+1-8 as amended (notably `DieFaceChanged` instead of a roll-only
+event, and `Reroll` fold-in params), target bindings (9),
+DamageModifier source scope (10), and the purchase-cost-floor
+erratum. Projected fit ~45/60 (75%). `V2_VOCABULARY.md` Part 1 is now
+the adopted spec; this plan's Appendix A and phase descriptions carry
+matching amendment notes. Two structural gaps (ability-blanking,
+live-value Amounts) are deferred as named Phase 8 design spikes, each
+hit by 3-4 independent cards. **Phases 1-7 are unblocked.**
 
 ## Context
 
@@ -130,6 +129,9 @@ verdicts; user has been shown the misfit list.
    error strings (die faces reference declared symbols, card die
    definitions have ≥1 face, template parameters reference declared
    keywords/tags, etc.). Test with 3–4 deliberately-broken configs.
+   *(Amended per sign-off)*: also warn when a config's energy symbol
+   ids collide with its affiliation/keyword strings — symbol ids join
+   the tag namespace under adopted Finding 4.
 
 **Acceptance**: solution builds; serialization + validation tests
 pass; zero references from v2 projects to `DiceFight.Engine`.
@@ -180,11 +182,18 @@ sign-off, mirroring the closed-vocabulary rule):
 ```
 Queries (7):
   GetAttack(die), GetDefense(die)          — base from current face + modifier sum
-  GetPurchaseCost(card, buyer)             — base + modifier sum, floor 0
-  GetFieldingCost(die)                     — same shape
+  GetPurchaseCost(card, buyer)             — base + modifier sum, floor 1 (erratum
+                                             2026-08-22: the game's own "to a minimum
+                                             of 1" text; was wrongly "floor 0")
+  GetFieldingCost(die)                     — same shape, floor 0 (printed-0 faces and
+                                             free-fielding are real)
   GetKeywords(die)                         — printed + granted set
   CanBeTargeted(die, byWhom, triggerKind)  — bool, AND of interceptor verdicts
   GetGlobalEnergyCost(card, payer)         — base + modifier sum (covers surcharges)
+
+An 8th query, AbilitiesActive(die), is RESERVED for the Phase 8
+ability-blanking design spike — do not implement it early, but do not
+take its name either.
 ```
 
 **Tasks**:
@@ -212,10 +221,18 @@ three `*DieMatch` filter records with one event + one filter shape.
 **Design** (fixed):
 
 ```
-Events (9): DieFielded, DieKOd, DieDamaged, DieAttacks, DieBlocks,
-            DiceDrawn, PurchaseMade, TurnStepEntered, DieUsed
+Events (10): DieFielded, DieKOd, DieDamaged, DieAttacks, DieBlocks,
+             DiceDrawn, PurchaseMade, TurnStepEntered, DieUsed,
+             DieFaceChanged   (amended per sign-off — Finding 1)
 Each event carries: the acting die id (if any), its controller,
-and step context.
+step context, and event-specific values (DieDamaged carries the damage
+amount; DieFaceChanged carries {PriorFace, NewFace, Cause: Roll |
+Reroll | Spin | Effect} and MUST be emitted from every face-mutation
+site — roll, reroll, ability spin, energy-face spin — v1's CheckAwaken
+funnel is the precedent; a skipped site is the silently-never-fires
+bug class). Energize/Awaken are EventFilters over DieFaceChanged
+(double-energy NewFace during Roll & Reroll; character-level increase
+with any Cause, respectively), not distinct trigger kinds.
 
 A card trigger = (EventKind, EventFilter, Ability).
 EventFilter = { Ownership (relative to listener), TagFilter?,
@@ -259,10 +276,16 @@ ordering; a self-only trigger doesn't fire for other dice.
    yes/no decisions (v1's MayPayLife stand-in-token trick is fine;
    keep it and its comment).
 3. Implement templates in this order (dependency-ish): LifeChange,
-   DealDamage, KO, MoveDie, DrawToZone, Reroll, Spin, SpinToEnergy,
-   ModifyStat, GrantTag, FieldDie, PurchaseModifier, CombatFlag,
-   Sequence, MayPay, Conditional. Amount resolution (Fixed vs
-   PerMatch) is one shared helper.
+   DealDamage, KO, MoveDie, DrawToZone, Reroll (with its adopted
+   NonCharacterMoveTo/DamagePerMoved params), Spin, SpinToEnergy,
+   ModifyStat (deltas + adopted SetAttack/SetDefense modes), GrantTag,
+   FieldDie, PurchaseModifier, CombatFlag, Sequence, MayPay,
+   Conditional, DrawAndChooseOne (adopted 17th template). Amount
+   resolution (Fixed vs PerMatch) is one shared helper. The
+   interpreter's execution context carries the adopted binding table
+   (BindAs/Bound, reserved name "event") — build it into TargetFilter
+   resolution from the start, and define TargetWasKOd/OnFaceKind
+   evaluation against bindings, not ad-hoc shared state.
 4. Per-template tests: at least one happy path + one "no legal
    target → rule 3.1.10 skip" case each. Conditions: one test per
    ConditionKind.
@@ -276,11 +299,14 @@ real in-code card definitions in tests.
 **Goal**: implement the ~6 continuous templates as registered
 query-modifiers/interceptors — the replacement for all 39 v1 flags.
 
-**Tasks**: implement per Appendix A: StatAura, CostModifier, TagAura,
-CombatRule, DamageModifier, TargetingProtection. Each is a factory
-that registers against Phase 3 queries / Phase 4 events; "while
-active" scoping (die must be in Field/Attack zone) is one shared
-predicate.
+**Tasks**: implement per Appendix A as amended: StatAura, CostModifier,
+TagAura, CombatRule, DamageModifier (with its adopted `Source:
+Ability | Combat | Any` scope), TargetingProtection — all six carrying
+the adopted `ActiveWhen: ConditionKind?` gate (evaluated live at query
+time; conditions are pure state reads, so this is safe). Each is a
+factory that registers against Phase 3 queries / Phase 4 events;
+"while active" scoping (die must be in Field/Attack zone) is one
+shared predicate, with `ActiveWhen` AND-ed on top when present.
 
 **Acceptance**: tests per template, including: aura appears/disappears
 as the source die enters/leaves the field; two auras stack additively;
@@ -319,12 +345,28 @@ KO-triggers-fire-through-combat and aura-affects-combat-stats tests.
    constructible in a test with zero engine changes. Write that test.
 2. Migrate the two curated v1 teams' ~26 cards first; verify against
    v1's test expectations for those cards.
-3. Then the DPS catalog, in batches of ~10–15 cards per session,
+3. **Design spikes (adopted at sign-off — do these BEFORE the batch
+   migration reaches the cards that need them):**
+   - *Ability-blanking spike* (needed by D'Ken DPS141, Mister Sinister
+     DPS083, Vulcan DPS095): likely shape is the reserved 8th query
+     `AbilitiesActive(die)` consulted by the trigger registry and
+     activation paths, with a continuous + one-shot template pair on
+     top; the spike must also decide whether a blanked die's own
+     continuous templates switch off (v1's answer: yes, via the
+     GetCard choke point — match it). Write the design up in
+     `V2_VOCABULARY.md`, get user sign-off, then implement.
+   - *Live-value Amounts spike* (needed by Archnemesis DPS001, Cosmic
+     Cube MSW002, Rogue DPS049, Dark Phoenix DPS107): extend `Amount`
+     with binding-referencing sources (`StatOf(binding, Attack|
+     Defense)`, `EventValue`), with values captured at bind time so
+     Archnemesis's rule-3.1.7 both-before-either simultaneity falls
+     out naturally. Same write-up → sign-off → implement flow.
+4. Then the DPS catalog, in batches of ~10–15 cards per session,
    using v1 `SampleCards.cs` as the source of truth for stats/text
    and `V2_VOCABULARY.md` expressions where Phase 0 already worked
    them out. Every card that doesn't fit goes to `V2_TAIL_POLICY.md`
    (Appendix C format) — no vocabulary additions (ground rule 2).
-4. Port v1's catalog-wide invariant tests (keyword/ability mismatch
+5. Port v1's catalog-wide invariant tests (keyword/ability mismatch
    scan, etc.).
 
 **Acceptance**: curated teams fully migrated with passing behavior
@@ -358,6 +400,24 @@ v1 games still work.
 ## Appendix A — The v2 vocabulary (seed for V2_VOCABULARY.md)
 
 Closed sets. Changing ANY of these requires user sign-off.
+
+> **AMENDED 2026-08-22 (user-signed-off; recorded here per ground rule
+> 2, full text in `V2_VOCABULARY.md` Part 1, which is authoritative):**
+> TargetFilter gains `BindAs`/`Bound` binding fields (reserved binding
+> "event" = the triggering event's subject) and `FieldingCost` as a
+> 5th Stat kind; the tag set additionally includes each die's printed
+> energy symbol id; effect templates number 17 (+`DrawAndChooseOne
+> (Count, PlayerTarget, ChosenToZone, RestToZone)`), with `ModifyStat`
+> gaining absolute `SetAttack`/`SetDefense` modes and `Reroll` gaining
+> `NonCharacterMoveTo`/`DamagePerMoved`; conditions number 7
+> (+`OnFaceKind`); all six continuous templates gain `ActiveWhen:
+> ConditionKind?` and `DamageModifier` gains `Source: Ability | Combat
+> | Any`; trigger events number 10 (+`DieFaceChanged {PriorFace,
+> NewFace, Cause: Roll|Reroll|Spin|Effect}`, from which Energize/
+> Awaken are expressed as event filters). Deferred by the same
+> decision: ability-blanking and live-value Amounts (Phase 8 design
+> spikes), `DieTargeted` (deferred, rejection-leaning), and the seven
+> tail items listed in `V2_VOCABULARY.md`.
 
 ### Targets — one filter shape, 8 fields
 
