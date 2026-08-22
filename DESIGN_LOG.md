@@ -7377,3 +7377,57 @@ the last validation rounds produced only parameter-level additions,
 not structural change. Phase 1 (scaffolding + data model, Appendix B
 + the F13 counter store) is next, executable by any capable session
 per the plan's handoff design.
+
+## Status update: v2 Phase 1 complete — project scaffolding + full data model
+
+Executed Phase 1 of `V2_PLAN.md` directly (architect session, not
+handed off) - the user's "let's get this puppy started" after the
+gate review. Scaffolded `src/DiceFight.V2` (classlib) and
+`tests/DiceFight.V2.Tests` (xunit), both net10.0, added to
+`DiceFight.slnx`, zero references to `DiceFight.Engine`.
+
+Built the full frozen vocabulary as pure data records, not just
+Appendix B's four named types - `CardDef.Abilities`/`Continuous`
+needed real types to compile, and none of it has behavior yet, so
+it belongs in "data model" per Phase 1's own scope. Model/Effects/
+now has: TargetFilter (11 fields incl. bindings and AnsweredBy),
+Amount (Fixed/PerMatch with Distinct/Unit), Duration, Condition (7
+kinds, each its own record rather than one bloated params bag -
+deliberately not repeating v1's own EffectCondition/Conditional
+bloat that the architecture review flagged), the 18 EffectNode
+templates, the 6 ContinuousDef templates (all carrying ActiveWhen),
+and Events (TriggerKind, EventFilter with the Finding-14 Stat
+threshold, DieFaceChangedPayload, TriggeredAbility).
+
+GameConfig.Validate() (extension method, gives the requested
+`config.Validate()` call shape while keeping the record clean)
+checks: dice have >=1 face, face symbols reference declared energy
+symbols, and Finding 4's symbol-vs-keyword-id namespace collision.
+Added a second entry point, ValidateCatalog(cards), for the same
+checks against a card catalog once one exists (extending the F4
+collision check to card affiliations) - Appendix B's GameConfig
+doesn't itself hold a card list, so this couldn't be one method.
+
+One real gotcha hit and fixed: the JSON round-trip test's first
+draft asserted `Assert.Equal(original, roundTripped)` using record
+equality, which failed - C# records only generate structural
+equality for ARRAY-typed properties, not IReadOnlyList<T> (used
+throughout this model since it reads better as an API). Fixed by
+comparing via re-serialization (does original's JSON == round-
+tripped-then-reserialized's JSON) instead, which is arguably the
+more meaningful check for "did this survive a JSON round trip"
+anyway. Noted in a test comment so a future session doesn't
+rediscover this the hard way.
+
+Scope note recorded in the plan: CardDef's own JSON round-trip needs
+JsonDerivedType configuration for its polymorphic Abilities/
+Continuous fields (System.Text.Json doesn't do this for free) -
+deferred to Phase 8 when card-catalog JSON loading is actually
+needed, not built speculatively now. The task's own round-trip test
+is scoped to GameConfig, which doesn't touch the polymorphic types,
+so this doesn't block Phase 1's acceptance bar.
+
+Verified: `dotnet build DiceFight.slnx` clean (0 warnings, 0 errors,
+all 5 projects incl. v1's three); `dotnet test` on the new project
+7/7 passing; v1's full suite re-run untouched, still 547/547 -
+ground rule 1 (never modify v1) holds. Phase 1 checkbox ticked.

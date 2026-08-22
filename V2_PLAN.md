@@ -83,7 +83,7 @@ rather than improvising a different architecture.
 | # | Phase | Deliverable | Status |
 |---|---|---|---|
 | 0 | Vocabulary validation on paper | `V2_VOCABULARY.md` + 20 cards re-expressed | [x] |
-| 1 | Project scaffolding + data model | `DiceFight.V2` + `DiceFight.V2.Tests` projects; GameConfig/DieDef/CardDef records | [ ] |
+| 1 | Project scaffolding + data model | `DiceFight.V2` + `DiceFight.V2.Tests` projects; GameConfig/DieDef/CardDef records | [x] |
 | 2 | Game state, zones, turn machine | Config-driven state + turn steps, no abilities | [ ] |
 | 3 | Query pipeline | Stat/cost/legality queries with modifier interception | [ ] |
 | 4 | Event bus + triggered abilities | Events, subscriptions, FIFO ability queue | [ ] |
@@ -620,3 +620,19 @@ also note the difference in the card's own definition comment),
 (flag for the user — candidate for redesign under direction C).
 Default while migrating: Vanilla + one-line entry. Never guess a
 wrong approximation silently (house rule from v1).
+
+**Phase 1 note (2026-08-22)**: the full effect vocabulary (TargetFilter,
+Amount, Condition, the 18 EffectNode templates, the 6 ContinuousDef
+templates, Events/TriggeredAbility) was built as pure data records in
+this phase too, not deferred to Phase 5 - Appendix B's CardDef needed
+real types for its Abilities/Continuous fields to compile and round-trip
+meaningfully, and none of it has behavior yet (matches "compilable data
+model, no behavior"). Phase 5 adds the interpreter that walks these
+trees; the shapes themselves are locked in now. One deliberate scope
+line: CardDef's own JSON round-trip (its Abilities/Continuous fields are
+polymorphic - EffectNode/ContinuousDef subtypes - and need
+`JsonDerivedType` configuration System.Text.Json doesn't provide for
+free) is deferred to whenever CardDef JSON loading is actually needed
+(Phase 8's card catalog), not built speculatively now. The task's own
+round-trip test is scoped to `GameConfig` only, which doesn't touch
+polymorphic types, so this doesn't block Phase 1's acceptance bar.

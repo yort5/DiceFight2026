@@ -3,8 +3,10 @@
     <Project Path="src/DiceFight.Api/DiceFight.Api.csproj" />
     <Project Path="src/DiceFight.DiscordBot/DiceFight.DiscordBot.csproj" />
     <Project Path="src/DiceFight.Engine/DiceFight.Engine.csproj" />
+    <Project Path="src/DiceFight.V2/DiceFight.V2.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/DiceFight.Engine.Tests/DiceFight.Engine.Tests.csproj" />
+    <Project Path="tests/DiceFight.V2.Tests/DiceFight.V2.Tests.csproj" />
   </Folder>
 </Solution>
