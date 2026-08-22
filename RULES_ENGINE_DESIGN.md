@@ -1,5 +1,12 @@
 # Dice Masters Rules Engine — Design Notes (v0)
 
+> **2026-08-22**: with the DPS pass complete, a step-back architecture
+> review lives in [`ARCHITECTURE_REVIEW.md`](ARCHITECTURE_REVIEW.md) —
+> a quantified audit of how the effect DSL actually scaled across a
+> full set, and a compared set of directions (restructure vs. simplify
+> vs. new game iteration) with a recommendation. Read it before
+> starting any large new ability-authoring pass.
+
 ## Start here (current state, 2026-07-27)
 
 **What exists**: `DiceFight.Engine` (rules engine - all four Main Step

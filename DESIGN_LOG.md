@@ -6812,3 +6812,33 @@ button still produces the original curated matchup - no console errors
 in either path. `dotnet test` 547/547 (3 new `RandomTeamBuilderTests`
 cases, run against the real catalog rather than a synthetic one so
 "ran out of implemented cards to draw from" would actually surface).
+
+## Status update: architecture review after the DPS pass
+
+Stepped back (user request) to evaluate the architecture now that a
+full set is implemented, specifically the observation that most cards
+required custom code despite the "small closed primitive vocabulary"
+design goal. Produced `ARCHITECTURE_REVIEW.md` (repo root) — analysis
+only, no code changes.
+
+Headline findings from the reuse audit: 49 EffectNode types of which
+23 (47%) are used by exactly one card, while the 16 nodes used >=5
+times cover ~85% of ability instances; TargetSpec at 25 parameters and
+EffectCondition at 17 members, mostly single-card; and — the starkest
+result — 39 bespoke `Grants*` flags on CardDef (one per card,
+zero reuse) enforced by checks scattered across DieStats/TurnEngine/
+CombatEngine, because continuous effects never got a representation of
+their own. Diagnosis: the closed-DSL bet was falsified by
+open-vocabulary card text, and the engine actually runs two parallel
+ability systems.
+
+The review compares three directions (faithful-but-restructured with
+an event/query spine + cards-as-scripts tail; a simplified closed
+template vocabulary; a new game iteration with data-driven dice/
+energy/rules-config) and recommends building a v2 core shaped as the
+simplified-template direction — which the new-game direction subsumes
+and the faithful direction can bolt a script escape-hatch onto —
+while leaving the working v1 engine untouched as the migration
+oracle. No implementation scheduled; next step if picked up is a
+paper spec of the template vocabulary validated against ~20 diverse
+DPS cards.
