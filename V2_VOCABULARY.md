@@ -8,9 +8,11 @@ rule 2) — this file records both the adopted vocabulary and, in a
 separate clearly-marked section, proposed-but-not-yet-adopted changes
 found during validation.
 
-Produced by Phase 0 (`V2_PLAN.md`). Status: **20 cards validated, 3
-refinements recommended for sign-off before Phase 4 — see "Findings
-requiring a decision" below. Vocabulary NOT yet amended.**
+Produced by Phase 0 (`V2_PLAN.md`), expanded from 20 to 60 cards at the
+user's request (2026-08-22) to get a statistically firmer read before
+committing. Status: **60 cards validated, 8 refinements recommended
+for sign-off before Phase 4/6 — see "Findings requiring a decision"
+below. Vocabulary NOT yet amended.**
 
 ---
 
@@ -337,68 +339,401 @@ independent gap (Deadpool), 2 sharing one gap (Jean Grey, Moira).**
 
 ---
 
+## Part 3 — Round 2: expanding to 60 cards
+
+The 20-card sample left the fit rate (13/20) in the ambiguous zone
+between the plan's 12-card stop floor and 15-card target, and rested
+big conclusions on single-card evidence. Expanded by 40 more cards -
+weighted toward finishing off single-use-node coverage (6/23 tested in
+round 1 → 22/23 after round 2) and much broader `Grants*` flag coverage
+(5/39 → 21/39) - to see whether the round-1 findings hold up under more
+evidence, and to surface anything round 1's small sample missed.
+Entries below are terser than Part 2's, since the template shapes are
+now established; only what's new or notable per card is called out.
+
+### Bucket A round 2 — 10 more common-node cards (#21-30)
+
+**21. Dazzler (MSW026)** — "When fielded, deal 4 damage to target [M]
+(Mask-energy) character die." `DealDamage` fits the shape, but
+targeting by a die's own **printed energy type** has no home in
+`TargetFilter` - it's not in `Tags` (Part 1's tag list is
+affiliations/keywords/name/sidekick - energy type was never added) and
+there's no dedicated field either. **Misfit — new gap (Finding 4).**
+
+**22. Shocking Grasp (MSW011)** — `Sequence([DealDamage(1, T),
+Conditional(TargetWasKOd, Then: MayPay(Cost:none, Then:
+MoveDie(Self,PrepArea)))])`. **Fit** — this is literally the card the
+plan's own Phase 5 description names as `MayPay`'s motivating example.
+
+**23. Cyclops, "First Class" (DPS025)** — `Trigger: DieFielded,
+EventFilter:{Ownership:Own, Tags:{AnyOf:["Founder"]}}, Effect:
+DealDamage(2, CharacterDie)`. **Fit** — confirms keyword-as-tag reactive
+filtering, and that "while active" needs no modeling (a trigger only
+listens while its source die is fielded).
+
+**24. Phoenix, "Psionic Maelstrom" (DPS086)** — `DealDamage(3, T)` then
+`Conditional(TargetHasAffiliation, CheckTarget: T, Then: DealDamage(3,
+another))`, where **T must be the same resolved die in both steps.**
+v1 achieves this by literally sharing one `TargetSpec` object reference
+between the two nodes (resolve-once, reuse-the-answer). Appendix A's
+`Sequence` has no equivalent - each step's `TargetFilter` re-resolves
+independently. **Misfit — same root cause as Mutation (#11): effect
+trees need a way for one step to refer to an already-resolved target
+from an earlier step**, not just `Self`.
+
+**25. Deathbird, "Treacherous" (DPS029)** — pure `Deadly` keyword, no
+effect tree at all. **Fit**, trivially - keyword behavior is engine
+code by design (Phase 7), free once the keyword is declared.
+
+**26. Corsair, "Criminal Record" (DPS104)** — `Conditional(CountAtLeast
+(opposing-field-zone-dice, 4), Then: Ko(Count:2), Else: Ko(Count:1))`.
+**Fit** — good confirmation `CountAtLeast` composes with a Count-varying
+`Then`/`Else`.
+
+**27. Jubilee, "X-Men Field Leader" (DPS143)** — `Trigger: DieFielded
+(unfiltered, own), Effect: Sequence([DealDamage(1,Player{Opposing}),
+DealDamage(1,CharacterDie)])`. **Fit.**
+
+**28. Lab Test (DPS005)** — Continuous Basic Action: `Trigger: DieUsed,
+Effect: Reroll(CharacterDie in ReservePool, Own)`. **Fit** - "Continuous"
+is just a keyword tag gating when/how the die can be activated, not a
+different trigger event.
+
+**29. Dark Phoenix, "Enemy of the Shi'ar" (DPS067)** — three abilities
+(`Ko` by affiliation tag, `DealDamage` to player on attack, a Global
+`Sequence([Ko(own), PurchaseModifier(Delta:-2)])`). **Fit**, all three -
+good `PurchaseModifier` confirmation. *Side note, not a vocabulary
+gap*: the card text says the discount floors at a **minimum of 1**, but
+Phase 3's `GetPurchaseCost` design says "floor 0" - that's a real rules
+mismatch (the physical game's purchase-cost floor is 1, not 0) worth
+fixing in the Phase 3 write-up regardless of the vocabulary decision.
+
+**30. Gambit, "Unless I Got Someone to Play With" (DPS112)** — "reroll
+up to 2 opposing dice; each that doesn't roll a character face moves to
+their Used Pile." Same shape as `RerollAndMoveUnlessCharacter` (a
+common-tier node, used 5 times in v1) and the same missing condition
+Making the Team (#15) already flagged - "did this die just roll onto a
+character face or not." **Misfit — reinforces #15's gap with a second,
+independent card**, and since the underlying v1 node has 5 total real
+users (not 1), this upgrades from a tail curiosity to a systemic gap.
+
+**Bucket A round 2 tally: 7/10 strict fit; 3 misfit, all mapping to
+findings (2 new-but-cheap, 1 reinforcing an existing one).**
+
+### Bucket B round 2 — 14 more ex-single-use-node cards (#31-44)
+
+Brings single-use-node coverage from 6/23 to 22/23 v1 nodes tested.
+
+**31. Cosmic Cube (MSW002)**, `SwapLife` — "switch life totals." No
+Amount/effect shape reads-and-cross-assigns two live values. **Misfit**
+- same value-source family as Archnemesis (#12).
+
+**32. Rogue, "Mrs. X" (DPS049)**, `SwapAttack` — "swap Rogue's A with
+target's A." **Misfit**, same family as #31/#12.
+
+**33. Rogue, "Strength Absorption" (DPS151)**, `SetStat` — "target has
+0A this turn." `ModifyStat` only has deltas, not an absolute set.
+**Misfit — new gap (Finding 5)**, and it's exactly why v1 itself needed
+a separate `SetStat` node alongside `ModifyStat`.
+
+**34. Black Widow (GOTG005)**, `SetCallOutTarget` (Call Out keyword) —
+`CombatFlag(opposing CharacterDie, OnlyBlocker)`. **Fit** - Appendix
+A's own table already anticipated this mapping.
+
+**35. Ronan the Accuser, "No Mercy" (DPS090)**, `OpponentKOsOwnCharacterDie`
+— "each player KOs a character die THEY control," where the
+opponent's half must be answered by the opponent, not the ability's
+controller. `TargetFilter.Ownership` picks which dice qualify, not who
+answers the choice. **Misfit** - narrow (1 v1 user), tail item.
+
+**36. Corsair, "Recruiting a Crew" (DPS024)**, `GrantNextPurchaseGoesToBag`
+— `PurchaseModifier(Delta:0, GoesToZone:Bag)`. **Fit** - Appendix A's
+table already lists `GoesToZone?` as a parameter.
+
+**37. Gambit, "I Like Solitaire" (DPS072)**, `GrantCantFieldCharacterDiceThisTurn`
+— its `Conditional(TurnFact(FieldedNoOtherCharacterThisTurn))` half
+fits directly (that `TurnFact` variant is already in Appendix A), but
+the "no more fielding this turn" restriction itself has no template.
+**Misfit** (the restriction half) - narrow, tail item.
+
+**38. Invisible Woman (MSW032)**, `ForceBlock` — `CombatFlag(Target,
+MustBlock)`. **Fit.**
+
+**39. Falcon (MSW027)**, `FieldSidekickForEachPlayer` — "each player
+fields A Sidekick if able," where Sidekicks are fungible so there's no
+real choice, even at `Count:1`. `TargetFilter` has `Optional` (up-to-N)
+but no "resolve arbitrarily, don't prompt" mode. **Misfit** - narrow,
+tail item.
+
+**40. Cyclops, "Xavier's Dream" (DPS140)**, `DividedDamageAmongChosenTargets`
+— unbounded player-chosen target count with automatic even split (v1
+already approximates the split). `TargetFilter.Count` is a fixed int,
+not "1..unbounded, player's choice how many." **Misfit** - narrow (1
+user, already an approximation in v1 itself), tail item.
+
+**41. Black Manta, "Deep Sea Deviant" (JL078)**, `DealDamagePerActiveAffiliate`
+— "damage = your active Villains," and "Villains" is one of Black
+Manta's own two printed (fixed) affiliations, not a dynamic
+self-reference. `DealDamage(PerMatch(CharacterDie{Own,Tags:AnyOf:
+["Villains"]}, x1), Player{Opposing})`. **Fit** - looked harder than it
+is; the affiliation is a literal tag, same as any other.
+
+**42. Polaris (DXM010)**, `Corrupt` — "draw 2, choose 1 to Used Pile,
+rest to Bag." Same "draw N, choose exactly 1, branch its destination"
+shape as `DrawAndChooseOneToRoll` (#44 below), just different target
+zones. **Misfit under the current spec, but notable**: these two v1
+single-use nodes look like exactly one general template wearing two
+costumes - see Finding 6.
+
+**43. Mister Sinister, "Mutant Supremacist" (DPS083)** — `BlankOpposingTeamText`
+(whole opposing side loses ability text) + `BlankTargetText` (one
+targeted die). Neither template nor continuous list has an "abilities
+don't fire" concept at all. **Misfit — real, structural gap (see
+"Consider" below)**, and not a one-off: D'Ken (#46) and Vulcan Power
+Suppression (#48) hit the same wall from the continuous side.
+
+**44. Gambit, "Ace in the Hole" (DPS032)** — `Conditional(OnBurstFace,
+Then: DrawAndChooseOneToRoll(2), Else: DrawDice(1))`. **Misfit** under
+the current spec (same as #42); **fit** once Finding 6's unified
+draw-and-choose template lands.
+
+**Bucket B round 2 tally: 4/14 strict fit; 10 misfit (3 resolve via
+recommended findings, 3 are the same bigger "Consider" gap, 4 are
+narrow tail items).**
+
+### Bucket C round 2 — 16 more ex-`Grants*` cards (#45-60)
+
+Brings `Grants*` flag coverage from 5/39 to 21/39.
+
+**45. Psylocke, "Heiress" (DPS128)**, `GrantsSelfAttackBonusPerMatchingDie`
+— `StatAura(Self, AtkDelta: PerMatch(own X-Men dice in Prep Area, x2))`.
+**Fit** - confirms `PerMatch` composes inside a continuous template's
+delta, as Appendix A's own parenthetical already anticipated.
+
+**46. D'Ken, "Shi'ar Civil War" (DPS141)**, `GrantsOpponentAbilityBlankWhileActive`
+— opposing cheap dice "lose their abilities AND are free to field."
+Two gaps in one card: ability-blanking (same as #43/#48) and a
+cost-side "set fielding cost to 0" rather than a delta (same family as
+Finding 5, but on `CostModifier` instead of `ModifyStat`). **Misfit**,
+both known families - no new gap type.
+
+**47. Dampening Collar (DPS002)**, `GrantsPreventsOpponentCharacterDiceFromSpinningUp`
+— `CombatRule(CantSpinUp, Opposing)`. **Fit** - matches the table
+directly.
+
+**48. Vulcan, "Power Suppression" (DPS095)**, `GrantsIgnoresAbilitiesWhileEngaged`
+— ability-blanking again, this time scoped to "dice currently engaged
+in combat with Vulcan." **Misfit**, same structural gap as #43/#46 -
+now 4 independent cards hitting it.
+
+**49. Magneto, "Visionary" (DPS081)**, `GrantsMinimumBlockersRequirement`
+— `CombatRule(MinBlockers:2, Tags:{AnyOf:["Brotherhood of Mutants"]})`.
+**Fit** - matches the table. (Its Teamwatch/Global abilities also fit
+cleanly via `PrepFromBag`/`Conditional`.)
+
+**50. Blob, "Immovable" (DPS101)**, `GrantsBlocksMultipleAttackers` +
+`GrantsReturnsKOdOpposingSidekickToBag` — the first half is a clean
+`CombatRule(BlocksN:3, Tags:{AnyOf:["Blob"]})` fit. The second
+("when THIS die KOs an opposing Sidekick in combat, return it to their
+bag") needs a trigger effect to act on **the die from the triggering
+event itself**, not the ability's own source die - `Self` doesn't cover
+this, and it's not one of Appendix A's fields. **Misfit** (2nd half) —
+**new gap (Finding 7)**, but likely near-universal: almost any reactive
+trigger that "does something to the die that was just KO'd/fielded/
+damaged" (not to the listening die itself) needs this, so it's probably
+under-counted by "1 card" here.
+
+**51. Bishop, "Tortured Timeline" (DPS019)**, `GrantsRerollOrSpinProtection`
+— protected from reroll/spin specifically, not blanket untargetable
+(still damageable). `TargetingProtection`'s `From` axis is
+Global/Action/Both (WHO), not WHICH EFFECT TYPE. **Misfit** - narrow (2
+v1 users total), tail item.
+
+**52. Mystique, "Freedom Force" (DPS085)**, `GrantsOwnDamageReductionFromOpponentAbilities`
+— reduces damage from **ability** sources only, not combat. v1's own
+comment flags this exact ability-vs-combat distinction as something it
+had to add specially. `DamageModifier` doesn't scope by damage source.
+**Misfit** (continuous half only - its WhenKOd half fits cleanly via
+`MinPurchaseCost`, already in the Stat kinds) - cheap, single-card, but
+matches an already-established real rules distinction; noted under
+Finding "DamageModifier scoping" below.
+
+**53. Colossus, "Organic Steel" (DPS063)**, `GrantsFirstDamageRedirectToSelf`
+— `DamageModifier(RedirectToSelf, Own)`, matches the table, but "the
+**first** time each turn" is a usage limiter continuous templates don't
+have (triggered Globals get `OncePerTurn`; continuous templates don't).
+**Fit**, with a minor noted limitation rather than a hard blocker.
+
+**54. Dark Phoenix, "Destructive Force" (DPS107)**, `GrantsRetaliatesEqualDamageToOpponentWhenDamagedByOpponent`
+— actually a reactive trigger in disguise: `Trigger: DieDamaged(Self,
+Source:Opposing), Effect: DealDamage(Amount:???, Player{Opposing})`
+where the amount must equal **the damage just dealt in the triggering
+event**. Same "need a live value source beyond Fixed/PerMatch" family
+as Archnemesis (#12) and the two "swap" cards (#31/#32), but the value
+here comes from the event's own payload, not a die's current stat.
+**Misfit**, same family - broadens Finding "Amount needs a
+context-value source" to cover event-payload values too, not just
+own-stat reads.
+
+**55. Angel, "Air Support" (DPS097)**, `GrantsGainLifeWhenOpponentTargetsOwnCharacterDie`
+— another disguised trigger: "when opponent TARGETS your die, gain
+life." None of the 9 planned events fire on target selection itself
+(only on things that already happened - fielded, KO'd, damaged, etc).
+**Misfit — new gap**, but structurally bigger than the others (it would
+mean target resolution itself starts emitting events, blurring the
+query/event split Phases 3 and 4 currently keep separate) - flagged
+under "Consider," not "Recommended."
+
+**56. Angel, "Xavier's Dream" (DPS137)**, `GrantsSidekickImmunityToOpponentGlobalTargeting`
+— `TargetingProtection(Own, Tags:{AnyOf:["sidekick"]}, From:Global)`.
+**Fit** - matches the table directly.
+
+**57. Vulcan, "Aggession" (DPS135)**, `GrantsOpponentStatDebuff` —
+"opponent's **non-fist** characters get -2D," needing `NoneOf:["Fist"]`
+against a die's own energy type as a tag. **Misfit** - same gap as
+Dazzler (#21), now confirmed by a second independent card.
+
+**58. Rogue, "Unity Squad" (DPS129)**, `GrantsFieldingCostReduction` —
+`CostModifier(Fielding, Tags:{AnyOf:["X-Men"]}, Delta:-1)`. **Fit** -
+the "normal" affiliation-scoped case, contrasting cleanly with
+Deadpool's stat-threshold-scoped one (#18) once `FieldingCost` is added
+to `Stat` kinds (Finding 3).
+
+**59. Kitty Pryde, "Headmistress" (DPS077)**, `cannotBeTargetedByOpponentWhileNamedCardActive`
+— `TargetingProtection(Self, From:Both)` gated on Wolverine being
+active. **Misfit only via the already-known `ActiveWhen` gap** - a
+third independent card hitting Finding 2 (after Jean Grey, Moira),
+otherwise confirms `TargetingProtection`'s own shape is fine.
+
+**60. Corsair, "Leading the Starjammers" (DPS064)**, `GrantsMirrorsOwnStatIncreaseToOwnSidekick`
+— "if Corsair's A or D is increased BY ANY EFFECT, mirror it onto a
+Sidekick." Needs a "this die's own stat was just modified, by
+whatever" reactive hook - not one of the 9 events, and structurally
+awkward (every stat-modifying code path would need to also emit an
+event). **Misfit — new gap**, but rare (1 user) and invasive enough to
+implement that it belongs in "Consider" at best, likely tail.
+
+**Bucket C round 2 tally: 6/16 strict fit; 10 misfit (2 resolve via
+recommended findings — Finding 2 confirmed a 3rd time, Finding 7
+confirmed — 4 are the ability-blanking/amount-source "Consider" gaps,
+2 are narrow tail items).**
+
+---
+
 ## Findings requiring a decision
 
-Three refinements, found across independent cards, each cheap and
-narrowly scoped - not open-ended vocabulary growth. **Recommended for
-sign-off before Phase 4/6 implementation begins:**
+Across 60 cards, eight refinements surfaced. All are cheap and
+narrowly scoped - none is open-ended vocabulary growth, and each is
+either reinforced by two or more independent real cards or is
+trivially low-risk on its own. **Recommended for sign-off before Phase
+4/6 implementation begins:**
 
-1. **Trigger events need a roll-outcome kind.** Energize, Awaken (and
-   v1's ContinuousResolve/WhenInfiltrates) fire on what face a die
-   rolls to, not on any of the 9 planned events (zone moves, purchases,
-   turn steps, actions). This isn't a tail case - Energize/Awaken are
-   core, common keywords (10 v1 uses combined). Recommend: add a 10th
-   event, `DieRolled { FaceKind: Character | Energy, PriorFaceKind }`,
-   with Energize/Awaken/etc. expressed as `EventFilter`s over it
-   (Energize = rolled to Energy; Awaken = rolled to Character from a
-   non-Character start) rather than as distinct trigger kinds.
-2. **Continuous templates need an `ActiveWhen` gate.** Surfaced twice
-   independently (#19, #20) and matches a recurring v1 pattern
-   (`RequiresOwnActiveSidekick`-style clauses on `Grants*` flags).
-   Recommend: add `ActiveWhen: ConditionKind?` to all 6 continuous
-   templates, reusing the existing 6 Condition kinds - no new
-   condition vocabulary.
-3. **`TargetFilter.Stat` is missing `FieldingCost`.** Surfaced once
-   (#18) but trivially justified and low-risk. Recommend: add it as a
-   5th stat kind alongside Attack/Defense/Level/PurchaseCost.
+1. **Trigger events need a roll-outcome kind.** Energize/Awaken fire on
+   what face a die rolls to, not on any of the 9 planned events. Core,
+   common keywords, not a tail case. *(2 cards: #5, #6.)* Add a 10th
+   event, `DieRolled { FaceKind: Character | Energy, PriorFaceKind }`;
+   Energize/Awaken become `EventFilter`s over it.
+2. **Continuous templates need an `ActiveWhen` gate.** *(3 cards: #19,
+   #20, #59.)* Add `ActiveWhen: ConditionKind?` to all 6 continuous
+   templates, reusing the existing 6 Condition kinds.
+3. **`TargetFilter.Stat` is missing `FieldingCost`.** *(1 card: #18,
+   low-risk regardless.)* Add it as a 5th stat kind.
+4. **A die's own energy type needs to be queryable as a tag (or a
+   dedicated filter).** *(2 cards: #21, #57.)* Add each die's printed
+   energy type to its auto-derived tag set (parallel to how
+   affiliations already work), so `Tags:{AnyOf:["Mask"]}` /
+   `NoneOf:["Fist"]` just works.
+5. **`ModifyStat` needs an absolute-set mode, not just deltas.** *(2
+   cards: #33 directly; also the underlying reason v1 needed a
+   separate `SetStat` node at all.)* Add optional `SetAttack: int?` /
+   `SetDefense: int?`, mutually exclusive with the delta fields.
+6. **Unify `Corrupt` and `DrawAndChooseOneToRoll` into one template.**
+   *(2 cards: #42, #44; both are "draw N, choose exactly 1, branch its
+   destination," differing only in the two zones.)* Add
+   `DrawAndChooseOne(Count, ChosenToZone, RestToZone)` - net **shrinks**
+   the total template count relative to keeping either as a one-off.
+7. **Effects need to target "the die from the triggering event,"
+   distinct from `Self`.** *(1 card directly - #50 - but the pattern
+   generalizes to almost any reactive trigger that acts on the event's
+   subject rather than its own source die, so it's likely under-tested
+   here, not over-claimed.)* Add `TargetFilter.EventSubject: bool`
+   alongside `Self`.
+8. **`OnFaceKind` condition (branch on rolled-to-character-vs-energy
+   face).** *(Upgraded from round 1's "not recommended": 2 cards
+   directly - #15, #30 - but the underlying v1 node
+   (`RerollAndMoveUnlessCharacter`) has 5 total real users, all of
+   which need this.)* Add a 7th condition kind,
+   `OnFaceKind(CharacterFace | EnergyFace)`.
 
-**Not recommended for adoption now** (real gaps, but rarer and
-individually costlier - better handled as tail-policy `Ask` entries
-once Phase 8 hits a card that needs them, rather than speculatively
-building for cards not yet migrated):
-- A `SelfStat` amount/value source (Archnemesis-style "damage/stat
-  equal to this die's own attack") - needs the added simultaneity-
-  snapshot design discussed in #12, not just a new enum case.
-- A one-shot damage-prevention effect (Organic Steel-style shields).
-- An `OnFaceKind` condition (Making the Team-style branch-on-roll).
-- A `MoveDie.EnterLevel` parameter (Mutation-style swap-and-set-level).
+**Worth a deliberate design session, not a quick add** (real,
+structural, reinforced by multiple cards - but each has more surface
+area or architectural interaction than 1-8 above):
+- **Ability-blanking.** 4 independent cards (#43 x2, #46, #48) hit
+  this from both the continuous and one-shot sides. Real recurring
+  Dice Masters mechanic, but touches ability-execution broadly - a
+  `BlankAbilities` effect/continuous family is the likely shape, but
+  deserves its own design pass rather than being bolted on here.
+- **`Amount`/effect values need a live-context source beyond
+  `Fixed`/`PerMatch`.** 4 cards (#12 x2, #31, #32, #54) want "this
+  resolved die's own current stat" or "the triggering event's own
+  payload value" as an amount. Real and recurring, but Archnemesis's
+  simultaneity requirement (both amounts captured before either
+  applies) makes the correct semantics non-trivial.
+- **A `DieTargeted` trigger event.** 1 card (#55), but architecturally
+  bigger than it looks - it means target resolution itself starts
+  emitting events, blurring the Phase 3 (query) / Phase 4 (event)
+  split that's otherwise clean.
+- **`DamageModifier` needs a damage-source scope** (Ability vs. Combat).
+  1 card (#52), cheap, and matches an already-known v1 rules
+  distinction - lowest-stakes item in this tier, could reasonably move
+  to "Recommended" if the user wants a 9th item.
 
-## Verdict tally
+**Tail** (rare - one confirming card each; defer to
+`V2_TAIL_POLICY.md` when Phase 8 reaches them):
+- Cross-player "opponent answers their own choice" (#35).
+- Whole-turn "can't field any more character dice" flag (#37).
+- No-choice/fungible single-target resolution at Count=1 (#39).
+- Unbounded, player-chosen-count divided damage (#40).
+- `TargetingProtection` narrowed to specific effect types, not just
+  source (#51).
+- Per-turn usage limiter on continuous templates (#53, minor).
+- `StatModified` reactive hook (#60) - rare and the most invasive of
+  the "new event" ideas (would require instrumenting every
+  stat-modifying code path), likely never worth it for one card.
 
-| Bucket | Fit | Partial | Misfit | n |
-|---|---|---|---|---|
-| A - common nodes | 8 clean + 2 flagged-trigger-gap | 0 | 0 | 10 |
-| B - ex-single-use-node | 1 | 0 | 4 | 5 |
-| C - ex-`Grants*` flag | 2 | 1 | 2 | 5 |
-| **Total** | **11-13** | **1** | **6** | **20** |
+## Verdict tally (60 cards)
 
-Against the Phase 0 acceptance bar (target ≥15/20 clean fit; hard stop
-below 12): **13 fit cleanly today** (counting the 2 flagged-trigger
-cards as fit-at-the-effect-level, since Finding 1 is a trigger-event
-gap, not an effect-vocabulary gap) - above the 12-card stop threshold,
-so no hard stop. But three of the six misfits collapse to the same two
-root causes (Findings 1 and 2), each a small, well-justified,
-non-open-ended addition. **Adopting Findings 1-3 would bring the
-clean-fit count to 17/20** (everything except Mutation's swap and
-Archnemesis's mutual-stat-damage, both genuinely unusual mechanics
-better handled as tail-policy items than vocabulary bloat).
+| Bucket | Strict fit | Misfit | n |
+|---|---|---|---|
+| A - common nodes | 15/20 | 5 | 20 |
+| B - ex-single-use-node | 5/19 | 14 | 19 |
+| C - ex-`Grants*` flag | 8/21 | 13 | 21 |
+| **Total** | **28/60 (47%)** | **32** | **60** |
 
-**Recommendation**: adopt Findings 1-3 into Appendix A / this spec
-before starting Phase 4 (events) and Phase 6 (continuous templates) -
-they're needed by those phases' own design, not deferrable busywork.
-Leave the four not-recommended items as-is; they'll become
-`V2_TAIL_POLICY.md` entries when Phase 8 reaches Mutation, Archnemesis,
-Organic Steel, and Making the Team specifically.
+**If Findings 1-8 are adopted**, 15 of the 32 misfits resolve, bringing
+the fit rate to **43/60 (72%)**. The remaining 17 split into 11
+"Consider" cases (mostly the ability-blanking and live-amount-source
+families, each reinforced by 3-4 cards) and 6 genuine one-off tail
+items.
+
+This second pass **confirms round 1's diagnosis rather than changing
+it**: the common-node bucket holds up well (15/20, and every one of its
+5 misfits maps to a cheap, reusable fix, not a one-off), while the two
+"hard" buckets stay hard in a structured way - not evenly distributed
+noise, but a small number of recurring root causes (ability-blanking,
+live-value amounts, cross-step/cross-event target references) each hit
+by multiple independent cards. That's a better sign than round 1's
+smaller sample could show on its own: the vocabulary's failure modes
+are a short, addressable list, not an open-ended one.
+
+**Recommendation, updated**: adopt Findings 1-8 (all cheap, all
+multiply-confirmed or trivially low-risk) before Phase 4/6. Treat
+ability-blanking and live-value amounts as explicit design spikes
+*before* Phase 8 reaches the cards that need them (D'Ken, Mister
+Sinister, Vulcan Power Suppression, Archnemesis, Dark Phoenix
+Destructive Force) rather than either building them speculatively now
+or discovering the design problem mid-migration. Leave the 6 tail
+items as `V2_TAIL_POLICY.md` entries when Phase 8 reaches them.
 
 This is a recommendation, not an adoption - per ground rule 2, the
 user decides.

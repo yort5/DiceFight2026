@@ -6901,3 +6901,39 @@ Phase 0's checkbox is marked done; Phase 1 (scaffolding) can proceed
 regardless of the outcome, but Phase 4 (events) and Phase 6
 (continuous templates) should wait for the user's decision on the 3
 findings since those phases' own designs are what the findings amend.
+
+## Status update: v2 Phase 0 expanded from 20 to 60 cards
+
+At the user's request, expanded Phase 0's validation sample from 20 to
+60 real v1 cards, weighted toward finishing off coverage of untested
+single-use EffectNodes (6/23 -> 22/23) and `Grants*` flags (5/39 ->
+21/39), to get a firmer read before committing to vocabulary changes.
+
+Result: 28/60 (47%) fit the vocabulary cleanly as specified today.
+The larger sample mostly *confirmed* round 1's diagnosis rather than
+changing it: the common-node bucket held up well (15/20, and every
+misfit maps to a cheap fix, not a one-off), while the round-1 findings
+(roll-outcome trigger event, ActiveWhen gate on continuous templates)
+each got reinforced by 1-2 more independent cards. Five NEW findings
+also surfaced, three worth recommending outright (a die's energy type
+needs to be queryable as a tag - hit by 2 cards; ModifyStat needs an
+absolute-set mode alongside deltas - matches why v1 itself needed a
+separate SetStat node; Corrupt and DrawAndChooseOneToRoll turned out
+to be the same "draw N, choose 1, branch destination" shape and can
+merge into one new template, net-shrinking the vocabulary; effects
+need to target "the die from the triggering event" distinct from Self
+- likely under-tested at 1 card since the pattern is probably
+near-universal for reactive triggers). Two bigger, genuinely
+structural gaps also emerged, each hit by 3-4 independent cards:
+"ability-blanking" (D'Ken, Mister Sinister x2, Vulcan Power
+Suppression all need some die/side to stop executing its own
+abilities) and effect Amounts needing a live-value source beyond
+Fixed/PerMatch (Archnemesis's mutual-attack-damage, two "swap X"
+cards, Dark Phoenix's retaliation-equal-to-damage-taken) - both
+flagged as explicit design spikes to do before Phase 8 reaches the
+cards that need them, not adopted or built now.
+
+Adopting all 8 recommended findings would bring the fit rate to 43/60
+(72%). `V2_VOCABULARY.md` now carries the full 60-card writeup
+(Part 3) plus the updated Findings/tally sections. Still awaiting the
+user's sign-off before Phase 4/6 proceed; Phase 1 remains unblocked.

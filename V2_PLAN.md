@@ -5,15 +5,20 @@ begins in earnest.** Update the checkboxes in the Phase Overview as
 phases complete, and add a one-line note after any phase where reality
 diverged from this plan.
 
-**Phase 0 outcome (2026-08-22)**: 13/20 cards fit the vocabulary
-cleanly (above the 12-card stop floor, below the 15-card target). Three
-small, narrowly-justified refinements were found that would bring the
-fit rate to 17/20 - see `V2_VOCABULARY.md`'s "Findings requiring a
-decision." **Awaiting user sign-off on those 3 findings before Phase 4
-(events) and Phase 6 (continuous templates) are implemented**, since
-both phases' own designs are what the findings amend. Phase 1
-(scaffolding/data model) does not depend on the outcome and can proceed
-either way.
+**Phase 0 outcome (2026-08-22)**: validated against 20 cards, then
+expanded to 60 at the user's request for a firmer read. Final: 28/60
+(47%) fit the vocabulary cleanly as specified. Eight small, mostly
+multiply-confirmed refinements were found that would bring the fit
+rate to 43/60 (72%) - see `V2_VOCABULARY.md`'s "Findings requiring a
+decision." Two bigger, structural-but-real gaps (an "ability-blanking"
+mechanism, and effect Amounts needing a live-value source beyond
+Fixed/PerMatch) were found independently by 3-4 cards each and are
+flagged as design spikes to do *before* Phase 8 reaches the cards that
+need them, not built speculatively now. **Awaiting user sign-off on
+the 8 findings before Phase 4 (events) and Phase 6 (continuous
+templates) are implemented**, since both phases' own designs are what
+the findings amend. Phase 1 (scaffolding/data model) does not depend
+on the outcome and can proceed either way.
 
 ## Context
 
