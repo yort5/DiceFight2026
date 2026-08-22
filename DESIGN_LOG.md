@@ -7115,3 +7115,55 @@ Also logged the user's Team Builder feature request (format filter +
 Orange Ban exclusion list, using this same list as the data source) as
 next-steps item #16 in RULES_ENGINE_DESIGN.md - a v1 web-client
 feature, independent of the v2 rewrite, not picked up now.
+
+## Status update: corrected the Orange Ban "unavailable" claims - all four were real
+
+The user caught that Venom and Constantine should both be in the
+reference sheet, and asked which Secret Wars cards were actually
+missing given "we should have their abilities, just not their
+stats" - a specific, testable claim. Investigated properly this time
+(fetching the live Google Sheet directly, not just our imported
+BulkCards.json) rather than re-asserting the prior "unavailable"
+verdict.
+
+Found two distinct mistakes: (1) a plain typo on my end (searched
+"Fortunado," the real card is "Fortunato" - it was in our data all
+along), and (2) a real, more significant one: **`BulkCards.json` is
+stale for at least two sets.** The live sheet has 153 rows for Marvel
+Secret Wars (`MSW` - confirmed via the sheet's own SetInfo tab; `SW`
+is a different, Warhammer-40K set, which is what led the original
+"Secret Wars isn't in the sheet at all" claim astray) against only 10
+in our imported JSON; Justice League is missing 14 rows live-vs-
+imported, including all three Constantine printings. DPS's own low
+bulk-count is expected (hand-curated separately), but MSW's and JL's
+aren't explained that way. Recommended (not yet run, pending the
+user) a `python3 scripts/import_bulk_cards.py` re-run to refresh the
+committed JSON from the live sheet.
+
+Pulled real text for all four originally-flagged cards directly from
+the live sheet and evaluated them: Constantine reinforces the
+ability-blanking gap again (7th+ card, and unusual in targeting a
+named-in-advance card rather than a filter match); the three Secret
+Wars cards (Invisible Woman, Black Panther, Terrax) all fit cleanly
+against the current vocabulary, no new gaps.
+
+Also proactively re-verified the three cards STILL marked
+"unavailable" (Doomcaliber Knight, Ring of Magnetism, Typhoid Mary)
+against the live sheet rather than leave an already-shown-unreliable
+claim standing - all three were real too. Doomcaliber Knight's two
+non-ban-listed siblings cancel an opponent's ability/action die
+mid-resolution - not a new v2 gap, it's the same interrupt/cancel
+primitive already named in RULES_ENGINE_DESIGN.md's next-steps as one
+of four things v1 deliberately left unbuilt, good to have it
+reconfirmed as relevant rather than freshly discovered. Ring of
+Magnetism surfaced one genuinely new pattern - continuous auras that
+attach to and gate off a separately-chosen target's status rather
+than the granting card's own "while active" state - flagged as likely
+low-priority/set-specific rather than broadly recurring. Typhoid Mary
+mostly fits cleanly (CostModifier+ActiveWhen, FieldDie+CombatFlag+
+bindings), plus another ability-blanking confirmation.
+
+All corrections written into `V2_VOCABULARY.md` Part 6, replacing the
+prior wrong "unavailable" section. Takeaway recorded plainly: all four
+originally-flagged cards were findable with more careful searching -
+the lesson was about the search process, not the vocabulary itself.

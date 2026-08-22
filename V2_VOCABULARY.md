@@ -1206,15 +1206,66 @@ the others in this list — likely stays deferred rather than adopted.
   bindings + `Spin.SetLevel` [F12] combination that closed Mutation —
   same confirmation.
 
-### Cards we couldn't evaluate — text unavailable
+### Correction: four cards wrongly marked unavailable
 
-Not present in either the bulk catalog or our hand-curated set, so no
-real text to check: Venom, "Angelo Fortunado"; Doomcaliber Knight;
-Ring of Magnetism; Constantine, "Hellblazer"; Typhoid Mary; and all
-three listed Secret Wars cards (Invisible Woman, Black Panther,
-Terrax) — Secret Wars isn't in the reference sheet at all, likely a
-set newer than the last bulk import. Flagged honestly rather than
-guessed at; worth re-checking once the sheet/set list is updated.
+The user caught this — Venom, Constantine, and the three Secret Wars
+cards are all real. Two different mistakes, worth recording precisely
+since one of them is a real data bug, not just an oversight in this
+review:
+
+1. **Venom, "Angelo Fortunato"**: a typo in my own search ("Fortunado"
+   vs. the card's actual "Fortunato") — it was in our data the whole
+   time (AVX124).
+2. **`BulkCards.json` is stale for at least two sets.** Fetching the
+   live reference sheet directly: Marvel Secret Wars (`MSW` — per the
+   sheet's own SetInfo tab, NOT the `SW` code, which is a Warhammer
+   40K set; this review's own earlier "Secret Wars isn't in the sheet"
+   claim was wrong, from that same code confusion) has **153 rows
+   live vs. 10 in our imported JSON**. Justice League is missing 14
+   rows live-vs-imported, including all three Constantine printings.
+   `DPS`'s low count (6) is expected — most DPS cards are hand-curated
+   separately and correctly excluded from the bulk file — but MSW's
+   and JL's gaps aren't explained by that and look like a genuine
+   stale/incomplete import, worth a `python3 scripts/
+   import_bulk_cards.py` re-run independent of this vocabulary work.
+
+Real text, pulled directly from the live sheet, and their vocabulary
+verdicts:
+
+**Constantine, "Hellblazer" (JL137)**: *"While Constantine is active,
+before your opponent's Clear and Draw Step, you may name a character.
+If that character is fielded this turn, ignore its text until end of
+turn and it cannot attack this turn."* Ability-blanking again — a 7th+
+confirming card now, and unusual in targeting a **named-in-advance**
+card rather than a filter match, which the deferred spike should plan
+for. The "before opponent's Clear and Draw Step" timing and the
+`CombatFlag(CantAttack)` half both look like clean fits on their own.
+
+**Invisible Woman, "Interdimensional Adventurer" (MSW141)**: *"When
+fielded, reroll 2 target character dice, and all of your character
+dice get +3 attack until end of turn."* **Fit** — `Sequence([Reroll,
+ModifyStat(Count:0)])`, nothing new.
+
+**Black Panther, "Toppling Doomstadt" (MSW100)**: *"Energize - Your
+Mask character dice get +2 attack this turn. While Black Panther is
+active, when your opponent fields a character die, you may reroll one
+of their other character dice."* **Fit** — the Energize half is
+`ModifyStat` gated on the energy-type tag [F4]; the second half is
+`DieFielded` with `EventFilter{Ownership:Opposing, ExcludeSelf}` (a
+field Part 4's Finding 1 write-up already specified) wrapped in
+`MayPay`.
+
+**Terrax, "Namor's Cabal" (MSW131)**: *"While active, when one of your
+character dice is KO'd, deal 4 damage to target character die."*
+**Fit** — plain `DieKOd(Own)` → `DealDamage`, same shape as several
+already-confirmed cards.
+
+All four resolve cleanly against the current vocabulary except for
+Constantine's ability-blanking half, which was already deferred.
+**Doomcaliber Knight, Ring of Magnetism, and Typhoid Mary remain
+genuinely unchecked** — not yet re-verified against the live sheet the
+way these four were; worth doing before treating them as truly
+missing, given how wrong that assumption turned out to be here.
 
 ### Recommendation
 
@@ -1235,3 +1286,49 @@ decision rather than another round-trip per item: **either take the
 whole set (1-8) in one sign-off now, or bank this document and decide
 everything remaining in one pass right before Phase 4/5/6 actually
 need it** (nothing here blocks Phase 1-3).
+
+**The remaining three, re-verified against the live sheet (also
+present — the earlier "unavailable" claim was wrong for these too):**
+
+**Doomcaliber Knight** (three DPS... erratum, YGO printings —
+"Doomcalibur" per the sheet, a second spelling difference from the ban
+list). The ban-listed "Fiendish Fighter" (YGO048): *"While this
+monster is active, it cannot be the target of action dice or
+abilities. Global: ... Your monsters cannot be the target of action
+dice or card abilities."* Mostly **fit** via `TargetingProtection`,
+though "abilities" reads broader than the `From: Global | Action |
+Both` axis currently covers (any triggered ability, not just paid
+Global activations) — worth confirming scope when this card is
+actually authored, not a new finding on its own. Its two siblings
+("Skeletal Warrior," "Dark Cavalry") both **cancel an opponent's
+ability/action die mid-resolution** — this isn't a new v2 gap, it's
+the same **interrupt/cancel primitive** `RULES_ENGINE_DESIGN.md`
+already named as one of four things v1 deliberately left unbuilt (see
+next-steps item #15's "deliberately `isImplemented: false`" list). Good
+to have it re-confirmed as relevant to v2 too, but it was already a
+known gap, not a new one from this pass.
+
+**Ring of Magnetism** (three YGO printings, all "Continuous. Play on a
+monster" — attach to an opponent- or self-chosen die, then grant a
+combat restriction *scoped to that attached die specifically*, e.g.
+"your opponent can only block monsters affected by this die"). This is
+structurally different from any of the 6 continuous templates: they
+all gate on the granting card's own "while active" status; these gate
+on a *separately chosen target's* status. A genuinely new pattern —
+**attachable continuous auras** — though it may be specific to YGO's
+own design language rather than broadly recurring; not urgent, but
+distinct enough to name rather than fold into an existing item.
+
+**Typhoid Mary** (three IG printings). "Red Rubber Boots": a
+`CostModifier` gated by `ActiveWhen` [F2] (fits cleanly) plus another
+ability-blanking case (further reinforcing that item). "Dissociative
+Identity Disorder": fits via `FieldDie` + `CombatFlag` + bindings
+[F9]. "Charming" prints a "Recruit" keyword not otherwise seen in our
+data — not enough context to assess; flagged rather than guessed at.
+
+**Takeaway**: every one of the four cards originally marked
+"unavailable" was actually findable with more careful searching — the
+lesson is about the search process, not the vocabulary. All fit
+cleanly except where they hit already-known gaps (ability-blanking,
+the pre-existing interrupt/cancel primitive). One genuinely new
+pattern (attachable continuous auras) surfaced, likely low-priority.
