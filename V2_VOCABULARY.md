@@ -1687,3 +1687,59 @@ everything this project has real card text for has now been checked
 against the adopted v2 vocabulary. What's NOT covered: the ~3,600-card
 bulk catalog beyond the Orange Ban list and DPS — no claim is made
 about fit rate there.
+
+---
+
+## Part 10 — Two more decisions from Part 9's findings (2026-08-22)
+
+### Adopted: Loyalty Counters (Finding 13)
+
+**Adopted** — a real, recurring gap (6+ confirmed DPS users, plus the
+same shape almost certainly covers D&D-set "Experience" tokens),
+missed until Part 9's full sweep because round 1 marked a
+Loyalty-using card "fit" without questioning the counter mechanism
+itself. Design, closely matching v1's own proven shape:
+
+- **Data model**: a per-`(player, cardId, counterName)` integer count,
+  living on `GameState` — counters belong to a *card* (all copies of
+  it share the count), not to one die, unlike everything else in the
+  adopted model. `Appendix B`'s `GameConfig`/`CardDef`/`DieInstance`
+  triad gains this as a new piece of `GameState` itself, not a new
+  per-card or per-die field.
+- **Grant**: `GrantCounter(TargetFilter, CounterName: string, Amount: int)`
+  — a 18th effect template. Always grants to the resolved target's own
+  *card*, mirroring `GrantLoyaltyCounter`'s v1 behavior.
+- **Read**: extend `TargetFilter.Stat` with a `Counter(name)` kind
+  alongside the existing fixed stat kinds (Attack/Defense/Level/
+  PurchaseCost/FieldingCost) — `Stat: (Counter("Loyalty"), Min: 1)`
+  reads as "at least one Loyalty Counter," reusing `CountAtLeast` and
+  ordinary target-filtering rather than inventing a parallel query/
+  condition system just for counters.
+
+Small, closely modeled on a mechanism v1 already proved works. Folded
+into Part 1 as adopted.
+
+### Reclassified: "payment-source visibility" (Bishop x2, Forge,
+Professor X) — presented to players as an alter-or-skip candidate, not
+a roadmap item
+
+Part 9 filed this as a `newgap` — buildable by giving purchase/
+fielding events richer payloads (which specific dice paid), the same
+kind of extension `DieDamaged`'s damage-amount payload or
+`DieFaceChanged`'s `Cause` field already are. The user's call: present
+these to players alongside Part 7's architecturally-bespoke examples
+(Forge, Blink, Explosion) as cards that might get altered or skipped,
+not cards on a "we're building this" list.
+
+**Worth recording the nuance, not just the decision**: technically
+this looks more like the payload-richness gaps already adopted
+elsewhere than like Part 7's structural walls (identity substitution,
+mid-queue cancellation, uncapped resource loops) — nothing about it
+breaks an architectural assumption the way those three do. But
+whether to spend the engineering effort building it is a separate,
+legitimate call from whether it's *possible* — four confirmed cards is
+thin evidence next to Loyalty's six-plus, and "present as a candidate
+for alteration" is a reasonable product decision independent of the
+technical classification. Recorded as the user's explicit choice, not
+a technical reassessment — if a future session decides to build it
+after all, the design sketch in Part 9's finding #2 is still there.

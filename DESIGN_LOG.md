@@ -7316,3 +7316,26 @@ closes the earlier "only ~30 cards individually checked" gap - the
 entire 145-card DPS set plus the full Orange Ban list are now both
 completely checked against the adopted v2 vocabulary. Not covered:
 the ~3,600-card bulk catalog beyond those two sources.
+
+## Status update: Loyalty Counters adopted; payment-source cards reclassified as player-facing alter-or-skip examples
+
+Two decisions on Part 9's new findings. (1) Loyalty Counters: adopted
+(Finding 13) - a per-(player, cardId, counterName) count on
+GameState (counters belong to a card, not a die, the first model
+element like that), an 18th effect template GrantCounter(TargetFilter,
+CounterName, Amount), and a Counter(name) kind on TargetFilter.Stat so
+reading them back reuses CountAtLeast rather than needing a parallel
+system. Closely modeled on v1's own proven GrantLoyaltyCounter/
+LoyaltyBonus shape. (2) The "payment-source visibility" gap (Bishop
+x2, Forge, Professor X) - the user's explicit call: present these to
+players alongside Part 7's Forge/Blink/Explosion examples as
+alter-or-skip candidates, not commit to building them. Flagged the
+nuance for the record rather than silently going along: technically
+this looks more like the already-adopted payload-richness pattern
+(DieDamaged's damage amount, DieFaceChanged's Cause) than Part 7's
+actual structural walls, so it's a product/effort call rather than a
+technical reclassification - noted in Part 10 so a future session
+knows the design sketch is still there if it's ever picked back up.
+
+Both written into V2_VOCABULARY.md Part 10 and V2_PLAN.md's Appendix A
+amendment trail.

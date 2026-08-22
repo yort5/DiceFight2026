@@ -440,6 +440,24 @@ Closed sets. Changing ANY of these requires user sign-off.
 > of the vocabulary caught — Cyclops's "divided how you choose" and
 > Mutation's level-1 landing — that the card-by-card pass had
 > respectively under-argued and over-claimed as solved.
+>
+> **ADDENDUM 2026-08-22, from the full 145-card DPS audit
+> (`V2_VOCABULARY.md` Parts 9-10) — Finding 13, adopted:** a per-
+> `(player, cardId, counterName)` count on `GameState` (Loyalty
+> Counters belong to a *card*, not a die, unlike everything else in
+> the model); an 18th effect template, `GrantCounter(TargetFilter,
+> CounterName, Amount)`; `TargetFilter.Stat` gains a `Counter(name)`
+> kind alongside the fixed stat kinds, read via the existing
+> `CountAtLeast`/target-filtering machinery — no parallel query system
+> needed. Real, 6+-card-confirmed gap the earlier sampling rounds
+> missed (round 1 marked a Loyalty-using card "fit" without
+> questioning the node it used). **Not adopted, user's explicit
+> call**: the "payment-source visibility" gap (4 cards — 2 Bishop,
+> Forge, Professor X) is deliberately being presented to players as an
+> alter-or-skip candidate rather than built, despite looking
+> technically buildable (event-payload richness, the same shape as
+> `DieDamaged`'s damage amount) — see Part 10's own note on this being
+> a product call, not a technical one.
 
 ### Targets — one filter shape, 8 fields
 
