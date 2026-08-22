@@ -1332,3 +1332,102 @@ lesson is about the search process, not the vocabulary. All fit
 cleanly except where they hit already-known gaps (ability-blanking,
 the pre-existing interrupt/cancel primitive). One genuinely new
 pattern (attachable continuous auras) surfaced, likely low-priority.
+
+---
+
+## Part 7 — Two corrections from player-summary review, round 2 (2026-08-22)
+
+### Correction: "you may" is never auto-collapsed to "always happens"
+
+The player-facing summary claimed "you may [X]" with no attached cost
+gets simplified to "always does X" on the reasoning that declining is
+"never rational." The user rejected this outright: there ARE real
+reasons to decline even a free, no-cost "you may" — you might simply
+not want the effect, or accepting it might hand your opponent a
+trigger for one of THEIR beneficial abilities (e.g. a reactive "when
+your character's stat changes" effect). That's a real strategic
+dimension a collapse silently deletes.
+
+Checking how far this actually reached: exactly **two** v1 cards used
+this collapse — Rogue, "Mrs. X" (`SwapAttack`, "you may swap Rogue's A
+with target's A") and Moira, "It's Not a Dream" (DPS044, "they may
+field it normally" after a forced reroll). Nothing in the already-
+adopted v2 findings (F1-F12) depended on this premise — it's an
+isolated authoring-policy error, not a vocabulary gap, and the fix is
+free: `MayPay` already supports a real yes/no choice with **no** cost
+attached (`MayPay(Cost: <no-op>, Then: <effect>)`) — this is exactly
+the shape already used for Shocking Grasp's "if that character is
+KO'd, you may Prep this die" in Part 2 (#22). The template never
+needed a change; the authoring policy applying it inconsistently did.
+
+**Adopted policy, effective immediately for all v2 authoring**: every
+"you may [X]" in card text — cost-attached or not — is modeled as
+`MayPay`, full stop. Never collapsed to "always happens" based on our
+own judgment that declining seems pointless. No sign-off needed for
+this one going forward per-card; it's a blanket authoring rule, not a
+vocabulary change.
+
+### Clarification: "doesn't fit the architecture" vs. "just needs a template we haven't built"
+
+The user drew a sharper line than Part 6 did: the ability-blanking and
+live-value-Amounts gaps are real, but they're *roadmapped* — they need
+a new template/query/event, which is buildable within the existing
+spine (queries, events, effect templates). That's different in kind
+from an ability that breaks an assumption the whole architecture rests
+on, no matter how the template list grows. Example given: a
+"Doppelganger"-style card that copies another card's **name and
+abilities** onto itself — every part of the engine (`GetKeywords`,
+`GetFace`, tag resolution, event attribution) assumes a die's
+underlying card identity is fixed for its lifetime; full identity
+replacement isn't "one more template," it's a different assumption
+about what a `DieInstance` is allowed to be.
+
+v1's own design work already vetted three real cards in exactly this
+category (deliberately left `isImplemented: false`, each flagged as
+needing "a genuinely new class of engine capability," not a bigger
+template) — worth carrying forward as the canonical v2 examples, since
+they're independently vetted, not newly invented for this document:
+
+- **Identity/control substitution** (the closest real match to
+  Doppelganger). Forge, "Reverse Engineer" (DPS111): *"While Forge is
+  active, if an opponent uses an action die, roll it. If it shows an
+  action face you may use its effect."* Running a die's ability under
+  a DIFFERENT controller than whoever actually used it means every
+  template's `Own`/`Opposing` logic, every event's controller
+  attribution, and every `PendingChoice`'s owner would need to accept
+  an override for the duration of one resolution. Same family as
+  Doppelganger: both break "this ability runs as its true owner /
+  this die is its true card" as a fixed assumption.
+- **Cancel an ability that's already running.** Blink, "Warp Portals"
+  (DPS100): *"...you may pay Mask and 1 life to cancel that [opponent's]
+  Global Ability."* Also Doomcaliber Knight's two non-ban-listed
+  printings (Part 6). The ability queue (rule 3.2) only has one kind of
+  interrupt — Prevent/Redirect effects that change an outcome. Stopping
+  an already-queued ability from resolving AT ALL is a categorically
+  different operation, not on that spectrum no matter how many
+  Prevent/Redirect-shaped templates get added.
+- **Open-ended, uncapped resource-to-effect loops.** Explosion (DPS003):
+  *"You may also spend any number of Bolt energy, for each that you do
+  you may deal 1 damage to target character die."* Every `Amount` in
+  the adopted vocabulary (`Fixed`, `PerMatch`, even the deferred
+  live-value idea) has a size determined BY GAME STATE. Here the
+  player decides the pool size itself, uncapped, as part of resolving
+  the ability — a different shape, not a bigger number.
+
+One v1-flagged card, **D'Ken, "Obsessed" (DPS066)** ("you may use an
+action die from either player's Used Pile"), was left in the same
+"needs new capability" bucket at the time, but on reflection for v2
+specifically it's a weaker fit for this category — it's a real,
+substantial rework (which zones a die can be activated from), but
+doesn't obviously break an architectural assumption the way the three
+above do; it may turn out to be buildable as a normal `TargetFilter`
+zone extension once someone sits down with it. Flagged as ambiguous
+rather than confidently sorted.
+
+**Why this distinction matters going forward**: Phase 8's tail-policy
+list (`V2_TAIL_POLICY.md`) should keep these two categories visibly
+separate — "needs a spike, then it's buildable" (ability-blanking,
+live-value Amounts) vs. "needs the architecture itself to bend in a
+new direction" (identity/control substitution, mid-resolution cancel,
+uncapped resource loops) — so a future session doesn't quietly treat
+the second category as "just another template to add."

@@ -65,6 +65,14 @@ rather than improvising a different architecture.
 7. **When porting a rule, cite it.** v1 code comments cite rulebook
    sections (e.g. "rule 2.6.2.3"); keep doing that in v2 so the
    faithful-vs-simplified diffs stay auditable.
+8. **"You may [X]" is always a real choice, cost or no cost.** Model
+   with `MayPay` (a no-op `Cost` is fine) — never collapse to "always
+   does X" on the reasoning that declining seems pointless. Corrected
+   2026-08-22 (`V2_VOCABULARY.md` Part 7): declining can matter even
+   with no attached cost — you may not want the effect, or accepting
+   it may hand the opponent a trigger for one of their own reactive
+   abilities. v1 got this wrong on exactly 2 cards (Rogue "Mrs. X",
+   Moira "It's Not a Dream"); don't repeat it in v2.
 
 ## Phase overview
 

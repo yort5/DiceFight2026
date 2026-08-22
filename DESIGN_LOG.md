@@ -7167,3 +7167,52 @@ All corrections written into `V2_VOCABULARY.md` Part 6, replacing the
 prior wrong "unavailable" section. Takeaway recorded plainly: all four
 originally-flagged cards were findable with more careful searching -
 the lesson was about the search process, not the vocabulary itself.
+
+## Status update: corrected the "you may" policy, and drew a sharper "doesn't fit the architecture" line
+
+Two more corrections from the user reviewing the player-facing
+summary, both real:
+
+**"You may" was being wrongly auto-collapsed.** The summary's own
+example (Rogue "Mrs. X") claimed "you may swap" simplifies to "always
+swaps" since declining is "never rational" - the user rejected this:
+declining a free "you may" can be a real strategic choice (you might
+not want the effect, or accepting it might trigger an opponent's own
+reactive ability). Traced how far this reached: exactly 2 v1 cards
+used the flawed collapse (Rogue "Mrs. X"/SwapAttack, Moira "It's Not
+a Dream"'s post-reroll fielding choice) - an isolated authoring-policy
+error, not a vocabulary gap, since MayPay already supports a genuine
+cost-free yes/no choice (already used correctly for Shocking Grasp).
+Adopted as V2_PLAN.md ground rule 8: every "you may" models as MayPay,
+no exceptions, no per-card judgment calls about whether declining
+"matters."
+
+**Sharper line drawn between "roadmapped gap" and "architecturally
+alien."** The user clarified their "doesn't fit" question wasn't about
+ability-blanking/live-value-Amounts (those are on the roadmap, just
+not built yet) - they meant cards that would need bespoke,
+one-off implementation no matter how the template vocabulary grows,
+citing a Doppelganger-style name-and-ability-copying card as the
+shape. Pulled the real, already-vetted v1 examples of exactly this
+(3 of the 4 DPS cards v1 left deliberately isImplemented:false,
+each flagged at the time as needing "a genuinely new class of engine
+capability," not a bigger template): Forge "Reverse Engineer" (running
+an ability under a DIFFERENT controller than whoever used the die -
+the closest real match to Doppelganger, since both break "identity is
+fixed for an ability's execution" as an assumption); Blink "Warp
+Portals" (canceling an already-queued ability outright, categorically
+different from every Prevent/Redirect-shaped outcome modifier the
+ability queue supports); Explosion (an uncapped, player-chosen-size
+resource-to-effect loop, breaking the Fixed/PerMatch Amount model's
+premise that size comes from game state, not player whim). The 4th
+v1-flagged card, D'Ken "Obsessed" (activate dice from either player's
+Used Pile), was flagged as a weaker fit for this category on
+reflection - a substantial rework, but not obviously architecture-
+breaking - so recorded as ambiguous rather than confidently sorted.
+
+Both corrections written into `V2_VOCABULARY.md` Part 7, plus a
+recorded reason WHY the distinction matters going forward: Phase 8's
+tail-policy list should keep "needs a spike, then buildable" visibly
+separate from "needs the architecture to bend," so a future session
+doesn't quietly treat identity-substitution/mid-resolution-cancel/
+uncapped-loops as just another template to add.
