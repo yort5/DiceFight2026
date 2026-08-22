@@ -7216,3 +7216,53 @@ tail-policy list should keep "needs a spike, then buildable" visibly
 separate from "needs the architecture to bend," so a future session
 doesn't quietly treat identity-substitution/mid-resolution-cancel/
 uncapped-loops as just another template to add.
+
+## Status update: complete audit of every deliberate v1 simplification, full DPS set + Orange Ban
+
+The user asked directly whether there are other cards altered to fit
+v2 beyond Gladiator's timing text and the two "may" corrections, or
+whether the rest of the DPS set (v1's whole 145-card pass) and Orange
+Ban list just work. Answered cheaply and close-to-completely by
+sweeping the entire SampleCards.cs for every comment marking a
+deliberate deviation from literal text - v1's own authoring policy
+required disclosing every one, so this is a near-exhaustive list for
+cards v1 actually scripted, gathered without re-deriving anything.
+
+Eight real cases found beyond the two already known: The Front Line's
+dropped "unless opponent pays 1 life" escape hatch (still applies to
+v2, needs a CombatEngine override v1 never had either); a THIRD "you
+may" wrongly collapsed to always-happens (Moira "It's Not a Dream" -
+flagged for the same ground-rule-8 fix as Rogue "Mrs. X"); Corsair
+"Leading the Starjammers" stacking two simplifications (a 4th "may"
+collapse, plus an auto-picked-Sidekick choice to avoid colliding
+PendingChoices - moot anyway until the deferred StatModified event
+exists); Wolverine "Hardened by Madripoor" printing Energize
+unconditionally instead of gating the keyword grant itself - actually
+CLEANLY FIXABLE now via TagAura's adopted ActiveWhen gate [F2], not a
+lingering gap; D'Ken "M'Kraan Crystal"'s player-life damage cap,
+which has no choke point to intercept at in v1 OR in v2 as currently
+specced (none of the 7 adopted Phase 3 queries cover player life) -
+flagged as worth reserving a query slot for, same treatment as
+AbilitiesActive; Magneto "Master of Magnetism"/Mystique "She Walks
+Among Us" both needing "opponent chooses" machinery - a THIRD
+confirming card for the cross-player-choice pattern already noted in
+Part 6 (Ronan No Mercy, Black Widow), which - since PendingChoice
+already supports routing to a different controller - looks cheap
+enough to promote from "tail" to "worth adopting" as a single
+TargetFilter.AnsweredBy field; and two minor, likely-permanent
+approximations (Phoenix "Psionic Maelstrom"'s unenforced distinctness,
+Angel "Air Support"'s untaken-branch scope widening).
+
+Confirmed: the Orange Ban list itself added no new altered-not-skipped
+cases beyond Gladiator - everything else checked out as a clean fit or
+a genuine (already-catalogued) gap, not an in-between simplification.
+
+Recorded an explicit scope caveat: this sweep is close to complete for
+v1-DISCLOSED simplifications, but is not a fresh re-verification of
+all ~145 DPS cards against v2's specific template shapes from scratch
+- only ~30 have been individually checked across this session's three
+passes. The other ~115 (scripted with no noted v1 deviation) are
+un-audited against v2 specifically; likely fine on priors from the
+checked sample, but that's an inference, not a verified claim. Written
+up as Part 8 of V2_VOCABULARY.md, including this scope note so a
+future session doesn't overclaim completeness.

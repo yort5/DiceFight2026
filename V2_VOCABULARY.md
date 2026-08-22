@@ -1431,3 +1431,136 @@ live-value Amounts) vs. "needs the architecture itself to bend in a
 new direction" (identity/control substitution, mid-resolution cancel,
 uncapped resource loops) — so a future session doesn't quietly treat
 the second category as "just another template to add."
+
+---
+
+## Part 8 — The complete list: every deliberate simplification across the full DPS set + Orange Ban (2026-08-22)
+
+The user asked directly: beyond Gladiator's timing text and the two
+corrected "you may" cases, are there other cards altered to fit — or
+does the rest work as printed? Answered by sweeping the *entire*
+`SampleCards.cs` (not just this session's samples) for every comment
+marking a deliberate deviation from literal card text — v1's own
+authoring policy required disclosing every one of these, so this list
+is close to complete for cards v1 actually scripted (it does not
+re-derive new v2-specific simplifications on the ~115 DPS cards v1
+scripted with *no* noted deviation at all — those were only spot-
+checked via this session's samples, not exhaustively re-verified
+against v2 from scratch; see the scope note at the end).
+
+Eight real cases beyond the two already discussed, each cross-checked
+against where v2 currently stands:
+
+1. **The Front Line (DPS015)**, Global: *"Target opposing character
+   die can't block this turn **unless opponent pays 1 life**."* v1
+   drops the "unless" escape hatch entirely (flat `CantBlock`,
+   strictly stronger than the real card — no counter-play). **Still
+   applies to v2 as currently designed** — `CombatFlag` has no
+   "unless the target's controller pays a cost" branch; would need
+   `CombatEngine`'s block-declaration step to accept a caller-supplied
+   override, not a template addition. Genuinely unaddressed either way.
+
+2. **Moira, "It's Not a Dream" (DPS044)**: *"...reroll it. If it lands
+   on an Action face, **they may field it normally**."* A second "you
+   may" wrongly collapsed to always-happens — same bug as Rogue "Mrs.
+   X", just not yet re-fixed. **Needs the same correction as ground
+   rule 8** — flagging for the same fix, not a new issue.
+
+3. **Corsair, "Leading the Starjammers" (DPS064)**: *"...**you may**
+   increase the A or D of a Sidekick die you control by the same
+   amount."* Two stacked simplifications: the "you may" itself is
+   auto-fired (third instance of the same bug — needs the ground-rule-8
+   fix too), AND which Sidekick gets the boost is auto-picked (the
+   first available one) rather than asked, specifically to avoid two
+   `PendingChoice`s opening at once if several Corsair-grant dice get
+   buffed simultaneously. That second half is a real, likely-permanent
+   constraint (single-open-choice) unless choice-stacking gets built —
+   different in kind from the "you may" bug. Moot until the deferred
+   "your own stat was just modified" reactive hook (Part 6) exists at
+   all — this card can't fire its trigger yet either way.
+
+4. **Wolverine, "Hardened by Madripoor" (DPS096)**: *"When you have at
+   least 3 active X-Men character dice, Wolverine **gains** 'Energize -
+   Spin this die to level 1.'"* The card only HAS the Energize keyword
+   conditionally; v1 prints Energize unconditionally and gates only the
+   *effect* behind the count check via `Conditional` (functionally
+   equivalent for this card alone, but a die that checks "does
+   Wolverine have Energize" independent of whether the condition holds
+   would see a difference). **Actually fixable cleanly in v2** now that
+   `TagAura` has `ActiveWhen` [F2] — `TagAura(Self, ["Energize"],
+   ActiveWhen: CountAtLeast(X-Men, 3))` grants the keyword itself only
+   when the condition holds, matching the card's literal wording for
+   the first time. Worth doing when this card is migrated, not a
+   structural gap.
+
+5. **D'Ken, "M'Kraan Crystal" (DPS106)**: *"...you take no more than 7
+   damage during an opponent's turn (further damage is reduced to
+   0)."* Left out entirely (the WhenAttacks half is scripted; this
+   clause isn't) — a player-life damage CAP, and no choke point for
+   player-life changes exists to intercept at. **Still applies to v2 as
+   currently designed** — the 7 adopted Phase 3 queries don't include
+   one for player life (`GetAttack`/`GetDefense`/etc. are all die-
+   scoped); `LifeChange` is a one-shot effect, not an interceptable
+   query. Worth a note for whoever designs Phase 3 in earnest: an
+   analogous "life-change interception" query may be worth reserving
+   the way `AbilitiesActive` already is, rather than discovering this
+   gap again mid-migration.
+
+6. **Magneto, "Master of Magnetism" (DPS121) and Mystique, "She Walks
+   Among Us" (DPS149)**: *"...spin target opposing character die to an
+   energy face **of your opponent's choice**."* Simplified to always
+   land on the higher-value double-energy face, on the reasoning a
+   rational opponent would pick that anyway. This is the SAME
+   underlying gap as the cross-player "opponent answers their own
+   choice" pattern from Part 6 (Ronan No Mercy, Black Widow "Tsarina")
+   — a **third independent confirming card**. Given `PendingChoice`
+   already supports routing a choice to a different controller (used
+   for exactly this in Ronan No Mercy's v1 implementation), this looks
+   cheaper than its "tail item" placement suggested — **worth
+   reconsidering for promotion**: a `TargetFilter.AnsweredBy: Own |
+   Opposing` field (distinct from `Ownership`, which picks *which
+   dice* qualify, not *who* answers) would close all three cards with
+   one small addition, not three separate special cases.
+
+7. **Phoenix, "Psionic Maelstrom" (DPS086)**: card text's "**another**
+   target character die" isn't enforced as actually different from the
+   first-hit die (no distinctness check). Minor, likely-permanent —
+   low stakes, no strong case for building a same-ability
+   different-die constraint for this alone.
+
+8. **Angel, "Air Support" (DPS097)**: the "when an opponent targets
+   your die, gain life" trigger counts a target CHOICE offered inside
+   an untaken `Conditional` branch, not just ones that actually
+   resolved — a minor scope-widening approximation. Minor, likely-
+   permanent, same reasoning as #7.
+
+### What does NOT need altering
+
+Everything else v1 scripted across the full DPS set carries no noted
+deviation at all — including, notably, cards this session already
+confirmed migrate cleanly to v2 (Colossus "Piotr," Magneto "Founder of
+the Brotherhood," Master Mold's three printings, all three Gladiator
+printings' Intimidate/targeting-immunity halves, Cyclops "First
+Class," Jubilee "X-Men Field Leader," and everything else fit-checked
+in Parts 2, 3, and 6). The Orange Ban list itself added no NEW
+altered-not-skipped cases beyond Gladiator's already-covered timing
+text — every other ban-listed card checked out as either a clean fit
+or a genuine gap (Part 6/7's misfit lists), not an in-between
+simplification.
+
+### Scope honesty
+
+This is a complete sweep of every simplification v1 **disclosed** —
+close to exhaustive for that category, since disclosure was a standing
+authoring requirement. It is **not** a fresh re-verification of all
+~145 DPS cards against the v2 vocabulary from scratch; roughly 30 have
+been individually checked across this session's three passes (Parts 2,
+3, 6), and the other ~115 (scripted by v1 with no noted deviation) have
+not been individually re-run against v2's specific template shapes. On
+priors from the ones that HAVE been checked, most should port cleanly
+— but that's an inference from a sample, not a verified claim about
+the remaining ~115. A full sweep would be a genuinely large task (order
+of magnitude bigger than any Phase 0 round so far); worth discussing
+whether it's worth the cost before Phase 8 actually needs the answer,
+versus finding out card-by-card during the real migration the way the
+plan already anticipates.
