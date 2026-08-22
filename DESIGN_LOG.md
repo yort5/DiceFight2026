@@ -7057,3 +7057,61 @@ as [F11]/[F12], with the rationale recorded in a new Part 5 addendum
 trail shows what a human catch added on top of it). `V2_PLAN.md`'s
 Appendix A amendment note and Phase 5 task list updated to match. No
 other findings/verdicts/tallies from Parts 1-4 changed.
+
+## Status update: validated the v2 vocabulary against the "Orange Ban" list
+
+The user proposed a better Phase 0 sampling strategy after noticing
+random/convenient sampling kept surfacing unrelated new gaps round
+after round: validate against the community's "Orange Ban" list
+instead - popular/powerful cards restricted in some formats (a few
+also outright WizKids-banned) to encourage team variety. Reasoning:
+these are the cards players care most about, and power outliers
+likely cluster around genuinely distinctive ability patterns rather
+than being a random draw.
+
+Pulled real card text from `BulkCards.json` (the ~3,600-card bulk
+reference-sheet import) for the ~64 listed cards, cross-checked
+against our own hand-curated SampleCards.cs for the handful already
+in our engine (D'Ken, Vulcan Aggession, Master Mold Endless
+Sentinels, Gladiator x3, Black Manta Deep Sea Deviant).
+
+Result: a better sample, confirmed. Most findings either re-confirmed
+prior triage or reinforced existing deferred items rather than being
+scattered new-new gaps: ability-blanking picked up 2 more confirming
+cards (Shriek, Magneto "Magnetic Monster") for 6+ total, and
+live-value Amounts picked up 2 more (Mr. Fixit's self-stat case,
+Vicious Struggle's event-payload case) - both recommended for
+promotion from "do before Phase 8" to "do early, not a tail concern."
+The cross-player "opponent responds" tail item (Ronan No Mercy) also
+got a second confirming card (Black Widow "Tsarina").
+
+8 new pattern types surfaced, roughly split into a cheap tier (missing
+"unblockable" CombatFlag variant, a PerMatch "distinct" counting mode,
+counting energy symbols instead of dice, a multi-turn Duration beyond
+End-of-Turn/Permanent - each 1-3 confirming cards) and a bigger tier
+worth deciding together (denying purchase/fielding of a specific named
+card - 3 confirming cards from this sample alone; damage-multiplier
+effects - 3 confirming cards; player-life-loss as a trigger source
+distinct from die-damage; paying life instead of energy for
+Global/Action use - matches a known-but-unsampled v1 flag). Also
+confirmed two recent fixes generalize past their single motivating
+card: Batgirl "Babs" independently needs DealDamage.Distribute [F11]
+(not just Cyclops), and Ring of Winter independently needs bindings +
+Spin.SetLevel [F12] (not just Mutation).
+
+A handful of listed cards (Venom "Angelo Fortunado," Doomcaliber
+Knight, Ring of Magnetism, Constantine "Hellblazer," Typhoid Mary, and
+all 3 listed Secret Wars cards) aren't in either our hand-curated set
+or the bulk catalog - flagged as unavailable rather than guessed at;
+Secret Wars isn't in the reference sheet's set list at all.
+
+Written up as Part 6 of `V2_VOCABULARY.md`. Nothing adopted yet - per
+ground rule 2, findings only, pending user sign-off. Given how much
+sign-off cycling has already happened, suggested batching the
+remaining decision (all of Part 6 at once, or bank it for right before
+Phase 4/5/6 need it) rather than another round-trip per item.
+
+Also logged the user's Team Builder feature request (format filter +
+Orange Ban exclusion list, using this same list as the data source) as
+next-steps item #16 in RULES_ENGINE_DESIGN.md - a v1 web-client
+feature, independent of the v2 rewrite, not picked up now.

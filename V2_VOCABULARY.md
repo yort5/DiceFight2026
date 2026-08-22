@@ -1063,3 +1063,175 @@ No other findings, verdicts, or tallies in Parts 1–4 change as a
 result of this addendum — these two items were specifically the ones
 a human reviewer caught that the card-by-card pass had either
 under-argued (Cyclops) or over-claimed as solved (Mutation).
+
+---
+
+## Part 6 — Validating against the "Orange Ban" list (2026-08-22)
+
+The user's observation: random/convenient sampling (rounds 1-2) kept
+surfacing new gaps round after round, which isn't a great validation
+signal — grab a different handful of cards, find different problems,
+repeat forever. Better idea: validate against the community's own
+"Orange Ban" list (popular, powerful cards restricted in some formats
+to encourage team variety — a few are also outright WizKids-banned).
+These are specifically the cards players care most about, and power
+outliers are likely to cluster around genuinely distinctive ability
+patterns rather than being a random draw — a much more targeted
+sample than "whatever we happened to have scripted already."
+
+**Source**: `src/DiceFight.Engine/Data/BulkCards.json` (the full
+~3,600-card reference sheet import, real printed text — see the
+`dicefight2026-bulk-card-catalog` memory), cross-checked against our
+own hand-curated `SampleCards.cs` for the handful of listed cards that
+are also DPS/MSW/JL cards already in our engine.
+
+**Result, upfront**: this WAS a better sample. Most of what it
+surfaced either re-confirmed cards we'd already triaged correctly, or
+reinforced findings already on the deferred list — genuinely NEW gap
+*types* were a minority, not a repeat of "every round finds unrelated
+new things." The two biggest deferred items (ability-blanking,
+live-value amounts) came back far more often than in either prior
+round, which is itself useful signal: those aren't edge cases, they're
+concentrated in exactly the cards worth prioritizing.
+
+### Already known — no new information
+
+- **D'Ken, "Shi'ar Civil War"** (DPS141): still a misfit — ability-
+  blanking, already deferred as a Phase 8 spike.
+- **Vulcan, "Aggession"** (DPS135): was a misfit in round 2 (needed
+  energy-type-as-tag) — **now fits**, adopted Finding 4 closes it.
+  Good confirmation that fix does what it was supposed to.
+- **Black Manta, "Deep Sea Deviant"** (JL078): already fit (round 2
+  #41).
+- **Master Mold, "Endless Sentinels"** (DPS147), **Gladiator** (all 3
+  DPS printings): straightforward `PlaceToken` / `TargetingProtection`
+  fits, nothing new.
+
+### Existing deferred items — strongly reinforced
+
+- **Ability-blanking** (Phase 8 spike, Part 4): confirmed by *Shriek*
+  ("ignore that card's text"), *Magneto, "Magnetic Monster"* ("opposing
+  characters lose their abilities"), on top of the already-known
+  D'Ken/Mister Sinister/Vulcan Power Suppression. Now 6+ confirming
+  cards, several from this specific power-outlier sample — raises this
+  from "do a design spike before Phase 8 reaches it" to **do this
+  spike early, it's clearly not a tail concern for the cards people
+  actually play.**
+- **Live-value Amounts** (Phase 8 spike): confirmed by *Mr. Fixit*
+  ("+XA where X is his own printed A" — the self-stat-as-amount case)
+  and *Vicious Struggle* ("1 damage for each damage you take" — the
+  event-payload-as-amount case). Same recommendation: this spike
+  matters more than "defer until Phase 8" implied.
+- **Cross-player "opponent responds" choices** (tail item, Ronan No
+  Mercy): reinforced by *Black Widow, "Tsarina"* ("opponent can
+  prevent this by spinning one of their characters down a level") —
+  a genuine interrupt/counter-offer shape, not just "opponent answers
+  a forced choice." Worth a small bump from "rare tail" to "revisit if
+  a third case turns up."
+
+### New patterns, not seen in rounds 1-2
+
+Roughly ranked by how cheap + well-confirmed they look:
+
+1. **`CombatFlag` is missing "unblockable."** *Falcon, "Recon"*:
+   "your Sidekicks can't be blocked." The existing flags
+   (MustBlock/CantBlock/MustAttack/CantAttack/OnlyBlocker) are all
+   about a die's own blocking behavior — none stop OTHER dice from
+   choosing to block this one. Cheap, obvious complement to what's
+   already there. **1 card, but clearly just a missing enum value.**
+2. **`PerMatch` needs a "distinct" mode.** Several cards count
+   *different* card names/affiliations, not just matching dice: *Team
+   Up* ("+1A/+1D per different affiliation among your active dice"),
+   *Half-Elf Bard, "Master"* ("+1A/+1D per other DIFFERENT character
+   die"), *Hope Summers* ("per different active X-Men"). **3 cards.**
+   Cheap: `PerMatch(Filter, multiplier, Distinct: bool)`.
+3. **Energy is sometimes counted by symbol, not by die.** *Lantern
+   Ring, "Limited Only by Imagination"* ("1 damage per energy symbol
+   in your Reserve Pool matching type"), *Parallax* variants ("at
+   least one of each energy type in Reserve Pool"). **2-3 cards.**
+   `PerMatch`/`CountAtLeast` currently count dice via `TargetFilter`;
+   this wants to count symbols shown, a different unit.
+4. **A multi-turn duration, beyond End-of-Turn/Permanent.** *Swords of
+   Revealing Light* ("can't attack until the start of your next
+   turn"), *Vicious Struggle* ("until your next turn"). **2 cards.**
+   `Duration` currently only has two values; needs a third
+   (`UntilYourNextTurn` or similar).
+5. **"Deny purchase/fielding of a specific named card."** *Magneto,
+   "Magnetic Monster"* ("Professor X can't be fielded"), *Blob,
+   "Appetite for Destruction"* ("opponent may not purchase or field
+   that card's dice"), *Drax, "The Pacifist"* (same shape). **3
+   cards**, all from this sample specifically — a real, recurring
+   "lockout" pattern among powerful cards, not a one-off. Shape:
+   probably a 7th continuous template, or a variant of `CostModifier`
+   that can express "infinite cost" / outright prohibition.
+6. **Damage-multiplier effects.** *Nick Fury, "Patch"* ("unblocked
+   Avengers deal double combat damage"), *Cosmic Cube, "Energy of the
+   Beyonders"* ("ability/action damage +2 this turn"), *Jerry Lawler*
+   ("blocked/blocking Superstars deal double damage"). **3 cards**,
+   concentrated in this sample. None of the 6 continuous templates nor
+   17 effect templates multiply/boost damage — `DamageModifier` only
+   reduces/redirects/prevents. Worth a `DamageModifier` amplify mode
+   or a sibling template.
+7. **Player-damage (not die-damage) as a trigger source.** *Hulk,
+   "Green Goliath"*: "whenever either you OR Hulk takes damage" — our
+   `DieDamaged` event fires on a die taking damage; nothing fires when
+   the *player's life* drops. **1 card** so far, but "vengeance on
+   life loss" is a recognizable, plausibly-recurring card-text idiom.
+8. **"Pay life instead of energy" to use a Global/Action.** *Jinzo,
+   "Trap Destroyer"* ("opponent must pay 2 life to use an action die
+   or global ability") — matches a v1 flag
+   (`GrantsOpponentPaysLifeToUseActionOrGlobal`) that existed but was
+   never sampled into either Phase 0 round. **2 known instances.**
+   `CostModifier` currently only touches Purchase/Fielding/
+   GlobalEnergy cost; this is a different resource (life) entirely.
+
+Smaller, single-card, likely-tail observations (not written up in
+full — cheap to note, not worth a decision yet): `DamageModifier`'s
+redirect-to-self should probably redirect to a chosen destination
+(die OR player), not just "self" (*Jocasta, "Patterned After Janet"*);
+`KO` may want an optional destination-zone override (*Lantern Ring,
+"Energy Constructs"*: KO'd die goes to Used Pile, not the default);
+continuous auras that grant a whole new triggered ability rather than
+a tag or stat (*Green Lantern, "Human"*) look structurally bigger than
+the others in this list — likely stays deferred rather than adopted.
+
+### Good news: two recent fixes generalized past their motivating card
+
+- **Batgirl, "Babs"** ("deal 4 damage divided any way you choose among
+  target opposing characters") is the *second* real card needing
+  exactly `DealDamage.Distribute` [F11] — the fix wasn't overfit to
+  Cyclops.
+- **Ring of Winter** ("move each Dragon die in Used Pile to Field Zone
+  at level 3") is the *second* real card needing exactly the
+  bindings + `Spin.SetLevel` [F12] combination that closed Mutation —
+  same confirmation.
+
+### Cards we couldn't evaluate — text unavailable
+
+Not present in either the bulk catalog or our hand-curated set, so no
+real text to check: Venom, "Angelo Fortunado"; Doomcaliber Knight;
+Ring of Magnetism; Constantine, "Hellblazer"; Typhoid Mary; and all
+three listed Secret Wars cards (Invisible Woman, Black Panther,
+Terrax) — Secret Wars isn't in the reference sheet at all, likely a
+set newer than the last bulk import. Flagged honestly rather than
+guessed at; worth re-checking once the sheet/set list is updated.
+
+### Recommendation
+
+Findings 1-4 above (unblockable flag, distinct-count, symbol-counting,
+multi-turn duration) look like the same shape as the earlier cheap,
+well-justified batch — small, mechanical, each solving a real
+confirmed card. Findings 5-8 (deny-a-named-card, damage multipliers,
+player-damage trigger, life-cost-for-abilities) are a notch bigger and
+would benefit from being decided together rather than piecemeal, the
+same way the ability-blanking/live-value spikes were carved out
+earlier — none is individually hard, but there are four of them this
+round instead of two.
+
+Not adopting anything in this pass without sign-off, per ground rule
+2 — this section is findings only. Given how much sign-off back-and-
+forth has already happened this session, suggest batching the next
+decision rather than another round-trip per item: **either take the
+whole set (1-8) in one sign-off now, or bank this document and decide
+everything remaining in one pass right before Phase 4/5/6 actually
+need it** (nothing here blocks Phase 1-3).

@@ -676,6 +676,17 @@ here rather than assuming which approach they'd want.
     out the entire "Dark Phoenix Saga, first pass" 27-card breakdown
     except DPS039 (needs Rush, deliberately deferred at the user's own
     direction from the start of this pass).
+16. **Not started**: the old reference Team Builder had a dropdown to
+    filter the card pool by format (Golden/Silver/Modern were the main
+    two) - port that, and add the "Orange Ban" list (popular/powerful
+    cards commonly disallowed to encourage team variety - some are also
+    outright banned by WizKids) as a filterable exclusion set, so team
+    building can't accidentally include a banned card. Raised 2026-08-22
+    during the v2 vocabulary work (see `V2_VOCABULARY.md` Part 6, which
+    used the Orange Ban list as validation data and would double as the
+    initial exclusion-set source). This is a v1 Team Builder/web client
+    feature, independent of the v2 engine rewrite - pick up whenever
+    product/UI work resumes, not gated on v2's progress.
 
 ## Implemented keywords
 
