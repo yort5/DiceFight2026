@@ -1,7 +1,7 @@
 # DiceFight v2 Core — Implementation Plan
 
-**Status: Phases 0-5 complete; vocabulary FROZEN at the 2026-08-22 gate
-review (`V2_VOCABULARY.md` Part 11); Phase 6 (continuous templates) is
+**Status: Phases 0-6 complete; vocabulary FROZEN at the 2026-08-22 gate
+review (`V2_VOCABULARY.md` Part 11); Phase 7 (combat) is
 next.** Update the checkboxes in the Phase Overview as
 phases complete, and add a one-line note after any phase where reality
 diverged from this plan.
@@ -89,7 +89,7 @@ rather than improvising a different architecture.
 | 3 | Query pipeline | Stat/cost/legality queries with modifier interception | [x] |
 | 4 | Event bus + triggered abilities | Events, subscriptions, FIFO ability queue | [x] |
 | 5 | Effect template interpreter | All Appendix A effect templates working | [x] |
-| 6 | Continuous templates | All Appendix A continuous templates working | [ ] |
+| 6 | Continuous templates | All Appendix A continuous templates working | [x] |
 | 7 | Combat | Attack/block/damage using queries + events | [ ] |
 | 8 | Dice Masters as a game definition | Current game expressed as data; card migration pass | [ ] |
 | 9 | API + web integration | v2 playable in the web client behind a switch | [ ] |
@@ -784,3 +784,74 @@ Verified: `dotnet build DiceFight.slnx` clean (0 warnings/errors, all
 5 projects); v2 tests 70/70 passing (47 new); v1's full suite re-run
 untouched, still 547/547. Phase 5 checkbox ticked; plan status header
 updated - Phase 6 (continuous templates) is next.
+
+**Phase 6 note (2026-08-23)**: all 6 continuous templates implemented
+as `ContinuousRegistry`, compiled once per game (`GameSetup.NewGame`)
+from every `CardDef.Continuous` entry into the Phase 3/5 registries.
+Each modifier object re-scans its OWN card's currently-active
+(Field/Attack Zone) dice, across both players independently, every
+time it's queried - "aura appears/disappears as the source die enters/
+leaves the field" and "two auras (including two copies of the same
+card) stack additively" both fall out of that live re-scan for free,
+no Field/CleanUp hook needed to add or remove anything. Every
+template resolves its own `Target`/`Whose` filter relative to EACH
+qualifying active source die's OWN controller, mirroring how a
+triggered ability only listens while its own source die is active
+(the Part 2 Magneto precedent).
+
+`IDieStatModifier`/`ICardCostModifier`'s `Delta` became a state-aware
+`GetDelta(state, ...)` method (was a plain property) - a continuous
+`StatAura`'s `AtkDelta`/`DefDelta` can be `PerMatch` (a live count),
+which a parameterless property can't compute. `AmountResolver` was
+extracted from `EffectInterpreter`'s private Fixed/PerMatch logic so
+both it and `ContinuousRegistry` share one implementation.
+
+**A real StackOverflow was found and fixed while writing this phase's
+own tests**, not anticipated in the design: a `TagAura`/`StatAura`/
+`CostModifier` whose own `Target`/`Whose` filter checks a Tag or Stat
+that its OWN registry contributes to (e.g. Darkseid's Target filters
+on the "sidekick" tag, and `QueryEngine.GetTags` now folds in ALL
+registered `TagAuras` to answer that) recurses into evaluating itself
+to answer "am I even active." Fixed generally, not just for the one
+case that crashed: added `GetBaseTags`/`GetBaseAttack`/`GetBaseDefense`/
+`GetBaseFieldingCost`/`GetBasePurchaseCost`/`GetBaseStatValue` to
+`QueryEngine` (printed + one-shot data only, no continuous fold-in),
+and threaded an `includeContinuous` flag through `TargetResolver.Query`,
+`ConditionEvaluator.Evaluate`, and `AmountResolver.Resolve` so
+`ContinuousRegistry`'s own eligibility checks (Target/Whose/ActiveWhen)
+always resolve against Base state - every other caller (ordinary
+ability targeting) is unaffected and still sees the fully continuous-
+inclusive values. This is the load-bearing reason a continuous
+template's own eligibility can never depend on another continuous
+grant (including itself); documented at `QueryEngine.GetBaseTags`'s own
+remarks as the canonical explanation.
+
+`DamageModifier` got a real consumer immediately (unlike CombatRule/
+ActionDieUse's CostModifier, which still have none - Combat/Action-die
+mechanics are unbuilt): `EffectInterpreter.ApplyDamage` now walks
+`GameState.DamageInterceptors` - `PreventNonCombat` blocks the instance
+outright, multipliers (`Amplify`/`Double`) apply before flat `Reduce`
+(the fixed ordering rule, Part 1/11), and `RedirectToSelf` changes who
+actually takes the (already-modified) hit and who `DieDamaged`/KO fire
+against. Only `DamageSource.Ability` is reachable before Phase 7 builds
+a Combat damage source.
+
+`CostModifier`'s single `Whose: TargetFilter` field resolves to
+different id spaces depending on `Kind`: Purchase/GlobalEnergy expect
+`Whose` to name a PLAYER (`Kind:Player`, checked against the payer id -
+Jean Grey "Xavier's Dream"), Fielding/ActionDieUse expect it to name a
+DIE (`Kind:CharacterDie`, checked against the die id - Deadpool
+"Collect THIS!") - both real Part 2 paper examples, both now passing as
+actual tests.
+
+Tests (`ContinuousRegistryTests.cs`) cover all 6 templates, the
+appear/disappear and additive-stacking acceptance criteria, the
+multiplier-before-reduction damage ordering, and all 5 of Part 2
+Bucket C's ex-`Grants*` paper examples (Captain Marvel, Darkseid,
+Deadpool, Jean Grey, Moira's continuous half) running as real card
+definitions.
+
+Verified: `dotnet build DiceFight.slnx` clean (0 warnings/errors, all
+5 projects); v2 tests 83/83 passing (13 new); v1's full suite re-run
+untouched, still 547/547. Phase 6 checkbox ticked; plan status header
+updated - Phase 7 (combat) is next.

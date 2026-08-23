@@ -34,6 +34,13 @@ public static class GameSetup
             SeedTeamDice(state, player, catalog);
         }
 
+        // Phase 6 - compile every card's Continuous defs into the
+        // registries QueryEngine/EffectInterpreter read. Once per game,
+        // here, not per-card-load, since the modifier objects themselves
+        // are what re-evaluate "is the source active" live on every query
+        // (ContinuousRegistry's own remarks).
+        ContinuousRegistry.RegisterAll(state);
+
         return state;
     }
 

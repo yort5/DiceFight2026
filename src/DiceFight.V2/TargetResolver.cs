@@ -16,9 +16,18 @@ namespace DiceFight.V2;
 // two id spaces don't collide, same convention v1 used).
 public static class TargetResolver
 {
+    // includeContinuous (Phase 6) - false when resolving a CONTINUOUS
+    // template's own Target/Whose filter (ContinuousRegistry), so Tags/
+    // Stat checks read GetBaseTags/GetBaseStatValue instead of the
+    // continuous-inclusive versions; otherwise a self-referential aura
+    // (its own Target filtering on a stat/tag it itself grants) would
+    // recurse into evaluating itself to answer whether it's active - a
+    // real StackOverflow found while building this phase, not a
+    // hypothetical. Every other caller (ordinary ability targeting,
+    // Amount/Condition resolution) keeps the default `true`.
     public static IReadOnlyList<string> Query(
         GameState state, string requestingControllerId, TargetFilter filter,
-        IReadOnlyDictionary<string, string> bindings, ProtectionFrom? protection = null)
+        IReadOnlyDictionary<string, string> bindings, ProtectionFrom? protection = null, bool includeContinuous = true)
     {
         if (filter.Self)
         {
@@ -56,7 +65,7 @@ public static class TargetResolver
         {
             dice = dice.Where(d =>
             {
-                var dieTags = QueryEngine.GetTags(state, d);
+                var dieTags = includeContinuous ? QueryEngine.GetTags(state, d) : QueryEngine.GetBaseTags(state, d);
                 if (tags.AnyOf is { Count: > 0 } anyOf && !anyOf.Any(dieTags.Contains)) return false;
                 if (tags.NoneOf is { Count: > 0 } noneOf && noneOf.Any(dieTags.Contains)) return false;
                 return true;
@@ -67,7 +76,7 @@ public static class TargetResolver
         {
             dice = dice.Where(d =>
             {
-                var value = QueryEngine.GetStatValue(state, d, stat);
+                var value = includeContinuous ? QueryEngine.GetStatValue(state, d, stat) : QueryEngine.GetBaseStatValue(state, d, stat);
                 if (stat.Min is { } min && value < min) return false;
                 if (stat.Max is { } max && value > max) return false;
                 return true;

@@ -11,9 +11,14 @@ namespace DiceFight.V2;
 // "self" and "event" are always seeded before a condition ever runs.
 public static class ConditionEvaluator
 {
-    public static bool Evaluate(GameState state, string controllerId, Condition condition, IReadOnlyDictionary<string, string> bindings) => condition switch
+    // includeContinuous (Phase 6) - forwarded to CountAtLeast's own
+    // TargetResolver.Query call; false when this Condition is a
+    // continuous template's ActiveWhen gate (ContinuousRegistry), for
+    // the identical self-referential-cycle reason TargetResolver.Query's
+    // own includeContinuous param exists.
+    public static bool Evaluate(GameState state, string controllerId, Condition condition, IReadOnlyDictionary<string, string> bindings, bool includeContinuous = true) => condition switch
     {
-        CountAtLeast c => TargetResolver.Query(state, controllerId, c.Filter, bindings).Count >= c.N,
+        CountAtLeast c => TargetResolver.Query(state, controllerId, c.Filter, bindings, includeContinuous: includeContinuous).Count >= c.N,
 
         // Rule 1.5.3.2 - a KO'd die lands in its owner's Prep Area,
         // unrolled. That's the only way a die legitimately ends up

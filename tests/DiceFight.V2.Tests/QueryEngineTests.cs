@@ -9,18 +9,19 @@ namespace DiceFight.V2.Tests;
 // (c) an empty registry reproduces Phase 2 behavior unchanged.
 public class QueryEngineTests
 {
-    // Minimal fixed-value stub implementations - real ones arrive with
-    // Phase 6's continuous templates; these just prove the registries work.
+    // Minimal fixed-value stub implementations - real ones arrived with
+    // Phase 6's continuous templates (ContinuousRegistry); these just
+    // prove the registries work.
     private sealed class AlwaysAppliesDieModifier(int delta) : IDieStatModifier
     {
         public bool AppliesTo(GameState state, DieInstance die) => true;
-        public int Delta => delta;
+        public int GetDelta(GameState state, DieInstance die) => delta;
     }
 
     private sealed class AlwaysAppliesCardModifier(int delta) : ICardCostModifier
     {
         public bool AppliesTo(GameState state, CardDef card, string payerId) => true;
-        public int Delta => delta;
+        public int GetDelta(GameState state, CardDef card, string payerId) => delta;
     }
 
     private static CardDef BuildCharacterCard(int purchaseCost = 3) => new(

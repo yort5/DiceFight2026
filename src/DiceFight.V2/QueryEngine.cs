@@ -12,10 +12,16 @@ namespace DiceFight.V2;
 // depends on application ORDER between two different sources, only on
 // their sum. Building a layers system here would be solving a problem
 // this game doesn't have.
+// GetDelta takes `state` (Phase 6 change - was a plain `int Delta { get; }`
+// property in Phase 3) because a continuous StatAura's own Amount can be
+// PerMatch (a live count), not just Fixed - AppliesTo and GetDelta are
+// still two separate calls (QueryEngine's own Where/Sum shape), not
+// merged into one, so a modifier that wants to short-circuit "am I even
+// active" before doing PerMatch's own live query still can.
 public interface IDieStatModifier
 {
     bool AppliesTo(GameState state, DieInstance die);
-    int Delta { get; }
+    int GetDelta(GameState state, DieInstance die);
 }
 
 // The card+player-scoped counterpart, for the two queries that aren't
@@ -27,7 +33,41 @@ public interface IDieStatModifier
 public interface ICardCostModifier
 {
     bool AppliesTo(GameState state, CardDef card, string payerId);
-    int Delta { get; }
+    int GetDelta(GameState state, CardDef card, string payerId);
+}
+
+// TagAura's own registry shape (Phase 6) - deliberately not folded into
+// IDieStatModifier (a tag grant isn't a delta) or GrantedTag (that's a
+// one-shot, per-die, GrantTag-effect store, not a continuous aura).
+public interface ITagAuraModifier
+{
+    bool AppliesTo(GameState state, DieInstance die);
+    IReadOnlyList<string> GetTags(GameState state, DieInstance die);
+}
+
+// CombatRule's registry shape (Phase 6) - nothing queries this yet
+// (Combat is Phase 7's own concern), same "register the closed
+// vocabulary's full shape now, wire its consumer when it exists" pattern
+// Phase 4 already used for DieKOd/DieDamaged emission sites.
+public interface ICombatRuleModifier
+{
+    bool AppliesTo(GameState state, DieInstance die);
+    CombatRuleKind Kind { get; }
+    int? N { get; }
+}
+
+// DamageModifier's registry shape (Phase 6) - THIS one has a real
+// consumer already: EffectInterpreter.ApplyDamage (Phase 5's own damage
+// choke point), extended in Phase 6 to walk this registry before marking
+// damage. Source lets a modifier scope itself to Ability|Combat|Any -
+// only Ability is reachable before Phase 7 builds a Combat damage
+// source, same "declared now, exercised once its trigger exists" shape.
+public interface IDamageInterceptor
+{
+    bool AppliesTo(GameState state, DieInstance die, DamageSource source);
+    DamageModifierMode Mode { get; }
+    int GetAmount(GameState state, DieInstance die); // meaningful for Reduce/Amplify only
+    DieInstance? RedirectTarget(GameState state, DieInstance originalTarget); // RedirectToSelf only
 }
 
 // CanBeTargeted is a boolean AND of interceptor verdicts, not a delta sum -
@@ -55,23 +95,35 @@ public interface ITargetingInterceptor
 // build it early.
 public static class QueryEngine
 {
-    public static int GetAttack(GameState state, DieInstance die)
-    {
-        var face = state.GetCurrentFace(die);
-        var baseValue = face?.Character?.Attack ?? 0;
-        var applied = die.AppliedModifiers.Sum(m => m.AttackDelta);
-        var continuous = state.AttackModifiers.Where(m => m.AppliesTo(state, die)).Sum(m => m.Delta);
-        return baseValue + applied + continuous;
-    }
+    // Base* variants (Phase 6) compute from printed data + one-shot
+    // AppliedModifiers only - no continuous registry fold-in. A
+    // continuous template's OWN eligibility check (ContinuousRegistry's
+    // SourceQualifies) resolves its Target/Whose/ActiveWhen through
+    // these instead of the continuous-inclusive versions below, which is
+    // what stops a self-referential aura (e.g. "each of your dice with
+    // 3+ Attack gets +1 Attack," or Darkseid-shaped TagAuras whose own
+    // Target filters on Tags) from recursing into itself while being
+    // asked "am I even active" - found as an actual `StackOverflow`
+    // crashing the Phase 6 test run, not designed in ahead of time.
+    // Ordinary ability targeting/conditions (Phase 5) are unaffected -
+    // they call the continuous-inclusive versions and correctly see
+    // continuously-granted stats/tags.
+    public static int GetBaseAttack(GameState state, DieInstance die) =>
+        (state.GetCurrentFace(die)?.Character?.Attack ?? 0) + die.AppliedModifiers.Sum(m => m.AttackDelta);
 
-    public static int GetDefense(GameState state, DieInstance die)
-    {
-        var face = state.GetCurrentFace(die);
-        var baseValue = face?.Character?.Defense ?? 0;
-        var applied = die.AppliedModifiers.Sum(m => m.DefenseDelta);
-        var continuous = state.DefenseModifiers.Where(m => m.AppliesTo(state, die)).Sum(m => m.Delta);
-        return baseValue + applied + continuous;
-    }
+    public static int GetBaseDefense(GameState state, DieInstance die) =>
+        (state.GetCurrentFace(die)?.Character?.Defense ?? 0) + die.AppliedModifiers.Sum(m => m.DefenseDelta);
+
+    public static int GetBaseFieldingCost(GameState state, DieInstance die) =>
+        Math.Max(0, (state.GetCurrentFace(die)?.Character?.FieldingCost ?? 0) + die.AppliedModifiers.Sum(m => m.FieldingCostDelta));
+
+    public static int GetBasePurchaseCost(CardDef card) => Math.Max(1, card.PurchaseCost);
+
+    public static int GetAttack(GameState state, DieInstance die) =>
+        GetBaseAttack(state, die) + state.AttackModifiers.Where(m => m.AppliesTo(state, die)).Sum(m => m.GetDelta(state, die));
+
+    public static int GetDefense(GameState state, DieInstance die) =>
+        GetBaseDefense(state, die) + state.DefenseModifiers.Where(m => m.AppliesTo(state, die)).Sum(m => m.GetDelta(state, die));
 
     // Floor 1 - the game's own "to a minimum of 1" purchase-discount text
     // (Dark Phoenix "Enemy of the Shi'ar" et al.) - erratum corrected
@@ -79,26 +131,26 @@ public static class QueryEngine
     // earlier draft of this plan.
     public static int GetPurchaseCost(GameState state, CardDef card, string payerId)
     {
-        var continuous = state.PurchaseCostModifiers.Where(m => m.AppliesTo(state, card, payerId)).Sum(m => m.Delta);
+        var continuous = state.PurchaseCostModifiers.Where(m => m.AppliesTo(state, card, payerId)).Sum(m => m.GetDelta(state, card, payerId));
         return Math.Max(1, card.PurchaseCost + continuous);
     }
 
     // Floor 0, unlike purchase - printed-0 fielding-cost faces and
     // free-to-field grants are both real (a 0 fielding cost is a normal
     // value, not a floor being hit).
-    public static int GetFieldingCost(GameState state, DieInstance die)
-    {
-        var face = state.GetCurrentFace(die);
-        var baseValue = face?.Character?.FieldingCost ?? 0;
-        var applied = die.AppliedModifiers.Sum(m => m.FieldingCostDelta);
-        var continuous = state.FieldingCostModifiers.Where(m => m.AppliesTo(state, die)).Sum(m => m.Delta);
-        return Math.Max(0, baseValue + applied + continuous);
-    }
+    public static int GetFieldingCost(GameState state, DieInstance die) =>
+        Math.Max(0, GetBaseFieldingCost(state, die) + state.FieldingCostModifiers.Where(m => m.AppliesTo(state, die)).Sum(m => m.GetDelta(state, die)));
 
+    // Now also folds in TagAura-granted keywords (Phase 6), same
+    // reasoning as GrantTag's own fold-in: a granted tag isn't tagged as
+    // "keyword" vs "affiliation" anywhere in the model, so this unions
+    // whatever's active in alongside the printed set.
     public static IReadOnlySet<string> GetKeywords(GameState state, DieInstance die)
     {
         var keywords = die.CardId is { } cardId ? new HashSet<string>(state.CardCatalog[cardId].Keywords) : [];
         foreach (var granted in die.GrantedTags) keywords.Add(granted.Tag);
+        foreach (var aura in state.TagAuras.Where(a => a.AppliesTo(state, die)))
+            foreach (var tag in aura.GetTags(state, die)) keywords.Add(tag);
         return keywords;
     }
 
@@ -114,7 +166,7 @@ public static class QueryEngine
         if (ability.EnergyCost is not { } baseCost)
             throw new InvalidOperationException("This ability has no EnergyCost to query - it isn't a paid Global.");
 
-        var continuous = state.GlobalEnergyCostModifiers.Where(m => m.AppliesTo(state, card, payerId)).Sum(m => m.Delta);
+        var continuous = state.GlobalEnergyCostModifiers.Where(m => m.AppliesTo(state, card, payerId)).Sum(m => m.GetDelta(state, card, payerId));
         return Math.Max(0, baseCost.Amount + continuous);
     }
 
@@ -126,6 +178,26 @@ public static class QueryEngine
     // 5's GrantTag effect, DieInstance.GrantedTags) are included now that
     // something actually populates them.
     public static IReadOnlySet<string> GetTags(GameState state, DieInstance die)
+    {
+        var tags = new HashSet<string>(GetBaseTags(state, die));
+        foreach (var aura in state.TagAuras.Where(a => a.AppliesTo(state, die)))
+            foreach (var tag in aura.GetTags(state, die)) tags.Add(tag);
+
+        return tags;
+    }
+
+    // Printed + one-shot-granted tags only - deliberately excludes
+    // continuous TagAuras (Phase 6). A TagAuraModifier's own AppliesTo
+    // resolves ITS Target filter through this (via TargetResolver's
+    // includeContinuousTags:false path), not the full GetTags above -
+    // otherwise evaluating any TagAura whose Target filter matches on
+    // Tags would need to evaluate every registered TagAura (including
+    // itself) to answer "what are this die's tags," which is exactly a
+    // stack-overflowing cycle (found by a crashing test run, not
+    // designed in ahead of time). Ordinary ability targeting (Phase 5)
+    // and EventFilter matching are unaffected - they call the full
+    // GetTags above and correctly see continuously-granted tags.
+    public static IReadOnlySet<string> GetBaseTags(GameState state, DieInstance die)
     {
         var tags = new HashSet<string>();
         if (die.IsSidekick) tags.Add("sidekick");
@@ -139,7 +211,6 @@ public static class QueryEngine
         }
 
         foreach (var granted in die.GrantedTags) tags.Add(granted.Tag);
-
         return tags;
     }
 
@@ -156,6 +227,23 @@ public static class QueryEngine
         StatKind.Level => state.GetCurrentFace(die)?.Character?.Level ?? 0,
         StatKind.PurchaseCost => die.CardId is { } pcId ? GetPurchaseCost(state, state.CardCatalog[pcId], die.ControllerId) : 0,
         StatKind.FieldingCost => GetFieldingCost(state, die),
+        StatKind.Counter => stat.CounterName is { } name && die.CardId is { } counterCardId
+            ? state.Counters.GetValueOrDefault((die.ControllerId, counterCardId, name))
+            : 0,
+        _ => 0,
+    };
+
+    // The Base-only counterpart (Phase 6) - same switch, but Attack/
+    // Defense/FieldingCost/PurchaseCost read the continuous-EXCLUDING
+    // Base* queries above. Used by ContinuousRegistry's own eligibility
+    // checks for the same self-referential-cycle reason GetBaseTags is.
+    public static int GetBaseStatValue(GameState state, DieInstance die, StatThreshold stat) => stat.Kind switch
+    {
+        StatKind.Attack => GetBaseAttack(state, die),
+        StatKind.Defense => GetBaseDefense(state, die),
+        StatKind.Level => state.GetCurrentFace(die)?.Character?.Level ?? 0,
+        StatKind.PurchaseCost => die.CardId is { } pcId ? GetBasePurchaseCost(state.CardCatalog[pcId]) : 0,
+        StatKind.FieldingCost => GetBaseFieldingCost(state, die),
         StatKind.Counter => stat.CounterName is { } name && die.CardId is { } counterCardId
             ? state.Counters.GetValueOrDefault((die.ControllerId, counterCardId, name))
             : 0,

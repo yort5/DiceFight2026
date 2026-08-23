@@ -214,17 +214,39 @@ public static class EffectInterpreter
     // >= current Defense) and KOs immediately if it's met, since ability
     // damage resolves one instance at a time (rule 3.2.2), unlike
     // simultaneous combat damage (Phase 7's own concern).
+    // Phase 6 extension - walks GameState.DamageInterceptors (DamageModifier's
+    // registry) before marking damage. Source is always Ability here (no
+    // Combat damage source exists before Phase 7). PreventNonCombat
+    // blocks the instance outright; multipliers apply before flat
+    // reductions (V2_VOCABULARY.md Part 1/11's fixed ordering rule);
+    // RedirectToSelf, if present, changes who actually takes the
+    // (already-modified) hit and who DieDamaged/KO fire against.
     private static void ApplyDamage(EffectContext ctx, string id, int amount)
     {
         if (amount <= 0) return;
         if (ctx.State.IsPlayerId(id)) { ctx.State.GetPlayer(id).Life -= amount; return; }
 
         var die = FindDie(ctx.State, id);
-        die.Damage += amount;
-        EventBus.Fire(ctx.State, ctx.Queue, new GameEvent(TriggerKind.DieDamaged, die, die.ControllerId, ctx.State.CurrentStep, new DamageDealtPayload(amount)));
+        var interceptors = ctx.State.DamageInterceptors.Where(m => m.AppliesTo(ctx.State, die, DamageSource.Ability)).ToList();
 
-        if (QueryEngine.GetDefense(ctx.State, die) <= die.Damage)
-            KoDie(ctx, die, triggersKOAbilities: true);
+        if (interceptors.Any(m => m.Mode == DamageModifierMode.PreventNonCombat))
+            return;
+
+        foreach (var m in interceptors.Where(m => m.Mode == DamageModifierMode.Double)) amount *= 2;
+        foreach (var m in interceptors.Where(m => m.Mode == DamageModifierMode.Amplify)) amount += m.GetAmount(ctx.State, die);
+        foreach (var m in interceptors.Where(m => m.Mode == DamageModifierMode.Reduce)) amount = Math.Max(0, amount - m.GetAmount(ctx.State, die));
+        if (amount <= 0) return;
+
+        var recipient = interceptors
+            .Where(m => m.Mode == DamageModifierMode.RedirectToSelf)
+            .Select(m => m.RedirectTarget(ctx.State, die))
+            .FirstOrDefault(d => d is not null) ?? die;
+
+        recipient.Damage += amount;
+        EventBus.Fire(ctx.State, ctx.Queue, new GameEvent(TriggerKind.DieDamaged, recipient, recipient.ControllerId, ctx.State.CurrentStep, new DamageDealtPayload(amount)));
+
+        if (QueryEngine.GetDefense(ctx.State, recipient) <= recipient.Damage)
+            KoDie(ctx, recipient, triggersKOAbilities: true);
     }
 
     private static void ExecuteKo(Ko n, EffectContext ctx, Action onComplete)
@@ -604,30 +626,12 @@ public static class EffectInterpreter
             ctx.Bindings[name] = resolvedIds[0];
     }
 
-    private static int ResolveAmount(EffectContext ctx, Amount amount) => amount switch
-    {
-        Fixed f => f.Value,
-        PerMatch p => ResolvePerMatch(ctx, p),
-        _ => throw new NotSupportedException($"Unknown Amount type '{amount.GetType().Name}'."),
-    };
-
-    private static int ResolvePerMatch(EffectContext ctx, PerMatch p)
-    {
-        var matches = TargetResolver.Query(ctx.State, ctx.ControllerId, p.Filter, ctx.Bindings, ProtectionFor(ctx.Trigger));
-        var dieMatches = matches.Where(id => !ctx.State.IsPlayerId(id)).ToList();
-
-        // Finding 14's two count units: EnergySymbols sums the pips
-        // currently shown, Distinct counts different card names rather
-        // than raw die count - both mutually meaningful with Dice, the
-        // default (plain count of matching dice).
-        var count = p.Unit == CountUnit.EnergySymbols
-            ? dieMatches.Sum(id => ctx.State.GetCurrentFace(FindDie(ctx.State, id))?.Symbols.Sum(s => s.Count) ?? 0)
-            : p.Distinct
-                ? dieMatches.Select(id => FindDie(ctx.State, id).CardId).Where(cardId => cardId is not null).Distinct().Count()
-                : dieMatches.Count;
-
-        return count * p.Multiplier;
-    }
+    // Phase 6 extracted this into AmountResolver (shared with
+    // ContinuousRegistry's StatAura handling) - kept as a thin wrapper
+    // here so every existing call site (ResolveAmount(ctx, amount))
+    // didn't need touching.
+    private static int ResolveAmount(EffectContext ctx, Amount amount) =>
+        AmountResolver.Resolve(ctx.State, ctx.ControllerId, amount, ctx.Bindings, ProtectionFor(ctx.Trigger));
 
     // Global/DieUsed are the only two trigger kinds targeting protection
     // can gate (rule 3.8's own scope - a targeted reactive trigger isn't

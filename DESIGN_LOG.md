@@ -7698,3 +7698,74 @@ Verified: `dotnet build DiceFight.slnx` clean (0 warnings/errors, all
 5 projects); v2 tests 70/70 passing (47 new); v1's full suite re-run
 untouched, still 547/547. Phase 5 checkbox ticked; plan status header
 updated - Phase 6 (continuous templates) is next.
+
+## Phase 6 — Continuous templates (2026-08-23)
+
+Implemented all 6 continuous templates (`src/DiceFight.V2/ContinuousRegistry.cs`)
+- the direct replacement for v1's 39 one-per-card `Grants*` CardDef
+flags. `ContinuousRegistry.RegisterAll` walks the whole CardCatalog
+once (called from `GameSetup.NewGame`) and builds ONE modifier object
+per (card, ContinuousDef) pair; each object re-scans its own card's
+currently-active dice live on every query, so an aura appearing/
+disappearing as its source enters/leaves the field, and two auras
+(including two copies of the same card) stacking additively, both
+fall out for free - no Field/CleanUp hook needed to add or remove
+anything from a registry.
+
+Every template resolves its own Target/Whose filter relative to EACH
+qualifying active source die's own controller independently (not one
+fixed "the ability's controller"), mirroring the same "no special
+modeling for while-active" precedent Phase 4's Magneto trigger example
+already established for triggered abilities.
+
+`IDieStatModifier.Delta`/`ICardCostModifier.Delta` (plain get-only
+properties since Phase 3) became `GetDelta(state, ...)` methods,
+because a continuous StatAura's AtkDelta/DefDelta can be a live
+PerMatch count, not just Fixed - a property with no state parameter
+can't compute that. Extracted the shared Fixed/PerMatch logic out of
+EffectInterpreter into a new `AmountResolver.cs` so both it and
+ContinuousRegistry use one implementation.
+
+**Found and fixed a real StackOverflow while writing this phase's own
+tests**, not designed in ahead of time: a TagAura/StatAura/CostModifier
+whose own Target/Whose filter checks a tag or stat that its OWN
+registry contributes to (Darkseid's Target filters on "sidekick";
+QueryEngine.GetTags folds in ALL registered TagAuras to answer that)
+recurses into evaluating itself to determine whether it's even active.
+Fixed generally: added Base* query variants to QueryEngine (GetBaseTags,
+GetBaseAttack/Defense/FieldingCost/PurchaseCost, GetBaseStatValue - no
+continuous fold-in) and threaded an `includeContinuous` flag through
+TargetResolver.Query, ConditionEvaluator.Evaluate, and
+AmountResolver.Resolve; ContinuousRegistry's own eligibility checks
+(Target/Whose/ActiveWhen) always pass `includeContinuous: false`, so a
+continuous template's own activation can never depend on another
+continuous grant, including itself. Every other caller is unaffected
+and still sees the fully continuous-inclusive values.
+
+DamageModifier got a real, working consumer this phase (unlike
+CombatRule and CostModifier's ActionDieUse kind, which still have
+none - Combat and Action-die mechanics are unbuilt): extended
+EffectInterpreter.ApplyDamage to walk GameState.DamageInterceptors -
+PreventNonCombat blocks the instance outright, Amplify/Double apply
+before flat Reduce (the fixed multiplier-before-reduction ordering
+rule from V2_VOCABULARY.md Part 1/11), and RedirectToSelf changes who
+actually takes the (already-modified) hit.
+
+CostModifier's single Whose:TargetFilter field resolves to different
+id spaces depending on Kind: Purchase/GlobalEnergy expect a
+Kind:Player filter (checked against the payer id), Fielding/
+ActionDieUse expect a die-kind filter (checked against the die id) -
+confirmed against the two real Part 2 paper examples (Jean Grey,
+Deadpool) rather than guessed.
+
+Tests (`ContinuousRegistryTests.cs`) cover all 6 templates including
+the appear/disappear-with-the-source-die and additive-stacking
+acceptance criteria, the multiplier-before-reduction damage-ordering
+proof, and all 5 of Part 2 Bucket C's ex-Grants* paper examples
+(Captain Marvel, Darkseid, Deadpool, Jean Grey, Moira's continuous
+half) running as real card definitions rather than just on paper.
+
+Verified: `dotnet build DiceFight.slnx` clean (0 warnings/errors, all
+5 projects); v2 tests 83/83 passing (13 new); v1's full suite re-run
+untouched, still 547/547. Phase 6 checkbox ticked; plan status header
+updated - Phase 7 (combat) is next.
