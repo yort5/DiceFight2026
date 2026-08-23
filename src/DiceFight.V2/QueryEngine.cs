@@ -116,4 +116,45 @@ public static class QueryEngine
         var continuous = state.GlobalEnergyCostModifiers.Where(m => m.AppliesTo(state, card, payerId)).Sum(m => m.Delta);
         return Math.Max(0, baseCost.Amount + continuous);
     }
+
+    // Not one of the 7 frozen queries - a plumbing helper (Phase 4) that
+    // composes them, needed by EventFilter/TargetFilter matching alike.
+    // Part 1's tag-unification note: "a die's tag set = its card's
+    // affiliations + keywords + its card name + 'sidekick' if applicable +
+    // its printed energy symbol id + granted tags." Granted tags aren't
+    // included yet, same reasoning as GetKeywords' own printed-only scope.
+    public static IReadOnlySet<string> GetTags(GameState state, DieInstance die)
+    {
+        var tags = new HashSet<string>();
+        if (die.IsSidekick) tags.Add("sidekick");
+
+        if (die.CardId is { } cardId && state.CardCatalog.TryGetValue(cardId, out var card))
+        {
+            foreach (var affiliation in card.Affiliations) tags.Add(affiliation);
+            foreach (var keyword in card.Keywords) tags.Add(keyword);
+            tags.Add(card.Name);
+            if (card.EnergySymbolId is { } symbolId) tags.Add(symbolId);
+        }
+
+        return tags;
+    }
+
+    // Another plumbing helper - reads whichever of the 7 queries a
+    // StatThreshold names, so EventFilter.Stat/TargetFilter.Stat matching
+    // (Phase 4/5) has one place to go rather than re-deriving this switch
+    // per caller. Counter reads GameState.Counters directly (Finding 13) -
+    // there's no dedicated query for it, since counters are card-scoped
+    // state, not something a continuous-modifier registry intercepts.
+    public static int GetStatValue(GameState state, DieInstance die, StatThreshold stat) => stat.Kind switch
+    {
+        StatKind.Attack => GetAttack(state, die),
+        StatKind.Defense => GetDefense(state, die),
+        StatKind.Level => state.GetCurrentFace(die)?.Character?.Level ?? 0,
+        StatKind.PurchaseCost => die.CardId is { } pcId ? GetPurchaseCost(state, state.CardCatalog[pcId], die.ControllerId) : 0,
+        StatKind.FieldingCost => GetFieldingCost(state, die),
+        StatKind.Counter => stat.CounterName is { } name && die.CardId is { } counterCardId
+            ? state.Counters.GetValueOrDefault((die.ControllerId, counterCardId, name))
+            : 0,
+        _ => 0,
+    };
 }

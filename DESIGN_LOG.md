@@ -7553,3 +7553,72 @@ Verified: `dotnet build DiceFight.slnx` clean (0 warnings/errors, all
 5 projects); new tests 17/17 passing (9 new); v1's full suite re-run
 untouched, still 547/547. Phase 3 checkbox ticked; plan status header
 updated (Phase 4, event bus + triggered abilities, is next).
+
+## Phase 4 — Event bus + triggered abilities (2026-08-22)
+
+Built the event bus that replaces v1's TriggerType enum + three
+separate *DieMatch filter records with one event shape (`GameEvent`)
+and one filter shape (`EventFilter`), matching V2_VOCABULARY.md Part
+1's 10 trigger events + Global. Ported v1's `AbilityQueue` (FIFO
+Enqueue, front-of-queue Interrupt per rule 3.2.8, Drain(resolve,
+shouldStop)) essentially unchanged - Enqueue and Drain stay decoupled,
+TurnEngine only enqueues, draining is Phase 5's interpreter's job.
+
+`EventBus.Fire` scans each controller's active dice (Field Zone +
+Attack Zone, active player first then inactive, FIFO within each -
+v1's own rule 3.2.2 ordering) against every die's TriggeredAbility
+list, matching on Trigger kind + Filter (null Filter = self-only,
+"when [this card] does X" - the majority pattern in real card text).
+
+Found and fixed a real bug, not just a test-fixture issue: the first
+draft of `Fire` only ever considered active (Field/Attack Zone) dice
+as listener candidates. Self-only triggers need to fire from the
+event's own subject die regardless of that die's zone at the moment
+the event fires - Energize/Awaken react to a die still mid-roll in
+the Prep Area (v1's CheckEnergize/CheckAwaken have no zone gate at
+all, for exactly this reason), and any future "when I am KO'd"
+ability's own die has already left the Field/Attack Zone by the time
+DieKOd fires. Caught by a failing test
+(Roll_Emits_DieFaceChanged_For_A_Die_That_Was_Already_Showing_A_Face)
+before it could hide as a silent gap. Fixed by always adding the
+event's own SubjectDie as an extra listener candidate for its own
+controller's scan, deduplicated against the normal active-dice list.
+
+Wired real event emission at every action that currently exists:
+Field -> DieFielded, Purchase -> PurchaseMade, ClearAndDraw ->
+DiceDrawn (only when something was actually drawn), Roll ->
+DieFaceChanged per die that had a prior face (skips first-ever
+rolls, since there's no "change" to report), EnterAttackStep/
+SkipAttackStep/CleanUp -> TurnStepEntered. DieKOd/DieDamaged/
+DieAttacks/DieBlocks/DieUsed are deliberately left unwired - no KO,
+damage, combat, or Action-die mechanic exists yet to emit them from
+(Phase 5 and Phase 7's job respectively).
+
+Implemented `TurnEngine.UseGlobal` for real (was a Phase 2 stub):
+validates the source die is active and controlled by the caller,
+looks up the ability by index, enforces OncePerTurn via the new
+`GameState.GlobalsUsedThisTurn` set (cleared in CleanUp, same
+turn-scoped lifetime v1 used), spends energy through the same
+SpendEnergy helper Purchase/Field already use, then enqueues directly
+(no EventBus involved - using the Global IS the trigger, there's no
+event to fire it from). UseAction stays a stub; Action-die mechanics
+haven't been touched anywhere yet.
+
+Added `EventPayload` (abstract marker) and `DamageDealtPayload` to
+Model/Effects/Events.cs, and `GetTags`/`GetStatValue` plumbing
+helpers to QueryEngine, both needed by EventFilter's Tags/Stat
+matching in MatchesFilter.
+
+Tests cover the plan's three named acceptance criteria (a real
+fielding action fires a tag-filtered watcher; three simultaneous
+triggers enqueue active-player-first-then-inactive, FIFO within each;
+a self-only trigger ignores other dice) plus extra coverage for
+DieFaceChanged emission (the test that exposed the Fire bug above)
+and UseGlobal (energy spent, OncePerTurn enforced via a second call
+throwing).
+
+Verified: `dotnet build DiceFight.slnx` clean (0 warnings/errors, all
+5 projects); v2 tests 23/23 passing (6 new); v1's full suite re-run
+untouched, still 547/547. Phase 4 checkbox ticked; plan status header
+updated - vocabulary is FROZEN as of the 2026-08-22 gate review, Phase
+5 (effect template interpreter) is next.

@@ -3,31 +3,36 @@ using DiceFight.V2.Model.Effects;
 
 namespace DiceFight.V2;
 
-// The turn step machine (V2_PLAN.md Phase 2 task 3) - ClearAndDraw -> Roll
-// -> FinishRoll -> Main (Purchase/Field/UseGlobal/UseAction) -> Attack
-// (skippable) -> CleanUp. Ported from v1's TurnEngine.cs at the STRUCTURAL
-// level only, per the plan's own instruction - v1's version is 1,769 lines
-// almost entirely because of ability hooks (discounts, surcharges,
-// triggered reactions, keyword checks) that don't exist yet; this is the
-// bare rules skeleton those hooks will attach to in Phases 3-7.
+// The turn step machine (V2_PLAN.md Phase 2 task 3, event-wired in Phase
+// 4) - ClearAndDraw -> Roll -> FinishRoll -> Main (Purchase/Field/
+// UseGlobal/UseAction) -> Attack (skippable) -> CleanUp. Ported from v1's
+// TurnEngine.cs at the STRUCTURAL level only, per the plan's own
+// instruction - v1's version is 1,769 lines almost entirely because of
+// ability hooks (discounts, surcharges, keyword checks) this rewrite
+// replaced with the query/event pipeline instead of re-porting one by one.
 //
 // Deliberate simplifications, all real gaps to close in later phases, not
 // oversights:
-//  - Purchase/Field now route their cost lookups through QueryEngine
-//    (Phase 3 task 3), so discounts/surcharges apply automatically once
-//    Phase 6 starts registering continuous modifiers - but nothing
-//    populates those registries yet, so today's effective costs still
-//    equal the printed ones.
-//  - No "when fielded"/Global/Action triggers fire - Phase 4 (events) and
-//    Phase 5/6 (effect/continuous interpreters).
+//  - Purchase/Field route their cost lookups through QueryEngine (Phase
+//    3), so discounts/surcharges apply automatically once Phase 6 starts
+//    registering continuous modifiers - none do yet.
+//  - Every action that has a real event now fires it and enqueues matches
+//    (Phase 4) - Field/Purchase/ClearAndDraw/Roll/EnterAttackStep/CleanUp,
+//    plus UseGlobal's own paid activation. Nothing DRAINS the queue here
+//    (see AbilityQueue's own remarks on why that stays the caller's job),
+//    and nothing can yet - Phase 5 is the effect interpreter that gives
+//    `resolve` something real to do. DieKOd/DieDamaged/DieAttacks/
+//    DieBlocks/DieUsed have no emission site yet because no KO/damage/
+//    combat/Action-die mechanic exists to emit them from - they'll be
+//    wired at the same time those mechanics are built (Phase 5 KO
+//    effects, Phase 7 combat), not fabricated early.
 //  - SpendEnergy doesn't implement partial-spend "spin down to the
 //    unused value" (v1 rule 2.6.1.5/2.6.1.6) - an overspent die is simply
-//    consumed whole. Real, but not needed for a skeleton turn cycle to
-//    work; revisit if/when it blocks something.
+//    consumed whole.
 //  - ClearAndDraw draws straight into PrepArea - the DiceFromBag/
 //    DiceFromPrep staging zones stay declared (frozen Zone list) but
-//    unused, since the interrupt window they exist for needs an ability
-//    layer that isn't built until Phase 4+.
+//    unused; the interrupt window they exist for needs a real mid-
+//    resolution pause, which Phase 5's interpreter is what will produce.
 //  - No Bag-refill-from-Used-Pile-when-empty (rule ~2.3's reshuffle) yet.
 public static class TurnEngine
 {
@@ -35,7 +40,7 @@ public static class TurnEngine
     // Takes its own Random (draw order) separately from IDiceRoller (face
     // results at the Roll step) - the caller controls both independently
     // for deterministic tests.
-    public static void ClearAndDraw(GameState state, Random random)
+    public static void ClearAndDraw(GameState state, AbilityQueue queue, Random random)
     {
         RequireStep(state, TurnStep.ClearAndDraw);
 
@@ -43,9 +48,15 @@ public static class TurnEngine
         var bag = state.DiceIn(state.ActivePlayerId, Zone.Bag).ToList();
         Shuffle(bag, random);
 
-        foreach (var die in bag.Take(Math.Max(0, drawCount)))
+        var drawn = bag.Take(Math.Max(0, drawCount)).ToList();
+        foreach (var die in drawn)
         {
             die.Zone = Zone.PrepArea;
+        }
+
+        if (drawn.Count > 0)
+        {
+            EventBus.Fire(state, queue, new GameEvent(TriggerKind.DiceDrawn, null, state.ActivePlayerId, state.CurrentStep));
         }
 
         state.IsFirstTurn = false;
@@ -55,15 +66,36 @@ public static class TurnEngine
     // First half of Roll & Reroll - assigns a face to every drawn die
     // without moving it yet, so a (future) caller can see results before
     // deciding what to reroll (v1's own reasoning for the Roll/FinishRoll
-    // split - see the class remarks on why that's not wired up yet).
-    public static void Roll(GameState state, IDiceRoller roller)
+    // split - see the class remarks on why interactive rerolling isn't
+    // wired up yet). Fires DieFaceChanged for every die rolled - this is
+    // the one face-mutation site that exists so far; Reroll/Spin/
+    // SpinToEnergy (Phase 5) and any future site MUST fire it too (Part
+    // 1's own warning: a skipped site is the silently-never-fires bug
+    // class v1's Awaken/Energize gate bug already taught this project).
+    public static void Roll(GameState state, AbilityQueue queue, IDiceRoller roller)
     {
         RequireStep(state, TurnStep.RollAndReroll);
 
-        foreach (var die in state.DiceIn(state.ActivePlayerId, Zone.PrepArea))
+        foreach (var die in state.DiceIn(state.ActivePlayerId, Zone.PrepArea).ToList())
         {
             var definition = state.GetDieDefinition(die);
-            die.CurrentFaceIndex = roller.Roll(definition);
+            var priorFace = state.GetCurrentFace(die); // null pre-roll - a dormant die has no "prior" face
+            var newIndex = roller.Roll(definition);
+            die.CurrentFaceIndex = newIndex;
+            var newFace = definition.Faces[newIndex];
+
+            if (priorFace is not null)
+            {
+                var payload = new DieFaceChangedPayload(priorFace, newFace, FaceChangeCause.Roll);
+                EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieFaceChanged, die, die.ControllerId, state.CurrentStep, payload));
+            }
+            // A die rolling for the first time ever (priorFace null - e.g.
+            // fresh off a card) has no meaningful "changed from" state to
+            // report; Energize/Awaken both key off symbol count/level
+            // INCREASE, which a null prior face can't express anyway, so
+            // skipping emission here isn't the silently-never-fires bug
+            // the class remarks warn about - there's nothing a filter
+            // could legitimately match against a null PriorFace.
         }
     }
 
@@ -84,7 +116,7 @@ public static class TurnEngine
     // EnergySymbolId (2.6.2.3); a wild symbol satisfies any requirement.
     // Default destination is the Used Pile (2.6.2.6) - no support yet for
     // an ability overriding that (e.g. v1's "goes to your bag instead").
-    public static void Purchase(GameState state, string dieId, IReadOnlyList<string> energyDieIdsToSpend)
+    public static void Purchase(GameState state, AbilityQueue queue, string dieId, IReadOnlyList<string> energyDieIdsToSpend)
     {
         RequireStep(state, TurnStep.Main);
 
@@ -105,13 +137,15 @@ public static class TurnEngine
 
         die.ControllerId = state.ActivePlayerId; // rule 1.1.4 - purchaser becomes controller
         die.Zone = Zone.UsedPile;
+
+        EventBus.Fire(state, queue, new GameEvent(TriggerKind.PurchaseMade, die, state.ActivePlayerId, state.CurrentStep));
     }
 
     // Rule 2.6.3 - Field Character Dice. Fielding cost may be paid with
     // any energy type (2.6.3.2) - no type-matching requirement, unlike
     // Purchase. Sources only from the Reserve Pool, showing a character
     // face (a die must be rolled to be fielded).
-    public static void Field(GameState state, string dieId, IReadOnlyList<string> energyDieIdsToSpend)
+    public static void Field(GameState state, AbilityQueue queue, string dieId, IReadOnlyList<string> energyDieIdsToSpend)
     {
         RequireStep(state, TurnStep.Main);
 
@@ -128,40 +162,84 @@ public static class TurnEngine
         SpendEnergy(state, energyDice, cost, requiredSymbolId: null);
 
         die.Zone = Zone.FieldZone;
+
+        // Rule 2.6.3.6 - "when fielded" fires immediately upon entering
+        // the Field Zone, which is why this die is already eligible to
+        // react to its OWN fielding (Fire scans active dice, and it's
+        // active as of the line above).
+        EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieFielded, die, die.ControllerId, state.CurrentStep));
     }
 
-    // Phase 4+ territory (event bus + triggered abilities / paid Global
-    // activation) - stubs so callers get a clear, honest failure instead
-    // of silently doing nothing.
-    public static void UseGlobal(GameState state, string dieId, IReadOnlyList<string> energyDieIdsToSpend) =>
-        throw new NotImplementedException("Global abilities require the event bus and effect interpreter (Phase 4+).");
+    // Rule 2.6.5.4 - a paid Global ability (V2_PLAN.md Phase 4 task 4).
+    // abilityIndex selects which of the source die's own CardDef.Abilities
+    // entries to use (a card could in principle print more than one
+    // Global) - the caller (eventually a real API request) is expected to
+    // know which one it's invoking, same as it already must know dieId.
+    public static void UseGlobal(GameState state, AbilityQueue queue, string dieId, int abilityIndex, IReadOnlyList<string> energyDieIdsToSpend)
+    {
+        if (state.CurrentStep is not (TurnStep.Main or TurnStep.Attack))
+            throw new InvalidOperationException("Global abilities are usable during the Main Step or the Attack Step's action window.");
+
+        var die = FindDie(state, dieId);
+        if (die.ControllerId != state.ActivePlayerId || die.Zone is not (Zone.FieldZone or Zone.AttackZone))
+            throw new InvalidOperationException($"Die '{dieId}' must be your own active die to use its Global.");
+
+        var cardId = die.CardId ?? throw new InvalidOperationException($"Die '{dieId}' has no card - Sidekicks don't have Globals.");
+        var card = state.CardCatalog[cardId];
+        if (abilityIndex < 0 || abilityIndex >= card.Abilities.Count || card.Abilities[abilityIndex].Trigger != TriggerKind.Global)
+            throw new InvalidOperationException($"Card '{cardId}' has no Global ability at index {abilityIndex}.");
+
+        var ability = card.Abilities[abilityIndex];
+
+        if (ability.OncePerTurn && state.GlobalsUsedThisTurn.Contains((state.ActivePlayerId, cardId)))
+            throw new InvalidOperationException($"'{card.Name}''s Global has already been used this turn.");
+
+        var energyDice = ResolveOwnReservePoolEnergy(state, energyDieIdsToSpend);
+        var cost = QueryEngine.GetGlobalEnergyCost(state, card, ability, state.ActivePlayerId);
+        SpendEnergy(state, energyDice, cost, ability.EnergyCost?.RequiredSymbolId);
+
+        if (ability.OncePerTurn) state.GlobalsUsedThisTurn.Add((state.ActivePlayerId, cardId));
+
+        // Rule 3.1.16 - Global abilities enqueue like any other triggered
+        // ability; there's no "event" to fire (using one IS the trigger),
+        // so this enqueues directly rather than going through EventBus.
+        queue.Enqueue(die.Id, die.ControllerId, TriggerKind.Global, ability.Effect);
+    }
 
     public static void UseAction(GameState state, string dieId) =>
         throw new NotImplementedException("Action dice require the effect interpreter (Phase 5+).");
 
-    public static void EnterAttackStep(GameState state)
+    public static void EnterAttackStep(GameState state, AbilityQueue queue)
     {
         RequireStep(state, TurnStep.Main);
         state.CurrentStep = TurnStep.Attack;
+        EventBus.Fire(state, queue, new GameEvent(TriggerKind.TurnStepEntered, null, state.ActivePlayerId, TurnStep.Attack));
     }
 
     // A player may decline to attack at all, straight from the Main Step
-    // or after entering the Attack Step and choosing no attackers - either
-    // way this is the only Attack-Step action Phase 2 needs (Combat itself
-    // is Phase 7).
-    public static void SkipAttackStep(GameState state)
+    // or after entering the Attack Step and choosing no attackers.
+    // Delegates to EnterAttackStep when coming from Main so the
+    // TurnStepEntered(Attack) event fires exactly once either way, not a
+    // separate "skip" event of its own - Combat itself is Phase 7.
+    public static void SkipAttackStep(GameState state, AbilityQueue queue)
     {
-        if (state.CurrentStep is not (TurnStep.Main or TurnStep.Attack))
+        if (state.CurrentStep == TurnStep.Main)
+        {
+            EnterAttackStep(state, queue);
+        }
+        else if (state.CurrentStep != TurnStep.Attack)
+        {
             throw new InvalidOperationException($"Cannot skip the Attack Step from {state.CurrentStep}.");
-        state.CurrentStep = TurnStep.Attack;
+        }
     }
 
     // Reserve Pool dice (never spent) and Out of Play dice (spent energy)
     // sweep to the Used Pile; Field/Attack Zone dice remain in play.
-    // AppliedModifiers expire per their Duration (Phase 3 task 2 - port of
-    // v1's "AppliedModifiers cleared at Clean Up" fix, a real bug once
-    // when it was missing). Then pass the turn.
-    public static void CleanUp(GameState state)
+    // AppliedModifiers expire per their Duration (Phase 3 - port of v1's
+    // "AppliedModifiers cleared at Clean Up" fix, a real bug once when it
+    // was missing). Then pass the turn and fire TurnStepEntered(ClearAndDraw)
+    // for whoever's turn it now is.
+    public static void CleanUp(GameState state, AbilityQueue queue)
     {
         RequireStep(state, TurnStep.Attack);
 
@@ -189,8 +267,11 @@ public static class TurnEngine
                 (m.Duration == Duration.UntilYourNextTurn && m.GrantedDuringPlayerId != endingPlayerId));
         }
 
+        state.GlobalsUsedThisTurn.Clear();
         state.ActivePlayerId = state.OpponentOf(state.ActivePlayerId);
         state.CurrentStep = TurnStep.ClearAndDraw;
+
+        EventBus.Fire(state, queue, new GameEvent(TriggerKind.TurnStepEntered, null, state.ActivePlayerId, TurnStep.ClearAndDraw));
     }
 
     private static void SpendEnergy(GameState state, IReadOnlyList<DieInstance> energyDice, int amountNeeded, string? requiredSymbolId)

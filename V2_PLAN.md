@@ -1,8 +1,8 @@
 # DiceFight v2 Core — Implementation Plan
 
-**Status: Phases 0-3 complete; vocabulary FROZEN at the 2026-08-22 gate
-review (`V2_VOCABULARY.md` Part 11); Phase 4 (event bus + triggered
-abilities) is next.** Update the checkboxes in the Phase Overview as
+**Status: Phases 0-4 complete; vocabulary FROZEN at the 2026-08-22 gate
+review (`V2_VOCABULARY.md` Part 11); Phase 5 (effect template interpreter)
+is next.** Update the checkboxes in the Phase Overview as
 phases complete, and add a one-line note after any phase where reality
 diverged from this plan.
 
@@ -87,7 +87,7 @@ rather than improvising a different architecture.
 | 1 | Project scaffolding + data model | `DiceFight.V2` + `DiceFight.V2.Tests` projects; GameConfig/DieDef/CardDef records | [x] |
 | 2 | Game state, zones, turn machine | Config-driven state + turn steps, no abilities | [x] |
 | 3 | Query pipeline | Stat/cost/legality queries with modifier interception | [x] |
-| 4 | Event bus + triggered abilities | Events, subscriptions, FIFO ability queue | [ ] |
+| 4 | Event bus + triggered abilities | Events, subscriptions, FIFO ability queue | [x] |
 | 5 | Effect template interpreter | All Appendix A effect templates working | [ ] |
 | 6 | Continuous templates | All Appendix A continuous templates working | [ ] |
 | 7 | Combat | Attack/block/damage using queries + events | [ ] |
@@ -681,3 +681,41 @@ honest about the two different things being checked. `GetKeywords` is
 scoped to printed keywords only for now (no per-die "granted tags"
 storage exists yet - that's Phase 5's `GrantTag` interpreter to add,
 same as-needed pattern every other phase here has followed).
+
+**Phase 4 note (2026-08-22)**: a real design gap found via the DieFaceChanged
+test, worth flagging clearly since it's more than a test-fixture fix.
+`EventBus.Fire`'s first draft only scanned Field/Attack Zone dice as
+listener candidates ("active dice," matching every OTHER-die reactive
+trigger in the codebase) - but self-only abilities (null `Filter`, the
+common "when [this card] does X" pattern) need to fire from the exact die
+the event is about regardless of that die's zone AT THE MOMENT the event
+fires: Energize/Awaken react to a die still in the Prep Area mid-roll
+(v1's CheckEnergize/CheckAwaken have no zone gate at all, for exactly
+this reason), and a future "when I am KO'd" ability's own die will
+already have left the Field/Attack Zone by the time DieKOd fires. Fixed
+by always adding the event's own `SubjectDie` as an extra listener
+candidate alongside the normal active-dice scan, deduplicated. General,
+not specific to DieFaceChanged - would have silently broken every
+self-only reaction to an event whose subject die isn't currently active,
+which is a lot of them (KO'd/damaged reactions especially).
+
+`UseGlobal` (task 4) is fully implemented, not stubbed: validates the
+source die is active and owned, looks up the ability by index (a card
+could in principle print more than one Global), enforces `OncePerTurn`
+via the new `GameState.GlobalsUsedThisTurn` set (reset in CleanUp,
+same turn-scoped lifetime as v1's `GlobalsUsedThisTurn`), spends energy
+through the same `SpendEnergy` helper Purchase/Field use, and enqueues
+the ability - it just can't be DRAINED yet (Phase 5). `UseAction` stays
+stubbed per Phase 2's own note (needs the interpreter too, and Action-die
+mechanics haven't been touched at all yet).
+
+Event emission was wired at every real action that currently exists:
+Field (DieFielded), Purchase (PurchaseMade), ClearAndDraw (DiceDrawn),
+Roll (DieFaceChanged, per Part 1's "every face-mutation site" mandate -
+the only such site that exists so far), EnterAttackStep/SkipAttackStep/
+CleanUp (TurnStepEntered). DieKOd/DieDamaged/DieAttacks/DieBlocks/DieUsed
+have no emission site yet because no KO/damage/combat/Action-die
+mechanic exists anywhere in the codebase to emit them from - wiring them
+now would mean firing an event for something that doesn't actually
+happen, which is worse than leaving them unwired with a clear comment
+saying where they'll go (Phase 5 KO effects, Phase 7 combat).

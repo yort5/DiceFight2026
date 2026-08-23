@@ -72,6 +72,7 @@ public class TurnCycleTests
 
         // --- Setup ---
         var state = DiceFight.V2.GameSetup.NewGame(config, catalog, playerOne, playerTwo);
+        var queue = new DiceFight.V2.AbilityQueue(); // Phase 4 - enqueue-only here, nothing drains yet (Phase 5)
 
         Assert.Equal(10, playerOne.Life);
         Assert.Single(state.DiceIn("p1", Zone.Unpurchased)); // T001's one die
@@ -80,7 +81,7 @@ public class TurnCycleTests
         Assert.Equal(TurnStep.ClearAndDraw, state.CurrentStep);
 
         // --- Clear and Draw (first turn: DrawCount - 1 = 2) ---
-        DiceFight.V2.TurnEngine.ClearAndDraw(state, new Random(1));
+        DiceFight.V2.TurnEngine.ClearAndDraw(state, queue, new Random(1));
 
         Assert.Equal(2, state.DiceIn("p1", Zone.PrepArea).Count());
         Assert.Equal(2, state.DiceIn("p1", Zone.Bag).Count());
@@ -88,7 +89,7 @@ public class TurnCycleTests
 
         // --- Roll (one lands on the Fist energy face, one on a character face) ---
         var roller = new ScriptedRoller(1, 2);
-        DiceFight.V2.TurnEngine.Roll(state, roller);
+        DiceFight.V2.TurnEngine.Roll(state, queue, roller);
         DiceFight.V2.TurnEngine.FinishRoll(state);
 
         Assert.Equal(TurnStep.Main, state.CurrentStep);
@@ -99,7 +100,7 @@ public class TurnCycleTests
 
         // --- Purchase (T001 costs 1 Fist) ---
         var unpurchasedDieId = FindUnpurchasedDieId(state, "T001");
-        DiceFight.V2.TurnEngine.Purchase(state, unpurchasedDieId, [energyDie.Id]);
+        DiceFight.V2.TurnEngine.Purchase(state, queue, unpurchasedDieId, [energyDie.Id]);
 
         var purchased = state.Dice.Single(d => d.CardId == "T001");
         Assert.Equal(Zone.UsedPile, purchased.Zone);
@@ -107,16 +108,16 @@ public class TurnCycleTests
         Assert.Equal(Zone.OutOfPlay, energyDie.Zone);
 
         // --- Field (the rolled character-face pool die, free to field) ---
-        DiceFight.V2.TurnEngine.Field(state, characterDie.Id, []);
+        DiceFight.V2.TurnEngine.Field(state, queue, characterDie.Id, []);
 
         Assert.Equal(Zone.FieldZone, characterDie.Zone);
 
         // --- Attack step: skipped ---
-        DiceFight.V2.TurnEngine.SkipAttackStep(state);
+        DiceFight.V2.TurnEngine.SkipAttackStep(state, queue);
         Assert.Equal(TurnStep.Attack, state.CurrentStep);
 
         // --- Clean Up: passes the turn ---
-        DiceFight.V2.TurnEngine.CleanUp(state);
+        DiceFight.V2.TurnEngine.CleanUp(state, queue);
 
         Assert.Equal("p2", state.ActivePlayerId);
         Assert.Equal(TurnStep.ClearAndDraw, state.CurrentStep);

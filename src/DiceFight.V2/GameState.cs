@@ -43,6 +43,13 @@ public sealed class GameState
     public List<ICardCostModifier> GlobalEnergyCostModifiers { get; } = [];
     public List<ITargetingInterceptor> TargetingInterceptors { get; } = [];
 
+    // Card-text-driven once-per-turn Global limiters (V2_PLAN.md Phase 4
+    // task 4, e.g. v1's Falcon "Once during your turn") - keyed by
+    // (player, cardId) since the limit is per-controller-per-card, not
+    // global across both players. Reset in TurnEngine.CleanUp, same
+    // turn-scoped lifetime as every other "ThisTurn" tracker in v1.
+    public HashSet<(string PlayerId, string CardId)> GlobalsUsedThisTurn { get; } = [];
+
     public Player GetPlayer(string playerId) =>
         playerId == PlayerOne.Id ? PlayerOne
         : playerId == PlayerTwo.Id ? PlayerTwo

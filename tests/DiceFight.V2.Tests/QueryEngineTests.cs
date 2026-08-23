@@ -78,7 +78,7 @@ public class QueryEngineTests
         Assert.Equal(5, QueryEngine.GetAttack(state, die));
 
         state.CurrentStep = TurnStep.Attack; // CleanUp requires the Attack step
-        TurnEngine.CleanUp(state);
+        TurnEngine.CleanUp(state, new AbilityQueue());
 
         Assert.Equal(3, QueryEngine.GetAttack(state, die)); // expired
     }
@@ -93,7 +93,7 @@ public class QueryEngineTests
         die.AppliedModifiers.Add(new AppliedModifier(AttackDelta: 1, DefenseDelta: 0, FieldingCostDelta: 0, Source: "test", Duration: Duration.Permanent));
 
         state.CurrentStep = TurnStep.Attack;
-        TurnEngine.CleanUp(state);
+        TurnEngine.CleanUp(state, new AbilityQueue());
 
         Assert.Equal(4, QueryEngine.GetAttack(state, die)); // still applied
     }
@@ -111,14 +111,14 @@ public class QueryEngineTests
         // Clean Up ending p1's OWN turn - must survive (it needs to last
         // through the opponent's whole turn first).
         state.CurrentStep = TurnStep.Attack;
-        TurnEngine.CleanUp(state);
+        TurnEngine.CleanUp(state, new AbilityQueue());
         Assert.Equal("p2", state.ActivePlayerId);
         Assert.Equal(4, QueryEngine.GetAttack(state, die));
 
         // Clean Up ending p2's turn (handing control back to p1, the
         // granter) - this is "the start of your next turn," so it expires.
         state.CurrentStep = TurnStep.Attack;
-        TurnEngine.CleanUp(state);
+        TurnEngine.CleanUp(state, new AbilityQueue());
         Assert.Equal("p1", state.ActivePlayerId);
         Assert.Equal(3, QueryEngine.GetAttack(state, die));
     }
@@ -185,7 +185,7 @@ public class QueryEngineTests
         state.Dice.Add(energyDie);
         state.Dice.Add(toBuy);
 
-        TurnEngine.Purchase(state, "unpurchased", ["e1"]);
+        TurnEngine.Purchase(state, new AbilityQueue(), "unpurchased", ["e1"]);
 
         Assert.Equal(Zone.UsedPile, toBuy.Zone);
         Assert.Equal("p1", toBuy.ControllerId);

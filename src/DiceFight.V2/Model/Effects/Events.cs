@@ -25,11 +25,24 @@ public enum TriggerKind
 
 public enum FaceChangeCause { Roll, Reroll, Spin, Effect }
 
+// A shared marker so GameEvent (Phase 4's runtime type, DiceFight.V2
+// namespace) can carry any event-specific payload without a loose
+// `object?`, while still only two of the ten events actually needing one
+// (Part 1: "DieDamaged carries the damage amount; DieFaceChanged carries
+// {PriorFace, NewFace, Cause}").
+public abstract record EventPayload;
+
 // The event-specific payload for DieFaceChanged (V2_VOCABULARY.md Part 1) -
 // carries full Face payloads, not just kinds, since Energize needs to
 // check symbol count (>= 2) on the new face, not just "is it an energy
 // face." Emitted from EVERY face-mutation site - see the class remarks.
-public sealed record DieFaceChangedPayload(Face PriorFace, Face NewFace, FaceChangeCause Cause);
+public sealed record DieFaceChangedPayload(Face PriorFace, Face NewFace, FaceChangeCause Cause) : EventPayload;
+
+// DieDamaged's own payload - the amount just dealt. Nothing fires
+// DieDamaged yet (no damage-dealing mechanic exists before Phase 5's
+// DealDamage interpreter / Phase 7's combat), but the payload TYPE is
+// part of the already-frozen event design (Part 1), not new scope.
+public sealed record DamageDealtPayload(int Amount) : EventPayload;
 
 // Reactive-trigger filter - deliberately a different, smaller shape than
 // TargetFilter (it filters ONE event's subject die, not a chosen set).
