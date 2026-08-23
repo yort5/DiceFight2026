@@ -27,7 +27,21 @@ public sealed record MoveDie(TargetFilter Target, Zone ToZone) : EffectNode;
 // destination zone alone decides, no separate "rolled" flag).
 public sealed record DrawToZone(int Count, Zone ToZone, Zone FromZone = Zone.Bag) : EffectNode;
 
-public sealed record FieldDie(TargetFilter Target, bool Free, int Level = 1) : EffectNode;
+// A fielded die always ends up AT some level - and normally that level
+// is simply the one it rolled, since a die showing a character face
+// already has one. `Level` is therefore an OVERRIDE, not the source of
+// truth: null (the default) means "field it as it stands". It is named
+// only when a card overrides the rolled level (Jubilee "Rebellious
+// Nature" - "field this die for free at level 2"), and it is also the
+// fallback for ability-driven fielding of a DORMANT die straight out of
+// the Used Pile (Falcon's "field a Sidekick from your Used Pile"),
+// which has no rolled face to take a level from - such a die comes in
+// at its lowest character level.
+//
+// Corrected 2026-08-24 (user ruling): this defaulted to `int Level = 1`,
+// which silently snapped a die that rolled its level-3 face down to
+// level 1 on being fielded.
+public sealed record FieldDie(TargetFilter Target, bool Free, int? Level = null) : EffectNode;
 
 // Finding 8 - NonCharacterMoveTo/DamagePerMoved fold the v1
 // RerollAndMoveUnlessCharacter per-die multi-target pattern (5 real

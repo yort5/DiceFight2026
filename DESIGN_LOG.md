@@ -8322,3 +8322,40 @@ around:
 Verified: `dotnet build DiceFight.slnx` clean (0 warnings/errors, all
 5 projects); v2 tests 148/148 passing (9 new); v1's full suite re-run
 untouched, still 547/547.
+
+## FieldDie fields at the rolled level (2026-08-24, user ruling)
+
+The user pushed back on how I'd framed batch 2's Making the Team
+finding, and their reframing was the right one: a die being fielded
+**always has a level**, because a die showing a character face has one.
+So the level is never in question - `FieldDie.Level` is an OVERRIDE,
+not the source of truth. What I had called a vocabulary gap was really
+a wrong default plus a wrong implementation.
+
+`FieldDie.Level` is now `int?` defaulting to null ("field it as it
+stands"), named only when a card overrides the rolled level (Jubilee
+"Rebellious Nature" - "field this die for free at level 2"). The old
+`int Level = 1` silently snapped a die that rolled its level-3 face
+down to level 1; there is now a regression test for exactly that.
+
+Implementing it surfaced a third case neither of us had named. A die
+showing a rolled ENERGY face is not dormant - it has a
+CurrentFaceIndex - so MoveToZone's dormant-die default would not fire
+and it would have been fielded on an energy face. All three cases are
+now handled explicitly and all three end on a character face: rolled
+character face with no override keeps it; a named level takes that
+level's face; dormant or energy-faced takes the lowest character face.
+
+Making the Team is un-tailed and implemented, exercising Finding 8's
+OnFaceKind condition for the first time. One stated approximation
+remains, recorded as Approximate rather than left silent: "a CHARACTER
+die from your Used Pile" is expressed as `Kind: AnyDie` +
+`NoneOf: ["sidekick"]`, because a dormant die has no face to read and
+TargetFilter.Kind cannot say "character-type CARD" (CharacterDie reads
+the current face; ActionDie reads CardType, with no negation). A Basic
+Action die in the Used Pile would be offered as a choice, then always
+fail the character-face check and be Prepped.
+
+Verified: `dotnet build DiceFight.slnx` clean (0 warnings/errors, all
+5 projects); v2 tests 151/151 passing (3 new); v1's full suite re-run
+untouched, still 547/547.

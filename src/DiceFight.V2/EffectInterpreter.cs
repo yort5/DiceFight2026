@@ -377,13 +377,40 @@ public static class EffectInterpreter
             foreach (var id in ids)
             {
                 var die = FindDie(ctx.State, id);
+                // Whether it already had a level to be fielded at, read
+                // BEFORE the move (MoveToZone gives a dormant die a
+                // default face on entering an active zone).
+                var rolledCharacterFace = ctx.State.GetCurrentFace(die)?.Character is not null;
                 MoveToZone(ctx.State, die, Zone.FieldZone);
 
-                var definition = ctx.State.GetDieDefinition(die);
-                var levelFace = definition.Faces
-                    .Select((f, i) => (f, i))
-                    .FirstOrDefault(x => x.f.Character?.Level == n.Level);
-                if (levelFace.f is not null) die.CurrentFaceIndex = levelFace.i;
+                // Re-face only when the card names a level, or when the
+                // die has no character face to be fielded on. Otherwise it
+                // keeps the face it rolled - it already has a level, and
+                // that is the level it is fielded at.
+                //
+                // Three cases, and all three must end on a character face:
+                //  - rolled a character face, no override -> keep it;
+                //  - a named level -> take that level's face;
+                //  - dormant OR showing an ENERGY face -> lowest character
+                //    face. The energy-face case is why this can't just
+                //    lean on MoveToZone's dormant-die default: such a die
+                //    has a CurrentFaceIndex already, so MoveToZone leaves
+                //    it alone and it would otherwise be fielded on an
+                //    energy face.
+                if (n.Level is not null || !rolledCharacterFace)
+                {
+                    var definition = ctx.State.GetDieDefinition(die);
+                    var characterFaces = definition.Faces
+                        .Select((f, i) => (f, i))
+                        .Where(x => x.f.Character is not null)
+                        .ToList();
+                    var chosen = n.Level is { } level
+                        ? characterFaces.FirstOrDefault(x => x.f.Character!.Level == level)
+                        : default;
+                    if (chosen.f is null && characterFaces.Count > 0)
+                        chosen = characterFaces.MinBy(x => x.f.Character!.Level);
+                    if (chosen.f is not null) die.CurrentFaceIndex = chosen.i;
+                }
 
                 ctx.State.FieldedCharacterThisTurn.Add(die.ControllerId);
 

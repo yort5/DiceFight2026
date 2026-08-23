@@ -484,12 +484,65 @@ public class DpsCardsTests
     [Fact]
     public void Batch2_Tailed_Cards_Are_Vanilla()
     {
-        foreach (var card in new[] { DpsCards.MakingTheTeam, DpsCards.PhoenixPsionicMaelstrom, DpsCards.ColossusOrganicSteel })
+        foreach (var card in new[] { DpsCards.PhoenixPsionicMaelstrom, DpsCards.ColossusOrganicSteel })
         {
             Assert.False(card.IsImplemented);
             Assert.Empty(card.Abilities);
             Assert.Empty(card.Continuous);
         }
+    }
+
+    // Making the Team, both branches - and the regression for FieldDie's
+    // corrected default: a die that rolls its LEVEL 3 face must be
+    // fielded at level 3, not snapped to level 1.
+    [Fact]
+    public void MakingTheTeam_Fields_A_Rolled_Character_Die_At_The_Level_It_Rolled()
+    {
+        var state = NewGame();
+        // Ronan's die: face 0 energy, faces 1..3 are levels 1..3.
+        var dormant = new Model.DieInstance { Id = "dormant", CardId = DpsCards.RonanTheAccuserTreason.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.UsedPile, CurrentFaceIndex = null };
+        state.Dice.Add(dormant);
+        var making = Ready(state, DpsCards.MakingTheTeam, "p1", 0);
+        var queue = new AbilityQueue();
+
+        TurnEngine.UseAction(state, queue, making.Id);
+        Drain(state, queue, rollIndex: 3); // rolls its level-3 face
+
+        Assert.Equal(Zone.FieldZone, dormant.Zone);
+        Assert.Equal(3, state.GetCurrentFace(dormant)!.Character!.Level); // NOT snapped to 1
+    }
+
+    [Fact]
+    public void MakingTheTeam_Preps_A_Die_That_Rolls_A_Non_Character_Face()
+    {
+        var state = NewGame();
+        var dormant = new Model.DieInstance { Id = "dormant", CardId = DpsCards.RonanTheAccuserTreason.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.UsedPile, CurrentFaceIndex = null };
+        state.Dice.Add(dormant);
+        var making = Ready(state, DpsCards.MakingTheTeam, "p1", 0);
+        var queue = new AbilityQueue();
+
+        TurnEngine.UseAction(state, queue, making.Id);
+        Drain(state, queue, rollIndex: 0); // face 0 is the energy face
+
+        Assert.Equal(Zone.PrepArea, dormant.Zone);
+    }
+
+    // FieldDie's override path still works - Jubilee-shaped "field this
+    // die at level 2" overrides whatever it happens to be showing.
+    [Fact]
+    public void FieldDie_With_An_Explicit_Level_Still_Overrides_The_Rolled_Face()
+    {
+        var state = NewGame();
+        var die = Ready(state, DpsCards.RonanTheAccuserTreason, "p1", 3); // showing level 3
+        var ctx = new EffectContext
+        {
+            State = state, Queue = new AbilityQueue(), ControllerId = "p1",
+            Trigger = Model.Effects.TriggerKind.Global, Roller = new FixedRoller(0), Random = new Random(1),
+        };
+
+        EffectInterpreter.Execute(new FieldDie(new TargetFilter(Ownership: TargetOwnership.Own, Kind: TargetKind.CharacterDie, Zones: [Zone.ReservePool]), Free: true, Level: 2), ctx);
+
+        Assert.Equal(2, state.GetCurrentFace(die)!.Character!.Level);
     }
 
     // The remaining batch-1 tail entry, pinned inert rather than silently

@@ -452,19 +452,34 @@ public static class DpsCards
 
     // --- Batch 2's tails (see V2_TAIL_POLICY.md for each) ---
 
-    // "Field it for free" must field the die ON THE FACE IT JUST ROLLED.
-    // FieldDie always forces a Level (defaulting to 1), and has no
-    // keep-the-current-face mode. MoveDie WOULD preserve the face but
-    // does not fire DieFielded, so it is not the same thing - Mutation's
-    // own text ("this does not trigger when fielded effects") is the
-    // proof that the distinction is real and load-bearing.
+    // Finding 8's OnFaceKind condition, first real user - and the card
+    // that corrected FieldDie's default (user ruling, 2026-08-24): a die
+    // is fielded AT THE LEVEL IT ROLLED, so FieldDie names no level here
+    // and the rolled face stands.
+    //
+    // One stated approximation: "a character die from your Used Pile"
+    // means a die of a CHARACTER-type card, but a dormant die has no
+    // face to read and TargetFilter's Kind cannot say "character card"
+    // (CharacterDie reads the current face; ActionDie reads CardType,
+    // with no negation). `NoneOf: ["sidekick"]` excludes pool dice but
+    // still admits a Basic Action die, which would be offered as a
+    // choice and then always fail the character-face check and be
+    // Prepped. Flagged in V2_TAIL_POLICY.md as Approximate rather than
+    // left silent.
     public static readonly CardDef MakingTheTeam = new(
         Id: "DPS007", Name: "Making the Team", Subtitle: "Basic Action", Set: "DPS", CardType: CardType.BasicAction,
         PurchaseCost: 3, EnergySymbolId: null,
         Die: MigrationDice.Action("DPS007Die"),
         DieLimit: 3, Affiliations: [], Keywords: [],
         RawText: "Roll a character die from your Used Pile. If it rolls a character face, field it for free. Otherwise, Prep it.",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [new TriggeredAbility(TriggerKind.DieUsed, new Sequence([
+            new Reroll(new TargetFilter(Kind: TargetKind.AnyDie, Ownership: TargetOwnership.Own, Zones: [Zone.UsedPile],
+                Tags: new TagQuery(NoneOf: ["sidekick"]), BindAs: "rolled")),
+            new Conditional(new OnFaceKind(FaceKind.CharacterFace, "rolled"),
+                Then: new FieldDie(new TargetFilter(Bound: "rolled"), Free: true),
+                Else: new MoveDie(new TargetFilter(Bound: "rolled"), Zone.PrepArea)),
+        ]))],
+        Continuous: []);
 
     // Part 3 #24 expected bindings to close this, and they close half of
     // it: BindAs lets the second clause reference the SAME die the first
