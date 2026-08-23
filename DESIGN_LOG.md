@@ -7833,3 +7833,81 @@ Verified: `dotnet build DiceFight.slnx` clean (0 warnings/errors, all
 untouched, still 547/547. Phase 7 checkbox ticked; plan status header
 updated - Phase 8 (Dice Masters as a game definition / card migration)
 is next.
+
+## Phase 8 — Dice Masters as a game definition (tasks 1-2, 2026-08-23)
+
+Task 1: `DiceFightClassicConfig` (`src/DiceFight.V2/Data/DiceFightClassicConfig.cs`)
+- the current physical game as one `GameConfig`. Sourced from v1's own
+real constants, not re-derived: 4 energy symbols (Fist/Bolt/Mask/
+Shield) + Wild, the Sidekick die's real 6 faces (one Level 1 character
+face at 1A/1D plus five distinct energy faces - DESIGN_LOG's own
+"corrected Sidekick die faces" entry, not v1's placeholder-roller
+shortcut), draw 4, life 20, the 8+2 team shape (rule 2.1.3), and the
+keyword id list actually printed on v1's migrated cards. Includes the
+Direction-C-readiness test the task asks for: a variant config (draw
+6, two split Sidekick-equivalent pools) constructible and playable
+with zero engine changes.
+
+Task 2: migrated the two curated v1 teams (`src/DiceFight.V2/Data/CardCatalog.cs`,
+20 cards ported from `SampleCards.cs`'s own `TeamA/TeamBCharacterIds`/
+`BasicActionIds`) verbatim - names, subtitles, text, stats, keywords,
+including v1's OWN placeholder stats where v1 itself never sourced
+real ones for these specific cards. This task doesn't upgrade v1's
+data quality, only ports what's actually there. Real per-die face
+LAYOUT isn't recoverable from v1's data model at all (v1 synthesizes a
+face shape at roll time via PlaceholderDiceRoller; v2 needs it stored
+per-die) - adopted one documented convention (one energy face + one
+character face per v1 level) rather than guessing per card.
+
+8 of the 20 fit the frozen vocabulary cleanly and are fully
+implemented with real-firing-path tests: Apocalypse (Overcrush
+keyword only), HarleyQuinn (blank text), CaptainMarvel (StatAura -
+team-wide +1A/+1D), Dazzler (DealDamage at a Mask-tagged target,
+Finding 4's tag-unification confirmed useful immediately), Shocking
+Grasp (the vocabulary's own MayPay motivating example, now a real
+migrated card), Franklin's Galactus (blank text), God Emperor Doom
+(DealDamage + Reroll), Groot (DrawToZone). The other 12 are tailed to
+the new `V2_TAIL_POLICY.md` (Appendix C format), all Policy: Ask - a
+lower fit rate than the DPS set's own ~82%, but for a known, expected
+reason: the curated rosters were built by v1's own author specifically
+to showcase Call Out/Infiltrate/Tag Out/Range/Intimidate for the web
+client's Attack Step UI, and Phase 7 deliberately didn't port any of
+those five keywords (only Overcrush and Fast made the cut) - every
+showcase card for them was always going to tail here regardless of
+migration effort.
+
+`TurnEngine.UseAction` had been a stub since Phase 2 ("Action dice
+require the effect interpreter") - implemented for real this task,
+since Shocking Grasp (the very card the vocabulary's own MayPay
+example is built around) needed an actual way to fire
+`TriggerKind.DieUsed`. Minimal, faithful to rule 2.6.4.1's default
+(Out of Play after use, DieUsed fires, a card's own WhenUsed ability
+can move the die elsewhere once the queue drains); Epic/Continuous
+Basic Action mechanics (rule 1.2.3/2.6.4.2) are explicitly not
+modeled - `CardType` has no Epic/Continuous distinction, and nothing
+migrated so far actually needs it (Cosmic Cube, the one curated Epic
+card, is tailed anyway for its own `SwapLife` gap).
+
+**A documented Phase 5 simplification had its first real consequence
+found this task, not a new bug**: Casket of Ancient Winters' full
+effect tree (Ko 3 opposing character dice, move 3 Reserve Pool dice to
+Bag, move 3 Prep Area dice to Used Pile) is individually expressible
+in every template, but `EffectInterpreter` resolves each `TargetFilter`
+LIVE rather than against a pre-execution snapshot (a known, named
+simplification from Phase 5 - the class remarks literally cite "Casket
+of Ancient Winters" as the example rule 3.2.5 exists to prevent). The
+Ko clause's own KO'd dice land in the Prep Area (rule 1.5.3.2) before
+the later Prep-Area-targeting `MoveDie` clause runs, diluting its live
+candidate pool from 3 to 6 and raising an unintended `PendingChoice`
+instead of auto-resolving. Confirmed by an actual failing test before
+being tailed - not guessed. The real fix (pre-resolve every
+`TargetFilter` once, upfront, same as v1's own rule-3.2.5 handling)
+remains out of scope for now; noted in both `CardCatalog.cs` and
+`V2_TAIL_POLICY.md`.
+
+Verified: `dotnet build DiceFight.slnx` clean (0 warnings/errors, all
+5 projects); v2 tests 115/115 passing (13 new); v1's full suite re-run
+untouched, still 547/547. Phase 8 tasks 1-2 done; task 3 (the two
+design spikes - ability-blanking, live-value Amounts) needs the user's
+explicit sign-off before any implementation, per ground rule 2 and the
+plan's own task 3 instructions - not started this session.

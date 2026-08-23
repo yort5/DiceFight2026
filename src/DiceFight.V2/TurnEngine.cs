@@ -218,8 +218,36 @@ public static class TurnEngine
         queue.Enqueue(die.Id, die.ControllerId, TriggerKind.Global, ability.Effect);
     }
 
-    public static void UseAction(GameState state, string dieId) =>
-        throw new NotImplementedException("Action dice require the effect interpreter (Phase 5+).");
+    // Rule 2.6.4.1 (Phase 8 - the first Basic Action cards migrated needed
+    // a real way to be "used" at all). Default destination for a used die
+    // is Out of Play; a card's own WhenUsed ability can move it elsewhere
+    // afterward once the queue drains (Shocking Grasp's own "you may Prep
+    // this die," V2_VOCABULARY.md's own MayPay motivating example - its
+    // MoveDie(Self, PrepArea) runs after this returns and overrides the
+    // default). Epic/Continuous Basic Action mechanics (rule 1.2.3,
+    // 2.6.4.2 - a once-per-turn limiter, returning to the card instead of
+    // Out of Play, a Continuous die fielded instead of resolved
+    // immediately) are NOT modeled - CardType has no Epic/Continuous
+    // distinction in the closed vocabulary; not exercised by anything
+    // migrated so far (Cosmic Cube "Switch life totals," the one curated-
+    // team Epic card, is already tailed for its own SwapLife gap).
+    public static void UseAction(GameState state, AbilityQueue queue, string dieId)
+    {
+        if (state.CurrentStep is not (TurnStep.Main or TurnStep.Attack))
+            throw new InvalidOperationException("Action dice are usable during the Main Step or the Attack Step's action window.");
+
+        var die = FindDie(state, dieId);
+        if (die.ControllerId != state.ActivePlayerId || die.Zone != Zone.ReservePool)
+            throw new InvalidOperationException($"Die '{dieId}' must be your own Reserve Pool die to use as an Action die.");
+
+        var cardId = die.CardId ?? throw new InvalidOperationException($"Die '{dieId}' has no card - only card dice can be used as Action dice.");
+        var card = state.CardCatalog[cardId];
+        if (card.CardType != CardType.BasicAction)
+            throw new InvalidOperationException($"Card '{cardId}' is not a Basic Action card.");
+
+        die.Zone = Zone.OutOfPlay;
+        EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieUsed, die, die.ControllerId, state.CurrentStep));
+    }
 
     public static void EnterAttackStep(GameState state, AbilityQueue queue)
     {

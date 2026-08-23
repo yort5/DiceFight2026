@@ -2,7 +2,10 @@
 
 **Status: Phases 0-7 complete; vocabulary FROZEN at the 2026-08-22 gate
 review (`V2_VOCABULARY.md` Part 11); Phase 8 (Dice Masters as a game
-definition / card migration) is next.** Update the checkboxes in the Phase Overview as
+definition / card migration) IN PROGRESS - tasks 1-2 done (2026-08-23),
+task 3 (the two design spikes) needs user sign-off before
+implementation, tasks 4-5 (DPS catalog batches, invariant tests) not
+started.** Update the checkboxes in the Phase Overview as
 phases complete, and add a one-line note after any phase where reality
 diverged from this plan.
 
@@ -924,3 +927,57 @@ Verified: `dotnet build DiceFight.slnx` clean (0 warnings/errors, all
 untouched, still 547/547. Phase 7 checkbox ticked; plan status header
 updated - Phase 8 (Dice Masters as a game definition / card migration)
 is next.
+
+**Phase 8 progress note (2026-08-23, tasks 1-2)**: `DiceFightClassicConfig`
+(`src/DiceFight.V2/Data/DiceFightClassicConfig.cs`) built from v1's own
+real constants (Fist/Bolt/Mask/Shield/Wild, the Sidekick die's real 6
+faces per DESIGN_LOG's "corrected Sidekick die faces" entry, draw 4,
+life 20, the 8+2 team shape) plus the Direction-C variant-config test
+the task asks for.
+
+Migrated the two curated v1 teams (20 cards: `src/DiceFight.V2/Data/CardCatalog.cs`,
+ported from `SampleCards.cs`'s `TeamA/TeamBCharacterIds`/`BasicActionIds`)
+verbatim on name/subtitle/text/stats/keywords, including v1's OWN
+placeholder stats where v1 itself never sourced real ones - this task
+doesn't upgrade v1's data quality, only ports it. Real per-die face
+LAYOUT isn't in v1's data model at all (v1 synthesizes faces at roll
+time; v2 needs them stored) - documented, single convention adopted:
+one energy face (1 pip, printed symbol) + one character face per v1
+level, flagged once in `CardCatalog.cs` rather than re-flagged per card.
+
+8/20 fit the frozen vocabulary cleanly and are fully implemented+tested
+(Apocalypse, HarleyQuinn, CaptainMarvel, Dazzler, ShockingGrasp,
+FranklinsGalactus, GodEmperorDoom, Groot); 12/20 are tailed to
+`V2_TAIL_POLICY.md` (all Ask). This is a lower fit rate than the DPS
+set's own ~82% for a known, non-alarming reason: the curated rosters
+were deliberately built to showcase one live example each of Call Out/
+Infiltrate/Tag Out/Range/Intimidate - and Phase 7 deliberately didn't
+port any of those five keywords, so every showcase card for them was
+always going to tail.
+
+`TurnEngine.UseAction` (a stub since Phase 2) had to be implemented for
+real this task - the first Basic Action cards migrated (Shocking Grasp)
+needed an actual way to fire `TriggerKind.DieUsed` at all. Minimal,
+faithful port of rule 2.6.4.1's default (Out of Play after use); Epic/
+Continuous Basic Action mechanics (rule 1.2.3/2.6.4.2) are NOT modeled -
+`CardType` has no Epic/Continuous distinction yet, not exercised by
+anything that actually needs it (Cosmic Cube, the one curated Epic
+card, is already tailed for its own `SwapLife` gap).
+
+**A real EffectInterpreter gap, already documented as a Phase 5
+simplification, was confirmed by an actual migrated card** - not a new
+finding, but its first real consequence: Casket of Ancient Winters'
+own effect tree resolves each `TargetFilter` LIVE, so its Ko clause's
+own KO'd dice (landing in the Prep Area, rule 1.5.3.2) dilute the
+later Prep-Area-targeting `MoveDie` clause's candidate pool from 3 to
+6, raising an unintended `PendingChoice` instead of auto-resolving.
+Left vanilla (tailed) rather than silently producing the wrong
+behavior; the real fix (pre-execution-snapshot resolution, rule 3.2.5)
+is unchanged in scope from Phase 5's own note.
+
+Verified: `dotnet build DiceFight.slnx` clean (0 warnings/errors, all
+5 projects); v2 tests 115/115 passing (13 new: 4 config, 9 catalog);
+v1's full suite re-run untouched, still 547/547. Tasks 1-2 checked off
+above; task 3 (design spikes) needs the user's sign-off before any
+implementation - see `V2_TAIL_POLICY.md`'s own entries for the
+concrete gaps a spike (or a small additional sign-off ask) could close.
