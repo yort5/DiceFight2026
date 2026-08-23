@@ -1,8 +1,8 @@
 # DiceFight v2 Core — Implementation Plan
 
-**Status: Phase 0 complete; vocabulary FROZEN at the 2026-08-22 gate
-review (`V2_VOCABULARY.md` Part 11); Phase 1 is next.** Update the
-checkboxes in the Phase Overview as phases complete, and add a
+**Status: Phases 0-2 complete; vocabulary FROZEN at the 2026-08-22 gate
+review (`V2_VOCABULARY.md` Part 11); Phase 3 (query pipeline) is next.**
+Update the checkboxes in the Phase Overview as phases complete, and add a
 one-line note after any phase where reality diverged from this plan.
 
 **Phase 0 outcome (2026-08-22, full arc)**: validated against 20
@@ -84,7 +84,7 @@ rather than improvising a different architecture.
 |---|---|---|---|
 | 0 | Vocabulary validation on paper | `V2_VOCABULARY.md` + 20 cards re-expressed | [x] |
 | 1 | Project scaffolding + data model | `DiceFight.V2` + `DiceFight.V2.Tests` projects; GameConfig/DieDef/CardDef records | [x] |
-| 2 | Game state, zones, turn machine | Config-driven state + turn steps, no abilities | [ ] |
+| 2 | Game state, zones, turn machine | Config-driven state + turn steps, no abilities | [x] |
 | 3 | Query pipeline | Stat/cost/legality queries with modifier interception | [ ] |
 | 4 | Event bus + triggered abilities | Events, subscriptions, FIFO ability queue | [ ] |
 | 5 | Effect template interpreter | All Appendix A effect templates working | [ ] |
@@ -636,3 +636,24 @@ free) is deferred to whenever CardDef JSON loading is actually needed
 (Phase 8's card catalog), not built speculatively now. The task's own
 round-trip test is scoped to `GameConfig` only, which doesn't touch
 polymorphic types, so this doesn't block Phase 1's acceptance bar.
+
+**Phase 2 note (2026-08-22)**: found and corrected a real plan erratum
+while implementing - "the same nine [zones] as v1" undercounted v1's real
+Zone enum by one. v1 also has `Unpurchased`, where EVERY card's dice
+(Character and Basic Action alike) sit until bought - not keyword-gated
+the way v1's own `Intimidated` zone is, so it's load-bearing for Purchase
+itself, unlike Intimidated (correctly left out, deferred to Phase 7).
+Corrected in place (`Zone` is now 10 values) rather than treated as a
+sign-off question - same category as the purchase-cost-floor erratum:
+the plan's own stated intent was "same as v1," so this is a faithful-port
+fix, not a new design decision. Documented in `Zone.cs`'s own comment.
+
+DieInstance ended up slimmer than v1's (no Status/Level/EnergyKind/
+EnergyAmount/BurstStars) because v2 dice carry real per-die face data
+from Phase 1 - CurrentFaceIndex plus a DieDefinition lookup replaces all
+of those as derived facts, which v1 couldn't do (no real face data
+existed - see PlaceholderDiceRoller's own remarks). Also added a
+DieInstance.PoolDieId (alongside CardId) rather than reusing v1's
+"CardId null = Sidekick" shape outright, since Direction C wants more
+than one interchangeable pool-die type expressible, not just one
+implicit "Sidekick."

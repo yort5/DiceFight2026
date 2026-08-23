@@ -7431,3 +7431,66 @@ Verified: `dotnet build DiceFight.slnx` clean (0 warnings, 0 errors,
 all 5 projects incl. v1's three); `dotnet test` on the new project
 7/7 passing; v1's full suite re-run untouched, still 547/547 -
 ground rule 1 (never modify v1) holds. Phase 1 checkbox ticked.
+
+## Status update: v2 Phase 2 complete — game state, zones, turn machine
+
+Executed Phase 2 of `V2_PLAN.md` directly, right after Phase 1 in the
+same session (user: "Go phase 2"). Config-driven setup + turn-step
+skeleton, no abilities.
+
+Built: `DieInstance` (slimmer than v1's - no Status/Level/EnergyKind/
+EnergyAmount/BurstStars, since v2 dice carry real per-die face data
+from Phase 1; CurrentFaceIndex + a DieDefinition lookup derives all of
+that on demand instead - a genuine improvement the new data model
+enables, not a simplified port, since v1 never had real face data to
+look up in the first place); `Player` (trimmed hard to Phase 2's
+actual needs, deliberately not porting v1's ability-hook bookkeeping
+fields nothing reads yet); `GameState` (Config/CardCatalog/dice list/
+turn tracking, plus the Finding-13 counter store keyed by (player,
+cardId, counterName) - the only card-scoped state); `IDiceRoller` +
+`RandomDiceRoller` (much simpler than v1's PlaceholderDiceRoller,
+since that class only existed to procedurally guess a face shape from
+card type when no real face table existed - v2 just picks one of a
+die's own declared faces); `GameSetup.NewGame` (seeds the basic dice
+pool per BasicDicePoolEntry - this is where "8 identical Sidekicks vs
+two 4-die sets" becomes pure data - plus each team card's dice into
+Unpurchased); `TurnEngine` (ClearAndDraw, Roll/FinishRoll split per
+v1's own reasoning, Purchase, Field, UseGlobal/UseAction stubs,
+EnterAttackStep/SkipAttackStep, CleanUp).
+
+Found and corrected a real plan erratum while implementing: "the same
+nine zones as v1" undercounted by one. v1 also has Zone.Unpurchased,
+where EVERY card's dice sit until bought - not keyword-gated the way
+v1's own Intimidated zone is (correctly left out, deferred to Phase
+7), so omitting it would have made Purchase itself unrepresentable.
+Corrected in place (Zone is now 10 values), same category as the
+purchase-cost-floor erratum - the plan's own stated intent was
+"same as v1," so this is a faithful-port fix, not a new design
+decision needing sign-off.
+
+Documented deliberate simplifications clearly in TurnEngine's own
+class comment rather than silently: no purchase/fielding cost
+modifiers yet (Phase 3), no ability triggers fire yet (Phase 4/5/6),
+SpendEnergy doesn't implement partial-spend "spin down" (v1 rule
+2.6.1.5/2.6.1.6 - an overspent die is simply consumed whole), no
+DiceFromBag/DiceFromPrep staging routing yet (the interrupt window
+they exist for needs an ability layer), no Bag-refill-from-Used-Pile
+reshuffle yet.
+
+One real bug caught and fixed while writing the acceptance test: a
+free (cost-0) purchase/field requiring a specific energy symbol type
+would have wrongly rejected even a zero-die offer, since the
+type-matching check didn't short-circuit when nothing needs to be
+paid. Fixed (amountNeeded == 0 bypasses the type check) - a real
+latent bug regardless of whether this exact test hit it, since a
+future Phase 3+ discount can legitimately bring a cost to 0.
+
+Wrote the scripted acceptance test (`TurnCycleTests.cs`) against a
+deliberately tiny, made-up GameConfig (not the real Dice Masters
+config - that's Phase 8): setup -> draw -> roll -> purchase -> field
+-> attack step skipped -> cleanup -> next turn, all passing.
+
+Verified: `dotnet build DiceFight.slnx` clean (0 warnings/errors, all
+5 projects); new tests 8/8 passing; v1's full suite re-run untouched,
+still 547/547. Phase 2 checkbox ticked; plan status header updated
+(Phase 3, query pipeline, is next).
