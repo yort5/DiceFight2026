@@ -162,9 +162,13 @@ public static class EffectInterpreter
     // this reuses the target-choice pipeline instead of a bespoke bool.
     private static void ExecuteMayPay(MayPay n, EffectContext ctx, Action onComplete)
     {
-        var standInId = ctx.Bindings.GetValueOrDefault("self")
-            ?? throw new InvalidOperationException("MayPay needs a 'self' binding to stand in as its PendingChoice candidate.");
         var answeredBy = n.AnsweredBy == TargetOwnership.Own ? ctx.ControllerId : ctx.State.OpponentOf(ctx.ControllerId);
+        // The stand-in is just a token for a yes/no answer, not a real
+        // target - the ability's own source die where there is one, and
+        // otherwise the answering player's id. The fallback matters for
+        // card-scoped Globals (rule 2.6.5.2), which belong to a card
+        // rather than to any die and so have no "self" binding at all.
+        var standInId = ctx.Bindings.GetValueOrDefault("self") ?? answeredBy;
 
         ctx.State.PendingChoice = new PendingChoice
         {

@@ -211,11 +211,11 @@ public class EventBusTests
         state.Dice.Add(energyDie);
         var queue = new AbilityQueue();
 
-        TurnEngine.UseGlobal(state, queue, die.Id, abilityIndex: 0, ["e1"]);
+        TurnEngine.UseGlobal(state, queue, card.Id, "p1", abilityIndex: 0, ["e1"]);
 
         Assert.Equal(Zone.OutOfPlay, energyDie.Zone); // energy spent
         Assert.Single(queue.Pending);
         Assert.Throws<InvalidOperationException>(() =>
-            TurnEngine.UseGlobal(state, queue, die.Id, abilityIndex: 0, []));
+            TurnEngine.UseGlobal(state, queue, card.Id, "p1", abilityIndex: 0, []));
     }
 }

@@ -97,10 +97,10 @@ Cards evaluated while implementing live-value Amounts. Rogue "Mrs. X"
 
 | CardId | Name | What it needs | Policy |
 |---|---|---|---|
-| DPS001 | Archnemesis | **Two** things. (a) Its WhenUsed half needs a bind-only step: both dice must be bound before either takes damage, but a `TargetFilter` only binds as a side effect of the node using it. A no-op `ModifyStat(AtkDelta: 0)` works as a bind step but is an obscure idiom; proposed instead is a `Bind(TargetFilter)` template. (b) Its Global sits on a Basic Action card, and v2 can't use those at all - see below | Ask |
+| DPS001 | Archnemesis | Global half now **implemented** (card-scoped Globals + Spike B's live `SetDefense`). Its WhenUsed half still needs a bind-only step: both dice must be bound before either takes damage, but a `TargetFilter` only binds as a side effect of the node using it. A no-op `ModifyStat(AtkDelta: 0)` works as a bind step but is an obscure idiom to propagate through card data; proposed instead is a `Bind(TargetFilter)` template | Ask |
 | DPS107 | Dark Phoenix (Destructive Force) | `EventValue` now supplies "that much damage", but "when an **opposing** character die damages Dark Phoenix" needs damage-SOURCE visibility, which no event payload carries. Same family as the payment-source gap the user already designated alter-or-skip | Ask |
 
-### Standing decision: Globals are card-scoped, not die-scoped
+### RESOLVED: Globals are card-scoped, not die-scoped (fixed 2026-08-24)
 
 Rule 2.6.5.2 - a Global ability is usable by **card ownership alone**,
 without any die of that card being active - and the TURN SUMMARY states
@@ -114,7 +114,13 @@ player. Consequences: a Global printed on a Basic Action card can never
 be used (no such die is ever fielded), and the inactive player can never
 use any Global.
 
-A pre-existing Phase 4 gap rather than anything a spike introduced, and
-it is a behavior change to a working signature, so it is flagged rather
-than folded into an unrelated pass - a natural candidate for its own,
-alongside the three TURN SUMMARY fidelity gaps.
+Fixed. `UseGlobal(state, queue, cardId, playerId, abilityIndex, energy)`
+is now card-scoped and player-parameterised, with rule 1.5.8.5's
+inactive-player rule (spent energy to the Used Pile, not Out of Play)
+implemented alongside it. Archnemesis's Global is migrated and works
+with no die of the card anywhere in play; a second test covers the
+inactive player using a Global.
+
+`MayPay` gained a fallback stand-in for its yes/no choice token (the
+answering player's id) since a card-scoped Global has no "self" die to
+use as one.

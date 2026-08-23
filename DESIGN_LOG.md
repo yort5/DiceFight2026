@@ -8203,3 +8203,45 @@ value GAINS life, so the opponent healed. "Deal that much damage" is
 Verified: `dotnet build DiceFight.slnx` clean (0 warnings/errors, all
 5 projects); v2 tests 137/137 passing (5 new); v1's full suite re-run
 untouched, still 547/547.
+
+## Card-scoped Globals (2026-08-24)
+
+Fixes the second Spike B finding, as its own pass. `TurnEngine.UseGlobal`
+was die-scoped since Phase 4 - it required an active fielded die owned
+by the ACTIVE player. Rule 2.6.5.2 says a Global is usable by card
+ownership alone with no die of that card active, and the TURN SUMMARY
+says plainly that both players may use Globals (inactive after priority
+passes). v1 had this right all along: `UseGlobalAbility` keys on
+`(cardId, playerId)`.
+
+New signature: `UseGlobal(state, queue, cardId, playerId, abilityIndex,
+energy)`. Catalog membership is the "is this card in this game" test,
+matching v1 exactly; the stricter team-roster reading is noted as
+belonging at the Phase 9 API layer, where rosters are authoritative.
+
+Rule 1.5.8.5 came along with it and is now implemented: the INACTIVE
+player's spent energy goes to the Used Pile rather than Out of Play,
+which is an active-player-turn concept. Only reachable at all now that
+the inactive player can use Globals - `SpendEnergy` gained a
+destination-zone parameter (defaulting to Out of Play, so
+Purchase/Field/Action-die are unchanged).
+
+One knock-on the change forced, worth recording because it is a genuine
+consequence rather than a workaround: a card-scoped Global has no
+source die, so there is no "self" binding. `MayPay` had been throwing
+without one, since it uses the source die as the stand-in candidate for
+its yes/no PendingChoice. It now falls back to the answering player's
+id - the stand-in is only ever a token for "yes or no", never a real
+target, so a player id serves as well as a die id.
+
+Archnemesis (DPS001) is migrated: its Global was doubly blocked until
+today - unreachable because it sits on a Basic Action card (no die of
+it is ever fielded), and inexpressible until Spike B gave SetDefense a
+live Amount. Its WhenUsed half remains tailed for the bind-step reason.
+Two new tests: the Global working with no die of its card in play, and
+the inactive player using a Global with their energy landing in the
+Used Pile.
+
+Verified: `dotnet build DiceFight.slnx` clean (0 warnings/errors, all
+5 projects); v2 tests 139/139 passing (2 new); v1's full suite re-run
+untouched, still 547/547.

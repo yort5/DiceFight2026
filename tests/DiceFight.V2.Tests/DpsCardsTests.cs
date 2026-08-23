@@ -202,11 +202,11 @@ public class DpsCardsTests
     public void Magnetos_Global_Draws_To_Prep_Only_While_The_Prep_Area_Is_Empty()
     {
         var state = NewGame();
-        var magneto = Active(state, DpsCards.MagnetoFounderOfTheBrotherhood, "p1");
         Sidekick(state, "p1", Zone.ReservePool, 4, "mask-energy"); // face 4 = Mask
         var queue = new AbilityQueue();
 
-        TurnEngine.UseGlobal(state, queue, magneto.Id, abilityIndex: 1, ["mask-energy"]);
+        // Card-scoped (rule 2.6.5.2) - no Magneto die need be active.
+        TurnEngine.UseGlobal(state, queue, DpsCards.MagnetoFounderOfTheBrotherhood.Id, "p1", abilityIndex: 1, ["mask-energy"]);
         Drain(state, queue);
 
         Assert.Single(state.DiceIn("p1", Zone.PrepArea));
@@ -284,6 +284,47 @@ public class DpsCardsTests
         var pending = Assert.Single(state.PendingPurchaseModifiers);
         Assert.Equal(-1, pending.Delta);
         Assert.Equal(CardType.BasicAction, pending.CardKind);
+    }
+
+    // Rule 2.6.5.2, end to end: Archnemesis's Global lives on a BASIC
+    // ACTION card, so no die of it is ever fielded - it was unreachable
+    // until Globals became card-scoped. Its effect is Spike B's
+    // SetDefense: StatOf(target, Attack).
+    [Fact]
+    public void Archnemesis_Global_Works_From_A_Basic_Action_Card_With_No_Die_In_Play()
+    {
+        var state = NewGame();
+        var target = Active(state, DpsCards.RonanTheAccuserTreason, "p1", level: 1, id: "target"); // 5A/5D
+        Sidekick(state, "p1", Zone.ReservePool, 5, "shield-energy"); // face 5 = Shield
+        var queue = new AbilityQueue();
+        Assert.DoesNotContain(state.Dice, d => d.CardId == DpsCards.Archnemesis.Id); // nothing of this card is in play
+
+        TurnEngine.UseGlobal(state, queue, DpsCards.Archnemesis.Id, "p1", abilityIndex: 0, ["shield-energy"]);
+        Drain(state, queue);
+        Answer(state, target.Id);
+
+        Assert.Equal(5, QueryEngine.GetDefense(state, target)); // D set to its own A
+    }
+
+    // The TURN SUMMARY's Main Step: "Both players can use Global
+    // Abilities (Inactive player after priority passes)." And rule
+    // 1.5.8.5 - the inactive player's spent energy goes to the Used Pile
+    // rather than Out of Play, which is an active-turn concept.
+    [Fact]
+    public void The_Inactive_Player_Can_Use_A_Global_And_Their_Energy_Goes_To_The_Used_Pile()
+    {
+        var state = NewGame();
+        Assert.Equal("p1", state.ActivePlayerId);
+        var target = Active(state, DpsCards.RonanTheAccuserTreason, "p1", level: 1, id: "target");
+        var energy = Sidekick(state, "p2", Zone.ReservePool, 5, "p2-shield"); // the INACTIVE player's energy
+        var queue = new AbilityQueue();
+
+        TurnEngine.UseGlobal(state, queue, DpsCards.Archnemesis.Id, "p2", abilityIndex: 0, ["p2-shield"]);
+        Drain(state, queue);
+        Answer(state, target.Id);
+
+        Assert.Equal(Zone.UsedPile, energy.Zone); // rule 1.5.8.5, not Out of Play
+        Assert.Equal(5, QueryEngine.GetDefense(state, target));
     }
 
     // The remaining batch-1 tail entry, pinned inert rather than silently

@@ -274,11 +274,37 @@ public static class DpsCards
             ])))],
         Continuous: []);
 
+    // Both halves were blocked until 2026-08-24. The Global is now
+    // usable because Globals became card-scoped (rule 2.6.5.2) - it sits
+    // on a Basic Action card, so no die of it is ever fielded and the
+    // old die-scoped UseGlobal could never reach it - and it is
+    // expressible because Spike B gave SetDefense a live Amount.
+    //
+    // The WhenUsed half stays off: "target character die you control and
+    // target opposing character die deal damage to each other equal to
+    // their A" needs BOTH dice bound before EITHER takes damage, and a
+    // TargetFilter only binds as a side effect of the node that uses it.
+    // See V2_TAIL_POLICY.md - a `Bind(TargetFilter)` template would
+    // close it. IsImplemented stays false until then, matching v1's own
+    // "independent ability slots, card still not fully implemented"
+    // convention.
+    public static readonly CardDef Archnemesis = new(
+        Id: "DPS001", Name: "Archnemesis", Subtitle: "Basic Action", Set: "DPS", CardType: CardType.BasicAction,
+        PurchaseCost: 4, EnergySymbolId: null,
+        Die: MigrationDice.Action("DPS001Die"),
+        DieLimit: 3, Affiliations: [], Keywords: [],
+        RawText: "Target character die you control and target opposing character die deal damage to each other equal to their A. Global: Pay Shield. Target character die has D equal to it's A (until end of turn).",
+        Abilities: [new TriggeredAbility(TriggerKind.Global,
+            new ModifyStat(new TargetFilter(Kind: TargetKind.CharacterDie, BindAs: "t"),
+                SetDefense: new StatOf("t", StatKind.Attack)),
+            EnergyCost: new EnergyCost(1, "Shield"))],
+        Continuous: [], IsImplemented: false);
+
     public static IReadOnlyList<CardDef> All =>
     [
         PowerBolt, Rally, RonanTheAccuserTreason, StormCloudCover, PsylockeTelepath,
         MasterMoldTargetingMutants, MasterMoldUntoldElectronicExpertise, MagnetoFounderOfTheBrotherhood,
         CyclopsFirstClass, JubileeXMenFieldLeader, CorsairCriminalRecord, ColossusPiotr,
-        DarkPhoenixEnemyOfTheShiar, MagikWielderOfTheSoulsword, DeathbirdTreacherous, RogueMrsX,
+        DarkPhoenixEnemyOfTheShiar, MagikWielderOfTheSoulsword, DeathbirdTreacherous, RogueMrsX, Archnemesis,
     ];
 }

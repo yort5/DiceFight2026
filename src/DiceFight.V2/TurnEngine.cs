@@ -195,40 +195,59 @@ public static class TurnEngine
         EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieFielded, die, die.ControllerId, state.CurrentStepId));
     }
 
-    // Rule 2.6.5.4 - a paid Global ability (V2_PLAN.md Phase 4 task 4).
-    // abilityIndex selects which of the source die's own CardDef.Abilities
-    // entries to use (a card could in principle print more than one
-    // Global) - the caller (eventually a real API request) is expected to
-    // know which one it's invoking, same as it already must know dieId.
-    public static void UseGlobal(GameState state, AbilityQueue queue, string dieId, int abilityIndex, IReadOnlyList<string> energyDieIdsToSpend)
+    // Rule 2.6.5.2/2.6.5.4 - a paid Global ability. Addressed by CARD,
+    // not by a die: a Global is usable by card ownership alone, with no
+    // die of that card active anywhere (v1's UseGlobalAbility keys on
+    // (cardId, playerId) for exactly this reason). And per the TURN
+    // SUMMARY's Main Step - "Both players can use Global Abilities
+    // (Inactive player after priority passes)" - `playerId` is whoever
+    // is using it, NOT necessarily the active player.
+    //
+    // Corrected 2026-08-24: Phase 4 built this die-scoped, which made a
+    // Global printed on a Basic Action card unusable (no such die is
+    // ever fielded - Archnemesis DPS001) and locked the inactive player
+    // out of every Global.
+    //
+    // abilityIndex selects among a card's own Global entries (a card
+    // could print more than one); the caller is expected to know which
+    // it is invoking.
+    public static void UseGlobal(GameState state, AbilityQueue queue, string cardId, string playerId, int abilityIndex, IReadOnlyList<string> energyDieIdsToSpend)
     {
         if (state.CurrentStep is not (TurnStep.Main or TurnStep.Attack))
             throw new InvalidOperationException("Global abilities are usable during the Main Step or the Attack Step's action window.");
 
-        var die = FindDie(state, dieId);
-        if (die.ControllerId != state.ActivePlayerId || die.Zone is not (Zone.FieldZone or Zone.AttackZone))
-            throw new InvalidOperationException($"Die '{dieId}' must be your own active die to use its Global.");
-
-        var cardId = die.CardId ?? throw new InvalidOperationException($"Die '{dieId}' has no card - Sidekicks don't have Globals.");
-        var card = state.CardCatalog[cardId];
+        // Catalog membership is the "is this card in this game" test,
+        // matching v1, which checks the same thing and no more. The
+        // stricter reading - the card must be on one of the two team
+        // rosters - belongs at the API layer (Phase 9), where rosters
+        // are authoritative and a catalog may legitimately be broader.
+        if (!state.CardCatalog.TryGetValue(cardId, out var card))
+            throw new InvalidOperationException($"Unknown card '{cardId}'.");
         if (abilityIndex < 0 || abilityIndex >= card.Abilities.Count || card.Abilities[abilityIndex].Trigger != TriggerKind.Global)
             throw new InvalidOperationException($"Card '{cardId}' has no Global ability at index {abilityIndex}.");
 
         var ability = card.Abilities[abilityIndex];
 
-        if (ability.OncePerTurn && state.GlobalsUsedThisTurn.Contains((state.ActivePlayerId, cardId)))
+        if (ability.OncePerTurn && state.GlobalsUsedThisTurn.Contains((playerId, cardId)))
             throw new InvalidOperationException($"'{card.Name}''s Global has already been used this turn.");
 
-        var energyDice = ResolveOwnReservePoolEnergy(state, energyDieIdsToSpend);
-        var cost = QueryEngine.GetGlobalEnergyCost(state, card, ability, state.ActivePlayerId);
-        SpendEnergy(state, energyDice, cost, ability.EnergyCost?.RequiredSymbolId);
+        var energyDice = ResolveReservePoolEnergy(state, playerId, energyDieIdsToSpend);
+        var cost = QueryEngine.GetGlobalEnergyCost(state, card, ability, playerId);
+        // Rule 1.5.8.5 - the INACTIVE player's spent energy goes to the
+        // Used Pile rather than Out of Play, since Out of Play is an
+        // active-player-turn concept. Only reachable now that the
+        // inactive player can use Globals at all.
+        SpendEnergy(state, energyDice, cost, ability.EnergyCost?.RequiredSymbolId,
+            playerId == state.ActivePlayerId ? Zone.OutOfPlay : Zone.UsedPile);
 
-        if (ability.OncePerTurn) state.GlobalsUsedThisTurn.Add((state.ActivePlayerId, cardId));
+        if (ability.OncePerTurn) state.GlobalsUsedThisTurn.Add((playerId, cardId));
 
-        // Rule 3.1.16 - Global abilities enqueue like any other triggered
-        // ability; there's no "event" to fire (using one IS the trigger),
-        // so this enqueues directly rather than going through EventBus.
-        queue.Enqueue(die.Id, die.ControllerId, TriggerKind.Global, ability.Effect);
+        // Rule 3.1.16 - Globals enqueue like any other triggered ability;
+        // using one IS the trigger, so there's no event to fire. Source
+        // die id is null: the ability belongs to the card, not to any
+        // die, so there is no "self" to bind (see MayPay's own remarks on
+        // its stand-in candidate for the card-scoped case).
+        queue.Enqueue(null, playerId, TriggerKind.Global, ability.Effect);
     }
 
     // Rule 2.6.4.1 (Phase 8 - the first Basic Action cards migrated needed
@@ -377,7 +396,7 @@ public static class TurnEngine
         EventBus.Fire(state, queue, new GameEvent(TriggerKind.TurnStepEntered, null, state.ActivePlayerId, StepIds.StartOfTurn));
     }
 
-    private static void SpendEnergy(GameState state, IReadOnlyList<DieInstance> energyDice, int amountNeeded, string? requiredSymbolId)
+    private static void SpendEnergy(GameState state, IReadOnlyList<DieInstance> energyDice, int amountNeeded, string? requiredSymbolId, Zone spentZone = Zone.OutOfPlay)
     {
         var total = 0;
         // amountNeeded == 0 bypasses the type-matching requirement too -
@@ -404,18 +423,24 @@ public static class TurnEngine
 
         foreach (var die in energyDice)
         {
-            die.Zone = Zone.OutOfPlay; // face index left intact - see class remarks
+            die.Zone = spentZone; // face index left intact - see class remarks
         }
     }
 
-    private static List<DieInstance> ResolveOwnReservePoolEnergy(GameState state, IReadOnlyList<string> dieIds)
+    private static List<DieInstance> ResolveOwnReservePoolEnergy(GameState state, IReadOnlyList<string> dieIds) =>
+        ResolveReservePoolEnergy(state, state.ActivePlayerId, dieIds);
+
+    // Player-parameterised because Globals can be paid for by either
+    // player (rule 2.6.5.2), unlike purchasing/fielding/Action dice,
+    // which are active-player-only.
+    private static List<DieInstance> ResolveReservePoolEnergy(GameState state, string playerId, IReadOnlyList<string> dieIds)
     {
         var dice = new List<DieInstance>();
         foreach (var id in dieIds)
         {
             var die = FindDie(state, id);
-            if (die.ControllerId != state.ActivePlayerId || die.Zone != Zone.ReservePool)
-                throw new InvalidOperationException($"Die '{id}' is not your own Reserve Pool energy.");
+            if (die.ControllerId != playerId || die.Zone != Zone.ReservePool)
+                throw new InvalidOperationException($"Die '{id}' is not {playerId}'s own Reserve Pool energy.");
             dice.Add(die);
         }
         return dice;
