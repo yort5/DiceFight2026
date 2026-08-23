@@ -2094,3 +2094,132 @@ sign-off rather than during implementation.
 Also outstanding and unrelated to either spike, from batch 1:
 `EventFilter.Step` (see `V2_TAIL_POLICY.md`) — a one-field addition
 blocking every end-of-turn/start-of-turn card in the catalog.
+
+---
+
+## Part 13 — Spike C: the timing model. PROPOSAL AWAITING SIGN-OFF (2026-08-24)
+
+**Not adopted.** Supersedes the `EventFilter.Step` parameter proposal
+(see `V2_TAIL_POLICY.md`, kept there marked superseded).
+
+Design direction set by the user: **one flat, ordered, extensible list
+of steps.** Abilities that need their own timing window get their own
+entry in that list rather than nesting inside a broader step — e.g.
+"Resolve any Range abilities" becomes a peer step after "Select
+attackers / resolve effects due to attacking", skipped entirely when
+no Range dice are active, rather than being handled *inside* the
+resolve-effects step.
+
+### Why this is right, not just workable
+
+1. **The rulebook itself is a flat ordered list.** The starter
+   rulebook's TURN SUMMARY presents "Any abilities that take place *at
+   the start of your turn*" as a **peer entry preceding Clear and
+   Draw**, not as a property of it. So "before X" needs no before/at/
+   after modelling at all — it is simply its own entry. That removes
+   the most complicated part of the earlier proposal.
+2. **v1 already converged here under pressure.** v1's `AttackSubStep`
+   carries `RangeWindow`, `InfiltrateWindow`, and `TagOutWindow` as
+   first-class peer values, with `NextSubStepAfterBlockers` skipping
+   whichever have nothing to offer. The design has survived contact
+   with real cards once already.
+3. **It is the only shape that makes timing addressable.** An ability
+   naming its window is just naming a value in the list — which is
+   what the frozen `EventFilter` needs in order to discriminate at all.
+4. **Direction C.** If the list is *data*, a variant game reorders,
+   removes, or inserts steps with zero engine change. That is a
+   materially bigger Direction-C win than the config work done so far.
+
+### The rulebook's own step list (starter rulebook TURN SUMMARY)
+
+```
+At the start of your turn        (abilities only)
+Clear and Draw    - move energy from Reserve Pool to Used Pile
+                  - draw 4 (refill bag from Used Pile if needed)
+Roll and Reroll   - roll drawn dice + Prep Area
+                  - reroll any of them, all at once
+Main              - field / use action dice / purchase / Globals (both players)
+                  - at END of step: move unfielded character dice to Used Pile
+Attack            - select attackers; resolve effects due to attacking
+                  - assign blockers; resolve effects due to blocking
+                  - Action/Global window (active, then inactive)
+                  - assign and resolve damage; unblocked attackers Out of Play
+                  - resolve effects due to damage or KO
+                  - return remaining Attack Zone dice to Field Zone
+Cleanup           - end all effects, clear all damage
+                  - unused Action dice to Used Pile
+                  - end turn; Out of Play to Used Pile
+```
+
+### Proposed shape
+
+- **`TurnStepDef { Id, Phase, NeedsInput }`**, and the game's step list
+  is an ordered `TurnStepDef[]` on `GameConfig` — same "engine knows
+  behavior by Id, config declares which exist" contract keywords
+  already use (Phase 7's note). `TurnStep` stops being a 5-value enum.
+- **`Phase`** is the grouping label (ClearAndDraw / Main / Attack /
+  Cleanup). Flattening the *order* loses containment, which real code
+  needs — `UseGlobal` allows "Main or Attack", `CleanUp` requires
+  Attack. Flat ordering **plus** a grouping tag keeps both.
+- **`NeedsInput`** distinguishes the two genuinely different kinds of
+  entry the summary contains: **decision windows** where a player
+  chooses (Main, Action/Global window, select attackers, Range /
+  Infiltrate / Tag Out) versus **engine procedures** that simply run
+  (move energy to Used Pile, return dice to Field Zone, clear damage).
+  Both are steps; only the first can pause. Phase 9's API needs this
+  distinction to know when it must wait for a client.
+- **Skip predicates are engine code keyed to keyword id** — "skip
+  RangeWindow unless a Range die is active" — matching Phase 7's
+  existing stated model and v1's `hasRangeTrigger` / `hasInfiltrateChoice`
+  / `hasTagOutChoice`.
+- **Abilities address a window by naming its step id**, via the
+  existing `TurnStepEntered` event plus a step discriminator on
+  `EventFilter`. That field is still needed — it is just now naming a
+  rich list rather than a 5-value enum.
+
+### Guardrail (recommend adopting as a ground rule)
+
+**A step may be added for a KEYWORD or for rulebook structure. Never
+for a single card's text.** The keyword set is closed and small (~24
+declared); cards are unbounded. A step-per-card would reproduce
+precisely the v1 failure this whole rewrite exists to escape — 39
+one-per-card `Grants*` flags with zero reuse (ARCHITECTURE_REVIEW.md's
+central finding).
+
+### Concrete payoff beyond unblocking cards
+
+`Fast` is currently implemented as a two-wave loop inside
+`CombatEngine.AssignCombatDamage`, selected by a `bool fast`
+parameter. Under this model it becomes two ordinary steps — "assign
+and resolve Fast damage", then "assign and resolve normal damage" —
+which is both a closer reading of the rulebook (its single "assign and
+resolve damage" line simply happens twice) and a plainer implementation
+than a boolean-parameterised private method. Range / Infiltrate /
+Tag Out / Call Out / Intimidate all become expressible for the first
+time, which un-tails five of the currently-tailed keyword cards.
+
+### Fidelity gaps this spike would also close
+
+Reading the TURN SUMMARY against the current engine surfaced three
+real differences, none previously logged:
+
+1. **Main Step has no end-of-step sweep.** The rulebook moves unfielded
+   character dice to the Used Pile at the end of Main; v2 leaves them
+   in the Reserve Pool until Clean Up.
+2. **Reserve Pool clears at the wrong time.** The rulebook (and v1,
+   which follows it — "rule 2.3.1") clears energy from the Reserve
+   Pool during *Clear and Draw*, i.e. at the start of your next turn.
+   v2's `CleanUp` sweeps it at end of turn instead. Same eventual
+   destination, different observable window — which matters precisely
+   for "at the start of your turn" abilities.
+3. **The Attack Step is missing three of its six entries** — "resolve
+   effects due to attacking" and "due to blocking" are not distinct
+   windows, and "return remaining Attack Zone dice to the Field Zone"
+   is folded inside `AssignCombatDamage` rather than being its own step.
+
+### Sizing
+
+Larger than Spike B, smaller than Spike A, but it is **load-bearing for
+both the tailed combat keywords and the Phase 9 API shape** (the client
+needs to know what step it is in and whether it must respond). Doing it
+before Phase 9 avoids designing that API twice.
