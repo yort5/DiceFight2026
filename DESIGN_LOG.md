@@ -7494,3 +7494,62 @@ Verified: `dotnet build DiceFight.slnx` clean (0 warnings/errors, all
 5 projects); new tests 8/8 passing; v1's full suite re-run untouched,
 still 547/547. Phase 2 checkbox ticked; plan status header updated
 (Phase 3, query pipeline, is next).
+
+## Status update: v2 Phase 3 complete — query pipeline
+
+Executed Phase 3 of `V2_PLAN.md` right after Phase 2, same session
+("Onward"). The interceptable-query spine that replaces v1's 39
+one-per-card `Grants*` flags.
+
+Built: `IDieStatModifier`/`ICardCostModifier` (split from the plan's
+single `IStatModifier` shape - die-scoped queries like Attack/Defense/
+FieldingCost and card+payer-scoped ones like PurchaseCost/
+GlobalEnergyCost genuinely check different things, so one interface
+didn't fit both without being dishonest about it; same "dumb, flat
+delta, no layers" spirit either way) and `ITargetingInterceptor`
+(boolean-AND, a different shape from the delta-sum ones). Five
+per-game-instance registries on `GameState` (not static - concurrent
+games must never share modifier state) plus `TargetingInterceptors`,
+all empty until Phase 6. All 7 frozen queries implemented in
+`QueryEngine`: GetAttack/GetDefense (base face value + per-die
+AppliedModifiers + continuous registry), GetPurchaseCost (floor 1,
+per the already-corrected erratum), GetFieldingCost (floor 0),
+GetKeywords (printed only for now - deliberately not adding per-die
+"granted tags" storage before Phase 5's GrantTag interpreter has a
+reason to populate it), CanBeTargeted, GetGlobalEnergyCost. The
+reserved 8th query (AbilitiesActive) was NOT implemented, per the
+plan's own explicit instruction not to build it early.
+
+AppliedModifier gained Duration (using the already-frozen 3-value
+enum - EndOfTurn/UntilYourNextTurn/Permanent - rather than the
+2-value one this task's own older wording literally says, since
+Finding 14 added the third value after that text was written),
+FieldingCostDelta (needed once GetFieldingCost had a per-die
+component to sum), and GrantedDuringPlayerId (only meaningful for
+UntilYourNextTurn). Worked out and implemented the actual expiry rule
+for UntilYourNextTurn from the card-text precedent ("...until the
+start of your next turn"): it must survive the Clean Up ending the
+GRANTER's own turn (needs to last through the opponent's whole turn
+first) and expire at the Clean Up that hands control back to the
+granter - ported v1's own "AppliedModifiers cleared at Clean Up" bug
+fix for the EndOfTurn/Permanent cases, and derived the third case
+fresh since v1 never had it.
+
+Routed Phase 2's TurnEngine.Purchase/Field through
+QueryEngine.GetPurchaseCost/GetFieldingCost instead of reading
+CardDef.PurchaseCost/Face.FieldingCost directly - discounts/
+surcharges will apply automatically once Phase 6 populates the
+registries, no further TurnEngine changes needed then.
+
+Tests prove exactly the three acceptance criteria (a modifier changes
+a stat and expires at Clean Up - tested for all three Duration
+values, not just EndOfTurn; a registered purchase-cost modifier
+changes what Purchase actually charges, not just what the query
+returns in isolation; empty registries reproduce Phase 2's base
+values unchanged) plus light coverage of GetKeywords/CanBeTargeted
+for completeness.
+
+Verified: `dotnet build DiceFight.slnx` clean (0 warnings/errors, all
+5 projects); new tests 17/17 passing (9 new); v1's full suite re-run
+untouched, still 547/547. Phase 3 checkbox ticked; plan status header
+updated (Phase 4, event bus + triggered abilities, is next).

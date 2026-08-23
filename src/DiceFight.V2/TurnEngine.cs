@@ -1,4 +1,5 @@
 using DiceFight.V2.Model;
+using DiceFight.V2.Model.Effects;
 
 namespace DiceFight.V2;
 
@@ -12,8 +13,11 @@ namespace DiceFight.V2;
 //
 // Deliberate simplifications, all real gaps to close in later phases, not
 // oversights:
-//  - No purchase-cost/fielding-cost modifiers (discounts, surcharges) -
-//    Phase 3's query pipeline (GetPurchaseCost/GetFieldingCost).
+//  - Purchase/Field now route their cost lookups through QueryEngine
+//    (Phase 3 task 3), so discounts/surcharges apply automatically once
+//    Phase 6 starts registering continuous modifiers - but nothing
+//    populates those registries yet, so today's effective costs still
+//    equal the printed ones.
 //  - No "when fielded"/Global/Action triggers fire - Phase 4 (events) and
 //    Phase 5/6 (effect/continuous interpreters).
 //  - SpendEnergy doesn't implement partial-spend "spin down to the
@@ -96,7 +100,8 @@ public static class TurnEngine
             throw new InvalidOperationException($"Die '{dieId}' belongs to your opponent's team and isn't a Basic Action.");
 
         var energyDice = ResolveOwnReservePoolEnergy(state, energyDieIdsToSpend);
-        SpendEnergy(state, energyDice, card.PurchaseCost, card.EnergySymbolId);
+        var cost = QueryEngine.GetPurchaseCost(state, card, state.ActivePlayerId);
+        SpendEnergy(state, energyDice, cost, card.EnergySymbolId);
 
         die.ControllerId = state.ActivePlayerId; // rule 1.1.4 - purchaser becomes controller
         die.Zone = Zone.UsedPile;
@@ -115,11 +120,12 @@ public static class TurnEngine
             throw new InvalidOperationException($"Die '{dieId}' cannot be fielded from its current state.");
 
         var face = state.GetCurrentFace(die);
-        if (face?.Character is not { } characterFace)
+        if (face?.Character is null)
             throw new InvalidOperationException($"Die '{dieId}' is not on a character face.");
 
         var energyDice = ResolveOwnReservePoolEnergy(state, energyDieIdsToSpend);
-        SpendEnergy(state, energyDice, characterFace.FieldingCost, requiredSymbolId: null);
+        var cost = QueryEngine.GetFieldingCost(state, die);
+        SpendEnergy(state, energyDice, cost, requiredSymbolId: null);
 
         die.Zone = Zone.FieldZone;
     }
@@ -151,11 +157,15 @@ public static class TurnEngine
     }
 
     // Reserve Pool dice (never spent) and Out of Play dice (spent energy)
-    // sweep to the Used Pile; Field/Attack Zone dice remain in play. Then
-    // pass the turn.
+    // sweep to the Used Pile; Field/Attack Zone dice remain in play.
+    // AppliedModifiers expire per their Duration (Phase 3 task 2 - port of
+    // v1's "AppliedModifiers cleared at Clean Up" fix, a real bug once
+    // when it was missing). Then pass the turn.
     public static void CleanUp(GameState state)
     {
         RequireStep(state, TurnStep.Attack);
+
+        var endingPlayerId = state.ActivePlayerId;
 
         foreach (var player in new[] { state.PlayerOne, state.PlayerTwo })
         {
@@ -164,6 +174,19 @@ public static class TurnEngine
                 die.Zone = Zone.UsedPile;
                 die.CurrentFaceIndex = null;
             }
+        }
+
+        foreach (var die in state.Dice)
+        {
+            // EndOfTurn always expires here. UntilYourNextTurn survives one
+            // MORE Clean Up (the granter's opponent's turn) and expires at
+            // the Clean Up that hands control back to the granter - i.e.
+            // exactly "gone by the start of your next turn" (see
+            // V2_VOCABULARY.md Part 1's Duration note). Permanent never
+            // expires on its own.
+            die.AppliedModifiers.RemoveAll(m =>
+                m.Duration == Duration.EndOfTurn ||
+                (m.Duration == Duration.UntilYourNextTurn && m.GrantedDuringPlayerId != endingPlayerId));
         }
 
         state.ActivePlayerId = state.OpponentOf(state.ActivePlayerId);

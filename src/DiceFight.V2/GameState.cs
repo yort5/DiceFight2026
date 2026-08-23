@@ -29,6 +29,20 @@ public sealed class GameState
     // instead of one dictionary per counter kind).
     public Dictionary<(string PlayerId, string CardId, string CounterName), int> Counters { get; } = [];
 
+    // The continuous-modifier registries QueryEngine reads (V2_PLAN.md
+    // Phase 3 task 1) - empty until Phase 6's continuous templates start
+    // registering into them. Per-game-instance (not static) so concurrent
+    // games never share modifier state. Five separate lists rather than
+    // one, since IDieStatModifier/ICardCostModifier genuinely check
+    // different things (a die vs. a card+payer) - see QueryEngine's own
+    // remarks.
+    public List<IDieStatModifier> AttackModifiers { get; } = [];
+    public List<IDieStatModifier> DefenseModifiers { get; } = [];
+    public List<IDieStatModifier> FieldingCostModifiers { get; } = [];
+    public List<ICardCostModifier> PurchaseCostModifiers { get; } = [];
+    public List<ICardCostModifier> GlobalEnergyCostModifiers { get; } = [];
+    public List<ITargetingInterceptor> TargetingInterceptors { get; } = [];
+
     public Player GetPlayer(string playerId) =>
         playerId == PlayerOne.Id ? PlayerOne
         : playerId == PlayerTwo.Id ? PlayerTwo

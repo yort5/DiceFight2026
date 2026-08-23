@@ -1,9 +1,10 @@
 # DiceFight v2 Core — Implementation Plan
 
-**Status: Phases 0-2 complete; vocabulary FROZEN at the 2026-08-22 gate
-review (`V2_VOCABULARY.md` Part 11); Phase 3 (query pipeline) is next.**
-Update the checkboxes in the Phase Overview as phases complete, and add a
-one-line note after any phase where reality diverged from this plan.
+**Status: Phases 0-3 complete; vocabulary FROZEN at the 2026-08-22 gate
+review (`V2_VOCABULARY.md` Part 11); Phase 4 (event bus + triggered
+abilities) is next.** Update the checkboxes in the Phase Overview as
+phases complete, and add a one-line note after any phase where reality
+diverged from this plan.
 
 **Phase 0 outcome (2026-08-22, full arc)**: validated against 20
 cards, expanded to 60, then against the community "Orange Ban" list,
@@ -85,7 +86,7 @@ rather than improvising a different architecture.
 | 0 | Vocabulary validation on paper | `V2_VOCABULARY.md` + 20 cards re-expressed | [x] |
 | 1 | Project scaffolding + data model | `DiceFight.V2` + `DiceFight.V2.Tests` projects; GameConfig/DieDef/CardDef records | [x] |
 | 2 | Game state, zones, turn machine | Config-driven state + turn steps, no abilities | [x] |
-| 3 | Query pipeline | Stat/cost/legality queries with modifier interception | [ ] |
+| 3 | Query pipeline | Stat/cost/legality queries with modifier interception | [x] |
 | 4 | Event bus + triggered abilities | Events, subscriptions, FIFO ability queue | [ ] |
 | 5 | Effect template interpreter | All Appendix A effect templates working | [ ] |
 | 6 | Continuous templates | All Appendix A continuous templates working | [ ] |
@@ -657,3 +658,26 @@ DieInstance.PoolDieId (alongside CardId) rather than reusing v1's
 "CardId null = Sidekick" shape outright, since Direction C wants more
 than one interchangeable pool-die type expressible, not just one
 implicit "Sidekick."
+
+**Phase 3 note (2026-08-22)**: task 2's literal text says "Duration
+(EndOfTurn | Permanent)" - written before Finding 14 added
+`UntilYourNextTurn` to the frozen `Duration` enum (Phase 1 already built
+the correct 3-value type, per Part 1). Implemented CleanUp expiry for all
+three: EndOfTurn always clears; Permanent never clears on its own;
+UntilYourNextTurn needed one new small field (`AppliedModifier.
+GrantedDuringPlayerId`) and a derived rule - it survives the Clean Up
+ending the granter's OWN turn (needs to last through the opponent's
+whole turn), and expires at the Clean Up that hands control back to the
+granter (exactly "gone by the start of your next turn"). Not a new
+erratum - just using the already-current frozen type instead of the
+stale echo in this task's own older wording.
+
+Query design notes: `IStatModifier`'s single shape from the plan's own
+text didn't quite fit both die-scoped queries (Attack/Defense/
+FieldingCost) and card+payer-scoped ones (PurchaseCost/GlobalEnergyCost)
+at once, so it split into two interfaces (`IDieStatModifier`,
+`ICardCostModifier`) - same "dumb, flat delta, no layers" spirit, just
+honest about the two different things being checked. `GetKeywords` is
+scoped to printed keywords only for now (no per-die "granted tags"
+storage exists yet - that's Phase 5's `GrantTag` interpreter to add,
+same as-needed pattern every other phase here has followed).

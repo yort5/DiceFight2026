@@ -1,12 +1,22 @@
+using DiceFight.V2.Model.Effects;
+
 namespace DiceFight.V2.Model;
 
-// A running attack/defense modifier, ported from v1's proven shape
-// (Modifier(AttackDelta, DefenseDelta, Source)). The list starts empty and
-// nothing populates or consumes it yet (V2_PLAN.md Phase 2 task 1) -
-// Phase 3's query pipeline is where Duration/expiry and actual
-// interception land; this is just the storage shape reserved now so
-// DieInstance doesn't need reshaping later.
-public sealed record AppliedModifier(int AttackDelta, int DefenseDelta, string Source);
+// A one-shot applied modifier - Phase 2 reserved the storage shape;
+// Phase 3 fills in Duration/expiry (V2_PLAN.md Phase 3 task 2) and the
+// query pipeline that reads it. FieldingCostDelta was added alongside
+// Attack/Defense once QueryEngine.GetFieldingCost needed a per-die
+// component to sum, same "add it when a real consumer needs it" rule
+// every other phase in this rewrite has followed. GrantedDuringPlayerId
+// is only meaningful for Duration.UntilYourNextTurn (see TurnEngine.
+// CleanUp's own expiry remarks) - null for EndOfTurn/Permanent.
+public sealed record AppliedModifier(
+    int AttackDelta,
+    int DefenseDelta,
+    int FieldingCostDelta,
+    string Source,
+    Duration Duration,
+    string? GrantedDuringPlayerId = null);
 
 // A physical die in play. Exactly one of CardId/PoolDieId is set: CardId
 // for a card-owned die (Character/BasicAction/Token), PoolDieId (a
