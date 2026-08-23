@@ -7769,3 +7769,67 @@ Verified: `dotnet build DiceFight.slnx` clean (0 warnings/errors, all
 5 projects); v2 tests 83/83 passing (13 new); v1's full suite re-run
 untouched, still 547/547. Phase 6 checkbox ticked; plan status header
 updated - Phase 7 (combat) is next.
+
+## Phase 7 — Combat (2026-08-23)
+
+Implemented the core Attack Step loop (`CombatEngine.cs`,
+`CombatAssignment.cs`, `Model/AttackSubStep.cs`): declare attackers ->
+declare blockers -> action/global window -> assign damage -> KO
+resolution, "once blocked always blocked," unblocked-damage-to-player,
+and both keyword behaviors the plan named explicitly (Overcrush, Fast)
+keyed off `QueryEngine.GetKeywords`. Every stat read goes through
+QueryEngine (a continuous StatAura now provably affects combat attack
+values), every KO/damage goes through EffectInterpreter's own choke
+points, and every restriction goes through CombatFlags (Phase 5) and
+CombatRules (Phase 6) - both got their first real consumer here.
+Deliberately not ported: Range/Infiltrate/Tag Out/Energy Drain/Deadly/
+Call Out/Obscure/Regenerate/Retaliation and every card-specific
+Grants* combat hook from v1 - none are CombatFlag/CombatRule-shaped in
+the closed vocabulary; they go to V2_TAIL_POLICY.md if Phase 8 needs
+them.
+
+**Found and fixed a real sequencing bug while porting the rulebook's
+own Fast worked example** (a "Fast attacker KOs its blocker before the
+blocker can retaliate" scenario) - not anticipated in the design.
+Phase 5's `EffectInterpreter.ApplyDamage` marks damage and resolves KO
+in one atomic call, correct for ability damage (rule 3.2.2, one
+instance at a time) but wrong for combat: rule 2.7.6.1 requires an
+entire wave's damage to land on BOTH sides before either side's KO is
+decided, so a naive "apply then immediately KO" call let one side's
+lethal hit silently cancel the other side's own damage in the same
+wave (two ordinary non-Fast dice that should die together were instead
+resolving as "attacker survives, blocker doesn't," found via a failing
+`Fast_NeitherSideHasIt_SameMatchupKillsBothInstead` test). Fixed by
+splitting `ApplyDamage` into `MarkDamage` (interception + DieDamaged,
+no KO) and `TryResolveKO` (threshold check + KoDie), both now public;
+ability callers still get the atomic `ApplyDamage` wrapper, while
+CombatEngine calls MarkDamage for every hit in a wave first and only
+then runs TryResolveKO across everyone still in the Attack Zone -
+exactly the two-pass shape v1's own DieStats.ApplyDamage/TryResolveKO
+split already used, which this project should have recognized sooner
+given it had already ported that same file's reasoning once before.
+
+Also closed two latent gaps in TurnEngine.CleanUp found while wiring
+this: Field Zone survivors never had their Damage cleared (rule
+2.8.1), and dice swept from Reserve Pool/Out of Play to the Used Pile
+never had Damage/GrantedTags/CombatFlags cleared either (same
+leaving-active-play reasoning EffectInterpreter.MoveToZone already
+applies) - both silent since Phase 5 introduced Damage, now fixed.
+
+Deliberate deviation from v1: AssignCombatDamage does NOT auto-advance
+CurrentStep to CleanUp (v1 does) - the caller calls TurnEngine.CleanUp
+explicitly, same as the skip-combat path, keeping CleanUp's own
+RequireStep(Attack) contract identical either way.
+
+Tests (`CombatEngineTests.cs`) port v1's acceptance scenarios
+(unblocked attacker, blocked survivor, incomplete-split rejection,
+"once blocked always blocked" wasting damage without Overcrush,
+Overcrush's three shapes, all four Fast worked-example variants
+verbatim), plus KO-fires-through-the-real-event-bus, a StatAura
+affecting combat attack, and CombatRule/CombatFlag enforcement.
+
+Verified: `dotnet build DiceFight.slnx` clean (0 warnings/errors, all
+5 projects); v2 tests 102/102 passing (19 new); v1's full suite re-run
+untouched, still 547/547. Phase 7 checkbox ticked; plan status header
+updated - Phase 8 (Dice Masters as a game definition / card migration)
+is next.

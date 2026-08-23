@@ -176,7 +176,7 @@ public static class EffectInterpreter
             }
             else
             {
-                foreach (var id in targets) ApplyDamage(ctx, id, amount);
+                foreach (var id in targets) ApplyDamage(ctx.State, ctx.Queue, DamageSource.Ability, id, amount);
                 onComplete();
             }
         });
@@ -202,51 +202,81 @@ public static class EffectInterpreter
             MaxCount = 1,
             Resolve = chosen =>
             {
-                ApplyDamage(ctx, chosen[0], 1);
+                ApplyDamage(ctx.State, ctx.Queue, DamageSource.Ability, chosen[0], 1);
                 DistributeDamage(ctx, targets, remainingAmount - 1, onComplete);
             },
         };
     }
 
-    // The single choke point every damage instance funnels through
-    // (matching v1's own DieStats.ApplyDamage precedent) - fires
-    // DieDamaged, then checks the KO threshold (rule ~1.5: damage marked
-    // >= current Defense) and KOs immediately if it's met, since ability
-    // damage resolves one instance at a time (rule 3.2.2), unlike
-    // simultaneous combat damage (Phase 7's own concern).
-    // Phase 6 extension - walks GameState.DamageInterceptors (DamageModifier's
-    // registry) before marking damage. Source is always Ability here (no
-    // Combat damage source exists before Phase 7). PreventNonCombat
-    // blocks the instance outright; multipliers apply before flat
-    // reductions (V2_VOCABULARY.md Part 1/11's fixed ordering rule);
-    // RedirectToSelf, if present, changes who actually takes the
+    // Marks damage (interception + DieDamaged) WITHOUT resolving KO -
+    // split out from ApplyDamage in Phase 7 because combat damage is
+    // simultaneous within a wave (rule 2.7.6.1: "simultaneous KO of
+    // anything at/over its defense among whoever just took damage this
+    // wave") while ability damage resolves one instance at a time (rule
+    // 3.2.2). CombatEngine calls this directly for BOTH directions of an
+    // engagement before resolving either side's KO, so a lethal hit in
+    // one direction can't stop the other die from still landing its own
+    // damage back first - exactly the rulebook's own Fast worked example
+    // (see CombatEngineTests) needs, and exactly what a single "mark AND
+    // immediately KO" call would get wrong. Returns the actual recipient
+    // (post-redirect) for the caller to run TryResolveKO against - null
+    // if nothing was actually marked (player target, prevented, or the
+    // amount reduced to 0).
+    //
+    // Walks GameState.DamageInterceptors (DamageModifier's registry):
+    // PreventNonCombat blocks the instance outright (unless `source`
+    // itself is Combat - it's a NON-combat preventer), multipliers apply
+    // before flat reductions (V2_VOCABULARY.md Part 1/11's fixed
+    // ordering rule), RedirectToSelf changes who actually takes the
     // (already-modified) hit and who DieDamaged/KO fire against.
-    private static void ApplyDamage(EffectContext ctx, string id, int amount)
+    public static DieInstance? MarkDamage(GameState state, AbilityQueue queue, DamageSource source, string id, int amount)
     {
-        if (amount <= 0) return;
-        if (ctx.State.IsPlayerId(id)) { ctx.State.GetPlayer(id).Life -= amount; return; }
+        if (amount <= 0) return null;
+        if (state.IsPlayerId(id)) { state.GetPlayer(id).Life -= amount; return null; }
 
-        var die = FindDie(ctx.State, id);
-        var interceptors = ctx.State.DamageInterceptors.Where(m => m.AppliesTo(ctx.State, die, DamageSource.Ability)).ToList();
+        var die = FindDie(state, id);
+        var interceptors = state.DamageInterceptors.Where(m => m.AppliesTo(state, die, source)).ToList();
 
-        if (interceptors.Any(m => m.Mode == DamageModifierMode.PreventNonCombat))
-            return;
+        if (interceptors.Any(m => m.Mode == DamageModifierMode.PreventNonCombat && source != DamageSource.Combat))
+            return null;
 
         foreach (var m in interceptors.Where(m => m.Mode == DamageModifierMode.Double)) amount *= 2;
-        foreach (var m in interceptors.Where(m => m.Mode == DamageModifierMode.Amplify)) amount += m.GetAmount(ctx.State, die);
-        foreach (var m in interceptors.Where(m => m.Mode == DamageModifierMode.Reduce)) amount = Math.Max(0, amount - m.GetAmount(ctx.State, die));
-        if (amount <= 0) return;
+        foreach (var m in interceptors.Where(m => m.Mode == DamageModifierMode.Amplify)) amount += m.GetAmount(state, die);
+        foreach (var m in interceptors.Where(m => m.Mode == DamageModifierMode.Reduce)) amount = Math.Max(0, amount - m.GetAmount(state, die));
+        if (amount <= 0) return null;
 
         var recipient = interceptors
             .Where(m => m.Mode == DamageModifierMode.RedirectToSelf)
-            .Select(m => m.RedirectTarget(ctx.State, die))
+            .Select(m => m.RedirectTarget(state, die))
             .FirstOrDefault(d => d is not null) ?? die;
 
         recipient.Damage += amount;
-        EventBus.Fire(ctx.State, ctx.Queue, new GameEvent(TriggerKind.DieDamaged, recipient, recipient.ControllerId, ctx.State.CurrentStep, new DamageDealtPayload(amount)));
+        EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieDamaged, recipient, recipient.ControllerId, state.CurrentStep, new DamageDealtPayload(amount)));
+        return recipient;
+    }
 
-        if (QueryEngine.GetDefense(ctx.State, recipient) <= recipient.Damage)
-            KoDie(ctx, recipient, triggersKOAbilities: true);
+    // KOs `die` if its marked Damage has reached its current Defense
+    // (rule ~1.5) - the second half of what ApplyDamage used to do in
+    // one step. Public so CombatEngine can run this as its own pass,
+    // once per wave, after MarkDamage has already landed on both sides
+    // of every engagement in that wave.
+    public static bool TryResolveKO(GameState state, AbilityQueue queue, DieInstance die)
+    {
+        if (QueryEngine.GetDefense(state, die) > die.Damage) return false;
+        KoDie(state, queue, die, triggersKOAbilities: true);
+        return true;
+    }
+
+    // The single choke point ability damage funnels through (matching
+    // v1's own DieStats.ApplyDamage precedent) - marks damage, then
+    // resolves KO immediately, since ability damage resolves one
+    // instance at a time (rule 3.2.2). Combat damage (Phase 7) calls
+    // MarkDamage/TryResolveKO directly instead - see MarkDamage's own
+    // remarks for why the two can't be one atomic call there.
+    public static void ApplyDamage(GameState state, AbilityQueue queue, DamageSource source, string id, int amount)
+    {
+        if (MarkDamage(state, queue, source, id, amount) is { } recipient)
+            TryResolveKO(state, queue, recipient);
     }
 
     private static void ExecuteKo(Ko n, EffectContext ctx, Action onComplete)
@@ -254,7 +284,7 @@ public static class EffectInterpreter
         ResolveTarget(ctx, n.Target, ProtectionFor(ctx.Trigger), ids =>
         {
             foreach (var id in ids)
-                KoDie(ctx, FindDie(ctx.State, id), n.TriggersKOAbilities);
+                KoDie(ctx.State, ctx.Queue, FindDie(ctx.State, id), n.TriggersKOAbilities);
             onComplete();
         });
     }
@@ -269,13 +299,15 @@ public static class EffectInterpreter
     // nuance (Appendix 1 clarification) - a deliberate simplification,
     // not modeled anywhere in the closed vocabulary's data shape (Ko has
     // no separate destination-zone param); revisit via the tail policy
-    // if a migrated card actually needs that distinction.
-    private static void KoDie(EffectContext ctx, DieInstance die, bool triggersKOAbilities)
+    // if a migrated card actually needs that distinction. Public +
+    // (state, queue) for the same Phase 7/CombatEngine reason ApplyDamage
+    // is.
+    public static void KoDie(GameState state, AbilityQueue queue, DieInstance die, bool triggersKOAbilities)
     {
-        MoveToZone(ctx.State, die, Zone.PrepArea);
-        ctx.State.CharacterDiceKOdThisTurn.Add(die.ControllerId);
+        MoveToZone(state, die, Zone.PrepArea);
+        state.CharacterDiceKOdThisTurn.Add(die.ControllerId);
         if (triggersKOAbilities)
-            EventBus.Fire(ctx.State, ctx.Queue, new GameEvent(TriggerKind.DieKOd, die, die.ControllerId, ctx.State.CurrentStep));
+            EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieKOd, die, die.ControllerId, state.CurrentStep));
     }
 
     // --- Movement ---

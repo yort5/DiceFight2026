@@ -225,6 +225,7 @@ public static class TurnEngine
     {
         RequireStep(state, TurnStep.Main);
         state.CurrentStep = TurnStep.Attack;
+        state.AttackSubStep = AttackSubStep.DeclareAttackers; // Phase 7 - fresh every time Attack is (re-)entered
         EventBus.Fire(state, queue, new GameEvent(TriggerKind.TurnStepEntered, null, state.ActivePlayerId, TurnStep.Attack));
     }
 
@@ -263,8 +264,24 @@ public static class TurnEngine
             {
                 die.Zone = Zone.UsedPile;
                 die.CurrentFaceIndex = null;
+                // Leaving active play (rule 3.4.5.4's own reasoning,
+                // applied here same as EffectInterpreter.MoveToZone) - an
+                // unblocked attacker sitting in Out of Play since combat
+                // still needs this reset once it actually leaves for good.
+                die.Damage = 0;
+                die.GrantedTags.Clear();
+                die.CombatFlags.Clear();
             }
         }
+
+        // Rule 2.8.1 - clear damage on Character dice that were NOT KO'd
+        // (a KO'd die already had its Damage reset when it left the Field/
+        // Attack Zone - see EffectInterpreter.MoveToZone/Ko). Every
+        // survivor still sitting in the Field Zone keeps its face/stats
+        // but loses whatever damage combat marked on it this turn,
+        // regardless of controller.
+        foreach (var die in state.DiceIn(state.PlayerOne.Id, Zone.FieldZone).Concat(state.DiceIn(state.PlayerTwo.Id, Zone.FieldZone)))
+            die.Damage = 0;
 
         foreach (var die in state.Dice)
         {

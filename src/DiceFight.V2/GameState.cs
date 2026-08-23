@@ -17,6 +17,11 @@ public sealed class GameState
     public string ActivePlayerId { get; set; } = string.Empty;
     public TurnStep CurrentStep { get; set; } = TurnStep.ClearAndDraw;
 
+    // Phase 7 - only meaningful while CurrentStep == Attack; TurnEngine.
+    // EnterAttackStep resets it to DeclareAttackers every time the Attack
+    // Step is (re-)entered.
+    public AttackSubStep AttackSubStep { get; set; } = AttackSubStep.DeclareAttackers;
+
     // Rule 2.3.3 - the very first turn of the game draws one fewer die.
     // A whole-GAME flag (only ever true before the first ClearAndDraw),
     // not a per-player-turn one - ported from v1.

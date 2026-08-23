@@ -1,8 +1,8 @@
 # DiceFight v2 Core — Implementation Plan
 
-**Status: Phases 0-6 complete; vocabulary FROZEN at the 2026-08-22 gate
-review (`V2_VOCABULARY.md` Part 11); Phase 7 (combat) is
-next.** Update the checkboxes in the Phase Overview as
+**Status: Phases 0-7 complete; vocabulary FROZEN at the 2026-08-22 gate
+review (`V2_VOCABULARY.md` Part 11); Phase 8 (Dice Masters as a game
+definition / card migration) is next.** Update the checkboxes in the Phase Overview as
 phases complete, and add a one-line note after any phase where reality
 diverged from this plan.
 
@@ -90,7 +90,7 @@ rather than improvising a different architecture.
 | 4 | Event bus + triggered abilities | Events, subscriptions, FIFO ability queue | [x] |
 | 5 | Effect template interpreter | All Appendix A effect templates working | [x] |
 | 6 | Continuous templates | All Appendix A continuous templates working | [x] |
-| 7 | Combat | Attack/block/damage using queries + events | [ ] |
+| 7 | Combat | Attack/block/damage using queries + events | [x] |
 | 8 | Dice Masters as a game definition | Current game expressed as data; card migration pass | [ ] |
 | 9 | API + web integration | v2 playable in the web client behind a switch | [ ] |
 
@@ -855,3 +855,72 @@ Verified: `dotnet build DiceFight.slnx` clean (0 warnings/errors, all
 5 projects); v2 tests 83/83 passing (13 new); v1's full suite re-run
 untouched, still 547/547. Phase 6 checkbox ticked; plan status header
 updated - Phase 7 (combat) is next.
+
+**Phase 7 note (2026-08-23)**: core combat loop implemented
+(`src/DiceFight.V2/CombatEngine.cs` + `CombatAssignment.cs` +
+`Model/AttackSubStep.cs`) - declare attackers -> declare blockers ->
+action/global window -> assign damage -> KO resolution, "once blocked
+always blocked," unblocked-damage-to-player, and both named keyword
+behaviors (Overcrush, Fast) keyed off `QueryEngine.GetKeywords`. Every
+stat read goes through QueryEngine (continuous auras affect combat
+automatically - a test proves it), every KO/damage goes through
+EffectInterpreter's own choke points, and every restriction goes
+through CombatFlags (MustAttack/CantAttack/MustBlock/CantBlock/
+Unblockable/OnlyBlocker, Phase 5) + CombatRules (BlocksN/MinBlockers,
+Phase 6) - both of which get their first real consumer here, closing
+the "no consumer yet" note left on them.
+
+Deliberately NOT ported from v1's CombatEngine: Range, Infiltrate, Tag
+Out, Energy Drain, Deadly, Call Out, Obscure, Regenerate, Retaliation,
+and every card-specific Grants* combat hook (Blob's Sidekick-return,
+Deathbird's damage-on-high-defense-KO, Lilandra's reroll-to-Prep-Area,
+etc.) - none of those are CombatFlag/CombatRule-shaped in the closed
+vocabulary, and the plan's own task list never named them. They go to
+`V2_TAIL_POLICY.md` if/when Phase 8's card migration needs them.
+
+**A real sequencing bug was found and fixed while porting the
+rulebook's own Fast worked example**, not anticipated in the design:
+`EffectInterpreter.ApplyDamage` (Phase 5) resolves KO immediately after
+marking damage, which is correct for ability damage (rule 3.2.2 -
+resolves one instance at a time) but wrong for combat, where rule
+2.7.6.1 requires damage to be simultaneous within a wave - an
+immediate-KO call would let one side's lethal hit stop the other side's
+own damage from ever landing in the same wave (both non-Fast dice
+should die TOGETHER; a Fast attacker's damage should still land on a
+Fast blocker before either side's KO is decided). Fixed by splitting
+`ApplyDamage` into `MarkDamage` (interception + `DieDamaged`, no KO) and
+`TryResolveKO` (the threshold check + `KoDie`), both now public;
+`ApplyDamage` chains them for ability callers, `CombatEngine` calls
+`MarkDamage` for every hit in a wave first and only then runs
+`TryResolveKO` over everyone still in the Attack Zone, exactly
+mirroring v1's own two-pass `DieStats.ApplyDamage`/`TryResolveKO` split
+(this project had already ported that shape once before and should
+have recognized it sooner).
+
+Also fixed while wiring this: `TurnEngine.CleanUp` never reset
+`Damage` on Field Zone survivors (rule 2.8.1 - damage clears at Clean
+Up for characters that weren't KO'd) or on dice swept from Reserve
+Pool/Out of Play to the Used Pile (leaving active play, same rule
+3.4.5.4 reasoning `EffectInterpreter.MoveToZone` already uses) - both
+gaps were latent since Phase 2/4 (Damage didn't exist until Phase 5),
+now closed.
+
+Deliberate deviation from v1: `AssignCombatDamage` does NOT advance
+`CurrentStep` to CleanUp itself (v1 does) - the caller calls
+`TurnEngine.CleanUp` explicitly afterward, same as the skip-combat
+path already does, keeping `CleanUp`'s own `RequireStep(Attack)`
+contract identical regardless of whether combat happened.
+
+Tests (`CombatEngineTests.cs`) port v1's own acceptance scenarios
+(unblocked attacker, blocked survivor, incomplete-split rejection,
+"once blocked always blocked" wasting damage without Overcrush,
+Overcrush's three shapes, and all four of the rulebook's own Fast
+worked-example variants verbatim), plus a KO-fires-DieKOd-through-the-
+real-event-bus test, a StatAura-affects-combat-attack test, and
+CombatRule/CombatFlag enforcement tests.
+
+Verified: `dotnet build DiceFight.slnx` clean (0 warnings/errors, all
+5 projects); v2 tests 102/102 passing (19 new); v1's full suite re-run
+untouched, still 547/547. Phase 7 checkbox ticked; plan status header
+updated - Phase 8 (Dice Masters as a game definition / card migration)
+is next.
