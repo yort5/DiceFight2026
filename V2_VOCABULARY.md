@@ -2097,9 +2097,10 @@ blocking every end-of-turn/start-of-turn card in the catalog.
 
 ---
 
-## Part 13 — Spike C: the timing model. PROPOSAL AWAITING SIGN-OFF (2026-08-24)
+## Part 13 — Spike C: the timing model. ADOPTED AND IMPLEMENTED (2026-08-24)
 
-**Not adopted.** Supersedes the `EventFilter.Step` parameter proposal
+**Signed off by the user and built the same day** (see the
+implementation note at the end of this Part).** Supersedes the `EventFilter.Step` parameter proposal
 (see `V2_TAIL_POLICY.md`, kept there marked superseded).
 
 Design direction set by the user: **one flat, ordered, extensible list
@@ -2223,3 +2224,31 @@ Larger than Spike B, smaller than Spike A, but it is **load-bearing for
 both the tailed combat keywords and the Phase 9 API shape** (the client
 needs to know what step it is in and whether it must respond). Doing it
 before Phase 9 avoids designing that API twice.
+
+### Implementation note (2026-08-24)
+
+Built as described, with one scope line: the step list contains only
+the steps the engine actually runs. `StepIds` names every entry from
+the TURN SUMMARY (plus the keyword windows), but `TurnStepDefs.Standard`
+lists the ten currently implemented, following the same "declare it
+when it has a consumer" rule Phase 4 used for unwired events.
+
+Shipped:
+- `TurnStep` becomes the PHASE tag (gaining `StartOfTurn`);
+  `TurnStepDef { Id, Phase, NeedsInput }`; `GameConfig.Steps` as an
+  ordered list defaulting to `TurnStepDefs.Standard`.
+- `GameState` carries a cursor (`CurrentStepIndex` / `CurrentStepId`),
+  with `CurrentStep` kept readable AND settable as a phase - setting it
+  parks on that phase's first step. That is what kept the refactor
+  small: ~290 call sites reference `CurrentStep`, and only three needed
+  touching, all of them the now-deleted `AttackSubStep`.
+- `AttackSubStep` is deleted. Attack sub-steps are ordinary entries in
+  the one list, so `CombatEngine` just asks "am I standing on this step".
+- `GameEvent.Step` is a step id; `EventFilter.Step` filters on it.
+- The turn now opens on `start-of-turn` (the TURN SUMMARY's own first
+  entry) before `clear-and-draw`, so a Pepper-Potts-shaped card has a
+  window to name. Nothing occupies it yet.
+
+Colossus "Piotr" is un-tailed, with a test asserting both halves of
+what made it tailed: it fires at Clean Up, and does NOT fire when its
+controller enters their own Attack Step.

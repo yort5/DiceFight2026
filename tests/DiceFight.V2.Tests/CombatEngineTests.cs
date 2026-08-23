@@ -35,8 +35,7 @@ public class CombatEngineTests
             PlayerOne = new Player { Id = "p1", Name = "One", Life = 20 },
             PlayerTwo = new Player { Id = "p2", Name = "Two", Life = 20 },
             ActivePlayerId = "p1",
-            CurrentStep = TurnStep.Attack,
-            AttackSubStep = AttackSubStep.DeclareAttackers,
+            CurrentStep = TurnStep.Attack, // Spike C - parks the cursor on the Attack phase's first step
         };
         ContinuousRegistry.RegisterAll(state);
         return state;
@@ -382,7 +381,7 @@ public class CombatEngineTests
         assignment.AssignBlocker(a2.Id, blocker.Id);
 
         CombatEngine.DeclareBlockers(state, queue, assignment, [blocker.Id]); // does not throw - BlocksN:2 covers it
-        Assert.Equal(AttackSubStep.ActionAndGlobalWindow, state.AttackSubStep);
+        Assert.Equal(StepIds.ActionGlobalWindow, state.CurrentStepId);
     }
 
     [Fact]

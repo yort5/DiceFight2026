@@ -12,7 +12,14 @@ public sealed record GameConfig(
     IReadOnlyList<KeywordDef> Keywords,
     RulesConfig Rules,
     IReadOnlyList<BasicDicePoolEntry> BasicDicePool,
-    int BasicActionSlots);
+    int BasicActionSlots)
+{
+    // Spike C (V2_VOCABULARY.md Part 13) - the game's ordered step list.
+    // Data, not an enum, so a Direction-C variant reorders, removes, or
+    // inserts steps with zero engine change. Defaults to the standard
+    // rulebook order; a config only needs to set this if it differs.
+    public IReadOnlyList<TurnStepDef> Steps { get; init; } = TurnStepDefs.Standard;
+}
 
 // An energy symbol - "no enum anywhere" (Appendix B). Wild (Sidekick-style
 // energy faces) satisfies any specific-type requirement; IsWild is a

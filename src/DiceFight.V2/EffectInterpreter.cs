@@ -272,7 +272,7 @@ public static class EffectInterpreter
             .FirstOrDefault(d => d is not null) ?? die;
 
         recipient.Damage += amount;
-        EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieDamaged, recipient, recipient.ControllerId, state.CurrentStep, new DamageDealtPayload(amount)));
+        EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieDamaged, recipient, recipient.ControllerId, state.CurrentStepId, new DamageDealtPayload(amount)));
         return recipient;
     }
 
@@ -328,7 +328,7 @@ public static class EffectInterpreter
         MoveToZone(state, die, Zone.PrepArea);
         state.CharacterDiceKOdThisTurn.Add(die.ControllerId);
         if (triggersKOAbilities)
-            EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieKOd, die, die.ControllerId, state.CurrentStep));
+            EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieKOd, die, die.ControllerId, state.CurrentStepId));
     }
 
     // --- Movement ---
@@ -385,7 +385,7 @@ public static class EffectInterpreter
                 // (Free isn't wired to a payment mechanism - there isn't
                 // one here to pay through); every ability-driven field is
                 // effectively free today.
-                EventBus.Fire(ctx.State, ctx.Queue, new GameEvent(TriggerKind.DieFielded, die, die.ControllerId, ctx.State.CurrentStep));
+                EventBus.Fire(ctx.State, ctx.Queue, new GameEvent(TriggerKind.DieFielded, die, die.ControllerId, ctx.State.CurrentStepId));
             }
             onComplete();
         });
@@ -413,7 +413,7 @@ public static class EffectInterpreter
                 if (priorFace is not null)
                 {
                     var payload = new DieFaceChangedPayload(priorFace, newFace, FaceChangeCause.Reroll);
-                    EventBus.Fire(ctx.State, ctx.Queue, new GameEvent(TriggerKind.DieFaceChanged, die, die.ControllerId, ctx.State.CurrentStep, payload));
+                    EventBus.Fire(ctx.State, ctx.Queue, new GameEvent(TriggerKind.DieFaceChanged, die, die.ControllerId, ctx.State.CurrentStepId, payload));
                 }
 
                 // Finding 8 - the per-die multi-target Reroll pattern
@@ -453,7 +453,7 @@ public static class EffectInterpreter
                 if (priorFace is not null)
                 {
                     var payload = new DieFaceChangedPayload(priorFace, definition.Faces[faceIndex], FaceChangeCause.Spin);
-                    EventBus.Fire(ctx.State, ctx.Queue, new GameEvent(TriggerKind.DieFaceChanged, die, die.ControllerId, ctx.State.CurrentStep, payload));
+                    EventBus.Fire(ctx.State, ctx.Queue, new GameEvent(TriggerKind.DieFaceChanged, die, die.ControllerId, ctx.State.CurrentStepId, payload));
                 }
             }
             onComplete();
@@ -485,7 +485,7 @@ public static class EffectInterpreter
                 if (priorFace is not null)
                 {
                     var payload = new DieFaceChangedPayload(priorFace, face, FaceChangeCause.Spin);
-                    EventBus.Fire(ctx.State, ctx.Queue, new GameEvent(TriggerKind.DieFaceChanged, die, die.ControllerId, ctx.State.CurrentStep, payload));
+                    EventBus.Fire(ctx.State, ctx.Queue, new GameEvent(TriggerKind.DieFaceChanged, die, die.ControllerId, ctx.State.CurrentStepId, payload));
                 }
             }
             onComplete();

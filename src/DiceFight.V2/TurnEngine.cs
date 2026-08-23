@@ -40,9 +40,22 @@ public static class TurnEngine
     // Takes its own Random (draw order) separately from IDiceRoller (face
     // results at the Roll step) - the caller controls both independently
     // for deterministic tests.
+    // Opens the turn. The TURN SUMMARY's first entry is "any abilities
+    // that take place at the start of your turn" - a peer window BEFORE
+    // Clear and Draw, which Spike C models as its own step rather than as
+    // a before/at modifier. So this begins on `start-of-turn`, fires that
+    // window (nothing occupies it yet, but a Pepper-Potts-shaped card
+    // addresses it by naming the id), then moves into `clear-and-draw`
+    // proper. A dedicated step-machine `Advance` that walks these
+    // automatically is Phase 9 API-shape work; until then the turn's
+    // first two steps are entered by this one call.
     public static void ClearAndDraw(GameState state, AbilityQueue queue, Random random)
     {
-        RequireStep(state, TurnStep.ClearAndDraw);
+        RequireStep(state, TurnStep.StartOfTurn);
+        EventBus.Fire(state, queue, new GameEvent(TriggerKind.TurnStepEntered, null, state.ActivePlayerId, StepIds.StartOfTurn));
+
+        state.MoveToStep(StepIds.ClearAndDraw);
+        EventBus.Fire(state, queue, new GameEvent(TriggerKind.TurnStepEntered, null, state.ActivePlayerId, StepIds.ClearAndDraw));
 
         var drawCount = state.Config.Rules.DrawCount - (state.IsFirstTurn ? 1 : 0);
         var bag = state.DiceIn(state.ActivePlayerId, Zone.Bag).ToList();
@@ -56,11 +69,11 @@ public static class TurnEngine
 
         if (drawn.Count > 0)
         {
-            EventBus.Fire(state, queue, new GameEvent(TriggerKind.DiceDrawn, null, state.ActivePlayerId, state.CurrentStep));
+            EventBus.Fire(state, queue, new GameEvent(TriggerKind.DiceDrawn, null, state.ActivePlayerId, state.CurrentStepId));
         }
 
         state.IsFirstTurn = false;
-        state.CurrentStep = TurnStep.RollAndReroll;
+        state.MoveToStep(StepIds.RollAndReroll);
     }
 
     // First half of Roll & Reroll - assigns a face to every drawn die
@@ -87,7 +100,7 @@ public static class TurnEngine
             if (priorFace is not null)
             {
                 var payload = new DieFaceChangedPayload(priorFace, newFace, FaceChangeCause.Roll);
-                EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieFaceChanged, die, die.ControllerId, state.CurrentStep, payload));
+                EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieFaceChanged, die, die.ControllerId, state.CurrentStepId, payload));
             }
             // A die rolling for the first time ever (priorFace null - e.g.
             // fresh off a card) has no meaningful "changed from" state to
@@ -109,7 +122,7 @@ public static class TurnEngine
             die.Zone = Zone.ReservePool;
         }
 
-        state.CurrentStep = TurnStep.Main;
+        state.MoveToStep(StepIds.Main);
     }
 
     // Rule 2.6.2 - Purchase Dice. Energy must type-match the card's own
@@ -149,7 +162,7 @@ public static class TurnEngine
         if (pending is not null) state.PendingPurchaseModifiers.Remove(pending);
 
         state.PurchasedThisTurn.Add(state.ActivePlayerId);
-        EventBus.Fire(state, queue, new GameEvent(TriggerKind.PurchaseMade, die, state.ActivePlayerId, state.CurrentStep));
+        EventBus.Fire(state, queue, new GameEvent(TriggerKind.PurchaseMade, die, state.ActivePlayerId, state.CurrentStepId));
     }
 
     // Rule 2.6.3 - Field Character Dice. Fielding cost may be paid with
@@ -179,7 +192,7 @@ public static class TurnEngine
         // the Field Zone, which is why this die is already eligible to
         // react to its OWN fielding (Fire scans active dice, and it's
         // active as of the line above).
-        EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieFielded, die, die.ControllerId, state.CurrentStep));
+        EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieFielded, die, die.ControllerId, state.CurrentStepId));
     }
 
     // Rule 2.6.5.4 - a paid Global ability (V2_PLAN.md Phase 4 task 4).
@@ -246,15 +259,14 @@ public static class TurnEngine
             throw new InvalidOperationException($"Card '{cardId}' is not a Basic Action card.");
 
         die.Zone = Zone.OutOfPlay;
-        EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieUsed, die, die.ControllerId, state.CurrentStep));
+        EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieUsed, die, die.ControllerId, state.CurrentStepId));
     }
 
     public static void EnterAttackStep(GameState state, AbilityQueue queue)
     {
         RequireStep(state, TurnStep.Main);
-        state.CurrentStep = TurnStep.Attack;
-        state.AttackSubStep = AttackSubStep.DeclareAttackers; // Phase 7 - fresh every time Attack is (re-)entered
-        EventBus.Fire(state, queue, new GameEvent(TriggerKind.TurnStepEntered, null, state.ActivePlayerId, TurnStep.Attack));
+        state.MoveToStep(StepIds.SelectAttackers); // Spike C - the Attack phase's first step
+        EventBus.Fire(state, queue, new GameEvent(TriggerKind.TurnStepEntered, null, state.ActivePlayerId, StepIds.SelectAttackers));
     }
 
     // A player may decline to attack at all, straight from the Main Step
@@ -286,18 +298,26 @@ public static class TurnEngine
 
         var endingPlayerId = state.ActivePlayerId;
 
-        // No TurnStepEntered(CleanUp) is fired here, deliberately. It
-        // looks like a missing emission site (CleanUp is a real turn step
-        // and TurnStepEntered is a frozen event), and Colossus "Piotr"
-        // (DPS103)'s "at the end of your turn" text wants it - but the
-        // frozen EventFilter has no step discriminator (Ownership/Tags/
-        // ExcludeSelf/MinPurchaseCost/Stat only), so a listener can't
-        // tell TurnStepEntered(CleanUp) from TurnStepEntered(Attack) and
-        // an end-of-turn ability would also fire on entering its own
-        // Attack Step. Adding a `Step` field is a vocabulary change
-        // (ground rule 2 - needs sign-off), so Colossus is tailed
-        // instead and this site stays unwired rather than emitting an
-        // event no filter can use correctly. See V2_TAIL_POLICY.md.
+        // "At the end of your turn" abilities (Colossus "Piotr", DPS103).
+        // Now addressable: Spike C gave EventFilter a Step discriminator,
+        // so a listener can name `cleanup` specifically instead of
+        // matching every TurnStepEntered. Fired FIRST, before any sweep
+        // or expiry below, and attributed to the ENDING player so an
+        // EventFilter{Ownership: Own, Step: cleanup} reads as "my turn is
+        // ending".
+        //
+        // Caveat, documented rather than papered over: nothing drains the
+        // queue here (AbilityQueue's enqueue/drain split - the caller
+        // drains), so an end-of-turn ability actually RESOLVES after this
+        // method has swept and passed the turn. Harmless for Colossus
+        // (Field Zone dice, which its PerMatch counts, survive the sweep,
+        // and "your opponent" resolves against the ability's own
+        // controller). A future end-of-turn card reading Reserve Pool or
+        // active-player state would NOT be safe - that needs an explicit
+        // drain point here, which is a Phase 9 API-shape decision.
+        state.MoveToStep(StepIds.CleanUp);
+        EventBus.Fire(state, queue, new GameEvent(TriggerKind.TurnStepEntered, null, endingPlayerId, StepIds.CleanUp));
+
         foreach (var player in new[] { state.PlayerOne, state.PlayerTwo })
         {
             foreach (var die in state.DiceIn(player.Id, Zone.ReservePool).Concat(state.DiceIn(player.Id, Zone.OutOfPlay)).ToList())
@@ -352,9 +372,9 @@ public static class TurnEngine
         state.FieldedCharacterThisTurn.Remove(endingPlayerId);
         state.CharacterDiceKOdThisTurn.Clear();
         state.ActivePlayerId = state.OpponentOf(state.ActivePlayerId);
-        state.CurrentStep = TurnStep.ClearAndDraw;
+        state.MoveToStep(StepIds.StartOfTurn);
 
-        EventBus.Fire(state, queue, new GameEvent(TriggerKind.TurnStepEntered, null, state.ActivePlayerId, TurnStep.ClearAndDraw));
+        EventBus.Fire(state, queue, new GameEvent(TriggerKind.TurnStepEntered, null, state.ActivePlayerId, StepIds.StartOfTurn));
     }
 
     private static void SpendEnergy(GameState state, IReadOnlyList<DieInstance> energyDice, int amountNeeded, string? requiredSymbolId)

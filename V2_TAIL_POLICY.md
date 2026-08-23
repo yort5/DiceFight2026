@@ -60,60 +60,32 @@ difference is only its Epic Basic Action mechanics, tracked below.
 
 ## DPS catalog batch 1 (V2_PLAN.md Phase 8 task 4, 2026-08-24)
 
-13 of 15 implemented. The two below are tailed.
+14 of 15 implemented. The one below is tailed.
 
 | CardId | Name | What it needs | Policy |
 |---|---|---|---|
 | DPS029 | Deathbird (Treacherous) | Deadly keyword - Phase 7 deliberately ported only Overcrush and Fast. Deadly is this card's entire text, so there is nothing else to express | Ask |
-| DPS103 | Colossus (Piotr) | A **step discriminator on `EventFilter`**. Its effect half is a clean `PerMatch` fit (V2_VOCABULARY.md Part 2 #13 worked it out on paper), but `TurnStepEntered` fires for several steps and the frozen `EventFilter` (Ownership/Tags/ExcludeSelf/MinPurchaseCost/Stat) has no way to say *which* - so an "at the end of your turn" ability would equally fire on entering its own Attack Step. Consequently `TurnEngine.CleanUp` also deliberately emits no `TurnStepEntered(CleanUp)`, since no filter could use it correctly | Ask |
 
-### Standing decision needed: a real TIMING-WINDOW model
+### RESOLVED: the timing-window model (Spike C, signed off + implemented 2026-08-24)
 
-*(Revised 2026-08-24 after user review — the original one-field
-`EventFilter.Step` proposal below was too small, and is superseded.)*
+The user signed off on a **flat, ordered, extensible step list** and it
+is now built (`V2_VOCABULARY.md` Part 13 for the design;
+`Model/TurnStep.cs`, `GameConfig.Steps`, `EventFilter.Step`).
+Colossus "Piotr" is un-tailed and implemented - its ability names
+`StepIds.CleanUp` and fires there and nowhere else.
 
-Colossus surfaced this, but the user's review makes clear the gap is
-not "TurnStepEntered needs a step filter." The engine needs a timing
-model that can name the windows the game actually has:
+What this does NOT yet un-tail: the five combat keywords (Call Out,
+Infiltrate, Tag Out, Range, Intimidate) are now *expressible* - the
+step list can name their windows - but expressible is not built. Each
+still needs its actual keyword behavior implemented, and their step
+entries are added to `TurnStepDefs.Standard` when that happens, per
+the same "declare it when it has a consumer" rule. They stay Ask.
 
-- **Combat sub-step windows** — Range, Fast, Infiltrate, Tag Out all
-  resolve at specific, distinct points inside the Attack Step. v1
-  modeled these as first-class `AttackSubStep` values (RangeWindow,
-  InfiltrateWindow, TagOutWindow); v2's Phase 7 deliberately ported
-  only the five-value spine (DeclareAttackers → DeclareBlockers →
-  ActionAndGlobalWindow → AssignCombatDamage → Done), so those windows
-  have nowhere to attach today. This is the same set of keywords
-  already tailed above, which is not a coincidence — they are tailed
-  *because* the timing model can't name their window.
-- **"Before X" vs "at X"** — Pepper Potts fires *before* your Clear and
-  Draw Step, which is a different instant from entering it. v2 already
-  carries the structural residue of this: `Zone.DiceFromBag` /
-  `DiceFromPrep` exist precisely because v1 had to split the Prep Area
-  to make a Pepper-Potts-shaped interaction expressible, and v2
-  declared both zones but has never routed anything through them
-  (`Zone.cs`'s own remarks say so).
-- **Whose turn** — already covered by `EventFilter.Ownership`.
+Also still open from Spike C's write-up, deliberately not done in the
+same pass: the three fidelity gaps (Main's end-of-step unfielded-dice
+sweep, the Reserve Pool clearing at Clean Up rather than Clear and
+Draw, and the missing attack-effects / block-effects / damage-ko-effects
+windows and the Fast/normal damage split). The step list has ids
+reserved for all of them (`StepIds`), but they are not in
+`TurnStepDefs.Standard` until their procedures move.
 
-So the decision is a design question, not a yes/no on one field:
-**what is the full list of nameable timing windows, and does a
-triggered ability address one by naming a step, a sub-step, or a
-(before | at | after, step) pair?** Getting this right also decides
-whether the five tailed combat keywords become expressible or stay
-engine-coded specials.
-
-Recommend treating this as a **third design spike**, sized between the
-other two, rather than a parameter addition — and doing it before the
-DPS batches reach the Attack-Step-window cards, for the same reason
-the plan sequences the other two spikes ahead of their cards.
-
-<details>
-<summary>Superseded original proposal (kept for the record)</summary>
-
-The candidate fix was one optional field — `EventFilter.Step:
-TurnStep?`, checked against `GameEvent.Step`, which the event already
-carries — which would also have let `TurnEngine.CleanUp` emit its
-currently-suppressed `TurnStepEntered(CleanUp)`. It closes Colossus
-specifically, but names none of the sub-step or "before" windows
-above, so it would have to be revisited almost immediately.
-
-</details>

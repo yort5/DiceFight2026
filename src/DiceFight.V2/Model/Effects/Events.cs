@@ -49,12 +49,20 @@ public sealed record DamageDealtPayload(int Amount) : EventPayload;
 // Stat (Finding 14) mirrors TargetFilter.Stat, checked against the
 // event's own subject die (Deathbird "Usurper" - "when you KO an
 // opposing die with 3D or greater").
+// Step (Spike C, V2_VOCABULARY.md Part 13) names WHICH timing window a
+// TurnStepEntered listener cares about - a step id from the game's own
+// ordered step list (StepIds). Without it a listener cannot tell
+// TurnStepEntered(cleanup) from TurnStepEntered(select-attackers), which
+// is what kept Colossus "Piotr" tailed through DPS batch 1. Null means
+// "any step", the pre-Spike-C behavior; it is meaningless for the nine
+// non-TurnStepEntered event kinds, which each fire at one point anyway.
 public sealed record EventFilter(
     TargetOwnership Ownership = TargetOwnership.Any,
     TagQuery? Tags = null,
     bool ExcludeSelf = false,
     int? MinPurchaseCost = null,
-    StatThreshold? Stat = null);
+    StatThreshold? Stat = null,
+    string? Step = null);
 
 // Rule 2.6.5.4 - a Global ability's energy price. RequiredSymbolId null
 // means any energy (including generic) satisfies it.

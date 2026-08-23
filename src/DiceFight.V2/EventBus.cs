@@ -71,6 +71,10 @@ public static class EventBus
 
     private static bool MatchesFilter(GameState state, GameEvent evt, DieInstance listener, EventFilter filter)
     {
+        // Spike C - which timing window this listener wants. Checked
+        // first: it's the cheapest test and the most likely to exclude.
+        if (filter.Step is { } step && evt.Step != step) return false;
+
         if (filter.Ownership != TargetOwnership.Any)
         {
             var isOwn = evt.SubjectControllerId == listener.ControllerId;

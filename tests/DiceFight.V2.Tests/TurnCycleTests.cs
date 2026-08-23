@@ -78,7 +78,7 @@ public class TurnCycleTests
         Assert.Single(state.DiceIn("p1", Zone.Unpurchased)); // T001's one die
         Assert.Equal(4, state.DiceIn("p1", Zone.Bag).Count()); // the basic pool
         Assert.Equal("p1", state.ActivePlayerId);
-        Assert.Equal(TurnStep.ClearAndDraw, state.CurrentStep);
+        Assert.Equal(TurnStep.StartOfTurn, state.CurrentStep); // Spike C - the turn opens on the start-of-turn window
 
         // --- Clear and Draw (first turn: DrawCount - 1 = 2) ---
         DiceFight.V2.TurnEngine.ClearAndDraw(state, queue, new Random(1));
@@ -120,7 +120,7 @@ public class TurnCycleTests
         DiceFight.V2.TurnEngine.CleanUp(state, queue);
 
         Assert.Equal("p2", state.ActivePlayerId);
-        Assert.Equal(TurnStep.ClearAndDraw, state.CurrentStep);
+        Assert.Equal(TurnStep.StartOfTurn, state.CurrentStep); // Spike C - the turn opens on the start-of-turn window
         Assert.Empty(state.DiceIn("p1", Zone.ReservePool)); // swept to Used Pile
         Assert.Empty(state.DiceIn("p1", Zone.OutOfPlay));
         Assert.Equal(Zone.FieldZone, characterDie.Zone); // Field Zone dice are untouched by Clean Up

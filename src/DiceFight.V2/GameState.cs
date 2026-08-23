@@ -15,12 +15,48 @@ public sealed class GameState
     public List<DieInstance> Dice { get; } = [];
 
     public string ActivePlayerId { get; set; } = string.Empty;
-    public TurnStep CurrentStep { get; set; } = TurnStep.ClearAndDraw;
 
-    // Phase 7 - only meaningful while CurrentStep == Attack; TurnEngine.
-    // EnterAttackStep resets it to DeclareAttackers every time the Attack
-    // Step is (re-)entered.
-    public AttackSubStep AttackSubStep { get; set; } = AttackSubStep.DeclareAttackers;
+    // Spike C - the engine's position is a cursor into Config.Steps (one
+    // flat ordered list), not a pair of enums. CurrentStep stays readable
+    // and settable as a PHASE for the many callers that only care about
+    // containment ("Main or Attack"); setting it parks the cursor on that
+    // phase's first step, which is what every "jump straight to the Main
+    // Step" caller means.
+    public int CurrentStepIndex { get; set; }
+
+    public TurnStepDef CurrentStepDef => Config.Steps[CurrentStepIndex];
+    public string CurrentStepId => CurrentStepDef.Id;
+
+    public TurnStep CurrentStep
+    {
+        get => CurrentStepDef.Phase;
+        set
+        {
+            var index = -1;
+            for (var i = 0; i < Config.Steps.Count; i++)
+            {
+                if (Config.Steps[i].Phase != value) continue;
+                index = i;
+                break;
+            }
+            CurrentStepIndex = index >= 0
+                ? index
+                : throw new ArgumentException($"This game's step list declares no step in phase '{value}'.", nameof(value));
+        }
+    }
+
+    // Moves the cursor to a specific step by id (engine use - the step
+    // machine advances one entry at a time rather than jumping phases).
+    public void MoveToStep(string stepId)
+    {
+        for (var i = 0; i < Config.Steps.Count; i++)
+        {
+            if (Config.Steps[i].Id != stepId) continue;
+            CurrentStepIndex = i;
+            return;
+        }
+        throw new ArgumentException($"This game's step list declares no step '{stepId}'.", nameof(stepId));
+    }
 
     // Rule 2.3.3 - the very first turn of the game draws one fewer die.
     // A whole-GAME flag (only ever true before the first ClearAndDraw),

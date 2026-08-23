@@ -12,5 +12,5 @@ public sealed record GameEvent(
     TriggerKind Kind,
     DieInstance? SubjectDie,
     string SubjectControllerId,
-    TurnStep Step,
+    string Step,
     EventPayload? Payload = null);

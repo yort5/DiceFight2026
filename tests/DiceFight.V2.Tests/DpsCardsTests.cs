@@ -262,7 +262,6 @@ public class DpsCardsTests
     {
         var state = NewGame();
         state.CurrentStep = TurnStep.Attack;
-        state.AttackSubStep = AttackSubStep.DeclareAttackers;
         var phoenix = Active(state, DpsCards.DarkPhoenixEnemyOfTheShiar, "p1");
         var queue = new AbilityQueue();
 
@@ -287,16 +286,36 @@ public class DpsCardsTests
         Assert.Equal(CardType.BasicAction, pending.CardKind);
     }
 
-    // The two batch-1 tail entries, pinned inert rather than silently
-    // half-working - see V2_TAIL_POLICY.md for each one's gap.
+    // The remaining batch-1 tail entry, pinned inert rather than silently
+    // half-working - see V2_TAIL_POLICY.md for its gap (Deadly).
     [Fact]
     public void Tailed_Batch1_Cards_Are_Vanilla()
     {
-        foreach (var card in new[] { DpsCards.DeathbirdTreacherous, DpsCards.ColossusPiotr })
-        {
-            Assert.False(card.IsImplemented);
-            Assert.Empty(card.Abilities);
-            Assert.Empty(card.Continuous);
-        }
+        Assert.False(DpsCards.DeathbirdTreacherous.IsImplemented);
+        Assert.Empty(DpsCards.DeathbirdTreacherous.Abilities);
+        Assert.Empty(DpsCards.DeathbirdTreacherous.Continuous);
+    }
+
+    // Spike C's payoff, end to end: Colossus's "at the end of your turn"
+    // ability now names the `cleanup` window specifically, so it fires
+    // exactly once per turn - at Clean Up - and NOT when its controller
+    // enters their own Attack Step, which is what kept it tailed.
+    [Fact]
+    public void ColossusPiotr_Fires_At_CleanUp_Only_And_Scales_With_Level_2_Plus_Dice()
+    {
+        var state = NewGame();
+        Active(state, DpsCards.ColossusPiotr, "p1", level: 2, id: "colossus"); // level 2 - counts itself
+        Active(state, DpsCards.RonanTheAccuserTreason, "p1", level: 3, id: "ronan"); // level 3 - counts
+        Active(state, DpsCards.PsylockeTelepath, "p1", level: 1, id: "psylocke"); // level 1 - does not
+        var queue = new AbilityQueue();
+
+        // Entering the Attack Step must NOT trigger it.
+        TurnEngine.EnterAttackStep(state, queue);
+        Assert.Empty(queue.Pending);
+
+        TurnEngine.CleanUp(state, queue);
+        Drain(state, queue);
+
+        Assert.Equal(20 - 4, state.PlayerTwo.Life); // 2 qualifying dice x 2 damage
     }
 }

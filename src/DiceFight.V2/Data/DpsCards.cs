@@ -10,7 +10,8 @@ namespace DiceFight.V2.Data;
 // convention. Cards that don't fit go to `V2_TAIL_POLICY.md` vanilla -
 // no vocabulary additions (ground rule 2).
 //
-// Batch 1 (2026-08-24): 13 implemented, 2 tailed. Deliberately drawn
+// Batch 1 (2026-08-24): 14 implemented, 1 tailed (Colossus un-tailed
+// same day by Spike C - see its own remarks). Deliberately drawn
 // from the cards Phase 0 worked out on paper, so each one is also a
 // live check that the paper expression really runs - which already paid
 // off: Colossus "Piotr" was marked a clean fit on paper, and wiring it
@@ -179,22 +180,26 @@ public static class DpsCards
     private static TargetFilter VillainsCharacterDice(int count) =>
         new(Kind: TargetKind.CharacterDie, Count: count, Tags: new TagQuery(AnyOf: ["Villains"]));
 
-    // Part 2 #13 worked this out on paper as a clean fit
-    // (TurnStepEntered + PerMatch), and its EFFECT half is exactly that -
-    // but the paper pass wrote the trigger as "TurnStepEntered(EndOfTurn)"
-    // without noticing the frozen EventFilter carries no step
-    // discriminator, so a listener cannot distinguish end-of-turn from
-    // entering its own Attack Step (both are TurnStepEntered with the
-    // same Ownership). Found while actually wiring it. Tailed rather than
-    // firing twice a turn; see V2_TAIL_POLICY.md and TurnEngine.CleanUp's
-    // own remarks on why no TurnStepEntered(CleanUp) is emitted either.
+    // Part 2 #13's worked expression - validates PerMatch's
+    // fixed-multiplier-times-live-count shape. Tailed through DPS batch 1
+    // because the paper pass wrote its trigger as
+    // "TurnStepEntered(EndOfTurn)" without noticing the EventFilter had
+    // no step discriminator, so it would equally have fired on entering
+    // its own Attack Step. Un-tailed by Spike C (V2_VOCABULARY.md Part
+    // 13): `Step: StepIds.CleanUp` names the window precisely, and
+    // TurnEngine.CleanUp now emits it.
     public static readonly CardDef ColossusPiotr = new(
         Id: "DPS103", Name: "Colossus", Subtitle: "Piotr", Set: "DPS", CardType: CardType.Character,
         PurchaseCost: 6, EnergySymbolId: "Fist",
         Die: MigrationDice.Character("DPS103Die", "Fist", (1, 4, 4), (1, 6, 5), (2, 8, 7)),
         DieLimit: 2, Affiliations: ["X-Men"], Keywords: [],
         RawText: "While Colossus is active, at the end of your turn, each of your level 2 or 3 character dice deals your opponent 2 damage (not 2 damage per Colossus die)",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [new TriggeredAbility(TriggerKind.TurnStepEntered,
+            new DealDamage(
+                new PerMatch(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own, Stat: new StatThreshold(StatKind.Level, Min: 2)), Multiplier: 2),
+                new TargetFilter(Kind: TargetKind.Player, Ownership: TargetOwnership.Opposing)),
+            Filter: new EventFilter(Ownership: TargetOwnership.Own, Step: StepIds.CleanUp))],
+        Continuous: []);
 
     // Part 3 #29's worked expression - all three abilities, and the
     // PurchaseModifier confirmation. (Its own "minimum of 1" is

@@ -30,7 +30,7 @@ public static class CombatEngine
     // yet); revisit if a real migrated card needs a different reading.
     public static void DeclareAttackers(GameState state, AbilityQueue queue, IReadOnlyList<string> attackerDieIds)
     {
-        RequireSubStep(state, AttackSubStep.DeclareAttackers);
+        RequireStep(state, StepIds.SelectAttackers);
 
         var forcedButOmitted = state.DiceIn(state.ActivePlayerId, Zone.FieldZone)
             .Where(d => d.CombatFlags.Contains(CombatFlagKind.MustAttack) && !attackerDieIds.Contains(d.Id))
@@ -48,16 +48,16 @@ public static class CombatEngine
 
             die.Zone = Zone.AttackZone;
             // Rule 2.7.1.2 - "when attacks" fires for each attacking die.
-            EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieAttacks, die, die.ControllerId, state.CurrentStep));
+            EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieAttacks, die, die.ControllerId, state.CurrentStepId));
         }
 
-        state.AttackSubStep = AttackSubStep.DeclareBlockers;
+        state.MoveToStep(StepIds.AssignBlockers);
     }
 
     // Rule 2.7.2 - the Inactive player assigns blockers (if any).
     public static void DeclareBlockers(GameState state, AbilityQueue queue, CombatAssignment assignment, IReadOnlyList<string> blockerDieIds)
     {
-        RequireSubStep(state, AttackSubStep.DeclareBlockers);
+        RequireStep(state, StepIds.AssignBlockers);
         var inactiveId = state.OpponentOf(state.ActivePlayerId);
 
         var forcedButOmitted = state.DiceIn(inactiveId, Zone.FieldZone)
@@ -79,10 +79,10 @@ public static class CombatEngine
                 throw new InvalidOperationException($"Die '{id}' cannot block this turn.");
 
             die.Zone = Zone.AttackZone;
-            EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieBlocks, die, die.ControllerId, state.CurrentStep));
+            EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieBlocks, die, die.ControllerId, state.CurrentStepId));
         }
 
-        state.AttackSubStep = AttackSubStep.ActionAndGlobalWindow;
+        state.MoveToStep(StepIds.ActionGlobalWindow);
     }
 
     // CombatFlagKind.Unblockable (Finding 14 - Falcon "Recon").
@@ -157,8 +157,8 @@ public static class CombatEngine
         GameState state, AbilityQueue queue, CombatAssignment assignment,
         IReadOnlyDictionary<string, IReadOnlyDictionary<string, int>> attackerDamageSplits)
     {
-        RequireSubStep(state, AttackSubStep.ActionAndGlobalWindow);
-        state.AttackSubStep = AttackSubStep.AssignCombatDamage;
+        RequireStep(state, StepIds.ActionGlobalWindow);
+        state.MoveToStep(StepIds.NormalDamage);
 
         var inactivePlayer = state.GetPlayer(state.OpponentOf(state.ActivePlayerId));
         var attackers = state.DiceIn(state.ActivePlayerId, Zone.AttackZone).ToList();
@@ -231,7 +231,7 @@ public static class CombatEngine
         foreach (var die in state.Dice.Where(d => d.Zone == Zone.AttackZone))
             die.Zone = Zone.FieldZone;
 
-        state.AttackSubStep = AttackSubStep.Done;
+        state.MoveToStep(StepIds.ReturnToField);
         // Unlike v1, this does NOT also advance CurrentStep to CleanUp -
         // the caller calls TurnEngine.CleanUp explicitly afterward, same
         // as the skip-combat path already does; keeps CleanUp's own
@@ -310,12 +310,12 @@ public static class CombatEngine
         return koIds;
     }
 
-    private static void RequireSubStep(GameState state, AttackSubStep expected)
+    // Spike C - attack sub-steps are ordinary entries in the one flat
+    // step list now, so this is just "are we standing on that step".
+    private static void RequireStep(GameState state, string expectedStepId)
     {
-        if (state.CurrentStep != TurnStep.Attack)
-            throw new InvalidOperationException($"Not in the Attack Step (currently {state.CurrentStep}).");
-        if (state.AttackSubStep != expected)
-            throw new InvalidOperationException($"Expected Attack sub-step {expected}, was {state.AttackSubStep}.");
+        if (state.CurrentStepId != expectedStepId)
+            throw new InvalidOperationException($"Expected the '{expectedStepId}' step, was '{state.CurrentStepId}'.");
     }
 
     private static DieInstance FindDie(GameState state, string id) =>

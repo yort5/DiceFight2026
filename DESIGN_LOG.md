@@ -8083,3 +8083,63 @@ marked superseded. Not implemented - ground rule 2.
 
 Verified: v2 tests 131/131 (1 new); v1's full suite untouched at
 547/547; build clean.
+
+## Spike C — the timing model, signed off and built (2026-08-24)
+
+The user approved the flat-step-list direction and doing it before
+Phase 9, so it is built. Design in V2_VOCABULARY.md Part 13; the short
+version is that the engine's position is now a cursor into one flat,
+ordered, config-declared step list rather than a pair of enums, and an
+ability names its timing window by step id.
+
+The user's own framing settled the hardest part before implementation
+started. I had proposed a `(before | at | after, step)` tuple to handle
+"before your Clear and Draw Step" cards; their pasted TURN SUMMARY
+shows the rulebook lists "any abilities that take place at the start of
+your turn" as a PEER ENTRY preceding Clear and Draw, not as a property
+of it. So "before X" is simply its own entry and the tuple was
+unnecessary. The rulebook flattens; so do we.
+
+What kept the refactor from being enormous: `TurnStep` was already
+exactly the rulebook's phase list, so it survives as the PHASE tag on
+a step rather than being replaced, and `GameState.CurrentStep` stayed
+both readable and settable as a phase (setting it parks the cursor on
+that phase's first step). ~290 call sites reference `CurrentStep`;
+only three needed touching, all of them uses of the now-deleted
+`AttackSubStep`.
+
+Shipped: `TurnStepDef {Id, Phase, NeedsInput}`; `GameConfig.Steps`
+(data, so a Direction-C variant reorders steps with zero engine
+change); `StepIds` constants so a typo is a compile error rather than a
+filter that silently never matches; `GameState` cursor +
+`MoveToStep`; `AttackSubStep` deleted with attack sub-steps becoming
+ordinary list entries; `GameEvent.Step` as a step id and
+`EventFilter.Step` filtering on it; and the turn now opening on a real
+`start-of-turn` window before `clear-and-draw`.
+
+`NeedsInput` distinguishes decision windows (Main, the Action/Global
+window, selecting attackers) from engine procedures that just run
+(return dice to the Field Zone). Nothing consumes it yet - it exists
+because Phase 9's API needs to know when it must wait for a client
+rather than advancing on its own, and deciding that after the API is
+designed would mean designing it twice.
+
+Colossus "Piotr" is un-tailed and implemented - tailed only yesterday
+during DPS batch 1 for exactly this gap. Its test asserts both halves
+of what made it tailed: it fires at Clean Up, and does NOT fire when
+its controller enters their own Attack Step.
+
+Deliberately NOT done in the same pass, and recorded in
+V2_TAIL_POLICY.md rather than silently skipped: the five combat
+keywords are now *expressible* (the list can name their windows) but
+not built - each still needs its keyword behavior, and its step entry
+joins the standard list when that lands. Likewise the three fidelity
+gaps the TURN SUMMARY comparison surfaced (Main's end-of-step sweep,
+the Reserve Pool clearing at the wrong step, and the missing
+attack-effects / block-effects / damage-ko-effects windows plus the
+Fast/normal damage split) have ids reserved in `StepIds` but are not
+in `TurnStepDefs.Standard` until their procedures move there.
+
+Verified: `dotnet build DiceFight.slnx` clean (0 warnings/errors, all
+5 projects); v2 tests 132/132 passing; v1's full suite re-run
+untouched, still 547/547.
