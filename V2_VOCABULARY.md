@@ -1896,3 +1896,167 @@ Appendix B blueprint plus F13's GameState counter store are the
 complete data-model input. Per the plan's handoff design, any capable
 session can execute it — the spec now answers the questions it would
 otherwise have had to invent answers for.
+
+---
+
+## Part 12 — The two design spikes: PROPOSALS AWAITING SIGN-OFF (2026-08-24)
+
+**Nothing in this Part is adopted.** V2_PLAN.md Phase 8 task 3 requires
+each spike to be written up, signed off, and only then implemented.
+Both write-ups below are grounded in v1's actual implementations and in
+what v2 has actually built, and both are honest about what they do NOT
+close.
+
+Reading guide: each spike states the cards that need it, the shape
+proposed, what it costs in vocabulary terms, what it closes, and what
+it leaves tailed.
+
+### Spike A — Ability-blanking + named-card lockout
+
+**Cards**: D'Ken "Shi'ar Civil War" (DPS141), Mister Sinister "Mutant
+Supremacist" (DPS083), Vulcan "Power Suppression" (DPS095), Shriek
+(SMC016); plus the named-card lockout family folded in at the Part 11
+freeze — Blob (XFC087), Drax (IG107), Magneto (AOU139).
+
+#### What v1 does, and the one detail worth copying exactly
+
+v1 funnels every "what does THIS die's card grant" lookup through a
+single choke point, `DieStats.GetCard`, which returns `null` when the
+die is blanked. The detail worth copying verbatim is its *scope*, which
+v1's own comment spells out: blanking hides the **rules-text box**
+(keywords, triggered abilities, static grants) and NOT fixed printed
+attributes — face stats, affiliations, energy type all survive. Nor
+does it apply when a *different* die's card is consulted for identity
+or board presence ("is a die named X active" for someone else's
+condition). A blanked Wolverine is still named Wolverine, still X-Men,
+still 4A — he just does nothing.
+
+#### Proposed v2 shape
+
+1. **Implement the reserved 8th query**: `QueryEngine.AbilitiesActive(state, die) -> bool`.
+   The plan reserved this name and explicitly said not to build it
+   early; this is what it was reserved for.
+
+2. **Consulted at exactly three sites**, each already existing:
+   - `EventBus.Fire`'s listener scan — a blanked die's triggered
+     abilities never enqueue.
+   - `TurnEngine.UseGlobal` / `UseAction` — a blanked die's Global
+     can't be activated.
+   - `ContinuousRegistry.ActiveSourceDice` — a blanked die's
+     continuous templates switch off. (The plan asks this question
+     explicitly; v1's answer is yes, via the same choke point. Match it.)
+
+3. **Deliberately NOT consulted** by `GetAttack`/`GetDefense`/
+   `GetFieldingCost`, by `GetTags`' affiliation/name/energy
+   contributions, or by `TargetResolver`'s identity filters — mirroring
+   v1's scope decision above.
+
+4. **The already-queued case, which the rule-3.2.5 decision already
+   settled.** If ability X blanks a die whose ability Y is *already in
+   the queue*, Y still fires and resolves with no text to do anything
+   (the Dwarf Wizard / Shriek behavior). Concretely:
+   `EffectInterpreter.ResolveQueued` must re-check `AbilitiesActive` on
+   the source die at *resolution* time and no-op if it has since been
+   blanked. This falls straight out of per-ability snapshots dissolving
+   between queue entries — no extra mechanism, but it must be written
+   down or it will be missed.
+
+#### Vocabulary cost
+
+| Addition | Kind | Covers |
+|---|---|---|
+| `AbilityBlank(Target, ActiveWhen?)` | continuous template (7th) | D'Ken (Target: opposing character dice, `Stat: PurchaseCost Max 3`) |
+| `BlankText(Target, Duration)` | effect template (19th) | Mister Sinister's Global (single die, end of turn) |
+| `RememberCard(Target, MemoryName)` | effect template (20th) | the "choose an opposing card when fielded" memory both families share |
+| `PurchaseLock` / `FieldLock` modes on `CostModifier`, or a `Lockout(MemoryName)` continuous | continuous | Blob / Drax / Magneto AOU139 "can't purchase/field that card" |
+
+#### What it does NOT close (be honest about this before signing)
+
+- **Mister Sinister's side-wide half** — "ignore all text on opposing
+  character *cards*" is **card**-scoped, not die-scoped: it covers
+  copies not yet in play. `AbilityBlank`'s `TargetFilter` resolves to
+  *dice*. Closing it needs a card-scoped store keyed by
+  `(player, cardId)` — exactly the shape `GameState.Counters` already
+  established for F13, so the precedent exists, but it is a second
+  mechanism, not a free rider on the first.
+- **Vulcan's engagement scoping** — "blocking or blocked by Vulcan" is
+  a combat-*engagement* relationship. `TargetFilter` has no concept of
+  "engaged with the source die," and v1 doesn't express it through
+  targeting either (it populates the blank set from inside
+  `CombatEngine.DeclareBlockers`). Vulcan likely stays tailed even
+  after this spike, unless engagement becomes a `TargetFilter` notion —
+  which would be a much larger ask.
+
+**Assessment**: this is the bigger of the two spikes — three or four
+vocabulary additions plus a card-scoped store, and it still leaves two
+of its five motivating cards partly open. Worth doing for the lockout
+family and D'Ken; worth going in with eyes open about Sinister and
+Vulcan.
+
+### Spike B — Live-value Amounts
+
+**Cards**: Archnemesis (DPS001), Cosmic Cube (MSW002), Rogue "Mrs. X"
+(DPS049), Dark Phoenix "Destructive Force" (DPS107).
+
+#### Proposed v2 shape
+
+Extend `Amount` with two binding-referencing sources, per the plan:
+
+```
+Amount = Fixed(n)
+       | PerMatch(...)                       // unchanged
+       | StatOf(binding, Attack|Defense|Level|...)   // NEW
+       | EventValue                                  // NEW
+```
+
+**`StatOf` captures at BIND time, not at use time.** This is the whole
+point, and it is what makes Archnemesis's rule-3.1.7 simultaneity fall
+out for free rather than needing special-casing: both dice are bound
+(and their stats snapshotted) before either `DealDamage` applies, so
+neither reads the other's already-applied damage.
+
+Implementation consequence worth stating up front:
+`EffectContext.Bindings` is currently `name -> dieId`. Bind-time
+capture means it becomes `name -> (dieId, capturedStats)` (or gains a
+parallel capture dictionary). Small, but it touches the binding table
+every template already uses.
+
+`EventValue` reads the triggering event's own numeric payload —
+`DamageDealtPayload.Amount` already exists and `QueuedAbility` already
+carries the event subject, so this is mostly plumbing the payload into
+the same capture table.
+
+#### One additional change these cards force
+
+`ModifyStat.SetAttack` / `SetDefense` are `int?`. Archnemesis's Global
+("target die has D equal to its A") and Rogue's attack-swap both need
+them to accept an `Amount` instead. That is a **type change to an
+existing frozen template**, not just a new `Amount` case — call it out
+now rather than discover it mid-implementation.
+
+#### Coverage
+
+| Card | Closed? | Notes |
+|---|---|---|
+| Archnemesis — WhenUsed mutual damage | **Yes** | `Sequence` of two `DealDamage`s over bound dice; bind-time capture gives the simultaneity |
+| Archnemesis — Global (D = its own A) | **Yes**, given Amount-typed `SetDefense` | |
+| Rogue "Mrs. X" — attack swap | **Yes**, same caveat | And note ground rule 8: v1 wrongly collapsed its "you may" to always-swap. v2 must wrap it in `MayPay` |
+| Dark Phoenix "Destructive Force" | **Yes** | `EventValue` off `DieDamaged`'s existing payload |
+| Cosmic Cube — swap life totals | **No** | Needs a `LifeOf(player)` amount source *and* a set-mode on `LifeChange` (it takes a signed delta, not an absolute). Two further additions for one card — recommend leaving tailed |
+
+**Assessment**: the cheaper and better-defined spike. Two `Amount`
+cases plus one type widening closes four of five motivating clauses
+cleanly, and the bind-time-capture design has a real payoff beyond
+these cards (it is the general answer to "read a value before the
+ability mutates it"). Recommend doing this one first.
+
+### Recommended order
+
+Spike B first (smaller, self-contained, immediate card payoff), then
+Spike A — and, if Spike A is approved, decide the Mister Sinister
+card-scoped store and the Vulcan engagement question explicitly at
+sign-off rather than during implementation.
+
+Also outstanding and unrelated to either spike, from batch 1:
+`EventFilter.Step` (see `V2_TAIL_POLICY.md`) — a one-field addition
+blocking every end-of-turn/start-of-turn card in the catalog.
