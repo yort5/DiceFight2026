@@ -1993,7 +1993,7 @@ of its five motivating cards partly open. Worth doing for the lockout
 family and D'Ken; worth going in with eyes open about Sinister and
 Vulcan.
 
-### Spike B — Live-value Amounts
+### Spike B — Live-value Amounts *(ADOPTED AND IMPLEMENTED 2026-08-24)*
 
 **Cards**: Archnemesis (DPS001), Cosmic Cube (MSW002), Rogue "Mrs. X"
 (DPS049), Dark Phoenix "Destructive Force" (DPS107).
@@ -2252,3 +2252,54 @@ Shipped:
 Colossus "Piotr" is un-tailed, with a test asserting both halves of
 what made it tailed: it fires at Clean Up, and does NOT fire when its
 controller enters their own Attack Step.
+
+---
+
+## Part 14 — Spike B implementation note (2026-08-24)
+
+Built as designed. `Amount` gains `StatOf(binding, stat)` and
+`EventValue`; `ModifyStat.SetAttack`/`SetDefense` widened from `int?` to
+`Amount?`; `EffectContext` gained a `CapturedStats` table and a `Bind`
+method that snapshots a die's BASE stats at bind time.
+
+Two implementation choices worth recording:
+
+- **`Bind` lives on `EffectContext`, not on `EffectInterpreter`.** The
+  first draft had it as a private interpreter helper, and a test that
+  seeded `Bindings["self"]` directly then silently skipped capture -
+  the failure surfaced immediately, but the same trap would have caught
+  any future caller. Binding-and-capturing is context state, so it is
+  now impossible to seed a binding without capturing it.
+- **`StatOf`/`EventValue` resolve in `EffectInterpreter`, not in
+  `AmountResolver`.** Both are meaningful only inside an ability's own
+  resolution, and `AmountResolver` is shared with `ContinuousRegistry`,
+  which has neither bindings nor a triggering event. Both throw rather
+  than reading zero when referenced out of context.
+
+**Closed**: Rogue "Mrs. X" (DPS049) is migrated and implemented - the
+attack swap, with its "you may" restored to a real `MayPay` choice
+(ground rule 8; v1 collapsed it, and V2_PLAN.md names it as one of the
+two cards v1 got wrong). Archnemesis's Global shape (`SetDefense:
+StatOf(target, Attack)`) and `EventValue` are both covered by tests.
+
+**Two further findings, neither anticipated in the write-up** - see
+`V2_TAIL_POLICY.md` for both:
+
+1. **Archnemesis's WhenUsed half needs a bind-only step.** The write-up
+   asserted this half closed, writing it as
+   `Sequence([DealDamage(StatOf("b",...), Bound "a"), ...])` without
+   saying where "a" and "b" get bound. They cannot: a `TargetFilter`
+   binds only as a side effect of the node that uses it, so the first
+   `DealDamage` would need "b" bound before "b" has been resolved. A
+   no-op `ModifyStat(..., AtkDelta: 0)` *does* work as a bind step, but
+   encoding it that way is an obscure idiom to propagate across cards.
+   Proposed instead: a `Bind(TargetFilter)` effect template. Not added -
+   ground rule 2.
+2. **Globals are card-scoped, not die-scoped.** Rule 2.6.5.2 (and v1's
+   own `UseGlobalAbility`, which keys on `(cardId, playerId)`): a Global
+   is usable by card ownership alone, with no die of it active - and the
+   TURN SUMMARY says *both* players may use Globals. v2's
+   `TurnEngine.UseGlobal` requires an active fielded die owned by the
+   ACTIVE player, so a Global on a Basic Action card (Archnemesis) can
+   never be used at all. A pre-existing Phase 4 gap, unrelated to this
+   spike but blocking the same card.

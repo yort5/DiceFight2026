@@ -89,3 +89,32 @@ windows and the Fast/normal damage split). The step list has ids
 reserved for all of them (`StepIds`), but they are not in
 `TurnStepDefs.Standard` until their procedures move.
 
+
+## Spike B findings (2026-08-24)
+
+Cards evaluated while implementing live-value Amounts. Rogue "Mrs. X"
+(DPS049) closed and is implemented; these did not.
+
+| CardId | Name | What it needs | Policy |
+|---|---|---|---|
+| DPS001 | Archnemesis | **Two** things. (a) Its WhenUsed half needs a bind-only step: both dice must be bound before either takes damage, but a `TargetFilter` only binds as a side effect of the node using it. A no-op `ModifyStat(AtkDelta: 0)` works as a bind step but is an obscure idiom; proposed instead is a `Bind(TargetFilter)` template. (b) Its Global sits on a Basic Action card, and v2 can't use those at all - see below | Ask |
+| DPS107 | Dark Phoenix (Destructive Force) | `EventValue` now supplies "that much damage", but "when an **opposing** character die damages Dark Phoenix" needs damage-SOURCE visibility, which no event payload carries. Same family as the payment-source gap the user already designated alter-or-skip | Ask |
+
+### Standing decision: Globals are card-scoped, not die-scoped
+
+Rule 2.6.5.2 - a Global ability is usable by **card ownership alone**,
+without any die of that card being active - and the TURN SUMMARY states
+plainly that **both** players can use Global Abilities (the inactive
+player after priority passes). v1 implements this correctly:
+`UseGlobalAbility(state, queue, cardId, playerId, energy)`.
+
+v2's `TurnEngine.UseGlobal(state, queue, dieId, abilityIndex, energy)`
+instead requires an active fielded die controlled by the **active**
+player. Consequences: a Global printed on a Basic Action card can never
+be used (no such die is ever fielded), and the inactive player can never
+use any Global.
+
+A pre-existing Phase 4 gap rather than anything a spike introduced, and
+it is a behavior change to a working signature, so it is flagged rather
+than folded into an unrelated pass - a natural candidate for its own,
+alongside the three TURN SUMMARY fidelity gaps.

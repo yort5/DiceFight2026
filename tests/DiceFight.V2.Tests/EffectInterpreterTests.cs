@@ -70,7 +70,7 @@ public class EffectInterpreterTests
     private static EffectContext BuildContext(GameState state, string controllerId, string? sourceDieId = null, IDiceRoller? roller = null, TriggerKind trigger = TriggerKind.Global)
     {
         var ctx = new EffectContext { State = state, Queue = new AbilityQueue(), ControllerId = controllerId, Trigger = trigger, Roller = roller ?? new FixedRoller(0), Random = new Random(1) };
-        if (sourceDieId is not null) ctx.Bindings["self"] = sourceDieId;
+        if (sourceDieId is not null) ctx.Bind("self", sourceDieId); // Bind, not a raw write - captures stats too
         return ctx;
     }
 
@@ -414,7 +414,7 @@ public class EffectInterpreterTests
         var die = AddDie(state, card, "p1", Zone.FieldZone, 0);
         var ctx = BuildContext(state, "p1");
 
-        EffectInterpreter.Execute(new ModifyStat(new TargetFilter(Ownership: TargetOwnership.Own), SetAttack: 9), ctx);
+        EffectInterpreter.Execute(new ModifyStat(new TargetFilter(Ownership: TargetOwnership.Own), SetAttack: new Fixed(9)), ctx);
 
         Assert.Equal(9, QueryEngine.GetAttack(state, die));
     }
@@ -445,10 +445,103 @@ public class EffectInterpreterTests
 
         // Swap in the Sidekick's 1A.
         var ctx = BuildContext(state, "p1", sourceDieId: hero.Id);
-        EffectInterpreter.Execute(new ModifyStat(new TargetFilter(Self: true), SetAttack: 1), ctx);
+        EffectInterpreter.Execute(new ModifyStat(new TargetFilter(Self: true), SetAttack: new Fixed(1)), ctx);
 
         Assert.Equal(1, QueryEngine.GetBaseAttack(state, hero)); // own value really is 1 now
         Assert.Equal(2, QueryEngine.GetAttack(state, hero)); // ...and Lois's +1 applies again on top
+    }
+
+    // --- Spike B: live-value Amounts (StatOf / EventValue) ---
+
+    // Archnemesis (DPS001)'s Global shape: "target character die has D
+    // equal to its A". The binding is made by the SAME node that uses it -
+    // ResolveTarget binds before the effect callback runs.
+    [Fact]
+    public void StatOf_Can_Set_One_Stat_From_Another_On_The_Same_Die()
+    {
+        var card = BuildCard("T", [new Face([], new CharacterFaceData(1, 0, 6, 2))]); // 6A/2D
+        var state = BuildState(card);
+        var die = AddDie(state, card, "p1", Zone.FieldZone, 0);
+        var ctx = BuildContext(state, "p1");
+
+        EffectInterpreter.Execute(new ModifyStat(new TargetFilter(Ownership: TargetOwnership.Own, BindAs: "t"),
+            SetDefense: new StatOf("t", StatKind.Attack)), ctx);
+
+        Assert.Equal(6, QueryEngine.GetDefense(state, die));
+    }
+
+    // The mechanism itself, via Rogue "Mrs. X"'s swap shape. This only
+    // comes out right because StatOf captures AT BIND TIME: step 1 binds
+    // "other" (snapshotting 5A) and immediately overwrites it with self's
+    // 2A; step 2 reads "other"'s CAPTURED 5A, not the 2A just written.
+    // A use-time read would leave BOTH dice on 2A.
+    [Fact]
+    public void StatOf_Captures_At_Bind_Time_So_A_Two_Way_Swap_Is_Really_A_Swap()
+    {
+        var mine = BuildCard("Mine", [new Face([], new CharacterFaceData(1, 0, 2, 3))]); // 2A
+        var theirs = BuildCard("Theirs", [new Face([], new CharacterFaceData(1, 0, 5, 4))]); // 5A
+        var state = BuildState(mine, theirs);
+        var self = AddDie(state, mine, "p1", Zone.FieldZone, 0, "self");
+        var other = AddDie(state, theirs, "p2", Zone.FieldZone, 0, "other");
+        var ctx = BuildContext(state, "p1", sourceDieId: "self");
+
+        EffectInterpreter.Execute(new Sequence([
+            new ModifyStat(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Opposing, BindAs: "other"),
+                SetAttack: new StatOf("self", StatKind.Attack)),
+            new ModifyStat(new TargetFilter(Self: true), SetAttack: new StatOf("other", StatKind.Attack)),
+        ]), ctx);
+
+        Assert.Equal(5, QueryEngine.GetAttack(state, self));
+        Assert.Equal(2, QueryEngine.GetAttack(state, other));
+    }
+
+    [Fact]
+    public void StatOf_Against_An_Unbound_Name_Throws_Rather_Than_Reading_Zero()
+    {
+        var card = BuildCard("T", [Level1Char]);
+        var state = BuildState(card);
+        AddDie(state, card, "p1", Zone.FieldZone, 0);
+        var ctx = BuildContext(state, "p1");
+
+        Assert.Throws<InvalidOperationException>(() => EffectInterpreter.Execute(
+            new ModifyStat(new TargetFilter(Ownership: TargetOwnership.Own), SetAttack: new StatOf("nope", StatKind.Attack)), ctx));
+    }
+
+    // EventValue, through the real firing path: a die reacting to its own
+    // DieDamaged deals "that much" damage onward. No migrated card can use
+    // this yet (Dark Phoenix "Destructive Force" also needs damage-SOURCE
+    // visibility, which no payload carries - see V2_TAIL_POLICY.md), so
+    // the card here is synthetic.
+    [Fact]
+    public void EventValue_Reads_The_Triggering_Events_Own_Damage_Amount()
+    {
+        var retaliator = BuildCard("Retaliator", [new Face([], new CharacterFaceData(1, 0, 1, 99))]) with
+        {
+            // DealDamage at a player, not LifeChange - LifeChange's Amount
+            // is signed and a positive value GAINS life, so "deal that much
+            // damage" is the damage template with a Player target.
+            Abilities = [new TriggeredAbility(TriggerKind.DieDamaged,
+                new DealDamage(new EventValue(), new TargetFilter(Kind: TargetKind.Player, Ownership: TargetOwnership.Opposing)))],
+        };
+        var state = BuildState(retaliator);
+        var die = AddDie(state, retaliator, "p1", Zone.FieldZone, 0);
+        var queue = new AbilityQueue();
+
+        EffectInterpreter.ApplyDamage(state, queue, DamageSource.Ability, die.Id, 3);
+        EffectInterpreter.DrainQueue(state, queue, new FixedRoller(0), new Random(1));
+
+        // p1 controls the retaliator, so "Opposing" is p2: 10 - 3.
+        Assert.Equal(7, state.PlayerTwo.Life);
+    }
+
+    [Fact]
+    public void EventValue_Outside_A_Numeric_Event_Throws_Rather_Than_Reading_Zero()
+    {
+        var state = BuildState();
+        var ctx = BuildContext(state, "p1");
+
+        Assert.Throws<InvalidOperationException>(() =>
+            EffectInterpreter.Execute(new DealDamage(new EventValue(), new TargetFilter(Kind: TargetKind.Player, Ownership: TargetOwnership.Opposing)), ctx));
     }
 
     [Fact]

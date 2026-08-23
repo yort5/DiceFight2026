@@ -8143,3 +8143,63 @@ in `TurnStepDefs.Standard` until their procedures move there.
 Verified: `dotnet build DiceFight.slnx` clean (0 warnings/errors, all
 5 projects); v2 tests 132/132 passing; v1's full suite re-run
 untouched, still 547/547.
+
+## Spike B — live-value Amounts, signed off and built (2026-08-24)
+
+`Amount` gains `StatOf(binding, stat)` and `EventValue`;
+`ModifyStat.SetAttack`/`SetDefense` widened from `int?` to `Amount?`;
+`EffectContext` gained a `CapturedStats` table and a `Bind` method that
+snapshots a die's BASE stats at bind time. `StatOf` reads base
+(printed + applied), never static-inclusive - the user's own
+applied-vs-static ruling, already settled before implementation.
+
+Bind-time capture is the whole mechanism, and the swap test is what
+proves it: step 1 binds "other" (snapshotting 5A) and immediately
+overwrites that attack with self's 2A; step 2 reads "other"'s CAPTURED
+5A rather than the 2A just written. A use-time read would leave both
+dice on 2A. Rogue "Mrs. X" (DPS049) is migrated on exactly this shape,
+with its "you may" restored to a real MayPay choice - v1 collapsed it,
+and V2_PLAN.md names it as one of the two cards v1 got wrong.
+
+Two implementation choices worth recording. `Bind` ended up on
+`EffectContext` rather than as a private `EffectInterpreter` helper:
+the first draft had it private, and a test that seeded
+`Bindings["self"]` directly then silently skipped capture. The failure
+surfaced at once, but the same trap would have caught any later
+caller, so binding-and-capturing now lives on the context where it is
+impossible to bypass. And `StatOf`/`EventValue` resolve in
+`EffectInterpreter`, not `AmountResolver` - both are meaningful only
+inside an ability's resolution, and `AmountResolver` is shared with
+`ContinuousRegistry`, which has neither bindings nor an event. Both
+throw rather than reading zero when referenced out of context.
+
+**Two findings the write-up had not anticipated**, both logged in
+V2_TAIL_POLICY.md rather than worked around:
+
+1. Archnemesis's WhenUsed half does NOT close, contrary to the
+   write-up. It needs both dice bound before either takes damage, but a
+   TargetFilter binds only as a side effect of the node that uses it -
+   so the first DealDamage would need "b" bound before "b" has been
+   resolved. The write-up glossed this by writing `Bound "a"` / `Bound
+   "b"` without saying where the binds happened. A no-op
+   `ModifyStat(AtkDelta: 0)` does work as a bind step, but propagating
+   that idiom across card data is worse than asking for a small
+   `Bind(TargetFilter)` template. Not added - ground rule 2.
+2. Globals are card-scoped, not die-scoped. Rule 2.6.5.2 and the TURN
+   SUMMARY both say a Global is usable by card ownership alone, by
+   EITHER player; v1's `UseGlobalAbility` keys on `(cardId, playerId)`
+   accordingly. v2's `UseGlobal` requires an active fielded die owned by
+   the active player, so a Global on a Basic Action card (Archnemesis)
+   can never be used and the inactive player can never use any Global.
+   Pre-existing Phase 4 gap, unrelated to this spike but blocking the
+   same card; flagged for its own pass rather than folded in.
+
+One test-expectation error worth noting because the engine was right
+and I was wrong: the first EventValue test used `LifeChange(EventValue)`
+expecting damage, but LifeChange's Amount is signed and a positive
+value GAINS life, so the opponent healed. "Deal that much damage" is
+`DealDamage` with a Player target.
+
+Verified: `dotnet build DiceFight.slnx` clean (0 warnings/errors, all
+5 projects); v2 tests 137/137 passing (5 new); v1's full suite re-run
+untouched, still 547/547.

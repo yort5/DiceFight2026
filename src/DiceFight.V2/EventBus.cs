@@ -41,7 +41,8 @@ public static class EventBus
                 foreach (var ability in card.Abilities)
                 {
                     if (Matches(state, evt, listener, ability))
-                        queue.Enqueue(listener.Id, listener.ControllerId, ability.Trigger, ability.Effect, evt.SubjectDie?.Id);
+                        queue.Enqueue(listener.Id, listener.ControllerId, ability.Trigger, ability.Effect, evt.SubjectDie?.Id,
+                            (evt.Payload as DamageDealtPayload)?.Amount);
                 }
             }
         }

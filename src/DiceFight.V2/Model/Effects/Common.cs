@@ -75,6 +75,28 @@ public abstract record Amount;
 public sealed record Fixed(int Value) : Amount;
 public sealed record PerMatch(TargetFilter Filter, int Multiplier, bool Distinct = false, CountUnit Unit = CountUnit.Dice) : Amount;
 
+// Spike B (V2_VOCABULARY.md Part 12, adopted 2026-08-24) - the two
+// live-value sources.
+//
+// StatOf reads a bound die's stat as CAPTURED AT BIND TIME, not as it
+// stands when the amount is used. That is the whole mechanism: it makes
+// rule 3.1.7 simultaneity fall out for free, since two dice bound before
+// either is modified each read the other's pre-modification value
+// (Rogue "Mrs. X"'s attack swap is exactly this).
+//
+// It reads the BASE stat (printed face + applied modifiers), never the
+// static-inclusive one - the game's own applied-vs-static distinction
+// (user ruling, 2026-08-24): an applied modifier is part of the die's
+// own value, a conditional static aura is not and recomputes from
+// whatever the die currently is. See QueryEngine's GetBase* queries.
+public sealed record StatOf(string Binding, StatKind Stat) : Amount;
+
+// The triggering event's own numeric payload - currently only
+// DieDamaged carries one (DamageDealtPayload.Amount), for "deal that
+// much damage" texts. Meaningless outside a triggered ability, and
+// resolving it without one throws rather than silently reading zero.
+public sealed record EventValue : Amount;
+
 public enum CountUnit
 {
     Dice,

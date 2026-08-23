@@ -77,12 +77,16 @@ public static class EffectInterpreter
             Trigger = ability.Trigger,
             Roller = roller,
             Random = random,
+            EventValue = ability.EventValue,
         };
         // "self"/"event" are the two reserved binding names (V2_VOCABULARY.md
         // Part 1) - seeded here, before the tree runs, from the queue
         // entry EventBus.Fire/TurnEngine.UseGlobal already populated.
-        if (ability.SourceDieId is { } sourceId) ctx.Bindings["self"] = sourceId;
-        if (ability.EventSubjectDieId is { } eventId) ctx.Bindings["event"] = eventId;
+        // Bound through Bind (not a raw dictionary write) so their stats
+        // are captured too - Rogue "Mrs. X" swaps against `self`, which
+        // must read its PRE-swap attack.
+        if (ability.SourceDieId is { } sourceId) ctx.Bind("self", sourceId);
+        if (ability.EventSubjectDieId is { } eventId) ctx.Bind("event", eventId);
 
         // The public Execute, not the private overload - it's what captures
         // this ability's own rule-3.2.5 snapshot (see the class remarks).
@@ -524,8 +528,8 @@ public static class EffectInterpreter
                 // becomes 2A - 1A swapped in, plus Lois's +1A again,
                 // because it is still a SuperFriend and still attacking.
                 // Against GetAttack it would have shown 1A.
-                var atkDelta = n.SetAttack is { } setAtk ? setAtk - QueryEngine.GetBaseAttack(ctx.State, die) : n.AtkDelta ?? 0;
-                var defDelta = n.SetDefense is { } setDef ? setDef - QueryEngine.GetBaseDefense(ctx.State, die) : n.DefDelta ?? 0;
+                var atkDelta = n.SetAttack is { } setAtk ? ResolveAmount(ctx, setAtk) - QueryEngine.GetBaseAttack(ctx.State, die) : n.AtkDelta ?? 0;
+                var defDelta = n.SetDefense is { } setDef ? ResolveAmount(ctx, setDef) - QueryEngine.GetBaseDefense(ctx.State, die) : n.DefDelta ?? 0;
                 die.AppliedModifiers.Add(new AppliedModifier(atkDelta, defDelta, 0, source, n.Duration, grantedDuring));
             }
             onComplete();
@@ -694,15 +698,18 @@ public static class EffectInterpreter
     private static void BindIfNeeded(EffectContext ctx, TargetFilter filter, IReadOnlyList<string> resolvedIds)
     {
         if (filter.BindAs is { } name && resolvedIds.Count > 0)
-            ctx.Bindings[name] = resolvedIds[0];
+            ctx.Bind(name, resolvedIds[0]);
     }
 
-    // Phase 6 extracted this into AmountResolver (shared with
-    // ContinuousRegistry's StatAura handling) - kept as a thin wrapper
-    // here so every existing call site (ResolveAmount(ctx, amount))
-    // didn't need touching.
-    private static int ResolveAmount(EffectContext ctx, Amount amount) =>
-        AmountResolver.Resolve(ctx.State, ctx.ControllerId, amount, ctx.Bindings, ProtectionFor(ctx.Trigger));
+    private static int ResolveAmount(EffectContext ctx, Amount amount) => amount switch
+    {
+        StatOf s => ctx.CapturedStats.TryGetValue(s.Binding, out var captured) && captured.TryGetValue(s.Stat, out var value)
+            ? value
+            : throw new InvalidOperationException($"StatOf references binding '{s.Binding}', which is not bound to a die in this ability."),
+        EventValue => ctx.EventValue
+            ?? throw new InvalidOperationException("EventValue was used by an ability whose triggering event carries no numeric payload."),
+        _ => AmountResolver.Resolve(ctx.State, ctx.ControllerId, amount, ctx.Bindings, ProtectionFor(ctx.Trigger)),
+    };
 
     // Global/DieUsed are the only two trigger kinds targeting protection
     // can gate (rule 3.8's own scope - a targeted reactive trigger isn't

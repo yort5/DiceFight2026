@@ -46,12 +46,16 @@ public sealed record SpinToEnergy(TargetFilter Target, int Amount = 1) : EffectN
 // AtkDelta/DefDelta are the relative-change form; SetAttack/SetDefense
 // (Finding 5) are the absolute-snapshot form, mutually exclusive with
 // their matching delta field, mirroring Spin's LevelDelta/SetLevel axis.
+// SetAttack/SetDefense are Amount-typed (widened from int? by Spike B) so
+// they can take a live value - Archnemesis's "target character die has D
+// equal to its A" is SetDefense: StatOf(target, Attack). A plain
+// absolute is just Fixed(n).
 public sealed record ModifyStat(
     TargetFilter Target,
     int? AtkDelta = null,
     int? DefDelta = null,
-    int? SetAttack = null,
-    int? SetDefense = null,
+    Amount? SetAttack = null,
+    Amount? SetDefense = null,
     Duration Duration = Duration.EndOfTurn) : EffectNode;
 
 public sealed record GrantTag(TargetFilter Target, IReadOnlyList<string> Tags, Duration Duration = Duration.EndOfTurn) : EffectNode;

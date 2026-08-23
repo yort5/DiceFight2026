@@ -248,11 +248,37 @@ public static class DpsCards
         RawText: "Deadly",
         Abilities: [], Continuous: [], IsImplemented: false);
 
+    // Spike B's demonstration card, and its motivating case. "Swap A" is
+    // two ModifyStat sets whose amounts are StatOf(...) - and it is only
+    // correct because StatOf captures AT BIND TIME: step 1 binds "other"
+    // (snapshotting its attack) and immediately overwrites that attack
+    // with self's; step 2 then reads "other"'s CAPTURED, pre-overwrite
+    // value. A use-time read would swap in the value it had just written
+    // and leave both dice on Rogue's attack.
+    //
+    // Ground rule 8: v1 collapsed this card's "you may" to always-swap
+    // (its own comment says so, and V2_PLAN.md names it as one of the two
+    // cards v1 got wrong). Here it is a real MayPay choice.
+    public static readonly CardDef RogueMrsX = new(
+        Id: "DPS049", Name: "Rogue", Subtitle: "Mrs. X", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 4, EnergySymbolId: "Mask",
+        Die: MigrationDice.Character("DPS049Die", "Mask", (1, 2, 3), (2, 4, 5), (2, 5, 6)),
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: [],
+        RawText: "When fielded, you may swap Rogue's A with target opposing character die's A.",
+        Abilities: [new TriggeredAbility(TriggerKind.DieFielded,
+            new MayPay(Cost: null, Then: new Sequence([
+                new ModifyStat(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Opposing, BindAs: "other"),
+                    SetAttack: new StatOf("self", StatKind.Attack)),
+                new ModifyStat(new TargetFilter(Self: true),
+                    SetAttack: new StatOf("other", StatKind.Attack)),
+            ])))],
+        Continuous: []);
+
     public static IReadOnlyList<CardDef> All =>
     [
         PowerBolt, Rally, RonanTheAccuserTreason, StormCloudCover, PsylockeTelepath,
         MasterMoldTargetingMutants, MasterMoldUntoldElectronicExpertise, MagnetoFounderOfTheBrotherhood,
         CyclopsFirstClass, JubileeXMenFieldLeader, CorsairCriminalRecord, ColossusPiotr,
-        DarkPhoenixEnemyOfTheShiar, MagikWielderOfTheSoulsword, DeathbirdTreacherous,
+        DarkPhoenixEnemyOfTheShiar, MagikWielderOfTheSoulsword, DeathbirdTreacherous, RogueMrsX,
     ];
 }
