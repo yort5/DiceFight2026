@@ -52,6 +52,17 @@ public static class TurnEngine
     public static void ClearAndDraw(GameState state, AbilityQueue queue, Random random)
     {
         RequireStep(state, TurnStep.StartOfTurn);
+
+        // Turn-scoped trackers reset as the new turn begins rather than
+        // as the old one ends - see CleanUp's own remarks for the card
+        // that forced this (an end-of-turn ability resolves after CleanUp
+        // has returned, and must still be able to read the turn it is
+        // ending).
+        state.GlobalsUsedThisTurn.Clear();
+        state.PurchasedThisTurn.Clear();
+        state.FieldedCharacterThisTurn.Clear();
+        state.CharacterDiceKOdThisTurn.Clear();
+
         EventBus.Fire(state, queue, new GameEvent(TriggerKind.TurnStepEntered, null, state.ActivePlayerId, StepIds.StartOfTurn));
 
         state.MoveToStep(StepIds.ClearAndDraw);
@@ -385,11 +396,22 @@ public static class TurnEngine
             die.CombatFlags.Clear();
         }
 
-        state.GlobalsUsedThisTurn.Clear();
+        // Turn-scoped TRACKERS are deliberately NOT reset here - they are
+        // reset at the start of the next turn instead (ClearAndDraw).
+        // Found via Jean Grey "Peaceful Coexistence" (DPS035), whose
+        // "if no character dice were KO'd that turn" condition reads
+        // exactly this state: an end-of-turn ability only RESOLVES after
+        // CleanUp returns (the caller drains the queue), so clearing here
+        // meant she always saw an empty KO set and always scored her
+        // Loyalty Counter. Resetting at turn start instead leaves the
+        // just-ended turn's facts readable for precisely as long as
+        // end-of-turn abilities need them, and is equivalent for every
+        // within-turn reader.
+        //
+        // Grants still expire HERE, not at turn start - the rulebook's
+        // Cleanup Step is "end all effects", and a "this turn" grant must
+        // not survive into the opponent's turn.
         state.PendingPurchaseModifiers.RemoveAll(m => m.PlayerId == endingPlayerId);
-        state.PurchasedThisTurn.Remove(endingPlayerId);
-        state.FieldedCharacterThisTurn.Remove(endingPlayerId);
-        state.CharacterDiceKOdThisTurn.Clear();
         state.ActivePlayerId = state.OpponentOf(state.ActivePlayerId);
         state.MoveToStep(StepIds.StartOfTurn);
 

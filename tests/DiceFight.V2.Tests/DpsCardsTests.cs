@@ -327,6 +327,171 @@ public class DpsCardsTests
         Assert.Equal(5, QueryEngine.GetDefense(state, target));
     }
 
+    // ---- Batch 2 ----
+
+    // Finding 12's worked answer end to end, and a live check that the
+    // rule-3.2.5 snapshot holds: step 1 puts a Field Zone die INTO the
+    // Used Pile, and step 2's Used Pile candidates must not include it.
+    [Fact]
+    public void Mutation_Swaps_A_Field_Die_With_A_Used_Pile_Die_And_Spins_It_To_Level_1()
+    {
+        var state = NewGame();
+        var fielded = Active(state, DpsCards.RonanTheAccuserTreason, "p1", level: 1, id: "fielded");
+        var dormant = new Model.DieInstance { Id = "dormant", CardId = DpsCards.PsylockeTelepath.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.UsedPile, CurrentFaceIndex = null };
+        state.Dice.Add(dormant);
+        var mutation = Ready(state, DpsCards.Mutation, "p1", 0);
+        var queue = new AbilityQueue();
+
+        TurnEngine.UseAction(state, queue, mutation.Id);
+        Drain(state, queue);
+
+        // Exactly one candidate per clause, so no choice is raised - and
+        // in particular the just-swapped-out die is NOT offered back.
+        Assert.Null(state.PendingChoice);
+        Assert.Equal(Zone.UsedPile, fielded.Zone);
+        Assert.Equal(Zone.FieldZone, dormant.Zone);
+        Assert.Equal(1, state.GetCurrentFace(dormant)!.Character!.Level);
+    }
+
+    [Fact]
+    public void Mutations_Global_Spins_One_Die_Down_And_Another_Up()
+    {
+        var state = NewGame();
+        var down = Active(state, DpsCards.RonanTheAccuserTreason, "p1", level: 2, id: "down");
+        var up = Active(state, DpsCards.PsylockeTelepath, "p1", level: 1, id: "up");
+        Sidekick(state, "p1", Zone.ReservePool, 4, "mask"); // face 4 = Mask
+        var queue = new AbilityQueue();
+
+        TurnEngine.UseGlobal(state, queue, DpsCards.Mutation.Id, "p1", abilityIndex: 1, ["mask"]);
+        Drain(state, queue);
+        Answer(state, "down");
+        Drain(state, queue);
+        Answer(state, "up");
+
+        Assert.Equal(1, state.GetCurrentFace(down)!.Character!.Level);
+        Assert.Equal(2, state.GetCurrentFace(up)!.Character!.Level);
+    }
+
+    // Finding 8's Reroll params. FixedRoller(0) lands every die on face
+    // 0, which MigrationDice makes the ENERGY face - so both rerolled
+    // dice fail to roll a character and move on, and Psylocke's
+    // DamagePerMoved fires twice.
+    [Fact]
+    public void Psylocke_Rerolls_Two_Opposing_Dice_Moves_The_Non_Characters_And_Deals_2_Per_Die()
+    {
+        var state = NewGame();
+        var a = Active(state, DpsCards.RonanTheAccuserTreason, "p1", id: "a"); // p1 is the target side here
+        var b = Active(state, DpsCards.MasterMoldTargetingMutants, "p1", id: "b");
+        var psylocke = Ready(state, DpsCards.PsylockeAdvancedTelekineticCombatant, "p2", 1);
+        state.ActivePlayerId = "p2"; // Psylocke's controller is the one fielding
+        var queue = new AbilityQueue();
+
+        TurnEngine.Field(state, queue, psylocke.Id, []);
+        Drain(state, queue);
+        var pending = state.PendingChoice!;
+        EffectInterpreter.AnswerPendingChoice(state, [.. pending.CandidateIds.Take(2)]);
+
+        Assert.Equal(Zone.UsedPile, a.Zone);
+        Assert.Equal(Zone.UsedPile, b.Zone);
+        Assert.Equal(20 - 4, state.PlayerOne.Life); // 2 dice moved x 2 damage
+    }
+
+    // Finding 13 (Loyalty Counters) plus Spike C's step discriminator.
+    [Fact]
+    public void JeanGrey_Adds_A_Loyalty_Counter_At_CleanUp_Only_When_Nothing_Was_KOd()
+    {
+        var state = NewGame();
+        var jean = Active(state, DpsCards.JeanGreyPeacefulCoexistence, "p1");
+        var queue = new AbilityQueue();
+
+        TurnEngine.EnterAttackStep(state, queue);
+        TurnEngine.CleanUp(state, queue);
+        Drain(state, queue);
+        Assert.Equal(1, state.Counters[("p1", DpsCards.JeanGreyPeacefulCoexistence.Id, "Loyalty")]);
+
+        // Now KO something during the next turn - no counter that time.
+        state.CurrentStep = TurnStep.Main;
+        state.ActivePlayerId = "p1";
+        var victim = Active(state, DpsCards.PsylockeTelepath, "p2", id: "victim");
+        EffectInterpreter.KoDie(state, queue, victim, triggersKOAbilities: false);
+        TurnEngine.EnterAttackStep(state, queue);
+        TurnEngine.CleanUp(state, queue);
+        Drain(state, queue);
+
+        Assert.Equal(1, state.Counters[("p1", DpsCards.JeanGreyPeacefulCoexistence.Id, "Loyalty")]); // unchanged
+    }
+
+    [Fact]
+    public void Deadpool_Makes_Fielding_Cost_2_Dice_Free_But_Not_Costlier_Ones()
+    {
+        var state = NewGame();
+        Active(state, DpsCards.DeadpoolCollectThis, "p1");
+        // Ronan level 3 costs 2 to field; Magneto level 3 costs 3.
+        var cheap = Active(state, DpsCards.RonanTheAccuserTreason, "p1", level: 3, id: "cheap");
+        var pricey = Active(state, DpsCards.MagnetoFounderOfTheBrotherhood, "p1", level: 3, id: "pricey");
+
+        Assert.Equal(0, QueryEngine.GetFieldingCost(state, cheap)); // 2 - 2
+        Assert.Equal(3, QueryEngine.GetFieldingCost(state, pricey)); // above the threshold, untouched
+    }
+
+    [Fact]
+    public void Angel_Stops_The_Opponent_Targeting_Your_Sidekicks_With_Globals_Only()
+    {
+        var state = NewGame();
+        Active(state, DpsCards.AngelXaviersDream, "p1");
+        var sidekick = Sidekick(state, "p1", Zone.FieldZone, 0, "sk");
+
+        Assert.False(QueryEngine.CanBeTargeted(state, sidekick, "p2", ProtectionFrom.Global));
+        Assert.True(QueryEngine.CanBeTargeted(state, sidekick, "p1", ProtectionFrom.Global)); // its own controller
+        Assert.True(QueryEngine.CanBeTargeted(state, sidekick, "p2", ProtectionFrom.Action)); // Globals only
+    }
+
+    [Fact]
+    public void MagnetoVisionary_Forces_Two_Or_More_Blockers_On_Brotherhood_Attackers()
+    {
+        var state = NewGame();
+        state.CurrentStep = TurnStep.Attack;
+        var magneto = Active(state, DpsCards.MagnetoVisionary, "p1"); // Brotherhood - protected by its own rule
+        var blocker = Active(state, DpsCards.PsylockeTelepath, "p2", id: "blocker");
+        var queue = new AbilityQueue();
+
+        CombatEngine.DeclareAttackers(state, queue, [magneto.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(magneto.Id, blocker.Id);
+
+        Assert.Throws<InvalidOperationException>(() => CombatEngine.DeclareBlockers(state, queue, assignment, [blocker.Id]));
+    }
+
+    [Fact]
+    public void Blob_May_Block_Three_Attackers()
+    {
+        var state = NewGame();
+        state.CurrentStep = TurnStep.Attack;
+        var blob = Active(state, DpsCards.BlobImmovable, "p2");
+        var a1 = Active(state, DpsCards.PsylockeTelepath, "p1", id: "a1");
+        var a2 = Active(state, DpsCards.MasterMoldTargetingMutants, "p1", id: "a2");
+        var queue = new AbilityQueue();
+
+        CombatEngine.DeclareAttackers(state, queue, [a1.Id, a2.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(a1.Id, blob.Id);
+        assignment.AssignBlocker(a2.Id, blob.Id);
+
+        CombatEngine.DeclareBlockers(state, queue, assignment, [blob.Id]); // does not throw
+        Assert.Equal(StepIds.ActionGlobalWindow, state.CurrentStepId);
+    }
+
+    [Fact]
+    public void Batch2_Tailed_Cards_Are_Vanilla()
+    {
+        foreach (var card in new[] { DpsCards.MakingTheTeam, DpsCards.PhoenixPsionicMaelstrom, DpsCards.ColossusOrganicSteel })
+        {
+            Assert.False(card.IsImplemented);
+            Assert.Empty(card.Abilities);
+            Assert.Empty(card.Continuous);
+        }
+    }
+
     // The remaining batch-1 tail entry, pinned inert rather than silently
     // half-working - see V2_TAIL_POLICY.md for its gap (Deadly).
     [Fact]

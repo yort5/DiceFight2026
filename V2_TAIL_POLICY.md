@@ -124,3 +124,35 @@ inactive player using a Global.
 `MayPay` gained a fallback stand-in for its yes/no choice token (the
 answering player's id) since a card-scoped Global has no "self" die to
 use as one.
+
+## DPS catalog batch 2 (V2_PLAN.md Phase 8 task 4, 2026-08-24)
+
+11 cards. 6 fully implemented (Mutation, Gambit "Unless I Got Someone
+to Play With", Psylocke "Advanced Telekinetic Combatant", Jean Grey
+"Peaceful Coexistence", Deadpool "Collect THIS!", Angel "Xavier's
+Dream"), 2 partial (Magneto "Visionary", Blob "Immovable" - their
+continuous halves work), 3 vanilla.
+
+Batch 2 was chosen to exercise vocabulary nothing had touched: Spin
+(both modes), Reroll's Finding-8 params, GrantCounter, CostModifier,
+TargetingProtection, CombatRule. All six worked on first authoring.
+
+| CardId | Name | What it needs | Policy |
+|---|---|---|---|
+| DPS007 | Making the Team | **`FieldDie` has no keep-the-current-face mode.** "Roll a die from your Used Pile... field it for free" must field it on the face it just rolled; `FieldDie` always forces a `Level` (default 1). `MoveDie` preserves the face but does not fire `DieFielded` - and Mutation's own text ("this does not trigger 'when fielded' effects") proves that distinction is load-bearing, so substituting it would be a silent behavior change. Candidate fix: make `FieldDie.Level` nullable, meaning "as rolled" | Ask |
+| DPS086 | Phoenix (Psionic Maelstrom) | **No tag-check condition.** Bindings closed half of Part 3 #24 - `BindAs` lets the second clause reference the same die the first damaged - but "if that character die is a **Villains** character die" is a tag test on a bound die, and none of the 7 frozen conditions test tags. `CountAtLeast` cannot stand in either: `TargetResolver` short-circuits a `Bound` filter and returns the die *without applying Tags*, so the count is always 1. Candidate fix: a `HasTag(binding, TagQuery)` condition, or make `Bound` compose with the rest of the filter | Ask |
+| DPS063 | Colossus (Organic Steel) | Confirms Part 2 #14 on a second card: `DamageModifier` is a CONTINUOUS template, and this is a one-shot, once-per-turn, optional redirect with a burst-face alternative. None of one-shot-ness, the frequency limit, the choice, or the burst branch is expressible on a continuous grant | Ask |
+| DPS081 | Magneto (Visionary) | CombatRule + Global **implemented**; `Teamwatch` is not one of the 10 frozen trigger kinds, so that clause is dropped (v1 made the same call on the same card) | Ask |
+| DPS101 | Blob (Immovable) | CombatRule **implemented**; "when Blob KO's an opponent's Sidekick, return it to their bag" needs KO-SOURCE attribution, which `DieKOd`'s payload does not carry - same family as the damage-source gap (DPS107) and the payment-source group | Ask |
+
+### Keyword behavior still unbuilt (affects implemented cards)
+
+Jean Grey "Peaceful Coexistence" is fully implemented as a card: her
+ability is exactly "put a Loyalty Counter on this card", and it does.
+But **Loyalty's own rule - a die gets +1A/+1D per counter - is engine
+behavior that does not exist yet**, so the counters accumulate without
+effect. Same category as Deadly and Regenerate: the card is right, the
+keyword is not built. Notably this is *not* expressible as a
+`StatAura` either - its `AtkDelta` would need to be "the value of a
+named counter", and `PerMatch` counts matching DICE, not a counter's
+magnitude.

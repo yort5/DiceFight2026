@@ -8245,3 +8245,80 @@ Used Pile.
 Verified: `dotnet build DiceFight.slnx` clean (0 warnings/errors, all
 5 projects); v2 tests 139/139 passing (2 new); v1's full suite re-run
 untouched, still 547/547.
+
+## Phase 8 task 4 — DPS catalog batch 2 (2026-08-24)
+
+11 cards: 6 fully implemented, 2 partial, 3 vanilla. Chosen on the
+user's reasoning ("better to identify problems earlier") to exercise
+vocabulary nothing had touched rather than to repeat known-good
+shapes - Spin in both modes, Reroll's Finding-8 params, GrantCounter,
+CostModifier, TargetingProtection, CombatRule. **All six of those
+worked on first authoring**, which is the batch's main positive
+result: the continuous templates and the awkward corners of the effect
+set hold up against real cards, not just paper examples.
+
+Implemented: Mutation (Finding 12's own worked answer - the swap plus
+Spin(SetLevel:1) against a bound die - and the first card to depend on
+the rule-3.2.5 snapshot in anger, since its step 1 puts a die INTO the
+Used Pile that its step 2 must not then offer back), Gambit "Unless I
+Got Someone to Play With" and Psylocke "Advanced Telekinetic
+Combatant" (Reroll's NonCharacterMoveTo and DamagePerMoved), Jean Grey
+"Peaceful Coexistence" (GrantCounter + Spike C's step discriminator),
+Deadpool "Collect THIS!" (CostModifier on a FieldingCost threshold),
+Angel "Xavier's Dream" (TargetingProtection). Magneto "Visionary" and
+Blob "Immovable" are partial - their CombatRule halves work.
+
+**A real bug, found exactly where yesterday's own caveat predicted
+it.** Jean Grey's condition is "if no character dice were KO'd that
+turn", and `TurnEngine.CleanUp` was clearing the turn-scoped trackers
+before returning - but an end-of-turn ability only RESOLVES after
+CleanUp returns, because draining the queue is the caller's job. So
+she always saw an empty KO set and always scored her counter. This is
+precisely the drain-ordering caveat written into CleanUp when Spike C
+landed ("a future end-of-turn card reading Reserve Pool or
+active-player state would NOT be safe"); Jean Grey is the second
+end-of-turn card migrated and she hit it immediately.
+
+Fixed by moving the turn-scoped tracker resets (GlobalsUsedThisTurn,
+PurchasedThisTurn, FieldedCharacterThisTurn, CharacterDiceKOdThisTurn)
+from the END of a turn to the START of the next one - the just-ended
+turn's facts stay readable for exactly as long as end-of-turn
+abilities need them, and nothing within a turn observes any
+difference. GRANT expiry (PendingPurchaseModifiers, AppliedModifiers,
+GrantedTags, CombatFlags, damage) deliberately stays in CleanUp: the
+rulebook's Cleanup Step is "end all effects", and a "this turn" grant
+must not survive into the opponent's turn. The narrower sweep-ordering
+issue remains for any future end-of-turn ability that reads damage or
+zones, and is still a Phase 9 API-shape decision.
+
+Four new findings, all logged in V2_TAIL_POLICY.md rather than worked
+around:
+
+1. **`FieldDie` has no keep-the-current-face mode** (Making the Team).
+   "Field it for free" must field the die on the face it just rolled;
+   FieldDie always forces a Level. MoveDie preserves the face but does
+   not fire DieFielded - and Mutation's own printed text ("this does
+   not trigger 'when fielded' effects") is the proof that the
+   distinction is real, so substituting it would be a silent change.
+2. **No tag-check condition** (Phoenix "Psionic Maelstrom"). Bindings
+   closed half of Part 3 #24, but "if that character die is a Villains
+   character die" is a tag test on a bound die and no frozen condition
+   tests tags. CountAtLeast cannot stand in: TargetResolver
+   short-circuits a `Bound` filter and returns the die WITHOUT applying
+   Tags, so the count is always 1. That short-circuit is itself worth a
+   look - `Bound` composing with the rest of the filter would close
+   this without a new condition.
+3. **DamageModifier is continuous-only** (Colossus "Organic Steel") -
+   confirms Part 2 #14 on a second card. One-shot-ness, the
+   once-per-turn limit, the choice, and the burst branch are all
+   inexpressible on a continuous grant.
+4. **Loyalty's keyword behavior does not exist.** Jean Grey is fully
+   implemented as a card - her ability really does add counters - but
+   "+1A/+1D per counter" is engine behavior, not card text, and is not
+   built. Notably it is not expressible as a StatAura either: AtkDelta
+   would need to be "the magnitude of a named counter", and PerMatch
+   counts matching DICE, not a counter's value.
+
+Verified: `dotnet build DiceFight.slnx` clean (0 warnings/errors, all
+5 projects); v2 tests 148/148 passing (9 new); v1's full suite re-run
+untouched, still 547/547.

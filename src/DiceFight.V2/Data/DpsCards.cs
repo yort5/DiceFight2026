@@ -300,11 +300,209 @@ public static class DpsCards
             EnergyCost: new EnergyCost(1, "Shield"))],
         Continuous: [], IsImplemented: false);
 
+
+    // ---- Batch 2 (2026-08-24) ----
+    // Chosen to exercise vocabulary no migrated card had touched yet:
+    // Spin (both modes), Reroll's Finding-8 params, GrantCounter,
+    // CostModifier, TargetingProtection, CombatRule. Known face-data
+    // gap: several of these print burst symbols on character faces
+    // (Gambit, Colossus) that MigrationDice.Character cannot carry -
+    // no implemented card's text reads them yet, so it is recorded here
+    // rather than expanded speculatively.
+
+    // Finding 12's own worked answer, now run for real: the swap is two
+    // MoveDies, and "spin that character die to level 1" is Spin's
+    // absolute SetLevel against the die the second MoveDie bound. Also
+    // the first card to depend on the rule-3.2.5 per-ability snapshot in
+    // anger - step 1 puts a die INTO the Used Pile, and step 2's Used
+    // Pile candidates must not include it.
+    public static readonly CardDef Mutation = new(
+        Id: "DPS009", Name: "Mutation", Subtitle: "Basic Action", Set: "DPS", CardType: CardType.BasicAction,
+        PurchaseCost: 3, EnergySymbolId: null,
+        Die: MigrationDice.Action("DPS009Die"),
+        DieLimit: 3, Affiliations: [], Keywords: [],
+        RawText: "Swap target character die in the Field Zone with target non-sidekick character dice in that player's Used Pile. Spin that character die to level 1. (This does not trigger \"when fielded\" effects.) Global: Pay Mask. Spin one of your character die down a level to spin another target character die up a level.",
+        Abilities: [
+            new TriggeredAbility(TriggerKind.DieUsed, new Sequence([
+                new MoveDie(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own, Zones: [Zone.FieldZone]), Zone.UsedPile),
+                new MoveDie(new TargetFilter(Kind: TargetKind.AnyDie, Ownership: TargetOwnership.Own, Zones: [Zone.UsedPile],
+                    Tags: new TagQuery(NoneOf: ["sidekick"]), BindAs: "incoming"), Zone.FieldZone),
+                new Spin(new TargetFilter(Bound: "incoming"), SetLevel: 1),
+            ])),
+            // Two independently-chosen targets, matching v1's own shape.
+            // Nothing stops the player naming the same die twice (a net
+            // no-op) - TargetFilter has no "not the die bound earlier"
+            // exclusion, and no authored card has needed one.
+            new TriggeredAbility(TriggerKind.Global, new Sequence([
+                new Spin(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own), LevelDelta: -1),
+                new Spin(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own), LevelDelta: 1),
+            ]), EnergyCost: new EnergyCost(1, "Mask")),
+        ],
+        Continuous: []);
+
+    // Finding 8's Reroll params, first real user: each rerolled die that
+    // lands on a non-character face moves on. The destination is its own
+    // controller's Used Pile automatically - MoveToZone only sets the
+    // zone, and these dice are the opponent's.
+    public static readonly CardDef GambitUnlessIGotSomeoneToPlayWith = new(
+        Id: "DPS112", Name: "Gambit", Subtitle: "Unless I Got Someone to Play With", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 5, EnergySymbolId: "Mask",
+        Die: MigrationDice.Character("DPS112Die", "Mask", (1, 1, 1), (1, 2, 2), (2, 4, 6)),
+        DieLimit: 2, Affiliations: ["X-Men"], Keywords: [],
+        RawText: "When fielded, reroll up to 2 target opposing character dice. Each die that doesn't roll a character goes to your opponent's Used Pile.",
+        Abilities: [new TriggeredAbility(TriggerKind.DieFielded,
+            new Reroll(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Opposing, Count: 2, Optional: true),
+                NonCharacterMoveTo: Zone.UsedPile))],
+        Continuous: []);
+
+    // The same shape with Finding 8's other param, DamagePerMoved.
+    public static readonly CardDef PsylockeAdvancedTelekineticCombatant = new(
+        Id: "DPS150", Name: "Psylocke", Subtitle: "Advanced Telekinetic Combatant", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 5, EnergySymbolId: "Mask",
+        Die: MigrationDice.Character("DPS150Die", "Mask", (0, 1, 2), (0, 2, 2), (1, 3, 3)),
+        DieLimit: 1, Affiliations: ["X-Men"], Keywords: [],
+        RawText: "When fielded, reroll up to 2 opposing character dice. Each die that does not roll a character goes to your opponent's Used Pile. Psylocke deals 2 damage to your opponent for each die moved.",
+        Abilities: [new TriggeredAbility(TriggerKind.DieFielded,
+            new Reroll(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Opposing, Count: 2, Optional: true),
+                NonCharacterMoveTo: Zone.UsedPile, DamagePerMoved: 2))],
+        Continuous: []);
+
+    // Finding 13's motivating card (Loyalty Counters), and the second
+    // consumer of Spike C's step discriminator. The card's OWN ability is
+    // exactly "put a counter on this card", which is fully implemented;
+    // Loyalty's "+1A and +1D per counter" is reminder text for a
+    // game-wide KEYWORD rule, engine behavior not yet built - same
+    // category as Deadly or Regenerate. See V2_TAIL_POLICY.md.
+    public static readonly CardDef JeanGreyPeacefulCoexistence = new(
+        Id: "DPS035", Name: "Jean Grey", Subtitle: "Peaceful Coexistence", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 4, EnergySymbolId: "Bolt",
+        Die: MigrationDice.Character("DPS035Die", "Bolt", (1, 3, 3), (2, 5, 5), (3, 6, 6)),
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: ["Founder", "Loyalty"],
+        RawText: "Founder. While Jean Grey is active, at the end of each of your turns, if no character dice were KO'd that turn, put a Loyalty Counter on Jean Grey's card (Loyalty Counters give a character die +1A and +1D.)",
+        Abilities: [new TriggeredAbility(TriggerKind.TurnStepEntered,
+            new Conditional(new NoKOsThisTurn(KoScope.Any), new GrantCounter(new TargetFilter(Self: true), "Loyalty", 1)),
+            Filter: new EventFilter(Ownership: TargetOwnership.Own, Step: StepIds.CleanUp))],
+        Continuous: []);
+
+    // Finding 3's FieldingCost stat kind, first real user. The threshold
+    // reads the BASE fielding cost, so the -2 cannot re-qualify the die
+    // it just discounted.
+    public static readonly CardDef DeadpoolCollectThis = new(
+        Id: "DPS108", Name: "Deadpool", Subtitle: "Collect THIS!", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 4, EnergySymbolId: "Fist",
+        Die: MigrationDice.Character("DPS108Die", "Fist", (0, 2, 4), (0, 2, 5), (1, 3, 7)),
+        DieLimit: 2, Affiliations: ["X-Men", "Deadpool Affiliation"], Keywords: [],
+        RawText: "While Deadpool is active, your character dice with fielding cost of 2 are free to field.",
+        Abilities: [],
+        Continuous: [new CostModifier(CostKind.Fielding,
+            new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own, Stat: new StatThreshold(StatKind.FieldingCost, Max: 2)),
+            Delta: -2)]);
+
+    // TargetingProtection's first real user - and the card
+    // V2_VOCABULARY.md Part 2 cites for the "protection is always against
+    // the granting player's OPPONENT" reading.
+    public static readonly CardDef AngelXaviersDream = new(
+        Id: "DPS137", Name: "Angel", Subtitle: "Xavier's Dream", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 3, EnergySymbolId: "Shield",
+        Die: MigrationDice.Character("DPS137Die", "Shield", (0, 2, 2), (1, 3, 3), (1, 3, 4)),
+        DieLimit: 3, Affiliations: ["X-Men"], Keywords: [],
+        RawText: "While Angel is active, your opponent can't target your Sidekick dice with Global Abilities.",
+        Abilities: [],
+        Continuous: [new TargetingProtection(
+            new TargetFilter(Kind: TargetKind.AnyDie, Ownership: TargetOwnership.Own, Tags: new TagQuery(AnyOf: ["sidekick"])),
+            ProtectionFrom.Global)]);
+
+    // CombatRule.MinBlockers' first real user. Teamwatch is not one of
+    // the 10 frozen trigger kinds, so that clause is dropped and the
+    // card stays IsImplemented: false - v1 made the same call on the
+    // same card for the same reason. Its Global inverts PrepAreaEmpty
+    // through an empty Then branch, exactly as v1 does.
+    public static readonly CardDef MagnetoVisionary = new(
+        Id: "DPS081", Name: "Magneto", Subtitle: "Visionary", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 5, EnergySymbolId: "Mask",
+        Die: MigrationDice.Character("DPS081Die", "Mask", (1, 4, 4), (2, 5, 7), (3, 6, 8)),
+        DieLimit: 3, Affiliations: ["Brotherhood of Mutants"], Keywords: ["Teamwatch"],
+        RawText: "While Magneto is active, your Brotherhood of Mutants character dice can only be blocked by 2 or more character dice. Teamwatch - Prep a die from your bag. Global Pay Mask. Once per turn, during your turn, if you have any dice in your Prep Area, you may draw a die and place it in your Prep Area.",
+        Abilities: [new TriggeredAbility(TriggerKind.Global,
+            new Conditional(new TurnFact(TurnFactKind.PrepAreaEmpty),
+                Then: new Sequence([]),
+                Else: new DrawToZone(1, Zone.PrepArea, Zone.Bag)),
+            EnergyCost: new EnergyCost(1, "Mask"), OncePerTurn: true)],
+        Continuous: [new CombatRule(CombatRuleKind.MinBlockers,
+            new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own, Tags: new TagQuery(AnyOf: ["Brotherhood of Mutants"])),
+            N: 2)],
+        IsImplemented: false);
+
+    // CombatRule.BlocksN's first real user - "your Blob dice" is a card-
+    // NAME tag, which the tag-unification design gives for free. The
+    // second clause ("when Blob KO's an opponent's Sidekick, return it to
+    // their bag") needs KO-source attribution that DieKOd's payload does
+    // not carry, so the card stays IsImplemented: false.
+    public static readonly CardDef BlobImmovable = new(
+        Id: "DPS101", Name: "Blob", Subtitle: "Immovable", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 4, EnergySymbolId: "Shield",
+        Die: MigrationDice.Character("DPS101Die", "Shield", (0, 1, 5), (1, 1, 6), (2, 1, 8)),
+        DieLimit: 2, Affiliations: ["Brotherhood of Mutants"], Keywords: [],
+        RawText: "Each of your Blob dice may block 3 character dice instead of 1. When Blob KO's an opponent's Sidekick die, return it to your opponent's bag.",
+        Abilities: [],
+        Continuous: [new CombatRule(CombatRuleKind.BlocksN,
+            new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own, Tags: new TagQuery(AnyOf: ["Blob"])),
+            N: 3)],
+        IsImplemented: false);
+
+    // --- Batch 2's tails (see V2_TAIL_POLICY.md for each) ---
+
+    // "Field it for free" must field the die ON THE FACE IT JUST ROLLED.
+    // FieldDie always forces a Level (defaulting to 1), and has no
+    // keep-the-current-face mode. MoveDie WOULD preserve the face but
+    // does not fire DieFielded, so it is not the same thing - Mutation's
+    // own text ("this does not trigger when fielded effects") is the
+    // proof that the distinction is real and load-bearing.
+    public static readonly CardDef MakingTheTeam = new(
+        Id: "DPS007", Name: "Making the Team", Subtitle: "Basic Action", Set: "DPS", CardType: CardType.BasicAction,
+        PurchaseCost: 3, EnergySymbolId: null,
+        Die: MigrationDice.Action("DPS007Die"),
+        DieLimit: 3, Affiliations: [], Keywords: [],
+        RawText: "Roll a character die from your Used Pile. If it rolls a character face, field it for free. Otherwise, Prep it.",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    // Part 3 #24 expected bindings to close this, and they close half of
+    // it: BindAs lets the second clause reference the SAME die the first
+    // damaged. What is missing is the condition itself - "if that
+    // character die is a Villains character die" is a TAG check on a
+    // bound die, and the 7 frozen conditions have no tag test. Nor can
+    // CountAtLeast stand in: a TargetFilter with Bound set returns that
+    // die without applying Tags at all (TargetResolver short-circuits),
+    // so the count is always 1.
+    public static readonly CardDef PhoenixPsionicMaelstrom = new(
+        Id: "DPS086", Name: "Phoenix", Subtitle: "Psionic Maelstrom", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 6, EnergySymbolId: "Bolt",
+        Die: MigrationDice.Character("DPS086Die", "Bolt", (1, 5, 5), (2, 7, 7), (3, 8, 8)),
+        DieLimit: 3, Affiliations: ["X-Men"], Keywords: [],
+        RawText: "When Phoenix attacks, deal 3 damage to target character die. If that character die is a Villains character die, you may deal 3 damage to another target character die.",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    // Confirms V2_VOCABULARY.md Part 2 #14's finding on a second card:
+    // DamageModifier is a CONTINUOUS template, and this is a one-shot,
+    // once-per-turn, optional redirect with a burst-face alternative
+    // (prevent instead). None of that is expressible.
+    public static readonly CardDef ColossusOrganicSteel = new(
+        Id: "DPS063", Name: "Colossus", Subtitle: "Organic Steel", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 5, EnergySymbolId: "Fist",
+        Die: MigrationDice.Character("DPS063Die", "Fist", (1, 4, 4), (1, 6, 5), (2, 8, 7)),
+        DieLimit: 3, Affiliations: ["X-Men"], Keywords: [],
+        RawText: "While Colossus is active, the first time one of your character dice would take damage each turn you may have Colossus take that damage instead. *Instead, prevent that damage.",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
     public static IReadOnlyList<CardDef> All =>
     [
         PowerBolt, Rally, RonanTheAccuserTreason, StormCloudCover, PsylockeTelepath,
         MasterMoldTargetingMutants, MasterMoldUntoldElectronicExpertise, MagnetoFounderOfTheBrotherhood,
         CyclopsFirstClass, JubileeXMenFieldLeader, CorsairCriminalRecord, ColossusPiotr,
         DarkPhoenixEnemyOfTheShiar, MagikWielderOfTheSoulsword, DeathbirdTreacherous, RogueMrsX, Archnemesis,
+        // Batch 2
+        Mutation, GambitUnlessIGotSomeoneToPlayWith, PsylockeAdvancedTelekineticCombatant,
+        JeanGreyPeacefulCoexistence, DeadpoolCollectThis, AngelXaviersDream,
+        MagnetoVisionary, BlobImmovable, MakingTheTeam, PhoenixPsionicMaelstrom, ColossusOrganicSteel,
     ];
 }
