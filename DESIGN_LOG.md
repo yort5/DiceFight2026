@@ -7911,3 +7911,58 @@ untouched, still 547/547. Phase 8 tasks 1-2 done; task 3 (the two
 design spikes - ability-blanking, live-value Amounts) needs the user's
 explicit sign-off before any implementation, per ground rule 2 and the
 plan's own task 3 instructions - not started this session.
+
+## Rule 3.2.5 per-ability snapshot (2026-08-24, user-signed-off)
+
+The user reviewed the Casket of Ancient Winters gap and signed off on
+the semantics to build - and corrected the framing in the process: a
+naive whole-queue "pre-execution snapshot" would be WRONG, not just
+incomplete. The correct model (matching how the physical game
+community handles simultaneity): simultaneously-fired abilities sit in
+the queue and each resolves COMPLETELY, one at a time; the rule-3.2.5
+snapshot is scoped to ONE ability's own resolution. So Casket's own Ko
+clause can't feed dice into its own later Prep-Area clause's candidate
+pool - but the moment Casket finishes, the snapshot dissolves, and the
+next ability in the queue sees live state: the KO'd dice really are in
+the Prep Area for it, a die KO'd earlier really is gone, and (the
+user's own forward-looking example, Dwarf Wizard/Shriek) a card whose
+text was blanked by an earlier queued ability still fires its trigger
+but resolves with no text to do anything. That last case is exactly
+why the snapshot must NOT outlive its ability - the design is
+blanking-spike-compatible by construction, nothing to retrofit later.
+
+Implementation: `EffectContext.Snapshot` (die id -> zone + face index,
+captured by the public `EffectInterpreter.Execute` at the start of one
+ability's resolution - and carried through PendingChoice pauses by the
+continuation closures holding the same context, so a mid-ability
+choice doesn't reset it). `TargetResolver.Query` gained a `snapshot`
+param: ZONE and FACE-KIND eligibility read the snapshot when present;
+Tag/Stat/protection checks stay live. Deliberately scoped to target
+ELIGIBILITY only: Conditions always read live state (`TargetWasKOd`
+exists precisely to observe what an earlier clause of the same ability
+just did - snapshotting it would break Shocking Grasp), `PerMatch`
+amounts count live matches (Part 1's own wording), and
+ContinuousRegistry never sees a snapshot at all (query-time state, not
+a queued ability).
+
+One bug during implementation, caught by the new test's first run:
+`ResolveQueued` (the DrainQueue path - i.e., every REAL ability
+resolution) was calling the private 3-arg Execute overload directly,
+bypassing the public entry where the snapshot capture lives - so tests
+passed through the public entry while the real path had no snapshot at
+all. Exactly the class of bug ground rule 6 (test the real firing
+path) exists to catch, and it did: the Casket test drives
+TurnEngine.UseAction -> EventBus -> queue -> DrainQueue, and failed
+until ResolveQueued was routed through the public entry.
+
+Casket of Ancient Winters is now fully implemented (un-tailed from
+Ask; its remaining Epic Basic Action mechanics difference is tracked
+as Approximate in V2_TAIL_POLICY.md). Two new tests: the Casket
+scenario itself (no spurious PendingChoice; KO'd dice not swept
+onward), and a queue-level test proving the snapshot dissolves between
+abilities (a later queued ability's Prep-Area sweep DOES catch a die
+the previous ability just KO'd there).
+
+Verified: `dotnet build DiceFight.slnx` clean (0 warnings/errors, all
+5 projects); v2 tests 116/116 passing; v1's full suite re-run
+untouched, still 547/547.

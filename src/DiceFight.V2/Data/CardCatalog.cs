@@ -233,27 +233,27 @@ public static class CardCatalog
         RawText: "Intimidate (When fielded, remove target opposing character die from the Field Zone until end of turn - place it next to your character cards.)",
         Abilities: [], Continuous: [], IsImplemented: false);
 
-    // Each clause's effect template is individually expressible (Ko +
-    // 2 MoveDie), but the SECOND MoveDie (Prep Area -> Used Pile) hits
-    // EffectInterpreter's own documented rule-3.2.5 simplification: the
-    // Ko clause lands its 3 dice in the Prep Area (rule 1.5.3.2) BEFORE
-    // the Prep-Area-targeting MoveDie clause resolves, and TargetFilters
-    // resolve LIVE rather than against a pre-execution snapshot (Phase 5's
-    // own class remarks named this exact "Casket of Ancient Winters"
-    // scenario as the reason for the simplification, before this card had
-    // actually been migrated) - so the live Prep Area pool is 6 dice
-    // (3 original + the 3 just KO'd), not the 3 the card means, and
-    // Count:3 against 6 live candidates raises an unintended
-    // PendingChoice instead of auto-resolving. Confirmed by a failing
-    // test, not guessed. Left vanilla rather than silently changing what
-    // the card does; see V2_TAIL_POLICY.md.
+    // Rule 3.2.5's per-ability snapshot (EffectInterpreter's class
+    // remarks - this card was its motivating case twice over: named in
+    // v1's own comments, then the first migrated card to actually hit
+    // Phase 5's resolve-live simplification) keeps the Ko clause's own
+    // KO'd dice out of the later Prep-Area clause's candidate pool.
+    // Epic Basic Action mechanics (rule 1.2.3 - once-per-turn limiter,
+    // returns to its card instead of Out of Play) remain unmodeled -
+    // CardType has no Epic distinction - so the die itself behaves as an
+    // ordinary Basic Action die; see V2_TAIL_POLICY.md (Approximate).
     public static readonly CardDef CasketOfAncientWinters = new(
         Id: "MSW001", Name: "Casket of Ancient Winters", Subtitle: "Epic Basic Action", Set: "MSW", CardType: CardType.BasicAction,
         PurchaseCost: 4, EnergySymbolId: null,
         Die: BuildActionDie("MSW001Die"),
         DieLimit: 3, Affiliations: [], Keywords: [],
         RawText: "Your opponent KOs three of their character dice, moves 3 dice from their Reserve Pool to their bag, and moves 3 dice from their Prep Area to their Used Pile.",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [new TriggeredAbility(TriggerKind.DieUsed, new Sequence([
+            new Ko(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Opposing, Zones: [Zone.FieldZone], Count: 3)),
+            new MoveDie(new TargetFilter(Kind: TargetKind.AnyDie, Ownership: TargetOwnership.Opposing, Zones: [Zone.ReservePool], Count: 3), Zone.Bag),
+            new MoveDie(new TargetFilter(Kind: TargetKind.AnyDie, Ownership: TargetOwnership.Opposing, Zones: [Zone.PrepArea], Count: 3), Zone.UsedPile),
+        ]))],
+        Continuous: []);
 
     // A "redraw a chosen subset of dice already drawn this turn" flow -
     // explicitly named non-coverage (V2_PLAN.md Appendix A: "draw-and-

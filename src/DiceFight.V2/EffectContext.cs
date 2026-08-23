@@ -21,4 +21,14 @@ public sealed class EffectContext
     public required IDiceRoller Roller { get; init; }
     public required Random Random { get; init; }
     public Dictionary<string, string> Bindings { get; } = [];
+
+    // Rule 3.2.5's per-ability snapshot (see EffectInterpreter's class
+    // remarks) - every die's zone/face as of the moment THIS ability's
+    // resolution began. Set by EffectInterpreter.Execute, consulted by
+    // TargetFilter candidate-pool resolution only; carried through
+    // PendingChoice pauses by the continuation closures holding this
+    // same context. Null only before Execute has run.
+    public IReadOnlyDictionary<string, DieSnapshot>? Snapshot { get; set; }
 }
+
+public sealed record DieSnapshot(Model.Zone Zone, int? FaceIndex);

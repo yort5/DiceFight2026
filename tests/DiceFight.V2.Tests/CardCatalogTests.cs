@@ -165,16 +165,59 @@ public class CardCatalogTests
         Assert.Equal(Zone.PrepArea, grasp.Zone);
     }
 
-    // Casket of Ancient Winters is vanilla (IsImplemented: false) - see
-    // CardCatalog.cs's own remarks: its second MoveDie clause collides
-    // with EffectInterpreter's documented rule-3.2.5 live-resolution
-    // simplification (the Ko clause's own KO'd dice dilute the later
-    // Prep-Area-targeting clause's live candidate pool). This test just
-    // pins that the card is inert rather than silently misbehaving.
+    // Rule 3.2.5's per-ability snapshot, exercised by its own motivating
+    // card: the Ko clause KOs 3 dice INTO the opponent's Prep Area (rule
+    // 1.5.3.2), and the later Prep-Area-targeting clause must still see
+    // only the 3 dice that were there when the ability began - exactly 3
+    // candidates each, so every clause auto-resolves with no PendingChoice.
     [Fact]
-    public void CasketOfAncientWinters_Is_Vanilla_Pending_The_Rule_3_2_5_Gap()
+    public void CasketOfAncientWinters_KOd_Dice_Do_Not_Dilute_Its_Own_Later_PrepArea_Clause()
     {
-        Assert.False(CardCatalog.CasketOfAncientWinters.IsImplemented);
-        Assert.Empty(CardCatalog.CasketOfAncientWinters.Abilities);
+        var state = NewTestGame(out _, out _);
+        state.CurrentStep = TurnStep.Main;
+        for (var i = 0; i < 3; i++) state.Dice.Add(new Model.DieInstance { Id = $"p2-field-{i}", PoolDieId = DiceFightClassicConfig.SidekickDie.Id, OwnerId = "p2", ControllerId = "p2", Zone = Zone.FieldZone, CurrentFaceIndex = 0 });
+        for (var i = 0; i < 3; i++) state.Dice.Add(new Model.DieInstance { Id = $"p2-reserve-{i}", PoolDieId = DiceFightClassicConfig.SidekickDie.Id, OwnerId = "p2", ControllerId = "p2", Zone = Zone.ReservePool, CurrentFaceIndex = 1 });
+        for (var i = 0; i < 3; i++) state.Dice.Add(new Model.DieInstance { Id = $"p2-prep-{i}", PoolDieId = DiceFightClassicConfig.SidekickDie.Id, OwnerId = "p2", ControllerId = "p2", Zone = Zone.PrepArea, CurrentFaceIndex = null });
+
+        var casket = new Model.DieInstance { Id = "casket-die", CardId = CardCatalog.CasketOfAncientWinters.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.ReservePool, CurrentFaceIndex = 0 };
+        state.Dice.Add(casket);
+        var queue = new AbilityQueue();
+
+        TurnEngine.UseAction(state, queue, casket.Id);
+        EffectInterpreter.DrainQueue(state, queue, new FixedRoller(0), new Random(1));
+
+        Assert.Null(state.PendingChoice); // every clause had exactly Count candidates - no choice anywhere
+        Assert.All(state.Dice.Where(d => d.Id.StartsWith("p2-field")), d => Assert.Equal(Zone.PrepArea, d.Zone)); // KO'd - and NOT swept onward
+        Assert.All(state.Dice.Where(d => d.Id.StartsWith("p2-reserve")), d => Assert.Equal(Zone.Bag, d.Zone));
+        Assert.All(state.Dice.Where(d => d.Id.StartsWith("p2-prep")), d => Assert.Equal(Zone.UsedPile, d.Zone));
+    }
+
+    // The snapshot's other half: it ends when its own ability finishes. A
+    // LATER ability in the same queue drain resolves against live state,
+    // so it DOES see the dice the previous ability just KO'd into the
+    // Prep Area - the queue-level semantics the per-ability scope exists
+    // to preserve (and the reason a blanked card's already-queued trigger
+    // will fire-but-do-nothing once the ability-blanking spike lands).
+    [Fact]
+    public void The_Snapshot_Ends_With_Its_Ability_A_Later_Queued_Ability_Sees_Live_State()
+    {
+        var state = NewTestGame(out _, out _);
+        state.CurrentStep = TurnStep.Main;
+        var victim = new Model.DieInstance { Id = "victim", PoolDieId = DiceFightClassicConfig.SidekickDie.Id, OwnerId = "p2", ControllerId = "p2", Zone = Zone.FieldZone, CurrentFaceIndex = 0 };
+        state.Dice.Add(victim);
+
+        var queue = new AbilityQueue();
+        // Ability 1: KO the field die (it lands in p2's Prep Area).
+        queue.Enqueue(null, "p1", Model.Effects.TriggerKind.Global,
+            new Model.Effects.Ko(new Model.Effects.TargetFilter(Kind: Model.Effects.TargetKind.CharacterDie, Ownership: Model.Effects.TargetOwnership.Opposing)));
+        // Ability 2: sweep ALL of p2's Prep Area dice to the Used Pile.
+        queue.Enqueue(null, "p1", Model.Effects.TriggerKind.Global,
+            new Model.Effects.MoveDie(new Model.Effects.TargetFilter(Kind: Model.Effects.TargetKind.AnyDie, Ownership: Model.Effects.TargetOwnership.Opposing, Zones: [Zone.PrepArea], Count: 0), Zone.UsedPile));
+
+        EffectInterpreter.DrainQueue(state, queue, new FixedRoller(0), new Random(1));
+
+        // Ability 2's own fresh snapshot included the just-KO'd die, so it
+        // was swept - proof the first ability's snapshot didn't leak.
+        Assert.Equal(Zone.UsedPile, victim.Zone);
     }
 }

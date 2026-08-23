@@ -25,10 +25,25 @@ public static class TargetResolver
     // real StackOverflow found while building this phase, not a
     // hypothetical. Every other caller (ordinary ability targeting,
     // Amount/Condition resolution) keeps the default `true`.
+    //
+    // snapshot (rule 3.2.5, see EffectInterpreter's class remarks) - when
+    // present, ZONE and FACE-KIND eligibility read the resolving ability's
+    // own start-of-resolution snapshot instead of live state, so an
+    // earlier clause's own mutations (a KO landing dice in the Prep Area)
+    // can't grow or shrink a later clause's candidate pool mid-ability.
+    // Tag/Stat/protection checks stay live - a die's identity-tags don't
+    // move mid-ability, and stats are the queries' own concern. Null for
+    // every non-ability caller (conditions, PerMatch amounts, continuous
+    // templates), which all deliberately read live state.
     public static IReadOnlyList<string> Query(
         GameState state, string requestingControllerId, TargetFilter filter,
-        IReadOnlyDictionary<string, string> bindings, ProtectionFrom? protection = null, bool includeContinuous = true)
+        IReadOnlyDictionary<string, string> bindings, ProtectionFrom? protection = null, bool includeContinuous = true,
+        IReadOnlyDictionary<string, DieSnapshot>? snapshot = null)
     {
+        Zone ZoneOf(DieInstance d) => snapshot is not null && snapshot.TryGetValue(d.Id, out var s) ? s.Zone : d.Zone;
+        Face? FaceOf(DieInstance d) => snapshot is not null && snapshot.TryGetValue(d.Id, out var s)
+            ? (s.FaceIndex is { } i ? state.GetDieDefinition(d).Faces[i] : null)
+            : state.GetCurrentFace(d);
         if (filter.Self)
         {
             return bindings.TryGetValue("self", out var selfId)
@@ -44,7 +59,7 @@ public static class TargetResolver
         var zones = filter.Zones ?? TargetFilter.DefaultZones;
         IEnumerable<DieInstance> dice = filter.Kind == TargetKind.Player
             ? []
-            : state.Dice.Where(d => zones.Contains(d.Zone));
+            : state.Dice.Where(d => zones.Contains(ZoneOf(d)));
 
         dice = filter.Ownership switch
         {
@@ -54,7 +69,7 @@ public static class TargetResolver
         };
 
         if (filter.Kind == TargetKind.CharacterDie)
-            dice = dice.Where(d => state.GetCurrentFace(d)?.Character is not null);
+            dice = dice.Where(d => FaceOf(d)?.Character is not null);
         else if (filter.Kind == TargetKind.ActionDie)
             dice = dice.Where(d => d.CardId is { } cid && state.CardCatalog[cid].CardType == CardType.BasicAction);
 

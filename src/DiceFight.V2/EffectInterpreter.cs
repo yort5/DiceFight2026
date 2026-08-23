@@ -18,25 +18,44 @@ namespace DiceFight.V2;
 // shape for free, rather than needing their own separate pause/resume
 // bookkeeping.
 //
-// Known, documented simplification vs. v1: TargetFilters are resolved
-// live, at the point their own node executes, not pre-resolved-and-cached
-// against a single pre-execution snapshot the way v1's EffectInterpreter.
-// Execute(node, ctx) does (rule 3.2.5 - see its own remarks, the "Casket
-// of Ancient Winters" example). A rare multi-step ability where an early
-// step's mutation shifts a LATER step's own live target pool would see
-// that shift here; no currently-authored card needs this precision, and
-// building a matching "collect every TargetFilter in tree order" pass
-// (v1's CollectTargetSpecs, which v1's own comments already flag as a
-// drift risk against Execute's real tree shape) is deferred rather than
-// spent against Phase 5's budget speculatively - revisit if Phase 8's
-// card migration finds a real card that needs it.
+// Rule 3.2.5 - "an ability reacts to the game state as it existed when
+// it entered the queue" - is modeled as a PER-ABILITY snapshot (user
+// decision, 2026-08-24, replacing Phase 5's documented resolve-live
+// simplification once Casket of Ancient Winters' migration actually hit
+// it): when one ability's resolution begins, the zone/face of every die
+// is snapshotted, and every TargetFilter CANDIDATE POOL inside that one
+// ability's tree resolves against the snapshot - so Casket's own Ko
+// clause's KO'd dice (landing in the Prep Area, rule 1.5.3.2) never
+// become candidates for its own later Prep-Area-targeting clause. The
+// snapshot dissolves the moment that ability finishes: the next ability
+// in the queue resolves completely against LIVE state, including
+// everything the previous ability changed (its KO'd dice really are in
+// the Prep Area now, a die it KO'd really is gone, and - once the
+// ability-blanking spike lands - text it blanked really is blank even
+// for an already-queued trigger, which still fires but does nothing).
+//
+// Deliberately snapshot-scoped to target ELIGIBILITY only:
+// - Conditions always read live state - TargetWasKOd exists precisely to
+//   observe what an earlier clause of the same ability just did.
+// - PerMatch amounts count live matches at resolution (Part 1's own
+//   wording: "a live count ... at resolution time").
+// - Continuous templates (ContinuousRegistry) never see a snapshot at
+//   all - they're query-time state, not queued abilities.
 public static class EffectInterpreter
 {
     // Entry point for a caller that already has an EffectContext built
     // (mostly tests exercising one template in isolation - Phase 5's own
     // acceptance bar, "one happy path + one no-legal-target case per
     // template"). Real ability resolution goes through DrainQueue below.
-    public static void Execute(EffectNode node, EffectContext ctx) => Execute(node, ctx, () => { });
+    // Captures the rule-3.2.5 snapshot here, unconditionally - a resumed
+    // PendingChoice continuation never re-enters this method (it resumes
+    // via its captured closure), so the snapshot taken here lives exactly
+    // as long as one ability's own resolution, pauses included.
+    public static void Execute(EffectNode node, EffectContext ctx)
+    {
+        ctx.Snapshot = ctx.State.Dice.ToDictionary(d => d.Id, d => new DieSnapshot(d.Zone, d.CurrentFaceIndex));
+        Execute(node, ctx, () => { });
+    }
 
     // Drains an AbilityQueue for real (V2_PLAN.md ground rule 6 - the
     // path Phase 4's own triggers-through-real-actions tests feed into).
@@ -65,7 +84,9 @@ public static class EffectInterpreter
         if (ability.SourceDieId is { } sourceId) ctx.Bindings["self"] = sourceId;
         if (ability.EventSubjectDieId is { } eventId) ctx.Bindings["event"] = eventId;
 
-        Execute(ability.Effect, ctx, () => { });
+        // The public Execute, not the private overload - it's what captures
+        // this ability's own rule-3.2.5 snapshot (see the class remarks).
+        Execute(ability.Effect, ctx);
     }
 
     // The only legal next action while GameState.PendingChoice is set.
@@ -610,7 +631,7 @@ public static class EffectInterpreter
     // PendingChoice, routed to AnsweredBy.
     private static void ResolveTarget(EffectContext ctx, TargetFilter filter, ProtectionFrom? protection, Action<IReadOnlyList<string>> onResolved)
     {
-        var candidates = TargetResolver.Query(ctx.State, ctx.ControllerId, filter, ctx.Bindings, protection);
+        var candidates = TargetResolver.Query(ctx.State, ctx.ControllerId, filter, ctx.Bindings, protection, snapshot: ctx.Snapshot);
 
         if (candidates.Count == 0) { onResolved([]); return; }
 

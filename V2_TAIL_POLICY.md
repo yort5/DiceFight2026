@@ -10,17 +10,18 @@ Cards whose real ability text doesn't fit the closed v2 vocabulary
 - **Ask** — flag for the user; candidate for redesign under Direction
   C, or for a small vocabulary sign-off ask later.
 
-Every entry below is currently **Vanilla** in `src/DiceFight.V2/Data/CardCatalog.cs`
-(`IsImplemented: false`) pending an **Ask** decision from the user on
-whether/how to close the gap. Never guess a wrong approximation
-silently (house rule, carried from v1).
+Ask-policy entries below are **Vanilla** in `src/DiceFight.V2/Data/CardCatalog.cs`
+(`IsImplemented: false`) pending a user decision on whether/how to
+close the gap. Never guess a wrong approximation silently (house rule,
+carried from v1).
 
 ## Curated team migration (V2_PLAN.md Phase 8 task 2, 2026-08-23)
 
-Of the 20 curated-team cards (`CardCatalog.TeamA*`/`TeamB*`), 8 fit the
-frozen vocabulary cleanly (Apocalypse, HarleyQuinn, CaptainMarvel,
-Dazzler, ShockingGrasp, FranklinsGalactus, GodEmperorDoom, Groot) and
-12 are tailed below. This is a lower fit rate than the DPS set's own
+Of the 20 curated-team cards (`CardCatalog.TeamA*`/`TeamB*`), 9 are
+implemented (Apocalypse, HarleyQuinn, CaptainMarvel, Dazzler,
+ShockingGrasp, FranklinsGalactus, GodEmperorDoom, Groot fit cleanly;
+Casket of Ancient Winters is Approximate - see its row) and 11 are
+tailed Ask below. This is a lower fit rate than the DPS set's own
 ~82% (V2_VOCABULARY.md Part 11) for a specific, known reason: the
 curated rosters were deliberately built by v1's own author to exercise
 one live example of each Attack-Step keyword the web client needs
@@ -29,6 +30,18 @@ combat implementation deliberately did NOT port any of those five
 keywords (only Overcrush and Fast), so every one of their showcase
 cards was always going to tail here. Not a representative sample of
 the wider catalog's fit rate.
+
+*(2026-08-24)*: Casket of Ancient Winters' original Ask entry (the
+rule-3.2.5 live-resolution gap) is RESOLVED - the user signed off on
+per-ability snapshot semantics (every TargetFilter candidate pool
+inside one ability resolves against that ability's own
+start-of-resolution zone/face snapshot; the snapshot dissolves when
+the ability finishes, so later queued abilities see live state -
+which is also the semantics a blanked card's already-queued trigger
+will need once the ability-blanking spike lands). Implemented in
+`EffectInterpreter`/`TargetResolver`; conditions (`TargetWasKOd`) and
+`PerMatch` amounts deliberately stay live. The card's remaining
+difference is only its Epic Basic Action mechanics, tracked below.
 
 | CardId | Name | What it needs | Policy |
 |---|---|---|---|
@@ -42,5 +55,5 @@ the wider catalog's fit rate.
 | TAG003 | Big E | Tag Out keyword - not ported in Phase 7 | Ask |
 | SKC090 | Starfire (Starbolts) | Range keyword - not ported in Phase 7 | Ask |
 | CW014 | Scarlet Spider | Intimidate keyword; its own destination (`Zone.Intimidated` in v1) has no equivalent in v2's 10-zone list at all | Ask |
-| MSW001 | Casket of Ancient Winters (epic) | Its own effect tree IS fully expressible (Ko + 2×MoveDie), but hits `EffectInterpreter`'s documented rule-3.2.5 live-resolution simplification: the Ko clause's own KO'd dice land in the Prep Area before the later Prep-Area-targeting MoveDie clause resolves, diluting its live candidate pool from 3 to 6 and raising an unintended `PendingChoice`. Confirmed by a failing test (not guessed) - see `CardCatalog.cs`'s own remarks. Fix requires the pre-execution-snapshot target resolution Phase 5 explicitly deferred. | Ask |
+| MSW001 | Casket of Ancient Winters (epic) | Effect tree fully implemented (rule-3.2.5 per-ability snapshot, signed off 2026-08-24 - see the dated note above). Remaining difference: Epic Basic Action mechanics (rule 1.2.3 - once-per-turn limiter, die returns to its card instead of Out of Play) aren't modeled; `CardType` has no Epic distinction, so the die behaves as an ordinary Basic Action die | Approximate |
 | GOTG008 | Cosmic Cube (Infinite Possibilities) | A "redraw a chosen subset of dice already drawn this turn" flow - explicitly named non-coverage (V2_PLAN.md Appendix A: "draw-and-choose flows") | Ask |

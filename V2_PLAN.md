@@ -981,3 +981,16 @@ v1's full suite re-run untouched, still 547/547. Tasks 1-2 checked off
 above; task 3 (design spikes) needs the user's sign-off before any
 implementation - see `V2_TAIL_POLICY.md`'s own entries for the
 concrete gaps a spike (or a small additional sign-off ask) could close.
+
+**Rule 3.2.5 note (2026-08-24, user-signed-off)**: the Phase 5
+resolve-live simplification is replaced by a PER-ABILITY snapshot -
+each queued ability's TargetFilter candidate pools resolve against a
+zone/face snapshot taken when ITS OWN resolution begins, and the
+snapshot dissolves when that ability finishes (later queue entries see
+live state - which is also what a blanked card's already-queued
+trigger needs once the ability-blanking spike lands: it still fires,
+against live state where its text is blank). Conditions and PerMatch
+amounts deliberately stay live. Casket of Ancient Winters is
+un-tailed and fully implemented; see DESIGN_LOG's same-day entry for
+the implementation shape and the real-firing-path bug the new test
+caught (ResolveQueued bypassing the snapshot-capturing entry point).
