@@ -132,12 +132,23 @@ public static class TurnEngine
             throw new InvalidOperationException($"Die '{dieId}' belongs to your opponent's team and isn't a Basic Action.");
 
         var energyDice = ResolveOwnReservePoolEnergy(state, energyDieIdsToSpend);
+
+        // Phase 5's PurchaseModifier effect (Appendix A: GrantNextPurchase
+        // Discount/GrantNextPurchaseGoesToBag) - a one-shot, per-controller
+        // offer consumed by the first purchase matching its own CardKind
+        // (null = matches any), on top of whatever QueryEngine's own
+        // continuous registry already applies.
+        var pending = state.PendingPurchaseModifiers.FirstOrDefault(m =>
+            m.PlayerId == state.ActivePlayerId && (m.CardKind is null || m.CardKind == card.CardType));
         var cost = QueryEngine.GetPurchaseCost(state, card, state.ActivePlayerId);
+        if (pending is not null) cost = Math.Max(1, cost + pending.Delta);
         SpendEnergy(state, energyDice, cost, card.EnergySymbolId);
 
         die.ControllerId = state.ActivePlayerId; // rule 1.1.4 - purchaser becomes controller
-        die.Zone = Zone.UsedPile;
+        die.Zone = pending?.GoesToZone ?? Zone.UsedPile;
+        if (pending is not null) state.PendingPurchaseModifiers.Remove(pending);
 
+        state.PurchasedThisTurn.Add(state.ActivePlayerId);
         EventBus.Fire(state, queue, new GameEvent(TriggerKind.PurchaseMade, die, state.ActivePlayerId, state.CurrentStep));
     }
 
@@ -162,6 +173,7 @@ public static class TurnEngine
         SpendEnergy(state, energyDice, cost, requiredSymbolId: null);
 
         die.Zone = Zone.FieldZone;
+        state.FieldedCharacterThisTurn.Add(die.ControllerId);
 
         // Rule 2.6.3.6 - "when fielded" fires immediately upon entering
         // the Field Zone, which is why this die is already eligible to
@@ -265,9 +277,23 @@ public static class TurnEngine
             die.AppliedModifiers.RemoveAll(m =>
                 m.Duration == Duration.EndOfTurn ||
                 (m.Duration == Duration.UntilYourNextTurn && m.GrantedDuringPlayerId != endingPlayerId));
+
+            // Phase 5's GrantedTag follows AppliedModifier's own Duration
+            // expiry rule exactly (same three-value enum, same
+            // GrantedDuringPlayerId convention). CombatFlags have no
+            // Duration of their own - every real use is "(this turn)," so
+            // they always clear here, unconditionally.
+            die.GrantedTags.RemoveAll(t =>
+                t.Duration == Duration.EndOfTurn ||
+                (t.Duration == Duration.UntilYourNextTurn && t.GrantedDuringPlayerId != endingPlayerId));
+            die.CombatFlags.Clear();
         }
 
         state.GlobalsUsedThisTurn.Clear();
+        state.PendingPurchaseModifiers.RemoveAll(m => m.PlayerId == endingPlayerId);
+        state.PurchasedThisTurn.Remove(endingPlayerId);
+        state.FieldedCharacterThisTurn.Remove(endingPlayerId);
+        state.CharacterDiceKOdThisTurn.Clear();
         state.ActivePlayerId = state.OpponentOf(state.ActivePlayerId);
         state.CurrentStep = TurnStep.ClearAndDraw;
 

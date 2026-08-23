@@ -7622,3 +7622,79 @@ Verified: `dotnet build DiceFight.slnx` clean (0 warnings/errors, all
 untouched, still 547/547. Phase 4 checkbox ticked; plan status header
 updated - vocabulary is FROZEN as of the 2026-08-22 gate review, Phase
 5 (effect template interpreter) is next.
+
+## Phase 5 — Effect template interpreter (2026-08-23)
+
+Implemented all 18 closed-vocabulary effect templates and all 7
+conditions (`src/DiceFight.V2/EffectInterpreter.cs`, `TargetResolver.cs`,
+`ConditionEvaluator.cs`, `EffectContext.cs`, `Model/PendingChoice.cs`).
+Written continuation-passing style - every private Execute* helper
+threads an `Action onComplete` - specifically so Sequence, Conditional,
+MayPay, DrawAndChooseOne, and DealDamage's Distribute flag all share
+ONE pause mechanism (`PendingChoice`, ported from v1's own) instead of
+each needing bespoke pause/resume bookkeeping. This is a real
+commitment beyond what v1 actually built: v1's own ability resolution
+routed ordinary targeting through `EffectContext.ResolveTargets`, a
+caller-supplied function standing in for a never-built real choice UI;
+v2's plan explicitly asked for every player decision - target picks
+included - to go through PendingChoice for real, so that's what got
+built.
+
+`TargetResolver.Query` is the TargetFilter -> candidate-ids port of
+v1's LegalTargets.Query, generalized onto the closed 11-field filter
+shape (Self/Bound bypass the query and read the ability's own binding
+table instead - Finding 9). `EffectInterpreter.ResolveTarget` is the
+choice/no-choice split on top of it: 0 candidates fizzles (rule
+3.1.10), `Count == 0` means "all matches, no choice" (Part 1's own
+note), a pool no bigger than a non-Optional Count auto-selects
+everything, anything else raises a real PendingChoice routed to
+`AnsweredBy`.
+
+Three real design gaps surfaced while implementing, each resolved and
+documented at its own site (also summarized in V2_PLAN.md's Phase 5
+note):
+- `TargetKind.CharacterDie` reads the CURRENT face, so it can never
+  match a dormant Used-Pile/Bag die - confirmed this is the
+  vocabulary's own intent (Rally's Part 2 example already uses
+  `Kind: AnyDie` for reaching into dormant zones), not a bug.
+- `Ko` always lands its target in the Prep Area, unrolled (rule
+  1.5.3.2, confirmed against v1's own `ForceKO`) - also the exact
+  signal `TargetWasKOd` reads back. v1's separate Sacrifice-shape
+  OutOfPlay/UsedPile nuance is deliberately not preserved; Ko's own
+  data shape has no destination-zone param to carry it.
+- A dormant die entering the Field/Attack Zone needs SOME current face
+  immediately; defaults to the die's own first character face, with
+  `Spin(SetLevel:n)` as the documented follow-up for a specific level -
+  exactly the pattern Finding 12's Mutation writeup already
+  established, so MoveDie/FieldDie didn't need their own level-set
+  param after all.
+
+Also added: three small turn-scoped `GameState` trackers for
+TurnFact/NoKOsThisTurn; real `TurnEngine.Purchase` plumbing for
+PurchaseModifier's one-shot "next purchase" grant
+(`GameState.PendingPurchaseModifiers`, consumed by the next matching
+purchase or discarded at CleanUp); and `QueuedAbility.
+EventSubjectDieId` (threaded from `EventBus.Fire`'s own `GameEvent.
+SubjectDie`) to seed the "event" binding Finding 9's reactive-trigger
+design always implied but Phase 4 hadn't actually carried through to
+the queue yet.
+
+One documented simplification against the phase's own budget:
+TargetFilters resolve LIVE at the point their node executes rather
+than being pre-resolved-and-cached against a single pre-execution
+snapshot the way v1's rule-3.2.5 handling does (the "Casket of Ancient
+Winters" case - see EffectInterpreter.cs's own class remarks). No
+currently-authored card needs that precision; flagged as a
+revisit-if-Phase-8-needs-it gap.
+
+Tests (`EffectInterpreterTests.cs`) cover a happy path plus a
+no-legal-target skip case for every TargetFilter-bearing template, one
+test per condition kind, a Distribute-specific test, and one
+real-firing-path test (ground rule 6: TurnEngine.Field -> EventBus ->
+AbilityQueue -> EffectInterpreter.DrainQueue -> the effect actually
+applied), not just direct EffectContext invocation.
+
+Verified: `dotnet build DiceFight.slnx` clean (0 warnings/errors, all
+5 projects); v2 tests 70/70 passing (47 new); v1's full suite re-run
+untouched, still 547/547. Phase 5 checkbox ticked; plan status header
+updated - Phase 6 (continuous templates) is next.

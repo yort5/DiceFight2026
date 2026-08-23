@@ -2,7 +2,13 @@ using DiceFight.V2.Model.Effects;
 
 namespace DiceFight.V2;
 
-public sealed record QueuedAbility(string? SourceDieId, string ControllerId, TriggerKind Trigger, EffectNode Effect, int Sequence);
+// EventSubjectDieId (Phase 5) is the "event" binding (V2_VOCABULARY.md
+// Part 1's reserved binding name) - the triggering GameEvent's own
+// SubjectDie, which is usually NOT the same die as SourceDieId (the
+// listening die whose ability this is). Null for Global (using the
+// ability IS the trigger - there's no separate event subject) and for
+// the three die-less events (TurnStepEntered/PurchaseMade/DiceDrawn).
+public sealed record QueuedAbility(string? SourceDieId, string ControllerId, TriggerKind Trigger, EffectNode Effect, int Sequence, string? EventSubjectDieId = null);
 
 // Rule 3.2 - Timing and Resolution. Ported from v1's AbilityQueue
 // (V2_PLAN.md Phase 4 task 2 - "this part of v1 is good"), same FIFO +
@@ -32,18 +38,18 @@ public sealed class AbilityQueue
     public bool IsEmpty => _queue.Count == 0;
     public IReadOnlyList<QueuedAbility> Pending => _queue.ToList();
 
-    public QueuedAbility Enqueue(string? sourceDieId, string controllerId, TriggerKind trigger, EffectNode effect)
+    public QueuedAbility Enqueue(string? sourceDieId, string controllerId, TriggerKind trigger, EffectNode effect, string? eventSubjectDieId = null)
     {
-        var ability = new QueuedAbility(sourceDieId, controllerId, trigger, effect, _nextSequence++);
+        var ability = new QueuedAbility(sourceDieId, controllerId, trigger, effect, _nextSequence++, eventSubjectDieId);
         _queue.Enqueue(ability);
         return ability;
     }
 
     // Rule 3.2.8 - an interrupting ability happens simultaneously with,
     // and ahead of, whatever is currently at the front of the queue.
-    public QueuedAbility Interrupt(string? sourceDieId, string controllerId, TriggerKind trigger, EffectNode effect)
+    public QueuedAbility Interrupt(string? sourceDieId, string controllerId, TriggerKind trigger, EffectNode effect, string? eventSubjectDieId = null)
     {
-        var ability = new QueuedAbility(sourceDieId, controllerId, trigger, effect, _nextSequence++);
+        var ability = new QueuedAbility(sourceDieId, controllerId, trigger, effect, _nextSequence++, eventSubjectDieId);
         var rest = _queue.ToArray();
         _queue.Clear();
         _queue.Enqueue(ability);

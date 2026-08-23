@@ -51,5 +51,27 @@ public sealed class DieInstance
 
     public List<AppliedModifier> AppliedModifiers { get; } = [];
 
+    // Phase 5 additions - damage marked on a character die (rule ~1.5;
+    // v1's DieInstance.Damage, same "accumulates, checked against
+    // GetDefense for KO" shape) and one-shot tag grants (GrantTag),
+    // stored the same Duration/GrantedDuringPlayerId shape as
+    // AppliedModifiers so TurnEngine.CleanUp's existing expiry sweep
+    // extends to both with one added loop rather than a second mechanism.
+    // Reset to 0/empty whenever a die leaves the Field/Attack Zone
+    // (EffectInterpreter's own MoveToZone helper) - damage and granted
+    // tags only mean anything while a character is actually in play.
+    public int Damage { get; set; }
+    public List<GrantedTag> GrantedTags { get; } = [];
+
+    // This-turn-only combat restrictions (CombatFlag effect template) -
+    // no Duration param on the record itself (V2_VOCABULARY.md Part 1),
+    // since every real CombatFlag use in Dice Masters card text is
+    // "(this turn)" - always EndOfTurn scoped, cleared alongside
+    // AppliedModifiers/GrantedTags at CleanUp. Read by Phase 7's combat,
+    // not consulted anywhere yet.
+    public HashSet<CombatFlagKind> CombatFlags { get; } = [];
+
     public bool IsSidekick => CardId is null;
 }
+
+public sealed record GrantedTag(string Tag, Duration Duration, string? GrantedDuringPlayerId = null);

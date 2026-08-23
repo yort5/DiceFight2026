@@ -50,6 +50,37 @@ public sealed class GameState
     // turn-scoped lifetime as every other "ThisTurn" tracker in v1.
     public HashSet<(string PlayerId, string CardId)> GlobalsUsedThisTurn { get; } = [];
 
+    // Phase 5 additions.
+    //
+    // Non-null = the game is paused waiting for a player answer (see
+    // Model/PendingChoice.cs) - the only legal next action is answering
+    // it (EffectInterpreter.AnswerPendingChoice); nothing else should
+    // drain the AbilityQueue further while this is set.
+    public PendingChoice? PendingChoice { get; set; }
+
+    // PurchaseModifier's one-shot "your next purchase (matching CardKind,
+    // if set) gets Delta off and/or goes to GoesToZone instead of the Used
+    // Pile" grant (V2_PLAN.md Appendix A: GrantNextPurchaseDiscount /
+    // GrantNextPurchaseGoesToBag). Unlike AppliedModifier/GrantedTag this
+    // isn't a per-die stat - it's a per-controller standing offer consumed
+    // by the next matching TurnEngine.Purchase call, or discarded unused
+    // at CleanUp (rule text is always "this turn"; nothing in the closed
+    // vocabulary asks for a longer-lived version).
+    public List<PendingPurchaseModifier> PendingPurchaseModifiers { get; } = [];
+
+    // Turn-scoped trackers TurnFact/NoKOsThisTurn read (Phase 5) - reset
+    // in CleanUp alongside GlobalsUsedThisTurn, same "ThisTurn" lifetime.
+    // FieldedCharacterThisTurn deliberately doesn't exclude the ability's
+    // own just-fielded die from its own "no OTHER character" check - a
+    // known simplification (not exercised by Phase 5's own test coverage,
+    // which only needs one TurnFact case); revisit once a real migrated
+    // card (Phase 8) actually needs the precise "other than itself" reading.
+    public HashSet<string> PurchasedThisTurn { get; } = [];
+    public HashSet<string> FieldedCharacterThisTurn { get; } = [];
+    public HashSet<string> CharacterDiceKOdThisTurn { get; } = [];
+
+    public bool IsPlayerId(string id) => id == PlayerOne.Id || id == PlayerTwo.Id;
+
     public Player GetPlayer(string playerId) =>
         playerId == PlayerOne.Id ? PlayerOne
         : playerId == PlayerTwo.Id ? PlayerTwo
@@ -90,3 +121,5 @@ public sealed class GameState
     public Face? GetCurrentFace(DieInstance die) =>
         die.CurrentFaceIndex is { } index ? GetDieDefinition(die).Faces[index] : null;
 }
+
+public sealed record PendingPurchaseModifier(string PlayerId, int Delta, CardType? CardKind, Zone? GoesToZone);

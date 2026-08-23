@@ -46,13 +46,13 @@ public interface ITargetingInterceptor
 // now, so every query today reproduces "just the base value" exactly,
 // which is also this phase's own acceptance proof.
 //
-// GetKeywords is scoped to PRINTED keywords only for now - the "granted"
-// half (v1's AppliedKeywords) needs per-die tag storage that only Phase
-// 5's GrantTag interpreter has a reason to add; adding it speculatively
-// here, before anything populates it, would be exactly the kind of
-// unused-scaffolding the "few hundred lines, no behavior" phases have
-// been deliberately avoiding. AbilitiesActive (the reserved 8th query) is
-// NOT implemented here - see V2_PLAN.md's own note not to build it early.
+// GetKeywords now folds in granted keyword-shaped tags too (Phase 5's
+// GrantTag, e.g. Psylocke "Telepath" granting Overcrush) - DieInstance.
+// GrantedTags doesn't distinguish "keyword" from "affiliation" from
+// anything else (Part 1's tag-unification note doesn't either), so this
+// just unions them into the printed set. AbilitiesActive (the reserved
+// 8th query) is NOT implemented here - see V2_PLAN.md's own note not to
+// build it early.
 public static class QueryEngine
 {
     public static int GetAttack(GameState state, DieInstance die)
@@ -97,8 +97,9 @@ public static class QueryEngine
 
     public static IReadOnlySet<string> GetKeywords(GameState state, DieInstance die)
     {
-        if (die.CardId is null) return new HashSet<string>();
-        return new HashSet<string>(state.CardCatalog[die.CardId].Keywords);
+        var keywords = die.CardId is { } cardId ? new HashSet<string>(state.CardCatalog[cardId].Keywords) : [];
+        foreach (var granted in die.GrantedTags) keywords.Add(granted.Tag);
+        return keywords;
     }
 
     public static bool CanBeTargeted(GameState state, DieInstance die, string byPlayerId, ProtectionFrom triggerKind) =>
@@ -121,8 +122,9 @@ public static class QueryEngine
     // composes them, needed by EventFilter/TargetFilter matching alike.
     // Part 1's tag-unification note: "a die's tag set = its card's
     // affiliations + keywords + its card name + 'sidekick' if applicable +
-    // its printed energy symbol id + granted tags." Granted tags aren't
-    // included yet, same reasoning as GetKeywords' own printed-only scope.
+    // its printed energy symbol id + granted tags." Granted tags (Phase
+    // 5's GrantTag effect, DieInstance.GrantedTags) are included now that
+    // something actually populates them.
     public static IReadOnlySet<string> GetTags(GameState state, DieInstance die)
     {
         var tags = new HashSet<string>();
@@ -135,6 +137,8 @@ public static class QueryEngine
             tags.Add(card.Name);
             if (card.EnergySymbolId is { } symbolId) tags.Add(symbolId);
         }
+
+        foreach (var granted in die.GrantedTags) tags.Add(granted.Tag);
 
         return tags;
     }

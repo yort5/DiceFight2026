@@ -1,8 +1,8 @@
 # DiceFight v2 Core — Implementation Plan
 
-**Status: Phases 0-4 complete; vocabulary FROZEN at the 2026-08-22 gate
-review (`V2_VOCABULARY.md` Part 11); Phase 5 (effect template interpreter)
-is next.** Update the checkboxes in the Phase Overview as
+**Status: Phases 0-5 complete; vocabulary FROZEN at the 2026-08-22 gate
+review (`V2_VOCABULARY.md` Part 11); Phase 6 (continuous templates) is
+next.** Update the checkboxes in the Phase Overview as
 phases complete, and add a one-line note after any phase where reality
 diverged from this plan.
 
@@ -88,7 +88,7 @@ rather than improvising a different architecture.
 | 2 | Game state, zones, turn machine | Config-driven state + turn steps, no abilities | [x] |
 | 3 | Query pipeline | Stat/cost/legality queries with modifier interception | [x] |
 | 4 | Event bus + triggered abilities | Events, subscriptions, FIFO ability queue | [x] |
-| 5 | Effect template interpreter | All Appendix A effect templates working | [ ] |
+| 5 | Effect template interpreter | All Appendix A effect templates working | [x] |
 | 6 | Continuous templates | All Appendix A continuous templates working | [ ] |
 | 7 | Combat | Attack/block/damage using queries + events | [ ] |
 | 8 | Dice Masters as a game definition | Current game expressed as data; card migration pass | [ ] |
@@ -719,3 +719,68 @@ mechanic exists anywhere in the codebase to emit them from - wiring them
 now would mean firing an event for something that doesn't actually
 happen, which is worse than leaving them unwired with a clear comment
 saying where they'll go (Phase 5 KO effects, Phase 7 combat).
+
+**Phase 5 note (2026-08-23)**: all 18 effect templates and all 7
+conditions are implemented and tested (70/70 v2 tests passing, up from
+23). Written continuation-passing style (`Action onComplete` threaded
+through every private Execute* helper) rather than a flat switch, so
+that Sequence/Conditional/MayPay/DrawAndChooseOne/Distribute all share
+ONE pause mechanism (`PendingChoice`, ported from v1) instead of each
+needing bespoke pause/resume bookkeeping - a real design commitment
+beyond v1's own targeting seam (`EffectContext.ResolveTargets`, a
+caller-supplied function that never actually paused for a real player
+decision). See `EffectInterpreter.cs`'s own class remarks for the full
+reasoning and the one documented simplification taken against the
+Phase 5 budget: TargetFilters resolve LIVE at the point their own node
+executes rather than being pre-resolved-and-cached against a single
+pre-execution snapshot the way v1's rule-3.2.5 handling does (the
+"Casket of Ancient Winters" case) - no currently-authored card needs
+that precision; flagged as a revisit-if-Phase-8-needs-it gap, not a
+silent one.
+
+Real gaps found and resolved while building, each documented at its
+own site rather than here:
+- `TargetKind.CharacterDie` reads the die's CURRENT face (matches
+  in-play/combat semantics), so it can never match a dormant die
+  sitting in the Used Pile/Bag - confirmed this is the vocabulary's own
+  intent (Part 2's Rally example explicitly uses `Kind: AnyDie` for
+  reaching into dormant zones), not a bug; documented at
+  `TargetResolver` and exercised by the MoveDie/FieldDie tests.
+- `Ko`'s destination is always the Prep Area, unrolled (rule 1.5.3.2) -
+  confirmed by grepping v1's own `ForceKO`, and is also the signal
+  `TargetWasKOd` reads (Zone == PrepArea && no current face). v1's
+  separate Sacrifice-shape OutOfPlay/UsedPile nuance (Appendix 1) is
+  NOT preserved - Ko's own data shape has no destination-zone param to
+  carry it, a deliberate simplification, not an oversight.
+- A dormant die entering the Field/Attack Zone (MoveDie/FieldDie/
+  DrawAndChooseOne) needs SOME current face; defaults to the die's own
+  first character face, with `Spin(SetLevel:n)` as the documented
+  follow-up for a specific level (Finding 12's Mutation writeup already
+  established this exact pattern - MoveDie doesn't need its own
+  level-set param).
+- Added three small turn-scoped trackers to `GameState`
+  (PurchasedThisTurn/FieldedCharacterThisTurn/CharacterDiceKOdThisTurn)
+  for `TurnFact`/`NoKOsThisTurn` - `FieldedCharacterThisTurn` is a
+  known simplification (doesn't exclude the ability's own just-fielded
+  die from its own "no OTHER character" check), acceptable since
+  Phase 5's own acceptance bar only asks for one test per Condition
+  KIND, not per enum value; revisit when a real migrated card needs
+  the precise reading.
+- `PurchaseModifier` needed real TurnEngine.Purchase plumbing (a
+  one-shot, per-controller `PendingPurchaseModifier` list, consumed by
+  the next matching purchase or discarded at CleanUp) since it grants a
+  FUTURE action a discount/zone override rather than mutating anything
+  in the moment - not a continuous registry (Phase 6's concern), a
+  one-shot queue of exactly one thing to consume.
+- `AbilityQueue`/`EventBus` gained the "event" binding plumbing Finding
+  9's reactive-trigger design always implied but Phase 4 hadn't
+  actually carried yet: `QueuedAbility.EventSubjectDieId`, populated by
+  `EventBus.Fire` from the firing `GameEvent.SubjectDie`, seeded into
+  `EffectContext.Bindings["event"]` before an ability's own tree runs -
+  without it, `TargetWasKOd`/`Bound:"event"`-style reactive effects
+  would have nothing to actually reference.
+
+Verified: `dotnet build DiceFight.slnx` clean (0 warnings/errors, all
+5 projects); v2 tests 70/70 passing (47 new); v1's full suite re-run
+untouched, still 547/547. Phase 5 checkbox ticked; plan status header
+updated - Phase 6 (continuous templates) is next.
