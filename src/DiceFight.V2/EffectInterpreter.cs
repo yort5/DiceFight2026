@@ -506,8 +506,26 @@ public static class EffectInterpreter
                 // Finding 5 - SetAttack/SetDefense as a computed delta
                 // modifier (v1's proven SetStat approach), mutually
                 // exclusive with their matching delta field.
-                var atkDelta = n.SetAttack is { } setAtk ? setAtk - QueryEngine.GetAttack(ctx.State, die) : n.AtkDelta ?? 0;
-                var defDelta = n.SetDefense is { } setDef ? setDef - QueryEngine.GetDefense(ctx.State, die) : n.DefDelta ?? 0;
+                //
+                // Computed against the BASE queries (printed face +
+                // AppliedModifiers), never the static-inclusive ones -
+                // the game's own applied-vs-static distinction (user
+                // ruling, 2026-08-24). A "set" replaces the die's OWN
+                // value; conditional static auras then recompute on top
+                // of the new value, because they depend on what the die
+                // currently is, not on what it was when the aura started.
+                //
+                // Worked example that fixed this (was a real bug -
+                // computing against GetAttack cancelled the aura out and
+                // re-added it, landing a level too low): Lois Lane gives
+                // other attacking SuperFriends +1A. An attacking 4A
+                // SuperFriend shows 5A. Swap its attack with a 1A
+                // Sidekick: the Sidekick becomes 4A, and the SuperFriend
+                // becomes 2A - 1A swapped in, plus Lois's +1A again,
+                // because it is still a SuperFriend and still attacking.
+                // Against GetAttack it would have shown 1A.
+                var atkDelta = n.SetAttack is { } setAtk ? setAtk - QueryEngine.GetBaseAttack(ctx.State, die) : n.AtkDelta ?? 0;
+                var defDelta = n.SetDefense is { } setDef ? setDef - QueryEngine.GetBaseDefense(ctx.State, die) : n.DefDelta ?? 0;
                 die.AppliedModifiers.Add(new AppliedModifier(atkDelta, defDelta, 0, source, n.Duration, grantedDuring));
             }
             onComplete();

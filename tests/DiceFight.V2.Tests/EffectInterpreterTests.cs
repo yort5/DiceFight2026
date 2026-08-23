@@ -30,7 +30,7 @@ public class EffectInterpreterTests
 
     private static readonly EffectNode StubEffect = new LifeChange(new Fixed(0));
 
-    private static CardDef BuildCard(string id, IReadOnlyList<Face> faces, int purchaseCost = 1, IReadOnlyList<string>? affiliations = null, CardType type = CardType.Character, IReadOnlyList<TriggerKind>? reactsTo = null) => new(
+    private static CardDef BuildCard(string id, IReadOnlyList<Face> faces, int purchaseCost = 1, IReadOnlyList<string>? affiliations = null, CardType type = CardType.Character, IReadOnlyList<TriggerKind>? reactsTo = null, IReadOnlyList<ContinuousDef>? continuous = null) => new(
         Id: id, Name: id, Subtitle: null, Set: "TEST", CardType: type,
         PurchaseCost: purchaseCost, EnergySymbolId: "Fist",
         Die: new DieDefinition(id + "Die", faces),
@@ -41,17 +41,24 @@ public class EffectInterpreterTests
         // it doesn't enqueue the raw event, so a test proving "this
         // fires event X" needs a real listener, same as production.
         Abilities: reactsTo?.Select(t => new TriggeredAbility(t, StubEffect)).ToList() ?? [],
-        Continuous: []);
+        Continuous: continuous ?? []);
 
-    private static GameState BuildState(params CardDef[] cards) => new()
+    private static GameState BuildState(params CardDef[] cards)
     {
-        Config = BuildConfig(),
-        CardCatalog = cards.ToDictionary(c => c.Id),
-        PlayerOne = new Player { Id = "p1", Name = "One", Life = 10 },
-        PlayerTwo = new Player { Id = "p2", Name = "Two", Life = 10 },
-        ActivePlayerId = "p1",
-        CurrentStep = TurnStep.Attack,
-    };
+        var state = new GameState
+        {
+            Config = BuildConfig(),
+            CardCatalog = cards.ToDictionary(c => c.Id),
+            PlayerOne = new Player { Id = "p1", Name = "One", Life = 10 },
+            PlayerTwo = new Player { Id = "p2", Name = "Two", Life = 10 },
+            ActivePlayerId = "p1",
+            CurrentStep = TurnStep.Attack,
+        };
+        // A no-op for every card in this file that declares no Continuous
+        // entries, which is all of them but the static-aura test below.
+        ContinuousRegistry.RegisterAll(state);
+        return state;
+    }
 
     private static DieInstance AddDie(GameState state, CardDef card, string controllerId, Zone zone, int? faceIndex, string? id = null)
     {
@@ -410,6 +417,38 @@ public class EffectInterpreterTests
         EffectInterpreter.Execute(new ModifyStat(new TargetFilter(Ownership: TargetOwnership.Own), SetAttack: 9), ctx);
 
         Assert.Equal(9, QueryEngine.GetAttack(state, die));
+    }
+
+    // The game's applied-vs-static distinction (user ruling, 2026-08-24):
+    // a "set" replaces the die's OWN value (printed + applied), and
+    // conditional static auras recompute on top of the new value.
+    //
+    // The user's own worked example: Lois Lane gives other SuperFriends
+    // +1A while attacking. An attacking 4A SuperFriend shows 5A. Swapping
+    // its attack with a 1A Sidekick leaves the SuperFriend at 2A - the
+    // 1A swapped in, plus Lois's +1A again, because it is still a
+    // SuperFriend and still attacking. (Computing the set against the
+    // static-INCLUSIVE attack instead would land it at 1A - which is
+    // exactly what this engine did until this test was written.)
+    [Fact]
+    public void ModifyStat_Set_Replaces_The_Dies_Own_Value_And_Static_Auras_Recompute_On_Top()
+    {
+        var loisLane = BuildCard("LoisLane", [Level1Char], continuous:
+            [new StatAura(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own, Tags: new TagQuery(AnyOf: ["SuperFriends"])), AtkDelta: new Fixed(1))]);
+        var superFriend = BuildCard("SuperFriend", [new Face([], new CharacterFaceData(1, 0, 4, 4))], affiliations: ["SuperFriends"]);
+        var state = BuildState(loisLane, superFriend);
+        AddDie(state, loisLane, "p1", Zone.FieldZone, 0, "lois");
+        var hero = AddDie(state, superFriend, "p1", Zone.FieldZone, 0, "hero");
+
+        Assert.Equal(5, QueryEngine.GetAttack(state, hero)); // 4 printed + 1 static from Lois
+        Assert.Equal(4, QueryEngine.GetBaseAttack(state, hero)); // the die's OWN value
+
+        // Swap in the Sidekick's 1A.
+        var ctx = BuildContext(state, "p1", sourceDieId: hero.Id);
+        EffectInterpreter.Execute(new ModifyStat(new TargetFilter(Self: true), SetAttack: 1), ctx);
+
+        Assert.Equal(1, QueryEngine.GetBaseAttack(state, hero)); // own value really is 1 now
+        Assert.Equal(2, QueryEngine.GetAttack(state, hero)); // ...and Lois's +1 applies again on top
     }
 
     [Fact]

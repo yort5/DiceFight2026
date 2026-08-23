@@ -8026,3 +8026,60 @@ have come from Cyclops.
 Verified: `dotnet build DiceFight.slnx` clean (0 warnings/errors, all
 5 projects); v2 tests 130/130 passing (14 new); v1's full suite re-run
 untouched, still 547/547.
+
+## User rules review: applied-vs-static, and the timing model (2026-08-24)
+
+Two corrections from the user's review of the spike write-ups. Both
+were substantive; one uncovered a live bug.
+
+**1. `ModifyStat`'s Set modes were reading the wrong value (real bug,
+now fixed).** The user set out the game's applied-vs-static modifier
+distinction: an APPLIED modifier (a Global's +1A) is part of the die's
+own value, so Archnemesis's "D equal to its A" on a 4A die with an
+applied +1A gives D 5, not 4; a STATIC aura (Lois Lane's +1A to other
+attacking SuperFriends) is NOT part of the die's own value and
+recomputes from whatever the die currently is. Their worked example:
+Lois active, attacking 4A SuperFriend shows 5A; swap its attack with a
+1A Sidekick and the Sidekick becomes 4A while the SuperFriend becomes
+2A (1A swapped in, plus Lois's +1A again).
+
+v2 turns out to already have precisely this split - `GetBaseAttack`
+etc. (printed + applied) vs `GetAttack` (adds the continuous registry)
+- built in Phase 6 to break a self-referential-aura recursion, with no
+idea it was reproducing a real rules line. So the spike needs no new
+concept for it. But `EffectInterpreter.ExecuteModifyStat` was
+computing its Set deltas against the static-INCLUSIVE `GetAttack`,
+which cancels the aura out and re-adds it: the Lois example landed on
+1A instead of 2A. Fixed to the `GetBase*` queries. Wrote the user's
+scenario as a regression test and verified it FAILS against the old
+code (die's own value came out 0 instead of 1) before restoring the
+fix - the test genuinely discriminates rather than just passing.
+
+Recorded in V2_VOCABULARY Part 12 as the settled answer to "which
+value does `StatOf` read": the `GetBase*` queries, always.
+
+**2. The `EventFilter.Step` proposal was too small; superseded.** I had
+proposed one optional field to close Colossus "Piotr". The user pointed
+out the timing model has to handle considerably more: the combat
+sub-step windows (Range, Fast, Infiltrate, Tag Out) and "before your
+Clear and Draw Step" windows like Pepper Potts - i.e. both a
+finer-than-step granularity and a before/at distinction, neither of
+which a `TurnStep?` field expresses.
+
+Two things fall into place with that framing. The five combat keywords
+already tailed (Call Out/Infiltrate/Tag Out/Range/Intimidate) are
+tailed *because* the timing model can't name their window - not
+coincidentally alongside it. And v2 already carries structural residue
+of the Pepper Potts case: `Zone.DiceFromBag`/`DiceFromPrep` exist only
+because v1 had to split the Prep Area to express it, and v2 declared
+both zones in Phase 2 without ever routing anything through them.
+
+Rewrote the `V2_TAIL_POLICY.md` entry as a **third design spike**
+(sized between the other two) rather than a parameter addition, posing
+the actual open question: what is the full list of nameable timing
+windows, and does an ability address one by naming a step, a sub-step,
+or a (before|at|after, step) pair? Original proposal kept inline,
+marked superseded. Not implemented - ground rule 2.
+
+Verified: v2 tests 131/131 (1 new); v1's full suite untouched at
+547/547; build clean.

@@ -2015,6 +2015,40 @@ out for free rather than needing special-casing: both dice are bound
 (and their stats snapshotted) before either `DealDamage` applies, so
 neither reads the other's already-applied damage.
 
+#### Which value `StatOf` reads — settled (user ruling, 2026-08-24)
+
+The game distinguishes two categories of stat modifier, and they
+behave differently under read-and-copy effects:
+
+- **Applied** — attaches to the die itself (a Global that gives +1A).
+  It IS part of the die's own value: a 4A die with an applied +1A,
+  targeted by Archnemesis's "D equal to its A," gets **D 5, not 4**.
+- **Static** — a conditional aura recomputed from what the die
+  currently is (Lois Lane: other SuperFriends get +1A *while
+  attacking*). It is NOT part of the die's own value; it re-derives
+  after any change.
+
+The user's worked example: Lois active; an attacking 4A SuperFriend
+shows 5A. Swap its attack with a 1A Sidekick. Result — the Sidekick
+becomes **4A**, and the SuperFriend becomes **2A**: the 1A swapped in,
+plus Lois's +1A again, because it is still a SuperFriend and still
+attacking.
+
+**So `StatOf` reads the `GetBase*` queries (printed face + applied
+modifiers), never the static-inclusive ones.** v2 already has exactly
+this split — `GetBaseAttack`/`GetBaseDefense`/`GetBaseStatValue` vs
+`GetAttack`/`GetDefense`/`GetStatValue` — built in Phase 6 for an
+unrelated reason (breaking a self-referential-aura recursion). It
+turns out to be the game's own applied-vs-static line, so this spike
+inherits it for free rather than needing a new concept.
+
+**This ruling already found and fixed a live bug**, independent of the
+spike: `ModifyStat`'s `SetAttack`/`SetDefense` were computing their
+delta against the static-INCLUSIVE `GetAttack`, which cancels the aura
+out and re-adds it — landing the Lois example on 1A instead of 2A.
+Corrected to the `GetBase*` queries, with the user's own scenario as
+the regression test (verified failing against the old code first).
+
 Implementation consequence worth stating up front:
 `EffectContext.Bindings` is currently `name -> dieId`. Bind-time
 capture means it becomes `name -> (dieId, capturedStats)` (or gains a
