@@ -7966,3 +7966,63 @@ the previous ability just KO'd there).
 Verified: `dotnet build DiceFight.slnx` clean (0 warnings/errors, all
 5 projects); v2 tests 116/116 passing; v1's full suite re-run
 untouched, still 547/547.
+
+## Phase 8 task 4 — DPS catalog batch 1 (2026-08-24)
+
+First DPS migration batch: 15 cards, 13 implemented, 2 tailed
+(`src/DiceFight.V2/Data/DpsCards.cs` + `DpsCardsTests.cs`).
+Deliberately drawn from the cards Phase 0 had already worked out on
+paper, so each migration doubles as a live check that the paper
+expression actually runs - which paid off immediately (see Colossus
+below).
+
+Implemented: Power Bolt, Rally, Ronan the Accuser "Treason!", Storm
+"Cloud Cover", Psylocke "Telepath", both Master Mold printings
+(DPS082/DPS122), Magneto "Founder of the Brotherhood" (both abilities,
+including the paid once-per-turn Global), Cyclops "First Class",
+Jubilee "X-Men Field Leader", Corsair "Criminal Record", Dark Phoenix
+"Enemy of the Shi'ar" (all three abilities), Magik "Wielder of the
+Soulsword".
+
+Extracted the migration die-construction convention into
+`Data/MigrationDice.cs` so it's stated in exactly one place rather than
+duplicated between the curated-team and DPS catalogs (v1 has no
+per-die face data at all, so every migrated die's face layout is a
+documented approximation). Gained a `bursts` parameter for the handful
+of cards whose text branches on a burst symbol - Rally's "**" clause
+is the first.
+
+**A card Phase 0 marked a clean fit turned out not to be, and the
+reason is structural rather than per-card.** Colossus "Piotr"
+(DPS103)'s "at the end of your turn" trigger was written on paper as
+`TurnStepEntered(EndOfTurn)` - but the frozen `EventFilter` carries no
+step discriminator (Ownership/Tags/ExcludeSelf/MinPurchaseCost/Stat
+only), so a listener cannot tell `TurnStepEntered(CleanUp)` from
+`TurnStepEntered(Attack)`; the ability would fire on entering its own
+Attack Step too. I had already added a `TurnStepEntered(CleanUp)`
+emission site to `TurnEngine.CleanUp` to support the card before
+noticing this, and reverted it - emitting an event no filter can use
+correctly is worse than leaving the site unwired, and the code now
+says so explicitly at the site. Colossus is tailed, and
+`V2_TAIL_POLICY.md` carries a standing decision request for the
+one-field fix (`EventFilter.Step: TurnStep?`, checked against the Step
+the GameEvent already carries), since every end-of-turn/start-of-turn
+card in the wider catalog hits this identically. Not implemented -
+ground rule 2.
+
+Deathbird "Treacherous" is the batch's other tail: pure Deadly, which
+Phase 7 deliberately didn't port, and Deadly is its entire text.
+
+Three test failures during the batch, all test-harness rather than
+engine or card bugs, worth noting only because two were the same
+mistake: Ronan and Master Mold have nonzero fielding costs at every
+level and were being fielded with no energy offered, and the Cyclops
+"doesn't fire for a non-Founder die" test used Psylocke as its plain
+die - Psylocke has her own unrelated DieFielded ability, so
+`Assert.Empty(queue.Pending)` was asserting the wrong thing. Swapped
+in a genuinely vanilla card (Deathbird) so anything queued could only
+have come from Cyclops.
+
+Verified: `dotnet build DiceFight.slnx` clean (0 warnings/errors, all
+5 projects); v2 tests 130/130 passing (14 new); v1's full suite re-run
+untouched, still 547/547.

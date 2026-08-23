@@ -286,6 +286,18 @@ public static class TurnEngine
 
         var endingPlayerId = state.ActivePlayerId;
 
+        // No TurnStepEntered(CleanUp) is fired here, deliberately. It
+        // looks like a missing emission site (CleanUp is a real turn step
+        // and TurnStepEntered is a frozen event), and Colossus "Piotr"
+        // (DPS103)'s "at the end of your turn" text wants it - but the
+        // frozen EventFilter has no step discriminator (Ownership/Tags/
+        // ExcludeSelf/MinPurchaseCost/Stat only), so a listener can't
+        // tell TurnStepEntered(CleanUp) from TurnStepEntered(Attack) and
+        // an end-of-turn ability would also fire on entering its own
+        // Attack Step. Adding a `Step` field is a vocabulary change
+        // (ground rule 2 - needs sign-off), so Colossus is tailed
+        // instead and this site stays unwired rather than emitting an
+        // event no filter can use correctly. See V2_TAIL_POLICY.md.
         foreach (var player in new[] { state.PlayerOne, state.PlayerTwo })
         {
             foreach (var die in state.DiceIn(player.Id, Zone.ReservePool).Concat(state.DiceIn(player.Id, Zone.OutOfPlay)).ToList())

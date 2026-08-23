@@ -57,3 +57,23 @@ difference is only its Epic Basic Action mechanics, tracked below.
 | CW014 | Scarlet Spider | Intimidate keyword; its own destination (`Zone.Intimidated` in v1) has no equivalent in v2's 10-zone list at all | Ask |
 | MSW001 | Casket of Ancient Winters (epic) | Effect tree fully implemented (rule-3.2.5 per-ability snapshot, signed off 2026-08-24 - see the dated note above). Remaining difference: Epic Basic Action mechanics (rule 1.2.3 - once-per-turn limiter, die returns to its card instead of Out of Play) aren't modeled; `CardType` has no Epic distinction, so the die behaves as an ordinary Basic Action die | Approximate |
 | GOTG008 | Cosmic Cube (Infinite Possibilities) | A "redraw a chosen subset of dice already drawn this turn" flow - explicitly named non-coverage (V2_PLAN.md Appendix A: "draw-and-choose flows") | Ask |
+
+## DPS catalog batch 1 (V2_PLAN.md Phase 8 task 4, 2026-08-24)
+
+13 of 15 implemented. The two below are tailed.
+
+| CardId | Name | What it needs | Policy |
+|---|---|---|---|
+| DPS029 | Deathbird (Treacherous) | Deadly keyword - Phase 7 deliberately ported only Overcrush and Fast. Deadly is this card's entire text, so there is nothing else to express | Ask |
+| DPS103 | Colossus (Piotr) | A **step discriminator on `EventFilter`**. Its effect half is a clean `PerMatch` fit (V2_VOCABULARY.md Part 2 #13 worked it out on paper), but `TurnStepEntered` fires for several steps and the frozen `EventFilter` (Ownership/Tags/ExcludeSelf/MinPurchaseCost/Stat) has no way to say *which* - so an "at the end of your turn" ability would equally fire on entering its own Attack Step. Consequently `TurnEngine.CleanUp` also deliberately emits no `TurnStepEntered(CleanUp)`, since no filter could use it correctly | Ask |
+
+### Standing decision needed: `EventFilter.Step`
+
+Colossus is the first card to need it, but the gap is structural, not
+per-card: **every** "at the end of your turn" / "at the beginning of
+your turn" card in the wider catalog hits it identically. The
+candidate fix is one optional field - `EventFilter.Step: TurnStep?`,
+checked against `GameEvent.Step`, which the event already carries - and
+it would also let `TurnEngine.CleanUp` emit its currently-suppressed
+`TurnStepEntered(CleanUp)`. Small, additive, no new concepts. Flagged
+here rather than implemented, per ground rule 2.

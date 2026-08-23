@@ -12,32 +12,16 @@ namespace DiceFight.V2.Data;
 // set cards never got real per-level stats sourced, only Name/Subtitle/
 // RawText/DieLimit are real for those - ported as-is, not upgraded here).
 //
-// Real physical face LAYOUT (how many energy vs. character faces, and
-// how many pips each energy face shows) isn't in v1's data model at all -
-// v1 never stored per-die faces; PlaceholderDiceRoller synthesized a
-// face shape at roll time instead (see its own remarks). v2's
-// DieDefinition needs real face data, so every migrated character die
-// here uses one fixed, documented convention: one energy face (1 pip of
-// the card's own printed energy symbol) plus one character face per v1
-// Levels entry, in level order. This is a stated approximation of the
-// real physical dice (which typically carry more than one energy face),
-// not sourced fact - flagged here once rather than re-flagged per card,
-// per Appendix C's "never guess a wrong approximation silently" rule.
+// Face layout follows MigrationDice's one documented convention (see
+// that file - v1 has no per-die face data at all, so every migrated
+// die's face shape is a stated approximation, flagged once there rather
+// than re-flagged per card).
 public static class CardCatalog
 {
-    private static DieDefinition BuildCharacterDie(string dieId, string energySymbolId, params (int FieldingCost, int Attack, int Defense)[] levels)
-    {
-        var faces = new List<Face> { new([new SymbolAmount(energySymbolId, 1)]) };
-        faces.AddRange(levels.Select((l, i) => new Face([], new CharacterFaceData(i + 1, l.FieldingCost, l.Attack, l.Defense))));
-        return new DieDefinition(dieId, faces);
-    }
+    private static DieDefinition BuildCharacterDie(string dieId, string energySymbolId, params (int FieldingCost, int Attack, int Defense)[] levels) =>
+        MigrationDice.Character(dieId, energySymbolId, levels);
 
-    // Rule 1.2.11 - every Basic Action card's die has 3 faces, DieLimit 3,
-    // all showing the card's single action (TargetKind.ActionDie is
-    // decided by CardType, not face content - see TargetResolver.Query -
-    // so the faces themselves carry no symbols/character data at all).
-    private static DieDefinition BuildActionDie(string dieId) =>
-        new(dieId, [new Face([]), new Face([]), new Face([])]);
+    private static DieDefinition BuildActionDie(string dieId) => MigrationDice.Action(dieId);
 
     // ---- Team A: 8 characters + 2 Basic Actions ----
 
