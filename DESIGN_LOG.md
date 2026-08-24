@@ -8359,3 +8359,41 @@ fail the character-face check and be Prepped.
 Verified: `dotnet build DiceFight.slnx` clean (0 warnings/errors, all
 5 projects); v2 tests 151/151 passing (3 new); v1's full suite re-run
 untouched, still 547/547.
+
+## Fidelity pass: Reserve Pool timing and the Main-end sweep (2026-08-24)
+
+Two of Spike C's three named fidelity gaps, taken together because they
+are two halves of one model (what happens to Reserve Pool contents) and
+splitting them would have left character dice sitting in the Reserve
+Pool through the opponent's turn.
+
+Rulebook model, now implemented:
+- **End of Main** (TURN SUMMARY): unfielded CHARACTER dice go to the
+  Used Pile. Implemented in `EnterAttackStep`, which now passes through
+  the `main-end` step (added to `TurnStepDefs.Standard`).
+- **Clean Up** (TURN SUMMARY): unused ACTION dice, and everything Out of
+  Play, go to the Used Pile - *not* the whole Reserve Pool.
+- **Clear and Draw** (rule 2.3.1, verbatim): "At the start of this step,
+  the Active player will CLEAR all dice in their Reserve Pool to the
+  Used Pile." Active player only.
+
+**This mattered more than the original log entry suggested.** v2 swept
+BOTH players' Reserve Pools at Clean Up, so a player's leftover energy
+never survived their opponent's turn - which meant the inactive player
+had nothing to spend, and the card-scoped-Globals work finished earlier
+today (rule 2.6.5.2, inactive player may use Globals) could never
+actually be exercised in a real game. The two fixes are coupled: the
+Global rule is only usable because energy now persists.
+
+Also worth noting the near-miss: all 152 existing tests still passed
+after the behavior change, because the turn-cycle test happens to spend
+its whole Reserve Pool before Clean Up. The change was completely
+uncovered until three tests were written for it - leftover energy
+surviving the opponent's turn, energy clearing at the owner's OWN next
+Clear and Draw, and unfielded character dice leaving at end of Main
+while energy stays. All three fail against the previous behavior.
+
+Verified: `dotnet build DiceFight.slnx` clean (0 warnings/errors, all
+5 projects); v2 tests 155/155 passing (3 new); v1's full suite re-run
+untouched, still 547/547. Spike C's third fidelity gap (the Attack Step
+windows and the Fast/normal damage split) remains open.

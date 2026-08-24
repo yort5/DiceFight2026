@@ -81,13 +81,13 @@ still needs its actual keyword behavior implemented, and their step
 entries are added to `TurnStepDefs.Standard` when that happens, per
 the same "declare it when it has a consumer" rule. They stay Ask.
 
-Also still open from Spike C's write-up, deliberately not done in the
-same pass: the three fidelity gaps (Main's end-of-step unfielded-dice
-sweep, the Reserve Pool clearing at Clean Up rather than Clear and
-Draw, and the missing attack-effects / block-effects / damage-ko-effects
-windows and the Fast/normal damage split). The step list has ids
-reserved for all of them (`StepIds`), but they are not in
-`TurnStepDefs.Standard` until their procedures move.
+Of Spike C's three named fidelity gaps, **two are now fixed**
+(2026-08-24): Main's end-of-step unfielded-dice sweep, and the Reserve
+Pool clearing at Clear and Draw rather than Clean Up. The third - the
+missing attack-effects / block-effects / damage-ko-effects windows and
+the Fast/normal damage split - remains open; `StepIds` reserves ids for
+all of them, but they are not in `TurnStepDefs.Standard` until their
+procedures move there.
 
 
 ## Spike B findings (2026-08-24)

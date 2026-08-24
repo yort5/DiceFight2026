@@ -127,6 +127,81 @@ public class TurnCycleTests
         Assert.False(state.IsFirstTurn);
     }
 
+    // --- Reserve Pool timing (rule 2.3.1 + the TURN SUMMARY's Main and
+    // Cleanup entries). Previously v2 swept BOTH players' Reserve Pools
+    // at Clean Up, which is neither what the rulebook says nor
+    // survivable for the inactive player's Globals. ---
+
+    private static DiceFight.V2.GameState TwoPlayerGame(out DiceFight.V2.AbilityQueue queue)
+    {
+        var config = BuildTinyConfig();
+        var card = BuildTestCharacterCard();
+        var state = DiceFight.V2.GameSetup.NewGame(config, new Dictionary<string, CardDef> { [card.Id] = card },
+            new Player { Id = "p1", Name = "One" }, new Player { Id = "p2", Name = "Two" });
+        state.CurrentStep = TurnStep.Main;
+        queue = new DiceFight.V2.AbilityQueue();
+        return state;
+    }
+
+    // Face 1 of the tiny config's basic die is a Fist energy face; face 2
+    // is a character face.
+    private static DieInstance PoolDieInReserve(DiceFight.V2.GameState state, string controllerId, int faceIndex, string id)
+    {
+        var die = new DieInstance { Id = id, PoolDieId = "Basic", OwnerId = controllerId, ControllerId = controllerId, Zone = Zone.ReservePool, CurrentFaceIndex = faceIndex };
+        state.Dice.Add(die);
+        return die;
+    }
+
+    [Fact]
+    public void Unfielded_Character_Dice_Leave_At_The_End_Of_The_Main_Step_But_Energy_Stays()
+    {
+        var state = TwoPlayerGame(out var queue);
+        var unfielded = PoolDieInReserve(state, "p1", 2, "unfielded-character");
+        var energy = PoolDieInReserve(state, "p1", 1, "leftover-energy");
+
+        DiceFight.V2.TurnEngine.EnterAttackStep(state, queue);
+
+        Assert.Equal(Zone.UsedPile, unfielded.Zone); // TURN SUMMARY, end of Main Step
+        Assert.Equal(Zone.ReservePool, energy.Zone); // energy is not swept here
+    }
+
+    [Fact]
+    public void Leftover_Energy_Survives_The_Opponents_Whole_Turn()
+    {
+        var state = TwoPlayerGame(out var queue);
+        var p2Energy = PoolDieInReserve(state, "p2", 1, "p2-energy"); // left from p2's own turn
+
+        // Play out the rest of p1's turn.
+        DiceFight.V2.TurnEngine.EnterAttackStep(state, queue);
+        DiceFight.V2.TurnEngine.CleanUp(state, queue);
+
+        // Still there - this is what funds the inactive player's Globals
+        // (rule 2.6.5.2). Sweeping it at Clean Up left them with nothing.
+        Assert.Equal(Zone.ReservePool, p2Energy.Zone);
+        Assert.Equal("p2", state.ActivePlayerId);
+    }
+
+    [Fact]
+    public void Your_Own_Leftover_Energy_Clears_At_Your_Next_Clear_And_Draw()
+    {
+        var state = TwoPlayerGame(out var queue);
+        var p1Energy = PoolDieInReserve(state, "p1", 1, "p1-energy");
+
+        // End p1's turn, then end p2's turn, handing control back to p1.
+        DiceFight.V2.TurnEngine.EnterAttackStep(state, queue);
+        DiceFight.V2.TurnEngine.CleanUp(state, queue);
+        Assert.Equal(Zone.ReservePool, p1Energy.Zone); // survived its own Clean Up
+
+        DiceFight.V2.TurnEngine.ClearAndDraw(state, queue, new Random(1)); // p2's turn opens
+        Assert.Equal(Zone.ReservePool, p1Energy.Zone); // and the opponent's Clear and Draw
+        DiceFight.V2.TurnEngine.FinishRoll(state);
+        DiceFight.V2.TurnEngine.EnterAttackStep(state, queue);
+        DiceFight.V2.TurnEngine.CleanUp(state, queue);
+
+        DiceFight.V2.TurnEngine.ClearAndDraw(state, queue, new Random(1)); // p1's own next turn - rule 2.3.1
+        Assert.Equal(Zone.UsedPile, p1Energy.Zone);
+    }
+
     private static string FindUnpurchasedDieId(DiceFight.V2.GameState state, string cardId) =>
         state.Dice.Single(d => d.CardId == cardId && d.Zone == Zone.Unpurchased).Id;
 }

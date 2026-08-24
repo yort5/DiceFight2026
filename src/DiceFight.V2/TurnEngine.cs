@@ -68,6 +68,20 @@ public static class TurnEngine
         state.MoveToStep(StepIds.ClearAndDraw);
         EventBus.Fire(state, queue, new GameEvent(TriggerKind.TurnStepEntered, null, state.ActivePlayerId, StepIds.ClearAndDraw));
 
+        // Rule 2.3.1 - "At the start of this step, the Active player will
+        // CLEAR all dice in their Reserve Pool to the Used Pile."
+        // Deliberately the ACTIVE player only, and deliberately here
+        // rather than at Clean Up: a player's leftover energy survives
+        // their opponent's whole turn, which is exactly what lets the
+        // INACTIVE player pay for Globals (rule 2.6.5.2). v2 previously
+        // swept both players' pools at Clean Up, which silently left the
+        // inactive player with nothing to spend.
+        foreach (var die in state.DiceIn(state.ActivePlayerId, Zone.ReservePool).ToList())
+        {
+            die.Zone = Zone.UsedPile;
+            die.CurrentFaceIndex = null;
+        }
+
         var drawCount = state.Config.Rules.DrawCount - (state.IsFirstTurn ? 1 : 0);
         var bag = state.DiceIn(state.ActivePlayerId, Zone.Bag).ToList();
         Shuffle(bag, random);
@@ -296,6 +310,20 @@ public static class TurnEngine
     public static void EnterAttackStep(GameState state, AbilityQueue queue)
     {
         RequireStep(state, TurnStep.Main);
+
+        // TURN SUMMARY, Main Step: "At the end of this step, move any
+        // unfielded Superstar dice to the Used Pile" ("Superstar" is the
+        // WWE set's word for Character). Only character-FACED dice go -
+        // energy stays in the Reserve Pool until the owner's next Clear
+        // and Draw, and unused Action dice go at Clean Up instead.
+        state.MoveToStep(StepIds.MainEnd);
+        foreach (var die in state.DiceIn(state.ActivePlayerId, Zone.ReservePool).ToList())
+        {
+            if (state.GetCurrentFace(die)?.Character is null) continue;
+            die.Zone = Zone.UsedPile;
+            die.CurrentFaceIndex = null;
+        }
+
         state.MoveToStep(StepIds.SelectAttackers); // Spike C - the Attack phase's first step
         EventBus.Fire(state, queue, new GameEvent(TriggerKind.TurnStepEntered, null, state.ActivePlayerId, StepIds.SelectAttackers));
     }
@@ -349,9 +377,16 @@ public static class TurnEngine
         state.MoveToStep(StepIds.CleanUp);
         EventBus.Fire(state, queue, new GameEvent(TriggerKind.TurnStepEntered, null, endingPlayerId, StepIds.CleanUp));
 
+        // TURN SUMMARY, Cleanup Step: "Move any unused Action Dice to the
+        // Used Pile" and "End turn. Move dice from Out of Play to the
+        // Used Pile." NOT the whole Reserve Pool - leftover energy
+        // survives until its owner's own next Clear and Draw (rule
+        // 2.3.1), which is what funds the inactive player's Globals.
         foreach (var player in new[] { state.PlayerOne, state.PlayerTwo })
         {
-            foreach (var die in state.DiceIn(player.Id, Zone.ReservePool).Concat(state.DiceIn(player.Id, Zone.OutOfPlay)).ToList())
+            var unusedActionDice = state.DiceIn(player.Id, Zone.ReservePool)
+                .Where(d => d.CardId is { } cardId && state.CardCatalog[cardId].CardType == CardType.BasicAction);
+            foreach (var die in unusedActionDice.Concat(state.DiceIn(player.Id, Zone.OutOfPlay)).ToList())
             {
                 die.Zone = Zone.UsedPile;
                 die.CurrentFaceIndex = null;

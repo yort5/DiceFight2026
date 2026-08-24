@@ -61,9 +61,9 @@ public static class TurnStepDefs
 {
     // The steps this engine actually implements, in rulebook order.
     // Deliberately NOT the full TURN SUMMARY yet: entries whose
-    // procedure isn't built (main-end's unfielded-dice sweep,
-    // attack-effects / block-effects / damage-ko-effects windows, the
-    // Fast/normal damage split) are added when their behavior is,
+    // procedure isn't built (the attack-effects / block-effects /
+    // damage-ko-effects windows, and the Fast/normal damage split) are
+    // added when their behavior is,
     // following the same "declare it when it has a consumer" rule Phase
     // 4 used for unwired events. StepIds lists them all; this list is
     // what a game currently runs.
@@ -78,6 +78,7 @@ public static class TurnStepDefs
         new(StepIds.ClearAndDraw, TurnStep.ClearAndDraw),
         new(StepIds.RollAndReroll, TurnStep.RollAndReroll, NeedsInput: true),
         new(StepIds.Main, TurnStep.Main, NeedsInput: true),
+        new(StepIds.MainEnd, TurnStep.Main),
         new(StepIds.SelectAttackers, TurnStep.Attack, NeedsInput: true),
         new(StepIds.AssignBlockers, TurnStep.Attack, NeedsInput: true),
         new(StepIds.ActionGlobalWindow, TurnStep.Attack, NeedsInput: true),
