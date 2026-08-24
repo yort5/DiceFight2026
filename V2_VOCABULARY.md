@@ -2303,3 +2303,139 @@ StatOf(target, Attack)`) and `EventValue` are both covered by tests.
    ACTIVE player, so a Global on a Basic Action card (Archnemesis) can
    never be used at all. A pre-existing Phase 4 gap, unrelated to this
    spike but blocking the same card.
+
+---
+
+## Part 15 — Rules validation pass (2026-08-24)
+
+Requested by the user before taking the outstanding vocabulary asks one
+at a time. Read against both source documents (see the rules-references
+memory for the extraction recipe):
+
+- *Dice Masters Comprehensive Rules* (4.11.2023)
+- the X-Men starter rulebook (its TURN SUMMARY, already used for Spike C)
+
+### Assumptions confirmed correct
+
+| Assumption | Rule |
+|---|---|
+| KO'd character dice go to the Prep Area | 1.5.3.2 |
+| Damage clears at Clean Up for dice that were not KO'd | 2.8.1 |
+| "Once blocked, always blocked" | 2.7.x (stated verbatim twice) |
+| Purchase needs at least one energy matching the card's type | 2.6.2.3 |
+| Purchase cost can never be reduced below 1 | 2.6.2.4 |
+| Fielding cost is payable with any energy type | 2.6.3.2 |
+| "When fielded" fires immediately on entering the Field Zone | 2.6.3.6 |
+| Globals are usable by either player | Glossary, "Global" |
+| Purchased dice go to the Used Pile; spent energy goes Out of Play | 2.6.2.6 |
+
+Also rule-cited at last: the Reserve Pool clears **at Clear and Draw**
+(2.3.1 - "At the start of this step, the Active player will CLEAR all
+dice in their Reserve Pool to the Used Pile"), confirming the fidelity
+gap already logged against `TurnEngine.CleanUp`.
+
+### Finding 1 — the tag collapse, and where it actually hurts
+
+The user's instinct was right, and the rules are more specific than the
+heuristic. **The rules define a closed list of card attributes** (1.2,
+and the 1.2 Key):
+
+> Card Attributes: Name/Title, Subtitle, Purchase Cost, Energy Type,
+> Affiliation, Alignment
+
+Keywords are NOT in that list. They are a class of *ability* -
+"3.4.7 Keyword Abilities... shorthand for special abilities that a card
+may have". And 1.2.7 explicitly separates a third group ("Such items
+are not affiliations"): Alignment, Emotional Conduit, Equipment.
+
+So the rules have three distinct concepts where `GetTags` has one
+string set: **attributes**, **keyword abilities**, and **die kind**
+(Sidekick, 1.3.8/1.3.9). The user's "if it is important enough to
+filter on in the Team Builder" heuristic maps almost exactly onto the
+rules' own "attribute".
+
+**Where this actually bites - blanking (Spike A).** The rules
+distinguish blanking a *component* from blanking an *ability* from
+blanking an *attribute*:
+
+- 3.4.8.1 - "Abilities that blank (or ignore) a specified **attribute,
+  ability, or component**"
+- 3.4.7.2 - "Abilities that blank or ignore the card's text box will
+  also blank the **Keyword ability**"
+- 3.4.8.2 - "When a card's text box is ignored, **all abilities** that
+  pertain to the dice from that card are lost"
+
+A blanked die therefore loses its keywords but keeps its affiliation,
+name and energy type - those are printed outside the text box. Against
+a single flat tag set that distinction cannot be drawn.
+
+**The good news: this needs no vocabulary change to fix.** `CardDef`
+already stores `Affiliations` and `Keywords` as separate lists;
+`QueryEngine.GetTags` is the only place they are merged, and provenance
+is fully recoverable there. Spike A can simply have `GetTags` omit the
+`Keywords`-derived entries when `AbilitiesActive(die)` is false. This
+should be written into Spike A's design before it is built.
+
+**What a vocabulary change WOULD buy**, and is a separate decision:
+attribute-level *addressing* - letting a card say "target a die with
+the X-Men **affiliation**" as distinct from "a die tagged X-Men". That
+matters for (a) name collisions between an affiliation, a keyword and a
+card title, which validation can only partly catch, and (b) 3.4.8.1's
+"blank a specified attribute", which cannot be expressed at all today.
+Candidate shape: `TargetFilter.Affiliations: TagQuery?` alongside the
+existing catch-all `Tags`. **Recommend deferring this until a real card
+needs it** - the blanking correctness fix above is the urgent half, and
+it is free.
+
+### Finding 2 — `EnergySymbolId` is singular; the rules allow several
+
+`CardDef.EnergySymbolId` is a single `string?`. The rules have
+Crossover characters:
+
+> 1781 - "Crossover: Crossover characters have two or more types of
+> energy. At least one of each type of energy they [require]..."
+> 2.6.2.3 example (2) - "To purchase a 3-cost bolt-fist Crossover
+> Character die, you can spend any combination of 3 energy but 2 of
+> those energy types must be a bolt and a fist"
+
+v1 got this right - its `CardDef.EnergyTypes` is a list. v2 narrowed it
+to one, which makes Crossover cards unrepresentable and makes
+`SpendEnergy`'s single `requiredSymbolId` check incomplete. No migrated
+card is Crossover yet, so nothing is currently wrong on disk - but this
+is a data-model narrowing rather than a missing feature, and it gets
+more expensive to widen the longer the catalog grows.
+
+### Finding 3 — ability-fielded dice and level 1 (NEEDS A RULING)
+
+This one bears directly on the `FieldDie` change made earlier today.
+The Glossary's "Field" entry says:
+
+> "...or an ability directing a Character die to be fielded from the
+> **Used Pile, Prep Area, or bag**... Other abilities can field
+> Character dice, and dice fielded this way are considered **fielded
+> for free on level 1**, unless otherwise stated."
+
+Two readings, and they disagree about Making the Team:
+
+1. **Literal**: ability-fielded dice are level 1 unless the card says
+   otherwise. Making the Team says only "field it for free", so it
+   fields at level 1 - and the roll matters solely for deciding
+   *whether* it is fielded or Prepped. This is what `FieldDie`'s
+   original `Level = 1` default did.
+2. **As ruled today**: the level-1 default exists *because* the three
+   zones named are all dormant - a die there has no face and therefore
+   no level. Making the Team is unusual in rolling the die first, which
+   gives it a real level, so it fields at that level.
+
+Reading 2 is defensible and arguably the better reading of intent - the
+named zones are all dormant, which is exactly when a default is needed.
+But reading 1 is what the sentence literally says. Current code
+implements reading 2. Flagging rather than quietly switching: this is a
+rules call, not an engineering one.
+
+### Finding 4 — Alignment and Equipment have no representation
+
+Both are card attributes per 1.2.7 and the 1.2 Key (Alignment on D&D
+sets; Equipment used with the Equip keyword). `CardDef` models neither.
+Nothing in the DPS set needs them, so this is a note for whenever a D&D
+set is migrated, not an action item.
