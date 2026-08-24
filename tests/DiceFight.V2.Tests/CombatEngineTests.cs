@@ -421,6 +421,71 @@ public class CombatEngineTests
         Assert.Throws<InvalidOperationException>(() => CombatEngine.DeclareBlockers(state, queue, assignment, [blocker.Id]));
     }
 
+    // --- The Attack Step's own six TURN SUMMARY entries (Spike C's
+    // third fidelity gap, closed 2026-08-24) ---
+
+    [Fact]
+    public void The_Attack_Step_Walks_Its_Six_Rulebook_Entries_In_Order()
+    {
+        var bruiser = BuildCard("Bruiser", [Level1Char]);
+        var blockerCard = BuildCard("Blocker", [new Face([], new CharacterFaceData(1, 1, 1, 9))]);
+        var state = BuildState(bruiser, blockerCard);
+        var attacker = AddDie(state, bruiser, "p1");
+        var blocker = AddDie(state, blockerCard, "p2");
+        var queue = new AbilityQueue();
+
+        Assert.Equal(StepIds.SelectAttackers, state.CurrentStepId);
+
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        // Walked through attack-effects and parked on the next input step.
+        Assert.Equal(StepIds.AssignBlockers, state.CurrentStepId);
+
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attacker.Id, blocker.Id);
+        CombatEngine.DeclareBlockers(state, queue, assignment, [blocker.Id]);
+        Assert.Equal(StepIds.ActionGlobalWindow, state.CurrentStepId);
+
+        CombatEngine.AssignCombatDamage(state, queue, assignment, SoloSplit(attacker.Id, blocker.Id, 3));
+        Assert.Equal(StepIds.ReturnToField, state.CurrentStepId);
+    }
+
+    // Every window is addressable - a card can name `attack-effects` and
+    // fire only there, not at select-attackers or any other step.
+    [Fact]
+    public void An_Ability_Can_Name_The_Resolve_Effects_Due_To_Attacking_Window()
+    {
+        var watcher = BuildCard("Watcher", [Level1Char], abilities:
+        [
+            new TriggeredAbility(TriggerKind.TurnStepEntered, new LifeChange(new Fixed(-1), Whose: TargetOwnership.Opposing),
+                Filter: new EventFilter(Step: StepIds.AttackEffects)),
+        ]);
+        var state = BuildState(watcher);
+        var attacker = AddDie(state, watcher, "p1");
+        var queue = new AbilityQueue();
+
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+
+        // Exactly one enqueue, from the attack-effects window - not from
+        // select-attackers, and not from assign-blockers.
+        var pending = Assert.Single(queue.Pending);
+        Assert.Equal(TriggerKind.TurnStepEntered, pending.Trigger);
+    }
+
+    // Keyword Fast's two waves are now two named steps rather than a bool
+    // parameter, and the rulebook worked example still holds.
+    [Fact]
+    public void The_Fast_And_Normal_Damage_Waves_Are_Separately_Addressable_Steps()
+    {
+        Assert.Contains(TurnStepDefs.Standard, s => s.Id == StepIds.FastDamage);
+        Assert.Contains(TurnStepDefs.Standard, s => s.Id == StepIds.NormalDamage);
+
+        var fastIndex = TurnStepDefs.Standard.ToList().FindIndex(s => s.Id == StepIds.FastDamage);
+        var normalIndex = TurnStepDefs.Standard.ToList().FindIndex(s => s.Id == StepIds.NormalDamage);
+        var koEffectsIndex = TurnStepDefs.Standard.ToList().FindIndex(s => s.Id == StepIds.DamageAndKoEffects);
+        Assert.True(fastIndex < normalIndex, "Fast damage resolves before normal damage");
+        Assert.True(normalIndex < koEffectsIndex, "damage/KO effects resolve after both damage waves");
+    }
+
     // --- CombatFlag (MustAttack / CantBlock / Unblockable) ---
 
     [Fact]

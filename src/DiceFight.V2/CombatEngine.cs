@@ -51,7 +51,9 @@ public static class CombatEngine
             EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieAttacks, die, die.ControllerId, state.CurrentStepId));
         }
 
-        state.MoveToStep(StepIds.AssignBlockers);
+        // "Select attackers. Resolve effects that occur due to attacking."
+        EnterStep(state, queue, StepIds.AttackEffects);
+        EnterStep(state, queue, StepIds.AssignBlockers);
     }
 
     // Rule 2.7.2 - the Inactive player assigns blockers (if any).
@@ -82,7 +84,9 @@ public static class CombatEngine
             EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieBlocks, die, die.ControllerId, state.CurrentStepId));
         }
 
-        state.MoveToStep(StepIds.ActionGlobalWindow);
+        // "Assign blockers. Resolve effects that occur due to blocking."
+        EnterStep(state, queue, StepIds.BlockEffects);
+        EnterStep(state, queue, StepIds.ActionGlobalWindow);
     }
 
     // CombatFlagKind.Unblockable (Finding 14 - Falcon "Recon").
@@ -158,7 +162,7 @@ public static class CombatEngine
         IReadOnlyDictionary<string, IReadOnlyDictionary<string, int>> attackerDamageSplits)
     {
         RequireStep(state, StepIds.ActionGlobalWindow);
-        state.MoveToStep(StepIds.NormalDamage);
+        EnterStep(state, queue, StepIds.FastDamage);
 
         var inactivePlayer = state.GetPlayer(state.OpponentOf(state.ActivePlayerId));
         var attackers = state.DiceIn(state.ActivePlayerId, Zone.AttackZone).ToList();
@@ -213,7 +217,13 @@ public static class CombatEngine
         // the test suite).
         var koIds = new List<string>();
         koIds.AddRange(ResolveFastOrSlowDamage(state, queue, assignment, attackerDamageSplits, fast: true));
+        EnterStep(state, queue, StepIds.NormalDamage);
         koIds.AddRange(ResolveFastOrSlowDamage(state, queue, assignment, attackerDamageSplits, fast: false));
+
+        // "Resolve effects that occur due to damage or KO." The DieDamaged
+        // and DieKOd abilities are already queued by the waves above; this
+        // names the window they resolve in.
+        EnterStep(state, queue, StepIds.DamageAndKoEffects);
 
         // Glossary/FAQ - Overcrush: "if this character die KO's or removes
         // all of its blockers, it deals any leftover damage to your
@@ -227,11 +237,11 @@ public static class CombatEngine
             if (leftover > 0) inactivePlayer.Life -= leftover;
         }
 
-        // Rule 2.7.6.6 - survivors return to the Field Zone.
+        // Rule 2.7.6.6 - "Return remaining dice in the Attack Zone to the
+        // Field Zone", the TURN SUMMARY's own final Attack Step entry.
+        EnterStep(state, queue, StepIds.ReturnToField);
         foreach (var die in state.Dice.Where(d => d.Zone == Zone.AttackZone))
             die.Zone = Zone.FieldZone;
-
-        state.MoveToStep(StepIds.ReturnToField);
         // Unlike v1, this does NOT also advance CurrentStep to CleanUp -
         // the caller calls TurnEngine.CleanUp explicitly afterward, same
         // as the skip-combat path already does; keeps CleanUp's own
@@ -308,6 +318,17 @@ public static class CombatEngine
         }
 
         return koIds;
+    }
+
+    // Moves onto a step and fires its window event, so every entry in
+    // the Attack Step is addressable by an ability (EventFilter.Step).
+    // Non-input steps are walked THROUGH by the method that precedes
+    // them - the caller only ever has to act on NeedsInput steps, which
+    // is what that flag is for.
+    private static void EnterStep(GameState state, AbilityQueue queue, string stepId)
+    {
+        state.MoveToStep(stepId);
+        EventBus.Fire(state, queue, new GameEvent(TriggerKind.TurnStepEntered, null, state.ActivePlayerId, stepId));
     }
 
     // Spike C - attack sub-steps are ordinary entries in the one flat

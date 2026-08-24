@@ -59,14 +59,17 @@ public static class StepIds
 
 public static class TurnStepDefs
 {
-    // The steps this engine actually implements, in rulebook order.
-    // Deliberately NOT the full TURN SUMMARY yet: entries whose
-    // procedure isn't built (the attack-effects / block-effects /
-    // damage-ko-effects windows, and the Fast/normal damage split) are
-    // added when their behavior is,
-    // following the same "declare it when it has a consumer" rule Phase
-    // 4 used for unwired events. StepIds lists them all; this list is
-    // what a game currently runs.
+    // The steps this engine actually implements, in rulebook order -
+    // as of 2026-08-24 that is the whole TURN SUMMARY, the Attack Step
+    // included (its six entries, with "assign and resolve damage" split
+    // into the two waves keyword Fast requires).
+    //
+    // The three "resolve effects that occur due to X" entries are real
+    // steps with no procedure of their own: resolving effects IS
+    // draining the ability queue, which is the caller's job (see
+    // AbilityQueue's enqueue/drain split). What they contribute is a
+    // NAMED, addressable window - a card can filter on `attack-effects`
+    // - and a defined point for the caller to drain at.
     //
     // Keyword windows (Range / Infiltrate / Tag Out) are likewise absent
     // until those keywords are implemented - the flat list makes them
@@ -80,9 +83,13 @@ public static class TurnStepDefs
         new(StepIds.Main, TurnStep.Main, NeedsInput: true),
         new(StepIds.MainEnd, TurnStep.Main),
         new(StepIds.SelectAttackers, TurnStep.Attack, NeedsInput: true),
+        new(StepIds.AttackEffects, TurnStep.Attack),
         new(StepIds.AssignBlockers, TurnStep.Attack, NeedsInput: true),
+        new(StepIds.BlockEffects, TurnStep.Attack),
         new(StepIds.ActionGlobalWindow, TurnStep.Attack, NeedsInput: true),
+        new(StepIds.FastDamage, TurnStep.Attack),
         new(StepIds.NormalDamage, TurnStep.Attack),
+        new(StepIds.DamageAndKoEffects, TurnStep.Attack),
         new(StepIds.ReturnToField, TurnStep.Attack),
         new(StepIds.CleanUp, TurnStep.CleanUp),
     ];

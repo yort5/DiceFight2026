@@ -8397,3 +8397,37 @@ Verified: `dotnet build DiceFight.slnx` clean (0 warnings/errors, all
 5 projects); v2 tests 155/155 passing (3 new); v1's full suite re-run
 untouched, still 547/547. Spike C's third fidelity gap (the Attack Step
 windows and the Fast/normal damage split) remains open.
+
+## Fidelity pass: the Attack Step's own six entries (2026-08-24)
+
+Spike C's third and last named fidelity gap. `TurnStepDefs.Standard`
+now runs the entire TURN SUMMARY, Attack Step included.
+
+Added: `attack-effects`, `block-effects`, `damage-ko-effects` (the
+rulebook's three "resolve effects that occur due to X" entries) and the
+`fast-damage` / `normal-damage` split.
+
+The three "resolve effects" entries have no procedure of their own, and
+that is correct rather than a stub: resolving effects IS draining the
+ability queue, which is deliberately the caller's job (AbilityQueue's
+enqueue/drain split). What they contribute is a NAMED window a card can
+filter on, and a defined point for the caller to drain at. A test
+covers exactly that - an ability filtered to `attack-effects` fires
+there and nowhere else in the Attack Step.
+
+`NeedsInput` earned its keep here. The combat methods now walk THROUGH
+the non-input steps themselves (firing each window's TurnStepEntered)
+and park on the next step that actually needs the caller: DeclareAttackers
+leaves the cursor on `assign-blockers`, DeclareBlockers on
+`action-global-window`, AssignCombatDamage on `return-to-field`. So no
+step-machine `Advance` was needed to close this - the flag Spike C
+added for Phase 9's benefit turned out to define the walk here too.
+
+Keyword Fast is now two named steps rather than a `bool fast` parameter
+threaded through a private method, which is what Spike C predicted
+would fall out. The rulebook's own Fast worked examples still pass
+unchanged.
+
+Verified: `dotnet build DiceFight.slnx` clean (0 warnings/errors, all
+5 projects); v2 tests 158/158 passing (3 new); v1's full suite re-run
+untouched, still 547/547.
