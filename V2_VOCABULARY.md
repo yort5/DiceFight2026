@@ -2598,3 +2598,78 @@ This is a genuine fork and should be decided once, not drifted into:
 apply the answer to `TargetFilter` and the condition together. Adding a
 tag-only condition first and an affiliation predicate later would leave
 the two query surfaces inconsistent, which is the worst of both.
+
+---
+
+## Part 18 — Analysis: affiliation as a tag (2026-08-24, user leaning yes)
+
+The user's own case, and my analysis on request. **Not yet decided** -
+they are still thinking. Recorded now so the reasoning survives.
+
+### The reframing that dissolves most of the tension
+
+`CardDef.Affiliations` is already its own field and stays either way.
+Team Builder filtering, deck validation, UI grouping, and blanking
+provenance all read that structured field directly. The choice is only
+about how ABILITY TARGETING addresses affiliations - a query-surface
+decision, not a data-model one. Most arguments for "first-class" turn
+out to be arguments for keeping the data structured, which nothing
+threatens.
+
+### For tags (the user's case, and I find it persuasive)
+
+1. **Direction C.** Privileging "Affiliation" hardcodes a Dice Masters
+   taxonomy into an engine whose stated purpose is expressing a
+   different game as data (ARCHITECTURE_REVIEW.md Part 3). Energy
+   symbols and keywords are already config-declared with no special
+   status.
+2. **Founder is the game telling on itself.** Dice Masters shipped a
+   KEYWORD that behaves like an affiliation because the closed
+   affiliation list could not stretch. v2 already proves the point:
+   Cyclops "First Class" filters `Tags: AnyOf ["Founder"]` and is
+   indistinguishable from an affiliation filter. An engine enforcing a
+   line the designers route around will keep losing.
+3. **WWE generalises the lesson** - a taxonomy load-bearing in one IP
+   and vestigial in another should not be structural.
+4. **Other games went this way** (Lorcana, Marvel Puzzle Quest):
+   multi-axis, open-ended classifications rather than one closed
+   affiliation field.
+
+### Against, stated honestly
+
+1. **Reversibility runs slightly the other way.** Choosing tags and
+   later wanting attributes means re-authoring every card that used
+   `Tags` for an affiliation check - ~8-10 of the 28 migrated so far,
+   far worse at 145. The reverse costs nothing, since `Tags` would
+   still exist. Small asymmetry, but it argues against drifting into
+   either answer by default.
+2. **One rules capability is lost.** 3.4.8.1 permits blanking "a
+   specified ATTRIBUTE" - "ignore that die's affiliation" is
+   inexpressible if the engine cannot tell which tags are affiliations
+   at query time. No such card is known in DPS; a risk to note, not a
+   blocker.
+3. **Collisions get worse** - addressed below.
+
+### Guardrail implemented regardless of the decision
+
+Tag unification puts affiliations, keywords, CARD NAMES, "sidekick" and
+energy symbol ids in one namespace. `ValidateCatalog` checked
+affiliations against symbols/keywords but **never checked card names at
+all** - despite names being the one part of that namespace nobody picks
+with the collision in mind. A filter for affiliation "X" would silently
+also match a card merely NAMED "X" (Kitty Pryde "Headmistress" already
+relies on name-tags: "while Wolverine is active").
+
+Now validated in both directions - a card name colliding with a
+keyword/symbol, and an affiliation colliding with a card name - with
+tests. This is protective whichever way the decision goes, and it is
+the concrete price of unification being paid up front.
+
+### Recommendation
+
+Go with tags, for reason 2 above more than any other - the Founder
+precedent is the game's own designers demonstrating that the closed
+list does not hold. Keep `CardDef.Affiliations` structured (it already
+is), keep the collision validation, and treat an `Affiliations`
+predicate on `TargetFilter` as an available additive move if a future
+card genuinely needs attribute-level addressing.

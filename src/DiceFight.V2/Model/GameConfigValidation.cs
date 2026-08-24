@@ -44,6 +44,16 @@ public static class GameConfigValidation
         var symbolOrKeywordIds = new HashSet<string>(declaredSymbols);
         symbolOrKeywordIds.UnionWith(keywordIds);
 
+        // A die's tag set is its affiliations + keywords + CARD NAME +
+        // "sidekick" + energy symbol ids (Part 1's tag-unification note).
+        // Every one of those shares a namespace, so a collision anywhere
+        // in it makes a TagQuery silently ambiguous - a filter for the
+        // affiliation "X" would also match a card merely NAMED "X".
+        // Card names were previously unchecked; they are the likeliest
+        // collision in practice, since names are the one part of the tag
+        // set nobody chooses with the namespace in mind.
+        var cardNames = new HashSet<string>(cards.Select(c => c.Name));
+
         foreach (var card in cards)
         {
             ValidateDie(card.Die, declaredSymbols, errors, card.Id);
@@ -58,7 +68,12 @@ public static class GameConfigValidation
             {
                 if (symbolOrKeywordIds.Contains(affiliation))
                     errors.Add($"Card \"{card.Id}\": affiliation \"{affiliation}\" collides with a declared energy symbol or keyword id - both would be tags on the same die.");
+                if (cardNames.Contains(affiliation))
+                    errors.Add($"Card \"{card.Id}\": affiliation \"{affiliation}\" collides with a card name - both would be tags on the same die.");
             }
+
+            if (symbolOrKeywordIds.Contains(card.Name))
+                errors.Add($"Card \"{card.Id}\": card name \"{card.Name}\" collides with a declared energy symbol or keyword id - both would be tags on the same die.");
         }
 
         return errors;

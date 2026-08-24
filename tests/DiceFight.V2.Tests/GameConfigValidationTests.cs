@@ -20,6 +20,13 @@ public class GameConfigValidationTests
         ],
         BasicActionSlots: 2);
 
+    private static CardDef NamedCard(string id, string name, IReadOnlyList<string>? affiliations = null) => new(
+        Id: id, Name: name, Subtitle: null, Set: "TEST", CardType: CardType.Character,
+        PurchaseCost: 1, EnergySymbolIds: ["Fist"],
+        Die: new DieDefinition(id + "Die", [new Face([], new CharacterFaceData(1, 0, 1, 1))]),
+        DieLimit: 1, Affiliations: affiliations ?? [], Keywords: [], RawText: "",
+        Abilities: [], Continuous: []);
+
     [Fact]
     public void Valid_Config_Produces_No_Errors()
     {
@@ -119,5 +126,32 @@ public class GameConfigValidationTests
         var errors = config.ValidateCatalog([card]);
 
         Assert.Contains(errors, e => e.Contains("C002") && e.Contains("no faces"));
+    }
+
+    // Tag unification puts affiliations, keywords, card names and energy
+    // symbol ids in ONE namespace, so a collision anywhere in it makes a
+    // TagQuery ambiguous. Card names are the likeliest offender - they
+    // are the one part nobody picks with the namespace in mind.
+    [Fact]
+    public void A_Card_Name_Colliding_With_A_Keyword_Is_Reported()
+    {
+        var config = ValidConfig(); // already declares the Overcrush keyword
+        var card = NamedCard("C1", "Overcrush");
+
+        var errors = config.ValidateCatalog([card]);
+
+        Assert.Contains(errors, e => e.Contains("card name") && e.Contains("Overcrush"));
+    }
+
+    [Fact]
+    public void An_Affiliation_Colliding_With_A_Card_Name_Is_Reported()
+    {
+        var config = ValidConfig();
+        var named = NamedCard("C1", "Wolverine");
+        var affiliated = NamedCard("C2", "Kitty Pryde", affiliations: ["Wolverine"]);
+
+        var errors = config.ValidateCatalog([named, affiliated]);
+
+        Assert.Contains(errors, e => e.Contains("collides with a card name"));
     }
 }
