@@ -23,7 +23,7 @@ public class ContinuousRegistryTests
 
     private static CardDef BuildCard(string id, IReadOnlyList<Face> faces, IReadOnlyList<ContinuousDef>? continuous = null, IReadOnlyList<string>? affiliations = null, int purchaseCost = 1) => new(
         Id: id, Name: id, Subtitle: null, Set: "TEST", CardType: CardType.Character,
-        PurchaseCost: purchaseCost, EnergySymbolId: "Fist",
+        PurchaseCost: purchaseCost, EnergySymbolIds: ["Fist"],
         Die: new DieDefinition(id + "Die", faces),
         DieLimit: 1, Affiliations: affiliations ?? [], Keywords: [], RawText: "",
         Abilities: [], Continuous: continuous ?? []);

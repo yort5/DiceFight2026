@@ -82,7 +82,7 @@ public class GameConfigValidationTests
             Set: "TEST",
             CardType: CardType.Character,
             PurchaseCost: 3,
-            EnergySymbolId: "Fist",
+            EnergySymbolIds: ["Fist"],
             Die: new DieDefinition("C001Die", [new Face([], Character: new CharacterFaceData(1, 1, 2, 2))]),
             DieLimit: 4,
             Affiliations: ["Fist"], // collides with the energy symbol id
@@ -107,7 +107,7 @@ public class GameConfigValidationTests
             Set: "TEST",
             CardType: CardType.Character,
             PurchaseCost: 3,
-            EnergySymbolId: "Fist",
+            EnergySymbolIds: ["Fist"],
             Die: new DieDefinition("C002Die", []),
             DieLimit: 4,
             Affiliations: [],

@@ -207,7 +207,7 @@ public static class QueryEngine
             foreach (var affiliation in card.Affiliations) tags.Add(affiliation);
             foreach (var keyword in card.Keywords) tags.Add(keyword);
             tags.Add(card.Name);
-            if (card.EnergySymbolId is { } symbolId) tags.Add(symbolId);
+            foreach (var symbolId in card.EnergySymbolIds) tags.Add(symbolId);
         }
 
         foreach (var granted in die.GrantedTags) tags.Add(granted.Tag);

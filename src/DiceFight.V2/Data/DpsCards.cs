@@ -24,7 +24,7 @@ public static class DpsCards
     // V2_VOCABULARY.md Part 2 #1's worked expression, verbatim.
     public static readonly CardDef PowerBolt = new(
         Id: "DPS011", Name: "Power Bolt", Subtitle: "Basic Action", Set: "DPS", CardType: CardType.BasicAction,
-        PurchaseCost: 3, EnergySymbolId: null,
+        PurchaseCost: 3, EnergySymbolIds: [],
         Die: MigrationDice.Action("DPS011Die"),
         DieLimit: 3, Affiliations: [], Keywords: [],
         RawText: "Deal 2 damage to target character die or player.",
@@ -39,7 +39,7 @@ public static class DpsCards
     // no dedicated SidekicksOnly filter needed, unlike v1).
     public static readonly CardDef Rally = new(
         Id: "DPS013", Name: "Rally", Subtitle: "Basic Action", Set: "DPS", CardType: CardType.BasicAction,
-        PurchaseCost: 3, EnergySymbolId: null,
+        PurchaseCost: 3, EnergySymbolIds: [],
         Die: MigrationDice.Action("DPS013Die", 0, 1, 2),
         DieLimit: 3, Affiliations: [], Keywords: [],
         RawText: "Move up to 2 Sidekick dice from your Used Pile to your Field Zone. ** Instead, move up to 3 Sidekicks instead.",
@@ -59,7 +59,7 @@ public static class DpsCards
     // design covers v1's separate GainLife/LoseLife in one template.
     public static readonly CardDef RonanTheAccuserTreason = new(
         Id: "DPS050", Name: "Ronan the Accuser", Subtitle: "Treason!", Set: "DPS", CardType: CardType.Character,
-        PurchaseCost: 5, EnergySymbolId: "Bolt",
+        PurchaseCost: 5, EnergySymbolIds: ["Bolt"],
         Die: MigrationDice.Character("DPS050Die", "Bolt", (1, 5, 5), (1, 6, 7), (2, 8, 8)),
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "When Ronan the Accuser is fielded, lose 1 life. When Ronan the Accuser is KO'd, your opponent loses 1 life.",
@@ -73,7 +73,7 @@ public static class DpsCards
     // TargetFilter field.
     public static readonly CardDef StormCloudCover = new(
         Id: "DPS092", Name: "Storm", Subtitle: "Cloud Cover", Set: "DPS", CardType: CardType.Character,
-        PurchaseCost: 4, EnergySymbolId: "Bolt",
+        PurchaseCost: 4, EnergySymbolIds: ["Bolt"],
         Die: MigrationDice.Character("DPS092Die", "Bolt", (0, 2, 1), (0, 3, 1), (1, 3, 3)),
         DieLimit: 3, Affiliations: ["X-Men"], Keywords: [],
         RawText: "When fielded, target character die with 3A or less can't block this turn.",
@@ -85,7 +85,7 @@ public static class DpsCards
     // in v2, no separate GrantKeyword/GrantAffiliation split.
     public static readonly CardDef PsylockeTelepath = new(
         Id: "DPS088", Name: "Psylocke", Subtitle: "Telepath", Set: "DPS", CardType: CardType.Character,
-        PurchaseCost: 2, EnergySymbolId: "Mask",
+        PurchaseCost: 2, EnergySymbolIds: ["Mask"],
         Die: MigrationDice.Character("DPS088Die", "Mask", (0, 1, 2), (0, 2, 2), (1, 3, 3)),
         DieLimit: 3, Affiliations: ["X-Men"], Keywords: [],
         RawText: "When fielded, target character die gets Overcrush.",
@@ -96,7 +96,7 @@ public static class DpsCards
     // Part 2 #8's worked expression.
     public static readonly CardDef MasterMoldTargetingMutants = new(
         Id: "DPS082", Name: "Master Mold", Subtitle: "Targeting Mutants", Set: "DPS", CardType: CardType.Character,
-        PurchaseCost: 5, EnergySymbolId: "Shield",
+        PurchaseCost: 5, EnergySymbolIds: ["Shield"],
         Die: MigrationDice.Character("DPS082Die", "Shield", (1, 5, 5), (2, 6, 6), (3, 8, 8)),
         DieLimit: 3, Affiliations: ["Villains"], Keywords: [],
         RawText: "When fielded, KO target Brotherhood of Mutants character die.",
@@ -106,7 +106,7 @@ public static class DpsCards
 
     public static readonly CardDef MasterMoldUntoldElectronicExpertise = new(
         Id: "DPS122", Name: "Master Mold", Subtitle: "Untold Electronic Expertise", Set: "DPS", CardType: CardType.Character,
-        PurchaseCost: 5, EnergySymbolId: "Shield",
+        PurchaseCost: 5, EnergySymbolIds: ["Shield"],
         Die: MigrationDice.Character("DPS122Die", "Shield", (1, 5, 5), (2, 6, 6), (3, 8, 8)),
         DieLimit: 2, Affiliations: ["Villains"], Keywords: [],
         RawText: "When fielded, KO target X-Men character die.",
@@ -120,7 +120,7 @@ public static class DpsCards
     // scans listeners.
     public static readonly CardDef MagnetoFounderOfTheBrotherhood = new(
         Id: "DPS146", Name: "Magneto", Subtitle: "Founder of the Brotherhood", Set: "DPS", CardType: CardType.Character,
-        PurchaseCost: 6, EnergySymbolId: "Mask",
+        PurchaseCost: 6, EnergySymbolIds: ["Mask"],
         Die: MigrationDice.Character("DPS146Die", "Mask", (1, 4, 4), (2, 5, 7), (3, 6, 8)),
         DieLimit: 1, Affiliations: ["Brotherhood of Mutants"], Keywords: [],
         RawText: "While Magneto is active, when one of your Brotherhood of Mutants character dice is KO'd, KO target opposing character dice. Global Pay Mask. Once per turn, during your turn, if you have no dice in your Prep Area, you may draw a die and place it in your Prep Area.",
@@ -138,7 +138,7 @@ public static class DpsCards
     // filtering. ExcludeSelf matches v1's own WhenAnotherDieFielded.
     public static readonly CardDef CyclopsFirstClass = new(
         Id: "DPS025", Name: "Cyclops", Subtitle: "First Class", Set: "DPS", CardType: CardType.Character,
-        PurchaseCost: 5, EnergySymbolId: "Bolt",
+        PurchaseCost: 5, EnergySymbolIds: ["Bolt"],
         Die: MigrationDice.Character("DPS025Die", "Bolt", (1, 4, 2), (1, 5, 3), (1, 6, 4)),
         DieLimit: 4, Affiliations: ["X-Men"], Keywords: ["Founder"],
         RawText: "Founder While Cyclops is active, when you field a character die with Founder, deal 2 damage to target character die.",
@@ -150,7 +150,7 @@ public static class DpsCards
     // Part 3 #27's worked expression.
     public static readonly CardDef JubileeXMenFieldLeader = new(
         Id: "DPS143", Name: "Jubilee", Subtitle: "X-Men Field Leader", Set: "DPS", CardType: CardType.Character,
-        PurchaseCost: 4, EnergySymbolId: "Bolt",
+        PurchaseCost: 4, EnergySymbolIds: ["Bolt"],
         Die: MigrationDice.Character("DPS143Die", "Bolt", (0, 2, 1), (1, 3, 3), (2, 4, 3)),
         DieLimit: 1, Affiliations: ["X-Men"], Keywords: [],
         RawText: "While Jubilee is active, when you field a character die she deals 1 damage to your opponent and 1 damage to target character die.",
@@ -166,7 +166,7 @@ public static class DpsCards
     // with a Count-varying Then/Else.
     public static readonly CardDef CorsairCriminalRecord = new(
         Id: "DPS104", Name: "Corsair", Subtitle: "Criminal Record", Set: "DPS", CardType: CardType.Character,
-        PurchaseCost: 5, EnergySymbolId: "Fist",
+        PurchaseCost: 5, EnergySymbolIds: ["Fist"],
         Die: MigrationDice.Character("DPS104Die", "Fist", (0, 3, 4), (1, 3, 5), (1, 4, 5)),
         DieLimit: 2, Affiliations: [], Keywords: [],
         RawText: "When fielded, KO target Villains character die, or KO 2 target Villains character dice if your opponent has 4 or more character dice in the Field Zone.",
@@ -190,7 +190,7 @@ public static class DpsCards
     // TurnEngine.CleanUp now emits it.
     public static readonly CardDef ColossusPiotr = new(
         Id: "DPS103", Name: "Colossus", Subtitle: "Piotr", Set: "DPS", CardType: CardType.Character,
-        PurchaseCost: 6, EnergySymbolId: "Fist",
+        PurchaseCost: 6, EnergySymbolIds: ["Fist"],
         Die: MigrationDice.Character("DPS103Die", "Fist", (1, 4, 4), (1, 6, 5), (2, 8, 7)),
         DieLimit: 2, Affiliations: ["X-Men"], Keywords: [],
         RawText: "While Colossus is active, at the end of your turn, each of your level 2 or 3 character dice deals your opponent 2 damage (not 2 damage per Colossus die)",
@@ -206,7 +206,7 @@ public static class DpsCards
     // QueryEngine.GetPurchaseCost's floor, already corrected in Phase 3.)
     public static readonly CardDef DarkPhoenixEnemyOfTheShiar = new(
         Id: "DPS067", Name: "Dark Phoenix", Subtitle: "Enemy of the Shi'ar", Set: "DPS", CardType: CardType.Character,
-        PurchaseCost: 6, EnergySymbolId: "Bolt",
+        PurchaseCost: 6, EnergySymbolIds: ["Bolt"],
         Die: MigrationDice.Character("DPS067Die", "Bolt", (1, 5, 5), (2, 7, 7), (3, 8, 8)),
         DieLimit: 3, Affiliations: ["Villains"], Keywords: [],
         RawText: "When fielded, KO target Shi'ar or X-Men character die. When Dark Phoenix attacks, deal 2 damage to your opponent. Global: Pay Bolt and KO one of your character dice. Your next die you purchase this turn costs 2 less (to a minimum of 1).",
@@ -229,7 +229,7 @@ public static class DpsCards
     // CardKind: BasicAction is the faithful equivalent, not a loss.
     public static readonly CardDef MagikWielderOfTheSoulsword = new(
         Id: "DPS040", Name: "Magik", Subtitle: "Wielder of the Soulsword", Set: "DPS", CardType: CardType.Character,
-        PurchaseCost: 3, EnergySymbolId: "Mask",
+        PurchaseCost: 3, EnergySymbolIds: ["Mask"],
         Die: MigrationDice.Character("DPS040Die", "Mask", (0, 1, 4), (0, 1, 6), (1, 2, 7)),
         DieLimit: 4, Affiliations: ["X-Men"], Keywords: [],
         RawText: "When fielded, the next action die you purchase costs 1 less (to a minimum of 1)",
@@ -242,7 +242,7 @@ public static class DpsCards
     // there is nothing else to express. See V2_TAIL_POLICY.md.
     public static readonly CardDef DeathbirdTreacherous = new(
         Id: "DPS029", Name: "Deathbird", Subtitle: "Treacherous", Set: "DPS", CardType: CardType.Character,
-        PurchaseCost: 2, EnergySymbolId: "Shield",
+        PurchaseCost: 2, EnergySymbolIds: ["Shield"],
         Die: MigrationDice.Character("DPS029Die", "Shield", (0, 1, 1), (0, 1, 2), (1, 3, 4)),
         DieLimit: 4, Affiliations: [], Keywords: ["Deadly"],
         RawText: "Deadly",
@@ -261,7 +261,7 @@ public static class DpsCards
     // cards v1 got wrong). Here it is a real MayPay choice.
     public static readonly CardDef RogueMrsX = new(
         Id: "DPS049", Name: "Rogue", Subtitle: "Mrs. X", Set: "DPS", CardType: CardType.Character,
-        PurchaseCost: 4, EnergySymbolId: "Mask",
+        PurchaseCost: 4, EnergySymbolIds: ["Mask"],
         Die: MigrationDice.Character("DPS049Die", "Mask", (1, 2, 3), (2, 4, 5), (2, 5, 6)),
         DieLimit: 4, Affiliations: ["X-Men"], Keywords: [],
         RawText: "When fielded, you may swap Rogue's A with target opposing character die's A.",
@@ -290,7 +290,7 @@ public static class DpsCards
     // convention.
     public static readonly CardDef Archnemesis = new(
         Id: "DPS001", Name: "Archnemesis", Subtitle: "Basic Action", Set: "DPS", CardType: CardType.BasicAction,
-        PurchaseCost: 4, EnergySymbolId: null,
+        PurchaseCost: 4, EnergySymbolIds: [],
         Die: MigrationDice.Action("DPS001Die"),
         DieLimit: 3, Affiliations: [], Keywords: [],
         RawText: "Target character die you control and target opposing character die deal damage to each other equal to their A. Global: Pay Shield. Target character die has D equal to it's A (until end of turn).",
@@ -318,7 +318,7 @@ public static class DpsCards
     // Pile candidates must not include it.
     public static readonly CardDef Mutation = new(
         Id: "DPS009", Name: "Mutation", Subtitle: "Basic Action", Set: "DPS", CardType: CardType.BasicAction,
-        PurchaseCost: 3, EnergySymbolId: null,
+        PurchaseCost: 3, EnergySymbolIds: [],
         Die: MigrationDice.Action("DPS009Die"),
         DieLimit: 3, Affiliations: [], Keywords: [],
         RawText: "Swap target character die in the Field Zone with target non-sidekick character dice in that player's Used Pile. Spin that character die to level 1. (This does not trigger \"when fielded\" effects.) Global: Pay Mask. Spin one of your character die down a level to spin another target character die up a level.",
@@ -346,7 +346,7 @@ public static class DpsCards
     // zone, and these dice are the opponent's.
     public static readonly CardDef GambitUnlessIGotSomeoneToPlayWith = new(
         Id: "DPS112", Name: "Gambit", Subtitle: "Unless I Got Someone to Play With", Set: "DPS", CardType: CardType.Character,
-        PurchaseCost: 5, EnergySymbolId: "Mask",
+        PurchaseCost: 5, EnergySymbolIds: ["Mask"],
         Die: MigrationDice.Character("DPS112Die", "Mask", (1, 1, 1), (1, 2, 2), (2, 4, 6)),
         DieLimit: 2, Affiliations: ["X-Men"], Keywords: [],
         RawText: "When fielded, reroll up to 2 target opposing character dice. Each die that doesn't roll a character goes to your opponent's Used Pile.",
@@ -358,7 +358,7 @@ public static class DpsCards
     // The same shape with Finding 8's other param, DamagePerMoved.
     public static readonly CardDef PsylockeAdvancedTelekineticCombatant = new(
         Id: "DPS150", Name: "Psylocke", Subtitle: "Advanced Telekinetic Combatant", Set: "DPS", CardType: CardType.Character,
-        PurchaseCost: 5, EnergySymbolId: "Mask",
+        PurchaseCost: 5, EnergySymbolIds: ["Mask"],
         Die: MigrationDice.Character("DPS150Die", "Mask", (0, 1, 2), (0, 2, 2), (1, 3, 3)),
         DieLimit: 1, Affiliations: ["X-Men"], Keywords: [],
         RawText: "When fielded, reroll up to 2 opposing character dice. Each die that does not roll a character goes to your opponent's Used Pile. Psylocke deals 2 damage to your opponent for each die moved.",
@@ -375,7 +375,7 @@ public static class DpsCards
     // category as Deadly or Regenerate. See V2_TAIL_POLICY.md.
     public static readonly CardDef JeanGreyPeacefulCoexistence = new(
         Id: "DPS035", Name: "Jean Grey", Subtitle: "Peaceful Coexistence", Set: "DPS", CardType: CardType.Character,
-        PurchaseCost: 4, EnergySymbolId: "Bolt",
+        PurchaseCost: 4, EnergySymbolIds: ["Bolt"],
         Die: MigrationDice.Character("DPS035Die", "Bolt", (1, 3, 3), (2, 5, 5), (3, 6, 6)),
         DieLimit: 4, Affiliations: ["X-Men"], Keywords: ["Founder", "Loyalty"],
         RawText: "Founder. While Jean Grey is active, at the end of each of your turns, if no character dice were KO'd that turn, put a Loyalty Counter on Jean Grey's card (Loyalty Counters give a character die +1A and +1D.)",
@@ -389,7 +389,7 @@ public static class DpsCards
     // it just discounted.
     public static readonly CardDef DeadpoolCollectThis = new(
         Id: "DPS108", Name: "Deadpool", Subtitle: "Collect THIS!", Set: "DPS", CardType: CardType.Character,
-        PurchaseCost: 4, EnergySymbolId: "Fist",
+        PurchaseCost: 4, EnergySymbolIds: ["Fist"],
         Die: MigrationDice.Character("DPS108Die", "Fist", (0, 2, 4), (0, 2, 5), (1, 3, 7)),
         DieLimit: 2, Affiliations: ["X-Men", "Deadpool Affiliation"], Keywords: [],
         RawText: "While Deadpool is active, your character dice with fielding cost of 2 are free to field.",
@@ -403,7 +403,7 @@ public static class DpsCards
     // the granting player's OPPONENT" reading.
     public static readonly CardDef AngelXaviersDream = new(
         Id: "DPS137", Name: "Angel", Subtitle: "Xavier's Dream", Set: "DPS", CardType: CardType.Character,
-        PurchaseCost: 3, EnergySymbolId: "Shield",
+        PurchaseCost: 3, EnergySymbolIds: ["Shield"],
         Die: MigrationDice.Character("DPS137Die", "Shield", (0, 2, 2), (1, 3, 3), (1, 3, 4)),
         DieLimit: 3, Affiliations: ["X-Men"], Keywords: [],
         RawText: "While Angel is active, your opponent can't target your Sidekick dice with Global Abilities.",
@@ -419,7 +419,7 @@ public static class DpsCards
     // through an empty Then branch, exactly as v1 does.
     public static readonly CardDef MagnetoVisionary = new(
         Id: "DPS081", Name: "Magneto", Subtitle: "Visionary", Set: "DPS", CardType: CardType.Character,
-        PurchaseCost: 5, EnergySymbolId: "Mask",
+        PurchaseCost: 5, EnergySymbolIds: ["Mask"],
         Die: MigrationDice.Character("DPS081Die", "Mask", (1, 4, 4), (2, 5, 7), (3, 6, 8)),
         DieLimit: 3, Affiliations: ["Brotherhood of Mutants"], Keywords: ["Teamwatch"],
         RawText: "While Magneto is active, your Brotherhood of Mutants character dice can only be blocked by 2 or more character dice. Teamwatch - Prep a die from your bag. Global Pay Mask. Once per turn, during your turn, if you have any dice in your Prep Area, you may draw a die and place it in your Prep Area.",
@@ -440,7 +440,7 @@ public static class DpsCards
     // not carry, so the card stays IsImplemented: false.
     public static readonly CardDef BlobImmovable = new(
         Id: "DPS101", Name: "Blob", Subtitle: "Immovable", Set: "DPS", CardType: CardType.Character,
-        PurchaseCost: 4, EnergySymbolId: "Shield",
+        PurchaseCost: 4, EnergySymbolIds: ["Shield"],
         Die: MigrationDice.Character("DPS101Die", "Shield", (0, 1, 5), (1, 1, 6), (2, 1, 8)),
         DieLimit: 2, Affiliations: ["Brotherhood of Mutants"], Keywords: [],
         RawText: "Each of your Blob dice may block 3 character dice instead of 1. When Blob KO's an opponent's Sidekick die, return it to your opponent's bag.",
@@ -457,6 +457,16 @@ public static class DpsCards
     // is fielded AT THE LEVEL IT ROLLED, so FieldDie names no level here
     // and the rolled face stands.
     //
+    // DELIBERATE DIVERGENCE from the literal rules text, user-ruled after
+    // the rules validation pass (V2_VOCABULARY.md Part 15, Finding 3).
+    // The Comprehensive Rules' "Field" glossary says ability-fielded dice
+    // are "considered fielded for free on level 1, unless otherwise
+    // stated", which read strictly would field this at level 1 regardless
+    // of the roll. That is not how the card was understood or played. The
+    // card's RawText is kept VERBATIM rather than reworded, so a future
+    // cross-check against the Google Sheet still matches - the divergence
+    // lives here in the comment and in the expression, not in the data.
+    //
     // One stated approximation: "a character die from your Used Pile"
     // means a die of a CHARACTER-type card, but a dormant die has no
     // face to read and TargetFilter's Kind cannot say "character card"
@@ -468,7 +478,7 @@ public static class DpsCards
     // left silent.
     public static readonly CardDef MakingTheTeam = new(
         Id: "DPS007", Name: "Making the Team", Subtitle: "Basic Action", Set: "DPS", CardType: CardType.BasicAction,
-        PurchaseCost: 3, EnergySymbolId: null,
+        PurchaseCost: 3, EnergySymbolIds: [],
         Die: MigrationDice.Action("DPS007Die"),
         DieLimit: 3, Affiliations: [], Keywords: [],
         RawText: "Roll a character die from your Used Pile. If it rolls a character face, field it for free. Otherwise, Prep it.",
@@ -491,7 +501,7 @@ public static class DpsCards
     // so the count is always 1.
     public static readonly CardDef PhoenixPsionicMaelstrom = new(
         Id: "DPS086", Name: "Phoenix", Subtitle: "Psionic Maelstrom", Set: "DPS", CardType: CardType.Character,
-        PurchaseCost: 6, EnergySymbolId: "Bolt",
+        PurchaseCost: 6, EnergySymbolIds: ["Bolt"],
         Die: MigrationDice.Character("DPS086Die", "Bolt", (1, 5, 5), (2, 7, 7), (3, 8, 8)),
         DieLimit: 3, Affiliations: ["X-Men"], Keywords: [],
         RawText: "When Phoenix attacks, deal 3 damage to target character die. If that character die is a Villains character die, you may deal 3 damage to another target character die.",
@@ -503,7 +513,7 @@ public static class DpsCards
     // (prevent instead). None of that is expressible.
     public static readonly CardDef ColossusOrganicSteel = new(
         Id: "DPS063", Name: "Colossus", Subtitle: "Organic Steel", Set: "DPS", CardType: CardType.Character,
-        PurchaseCost: 5, EnergySymbolId: "Fist",
+        PurchaseCost: 5, EnergySymbolIds: ["Fist"],
         Die: MigrationDice.Character("DPS063Die", "Fist", (1, 4, 4), (1, 6, 5), (2, 8, 7)),
         DieLimit: 3, Affiliations: ["X-Men"], Keywords: [],
         RawText: "While Colossus is active, the first time one of your character dice would take damage each turn you may have Colossus take that damage instead. *Instead, prevent that damage.",

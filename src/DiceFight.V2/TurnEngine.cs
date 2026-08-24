@@ -166,7 +166,7 @@ public static class TurnEngine
             m.PlayerId == state.ActivePlayerId && (m.CardKind is null || m.CardKind == card.CardType));
         var cost = QueryEngine.GetPurchaseCost(state, card, state.ActivePlayerId);
         if (pending is not null) cost = Math.Max(1, cost + pending.Delta);
-        SpendEnergy(state, energyDice, cost, card.EnergySymbolId);
+        SpendEnergy(state, energyDice, cost, card.EnergySymbolIds);
 
         die.ControllerId = state.ActivePlayerId; // rule 1.1.4 - purchaser becomes controller
         die.Zone = pending?.GoesToZone ?? Zone.UsedPile;
@@ -194,7 +194,7 @@ public static class TurnEngine
 
         var energyDice = ResolveOwnReservePoolEnergy(state, energyDieIdsToSpend);
         var cost = QueryEngine.GetFieldingCost(state, die);
-        SpendEnergy(state, energyDice, cost, requiredSymbolId: null);
+        SpendEnergy(state, energyDice, cost, requiredSymbolIds: []);
 
         die.Zone = Zone.FieldZone;
         state.FieldedCharacterThisTurn.Add(die.ControllerId);
@@ -248,7 +248,8 @@ public static class TurnEngine
         // Used Pile rather than Out of Play, since Out of Play is an
         // active-player-turn concept. Only reachable now that the
         // inactive player can use Globals at all.
-        SpendEnergy(state, energyDice, cost, ability.EnergyCost?.RequiredSymbolId,
+        SpendEnergy(state, energyDice, cost,
+            ability.EnergyCost?.RequiredSymbolId is { } required ? [required] : [],
             playerId == state.ActivePlayerId ? Zone.OutOfPlay : Zone.UsedPile);
 
         if (ability.OncePerTurn) state.GlobalsUsedThisTurn.Add((playerId, cardId));
@@ -418,30 +419,41 @@ public static class TurnEngine
         EventBus.Fire(state, queue, new GameEvent(TriggerKind.TurnStepEntered, null, state.ActivePlayerId, StepIds.StartOfTurn));
     }
 
-    private static void SpendEnergy(GameState state, IReadOnlyList<DieInstance> energyDice, int amountNeeded, string? requiredSymbolId, Zone spentZone = Zone.OutOfPlay)
+    // Rule 2.6.2.3 - the amount may be paid with any energy, but "if the
+    // card has one or more energy types then at least one of the energy
+    // you spend must match EACH of the energy type(s)". Crossover
+    // characters carry two or more (some carry all four), which is why
+    // this takes a list rather than the single symbol it took until
+    // 2026-08-24. Wild satisfies any requirement.
+    private static void SpendEnergy(
+        GameState state, IReadOnlyList<DieInstance> energyDice, int amountNeeded,
+        IReadOnlyList<string> requiredSymbolIds, Zone spentZone = Zone.OutOfPlay)
     {
         var total = 0;
-        // amountNeeded == 0 bypasses the type-matching requirement too -
-        // a free purchase/field has nothing for the type check to apply
-        // to. Caught while designing the Phase 2 test, but a real latent
-        // bug regardless (a future Phase 3+ discount can legitimately
-        // bring a cost to 0).
-        var hasRequiredSymbol = requiredSymbolId is null || amountNeeded == 0;
         var wildIds = new HashSet<string>(state.Config.EnergySymbols.Where(s => s.IsWild).Select(s => s.Id));
+
+        // amountNeeded == 0 bypasses the type requirement too - a free
+        // purchase/field has nothing for the type check to apply to.
+        // Caught while designing the Phase 2 test, but a real latent bug
+        // regardless (a discount can legitimately bring a cost to 0).
+        var unmatched = amountNeeded == 0 ? [] : new HashSet<string>(requiredSymbolIds);
 
         foreach (var die in energyDice)
         {
             var face = state.GetCurrentFace(die) ?? throw new InvalidOperationException($"Die '{die.Id}' is not showing a face.");
             total += face.Symbols.Sum(s => s.Count);
 
-            if (requiredSymbolId is not null && face.Symbols.Any(s => s.SymbolId == requiredSymbolId || wildIds.Contains(s.SymbolId)))
-                hasRequiredSymbol = true;
+            foreach (var symbol in face.Symbols)
+            {
+                if (wildIds.Contains(symbol.SymbolId)) unmatched.Clear(); // wild satisfies every outstanding requirement
+                else unmatched.Remove(symbol.SymbolId);
+            }
         }
 
         if (total < amountNeeded)
             throw new InvalidOperationException($"Not enough energy offered (needs {amountNeeded}, offered {total}).");
-        if (!hasRequiredSymbol)
-            throw new InvalidOperationException($"Offered energy doesn't include the required symbol '{requiredSymbolId}'.");
+        if (unmatched.Count > 0)
+            throw new InvalidOperationException($"Offered energy doesn't include the required symbol(s) {string.Join(", ", unmatched)}.");
 
         foreach (var die in energyDice)
         {

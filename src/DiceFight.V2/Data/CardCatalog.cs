@@ -27,7 +27,7 @@ public static class CardCatalog
 
     public static readonly CardDef Apocalypse = new(
         Id: "MSW018", Name: "Apocalypse", Subtitle: "Obsessive", Set: "MSW", CardType: CardType.Character,
-        PurchaseCost: 3, EnergySymbolId: "Mask",
+        PurchaseCost: 3, EnergySymbolIds: ["Mask"],
         Die: BuildCharacterDie("MSW018Die", "Mask", (0, 1, 2), (1, 2, 3), (2, 4, 4)),
         DieLimit: 4, Affiliations: [], Keywords: ["Overcrush"],
         RawText: "Overcrush (Character dice with Overcrush deal damage in excess of blocker's defense to opponent.)",
@@ -38,7 +38,7 @@ public static class CardCatalog
     // V2_TAIL_POLICY.md.
     public static readonly CardDef Beast = new(
         Id: "MSW019", Name: "Beast", Subtitle: "Olympic Athleticism", Set: "MSW", CardType: CardType.Character,
-        PurchaseCost: 3, EnergySymbolId: "Mask",
+        PurchaseCost: 3, EnergySymbolIds: ["Mask"],
         Die: BuildCharacterDie("MSW019Die", "Mask", (0, 1, 2), (1, 2, 3), (2, 4, 4)),
         DieLimit: 3, Affiliations: [], Keywords: ["Regenerate"],
         RawText: "Regenerate (Reroll when KO'd)",
@@ -55,7 +55,7 @@ public static class CardCatalog
     // V2_TAIL_POLICY.md.
     public static readonly CardDef BlackPanther = new(
         Id: "MSW020", Name: "Black Panther", Subtitle: "Clutching Reality", Set: "MSW", CardType: CardType.Character,
-        PurchaseCost: 3, EnergySymbolId: "Mask",
+        PurchaseCost: 3, EnergySymbolIds: ["Mask"],
         Die: BuildCharacterDie("MSW020Die", "Mask", (0, 1, 2), (1, 2, 3), (2, 4, 4)),
         DieLimit: 4, Affiliations: ["Avengers", "Infinity Watch"], Keywords: ["Energize"],
         RawText: "Energize - Roll 2 dice from your bag. When fielded, roll a die from your bag.",
@@ -63,7 +63,7 @@ public static class CardCatalog
 
     public static readonly CardDef HarleyQuinn = new(
         Id: "SKC032", Name: "Harley Quinn", Subtitle: "Bright Lights Big City", Set: "SKC", CardType: CardType.Character,
-        PurchaseCost: 1, EnergySymbolId: "Mask",
+        PurchaseCost: 1, EnergySymbolIds: ["Mask"],
         Die: BuildCharacterDie("SKC032Die", "Mask", (0, 2, 2), (1, 3, 3), (1, 4, 4)),
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "", // real card, genuinely blank text box
@@ -71,7 +71,7 @@ public static class CardCatalog
 
     public static readonly CardDef CaptainMarvel = new(
         Id: "MSW023", Name: "Captain Marvel", Subtitle: "Alpha Flight", Set: "MSW", CardType: CardType.Character,
-        PurchaseCost: 4, EnergySymbolId: "Mask",
+        PurchaseCost: 4, EnergySymbolIds: ["Mask"],
         Die: BuildCharacterDie("MSW023Die", "Mask", (0, 1, 2), (1, 2, 3), (2, 4, 4)),
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "While Captain Marvel is active, your Character dice get +1 attack and +1 defense.",
@@ -83,7 +83,7 @@ public static class CardCatalog
     // every die's tag set.
     public static readonly CardDef Dazzler = new(
         Id: "MSW026", Name: "Dazzler", Subtitle: "Lightbringer", Set: "MSW", CardType: CardType.Character,
-        PurchaseCost: 3, EnergySymbolId: "Mask",
+        PurchaseCost: 3, EnergySymbolIds: ["Mask"],
         Die: BuildCharacterDie("MSW026Die", "Mask", (0, 1, 2), (1, 2, 3), (2, 4, 4)),
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "When fielded, deal 4 damage to target [M] character die.",
@@ -94,7 +94,7 @@ public static class CardCatalog
     // Call Out isn't implemented in v2 (Phase 7 note) - see V2_TAIL_POLICY.md.
     public static readonly CardDef BlackWidow = new(
         Id: "GOTG005", Name: "Black Widow", Subtitle: "Red Scare", Set: "GOTG", CardType: CardType.Character,
-        PurchaseCost: 3, EnergySymbolId: "Fist",
+        PurchaseCost: 3, EnergySymbolIds: ["Fist"],
         Die: BuildCharacterDie("GOTG005Die", "Fist", (0, 3, 1), (0, 3, 2), (1, 3, 3)),
         DieLimit: 4, Affiliations: [], Keywords: ["Call Out"],
         RawText: "Call Out - When this character die attacks, target character die is the only character die that may block this character die.",
@@ -105,7 +105,7 @@ public static class CardCatalog
     // see V2_TAIL_POLICY.md.
     public static readonly CardDef AntManAmplify = new(
         Id: "JLL002", Name: "Ant-Man", Subtitle: "Through The Cracks", Set: "JLL", CardType: CardType.Character,
-        PurchaseCost: 3, EnergySymbolId: "Fist",
+        PurchaseCost: 3, EnergySymbolIds: ["Fist"],
         Die: BuildCharacterDie("JLL002Die", "Fist", (0, 2, 1), (0, 3, 1), (1, 5, 2)),
         DieLimit: 4, Affiliations: [], Keywords: ["Amplify"],
         RawText: "Amplify - When you use an action die, spin this character up 1 level.",
@@ -115,7 +115,7 @@ public static class CardCatalog
     // (V2_PLAN.md Appendix A) - see V2_TAIL_POLICY.md.
     public static readonly CardDef CosmicCube = new(
         Id: "MSW002", Name: "Cosmic Cube", Subtitle: "Epic Basic Action", Set: "MSW", CardType: CardType.BasicAction,
-        PurchaseCost: 4, EnergySymbolId: null,
+        PurchaseCost: 4, EnergySymbolIds: [],
         Die: BuildActionDie("MSW002Die"),
         DieLimit: 3, Affiliations: [], Keywords: [],
         RawText: "Switch life totals with your opponent.",
@@ -126,7 +126,7 @@ public static class CardCatalog
     // against that same die (Finding 9's binding table).
     public static readonly CardDef ShockingGrasp = new(
         Id: "MSW011", Name: "Shocking Grasp", Subtitle: "Basic Action", Set: "MSW", CardType: CardType.BasicAction,
-        PurchaseCost: 2, EnergySymbolId: null,
+        PurchaseCost: 2, EnergySymbolIds: [],
         Die: BuildActionDie("MSW011Die"),
         DieLimit: 3, Affiliations: [], Keywords: [],
         RawText: "Deal 1 damage to target character die. If that character is KO'd by this damage, you may Prep this die.",
@@ -141,7 +141,7 @@ public static class CardCatalog
 
     public static readonly CardDef FranklinsGalactus = new(
         Id: "MSW028", Name: "Franklin's Galactus", Subtitle: "Earth Shatterer", Set: "MSW", CardType: CardType.Character,
-        PurchaseCost: 3, EnergySymbolId: "Mask",
+        PurchaseCost: 3, EnergySymbolIds: ["Mask"],
         Die: BuildCharacterDie("MSW028Die", "Mask", (0, 1, 2), (1, 2, 3), (2, 4, 4)),
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "", // genuinely blank
@@ -149,7 +149,7 @@ public static class CardCatalog
 
     public static readonly CardDef GodEmperorDoom = new(
         Id: "MSW029", Name: "God Emperor Doom", Subtitle: "Harnessing the Beyonders", Set: "MSW", CardType: CardType.Character,
-        PurchaseCost: 3, EnergySymbolId: "Mask",
+        PurchaseCost: 3, EnergySymbolIds: ["Mask"],
         Die: BuildCharacterDie("MSW029Die", "Mask", (0, 1, 2), (1, 2, 3), (2, 4, 4)),
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "When fielded, deal 3 damage to target character die and reroll target character die.",
@@ -161,7 +161,7 @@ public static class CardCatalog
 
     public static readonly CardDef Groot = new(
         Id: "MSW031", Name: "Groot", Subtitle: "Skilled Investigator", Set: "MSW", CardType: CardType.Character,
-        PurchaseCost: 3, EnergySymbolId: "Mask",
+        PurchaseCost: 3, EnergySymbolIds: ["Mask"],
         Die: BuildCharacterDie("MSW031Die", "Mask", (0, 1, 2), (1, 2, 3), (2, 4, 4)),
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "When fielded, roll 2 dice from your bag.",
@@ -173,7 +173,7 @@ public static class CardCatalog
     // has no template equivalent - see V2_TAIL_POLICY.md.
     public static readonly CardDef Falcon = new(
         Id: "MSW027", Name: "Falcon", Subtitle: "Take Flight", Set: "MSW", CardType: CardType.Character,
-        PurchaseCost: 3, EnergySymbolId: "Mask",
+        PurchaseCost: 3, EnergySymbolIds: ["Mask"],
         Die: BuildCharacterDie("MSW027Die", "Mask", (0, 1, 2), (1, 2, 3), (2, 4, 4)),
         DieLimit: 4, Affiliations: ["Avengers"], Keywords: ["Teamwatch"],
         RawText: "Teamwatch - Prep a [PAWN] from your Used Pile. Global: Pay [F]. Once during your turn, each player must field a [PAWN] from their Used Pile if able.",
@@ -182,7 +182,7 @@ public static class CardCatalog
     // Infiltrate isn't implemented (Phase 7 note) - see V2_TAIL_POLICY.md.
     public static readonly CardDef Ricochet = new(
         Id: "GOTG105", Name: "Ricochet", Subtitle: "Slinger", Set: "GOTG", CardType: CardType.Character,
-        PurchaseCost: 3, EnergySymbolId: "Bolt",
+        PurchaseCost: 3, EnergySymbolIds: ["Bolt"],
         Die: BuildCharacterDie("GOTG105Die", "Bolt", (0, 2, 1), (1, 3, 2), (2, 4, 3)),
         DieLimit: 2, Affiliations: [], Keywords: ["Infiltrate"],
         RawText: "Infiltrate. While Ricochet is active, each time one of your character dice uses Infiltrate, draw a die from your bag and add it to your Prep Area.",
@@ -191,7 +191,7 @@ public static class CardCatalog
     // Tag Out isn't implemented (Phase 7 note) - see V2_TAIL_POLICY.md.
     public static readonly CardDef BigE = new(
         Id: "TAG003", Name: "Big E", Subtitle: "Tag Team Champion", Set: "TAG", CardType: CardType.Character,
-        PurchaseCost: 4, EnergySymbolId: "Mask",
+        PurchaseCost: 4, EnergySymbolIds: ["Mask"],
         Die: BuildCharacterDie("TAG003Die", "Mask", (0, 1, 4), (1, 2, 5), (1, 2, 7)),
         DieLimit: 4, Affiliations: ["A New Day"], Keywords: ["Tag Out"],
         RawText: "Tag Out (After blockers are declared, you may Prep this die from the Field Zone to give target Superstar die +2A and +2D until end of turn.)",
@@ -200,7 +200,7 @@ public static class CardCatalog
     // Range isn't implemented (Phase 7 note) - see V2_TAIL_POLICY.md.
     public static readonly CardDef StarfireStarbolts = new(
         Id: "SKC090", Name: "Starfire", Subtitle: "Starbolts", Set: "SKC", CardType: CardType.Character,
-        PurchaseCost: 4, EnergySymbolId: "Bolt",
+        PurchaseCost: 4, EnergySymbolIds: ["Bolt"],
         Die: BuildCharacterDie("SKC090Die", "Bolt", (1, 3, 3), (2, 4, 4), (2, 5, 5)),
         DieLimit: 4, Affiliations: ["Teen Titans"], Keywords: ["Range"],
         RawText: "Range 2 (When this character attacks, all active characters with Range deal damage equal to their Range value to target opposing character die.)",
@@ -211,7 +211,7 @@ public static class CardCatalog
     // all - see V2_TAIL_POLICY.md.
     public static readonly CardDef ScarletSpider = new(
         Id: "CW014", Name: "Scarlet Spider", Subtitle: "Former Villain", Set: "CW", CardType: CardType.Character,
-        PurchaseCost: 4, EnergySymbolId: "Mask",
+        PurchaseCost: 4, EnergySymbolIds: ["Mask"],
         Die: BuildCharacterDie("CW014Die", "Mask", (1, 3, 3), (1, 4, 3), (2, 6, 3)),
         DieLimit: 4, Affiliations: [], Keywords: ["Intimidate"],
         RawText: "Intimidate (When fielded, remove target opposing character die from the Field Zone until end of turn - place it next to your character cards.)",
@@ -228,7 +228,7 @@ public static class CardCatalog
     // ordinary Basic Action die; see V2_TAIL_POLICY.md (Approximate).
     public static readonly CardDef CasketOfAncientWinters = new(
         Id: "MSW001", Name: "Casket of Ancient Winters", Subtitle: "Epic Basic Action", Set: "MSW", CardType: CardType.BasicAction,
-        PurchaseCost: 4, EnergySymbolId: null,
+        PurchaseCost: 4, EnergySymbolIds: [],
         Die: BuildActionDie("MSW001Die"),
         DieLimit: 3, Affiliations: [], Keywords: [],
         RawText: "Your opponent KOs three of their character dice, moves 3 dice from their Reserve Pool to their bag, and moves 3 dice from their Prep Area to their Used Pile.",
@@ -244,7 +244,7 @@ public static class CardCatalog
     // choose flows") - see V2_TAIL_POLICY.md.
     public static readonly CardDef CosmicCubeInfinitePossibilities = new(
         Id: "GOTG008", Name: "Cosmic Cube", Subtitle: "Basic Action", Set: "GOTG", CardType: CardType.BasicAction,
-        PurchaseCost: 2, EnergySymbolId: null,
+        PurchaseCost: 2, EnergySymbolIds: [],
         Die: BuildActionDie("GOTG008Die"),
         DieLimit: 3, Affiliations: [], Keywords: [],
         RawText: "During your Clear and Draw Step, when you draw this die from your bag, you may send it and any other dice you've drawn this turn Out of Play. For each die sent Out of Play, draw a die.",

@@ -37,7 +37,7 @@ public class DiceFightClassicConfigTests
     {
         var card = new Model.CardDef(
             Id: "smoke-test-card", Name: "Smoke Test Card", Subtitle: null, Set: "TEST",
-            CardType: CardType.Character, PurchaseCost: 1, EnergySymbolId: "Fist",
+            CardType: CardType.Character, PurchaseCost: 1, EnergySymbolIds: ["Fist"],
             Die: new DieDefinition("SmokeDie", [new Face([new SymbolAmount("Fist", 1)]), new Face([], new CharacterFaceData(1, 0, 1, 1))]),
             DieLimit: 1, Affiliations: [], Keywords: [], RawText: "", Abilities: [], Continuous: []);
 

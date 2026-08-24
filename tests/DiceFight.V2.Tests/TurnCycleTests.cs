@@ -46,7 +46,7 @@ public class TurnCycleTests
         Set: "TEST",
         CardType: CardType.Character,
         PurchaseCost: 1,
-        EnergySymbolId: "Fist",
+        EnergySymbolIds: ["Fist"],
         Die: new DieDefinition("T001Die",
         [
             new Face([new SymbolAmount("Fist", 1)]),

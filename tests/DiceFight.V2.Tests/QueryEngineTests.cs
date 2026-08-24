@@ -31,7 +31,7 @@ public class QueryEngineTests
         Set: "TEST",
         CardType: CardType.Character,
         PurchaseCost: purchaseCost,
-        EnergySymbolId: "Fist",
+        EnergySymbolIds: ["Fist"],
         Die: new DieDefinition("T001Die",
         [
             new Face([], Character: new CharacterFaceData(Level: 1, FieldingCost: 2, Attack: 3, Defense: 4)),
@@ -190,6 +190,54 @@ public class QueryEngineTests
 
         Assert.Equal(Zone.UsedPile, toBuy.Zone);
         Assert.Equal("p1", toBuy.ControllerId);
+    }
+
+    // Rule 2.6.2.3 + the Crossover glossary entry - a card with two
+    // energy types needs at least one of EACH, whatever else is spent.
+    // (Some real Crossover characters require all four.)
+    [Fact]
+    public void Purchasing_A_Crossover_Card_Requires_One_Of_Each_Of_Its_Energy_Types()
+    {
+        var crossover = BuildCharacterCard(purchaseCost: 3) with { EnergySymbolIds = ["Bolt", "Fist"] };
+        var boltDie = new DieDefinition("BoltDie", [new Face([new SymbolAmount("Bolt", 1)])]);
+        var fistDie = new DieDefinition("FistDie", [new Face([new SymbolAmount("Fist", 1)])]);
+        var config = new GameConfig(
+            Id: "test", Name: "Test",
+            EnergySymbols: [new SymbolDef("Bolt"), new SymbolDef("Fist")],
+            Keywords: [],
+            Rules: new RulesConfig(StartingLife: 10, DrawCount: 3, MaxTeamCards: 2, MaxTeamDice: 4, BasicActionCount: 0),
+            BasicDicePool: [new BasicDicePoolEntry(boltDie, 3), new BasicDicePoolEntry(fistDie, 3)],
+            BasicActionSlots: 0);
+
+        GameState Fresh()
+        {
+            var s = new GameState
+            {
+                Config = config,
+                CardCatalog = new Dictionary<string, CardDef> { [crossover.Id] = crossover },
+                PlayerOne = new Player { Id = "p1", Name = "One" },
+                PlayerTwo = new Player { Id = "p2", Name = "Two" },
+                ActivePlayerId = "p1",
+                CurrentStep = TurnStep.Main,
+            };
+            s.Dice.Add(new DieInstance { Id = "unpurchased", CardId = crossover.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.Unpurchased });
+            return s;
+        }
+
+        // Three Bolt covers the AMOUNT but has no Fist - rejected.
+        var boltOnly = Fresh();
+        for (var i = 0; i < 3; i++)
+            boltOnly.Dice.Add(new DieInstance { Id = $"b{i}", PoolDieId = "BoltDie", OwnerId = "p1", ControllerId = "p1", Zone = Zone.ReservePool, CurrentFaceIndex = 0 });
+        Assert.Throws<InvalidOperationException>(() =>
+            TurnEngine.Purchase(boltOnly, new AbilityQueue(), "unpurchased", ["b0", "b1", "b2"]));
+
+        // Two Bolt + one Fist covers the amount AND both types.
+        var mixed = Fresh();
+        for (var i = 0; i < 2; i++)
+            mixed.Dice.Add(new DieInstance { Id = $"b{i}", PoolDieId = "BoltDie", OwnerId = "p1", ControllerId = "p1", Zone = Zone.ReservePool, CurrentFaceIndex = 0 });
+        mixed.Dice.Add(new DieInstance { Id = "f0", PoolDieId = "FistDie", OwnerId = "p1", ControllerId = "p1", Zone = Zone.ReservePool, CurrentFaceIndex = 0 });
+        TurnEngine.Purchase(mixed, new AbilityQueue(), "unpurchased", ["b0", "b1", "f0"]);
+        Assert.Equal(Zone.UsedPile, mixed.Dice.Single(d => d.Id == "unpurchased").Zone);
     }
 
     // --- (c) an empty registry reproduces Phase 2 behavior unchanged ---

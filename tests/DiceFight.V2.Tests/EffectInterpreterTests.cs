@@ -32,7 +32,7 @@ public class EffectInterpreterTests
 
     private static CardDef BuildCard(string id, IReadOnlyList<Face> faces, int purchaseCost = 1, IReadOnlyList<string>? affiliations = null, CardType type = CardType.Character, IReadOnlyList<TriggerKind>? reactsTo = null, IReadOnlyList<ContinuousDef>? continuous = null) => new(
         Id: id, Name: id, Subtitle: null, Set: "TEST", CardType: type,
-        PurchaseCost: purchaseCost, EnergySymbolId: "Fist",
+        PurchaseCost: purchaseCost, EnergySymbolIds: ["Fist"],
         Die: new DieDefinition(id + "Die", faces),
         DieLimit: 1, Affiliations: affiliations ?? [], Keywords: [], RawText: "",
         // reactsTo wires up self-only (null Filter) TriggeredAbilities with

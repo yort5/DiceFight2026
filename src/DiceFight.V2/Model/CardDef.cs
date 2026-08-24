@@ -21,7 +21,14 @@ public sealed record CardDef(
     string Set,
     CardType CardType,
     int PurchaseCost,
-    string? EnergySymbolId,
+    // Rule 2.6.2.3 / the Crossover glossary entry - a card may carry
+    // MORE THAN ONE energy type ("Crossover characters have two or more
+    // types of energy"; some require all four), and purchasing one means
+    // spending at least one energy of EACH. Widened from a single
+    // `string?` on 2026-08-24 after the rules validation pass; v1's own
+    // CardDef.EnergyTypes was a list all along. Empty for Basic Action
+    // cards, which have no energy type (rule 1.2.4).
+    IReadOnlyList<string> EnergySymbolIds,
     DieDefinition Die,
     int DieLimit,
     IReadOnlyList<string> Affiliations,

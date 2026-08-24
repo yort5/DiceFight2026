@@ -48,8 +48,11 @@ public static class GameConfigValidation
         {
             ValidateDie(card.Die, declaredSymbols, errors, card.Id);
 
-            if (card.EnergySymbolId is not null && !declaredSymbols.Contains(card.EnergySymbolId))
-                errors.Add($"Card \"{card.Id}\": EnergySymbolId \"{card.EnergySymbolId}\" is not declared in GameConfig.EnergySymbols.");
+            foreach (var symbolId in card.EnergySymbolIds)
+            {
+                if (!declaredSymbols.Contains(symbolId))
+                    errors.Add($"Card \"{card.Id}\": energy symbol \"{symbolId}\" is not declared in GameConfig.EnergySymbols.");
+            }
 
             foreach (var affiliation in card.Affiliations)
             {

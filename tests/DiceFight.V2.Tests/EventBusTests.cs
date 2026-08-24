@@ -27,7 +27,7 @@ public class EventBusTests
         Set: "TEST",
         CardType: CardType.Character,
         PurchaseCost: 1,
-        EnergySymbolId: "Fist",
+        EnergySymbolIds: ["Fist"],
         Die: new DieDefinition(id + "Die",
         [
             new Face([], Character: new CharacterFaceData(Level: 1, FieldingCost: 0, Attack: 1, Defense: 1)),

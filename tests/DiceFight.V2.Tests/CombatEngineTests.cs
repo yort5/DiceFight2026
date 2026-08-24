@@ -21,7 +21,7 @@ public class CombatEngineTests
 
     private static CardDef BuildCard(string id, IReadOnlyList<Face> faces, IReadOnlyList<string>? keywords = null, IReadOnlyList<ContinuousDef>? continuous = null, IReadOnlyList<TriggeredAbility>? abilities = null) => new(
         Id: id, Name: id, Subtitle: null, Set: "TEST", CardType: CardType.Character,
-        PurchaseCost: 3, EnergySymbolId: "Fist",
+        PurchaseCost: 3, EnergySymbolIds: ["Fist"],
         Die: new DieDefinition(id + "Die", faces),
         DieLimit: 4, Affiliations: [], Keywords: keywords ?? [], RawText: "",
         Abilities: abilities ?? [], Continuous: continuous ?? []);

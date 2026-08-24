@@ -2439,3 +2439,75 @@ Both are card attributes per 1.2.7 and the 1.2 Key (Alignment on D&D
 sets; Equipment used with the Equip keyword). `CardDef` models neither.
 Nothing in the DPS set needs them, so this is a note for whenever a D&D
 set is migrated, not an action item.
+
+---
+
+## Part 16 — Blanking is provenance-aware; granted abilities are a gap (2026-08-24)
+
+User correction to Part 15's Finding 1, and it changes Spike A's design
+before it is built.
+
+**Blanking removes only a card's OWN printed text - never text granted
+to that die by another ability.** Worked examples the user gave:
+
+- Psylocke "Telepath" grants a die Overcrush. If Shriek then blanks that
+  die, **it keeps Overcrush**.
+- Lantern Ring is the classic case: it grants a die "deal 1 damage to
+  target player for each energy symbol in your Reserve Pool that matches
+  [this die's] type". A die granted that ability keeps it through
+  blanking.
+
+The rules support this reading: 3.4.8.2 explains blanking as "all
+abilities that pertain to the dice from that card are lost **because
+dice refer to their card to initiate or trigger their abilities**". A
+granted ability does not come from the blanked card, so nothing severs
+it.
+
+### Consequences for v2
+
+1. **Part 15's blanking note was too coarse.** It said a blanked die
+   "loses its keywords but keeps affiliation/name/energy". Correct
+   version: a blanked die loses only the entries `GetBaseTags` derives
+   from `card.Keywords` - it keeps `DieInstance.GrantedTags` (from
+   `GrantTag`) and anything a live `TagAura` contributes, as well as all
+   printed ATTRIBUTES. The provenance needed is still fully recoverable
+   inside `QueryEngine`, so this remains a no-vocabulary-change fix -
+   just a more careful one than first written.
+
+2. **Granted ABILITIES have no representation at all.** `GrantTag`
+   grants tags; nothing in the closed vocabulary grants a whole
+   triggered ability to a die. Lantern Ring needs exactly that, and
+   `EventBus.Fire` currently scans only `state.CardCatalog[cardId].Abilities` -
+   there is nowhere for a granted ability to live, let alone survive
+   blanking. This is a real gap independent of Spike A; Spike A merely
+   makes it visible, because "which abilities does this die have" stops
+   being answerable from the card alone.
+
+   Candidate shape: a per-die granted-ability store (mirroring
+   `GrantedTags`, with the same `Duration` handling) plus a
+   `GrantAbility` effect template, and `EventBus.Fire` unioning it with
+   the card's own list. Needs sign-off; not implemented.
+
+3. **The ruling is changeable, but the mechanism is not optional.** The
+   user noted that the granted-survives-blanking ruling could itself be
+   simplified away if it bought enough. It would not buy much: even if
+   granted text were blanked alongside printed text, v2 would still need
+   somewhere for granted abilities to live in order to have Lantern Ring
+   at all. So build the store either way; the ruling only decides
+   whether blanking filters it.
+
+### Also settled this pass
+
+- **`CardDef.EnergySymbolIds` is now a list** (implemented). Rule
+  2.6.2.3 requires one energy of EACH of a card's types; Crossover
+  characters carry two or more and some carry all four. v1's
+  `EnergyTypes` was a list all along. `SpendEnergy` now tracks an
+  outstanding-requirement set, with wild satisfying any of them.
+- **Making the Team keeps its RawText verbatim.** The user offered
+  rewording the card text so the glossary's "unless otherwise stated"
+  is satisfied, with the caveat that it might confuse future Google
+  Sheet syncs. It would: `import_bulk_cards.py` skips ids it finds
+  already hand-curated, so nothing mechanical would clobber it, but an
+  edited RawText would read as a data error on any later cross-check.
+  Instead the divergence is recorded in the card's own comment and in
+  its expression, leaving the data verbatim and auditable.
