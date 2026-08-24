@@ -545,6 +545,26 @@ public class DpsCardsTests
         Assert.Equal(2, state.GetCurrentFace(die)!.Character!.Level);
     }
 
+    // Phoenix "Eternal Flame" - a stat threshold on SELECTION, not a
+    // condition. Count: 0 flags every match at once with no choice.
+    [Fact]
+    public void PhoenixEternalFlame_Flags_Every_Opposing_Die_Under_4A_And_No_Others()
+    {
+        var state = NewGame();
+        state.CurrentStep = TurnStep.Attack;
+        var phoenix = Active(state, DpsCards.PhoenixEternalFlame, "p1");
+        var weak = Active(state, DpsCards.PsylockeTelepath, "p2", level: 3, id: "weak");     // 3A
+        var strong = Active(state, DpsCards.RonanTheAccuserTreason, "p2", level: 1, id: "strong"); // 5A
+        var queue = new AbilityQueue();
+
+        CombatEngine.DeclareAttackers(state, queue, [phoenix.Id]);
+        Drain(state, queue);
+
+        Assert.Null(state.PendingChoice); // Count: 0 - every match, no choice
+        Assert.Contains(CombatFlagKind.CantBlock, weak.CombatFlags);
+        Assert.Empty(strong.CombatFlags);
+    }
+
     // The remaining batch-1 tail entry, pinned inert rather than silently
     // half-working - see V2_TAIL_POLICY.md for its gap (Deadly).
     [Fact]

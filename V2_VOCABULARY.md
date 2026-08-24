@@ -2511,3 +2511,90 @@ it.
   edited RawText would read as a data error on any later cross-check.
   Instead the divergence is recorded in the card's own comment and in
   its expression, leaving the data verbatim and auditable.
+
+---
+
+## Part 17 — The bound-die predicate condition (supersedes the `HasTag` proposal, 2026-08-24)
+
+The user asked two questions about the proposed `HasTag` condition that
+between them reshaped it, and a third that is still open.
+
+### `HasTag` was too narrow - it should be a general bound-die predicate
+
+The question was whether `HasTag` would also cover Phoenix "Eternal
+Flame" (DPS126), whose text gates on attack value rather than a tag.
+Investigating it separated two things that are easy to conflate:
+
+- **Selection filtering** - "which dice does this effect apply to".
+  `TargetFilter` already carries both `Tags` AND `Stat`. Eternal Flame
+  is entirely this: "opposing character dice with less than 4A can't
+  block" is `CombatFlag(TargetFilter{Opposing, CharacterDie,
+  Stat:(Attack, Max:3), Count: 0}, CantBlock)`. **It needed nothing new
+  and is now migrated and tested.**
+- **Branching on an already-chosen die** - `Conditional` over a bound
+  die. v2 can test that die's KO state (`TargetWasKOd`), burst level
+  (`OnBurstFace`) and face kind (`OnFaceKind`)... but neither its tags
+  nor its stats. Phoenix "Psionic Maelstrom" is this second kind.
+
+So the gap is not "tags specifically", it is "predicates about one
+bound die". A narrow `HasTag` would close one case and leave the
+identical stat-shaped case ("if that die has 3D or greater") open for a
+second addition later.
+
+**Revised proposal**: one condition carrying nullable predicate fields,
+so only what is set is checked:
+
+```
+BoundDieMatches(
+    CheckBinding: string,
+    Tags: TagQuery?      = null,
+    Stat: StatThreshold? = null,
+    Kind: TargetKind?    = null,
+    Ownership: TargetOwnership? = null)
+```
+
+All-nullable is what makes it safe: it avoids the trap that killed the
+`Bound`-composes-with-`TargetFilter` idea, where `Kind` defaulting to
+`CharacterDie` silently excluded energy-faced dice.
+
+### Sizing, from v1's own usage
+
+v1's `TargetHasAffiliation` - the direct equivalent - has **2 users**
+in the curated set (Phoenix "Psionic Maelstrom" DPS086, and Dark
+Phoenix's "if that die was X-Men" clause). Small, but the shape
+generalises, and v2 already ships three sibling conditions that address
+a bound die the same way.
+
+Most of v1's other condition kinds are *counting* conditions that v2's
+`CountAtLeast` already subsumes (`OwnActiveAffiliationOrKeywordCountAtLeast`,
+`OwnSidekickActive`, `OwnCharacterDiceInFieldZoneAtLeast`,
+`OpponentHasAtLeastNCharacterDiceInFieldZone`, and the Loyalty-counter
+one) - so the bound-die predicate is genuinely the main uncovered
+condition shape, not one of many.
+
+### STILL OPEN: is Affiliation a tag, or first-class?
+
+Naming this condition `HasTag` would have quietly settled a question
+the user raised earlier and which Part 15 deliberately deferred: the
+rules define a **closed list of card attributes** (Name/Title, Subtitle,
+Purchase Cost, Energy Type, Affiliation, Alignment) in which keywords do
+not appear, and the user's heuristic - "if it is important enough to
+filter on in the Team Builder, it is important enough" - lines up with
+that list.
+
+This is a genuine fork and should be decided once, not drifted into:
+
+- **(a) Keep affiliations merged into tags.** Cheapest now. Every card
+  authored against the merged path makes unpicking it later more
+  expensive - the same trajectory `EnergySymbolIds` was on before it was
+  widened.
+- **(b) Give Affiliation first-class addressing.** `CardDef` already
+  stores `Affiliations` separately, so this is a QUERY-surface change:
+  an `Affiliations` predicate on both `TargetFilter` and the new
+  condition, with `Tags` left for genuinely tag-ish things (Alignment,
+  Equipment, card names, "sidekick").
+
+**Recommendation: decide (a) vs (b) before adding the condition**, and
+apply the answer to `TargetFilter` and the condition together. Adding a
+tag-only condition first and an affiliation predicate later would leave
+the two query surfaces inconsistent, which is the worst of both.

@@ -450,6 +450,25 @@ public static class DpsCards
             N: 3)],
         IsImplemented: false);
 
+    // Worth contrasting with Phoenix "Psionic Maelstrom" below, which IS
+    // tailed: this card looks like it needs a stat CONDITION and does
+    // not. "Opposing character dice with less than 4A can't block" is a
+    // stat threshold on SELECTION - which TargetFilter.Stat has always
+    // handled - with Count: 0 meaning "every match, no choice"
+    // (replacing v1's separate MatchAll bool). No condition involved.
+    public static readonly CardDef PhoenixEternalFlame = new(
+        Id: "DPS126", Name: "Phoenix", Subtitle: "Eternal Flame", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 6, EnergySymbolIds: ["Bolt"],
+        Die: MigrationDice.Character("DPS126Die", "Bolt", (1, 5, 5), (2, 7, 7), (3, 8, 8)),
+        DieLimit: 2, Affiliations: ["X-Men"], Keywords: [],
+        RawText: "When Phoenix attacks, opposing character dice with less than 4A can't block.",
+        Abilities: [new TriggeredAbility(TriggerKind.DieAttacks,
+            new CombatFlag(
+                new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Opposing,
+                    Stat: new StatThreshold(StatKind.Attack, Max: 3), Count: 0),
+                CombatFlagKind.CantBlock))],
+        Continuous: []);
+
     // --- Batch 2's tails (see V2_TAIL_POLICY.md for each) ---
 
     // Finding 8's OnFaceKind condition, first real user - and the card
@@ -529,5 +548,6 @@ public static class DpsCards
         Mutation, GambitUnlessIGotSomeoneToPlayWith, PsylockeAdvancedTelekineticCombatant,
         JeanGreyPeacefulCoexistence, DeadpoolCollectThis, AngelXaviersDream,
         MagnetoVisionary, BlobImmovable, MakingTheTeam, PhoenixPsionicMaelstrom, ColossusOrganicSteel,
+        PhoenixEternalFlame,
     ];
 }
