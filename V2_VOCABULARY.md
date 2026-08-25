@@ -729,7 +729,7 @@ under "Consider," not "Recommended."
 — `TargetingProtection(Own, Tags:{AnyOf:["sidekick"]}, From:Global)`.
 **Fit** - matches the table directly.
 
-**57. Vulcan, "Aggession" (DPS135)**, `GrantsOpponentStatDebuff` —
+**57. Vulcan, "Aggression" (DPS135)**, `GrantsOpponentStatDebuff` —
 "opponent's **non-fist** characters get -2D," needing `NoneOf:["Fist"]`
 against a die's own energy type as a tag. **Misfit** - same gap as
 Dazzler (#21), now confirmed by a second independent card.
@@ -1152,7 +1152,7 @@ concentrated in exactly the cards worth prioritizing.
 
 - **D'Ken, "Shi'ar Civil War"** (DPS141): still a misfit — ability-
   blanking, already deferred as a Phase 8 spike.
-- **Vulcan, "Aggession"** (DPS135): was a misfit in round 2 (needed
+- **Vulcan, "Aggression"** (DPS135): was a misfit in round 2 (needed
   energy-type-as-tag) — **now fits**, adopted Finding 4 closes it.
   Good confirmation that fix does what it was supposed to.
 - **Black Manta, "Deep Sea Deviant"** (JL078): already fit (round 2

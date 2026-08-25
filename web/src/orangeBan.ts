@@ -21,14 +21,13 @@ export interface OrangeBanEntry {
   /**
    * Alternate spellings this card appears under in OUR catalog.
    *
-   * The ban list and the card catalog are transcribed from different
-   * sources and disagree on a handful of spellings - in most cases the
-   * source spreadsheet the catalog is imported from carries the typo
-   * ("Power of Attourney", "Muscle of Hire", "Enchanged Crowbar",
-   * "Aggession", "Doomcalibur"), and in one case the ban list does
-   * ("Angelo Fortunado" for Angelo Fortunato). Rather than silently
-   * "correcting" either source, the mismatch is recorded here so the
-   * matcher succeeds and the disagreement stays visible.
+   * The ban list and the card catalog were transcribed from different
+   * sources and disagreed on six subtitles. Five were typos in the
+   * source spreadsheet and have since been corrected there, leaving one
+   * real case: the ban list itself misspells Venom's "Angelo Fortunato"
+   * as "Fortunado". The ban list is a published document we do not
+   * control, so the mismatch is recorded here rather than "corrected"
+   * into it - and the mechanism stays for the next such disagreement.
    */
   readonly alsoMatches?: readonly { readonly name?: string; readonly subtitle?: string }[];
 }
@@ -48,7 +47,7 @@ export const ORANGE_BAN_LIST: readonly OrangeBanEntry[] = [
   { set: "UXM", name: "Falcon", subtitle: "Recon" },
   // YGO
   { set: "YGO", name: "Swords of Revealing Light", subtitle: "Basic Action Card" },
-  { set: "YGO", name: "Doomcaliber Knight", subtitle: "Fiendish Fighter", alsoMatches: [{ name: "Doomcalibur Knight" }] },
+  { set: "YGO", name: "Doomcaliber Knight", subtitle: "Fiendish Fighter" },
   { set: "YGO", name: "Jinzo", subtitle: "Trap Destroyer" },
   { set: "YGO", name: "Ring of Magnetism", subtitle: "Action Attraction" },
   // BFF
@@ -90,9 +89,9 @@ export const ORANGE_BAN_LIST: readonly OrangeBanEntry[] = [
   { set: "TOA", name: "Yuan-ti Pureblood", subtitle: "Epic Humanoid" },
   { set: "TOA", name: "Ring of Winter", subtitle: "Epic Magical Object" },
   // THOR
-  { set: "THOR", name: "Hulk", subtitle: "Power of Attorney", alsoMatches: [{ subtitle: "Power of Attourney" }] },
-  { set: "THOR", name: "Mr. Fixit", subtitle: "Muscle for Hire", alsoMatches: [{ subtitle: "Muscle of Hire" }] },
-  { set: "THOR", name: "Wrecker", subtitle: "Enchanted Crowbar", alsoMatches: [{ subtitle: "Enchanged Crowbar" }] },
+  { set: "THOR", name: "Hulk", subtitle: "Power of Attorney" },
+  { set: "THOR", name: "Mr. Fixit", subtitle: "Muscle for Hire" },
+  { set: "THOR", name: "Wrecker", subtitle: "Enchanted Crowbar" },
   // JUS
   { set: "JUS", name: "Green Lantern", subtitle: "Human" },
   // XMF
@@ -113,7 +112,7 @@ export const ORANGE_BAN_LIST: readonly OrangeBanEntry[] = [
   { set: "DPS", name: "Gladiator", subtitle: null },
   { set: "DPS", name: "Lilandra", subtitle: "Majestrix" },
   { set: "DPS", name: "Master Mold", subtitle: "Endless Sentinels" },
-  { set: "DPS", name: "Vulcan", subtitle: "Aggression", alsoMatches: [{ subtitle: "Aggession" }] },
+  { set: "DPS", name: "Vulcan", subtitle: "Aggression" },
   // SKC
   { set: "SKC", name: "Hawkman", subtitle: null },
   { set: "SKC", name: "Barry Allen", subtitle: "Master of the Speed Force" },

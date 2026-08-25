@@ -76,7 +76,7 @@ public sealed record CardDef
     // TurnEngine.Field's own IsFreeToField for where this is consulted.
     public FreeFieldingGrant? GrantsFreeFielding { get; init; }
 
-    // Vulcan ("Aggession", DPS135): "your opponent's non-fist characters
+    // Vulcan ("Aggression", DPS135): "your opponent's non-fist characters
     // get -2D." The cross-player counterpart to GrantsStaticTeamBonus -
     // that field's own granter scan is always same-controller (see
     // DieStats.StaticTeamBonusFor), so this is a genuinely different

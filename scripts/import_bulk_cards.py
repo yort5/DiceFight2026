@@ -55,6 +55,7 @@ PARAM_KEYWORDS = ["Range"]  # "Range X" - Corrupt X is NOT zero-AbilityDef
 # that would have silently gotten IsImplemented: true with empty Abilities.)
 
 VALID_ENERGY = {"Fist", "Bolt", "Mask", "Shield"}
+
 BASIC_ACTION_SUBS = {"Basic Action Card", "Basic Action Cards", "Basic Action"}
 EPIC_SUBS = {"Epic Basic Action"}
 ID_RE = re.compile(r"^[A-Za-z]+\d+$")
@@ -114,6 +115,23 @@ def parse_faces(statline):
             "burstStars": stars if stars else None,
         })
     return faces
+
+
+def parse_energy(raw):
+    """"Bolt" -> ["Bolt"]; "Bolt/Mask" -> ["Bolt", "Mask"]; None if any
+    part is not a real energy type.
+
+    Dual-energy characters (Crossovers and the like - 76 rows as of
+    2026-08-25, e.g. every GAF Barry Allen printing) were previously
+    dropped outright because this column was read as a single value.
+    v1's CardDef.EnergyTypes was ALREADY a list, and every v1 consumer
+    that matters treats it as one (Contains checks, and TurnEngine's
+    purchase path takes the whole list), so emitting a list here is
+    compatible rather than a v1 change in disguise."""
+    parts = [p.strip() for p in (raw or "").split("/") if p.strip()]
+    if not parts or any(p not in VALID_ENERGY for p in parts):
+        return None
+    return parts
 
 
 def parse_affiliations(raw):
@@ -269,12 +287,13 @@ def classify_row(code, row):
 
     levels = None
     die_limit = 3
-    energy_type = None
+    energy_type = []
     stats_missing = False
 
     if card_type == "Character":
-        if energy_raw not in VALID_ENERGY:
-            return None, "character bad/multi/missing energy"
+        energy_type = parse_energy(energy_raw)
+        if energy_type is None:
+            return None, "character bad/missing energy"
         if not statline:
             levels = PLACEHOLDER_FACES
             stats_missing = True
@@ -285,11 +304,10 @@ def classify_row(code, row):
         if rarity not in RARITY_TO_DIE_LIMIT:
             return None, "unknown rarity"
         die_limit = RARITY_TO_DIE_LIMIT[rarity]
-        energy_type = energy_raw
     elif card_type == "Action":
-        if energy_raw not in VALID_ENERGY:
-            return None, "action bad/multi/missing energy"
-        energy_type = energy_raw
+        energy_type = parse_energy(energy_raw)
+        if energy_type is None:
+            return None, "action bad/missing energy"
         levels = []
     else:
         levels = []
@@ -321,7 +339,7 @@ def classify_row(code, row):
         "subtitle": subtitle or None,
         "type": card_type,
         "purchaseCost": purchase_cost,
-        "energyType": energy_type,
+        "energyTypes": energy_type,
         "dieLimit": die_limit,
         "levels": levels,
         "statsMissing": stats_missing,

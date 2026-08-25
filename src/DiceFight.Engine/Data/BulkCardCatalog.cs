@@ -48,7 +48,10 @@ public static class BulkCardCatalog
             Subtitle = row.Subtitle,
             Type = Enum.Parse<CardType>(row.Type),
             PurchaseCost = row.PurchaseCost,
-            EnergyTypes = row.EnergyType is { } e ? [Enum.Parse<EnergyType>(e)] : [],
+            // A list, not a single value: dual-energy characters ("Bolt/Mask")
+            // are real printed cards, and CardDef.EnergyTypes has always been a
+            // list to hold them. Basic Actions legitimately have none.
+            EnergyTypes = row.EnergyTypes.Select(Enum.Parse<EnergyType>).ToList(),
             Affiliations = row.Affiliations,
             DieLimit = row.DieLimit,
             Levels = row.Levels.Select(f => new CharacterFace(f.FieldingCost, f.Attack, f.Defense, f.BurstStars)).ToList(),
@@ -98,7 +101,7 @@ public static class BulkCardCatalog
         template.Params.TryGetValue("amount", out var amount) ? amount : fallback;
 
     private sealed record BulkCardJson(
-        string Id, string Name, string? Subtitle, string Type, int PurchaseCost, string? EnergyType,
+        string Id, string Name, string? Subtitle, string Type, int PurchaseCost, List<string> EnergyTypes,
         int DieLimit, List<BulkFaceJson> Levels, string RawText, List<string> Keywords,
         List<string> Affiliations, bool IsImplemented, string Set, AbilityTemplateJson? AbilityTemplate);
 

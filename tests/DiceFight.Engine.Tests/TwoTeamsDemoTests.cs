@@ -2030,10 +2030,10 @@ public class TwoTeamsDemoTests
     }
 
     [Fact]
-    public void VulcanAggession_DebuffsOnlyOpponentsNonFistCharacters()
+    public void VulcanAggression_DebuffsOnlyOpponentsNonFistCharacters()
     {
         var state = BuildTwoTeamGame(
-            extraTeamACardIds: [SampleCards.VulcanAggession.Id],
+            extraTeamACardIds: [SampleCards.VulcanAggression.Id],
             extraTeamBCardIds: [SampleCards.SabretoothDoISmellWeakness.Id]); // Fist energy type
 
         var nonFistOpponent = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id); // PlaceholderEnergy: Mask
@@ -2054,7 +2054,7 @@ public class TwoTeamsDemoTests
         ownNonFistDie.Level = 1;
         var ownDefenseBefore = DieStats.EffectiveDefense(state, ownNonFistDie);
 
-        var vulcanDie = FindUnpurchased(state, "teamA", SampleCards.VulcanAggession.Id);
+        var vulcanDie = FindUnpurchased(state, "teamA", SampleCards.VulcanAggression.Id);
         vulcanDie.Zone = Zone.FieldZone;
         vulcanDie.Status = DieStatus.Character;
         vulcanDie.Level = 1;
@@ -2065,9 +2065,9 @@ public class TwoTeamsDemoTests
     }
 
     [Fact]
-    public void UsingVulcanAggessionGlobal_ForcesTargetToAttack()
+    public void UsingVulcanAggressionGlobal_ForcesTargetToAttack()
     {
-        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.VulcanAggession.Id]);
+        var state = BuildTwoTeamGame(extraTeamACardIds: [SampleCards.VulcanAggression.Id]);
         state.ActivePlayerId = "teamA";
 
         var target = FindUnpurchased(state, "teamB", SampleCards.Falcon.Id);
@@ -2077,7 +2077,7 @@ public class TwoTeamsDemoTests
 
         var energy = GiveWildEnergy(state, "teamA", 1);
         var queue = new AbilityQueue();
-        TurnEngine.UseGlobalAbility(state, queue, SampleCards.VulcanAggession.Id, "teamA", energy.Select(d => d.Id).ToList());
+        TurnEngine.UseGlobalAbility(state, queue, SampleCards.VulcanAggression.Id, "teamA", energy.Select(d => d.Id).ToList());
         queue.Drain(ability => EffectInterpreter.Execute(
             ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [target.Id])));
 

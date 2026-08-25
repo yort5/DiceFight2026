@@ -322,7 +322,7 @@ here rather than assuming which approach they'd want.
     `VirtualCardId ?? CardId`, so a die with only a `VirtualCardId` -
     never exercised before now - silently got the bare 1A/1D Sidekick
     face instead of its real stats), and `CardDef.
-    GrantsOpponentStatDebuff` (Vulcan "Aggession," the cross-player
+    GrantsOpponentStatDebuff` (Vulcan "Aggression," the cross-player
     mirror of `GrantsStaticTeamBonus`) - see the "tackling the deeper
     gaps" status update, including why the other three (damage
     redirection, ability-blanking, Gladiator's temporary team-wide

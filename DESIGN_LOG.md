@@ -8562,3 +8562,50 @@ user rather than taken unasked. Remaining skips beyond those 76: 12
 blank/'None' energy, 6 'Generic' energy, 6 YGO Egyptian God cards whose
 double-digit stat lines are genuinely ambiguous ('3108' = 3/10/8 but
 '3810' = 3/8/10), and Supreme Intelligence: Merciless with a blank cost.
+
+---
+
+## Dual-energy import + sheet fixes: Orange Ban now 64/64 (2026-08-25)
+
+The user corrected the sheet for five of the six spelling disagreements
+above, and confirmed Venom genuinely IS "Angelo Fortunato" - so the ban
+list, not the sheet, is wrong on that one. Five `alsoMatches` entries
+were therefore deleted and only Venom's kept. The mechanism stays for
+the next disagreement: the ban list is a published document we do not
+control, so recording a mismatch beats editing either source.
+
+Vulcan needed a separate fix - it is hand-curated in SampleCards.cs, so
+re-importing could never touch it. Corrected "Aggession" -> "Aggression"
+there (and in the two living design docs; DESIGN_LOG history left as
+written, since it records what was true at the time).
+
+**Dual energy.** Per the user's call, the importer now parses
+`Bolt/Mask` into a list via `parse_energy`. This turned out NOT to be a
+v1 compromise at all: `CardDef.EnergyTypes` was already
+`IReadOnlyList<EnergyType>`, and every consumer that matters treats it
+as one - `Contains` checks in LegalTargets/DieStats/TurnEngine, and
+TurnEngine.cs:490 passes the whole list into the purchase path. Only two
+`FirstOrDefault()` sites exist (PlaceholderDiceRoller and the spin-to-
+energy effect, both "which face does this die show"), and they degrade
+to the first type rather than breaking. So `BulkCards.json` now stores
+`energyTypes` as an array and BulkCardCatalog.cs reads it as one; no
+cards had to be dropped or marked unimplemented.
+
+Recovered 75 dual/multi-energy cards, including all three Typhoid Mary
+printings (the last unmatched ban entry) and the BAT White Lantern
+cards, which carry all four energy types.
+
+**Numbers.** BulkCards.json 3652 -> 3727; merged API catalog 3927.
+Orange Ban matching **63/64 -> 64/64**, flagging 69 cards. All 708 tests
+pass. Verified in real headless Chromium (route is `/teambuilder`, not
+`/team-builder`): counts nest correctly - 3927 total, 3858 with the ban
+applied; implemented-only 348 / Silver 278 / Bronze 234 / Bronze+ban
+227 - dual energy renders as "Bolt/Mask", and no page errors.
+
+**Left for the sheet, not fixed here** (all upstream data, deliberately
+not guessed at): 6 YGO Egyptian God cards whose double-digit stat lines
+are ambiguous ('3108' reads 3/10/8 but '3810' reads 3/8/10); 18 Action
+cards with blank or "Generic" energy (BFF Magic Helmet, ASM Web
+Shooters); Supreme Intelligence: Merciless with a blank cost; and 3 BAT
+White Lantern cards whose Affiliation cell contains a raw Discord emoji
+code, `<:whitelantern:336233573684084750>`, which renders as-is.

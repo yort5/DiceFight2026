@@ -2474,12 +2474,12 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 3, Attack: 8, Defense: 8)
         ], set: "DPS");
 
-    // Vulcan, "Aggession" - the first card to use
+    // Vulcan, "Aggression" - the first card to use
     // CardDef.GrantsOpponentStatDebuff (new this pass); the Global reuses
     // ForceAttack, the same primitive Vulcan's own "Ruler of the
     // Imperium" printing already established.
-    public static readonly CardDef VulcanAggession = Character(
-        "DPS135", "Vulcan", "Aggession", dieLimit: 2,
+    public static readonly CardDef VulcanAggression = Character(
+        "DPS135", "Vulcan", "Aggression", dieLimit: 2,
         "While Vulcan is active, your opponent's non-fist characters get -2D. Global: Pay Fist. Target " +
         "character die must attack this turn.",
         purchaseCost: 6, energyType: EnergyType.Fist,
@@ -4325,7 +4325,7 @@ public static class SampleCards
             DarkPhoenixEnemyOfTheShiar, MagikWielderOfTheSoulsword, TakeCover, DeadpoolCollectThis,
             MystiqueTaughtByMagneto, IcemanFrozenFistsOfFury,
             RonanTheAccuserNoMercy, EmmaFrostManipulative, EmmaFrostFinesse, SentinelToken, MasterMoldEndlessSentinels,
-            VulcanAggession, ColossusOrganicSteel, VulcanPowerSuppression, MisterSinisterMutantSupremacist,
+            VulcanAggression, ColossusOrganicSteel, VulcanPowerSuppression, MisterSinisterMutantSupremacist,
             GladiatorPsiResistance, GladiatorMajestorKallark,
             DeadpoolDraftPick, WolverinePureOfHeart, CorsairRecruitingACrew, RogueSurveillanceImmunity,
             RogueMrsX, AngelJeanGreysSchool, MystiqueRelentless, CableBosomBuddies, BeastXaviersDream,
