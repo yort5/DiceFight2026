@@ -945,19 +945,39 @@
 }
 
 /* ---- Team Builder: rarity colour-coding ----
-   A left stripe rather than a row tint: it reads at a glance, stays
-   legible in both themes, and does not fight the table's own hover and
-   zebra striping the way a background colour would. */
-.card-catalog-table tr[class^="rarity-"] td:first-child,
-.card-catalog-table tr[class*=" rarity-"] td:first-child {
-  border-left: 4px solid transparent;
+   Each rarity's colour is defined ONCE as --rarity-colour on the shared
+   class, then reused by the catalog row stripe, the team sidebar stripe
+   and the filter swatches - so the palette can never drift between the
+   three places it appears. A stripe rather than a row tint: it reads at
+   a glance, works in both themes, and does not fight the table's own
+   hover and zebra styling. */
+.rarity-common { --rarity-colour: #9aa0a6; }
+.rarity-uncommon { --rarity-colour: #2e9e4f; }
+.rarity-rare { --rarity-colour: #d4a017; }
+.rarity-super { --rarity-colour: #cc3333; }
+.rarity-chase { --rarity-colour: #8e44ad; }
+.rarity-promo { --rarity-colour: #2f6fd0; }
+
+.card-catalog-table tr[class*="rarity-"] td:first-child {
+  border-left: 6px solid var(--rarity-colour, transparent);
 }
-.card-catalog-table tr.rarity-common td:first-child { border-left-color: #9aa0a6; }
-.card-catalog-table tr.rarity-uncommon td:first-child { border-left-color: #2e9e4f; }
-.card-catalog-table tr.rarity-rare td:first-child { border-left-color: #d4a017; }
-.card-catalog-table tr.rarity-super td:first-child { border-left-color: #cc3333; }
-.card-catalog-table tr.rarity-chase td:first-child { border-left-color: #8e44ad; }
-.card-catalog-table tr.rarity-promo td:first-child { border-left-color: #2f6fd0; }
+
+/* The sidebar item is a rounded card, so the stripe is its left edge. */
+.team-list-item[class*="rarity-"] {
+  border-left: 6px solid var(--rarity-colour, transparent);
+}
+
+/* Filter checkboxes carry a small swatch so the legend is the filter. */
+.card-catalog-filters label[class*="rarity-"]::before {
+  content: "";
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 2px;
+  border-radius: 2px;
+  background: var(--rarity-colour, transparent);
+  vertical-align: -1px;
+}
 
 /* ---- Team Builder: team sidebar ---- */
 

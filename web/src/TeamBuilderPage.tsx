@@ -119,6 +119,17 @@ function sortValue(card: CardDef, key: SortKey): string | number {
   }
 }
 
+// The rarity TIERS a card can be filtered by, in printed order. "Super"
+// and "Super-Rare" are one tier spelled two ways across the sheet's tabs
+// (171 vs 16 cards), so they collapse into a single option - a "Super
+// Rare only" format has to catch both or it silently drops 16 cards.
+const RARITY_TIERS = ["Common", "Uncommon", "Rare", "Super Rare", "Chase", "Promo"] as const;
+
+function rarityTier(rarity: string | null): string | null {
+  if (rarity === "Super" || rarity === "Super-Rare") return "Super Rare";
+  return rarity;
+}
+
 // Rarity colour-coding, matching the old Teambuilder's stripe colours.
 // "Super" and "Super-Rare" are the same tier spelled two ways across the
 // sheet's tabs, so they share a class. Chase (4 cards in the whole
@@ -126,12 +137,11 @@ function sortValue(card: CardDef, key: SortKey): string | number {
 // own class so it is at least distinguishable rather than silently
 // falling in with Common.
 function rarityClass(rarity: string | null): string {
-  switch (rarity) {
+  switch (rarityTier(rarity)) {
     case "Common": return "rarity-common";
     case "Uncommon": return "rarity-uncommon";
     case "Rare": return "rarity-rare";
-    case "Super":
-    case "Super-Rare": return "rarity-super";
+    case "Super Rare": return "rarity-super";
     case "Chase": return "rarity-chase";
     case "Promo": return "rarity-promo";
     default: return "";
@@ -171,6 +181,7 @@ export function TeamBuilderPage() {
   const [activeEnergyTypes, setActiveEnergyTypes] = useState<Set<string>>(new Set());
   const [activeAffiliations, setActiveAffiliations] = useState<Set<string>>(new Set());
   const [activeSets, setActiveSets] = useState<Set<string>>(new Set());
+  const [activeRarities, setActiveRarities] = useState<Set<string>>(new Set());
   // Defaults to TRUE: the catalog is useful as a reference long before the
   // simulator covers it, and in this phase it gets far more use than the
   // game does, so hiding four fifths of the cards by default is backwards.
@@ -356,6 +367,8 @@ export function TeamBuilderPage() {
       if (activeEnergyTypes.size > 0 && !c.energyTypes.some((e) => activeEnergyTypes.has(e))) return false;
       if (activeAffiliations.size > 0 && !c.affiliations.some((a) => activeAffiliations.has(a))) return false;
       if (activeSets.size > 0 && (!c.set || !activeSets.has(c.set))) return false;
+      const tier = rarityTier(c.rarity);
+      if (activeRarities.size > 0 && (!tier || !activeRarities.has(tier))) return false;
       if (activeFormat && (!c.set || !activeFormat.sets.has(c.set))) return false;
       if (applyOrangeBan && isOrangeBanned(c)) return false;
       if (needle.length === 0) return true;
@@ -369,7 +382,7 @@ export function TeamBuilderPage() {
         c.rawText.toLowerCase().includes(needle)
       );
     });
-  }, [cards, deferredSearch, activeTypes, activeEnergyTypes, activeAffiliations, activeSets, showUnimplemented, activeFormat, applyOrangeBan]);
+  }, [cards, deferredSearch, activeTypes, activeEnergyTypes, activeAffiliations, activeSets, activeRarities, showUnimplemented, activeFormat, applyOrangeBan]);
 
   const sorted = useMemo(() => {
     const dir = sort.direction === "asc" ? 1 : -1;
@@ -430,6 +443,19 @@ export function TeamBuilderPage() {
                     onChange={() => toggle(activeEnergyTypes, setActiveEnergyTypes, t)}
                   />
                   {t}
+                </label>
+              ))}
+            </fieldset>
+            <fieldset>
+              <legend>Rarity</legend>
+              {RARITY_TIERS.map((r) => (
+                <label key={r} className={rarityClass(r)}>
+                  <input
+                    type="checkbox"
+                    checked={activeRarities.has(r)}
+                    onChange={() => toggle(activeRarities, setActiveRarities, r)}
+                  />
+                  {r}
                 </label>
               ))}
             </fieldset>
@@ -574,7 +600,7 @@ export function TeamBuilderPage() {
           ) : (
             <ul className="team-list">
               {[...characterEntries, ...basicActionEntries].map(({ card, count }) => (
-                <li key={card.id} className="team-list-item">
+                <li key={card.id} className={`team-list-item ${rarityClass(card.rarity)}`}>
                   <div className="team-card-identity">
                     <div className="team-card-name">{card.name}</div>
                     {card.subtitle && <div className="hint">{card.subtitle}</div>}

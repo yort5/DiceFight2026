@@ -8822,3 +8822,37 @@ character's Global and a Basic Action's full text.
 **Open question**: "Chase" (4 cards in the entire catalog) had no colour
 in the user's list. Given a distinct purple so it is at least not
 silently indistinguishable from Common - worth confirming.
+
+---
+
+## Rarity filter, thicker stripes, sidebar colouring (2026-08-25)
+
+**Rarity filter added**, driven by a real need - the user's next event is
+"Super Rare only, with the Orange Ban list".
+
+The one subtlety worth recording: the sheet spells that tier two ways,
+"Super" (171 cards) and "Super-Rare" (16), across different tabs. A
+filter offering them separately would silently drop 16 legal cards from
+a Super-Rare-only format, so `rarityTier()` collapses them into a single
+"Super Rare" option, and `rarityClass()` now routes through it as well
+rather than duplicating the knowledge. Verified: the six tiers total
+2239 + 792 + 734 + 187 + 4 + 128 = **4084**, exactly the catalog size,
+so every card falls in exactly one tier and none is double-counted.
+Super Rare alone is 187; with the Orange Ban applied, 169.
+
+**Stripes thickened** 4px -> 6px and **extended to the team sidebar**,
+where each entry now carries its card's rarity colour on its left edge.
+
+While doing it, the palette was collapsed to a single definition: each
+rarity class now sets a `--rarity-colour` custom property, and the
+catalog row stripe, the sidebar stripe and the new filter swatches all
+read from it. Three places were about to hard-code the same six hex
+values, which is exactly how palettes drift.
+
+**The Chase cards**, for the record - all four are Age of Ultron
+#143-146: Magneto "Magnetic Monster", Red Skull "Undying Evil",
+Gladiator "Intergalactic Terror", Electro "Cooked Meat". Purple
+confirmed by the user.
+
+All 708 tests pass; `tsc --noEmit` and `npm run build` clean; verified
+in headless Chromium with no page errors.
