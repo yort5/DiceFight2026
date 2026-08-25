@@ -8431,3 +8431,75 @@ unchanged.
 Verified: `dotnet build DiceFight.slnx` clean (0 warnings/errors, all
 5 projects); v2 tests 158/158 passing (3 new); v1's full suite re-run
 untouched, still 547/547.
+
+## Team Builder: format filters + Orange Ban list (2026-08-25)
+
+User-requested detour into the v1 web client (outside V2_PLAN ground
+rule 1's "web/ is read-only until Phase 9" - the user directed it, so
+it is deliberate rather than drift).
+
+**Formats.** Ported from the reference Teambuilder's own `format_bans`
+map (`~/DiceMasters/Teambuilder/index.php`). That tool models a format
+as a ban list keyed by set code or card id - but reading the real
+lists, Silver Age's bans are exactly the sets from AvX through TMNT, a
+contiguous RELEASE-ORDER PREFIX. So both formats are expressed as
+release-order cutoffs instead of ban lists: shorter, and a newly-added
+set becomes legal in the right formats automatically rather than
+needing every list edited.
+
+- **Silver Age**: Green Arrow and The Flash onward (the reference
+  tool's own definition, re-expressed).
+- **Bronze Age**: new, per the user - Campaign Boxes onward, i.e.
+  Avengers Infinity and Harley Quinn and later. Derived from
+  `SET_RELEASE_ORDER`, which is `sets.ts`'s existing ordering pulled
+  out explicitly rather than left as implicit object-key order.
+- Golden Era deliberately not ported (bans five individual cards, so
+  effectively "no filter"); Modern / Global Escalation / Dice Fight
+  Legacy not ported (no longer used).
+
+PROMO stays legal in every format: it is one bucket spanning all sets,
+where the reference tool could be precise because it modelled per-set
+promo codes (AvXop, JLop...). Documented rather than guessed.
+
+**Orange Ban list.** The page the user linked embeds a published Google
+Sheet; the list is not in the page HTML at all (a WebFetch returns
+navigation chrome only). Pulled via the sheet's CSV export instead -
+the same trick the stats-spreadsheet memory records - and generated
+into `web/src/orangeBan.ts` rather than hand-transcribed. 64 entries.
+Matched by SET + NAME + SUBTITLE, with a null subtitle meaning every
+printing (the list's own "(All)" notation, used for Gladiator and
+Hawkman) and a special case for Basic Action cards, which the list
+writes as "<name>: Basic Action Card" while the catalog stores just
+"Basic Action".
+
+It is a separate CHECKBOX rather than another dropdown entry because it
+is normally applied on top of a format, as the user described.
+
+**A finding worth acting on separately.** Only 47 of the 64 entries
+resolve against `BulkCards.json`. Six of the misses are hand-curated
+cards (`import_bulk_cards.py` removes those from the bulk file by
+design, and the API merges both, so those match at runtime). But
+**eleven match nothing anywhere**: Venom "Angelo Fortunado",
+Doomcaliber Knight, Ring of Magnetism, Constantine "Hellblazer", three
+Mighty Thor cards, Typhoid Mary, and three Secret Wars cards. That is
+independent confirmation of the stale-bulk-catalog problem already
+flagged earlier in this project (BulkCards.json known bad for MSW/JL) -
+now quantified by a second source rather than a spot check.
+
+The full 64-entry list is kept regardless. The ban list is the
+authoritative document and the catalog is the incomplete one; an entry
+that matches nothing bans nothing today and starts working when the
+catalog is fixed. Trimming it to fit today's data would quietly lose
+that.
+
+Also noted, not fixed: v1 spells Vulcan's subtitle "Aggession" while
+the ban list says "Aggression", so that one entry will not match until
+the typo is corrected. Left alone rather than editing v1 card data
+unasked.
+
+Verified in a real browser per house rules (headless Chromium via
+Playwright, recipe from the dev-environment memory): API + Vite dev
+server up, clicked through to the Team Builder, exercised the dropdown
+and checkbox. Counts nest sensibly - 343 with no format, 273 Silver,
+230 Bronze, 224 Bronze + Orange Ban - with no page errors. `npx tsc
+--noEmit` and `npm run build` both clean.

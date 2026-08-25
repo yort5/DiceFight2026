@@ -3,6 +3,8 @@ import { api } from "./api";
 import { stashPendingGame } from "./gameHandoff";
 import { navigate } from "./router";
 import { SET_NAMES } from "./sets";
+import { FORMATS } from "./formats";
+import { ORANGE_BAN_LIST, isOrangeBanned } from "./orangeBan";
 import type { CardDef } from "./types";
 
 // Now a real team builder (see RULES_ENGINE_DESIGN.md's next-steps
@@ -151,6 +153,12 @@ export function TeamBuilderPage() {
   const [activeAffiliations, setActiveAffiliations] = useState<Set<string>>(new Set());
   const [activeSets, setActiveSets] = useState<Set<string>>(new Set());
   const [showUnimplemented, setShowUnimplemented] = useState(false);
+  // Format is a single-select preset (the presets are mutually
+  // exclusive release-order cutoffs), while the Orange Ban list is a
+  // separate checkbox layered on top - it is normally used in
+  // conjunction with a format rather than instead of one.
+  const [formatId, setFormatId] = useState<string>("");
+  const [applyOrangeBan, setApplyOrangeBan] = useState(false);
   const [sort, setSort] = useState<{ key: SortKey; direction: "asc" | "desc" }>({
     key: "name",
     direction: "asc",
@@ -316,6 +324,8 @@ export function TeamBuilderPage() {
     );
   }
 
+  const activeFormat = useMemo(() => FORMATS.find((f) => f.id === formatId), [formatId]);
+
   const filtered = useMemo(() => {
     const needle = deferredSearch.trim().toLowerCase();
     return (cards ?? []).filter((c) => {
@@ -324,6 +334,8 @@ export function TeamBuilderPage() {
       if (activeEnergyTypes.size > 0 && !c.energyTypes.some((e) => activeEnergyTypes.has(e))) return false;
       if (activeAffiliations.size > 0 && !c.affiliations.some((a) => activeAffiliations.has(a))) return false;
       if (activeSets.size > 0 && (!c.set || !activeSets.has(c.set))) return false;
+      if (activeFormat && (!c.set || !activeFormat.sets.has(c.set))) return false;
+      if (applyOrangeBan && isOrangeBanned(c)) return false;
       if (needle.length === 0) return true;
       const setFullName = c.set ? SET_NAMES[c.set] : undefined;
       return (
@@ -335,7 +347,7 @@ export function TeamBuilderPage() {
         c.rawText.toLowerCase().includes(needle)
       );
     });
-  }, [cards, deferredSearch, activeTypes, activeEnergyTypes, activeAffiliations, activeSets, showUnimplemented]);
+  }, [cards, deferredSearch, activeTypes, activeEnergyTypes, activeAffiliations, activeSets, showUnimplemented, activeFormat, applyOrangeBan]);
 
   const sorted = useMemo(() => {
     const dir = sort.direction === "asc" ? 1 : -1;
@@ -433,6 +445,25 @@ export function TeamBuilderPage() {
                 ))}
               </div>
             </details>
+            <label title={activeFormat?.description ?? "No format restriction."}>
+              Format{" "}
+              <select value={formatId} onChange={(e) => setFormatId(e.target.value)}>
+                <option value="">No format</option>
+                {FORMATS.map((f) => (
+                  <option key={f.id} value={f.id} title={f.description}>
+                    {f.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label title={`Hide the ${ORANGE_BAN_LIST.length} cards on the community Orange Ban list. Applies on top of the selected format.`}>
+              <input
+                type="checkbox"
+                checked={applyOrangeBan}
+                onChange={(e) => setApplyOrangeBan(e.target.checked)}
+              />
+              Apply Orange Ban list
+            </label>
             <label>
               <input
                 type="checkbox"
