@@ -1,3 +1,17 @@
+/* #root in index.css is a FIXED width: 1126px, so the page never grows
+   with the window - which is why the catalog table always had a
+   horizontal scrollbar no matter how wide the browser was. The game
+   board is designed around that width and keeps it; the Team Builder is
+   a wide data table plus a sidebar and wants the room, so it opts out.
+   :has() degrades safely - browsers without it just keep the old width. */
+#root:has(.team-builder-layout) {
+  width: min(1800px, 100%);
+}
+
+.app:has(.team-builder-layout) {
+  max-width: 1800px;
+}
+
 .app {
   max-width: 1580px;
   margin: 0 auto;
@@ -958,7 +972,7 @@
 .rarity-chase { --rarity-colour: #8e44ad; }
 .rarity-promo { --rarity-colour: #2f6fd0; }
 
-.card-catalog-table tr[class*="rarity-"] td:first-child {
+.card-catalog-table tr[class*="rarity-"] > td:first-child {
   border-left: 6px solid var(--rarity-colour, transparent);
 }
 
@@ -977,6 +991,21 @@
   border-radius: 2px;
   background: var(--rarity-colour, transparent);
   vertical-align: -1px;
+}
+
+/* A card occupies two rows: the stats row and its printed text. Only the
+   text row carries the bottom border, so the pair reads as one entry. */
+.card-catalog-table tr.card-row > td {
+  border-bottom: none;
+  padding-bottom: 2px;
+}
+
+.card-catalog-table tr.card-text-row > td {
+  padding-top: 0;
+  padding-bottom: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  opacity: 0.85;
 }
 
 /* ---- Team Builder: team sidebar ---- */
@@ -1024,12 +1053,21 @@
 
 .team-list-item {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
+  flex-direction: column;
+  gap: 6px;
   padding: 6px 8px;
   border-radius: 8px;
   background: rgba(127, 127, 127, 0.08);
+}
+
+/* Name/subtitle on the left, stepper and Remove on the right. The printed
+   text is a SIBLING of this row, not a child, so it spans the panel's full
+   width rather than being trapped in the column beside the controls. */
+.team-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .team-card-identity {
@@ -1042,7 +1080,6 @@
 }
 
 .team-card-text {
-  margin-top: 5px;
   font-size: 12px;
   line-height: 1.35;
   opacity: 0.85;

@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { Fragment, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { api } from "./api";
 import { stashPendingGame } from "./gameHandoff";
 import { navigate } from "./router";
@@ -146,11 +146,6 @@ function rarityClass(rarity: string | null): string {
     case "Promo": return "rarity-promo";
     default: return "";
   }
-}
-
-function cardTooltip(card: CardDef): string {
-  const header = card.subtitle ? `${card.name} — ${card.subtitle}` : card.name;
-  return `${header}\n\n${card.rawText || "(blank text box)"}`;
 }
 
 // Rendered before the row cap below applies, so typing narrows the
@@ -372,13 +367,13 @@ export function TeamBuilderPage() {
       if (activeFormat && (!c.set || !activeFormat.sets.has(c.set))) return false;
       if (applyOrangeBan && isOrangeBanned(c)) return false;
       if (needle.length === 0) return true;
-      const setFullName = c.set ? SET_NAMES[c.set] : undefined;
+      // Deliberately NOT matched against the set code or set name: a
+      // search for "Thor" should find Thor, not all 137 cards in the Thor
+      // set. Picking a set is a filtering task and has its own checkboxes.
       return (
         c.name.toLowerCase().includes(needle) ||
         (c.subtitle?.toLowerCase().includes(needle) ?? false) ||
         c.affiliations.some((a) => a.toLowerCase().includes(needle)) ||
-        (c.set?.toLowerCase().includes(needle) ?? false) ||
-        (setFullName?.toLowerCase().includes(needle) ?? false) ||
         c.rawText.toLowerCase().includes(needle)
       );
     });
@@ -550,7 +545,8 @@ export function TeamBuilderPage() {
                     const l1 = level1(c);
                     const add = canAddCard(c);
                     return (
-                      <tr key={c.id} className={rarityClass(c.rarity)} title={cardTooltip(c)}>
+                      <Fragment key={c.id}>
+                      <tr className={`card-row ${rarityClass(c.rarity)}`}>
                         <td>
                           <button
                             className="team-add-button"
@@ -576,6 +572,15 @@ export function TeamBuilderPage() {
                         <td>{l1?.defense ?? "-"}</td>
                         <td>{c.isImplemented ? "✓" : ""}</td>
                       </tr>
+                      {/* Printed text on its own full-width row rather than
+                          in the Name cell: it spans every column, so it gets
+                          real room to read instead of squeezing the stats. */}
+                      <tr className={`card-text-row ${rarityClass(c.rarity)}`}>
+                        <td colSpan={COLUMNS.length + 1}>
+                          {c.rawText || <span className="hint">(blank text box)</span>}
+                        </td>
+                      </tr>
+                      </Fragment>
                     );
                   })}
                 </tbody>
@@ -601,14 +606,11 @@ export function TeamBuilderPage() {
             <ul className="team-list">
               {[...characterEntries, ...basicActionEntries].map(({ card, count }) => (
                 <li key={card.id} className={`team-list-item ${rarityClass(card.rarity)}`}>
-                  <div className="team-card-identity">
-                    <div className="team-card-name">{card.name}</div>
-                    {card.subtitle && <div className="hint">{card.subtitle}</div>}
-                    {/* Full printed text, Global included - the whole point of
-                        the sidebar is reviewing what the team actually does
-                        while you build it, so it is shown, not hovered for. */}
-                    <div className="team-card-text">{card.rawText || "(blank text box)"}</div>
-                  </div>
+                  <div className="team-card-header">
+                    <div className="team-card-identity">
+                      <div className="team-card-name">{card.name}</div>
+                      {card.subtitle && <div className="hint">{card.subtitle}</div>}
+                    </div>
                   {isBasicActionFamily(card) ? (
                     <span className="hint">{count} dice</span>
                   ) : (
@@ -631,6 +633,11 @@ export function TeamBuilderPage() {
                   <button className="team-remove-button" onClick={() => removeCard(card.id)}>
                     Remove
                   </button>
+                  </div>
+                  {/* Below the header, not beside it, so the printed text
+                      spans the panel's full width instead of being squeezed
+                      into the column left of the stepper. */}
+                  <div className="team-card-text">{card.rawText || "(blank text box)"}</div>
                 </li>
               ))}
             </ul>

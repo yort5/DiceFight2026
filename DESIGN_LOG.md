@@ -8856,3 +8856,46 @@ confirmed by the user.
 
 All 708 tests pass; `tsc --noEmit` and `npm run build` clean; verified
 in headless Chromium with no page errors.
+
+---
+
+## Team Builder usability pass: search, width, inline text (2026-08-25)
+
+Four fixes from the user actually using the tool.
+
+1. **Search no longer matches the set.** Searching "Thor" was dragging
+   in all 137 cards of the Thor set. Set code and set full name are out
+   of the predicate - picking a set is a filtering task with its own
+   checkboxes. "Thor" now returns 75 cards across 15 sets, only 15 of
+   them from THOR, and every one matches on name, affiliation or printed
+   text (verified: zero rows match on nothing else).
+
+2. **The table was width-locked, and `.app`'s max-width was a red
+   herring.** The real cause was `#root { width: 1126px }` in index.css -
+   a FIXED width, not a max-width, so the page never grew with the
+   window and the catalog always had a horizontal scrollbar. Measured
+   before touching anything: `.app` came back 1124px at 1280, 1600 and
+   2200px viewports alike.
+
+   The game board is designed around that width and keeps it, so the
+   override is scoped to the Team Builder via
+   `#root:has(.team-builder-layout)`. `:has()` degrades safely - a
+   browser without it just keeps the old behaviour. Now 830 / 1150 /
+   1350px of table at those three viewports with no scrollbar, while the
+   game page still measures exactly 1126. The `overflow-x` container
+   stays as a safety net and correctly still engages at 700px.
+
+3. **Sidebar printed text spans the panel.** The text is now a sibling
+   of the name/controls row rather than a child of the name column, so
+   it uses the full width instead of the strip left of the stepper.
+
+4. **Printed text is now inline in the catalog table**, on its own row
+   with `colSpan` across every column - hovering each card for a tooltip
+   was too slow to be usable. The two rows per card share a rarity
+   stripe and only the text row carries the bottom border, so a card
+   still reads as one entry. `cardTooltip` was deleted rather than left
+   dangling, since the text it produced is now always visible.
+
+All 708 tests pass; `tsc --noEmit` and `npm run build` clean; verified
+in headless Chromium at 700/900/1100/1280/1600/2200px with zero
+horizontal page overflow and no page errors.
