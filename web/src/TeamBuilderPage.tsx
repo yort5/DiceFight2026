@@ -634,9 +634,28 @@ export function TeamBuilderPage() {
                     Remove
                   </button>
                   </div>
-                  {/* Below the header, not beside it, so the printed text
-                      spans the panel's full width instead of being squeezed
-                      into the column left of the stepper. */}
+                  {/* Cost / energy / affiliation, the details that actually
+                      drive team selection - energy especially, since you are
+                      usually either balancing it or committing to one type.
+                      Type and Set are deliberately left out: neither changes
+                      a build decision, and the panel is narrow. */}
+                  <div className="team-card-meta">
+                    <span className="team-card-cost" title="Purchase cost">{card.purchaseCost}</span>
+                    <span>{card.energyTypes.join("/") || "No energy type"}</span>
+                    {card.affiliations.length > 0 && <span>{card.affiliations.join(", ")}</span>}
+                  </div>
+                  {card.levels.length > 0 && (
+                    // Every level, not just level 1: whether a die is worth
+                    // running often turns on what its level 2/3 faces do, and
+                    // the main table only ever shows level 1.
+                    <div className="team-card-levels" title="Per level: fielding cost / attack / defense">
+                      {card.levels.map((l, i) => (
+                        <span key={i}>
+                          <span className="hint">L{i + 1}</span> {l.fieldingCost}/{l.attack}/{l.defense}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   <div className="team-card-text">{card.rawText || "(blank text box)"}</div>
                 </li>
               ))}

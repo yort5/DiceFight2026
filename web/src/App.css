@@ -1079,6 +1079,37 @@
   font-weight: 600;
 }
 
+.team-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+/* The cost reads as a cost, not as another comma-separated word. */
+.team-card-cost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  font-weight: 600;
+  background: rgba(127, 127, 127, 0.25);
+}
+
+.team-card-levels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.9;
+}
+
 .team-card-text {
   font-size: 12px;
   line-height: 1.35;

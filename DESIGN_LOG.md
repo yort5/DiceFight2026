@@ -8899,3 +8899,33 @@ Four fixes from the user actually using the tool.
 All 708 tests pass; `tsc --noEmit` and `npm run build` clean; verified
 in headless Chromium at 700/900/1100/1280/1600/2200px with zero
 horizontal page overflow and no page errors.
+
+---
+
+## Team panel shows the details that drive selection (2026-08-25)
+
+From user feedback: the team sidebar listed only name, subtitle and
+printed text, which is not enough to judge a team. It now also carries,
+under the name:
+
+- **Purchase cost**, styled as a badge rather than another
+  comma-separated word - the user's reason being cheap characters as
+  insurance against a bad roll.
+- **Energy type(s)**, called out as the most important addition: a build
+  is usually either balancing energy across types or committing to one.
+  Dual-energy cards read "Bolt/Mask"; cards with none read "No energy
+  type" rather than showing an empty gap.
+- **Affiliations**.
+- **Fielding cost / attack / defense for EVERY level**, not just level 1.
+  Whether a die is worth running usually turns on what its level 2 and 3
+  faces do, and the main catalog table only ever shows level 1. Omitted
+  entirely for Actions and Basic Actions, which have no levels.
+
+**Type and Set are deliberately left out** per the user - neither changes
+a build decision, and the panel is narrow. Subtitle was offered up as
+droppable but kept: several characters have three or four printings with
+very different text (Vulcan has three), so it is what tells them apart.
+
+All 708 tests pass; `tsc --noEmit` and `npm run build` clean; verified in
+headless Chromium against a character, a dual-energy character and a
+Basic Action, with zero horizontal page overflow and no page errors.
