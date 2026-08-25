@@ -19,6 +19,9 @@ export interface CardDef {
   energyTypes: string[];
   affiliations: string[];
   alignment: string | null;
+  /** Printed rarity - display only, drives no rules. Null if the card
+   *  is not on the reference sheet. */
+  rarity: string | null;
   dieLimit: number;
   levels: CharacterFace[];
   rawText: string;

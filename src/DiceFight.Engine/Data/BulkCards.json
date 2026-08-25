@@ -142598,15 +142598,15 @@
   },
   {
     "id": "XMF036",
-    "name": "Madalyne Pryor",
+    "name": "Madelyne Pryor",
     "subtitle": "Sinister Origin",
     "type": "Character",
     "purchaseCost": 3,
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -142642,15 +142642,15 @@
   },
   {
     "id": "XMF037",
-    "name": "Madalyne Pryor",
+    "name": "Madelyne Pryor",
     "subtitle": "Anodyne",
     "type": "Character",
     "purchaseCost": 3,
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,

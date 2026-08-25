@@ -28,6 +28,25 @@ public static class BulkCardCatalog
 
     public static IReadOnlyList<CardDef> Load() => Cached.Value;
 
+    // Printed rarity for EVERY card on the reference sheet, hand-curated
+    // ones included - which is why it is a separate map rather than a
+    // field on BulkCardJson: the hand-curated cards are excluded from
+    // BulkCards.json by design, but still need colour-coding in the Team
+    // Builder. Display only; nothing in the rules engine reads it.
+    private static readonly Lazy<IReadOnlyDictionary<string, string>> CachedRarity =
+        new(LoadRarityUncached);
+
+    public static IReadOnlyDictionary<string, string> Rarities => CachedRarity.Value;
+
+    private static IReadOnlyDictionary<string, string> LoadRarityUncached()
+    {
+        using var stream = typeof(BulkCardCatalog).Assembly
+            .GetManifestResourceStream("DiceFight.Engine.Data.CardRarity.json")
+            ?? throw new InvalidOperationException("CardRarity.json embedded resource not found.");
+        return JsonSerializer.Deserialize<Dictionary<string, string>>(stream, JsonOptions)
+            ?? throw new InvalidOperationException("CardRarity.json deserialized to null.");
+    }
+
     private static IReadOnlyList<CardDef> LoadUncached()
     {
         using var stream = typeof(BulkCardCatalog).Assembly

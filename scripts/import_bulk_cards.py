@@ -23,6 +23,14 @@ from pathlib import Path
 SHEET_ID = "19_XaXj37QQSoCvyVdiUFBml4cnUqk3H5YtrO_Di871A"
 REPO_ROOT = Path(__file__).resolve().parent.parent
 OUTPUT_PATH = REPO_ROOT / "src" / "DiceFight.Engine" / "Data" / "BulkCards.json"
+# Rarity is display-only (it colour-codes the Team Builder) and, unlike
+# everything else here, is needed for the HAND-CURATED cards too - which
+# are deliberately excluded from BulkCards.json. So it ships as its own
+# id -> rarity map covering every sheet row, applied to the whole merged
+# catalog in SampleCards.BuildCatalog(). One map beats adding a rarity
+# argument to 200 hand-written Character(...) call sites, and it stays
+# correct on its own when the sheet changes.
+RARITY_PATH = REPO_ROOT / "src" / "DiceFight.Engine" / "Data" / "CardRarity.json"
 SAMPLE_CARDS_PATH = REPO_ROOT / "src" / "DiceFight.Engine" / "Data" / "SampleCards.cs"
 
 # All known set tab names (== short set codes) per the SetInfo tab -
@@ -442,6 +450,7 @@ def main():
     print(f"Excluding {len(existing_ids)} already hand-curated ids from bulk import.")
 
     entries = []
+    rarity_by_id = {}
     seen_ids = set()
     reasons = Counter()
     total_rows = 0
@@ -457,6 +466,8 @@ def main():
                 continue
             total_rows += 1
             card_id = row[0].strip()
+            if len(row) > 5 and norm(row[5]):
+                rarity_by_id[card_id] = norm(row[5])
             if card_id in existing_ids:
                 reasons["already hand-curated (skipped)"] += 1
                 continue
@@ -470,6 +481,11 @@ def main():
             seen_ids.add(card_id)
             entries.append(entry)
             type_counts[entry["type"]] += 1
+
+    RARITY_PATH.write_text(
+        json.dumps(dict(sorted(rarity_by_id.items())), indent=1) + "\n", encoding="utf-8")
+    print(f"Wrote {len(rarity_by_id)} id -> rarity entries to "
+          f"{RARITY_PATH.relative_to(REPO_ROOT)}")
 
     entries.sort(key=lambda e: e["id"])
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)

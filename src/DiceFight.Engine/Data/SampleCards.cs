@@ -4359,6 +4359,19 @@ public static class SampleCards
         {
             catalog.TryAdd(bulkCard.Id, bulkCard);
         }
+
+        // Rarity is stamped on here, after the merge, so the hand-curated
+        // cards get it too without 200 Character(...) call sites each
+        // repeating a display-only value. Cards absent from the sheet
+        // (Tokens, anything invented) simply keep a null Rarity.
+        var rarities = BulkCardCatalog.Rarities;
+        foreach (var (id, card) in catalog.ToList())
+        {
+            if (rarities.TryGetValue(id, out var rarity))
+            {
+                catalog[id] = card with { Rarity = rarity };
+            }
+        }
         return catalog;
     }
 }

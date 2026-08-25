@@ -14,6 +14,7 @@ public sealed record GlobalAbilityCostDto(int Amount, string? RequiredType);
 public sealed record CardDefDto(
     string Id, string Name, string? Subtitle, string Type, int PurchaseCost,
     IReadOnlyList<string> EnergyTypes, IReadOnlyList<string> Affiliations, string? Alignment,
+    string? Rarity,
     int DieLimit, IReadOnlyList<CharacterFaceDto> Levels, string RawText,
     IReadOnlyList<string> Keywords, IReadOnlyList<string> AbilityTriggers,
     GlobalAbilityCostDto? GlobalAbilityCost, bool GlobalAbilityNeedsTarget, bool IsImplemented,
@@ -26,7 +27,7 @@ public sealed record CardDefDto(
         return new(
             card.Id, card.Name, card.Subtitle, card.Type.ToString(), card.PurchaseCost,
             card.EnergyTypes.Select(e => e.ToString()).ToList(),
-            card.Affiliations, card.Alignment?.ToString(), card.DieLimit,
+            card.Affiliations, card.Alignment?.ToString(), card.Rarity, card.DieLimit,
             card.Levels.Select(l => new CharacterFaceDto(l.FieldingCost, l.Attack, l.Defense, l.BurstStars)).ToList(),
             card.RawText, card.Keywords.Select(k => k.Name).ToList(),
             card.Abilities.Select(a => a.Trigger.ToString()).Distinct().ToList(),

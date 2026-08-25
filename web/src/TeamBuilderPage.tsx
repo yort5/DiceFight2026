@@ -119,6 +119,25 @@ function sortValue(card: CardDef, key: SortKey): string | number {
   }
 }
 
+// Rarity colour-coding, matching the old Teambuilder's stripe colours.
+// "Super" and "Super-Rare" are the same tier spelled two ways across the
+// sheet's tabs, so they share a class. Chase (4 cards in the whole
+// catalog) is rarer still and has no assigned colour yet - it gets its
+// own class so it is at least distinguishable rather than silently
+// falling in with Common.
+function rarityClass(rarity: string | null): string {
+  switch (rarity) {
+    case "Common": return "rarity-common";
+    case "Uncommon": return "rarity-uncommon";
+    case "Rare": return "rarity-rare";
+    case "Super":
+    case "Super-Rare": return "rarity-super";
+    case "Chase": return "rarity-chase";
+    case "Promo": return "rarity-promo";
+    default: return "";
+  }
+}
+
 function cardTooltip(card: CardDef): string {
   const header = card.subtitle ? `${card.name} — ${card.subtitle}` : card.name;
   return `${header}\n\n${card.rawText || "(blank text box)"}`;
@@ -152,7 +171,10 @@ export function TeamBuilderPage() {
   const [activeEnergyTypes, setActiveEnergyTypes] = useState<Set<string>>(new Set());
   const [activeAffiliations, setActiveAffiliations] = useState<Set<string>>(new Set());
   const [activeSets, setActiveSets] = useState<Set<string>>(new Set());
-  const [showUnimplemented, setShowUnimplemented] = useState(false);
+  // Defaults to TRUE: the catalog is useful as a reference long before the
+  // simulator covers it, and in this phase it gets far more use than the
+  // game does, so hiding four fifths of the cards by default is backwards.
+  const [showUnimplemented, setShowUnimplemented] = useState(true);
   // Format is a single-select preset (the presets are mutually
   // exclusive release-order cutoffs), while the Orange Ban list is a
   // separate checkbox layered on top - it is normally used in
@@ -370,12 +392,12 @@ export function TeamBuilderPage() {
         {error && <div className="error">{error}</div>}
       </header>
 
-      <div className="app-layout">
+      <div className="app-layout team-builder-layout">
         <div className="main-column">
           <h2>Team Builder - Card Search</h2>
           <p className="hint">
-            Browse the full card catalog. "OK" means the card's full printed text is correctly modeled by the
-            engine - unimplemented cards are hidden by default.
+            Browse the full card catalog. "OK" marks the cards whose full printed text is already modeled by
+            the engine; the rest are searchable here but not yet playable in a game.
           </p>
 
           <div className="card-catalog-filters">
@@ -481,6 +503,10 @@ export function TeamBuilderPage() {
               <p className="hint">
                 {sorted.length} card(s) match{sorted.length > MAX_ROWS ? ` (showing first ${MAX_ROWS} - narrow your search to see more)` : ""}.
               </p>
+              {/* The table has more columns than the narrowed main column
+                  can always fit, so it scrolls inside its own box rather
+                  than sliding under the sticky team sidebar. */}
+              <div className="card-catalog-scroll">
               <table className="card-catalog-table">
                 <thead>
                   <tr>
@@ -498,7 +524,7 @@ export function TeamBuilderPage() {
                     const l1 = level1(c);
                     const add = canAddCard(c);
                     return (
-                      <tr key={c.id} className={c.isImplemented ? "" : "unimplemented"} title={cardTooltip(c)}>
+                      <tr key={c.id} className={rarityClass(c.rarity)} title={cardTooltip(c)}>
                         <td>
                           <button
                             className="team-add-button"
@@ -528,6 +554,7 @@ export function TeamBuilderPage() {
                   })}
                 </tbody>
               </table>
+              </div>
             </>
           )}
         </div>
@@ -548,9 +575,13 @@ export function TeamBuilderPage() {
             <ul className="team-list">
               {[...characterEntries, ...basicActionEntries].map(({ card, count }) => (
                 <li key={card.id} className="team-list-item">
-                  <div>
+                  <div className="team-card-identity">
                     <div className="team-card-name">{card.name}</div>
                     {card.subtitle && <div className="hint">{card.subtitle}</div>}
+                    {/* Full printed text, Global included - the whole point of
+                        the sidebar is reviewing what the team actually does
+                        while you build it, so it is shown, not hovered for. */}
+                    <div className="team-card-text">{card.rawText || "(blank text box)"}</div>
                   </div>
                   {isBasicActionFamily(card) ? (
                     <span className="hint">{count} dice</span>

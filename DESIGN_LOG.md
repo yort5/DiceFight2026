@@ -8762,3 +8762,63 @@ ids, 2 promo rows with bad energy (user is fixing those). Catalog 3781
 pass. Verified in headless Chromium: promos present (Trinity War),
 Angel "Wings Over the World" reads MAX 5, Multiple Man "Pile On!" reads
 MAX 6, no page errors.
+
+---
+
+## Team Builder: catalog-first defaults, ability text, rarity colours (2026-08-25)
+
+Five changes, on the user's framing that in this phase the Team Builder
+is used far more than the simulator is.
+
+1. **Madelyne Pryor** fixed in the sheet, so XMF036/XMF037 stopped
+   falling through to the default die limit of 1 and now read 4 like
+   every other printing.
+2. **"Show not-yet-fully-implemented cards" now defaults to ON.** The
+   catalog is useful as a reference long before the engine covers it,
+   and hiding four fifths of the cards by default was backwards. The
+   blurb changed with it - "OK" now reads as a positive marker rather
+   than an explanation of what is hidden.
+3. **Unimplemented cards are no longer dimmed** (dropped the
+   `opacity: 0.5` rule). They are the common case now, not an exception.
+4. **The team sidebar shows each card's full printed text**, Global
+   included, straight from `RawText` - reviewing what a team actually
+   does while building it is the point of the panel, so it is shown
+   rather than hidden behind a tooltip.
+5. **Rarity colour-coding**, per the user's palette: Common grey,
+   Uncommon green, Rare yellow, Super/Super-Rare red, Promo blue. Drawn
+   as a left stripe rather than a row tint - it reads at a glance,
+   survives both themes, and does not fight the table's hover/zebra
+   styling.
+
+**Rarity needed real plumbing**, which is worth recording since the ask
+looked like pure CSS. Rarity had just been removed from the pipeline (it
+gates nothing now that die limit no longer derives from it), so it had
+to come back: `CardDef.Rarity`, a DTO field, a web type, and a source.
+
+The source is deliberately NOT a field on BulkCards.json. Hand-curated
+cards are excluded from that file by design, but still need colouring -
+so the importer emits a separate `Data/CardRarity.json`, an id -> rarity
+map covering **every** sheet row (4086 entries), embedded alongside
+BulkCards.json and stamped onto the merged catalog in
+`SampleCards.BuildCatalog()`. One map beats adding a display-only
+argument to 200 hand-written `Character(...)` call sites, and it stays
+correct on its own as the sheet changes. `CardDef.Rarity` carries an
+explicit comment that it drives nothing in the engine - in particular
+not die limit, the assumption that started all this.
+
+Two layout fixes fell out of showing ability text: the Team Builder's
+sidebar column went 280px -> 380px (scoped to `.team-builder-layout`,
+since `.app-layout` is shared with the game board and should not
+change), and the catalog table now scrolls inside its own
+`overflow-x: auto` box instead of sliding under the sticky sidebar.
+Verified: zero horizontal page overflow.
+
+Catalog 4084 cards, every one carrying a rarity. All 708 tests pass;
+`tsc --noEmit` and `npm run build` clean; verified in headless Chromium
+with no page errors - the checkbox defaults checked, first-row opacity
+is 1, five distinct stripe colours render, and the sidebar shows both a
+character's Global and a Basic Action's full text.
+
+**Open question**: "Chase" (4 cards in the entire catalog) had no colour
+in the user's list. Given a distinct purple so it is at least not
+silently indistinguishable from Common - worth confirming.

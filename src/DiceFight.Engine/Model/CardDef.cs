@@ -22,6 +22,14 @@ public sealed record CardDef
     public IReadOnlyList<string> Affiliations { get; init; } = [];
     public Alignment? Alignment { get; init; }
 
+    // Printed rarity ("Common", "Uncommon", "Rare", "Super", "Super-Rare",
+    // "Chase", "Promo"). Display only - it colour-codes the Team Builder
+    // and deliberately drives NOTHING in the rules engine. In particular it
+    // does not imply a die limit: that was an old assumption, disproved
+    // outright (see DESIGN_LOG.md's max-dice entry). Null when the card is
+    // absent from the reference sheet.
+    public string? Rarity { get; init; }
+
     // Rule 1.2.10/1.2.11 - Max # on the card; Basic Actions always use 3.
     public required int DieLimit { get; init; }
 

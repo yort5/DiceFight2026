@@ -12,8 +12,16 @@
   align-items: start;
 }
 
+/* The Team Builder's sidebar carries each card's full printed text, so
+   it needs materially more room than the game board's does. Scoped to
+   this page rather than widening .app-layout, which the game shares. */
+.app-layout.team-builder-layout {
+  grid-template-columns: 1fr 380px;
+}
+
 @media (max-width: 1100px) {
-  .app-layout {
+  .app-layout,
+  .app-layout.team-builder-layout {
     grid-template-columns: 1fr;
   }
 }
@@ -903,6 +911,11 @@
   gap: 4px 10px;
 }
 
+.card-catalog-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
 .card-catalog-table {
   width: 100%;
   border-collapse: collapse;
@@ -931,9 +944,20 @@
   font-size: 10px;
 }
 
-.card-catalog-table tr.unimplemented {
-  opacity: 0.5;
+/* ---- Team Builder: rarity colour-coding ----
+   A left stripe rather than a row tint: it reads at a glance, stays
+   legible in both themes, and does not fight the table's own hover and
+   zebra striping the way a background colour would. */
+.card-catalog-table tr[class^="rarity-"] td:first-child,
+.card-catalog-table tr[class*=" rarity-"] td:first-child {
+  border-left: 4px solid transparent;
 }
+.card-catalog-table tr.rarity-common td:first-child { border-left-color: #9aa0a6; }
+.card-catalog-table tr.rarity-uncommon td:first-child { border-left-color: #2e9e4f; }
+.card-catalog-table tr.rarity-rare td:first-child { border-left-color: #d4a017; }
+.card-catalog-table tr.rarity-super td:first-child { border-left-color: #cc3333; }
+.card-catalog-table tr.rarity-chase td:first-child { border-left-color: #8e44ad; }
+.card-catalog-table tr.rarity-promo td:first-child { border-left-color: #2f6fd0; }
 
 /* ---- Team Builder: team sidebar ---- */
 
@@ -980,16 +1004,30 @@
 
 .team-list-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
   padding: 6px 8px;
   border-radius: 8px;
   background: rgba(127, 127, 127, 0.08);
 }
 
+.team-card-identity {
+  min-width: 0;
+  flex: 1;
+}
+
 .team-card-name {
   font-weight: 600;
+}
+
+.team-card-text {
+  margin-top: 5px;
+  font-size: 12px;
+  line-height: 1.35;
+  opacity: 0.85;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .team-stepper {
