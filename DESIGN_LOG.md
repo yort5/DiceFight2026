@@ -8701,3 +8701,64 @@ Outsider, 1WKO16DC Terry McGinnis). And two promo ids are used twice -
 6DC2016 is both Scarecrow "Legion of Doom" and Lois Lane "DC Bombshell"
 - two 2016 DC promo series sharing one numbering scheme. The importer
 keeps the first and drops the second as "duplicate id within sheet".
+
+---
+
+## Max dice comes from the old Teambuilder, not from rarity (2026-08-25)
+
+The user corrected a wrong assumption baked into the importer since the
+first bulk import: **rarity has no direct bearing on max dice.**
+`RARITY_TO_DIE_LIMIT` (Common 4, Uncommon 3, Rare 2, Super 1) was an
+invention, and the sheet has no die-limit column to replace it with.
+
+The evidence is unambiguous. Decoding the old Teambuilder's DPS array
+shows max dice varying freely *within* a rarity - rarity 1 yields both
+MAX 4 and MAX 5, rarity 4 yields both MAX 2 and MAX 5:
+
+    124X5  Angel - Wings Over the World     rarity 1, cost 2, MAX 5
+    123X4  Jubilee - Rebellious Nature      rarity 1, cost 2, MAX 4
+    434X2  Angel - Xavier's Dream           rarity 4, cost 3, MAX 2
+    443X5  Jubilee - X-Men Field Leader     rarity 4, cost 4, MAX 5
+
+Across every card both sources knew, the formula and the real values
+disagreed on **1605 of 3352**.
+
+**New source.** `scripts/extract_maxdice.py` reads the old Teambuilder's
+`cards.php`, which packs each card as a fixed-width header plus
+"Name|Subtitle|Ability|..." - per its index.php, `[4]` is max dice and
+`p_src = set[i].substring(is_dnd ? 7 : 5)`, so the header is 5 wide (7
+for the six D&D sets, plus their product-named promo arrays). Output is
+`scripts/maxdice.json`, keyed on name+subtitle because the promo arrays
+(avxop, m_op2019, wd_op2018) do not map to sheet set codes at all.
+3737 entries, **zero conflicts**. The offset is confirmed correct by
+decoding the other fields: cost, energy and affiliation all match the
+sheet independently.
+
+**Lookup order** in the importer: exact name+subtitle; then name alone,
+but only for names whose every printing agrees (catches the ~199 cards
+where the two sources spell a subtitle differently - "Big Enterance");
+then `DEFAULT_DIE_LIMIT = 1`, the user's call and the safe direction,
+since too low a limit can never make an illegal team look legal.
+Resulting sources: 3400 exact, 231 by-name, 253 default. Recorded
+per-card as `dieLimitSource` so the defaults are findable when the sheet
+grows a real column.
+
+**Rarity is now read for reference only** and gates nothing - which
+also, as a side effect, removed the last obstacle for promos. "unknown
+rarity" went from 105 skips to zero, so all 104 promo characters and the
+three promo printings filed under other sets (Belaphoss, Bat-Mite,
+Squirrel Girl) now import.
+
+**SampleCards.cs had the same bug.** 162 of its 174 hand-curated die
+limits exactly equalled the old rarity formula - i.e. they were derived
+from it, not verified against real cards - so they inherited the error.
+Corrected 102 of them from the same source; one (XMF035 Madalyne Pryor,
+"Red Queen") is unknown to the old Teambuilder and was left alone rather
+than defaulted, since an existing value beats a guess.
+
+Skip reasons are now down to noise: 200 hand-curated, 2 duplicate promo
+ids, 2 promo rows with bad energy (user is fixing those). Catalog 3781
+-> 3884 bulk, **4084 merged** (4015 with the Orange Ban). All 708 tests
+pass. Verified in headless Chromium: promos present (Trinity War),
+Angel "Wings Over the World" reads MAX 5, Multiple Man "Pile On!" reads
+MAX 6, no page errors.

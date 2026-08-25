@@ -79,7 +79,18 @@ DOUBLE_DIGIT_STAT = {
     "The Winged Dragon of Ra": "defense",   # 157 268 3810 -> 3/8/10
     "White Lantern Dove": "defense",        # 022 033 1410 -> 1/4/10
 }
-RARITY_TO_DIE_LIMIT = {"Common": 4, "Uncommon": 3, "Rare": 2, "Super": 1, "Super-Rare": 1, "Chase": 1}
+# Die limit is NOT derivable from rarity. This used to map the rarity/
+# "Stripe" column to a limit (Common 4, Uncommon 3, ...), which the user
+# confirmed is simply wrong - rarity has no direct bearing on max dice,
+# and checking against the old Teambuilder's real per-card values bore
+# that out: the two disagreed on 1605 of the 3352 cards both knew about.
+# So rarity is no longer consulted at all, and max dice comes from
+# scripts/maxdice.json (see extract_maxdice.py) until the sheet grows a
+# column of its own.
+MAXDICE_PATH = REPO_ROOT / "scripts" / "maxdice.json"
+DEFAULT_DIE_LIMIT = 1  # user's call: when unknown, 1 - the safe direction,
+                       # since too LOW a limit can never make an illegal
+                       # team look legal.
 
 _single_kw_alts = [re.escape(k) for k in PURE_KEYWORDS] + [re.escape(k) + r" \d+" for k in PARAM_KEYWORDS]
 _one_kw = r"(?:" + "|".join(_single_kw_alts) + r")(?:\s*\([^()]*\)\.?)?"
@@ -95,6 +106,43 @@ def fetch_set_csv(code):
     url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={code}"
     with urllib.request.urlopen(url, timeout=30) as resp:
         return resp.read().decode("utf-8")
+
+
+def load_max_dice():
+    """(exact key -> limit, name-only key -> limit) from maxdice.json.
+
+    The name-only map holds just those names whose every printing in the
+    old Teambuilder agrees on a limit; it catches the ~199 cards where the
+    two sources spell a subtitle differently ("Big Enterance") without
+    guessing for the ~72 names whose printings genuinely differ."""
+    if not MAXDICE_PATH.exists():
+        print(f"WARNING: {MAXDICE_PATH.name} missing - every card will default to "
+              f"{DEFAULT_DIE_LIMIT}. Run scripts/extract_maxdice.py first.")
+        return {}, {}
+    exact = json.loads(MAXDICE_PATH.read_text(encoding="utf-8"))["maxDice"]
+    by_name = {}
+    for key, value in exact.items():
+        name = key.split("|")[0]
+        if name in by_name and by_name[name] != value:
+            by_name[name] = None       # printings disagree - refuse to guess
+        elif name not in by_name:
+            by_name[name] = value
+    return exact, {n: v for n, v in by_name.items() if v is not None}
+
+
+def lookup_die_limit(max_dice, name, subtitle):
+    exact, by_name = max_dice
+    key = f"{normalize_key(name)}|{normalize_key(subtitle)}"
+    if key in exact:
+        return exact[key], "teambuilder"
+    hit = by_name.get(normalize_key(name))
+    if hit is not None:
+        return hit, "teambuilder-name"
+    return DEFAULT_DIE_LIMIT, "default"
+
+
+def normalize_key(s):
+    return re.sub(r"[^a-z0-9]", "", (s or "").lower())
 
 
 def existing_hand_curated_ids():
@@ -293,7 +341,7 @@ def match_ability_template(ability, name):
     return None
 
 
-def classify_row(code, row):
+def classify_row(code, row, max_dice):
     if len(row) < 9 or not row[0].strip():
         return None, "empty row"
     card_id = row[0].strip()
@@ -301,7 +349,7 @@ def classify_row(code, row):
     subtitle = norm(row[2])
     cost_raw = row[3].strip()
     energy_raw = norm(row[4])
-    rarity = norm(row[5])
+    rarity = norm(row[5])  # read for reference only - no longer sets die limit
     ability = norm(row[7])
     if is_no_ability_placeholder(ability):
         ability = ""
@@ -320,7 +368,7 @@ def classify_row(code, row):
         card_type = "Character"
 
     levels = None
-    die_limit = 3
+    die_limit, die_limit_source = lookup_die_limit(max_dice, name, subtitle)
     energy_type = []
     stats_missing = False
 
@@ -335,9 +383,6 @@ def classify_row(code, row):
             levels = parse_faces(statline, name)
             if levels is None:
                 return None, "character unparseable stat line"
-        if rarity not in RARITY_TO_DIE_LIMIT:
-            return None, "unknown rarity"
-        die_limit = RARITY_TO_DIE_LIMIT[rarity]
     elif card_type == "Action":
         if energy_raw in GENERIC_ENERGY:
             energy_type = []
@@ -378,6 +423,7 @@ def classify_row(code, row):
         "purchaseCost": purchase_cost,
         "energyTypes": energy_type,
         "dieLimit": die_limit,
+        "dieLimitSource": die_limit_source,
         "levels": levels,
         "statsMissing": stats_missing,
         "rawText": ability,
@@ -391,6 +437,7 @@ def classify_row(code, row):
 
 
 def main():
+    max_dice = load_max_dice()
     existing_ids = existing_hand_curated_ids()
     print(f"Excluding {len(existing_ids)} already hand-curated ids from bulk import.")
 
@@ -416,7 +463,7 @@ def main():
             if card_id in seen_ids:
                 reasons["duplicate id within sheet"] += 1
                 continue
-            entry, skip_reason = classify_row(code, row)
+            entry, skip_reason = classify_row(code, row, max_dice)
             if entry is None:
                 reasons[skip_reason] += 1
                 continue
@@ -436,6 +483,8 @@ def main():
     print(f"Auto-IsImplemented=true (blank/pure-keyword/templated): {implemented_count}")
     print(f"  of which via an ability template ({len(templated)}): " +
           ", ".join(f"{e['id']}={e['abilityTemplate']['effect']}" for e in templated))
+    sources = Counter(e["dieLimitSource"] for e in entries)
+    print(f"Die limit sources: {dict(sources)}")
     print("\nSkip reasons:")
     for reason, count in reasons.most_common():
         print(f"  {count:5d}  {reason}")

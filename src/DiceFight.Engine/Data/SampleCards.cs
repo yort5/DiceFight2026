@@ -200,7 +200,7 @@ public static class SampleCards
     // and none distinguish "combat" from "non-combat" at the point
     // they'd need to check it) - left vanilla, isImplemented: false.
     public static readonly CardDef BigBarda = Character(
-        "SKC021", "Big Barda", "Formerly of Apokolips", dieLimit: 4,
+        "SKC021", "Big Barda", "Formerly of Apokolips", dieLimit: 3,
         "Ignore all non-combat damage dealt to Big Barda.",
         purchaseCost: 3, energyType: EnergyType.Fist,
         levels: [
@@ -231,7 +231,7 @@ public static class SampleCards
         affiliations: ["Avengers", "Infinity Watch"], set: "MSW");
 
     public static readonly CardDef HarleyQuinn = Character(
-        "SKC032", "Harley Quinn", "Bright Lights Big City", dieLimit: 4,
+        "SKC032", "Harley Quinn", "Bright Lights Big City", dieLimit: 3,
         "", // real card, genuinely blank text box
         purchaseCost: 1, energyType: EnergyType.Mask,
         levels: [
@@ -504,7 +504,7 @@ public static class SampleCards
         isImplemented: false, set: "WF");
 
     public static readonly CardDef AlfredPennyworthMI5 = Character(
-        "WF075", "Alfred Pennyworth", "MI-5", dieLimit: 3,
+        "WF075", "Alfred Pennyworth", "MI-5", dieLimit: 4,
         "Ally - When KO'd, you may roll a Sidekick or Batman die from your Used Pile. If you roll an energy " +
         "result, return Alfred to the Field Zone at level 1. Either way, return the rolled die to the Used Pile.",
         purchaseCost: 2, energyType: EnergyType.Shield,
@@ -517,7 +517,7 @@ public static class SampleCards
         isImplemented: false, set: "WF");
 
     public static readonly CardDef AlfredPennyworthToughAsNails = Character(
-        "WF107", "Alfred Pennyworth", "Tough as Nails", dieLimit: 2,
+        "WF107", "Alfred Pennyworth", "Tough as Nails", dieLimit: 4,
         "Ally - When fielded, give target Batman die or target Sidekick +1 attack and +1 defense " +
         "(besides Alfred Pennyworth) while attacking this turn.",
         purchaseCost: 2, energyType: EnergyType.Shield,
@@ -705,7 +705,7 @@ public static class SampleCards
     // correctly without cross-wiring anything Ally- or Swarm-specific
     // together - each one only knows its own rule.
     public static readonly CardDef Darkseid = Character(
-        "BAT117", "Darkseid", "Force of Entropy", dieLimit: 1, // Super Rare
+        "BAT117", "Darkseid", "Force of Entropy", dieLimit: 4, // Super Rare
         "While Darkseid is active, your Sidekicks gain Swarm.",
         purchaseCost: 6, energyType: EnergyType.Bolt,
         grantsToSidekicks: ["Swarm"],
@@ -723,7 +723,7 @@ public static class SampleCards
     // later at Clean Up, regardless of what happens to either die in
     // between - see the design doc for the full reasoning).
     public static readonly CardDef Deathbird = Character(
-        "DPS029", "Deathbird", "Treacherous", dieLimit: 4,
+        "DPS029", "Deathbird", "Treacherous", dieLimit: 2,
         "Deadly",
         purchaseCost: 2, energyType: EnergyType.Shield,
         keywords: [new KeywordInstance("Deadly")],
@@ -789,7 +789,7 @@ public static class SampleCards
     // Ricochet itself) triggers it, same shape as Attune reacting to
     // "you use an Action die." See TriggerType.WhenInfiltrates.
     public static readonly CardDef Ricochet = Character(
-        "GOTG105", "Ricochet", "Slinger", dieLimit: 2,
+        "GOTG105", "Ricochet", "Slinger", dieLimit: 4,
         "Infiltrate. While Ricochet is active, each time one of your character dice uses Infiltrate, draw a " +
         "die from your bag and add it to your Prep Area.",
         purchaseCost: 3, energyType: EnergyType.Bolt,
@@ -888,7 +888,7 @@ public static class SampleCards
     // HasStrikeBonus), not a triggered effect, same shape as Loyalty
     // counters or Darkseid's keyword grant.
     public static readonly CardDef BizarroMoreThanAMonster = Character(
-        "JUS008", "Bizarro", "More Than a Monster", dieLimit: 4,
+        "JUS008", "Bizarro", "More Than a Monster", dieLimit: 2,
         "Strike (This character gets +2A, +2D, and Overcrush so long as it is the only character die you " +
         "fielded this turn.)",
         purchaseCost: 7, energyType: EnergyType.Shield,
@@ -1142,7 +1142,7 @@ public static class SampleCards
     // so far only ever meant the ability's own controller, so the node
     // had no way to say otherwise until now.
     public static readonly CardDef RonanTheAccuserTreason = Character(
-        "DPS050", "Ronan the Accuser", "Treason!", dieLimit: 4,
+        "DPS050", "Ronan the Accuser", "Treason!", dieLimit: 3,
         "When Ronan the Accuser is fielded, lose 1 life. When Ronan the Accuser is KO'd, your opponent loses 1 life.",
         purchaseCost: 5, energyType: EnergyType.Bolt,
         abilities: [
@@ -1408,7 +1408,7 @@ public static class SampleCards
     // burst-symbol status update), so it's recorded on the levels below
     // for data accuracy but not wired into any Conditional.
     public static readonly CardDef GambitUnlessIGotSomeoneToPlayWith = Character(
-        "DPS112", "Gambit", "Unless I Got Someone to Play With", dieLimit: 2,
+        "DPS112", "Gambit", "Unless I Got Someone to Play With", dieLimit: 4,
         "When fielded, reroll up to 2 target opposing character dice. Each die that doesn't roll a character " +
         "goes to your opponent's Used Pile.",
         purchaseCost: 5, energyType: EnergyType.Mask,
@@ -1428,7 +1428,7 @@ public static class SampleCards
     // second user, this time with the DamagePerMovedToOpponent follow-up
     // ("Psylocke deals 2 damage to your opponent for each die moved").
     public static readonly CardDef PsylockeAdvancedTelekineticCombatant = Character(
-        "DPS150", "Psylocke", "Advanced Telekinetic Combatant", dieLimit: 1,
+        "DPS150", "Psylocke", "Advanced Telekinetic Combatant", dieLimit: 4,
         "When fielded, reroll up to 2 opposing character dice. Each die that does not roll a character goes " +
         "to your opponent's Used Pile. Psylocke deals 2 damage to your opponent for each die moved.",
         purchaseCost: 5, energyType: EnergyType.Mask,
@@ -1457,7 +1457,7 @@ public static class SampleCards
     // self-defeating effect with no precedent anywhere in the set. Read
     // as the same RerollAndMoveUnlessCharacter shape as Psylocke.
     public static readonly CardDef StormQueen = Character(
-        "DPS132", "Storm", "Queen", dieLimit: 2,
+        "DPS132", "Storm", "Queen", dieLimit: 4,
         "When Fielded, reroll target character die. When Storm attacks, reroll up to 2 opposing character " +
         "dice. Move each die that does roll a character goes to you opponent's Used Pile. Storm deals 2 " +
         "damage to your opponent for each die moved. Energize - Reroll target opposing character die",
@@ -1492,7 +1492,7 @@ public static class SampleCards
     // Energize/Awaken bug was, just on the "own printed Keywords" side
     // instead of the "own AbilityDef" side).
     public static readonly CardDef MagikSorceressOfLimbo = Character(
-        "DPS120", "Magik", "Sorceress of Limbo", dieLimit: 2,
+        "DPS120", "Magik", "Sorceress of Limbo", dieLimit: 4,
         "When fielded, target character die gains Overcrush and +2A.",
         purchaseCost: 4, energyType: EnergyType.Mask,
         affiliations: ["X-Men"],
@@ -1510,7 +1510,7 @@ public static class SampleCards
     // Psylocke, "Telepath" - GrantKeyword's second user, no stat buff
     // attached this time.
     public static readonly CardDef PsylockeTelepath = Character(
-        "DPS088", "Psylocke", "Telepath", dieLimit: 3,
+        "DPS088", "Psylocke", "Telepath", dieLimit: 2,
         "When fielded, target character die gets Overcrush.",
         purchaseCost: 2, energyType: EnergyType.Mask,
         affiliations: ["X-Men"],
@@ -1526,7 +1526,7 @@ public static class SampleCards
     // first used CantBlock: TargetSpec.MaxAttack (new this pass), the
     // stat-threshold filter "target character die with 3A or less" needs.
     public static readonly CardDef StormCloudCover = Character(
-        "DPS092", "Storm", "Cloud Cover", dieLimit: 3,
+        "DPS092", "Storm", "Cloud Cover", dieLimit: 4,
         "When fielded, target character die with 3A or less can't block this turn.",
         purchaseCost: 4, energyType: EnergyType.Bolt,
         affiliations: ["X-Men"],
@@ -1542,7 +1542,7 @@ public static class SampleCards
     // TargetSpec.RequiredAffiliations (new this pass), a plain single-
     // affiliation KO with nothing else on the card.
     public static readonly CardDef MasterMoldTargetingMutants = Character(
-        "DPS082", "Master Mold", "Targeting Mutants", dieLimit: 3,
+        "DPS082", "Master Mold", "Targeting Mutants", dieLimit: 4,
         "When fielded, KO target Brotherhood of Mutants character die.",
         purchaseCost: 5, energyType: EnergyType.Shield,
         affiliations: ["Villains"],
@@ -1558,7 +1558,7 @@ public static class SampleCards
     // Master Mold, "Untold Electronic Expertise" - RequiredAffiliations'
     // second user, same shape targeting X-Men instead.
     public static readonly CardDef MasterMoldUntoldElectronicExpertise = Character(
-        "DPS122", "Master Mold", "Untold Electronic Expertise", dieLimit: 2,
+        "DPS122", "Master Mold", "Untold Electronic Expertise", dieLimit: 4,
         "When fielded, KO target X-Men character die.",
         purchaseCost: 5, energyType: EnergyType.Shield,
         affiliations: ["Villains"],
@@ -1638,7 +1638,7 @@ public static class SampleCards
     // than 4A can't block" is every legal match at once, same as Master
     // Mold above, just gated on attack value instead of affiliation.
     public static readonly CardDef PhoenixEternalFlame = Character(
-        "DPS126", "Phoenix", "Eternal Flame", dieLimit: 2,
+        "DPS126", "Phoenix", "Eternal Flame", dieLimit: 4,
         "When Phoenix attacks, opposing character dice with less than 4A can't block.",
         purchaseCost: 6, energyType: EnergyType.Bolt,
         affiliations: ["X-Men"],
@@ -1655,7 +1655,7 @@ public static class SampleCards
     // with DrawDice, the exact same shape Kitty Pryde/Black Panther's own
     // Awaken/Energize cards already established. No new primitive needed.
     public static readonly CardDef MagikBetterThanBelasco = Character(
-        "DPS080", "Magik", "Better than Belasco", dieLimit: 3,
+        "DPS080", "Magik", "Better than Belasco", dieLimit: 4,
         "Awaken Roll a die from your bag.",
         purchaseCost: 4, energyType: EnergyType.Mask,
         affiliations: ["X-Men"],
@@ -1673,7 +1673,7 @@ public static class SampleCards
     // not "character die"), not just a Character one, so TargetSpec.
     // AnyDie is the right shape here rather than CharacterDie.
     public static readonly CardDef ProfessorXUncannyLeadership = Character(
-        "DPS127", "Professor X", "Uncanny Leadership", dieLimit: 2,
+        "DPS127", "Professor X", "Uncanny Leadership", dieLimit: 4,
         "When fielded, spin an opposing die to it's single energy face. Energize - Move an X-Men die from " +
         "your Used Pile to your Prep Area.",
         purchaseCost: 6, energyType: EnergyType.Mask,
@@ -1707,7 +1707,7 @@ public static class SampleCards
     // restricted filter counterpart to RequiredAffiliations): "target
     // opposing LEVEL 1 character die."
     public static readonly CardDef IcemanIcyInterference = Character(
-        "DPS034", "Iceman", "Icy Interference", dieLimit: 4,
+        "DPS034", "Iceman", "Icy Interference", dieLimit: 3,
         "When Iceman attacks, spin target opposing level 1 character die to an energy face.",
         purchaseCost: 4, energyType: EnergyType.Bolt,
         affiliations: ["X-Men"],
@@ -1724,7 +1724,7 @@ public static class SampleCards
     // Energize firing a Sequence of a DealDamage and a Reroll of its own
     // source die.
     public static readonly CardDef CyclopsDefendingThePhoenix = Character(
-        "DPS065", "Cyclops", "Defending the Phoenix", dieLimit: 3,
+        "DPS065", "Cyclops", "Defending the Phoenix", dieLimit: 4,
         "Energize - Deal 1 damage to target character die and reroll this die.",
         purchaseCost: 4, energyType: EnergyType.Bolt,
         affiliations: ["X-Men"],
@@ -1744,7 +1744,7 @@ public static class SampleCards
     // this pass): "has 0A this turn" is a snapshot to an exact value, not
     // a delta.
     public static readonly CardDef RogueStrengthAbsorption = Character(
-        "DPS151", "Rogue", "Strength Absorption", dieLimit: 1,
+        "DPS151", "Rogue", "Strength Absorption", dieLimit: 4,
         "Energize - Target character die has 0A this turn.",
         purchaseCost: 4, energyType: EnergyType.Mask,
         affiliations: ["X-Men"],
@@ -1795,7 +1795,7 @@ public static class SampleCards
     // on the "they may field it normally" -> always-happens
     // simplification). No AbilityDef needed - a passive, always-on grant.
     public static readonly CardDef MoiraItsNotADream = Character(
-        "DPS044", "Moira", "It's Not a Dream", dieLimit: 4,
+        "DPS044", "Moira", "It's Not a Dream", dieLimit: 3,
         "While Moira is active, when an opponent fields a Continuous Action die, reroll it. If it lands " +
         "on an action face, they may field it normally. Otherwise, send it to the Used Pile.",
         purchaseCost: 2, energyType: EnergyType.Shield,
@@ -1814,7 +1814,7 @@ public static class SampleCards
     // not by removing it from a legal-blockers list a caller would still
     // have to know to consult.
     public static readonly CardDef DeathbirdWarOfKings = Character(
-        "DPS109", "Deathbird", "War of Kings", dieLimit: 2,
+        "DPS109", "Deathbird", "War of Kings", dieLimit: 3,
         "When fielded, target character die cannot block this turn.",
         purchaseCost: 3, energyType: EnergyType.Shield,
         affiliations: ["Villains", "Shi'ar"],
@@ -1832,7 +1832,7 @@ public static class SampleCards
     // own DealDamage(..., TargetSpec.Player(...)) call, just off a
     // different trigger.
     public static readonly CardDef DeadpoolMoreThanAChumpBlocker = Character(
-        "DPS068", "Deadpool", "More than a Chump Blocker", dieLimit: 3,
+        "DPS068", "Deadpool", "More than a Chump Blocker", dieLimit: 4,
         "When Deadpool attacks, he deals your opponent 1 damage.",
         purchaseCost: 4, energyType: EnergyType.Fist,
         affiliations: ["Deadpool Affiliation"],
@@ -1853,7 +1853,7 @@ public static class SampleCards
     // left unauthored - that needs the opposing player to make their own
     // choice, which nothing in the ability DSL threads through yet).
     public static readonly CardDef RonanTheAccuserNoExceptions = Character(
-        "DPS130", "Ronan the Accuser", "No Exceptions", dieLimit: 2,
+        "DPS130", "Ronan the Accuser", "No Exceptions", dieLimit: 4,
         "When fielded, each player loses 3 life.",
         purchaseCost: 6, energyType: EnergyType.Bolt,
         abilities: [new AbilityDef(TriggerType.WhenFielded, Cost: null,
@@ -1900,7 +1900,7 @@ public static class SampleCards
     // Falcon's own "Once during your turn" already has (see next-steps
     // item 6), not a new one.
     public static readonly CardDef Magneto = Character(
-        "DPS041", "Magneto", "Idealist", dieLimit: 4,
+        "DPS041", "Magneto", "Idealist", dieLimit: 2,
         "When one of your Mask character dice is KO'd, put a Loyalty Counter on Magneto's card. (Loyaly " +
         "Counters give a character die +1A and +1D). Global: Pay Mask. Once per turn, during your turn, " +
         "if you have no dice in your Prep Area, you may draw a die and place it in your Prep Area.",
@@ -1925,7 +1925,7 @@ public static class SampleCards
     // (purely a live, continuously-recomputed Static ability, same as
     // Captain Marvel's own unqualified version).
     public static readonly CardDef KittyPrydeExperiencedLeader = Character(
-        "DPS144", "Kitty Pryde", "Experienced Leader", dieLimit: 1,
+        "DPS144", "Kitty Pryde", "Experienced Leader", dieLimit: 4,
         "While Kitty Pryde is active, each of your X-Men character dice get +1A and +1D.",
         purchaseCost: 4, energyType: EnergyType.Mask,
         affiliations: ["X-Men"],
@@ -1941,7 +1941,7 @@ public static class SampleCards
     // TargetSpec.MaxDefense (also new this pass). No AbilityDef needed -
     // purely a live, continuously-recomputed self bonus.
     public static readonly CardDef SabretoothDoISmellWeakness = Character(
-        "DPS091", "Sabretooth", "Do I Smell... Weakness?", dieLimit: 3,
+        "DPS091", "Sabretooth", "Do I Smell... Weakness?", dieLimit: 4,
         "Sabretooth gets +1A for each opposing character die with 2D or less.",
         purchaseCost: 4, energyType: EnergyType.Fist,
         affiliations: ["Brotherhood of Mutants"],
@@ -1985,7 +1985,7 @@ public static class SampleCards
     // CharacterDiceOnly filter" reasoning Professor X's own Energize
     // already established) - plus a real Energize ability on top.
     public static readonly CardDef PsylockeHeiress = Character(
-        "DPS128", "Psylocke", "Heiress", dieLimit: 2,
+        "DPS128", "Psylocke", "Heiress", dieLimit: 4,
         "Psylocke gets +2A for each of your X-Men dice in the Prep Area. Energize - Spin target character " +
         "die up 1 level.",
         purchaseCost: 4, energyType: EnergyType.Mask,
@@ -2010,7 +2010,7 @@ public static class SampleCards
     // of energy type this time), and the exact same "if you have no dice
     // in your Prep Area, draw one" Global.
     public static readonly CardDef MagnetoFounderOfTheBrotherhood = Character(
-        "DPS146", "Magneto", "Founder of the Brotherhood", dieLimit: 1,
+        "DPS146", "Magneto", "Founder of the Brotherhood", dieLimit: 2,
         "While Magneto is active, when one of your Brotherhood of Mutants character dice is KO'd, KO " +
         "target opposing character dice. Global Pay Mask. Once per turn, during your turn, if you have no " +
         "dice in your Prep Area, you may draw a die and place it in your Prep Area.",
@@ -2036,7 +2036,7 @@ public static class SampleCards
     // already established for "your [affiliation] dice get +NA"), and
     // Teamwatch + the existing plain CantBlock.
     public static readonly CardDef SabretoothYouReadyToParty = Character(
-        "DPS131", "Sabretooth", "You Ready to Party?", dieLimit: 2,
+        "DPS131", "Sabretooth", "You Ready to Party?", dieLimit: 4,
         "When Sabretooth attacks, your Brotherhood of Mutants character dice get +2A. Teamwatch - Target " +
         "character die can't block this turn",
         purchaseCost: 5, energyType: EnergyType.Fist,
@@ -2061,7 +2061,7 @@ public static class SampleCards
     // Toad, "Journey Into Misery" - Teamwatch + a plain MoveDie against
     // the opponent's Prep Area, no new primitive needed.
     public static readonly CardDef ToadJourneyIntoMisery = Character(
-        "DPS134", "Toad", "Journey Into Misery", dieLimit: 2,
+        "DPS134", "Toad", "Journey Into Misery", dieLimit: 4,
         "Teamwatch - Move a die from your opponents Prep Area to their bag.",
         purchaseCost: 3, energyType: EnergyType.Fist,
         affiliations: ["Brotherhood of Mutants"],
@@ -2124,7 +2124,7 @@ public static class SampleCards
     // user, this time unfiltered (any of your own dice being fielded,
     // not just Founder ones).
     public static readonly CardDef JubileeXMenFieldLeader = Character(
-        "DPS143", "Jubilee", "X-Men Field Leader", dieLimit: 1,
+        "DPS143", "Jubilee", "X-Men Field Leader", dieLimit: 5,
         "While Jubilee is active, when you field a character die she deals 1 damage to your opponent and " +
         "1 damage to target character die.",
         purchaseCost: 4, energyType: EnergyType.Bolt,
@@ -2144,7 +2144,7 @@ public static class SampleCards
     // Jubilee, "Things Never Change" - purely GrantsSelfStatBonusWhileNamedCardActive,
     // no AbilityDef needed at all.
     public static readonly CardDef JubileeThingsNeverChange = Character(
-        "DPS076", "Jubilee", "Things Never Change", dieLimit: 3,
+        "DPS076", "Jubilee", "Things Never Change", dieLimit: 4,
         "While Woverine is active, Jubilee gets +1A.",
         purchaseCost: 2, energyType: EnergyType.Bolt,
         affiliations: ["X-Men"],
@@ -2160,7 +2160,7 @@ public static class SampleCards
     // combined with the existing GrantsSelfStatBonusWhileNamedCardActive.
     // No AbilityDef needed - both are continuous.
     public static readonly CardDef KittyPrydeHeadmistress = Character(
-        "DPS077", "Kitty Pryde", "Headmistress", dieLimit: 3,
+        "DPS077", "Kitty Pryde", "Headmistress", dieLimit: 4,
         "While Woverine is active, Kitty Pryde gets +1A and can't be targeted by your opponent.",
         purchaseCost: 3, energyType: EnergyType.Mask,
         affiliations: ["X-Men"],
@@ -2176,7 +2176,7 @@ public static class SampleCards
     // EffectCondition.OpponentHasAtLeastNCharacterDiceInFieldZone (new
     // this pass).
     public static readonly CardDef CorsairCriminalRecord = Character(
-        "DPS104", "Corsair", "Criminal Record", dieLimit: 2,
+        "DPS104", "Corsair", "Criminal Record", dieLimit: 4,
         "When fielded, KO target Villains character die, or KO 2 target Villains character dice if your " +
         "opponent has 4 or more character dice in the Field Zone.",
         purchaseCost: 5, energyType: EnergyType.Fist,
@@ -2198,7 +2198,7 @@ public static class SampleCards
     // its "auto-pick the first Sidekick, no real choice" simplification
     // remarks). No AbilityDef needed - a passive, always-on grant.
     public static readonly CardDef CorsairLeadingTheStarjammers = Character(
-        "DPS064", "Corsair", "Leading the Starjammers", dieLimit: 3,
+        "DPS064", "Corsair", "Leading the Starjammers", dieLimit: 4,
         "If Corsair's A or D is increasedby an effect, you may increase the A or D of a Sidekick die you " +
         "control by the same amount.",
         purchaseCost: 4, energyType: EnergyType.Fist,
@@ -2222,7 +2222,7 @@ public static class SampleCards
     public static readonly TargetSpec PhoenixPsionicMaelstromTarget = TargetSpec.CharacterDie("target character die");
 
     public static readonly CardDef PhoenixPsionicMaelstrom = Character(
-        "DPS086", "Phoenix", "Psionic Maelstrom", dieLimit: 3,
+        "DPS086", "Phoenix", "Psionic Maelstrom", dieLimit: 4,
         "When Phoenix attacks, deal 3 damage to target character die. If that character die is a Villains " +
         "character die, you may deal 3 damage to another target character die.",
         purchaseCost: 6, energyType: EnergyType.Bolt,
@@ -2248,7 +2248,7 @@ public static class SampleCards
     // choice Sacrifice's own status update already made - Cost stays
     // unused engine-wide, not just for Sacrifice.
     public static readonly CardDef DarkPhoenixEnemyOfTheShiar = Character(
-        "DPS067", "Dark Phoenix", "Enemy of the Shi'ar", dieLimit: 3,
+        "DPS067", "Dark Phoenix", "Enemy of the Shi'ar", dieLimit: 4,
         "When fielded, KO target Shi'ar or X-Men character die.When Dark Phoenix attacks, deal 2 damage to " +
         "your opponent. Global: Pay Bolt and KO one of your character dice. Your next die you purchase " +
         "this turn costs 2 less (to a minimum of 1).",
@@ -2319,7 +2319,7 @@ public static class SampleCards
     // Deadpool, "Collect THIS!" - the first card to use
     // CardDef.GrantsFreeFielding (new this pass), scoped by fielding cost.
     public static readonly CardDef DeadpoolCollectThis = Character(
-        "DPS108", "Deadpool", "Collect THIS!", dieLimit: 2,
+        "DPS108", "Deadpool", "Collect THIS!", dieLimit: 4,
         "While Deadpool is active, your character dice with fielding cost of 2 are free to field.",
         purchaseCost: 4, energyType: EnergyType.Fist,
         affiliations: ["X-Men", "Deadpool Affiliation"],
@@ -2335,7 +2335,7 @@ public static class SampleCards
     // a Brotherhood of Mutants die directly (the same primitive Colossus's
     // own Energize already established).
     public static readonly CardDef MystiqueTaughtByMagneto = Character(
-        "DPS125", "Mystique", "Taught by Magneto", dieLimit: 2,
+        "DPS125", "Mystique", "Taught by Magneto", dieLimit: 4,
         "While Mystique is active, Brotherhood of Mutants character dice are free to field. Energize - You " +
         "may field a Brotherhood of Mutants character die for free.",
         purchaseCost: 3, energyType: EnergyType.Mask,
@@ -2361,7 +2361,7 @@ public static class SampleCards
     // GrantsSelfStatBonusWhileNamedCardActive apply continuously,
     // surfaced here as a gate on a triggered effect instead.
     public static readonly CardDef IcemanFrozenFistsOfFury = Character(
-        "DPS074", "Iceman", "Frozen Fists of Fury", dieLimit: 3,
+        "DPS074", "Iceman", "Frozen Fists of Fury", dieLimit: 4,
         "Founder When Iceman attacks, if Wolverine is active, deal 3 damage to target character die.",
         purchaseCost: 4, energyType: EnergyType.Bolt,
         affiliations: ["X-Men"],
@@ -2382,7 +2382,7 @@ public static class SampleCards
     // own ordinary Ko(Own) choice (answered the normal way) and this new
     // node for the opponent's own, otherwise-unanswerable, choice.
     public static readonly CardDef RonanTheAccuserNoMercy = Character(
-        "DPS090", "Ronan the Accuser", "No Mercy", dieLimit: 3,
+        "DPS090", "Ronan the Accuser", "No Mercy", dieLimit: 4,
         "When fielded, each player KOs a character die they control.",
         purchaseCost: 6, energyType: EnergyType.Bolt,
         abilities: [new AbilityDef(TriggerType.WhenFielded, Cost: null,
@@ -2400,7 +2400,7 @@ public static class SampleCards
     // TriggerType.StartOfOpponentsAttackStep (new this pass, fired from
     // TurnEngine.EnterAttackStep).
     public static readonly CardDef EmmaFrostManipulative = Character(
-        "DPS070", "Emma Frost", "Manipulative", dieLimit: 3,
+        "DPS070", "Emma Frost", "Manipulative", dieLimit: 4,
         "While Emma Frost is active, at the start of your opponent's Attack Step, reroll target character " +
         "die they control.",
         purchaseCost: 5, energyType: EnergyType.Shield,
@@ -2421,7 +2421,7 @@ public static class SampleCards
     // primitive, which for a die already sitting in the Field Zone
     // *is* "returned to the Field Zone." No new primitive needed.
     public static readonly CardDef EmmaFrostFinesse = Character(
-        "DPS110", "Emma Frost", "Finesse", dieLimit: 2,
+        "DPS110", "Emma Frost", "Finesse", dieLimit: 4,
         "While Emma Frost is Active, at the start of your opponents Attack Step, reroll 2 target Fist " +
         "character dice your oppoenent controls. Those showing character faces are returned to the Field " +
         "Zone, those on energy faces are sent to the Reserve Pool.",
@@ -2458,7 +2458,7 @@ public static class SampleCards
     // Master Mold, "Endless Sentinels" - the first card to use PlaceToken
     // (new this pass, alongside CardType.Token/SentinelToken above).
     public static readonly CardDef MasterMoldEndlessSentinels = Character(
-        "DPS147", "Master Mold", "Endless Sentinels", dieLimit: 1,
+        "DPS147", "Master Mold", "Endless Sentinels", dieLimit: 4,
         "When fielded, when Master Mold attacks, or when Master Mold is KO'd, place a Sentinel token with " +
         "5A and 5D into the Field Zone.",
         purchaseCost: 6, energyType: EnergyType.Shield,
@@ -2479,7 +2479,7 @@ public static class SampleCards
     // ForceAttack, the same primitive Vulcan's own "Ruler of the
     // Imperium" printing already established.
     public static readonly CardDef VulcanAggression = Character(
-        "DPS135", "Vulcan", "Aggression", dieLimit: 2,
+        "DPS135", "Vulcan", "Aggression", dieLimit: 4,
         "While Vulcan is active, your opponent's non-fist characters get -2D. Global: Pay Fist. Target " +
         "character die must attack this turn.",
         purchaseCost: 6, energyType: EnergyType.Fist,
@@ -2499,7 +2499,7 @@ public static class SampleCards
     // damage-application site now consults. Levels 2/3 carry the real
     // single-burst mark the "*Instead, prevent that damage" clause reads.
     public static readonly CardDef ColossusOrganicSteel = Character(
-        "DPS063", "Colossus", "Organic Steel", dieLimit: 3,
+        "DPS063", "Colossus", "Organic Steel", dieLimit: 4,
         "While Colossus is active, the first time one of your character dice would take damage each turn " +
         "you may have Colossus take that damage instead. *Instead, prevent that damage.",
         purchaseCost: 5, energyType: EnergyType.Fist,
@@ -2516,7 +2516,7 @@ public static class SampleCards
     // this pass). No AbilityDef needed - CombatEngine.DeclareBlockers'
     // own RecordVulcanTextBlanking records the engagement every combat.
     public static readonly CardDef VulcanPowerSuppression = Character(
-        "DPS095", "Vulcan", "Power Suppression", dieLimit: 3,
+        "DPS095", "Vulcan", "Power Suppression", dieLimit: 4,
         "Ignore the abilities of character dice blocking or blocked by Vulcan.",
         purchaseCost: 5, energyType: EnergyType.Fist,
         grantsIgnoresAbilitiesWhileEngaged: true,
@@ -2532,7 +2532,7 @@ public static class SampleCards
     // scoped to Zone.AttackZone only - no new primitive needed for that
     // half beyond the new blanking node itself.
     public static readonly CardDef MisterSinisterMutantSupremacist = Character(
-        "DPS083", "Mister Sinister", "Mutant Supremacist", dieLimit: 3,
+        "DPS083", "Mister Sinister", "Mutant Supremacist", dieLimit: 4,
         "When fielded, ignore all text on opposing character cards (including Global Abilities) (until " +
         "end of turn). Global: Pay 3. Ignore target attacking character die's text until end of turn.",
         purchaseCost: 5, energyType: EnergyType.Bolt,
@@ -2600,7 +2600,7 @@ public static class SampleCards
     // Global; the other two Gladiator printings' own identical Global
     // text has no such qualifier at all), not a genuine new restriction.
     public static readonly CardDef GladiatorTheEmpireMustStand = Character(
-        "DPS073", "Gladiator", "The Empire Must Stand", dieLimit: 3,
+        "DPS073", "Gladiator", "The Empire Must Stand", dieLimit: 4,
         "Overcrush When Lilandra is KO'd, put a Loyalty Counter on Gladiator's card. (Loyalty Counters give " +
         "character +1A and +1D.) Global: Pay Fist when you attack. Your character dice can't be the target " +
         "of Action Dice or Global Abilities (until the end of turn).",
@@ -2623,7 +2623,7 @@ public static class SampleCards
     // Gladiator, "Majestor Kallark" - the same Global as "Psi Resistance"
     // above with no Intimidate half.
     public static readonly CardDef GladiatorMajestorKallark = Character(
-        "DPS113", "Gladiator", "Majestor Kallark", dieLimit: 2,
+        "DPS113", "Gladiator", "Majestor Kallark", dieLimit: 4,
         "Global: Pay Fist. Your character dice can't be the target of Action Dice or Global Abilities " +
         "(until end of turn).",
         purchaseCost: 4, energyType: EnergyType.Fist,
@@ -2733,7 +2733,7 @@ public static class SampleCards
     // mechanism yet (WhenAnotherDieFielded always fires for every
     // fielding), a narrower and rarer gap than the main effect.
     public static readonly CardDef RogueSurveillanceImmunity = Character(
-        "DPS089", "Rogue", "Surveillance Immunity", dieLimit: 3,
+        "DPS089", "Rogue", "Surveillance Immunity", dieLimit: 5,
         "When fielded, send target action die from the Field Zone to your opponent's Used Pile. Fielding " +
         "Rogue doesn't trigger opposing effects.",
         purchaseCost: 3, energyType: EnergyType.Mask,
@@ -2749,7 +2749,7 @@ public static class SampleCards
     // Rogue, "Mrs. X" - the first user of SwapAttack (new this round).
     // "You may" simplified to "always swap" (house convention).
     public static readonly CardDef RogueMrsX = Character(
-        "DPS049", "Rogue", "Mrs. X", dieLimit: 4,
+        "DPS049", "Rogue", "Mrs. X", dieLimit: 3,
         "When fielded, you may swap Rogue's A with target opposing character die's A.",
         purchaseCost: 4, energyType: EnergyType.Mask,
         affiliations: ["X-Men"],
@@ -2767,7 +2767,7 @@ public static class SampleCards
     // Angel carries it too, both as its own printed keyword and as the
     // filter its own static bonus checks against OTHER dice.
     public static readonly CardDef AngelJeanGreysSchool = Character(
-        "DPS057", "Angel", "Jean Grey's School", dieLimit: 3,
+        "DPS057", "Angel", "Jean Grey's School", dieLimit: 4,
         "Founder When Angel is active, other character dice with Founder get +1A.",
         purchaseCost: 3, energyType: EnergyType.Shield,
         affiliations: ["X-Men"],
@@ -2785,7 +2785,7 @@ public static class SampleCards
     // primitive (Moira's own "+1D while Wolverine is active" printing
     // already uses the identical shape).
     public static readonly CardDef MystiqueRelentless = Character(
-        "DPS045", "Mystique", "Relentless", dieLimit: 4,
+        "DPS045", "Mystique", "Relentless", dieLimit: 3,
         "When Wolverine is active, Mystique gets +2A. Global: Pay Mask Mask. Target character die can't " +
         "block this turn if it shares a Team Affiliation with a character card on your team.",
         purchaseCost: 2, energyType: EnergyType.Mask,
@@ -2807,7 +2807,7 @@ public static class SampleCards
     // Cable, "Bosom Buddies" - the first user of GrantsNamedCardSupport
     // (new this round).
     public static readonly CardDef CableBosomBuddies = Character(
-        "DPS062", "Cable", "Bosom Buddies", dieLimit: 3,
+        "DPS062", "Cable", "Bosom Buddies", dieLimit: 4,
         "While Cable is active, your Deadpool costs 1 less to purchase (to a minimum of 1) and has +2A.",
         purchaseCost: 4, energyType: EnergyType.Bolt,
         affiliations: ["X-Men"],
@@ -2823,7 +2823,7 @@ public static class SampleCards
     // own remarks for why Iceman/Cyclops's own "Xavier's Dream"
     // printings, which share the identical gate, aren't included here).
     public static readonly CardDef BeastXaviersDream = Character(
-        "DPS138", "Beast", "Xavier's Dream", dieLimit: 1,
+        "DPS138", "Beast", "Xavier's Dream", dieLimit: 4,
         "While you have an active Sidekick die, Beast gets +1A. Overcrush",
         purchaseCost: 3, energyType: EnergyType.Fist,
         affiliations: ["X-Men"],
@@ -2838,7 +2838,7 @@ public static class SampleCards
     // Forge, "Support Technician" - the first user of
     // GrantsOpponentPurchaseSurcharge (new this round).
     public static readonly CardDef ForgeSupportTechnician = Character(
-        "DPS071", "Forge", "Support Technician", dieLimit: 3,
+        "DPS071", "Forge", "Support Technician", dieLimit: 4,
         "While Forge is active, your opponents must pay 1 more to purchase a die with purchase cost of 2 " +
         "or less.",
         purchaseCost: 4, energyType: EnergyType.Bolt,
@@ -2855,7 +2855,7 @@ public static class SampleCards
     // "and one of your Sidekick dice are active" clause modeled via
     // OpponentGlobalSurcharge.RequiresOwnActiveSidekick.
     public static readonly CardDef JeanGreyXaviersDream = Character(
-        "DPS075", "Jean Grey", "Xavier's Dream", dieLimit: 3,
+        "DPS075", "Jean Grey", "Xavier's Dream", dieLimit: 4,
         "Founder While Jean Grey and one of your Sidekick dice are active, your opponents must pay 1 " +
         "extra to use a Global Ability.",
         purchaseCost: 4, energyType: EnergyType.Bolt,
@@ -2873,7 +2873,7 @@ public static class SampleCards
     // first user of SelfFreeFieldingWhileOtherActiveAffiliation (new
     // this round).
     public static readonly CardDef JeanGreyMarvelGirl = Character(
-        "DPS115", "Jean Grey", "Marvel Girl", dieLimit: 2,
+        "DPS115", "Jean Grey", "Marvel Girl", dieLimit: 3,
         "Founder While Jean Grey is active, your opponent must pay 1 extra to use a Global Ability. While " +
         "you have a different X-Men character die in your Field Zone, Jean Grey is free to field.",
         purchaseCost: 5, energyType: EnergyType.Bolt,
@@ -2890,7 +2890,7 @@ public static class SampleCards
     // Angel, "Xavier's Dream" - the first user of
     // GrantsSidekickImmunityToOpponentGlobalTargeting (new this round).
     public static readonly CardDef AngelXaviersDream = Character(
-        "DPS137", "Angel", "Xavier's Dream", dieLimit: 3,
+        "DPS137", "Angel", "Xavier's Dream", dieLimit: 2,
         "While Angel is active, your opponent can't target your Sidekick dice with Global Abilities.",
         purchaseCost: 3, energyType: EnergyType.Shield,
         affiliations: ["X-Men"],
@@ -2909,7 +2909,7 @@ public static class SampleCards
     // AbilityDef needed - a passive, always-on grant, same shape as this
     // card's own "Xavier's Dream" printing's Global-targeting immunity.
     public static readonly CardDef AngelAirSupport = Character(
-        "DPS097", "Angel", "Air Support", dieLimit: 2,
+        "DPS097", "Angel", "Air Support", dieLimit: 3,
         "Founder While Angel is active, when an opponent targets one of your character dice, gain 1 life.",
         purchaseCost: 4, energyType: EnergyType.Shield,
         affiliations: ["X-Men"],
@@ -2949,7 +2949,7 @@ public static class SampleCards
     // Rogue, "Unity Squad" - the first user of GrantsFieldingCostReduction
     // (new this round).
     public static readonly CardDef RogueUnitySquad = Character(
-        "DPS129", "Rogue", "Unity Squad", dieLimit: 2,
+        "DPS129", "Rogue", "Unity Squad", dieLimit: 4,
         "While Rogue is active, your X-Men character dice cost 1 less to field. Teamwatch - Rogue gets +2A.",
         purchaseCost: 4, energyType: EnergyType.Mask,
         affiliations: ["X-Men"],
@@ -2971,7 +2971,7 @@ public static class SampleCards
     // adding a redundant "PrepAreaNotEmpty" condition just to avoid the
     // inversion.
     public static readonly CardDef MagnetoVisionary = Character(
-        "DPS081", "Magneto", "Visionary", dieLimit: 3,
+        "DPS081", "Magneto", "Visionary", dieLimit: 4,
         "While Magneto is active, your Brotherhood of Mutants character dice can only be blocked by 2 " +
         "or more character dice. Teamwatch - Prep a die from your bag. Global Pay Mask. Once per turn, " +
         "during your turn, if you have any dice in your Prep Area, you may draw a die and place it in " +
@@ -3004,7 +3004,7 @@ public static class SampleCards
     // on a character face (see DieStats.SpinLevel's own guard), so it
     // couldn't do the energy-to-character conversion this text needs.
     public static readonly CardDef WolverineHardenedByMadripoor = Character(
-        "DPS096", "Wolverine", "Hardened by Madripoor", dieLimit: 3,
+        "DPS096", "Wolverine", "Hardened by Madripoor", dieLimit: 4,
         "When you have at least 3 active X-Men character dice, Wolverine gains \"Energize Spin this die " +
         "to level 1\"",
         purchaseCost: 5, energyType: EnergyType.Fist,
@@ -3024,7 +3024,7 @@ public static class SampleCards
     // Beast, "Combat Ready" - the first user of SelfFirstPurchaseSurcharge
     // (new this round).
     public static readonly CardDef BeastCombatReady = Character(
-        "DPS098", "Beast", "Combat Ready", dieLimit: 2,
+        "DPS098", "Beast", "Combat Ready", dieLimit: 4,
         "Founder When Beast attacks, Prep a die from your bag. The first Beast die you purchase each " +
         "game costs 1 extra.",
         purchaseCost: 2, energyType: EnergyType.Fist,
@@ -3083,7 +3083,7 @@ public static class SampleCards
     // Cable, "High Stakes" - the first user of DoublePrintedAttackOfEach
     // (new this round).
     public static readonly CardDef CableHighStakes = Character(
-        "DPS102", "Cable", "High Stakes", dieLimit: 2,
+        "DPS102", "Cable", "High Stakes", dieLimit: 4,
         "When Cable attacks, double the printed A of all your other character dice.",
         purchaseCost: 6, energyType: EnergyType.Bolt,
         affiliations: ["X-Men"],
@@ -3104,7 +3104,7 @@ public static class SampleCards
     // it) for the "reroll all opposing character dice; non-character
     // results go to their Used Pile" half.
     public static readonly CardDef GambitILikeSolitaire = Character(
-        "DPS072", "Gambit", "I Like Solitaire", dieLimit: 3,
+        "DPS072", "Gambit", "I Like Solitaire", dieLimit: 4,
         "When fielded, if you have fielded no other character dice this turn, reroll all opposing " +
         "character dice. Move any that roll an energy face to their Used Pile. You may not field any " +
         "more character dice this turn.",
@@ -3129,7 +3129,7 @@ public static class SampleCards
     // EffectCondition.OwnCharacterDiceInFieldZoneAtLeast (new this
     // round, the own-side mirror of the existing opponent-side version).
     public static readonly CardDef CyclopsUtopiaRealized = Character(
-        "DPS105", "Cyclops", "Utopia Realized", dieLimit: 2,
+        "DPS105", "Cyclops", "Utopia Realized", dieLimit: 4,
         "While you have 2 or more character dice in the Field Zone, when Cyclops attacks, deal 3 " +
         "damage to target character die.",
         purchaseCost: 6, energyType: EnergyType.Bolt,
@@ -3156,7 +3156,7 @@ public static class SampleCards
     // reasoning this card's own "Utopia Realized" printing's
     // OwnCharacterDiceInFieldZoneAtLeast condition already established.
     public static readonly CardDef CyclopsXaviersDream = Character(
-        "DPS140", "Cyclops", "Xavier's Dream", dieLimit: 1,
+        "DPS140", "Cyclops", "Xavier's Dream", dieLimit: 4,
         "While you have a Sidekick die active, when Cyclops attacks deal X damage divided how you choose " +
         "among any number of target character dice, where X is the number of your character dice in the " +
         "Field Zone.",
@@ -3226,7 +3226,7 @@ public static class SampleCards
     // needing a caller-supplied choice at all, matching "your opponent"
     // not really being a decision in the first place.
     public static readonly CardDef ColossusPiotr = Character(
-        "DPS103", "Colossus", "Piotr", dieLimit: 2,
+        "DPS103", "Colossus", "Piotr", dieLimit: 4,
         "While Colossus is active, at the end of your turn, each of your level 2 or 3 character dice " +
         "deals your opponent 2 damage (not 2 damage per Colossus die)",
         purchaseCost: 6, energyType: EnergyType.Fist,
@@ -3276,7 +3276,7 @@ public static class SampleCards
     // was. Left vanilla rather than a half-working "tracks the trigger
     // but can't do anything with it" implementation.
     public static readonly CardDef DKenObsessed = Character(
-        "DPS066", "D'Ken", "Obsessed", dieLimit: 3,
+        "DPS066", "D'Ken", "Obsessed", dieLimit: 4,
         "While D'Ken is active, if you take combat damage this turn you may use an action die from either " +
         "player's Used Pile.",
         purchaseCost: 4, energyType: EnergyType.Shield,
@@ -3310,7 +3310,7 @@ public static class SampleCards
     // own rather than a rushed/wrong implementation - see the "Scripting
     // policy" note at the top of this file.
     public static readonly CardDef DKenMKraanCrystal = Character(
-        "DPS106", "D'Ken", "M'Kraan Crystal", dieLimit: 2,
+        "DPS106", "D'Ken", "M'Kraan Crystal", dieLimit: 4,
         "When D'Ken attacks, Prep a die from your Used Pile. While a D'Ken die is in your Used Pile, you " +
         "take no more than 7 damage during an opponent's turn (further damage dealt to you is reduced to 0).",
         purchaseCost: 5, energyType: EnergyType.Shield,
@@ -3328,7 +3328,7 @@ public static class SampleCards
     // GrantsPrepInsteadOfUsedPileIfPurchasedWithSameNameEnergy (new this
     // round).
     public static readonly CardDef BishopTimeTraveller = Character(
-        "DPS099", "Bishop", "Time Traveller", dieLimit: 2,
+        "DPS099", "Bishop", "Time Traveller", dieLimit: 4,
         "If you only use energy from Bishop dice to purchase a character die, Prep that die instead of " +
         "adding it to your Used Pile",
         purchaseCost: 3, energyType: EnergyType.Shield,
@@ -3347,7 +3347,7 @@ public static class SampleCards
     // naive keyword scan, which mis-attributed it as printed (the same
     // class of parsing trap Magik's own granted keyword hit before).
     public static readonly CardDef BlinkExilesTeamLeader = Character(
-        "DPS060", "Blink", "Exiles Team Leader", dieLimit: 3,
+        "DPS060", "Blink", "Exiles Team Leader", dieLimit: 4,
         "When Blink attacks with at least 2 other X-Men character dice, each of your X-Men character " +
         "dice in the Field Zone gains Infiltrate.",
         purchaseCost: 4, energyType: EnergyType.Mask,
@@ -3379,7 +3379,7 @@ public static class SampleCards
     // tracking independent of the opponent's own Global usage. Left
     // vanilla rather than a guessed-at partial.
     public static readonly CardDef BlinkWarpPortals = Character(
-        "DPS100", "Blink", "Warp Portals", dieLimit: 2,
+        "DPS100", "Blink", "Warp Portals", dieLimit: 4,
         "While Blink is active, once per turn when your opponent uses a Global Ability you may pay Mask " +
         "and 1 life to cancel that Global Ability.",
         purchaseCost: 4, energyType: EnergyType.Mask,
@@ -3462,7 +3462,7 @@ public static class SampleCards
     // Jubilee, "Fireworks" - the first user of
     // TriggerType.WhenXMenEnergySpentOnGlobalOrField (new this round).
     public static readonly CardDef JubileeFireworks = Character(
-        "DPS116", "Jubilee", "Fireworks", dieLimit: 2,
+        "DPS116", "Jubilee", "Fireworks", dieLimit: 4,
         "While Jubilee is active, when you spend energy from an [X-Men] die to use a Global Ability " +
         "or field a character, deal 1 damage to target opponent or character die.",
         purchaseCost: 3, energyType: EnergyType.Bolt,
@@ -3482,7 +3482,7 @@ public static class SampleCards
     // Cyclops "First Class" (DPS025)'s own WhenAnotherDieFielded
     // precedent for the identical "a character die with Founder" shape.
     public static readonly CardDef BeastFirstClass = Character(
-        "DPS058", "Beast", "First Class", dieLimit: 3,
+        "DPS058", "Beast", "First Class", dieLimit: 4,
         "Founder While Beast is active, when a character die with Founder attacks, Prep a die from " +
         "your bag.",
         purchaseCost: 3, energyType: EnergyType.Fist,
@@ -3505,7 +3505,7 @@ public static class SampleCards
     // printing is the one that names that mechanism instead). No
     // AbilityDef needed - purely a passive, always-on grant.
     public static readonly CardDef BishopTorturedTimeline = Character(
-        "DPS019", "Bishop", "Tortured Timeline", dieLimit: 4,
+        "DPS019", "Bishop", "Tortured Timeline", dieLimit: 3,
         "Opposing effects can't cause Bishop to be rerolled, or cause you to spin a Bishop die up or down.",
         purchaseCost: 4, energyType: EnergyType.Shield,
         affiliations: ["X-Men"],
@@ -3526,7 +3526,7 @@ public static class SampleCards
     // no target choice in the card text (no "target die"), just a
     // random draw-and-Prep, same as every other PrepFromBag user.
     public static readonly CardDef WolverineToughForTheKids = Character(
-        "DPS152", "Wolverine", "Tough for the Kids", dieLimit: 1,
+        "DPS152", "Wolverine", "Tough for the Kids", dieLimit: 3,
         "Regenerate *If you have at least 3 different active X-Men, Wolverine can't be spun to an energy " +
         "face or rerolled by your opponent. Global: Pay Fist. Once per turn, on your turn, Prep a die from " +
         "your bag.",
@@ -3552,7 +3552,7 @@ public static class SampleCards
     // OncePerTurn shape as this card's own "Tough for the Kids"
     // printing above.
     public static readonly CardDef WolverineTrainer = Character(
-        "DPS136", "Wolverine", "Trainer", dieLimit: 2,
+        "DPS136", "Wolverine", "Trainer", dieLimit: 4,
         "Awaken: Target sidekick character die gains Deadly.*When you spin up another character die,spin " +
         "Wolverine up also. Global: Pay Fist. Once per turn, on your turn, Prep a die from your bag",
         purchaseCost: 4, energyType: EnergyType.Fist,
@@ -3590,7 +3590,7 @@ public static class SampleCards
     // Iceman, "Xavier's Dream" - the first user of
     // SelfAttackEqualsDefenseWhileOwnSidekickActive (new this round).
     public static readonly CardDef IcemanXaviersDream = Character(
-        "DPS142", "Iceman", "Xavier's Dream", dieLimit: 1,
+        "DPS142", "Iceman", "Xavier's Dream", dieLimit: 3,
         "Founder While you have a Sidekick die active, Iceman's A is equal to his D.",
         purchaseCost: 4, energyType: EnergyType.Bolt,
         affiliations: ["X-Men"],
@@ -3607,7 +3607,7 @@ public static class SampleCards
     // "High Stakes"'s own DoublePrintedAttackOfEach with a single chosen
     // target instead of MatchAll.
     public static readonly CardDef IcemanMrIceGuy = Character(
-        "DPS114", "Iceman", "Mr Ice Guy", dieLimit: 2,
+        "DPS114", "Iceman", "Mr Ice Guy", dieLimit: 4,
         "Founder Energize - Double target character die's printed A until the end of turn. While " +
         "Iceman is active, your Sidekick dice get +1A.",
         purchaseCost: 4, energyType: EnergyType.Bolt,
@@ -3667,7 +3667,7 @@ public static class SampleCards
     // grant the way this pass's other reactive hooks were. Left vanilla
     // rather than guessed at.
     public static readonly CardDef ForgeReverseEngineer = Character(
-        "DPS111", "Forge", "Reverse Engineer", dieLimit: 2,
+        "DPS111", "Forge", "Reverse Engineer", dieLimit: 4,
         "While Forge is active, if an opponent uses an action die, roll it. If it shows an action face " +
         "you may use it's effect.",
         purchaseCost: 4, energyType: EnergyType.Bolt,
@@ -3712,7 +3712,7 @@ public static class SampleCards
     // combat" distinction this needed). The WhenKOd half is the first
     // user of TargetSpec.MinPurchaseCost.
     public static readonly CardDef MystiqueFreedomForce = Character(
-        "DPS085", "Mystique", "Freedom Force", dieLimit: 3,
+        "DPS085", "Mystique", "Freedom Force", dieLimit: 4,
         "When Mystique is active, reduce damage from opposing character abilities by 1. When Mystique " +
         "is KO'd, you may move a Brotherhood of Mutants die with purchase cost 4 or more from your " +
         "Used Pile to your Prep Area.",
@@ -3735,7 +3735,7 @@ public static class SampleCards
     // Mister Sinister, "Biologist" - the first user of
     // GrantsPreventsNonCombatDamageToOtherOwnDice (new this round).
     public static readonly CardDef MisterSinisterBiologist = Character(
-        "DPS148", "Mister Sinister", "Biologist", dieLimit: 1,
+        "DPS148", "Mister Sinister", "Biologist", dieLimit: 4,
         "While Mister Sinister is active, prevent non-combat damage dealt to your other character " +
         "dice. Global: Pay 3. Target character die gains Overcrush.",
         purchaseCost: 6, energyType: EnergyType.Bolt,
@@ -3763,7 +3763,7 @@ public static class SampleCards
     // shape already established elsewhere (Falcon's own Teamwatch Prep,
     // rule 2.6.3's "ability-driven fielding is free by default" note).
     public static readonly CardDef MisterSinisterDarkExperimentation = Character(
-        "DPS123", "Mister Sinister", "Dark Experimentation", dieLimit: 2,
+        "DPS123", "Mister Sinister", "Dark Experimentation", dieLimit: 4,
         "When Mister Sinister attacks, after blockers are declared, you may pay 2 life and have him gain " +
         "+3A Global: Pay 2. Field a Sidekick from your Used Pile, Prep a Sidekick from your Used Pile.",
         purchaseCost: 5, energyType: EnergyType.Bolt,
@@ -3804,7 +3804,7 @@ public static class SampleCards
     // Ko+GrantNextPurchaseDiscount Sequence verbatim (both Dark Phoenix
     // printings that have this Global share identical text).
     public static readonly CardDef DarkPhoenixDestructiveForce = Character(
-        "DPS107", "Dark Phoenix", "Destructive Force", dieLimit: 2,
+        "DPS107", "Dark Phoenix", "Destructive Force", dieLimit: 3,
         "When an opposing character die damages Dark Phoenix, she deals that much damage to each " +
         "opponent. Global: Pay Bolt and KO one of your character dice. The next die you purchase this " +
         "turn costs 2 less (to a minimum of 1).",
@@ -3831,7 +3831,7 @@ public static class SampleCards
     // attacking Character die" default was never actually enforced
     // anywhere in this engine before this card).
     public static readonly CardDef BlobImmovable = Character(
-        "DPS101", "Blob", "Immovable", dieLimit: 2,
+        "DPS101", "Blob", "Immovable", dieLimit: 4,
         "Each of your Blob dice may block 3 character dice instead of 1. When Blob KO's an opponent's " +
         "Sidekick die, return it to your opponent's bag.",
         purchaseCost: 4, energyType: EnergyType.Shield,
@@ -3872,7 +3872,7 @@ public static class SampleCards
     // target character OR PLAYER" is a real one, so this is the first card
     // that actually needs the queue-based trigger wired up for real.
     public static readonly CardDef FirestarAmazingFriend = Character(
-        "ASM117", "Firestar", "Amazing Friend", dieLimit: 2,
+        "ASM117", "Firestar", "Amazing Friend", dieLimit: 4,
         "When Firestar takes damage, deal 1 damage to target character or player.",
         purchaseCost: 5, energyType: EnergyType.Bolt,
         affiliations: ["Spider-Friends"],
@@ -3924,7 +3924,7 @@ public static class SampleCards
     // attacker branch). No AbilityDef needed - a passive, always-on
     // grant.
     public static readonly CardDef LilandraGrandAdmiralOfTheGuard = Character(
-        "DPS118", "Lilandra", "Grand Admiral of the Guard", dieLimit: 2,
+        "DPS118", "Lilandra", "Grand Admiral of the Guard", dieLimit: 4,
         "While Lilandra is active, if one of your character dice attacks and is unblocked, reroll them " +
         "after damage is dealt. If they land on a character face, put them in your Prep Area instead of " +
         "your Used Pile.",
@@ -3972,7 +3972,7 @@ public static class SampleCards
         ], set: "DPS");
 
     public static readonly CardDef MystiqueSheWalksAmongUs = Character(
-        "DPS149", "Mystique", "She Walks Among Us", dieLimit: 1,
+        "DPS149", "Mystique", "She Walks Among Us", dieLimit: 4,
         "Teamwatch - Spin target opposing character die to an energy face of your opponent's choice.",
         purchaseCost: 3, energyType: EnergyType.Mask,
         affiliations: ["Brotherhood of Mutants", "Villains"],
@@ -4009,7 +4009,7 @@ public static class SampleCards
     // counter (which, being posthumous, wouldn't even matter for stats,
     // but the filter should still say what the card says).
     public static readonly CardDef MadelynePryorSisterhood = Character(
-        "DPS079", "Madelyne Pryor", "Sisterhood", dieLimit: 3,
+        "DPS079", "Madelyne Pryor", "Sisterhood", dieLimit: 4,
         "When one of your Brotherhood of Mutants character dice is KO'd besides Madelyne Pryor, put a " +
         "Loyalty Counter on her card. (Loyaly Counters give a character die +1A and +1D).",
         purchaseCost: 3, energyType: EnergyType.Mask,
@@ -4027,7 +4027,7 @@ public static class SampleCards
     // this pass - see TurnEngine.ClearAndDraw's own swarmBonusDice hook).
     // No AbilityDef needed - a passive, always-on grant.
     public static readonly CardDef MadelynePryorAspiring = Character(
-        "DPS119", "Madelyne Pryor", "Aspiring", dieLimit: 2,
+        "DPS119", "Madelyne Pryor", "Aspiring", dieLimit: 4,
         "While Madelyne Pryor is active, if an opponent draws an extra die during their Clear and Draw " +
         "Step, Prep 2 dice from your bag (no matter how many extra dice your opponent draws, you only " +
         "Prep 2 dice).",
@@ -4045,7 +4045,7 @@ public static class SampleCards
     // Kitty Pryde/Phoenix's remarks in EffectInterpreterTests) is known
     // to matter and checked for.
     public static readonly CardDef AngelWingsOverTheWorld = Character(
-        "DPS017", "Angel", "Wings Over the World", dieLimit: 4,
+        "DPS017", "Angel", "Wings Over the World", dieLimit: 5,
         "Energize - Target Sidekick gets +2A this turn.",
         purchaseCost: 2, energyType: EnergyType.Shield,
         affiliations: ["X-Men"],
@@ -4181,7 +4181,7 @@ public static class SampleCards
     // regardless, so the shared condition alone wasn't worth splitting out
     // into its own reusable piece yet.
     public static readonly CardDef PsylockeAdventurer = Character(
-        "DPS048", "Psylocke", "Adventurer", dieLimit: 4,
+        "DPS048", "Psylocke", "Adventurer", dieLimit: 3,
         "While Wolverine is active, Psylocke gains Deadly. When fielded, spin target character die up 1 level.",
         purchaseCost: 2, energyType: EnergyType.Mask,
         affiliations: ["X-Men"],
@@ -4199,7 +4199,7 @@ public static class SampleCards
     // "remove target opposing character die" (same MoveDie-to-Intimidated
     // shape Scarlet Spider's own Intimidate printing uses).
     public static readonly CardDef BlobMGHDependent = Character(
-        "DPS061", "Blob", "MGH Dependent", dieLimit: 3,
+        "DPS061", "Blob", "MGH Dependent", dieLimit: 4,
         "When fielded, lose 1 life. Intimidate.",
         purchaseCost: 4, energyType: EnergyType.Shield,
         affiliations: ["Brotherhood of Mutants"],
@@ -4222,7 +4222,7 @@ public static class SampleCards
     // "Intimidate Overcrush" together isn't a bare single keyword, so the
     // bulk importer's own pure-keyword auto-detection doesn't catch it.
     public static readonly CardDef SupremeIntelligencePsionicCollective = Character(
-        "DPS093", "Supreme Intelligence", "Psionic Collective", dieLimit: 3,
+        "DPS093", "Supreme Intelligence", "Psionic Collective", dieLimit: 4,
         "Intimidate Overcrush",
         purchaseCost: 7, energyType: EnergyType.Mask,
         keywords: [new KeywordInstance("Intimidate"), new KeywordInstance("Overcrush")],
@@ -4243,7 +4243,7 @@ public static class SampleCards
     // level 1 from any starting level - same trick as Colossus's own
     // Spin(+2) reaching exactly level 3 from a guaranteed level-1 start.
     public static readonly CardDef ToadLookingForComradery = Character(
-        "DPS094", "Toad", "Looking for Comradery", dieLimit: 3,
+        "DPS094", "Toad", "Looking for Comradery", dieLimit: 4,
         "Energize - You may spin one of the Character dice in your reserve pool from a character face to level 1.",
         purchaseCost: 3, energyType: EnergyType.Fist,
         affiliations: ["Brotherhood of Mutants"],
