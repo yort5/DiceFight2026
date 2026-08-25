@@ -8609,3 +8609,51 @@ cards with blank or "Generic" energy (BFF Magic Helmet, ASM Web
 Shooters); Supreme Intelligence: Merciless with a blank cost; and 3 BAT
 White Lantern cards whose Affiliation cell contains a raw Discord emoji
 code, `<:whitelantern:336233573684084750>`, which renders as-is.
+
+---
+
+## Egyptian God stat lines, generic-energy Actions (2026-08-25)
+
+Four upstream items resolved, three of them by the user fixing the sheet
+(ASM energy, Supreme Intelligence's blank cost, and the BAT White
+Lantern affiliation that had been a raw Discord emoji code).
+
+**Double-digit stat lines.** "3108" and "3810" are the same shape -
+fielding cost plus three digits - but the first is 10A/8D and the second
+is 8A/10D. Nothing in the string distinguishes them, so the split cannot
+be inferred and is now stated per card in `DOUBLE_DIGIT_STAT` (the
+user's ruling: Slifer is 10A, The Winged Dragon of Ra is 10D). Parsing
+falls back to `FACE_10_RE` only when the normal single-digit regex
+fails, and still refuses a 4-digit group for any card not in the table -
+verified, so a future one fails loudly instead of being guessed at.
+
+**Generic-energy Actions.** The BFF equipment (Magic Helmet, Magic
+Sword, Limited Wish) really is generic, per the user. That is not
+missing data - it is the same "no energy type" Basic Actions already
+have (rule 1.2.4/1.3.10, SampleCards.cs:182), so it maps to an empty
+list. Worth noting the enum agrees: Generic is an `EnergyKind`, never an
+`EnergyType`, which is exactly why `[]` is the right shape rather than a
+new enum member.
+
+BulkCards.json 3727 -> 3752, merged catalog 3952 (3883 with the Orange
+Ban applied). All 708 tests pass. Verified in headless Chromium: both
+Gods import all three printings with the right level-3 line, Magic
+Helmet shows a blank Energy column, Supreme Intelligence: Merciless is
+cost 12, and BAT White Lanterns read "White Lantern".
+
+**Still open, all upstream sheet data.**
+- **127 PROMO cards are missing entirely.** The PROMO tab numbers its
+  ids digits-first ("1AvXop", "12AvXop") but `ID_RE` requires
+  letters-then-digits, so every row fails "bad id format". Easily the
+  largest remaining gap, and a real decision rather than a typo fix -
+  those ids would become card ids.
+- 3 cards with rarity "Promo" (FUS143 Belaphoss, WF143 Bat-Mite, CW143
+  Squirrel Girl) - `RARITY_TO_DIE_LIMIT` has no entry, and the die limit
+  is not derivable, so it needs stating.
+- BAT122 White Lantern Dove, stat line "022 033 1410" - same
+  double-digit ambiguity as the Gods, needs the same one-line ruling.
+- 5 AI rows are missing a digit: Black Widow "22 022 133" (AI011/012)
+  and Dormammu "155 276 28" (AI019/020/021).
+- GAF spells the affiliation "White Lanterns" while BAT now spells it
+  "White Lantern", so the two sets' cards land in different affiliation
+  buckets in the Team Builder filter.

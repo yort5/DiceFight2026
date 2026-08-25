@@ -9915,6 +9915,25 @@
     "abilityTemplate": null
   },
   {
+    "id": "ASM051",
+    "name": "Goblin Glider",
+    "subtitle": "Goblin Tech",
+    "type": "Action",
+    "purchaseCost": 4,
+    "energyTypes": [
+      "Shield"
+    ],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "Search your bag for a Villains character die and put it into your Prep Area.",
+    "keywords": [],
+    "affiliations": [],
+    "isImplemented": false,
+    "set": "ASM",
+    "abilityTemplate": null
+  },
+  {
     "id": "ASM052",
     "name": "Green Goblin",
     "subtitle": "Evil Genius",
@@ -10723,6 +10742,25 @@
     "abilityTemplate": null
   },
   {
+    "id": "ASM072",
+    "name": "Web Shooters",
+    "subtitle": "A Spider's Best Friend",
+    "type": "Action",
+    "purchaseCost": 4,
+    "energyTypes": [
+      "Bolt"
+    ],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "Ignore the text of target Fist or Mask character die until end of turn. */**Also deal 2 damage to that character die.",
+    "keywords": [],
+    "affiliations": [],
+    "isImplemented": false,
+    "set": "ASM",
+    "abilityTemplate": null
+  },
+  {
     "id": "ASM073",
     "name": "White Tiger",
     "subtitle": "New Avenger",
@@ -11320,6 +11358,25 @@
     ],
     "statsMissing": false,
     "rawText": "When Gladiator is blocked or blocking he gets +2A per affiliation on the character he is blocking or blocked by.",
+    "keywords": [],
+    "affiliations": [],
+    "isImplemented": false,
+    "set": "ASM",
+    "abilityTemplate": null
+  },
+  {
+    "id": "ASM088",
+    "name": "Goblin Glider",
+    "subtitle": "High Flying",
+    "type": "Action",
+    "purchaseCost": 4,
+    "energyTypes": [
+      "Shield"
+    ],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "Search your bag for a Villains die and field it at level 1. Sacrifice it at end of turn.",
     "keywords": [],
     "affiliations": [],
     "isImplemented": false,
@@ -11971,6 +12028,25 @@
     "abilityTemplate": null
   },
   {
+    "id": "ASM105",
+    "name": "Web Shooters",
+    "subtitle": "Stinging Web",
+    "type": "Action",
+    "purchaseCost": 4,
+    "energyTypes": [
+      "Bolt"
+    ],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "Ignore the text of target Bolt or Shield character die until end of turn. */**Also that character die gets -2A.",
+    "keywords": [],
+    "affiliations": [],
+    "isImplemented": false,
+    "set": "ASM",
+    "abilityTemplate": null
+  },
+  {
     "id": "ASM106",
     "name": "Wolverine",
     "subtitle": "Regenerative",
@@ -12446,6 +12522,25 @@
     ],
     "statsMissing": false,
     "rawText": "Gladiator can block up to 2 attackers. When Gladiator is blocked or blocking he gets +2A per affiliation on the character he is blocking or blocked by.",
+    "keywords": [],
+    "affiliations": [],
+    "isImplemented": false,
+    "set": "ASM",
+    "abilityTemplate": null
+  },
+  {
+    "id": "ASM119",
+    "name": "Goblin Glider",
+    "subtitle": "Borrowed Transportation",
+    "type": "Action",
+    "purchaseCost": 5,
+    "energyTypes": [
+      "Shield"
+    ],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "Search your bag for a Villains die and field it at level 1. Each player takes 2 damage and sacrifices a character die at end of turn",
     "keywords": [],
     "affiliations": [],
     "isImplemented": false,
@@ -12977,6 +13072,25 @@
       "Villains",
       "Sinister Six"
     ],
+    "isImplemented": false,
+    "set": "ASM",
+    "abilityTemplate": null
+  },
+  {
+    "id": "ASM133",
+    "name": "Web Shooters",
+    "subtitle": "Webbing All Over",
+    "type": "Action",
+    "purchaseCost": 5,
+    "energyTypes": [
+      "Bolt"
+    ],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "Ignore the text of target fielded character die until end of turn. */**Also that character die can't block this turn.",
+    "keywords": [],
+    "affiliations": [],
     "isImplemented": false,
     "set": "ASM",
     "abilityTemplate": null
@@ -22692,7 +22806,7 @@
     "rawText": "You may not use ? energy to purchase this die, this text may not be ignored. While White Lantern Aquaman is active, whenever your opponent fields a Sidekick, deal 1 damage to your opponent.",
     "keywords": [],
     "affiliations": [
-      "<:whitelantern:336233573684084750>"
+      "White Lantern"
     ],
     "isImplemented": false,
     "set": "BAT",
@@ -22735,7 +22849,7 @@
     "rawText": "You may not use ? energy to purchase this die, this text may not be ignored. While White Lantern Hal Jordan is active, whenever you flip a character card, if that character is active, deal 1 damage to your opponent.",
     "keywords": [],
     "affiliations": [
-      "<:whitelantern:336233573684084750>"
+      "White Lantern"
     ],
     "isImplemented": false,
     "set": "BAT",
@@ -22778,7 +22892,7 @@
     "rawText": "You may not use ? energy to purchase this die, this text may not be ignored. While White Lantern Superman is active, whenever an opposing Villain character die is KO'd, deal 1 damage to your opponent.",
     "keywords": [],
     "affiliations": [
-      "<:whitelantern:336233573684084750>"
+      "White Lantern"
     ],
     "isImplemented": false,
     "set": "BAT",
@@ -25231,6 +25345,82 @@
     "abilityTemplate": null
   },
   {
+    "id": "BFF061",
+    "name": "Magic Helmet",
+    "subtitle": "Lesser Gear",
+    "type": "Action",
+    "purchaseCost": 2,
+    "energyTypes": [],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "Equip (attach to a character with Equip). Equipped character can only be blocked by two or more characters.",
+    "keywords": [],
+    "affiliations": [
+      "Neutral None"
+    ],
+    "isImplemented": false,
+    "set": "BFF",
+    "abilityTemplate": null
+  },
+  {
+    "id": "BFF062",
+    "name": "Magic Sword",
+    "subtitle": "Lesser Gear",
+    "type": "Action",
+    "purchaseCost": 3,
+    "energyTypes": [],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "Equip (attach to a character with Equip). This equipped character gets +1A and +1D.",
+    "keywords": [],
+    "affiliations": [
+      "Neutral None"
+    ],
+    "isImplemented": false,
+    "set": "BFF",
+    "abilityTemplate": null
+  },
+  {
+    "id": "BFF063",
+    "name": "Limited Wish",
+    "subtitle": "Lesser Spell",
+    "type": "Action",
+    "purchaseCost": 6,
+    "energyTypes": [],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "Choose an unpurchased die (yours or from the basic action cards) and roll it. If you roll a non-energy face, place the die in your used pile.",
+    "keywords": [],
+    "affiliations": [
+      "Neutral None"
+    ],
+    "isImplemented": false,
+    "set": "BFF",
+    "abilityTemplate": null
+  },
+  {
+    "id": "BFF064",
+    "name": "Prismatic Spray",
+    "subtitle": "Lesser Spell",
+    "type": "Action",
+    "purchaseCost": 4,
+    "energyTypes": [],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "All of your opponent's characters lose all their card text until the end of the turn.",
+    "keywords": [],
+    "affiliations": [
+      "Neutral None"
+    ],
+    "isImplemented": false,
+    "set": "BFF",
+    "abilityTemplate": null
+  },
+  {
     "id": "BFF065",
     "name": "Carrion Crawler",
     "subtitle": "Greater Aberration",
@@ -26367,6 +26557,82 @@
     "abilityTemplate": null
   },
   {
+    "id": "BFF093",
+    "name": "Magic Helmet",
+    "subtitle": "Greater Gear",
+    "type": "Action",
+    "purchaseCost": 2,
+    "energyTypes": [],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "Equip (attach to a character with Equip). This equipped character cannot be affected by your opponent's action dice or character abilities.",
+    "keywords": [],
+    "affiliations": [
+      "Neutral None"
+    ],
+    "isImplemented": false,
+    "set": "BFF",
+    "abilityTemplate": null
+  },
+  {
+    "id": "BFF094",
+    "name": "Magic Sword",
+    "subtitle": "Greater Gear",
+    "type": "Action",
+    "purchaseCost": 3,
+    "energyTypes": [],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "Equip (attach to a character with Equip). This equipped character gets +2A.",
+    "keywords": [],
+    "affiliations": [
+      "Neutral None"
+    ],
+    "isImplemented": false,
+    "set": "BFF",
+    "abilityTemplate": null
+  },
+  {
+    "id": "BFF095",
+    "name": "Limited Wish",
+    "subtitle": "Greater Spell",
+    "type": "Action",
+    "purchaseCost": 4,
+    "energyTypes": [],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "Name a non-NPC die. Your opponent pulls a die from his bag. If it is the named die, return it to its card (as if it had not been purchased). Otherwise, place it in the bag or its used pile.",
+    "keywords": [],
+    "affiliations": [
+      "Neutral None"
+    ],
+    "isImplemented": false,
+    "set": "BFF",
+    "abilityTemplate": null
+  },
+  {
+    "id": "BFF096",
+    "name": "Prismatic Spray",
+    "subtitle": "Greater Spell",
+    "type": "Action",
+    "purchaseCost": 5,
+    "energyTypes": [],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "All characters are treated as if they had 1A and 1D (instead of their normal values, regardless of bonuses) until the end of the turn. Fielding costs remain unchanged.",
+    "keywords": [],
+    "affiliations": [
+      "Neutral None"
+    ],
+    "isImplemented": false,
+    "set": "BFF",
+    "abilityTemplate": null
+  },
+  {
     "id": "BFF097",
     "name": "Carrion Crawler",
     "subtitle": "Paragon Aberration",
@@ -27332,6 +27598,82 @@
     "keywords": [],
     "affiliations": [
       "Neutral Equip Monster"
+    ],
+    "isImplemented": false,
+    "set": "BFF",
+    "abilityTemplate": null
+  },
+  {
+    "id": "BFF121",
+    "name": "Magic Helmet",
+    "subtitle": "Paragon Gear",
+    "type": "Action",
+    "purchaseCost": 3,
+    "energyTypes": [],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "Equip (attach to a character with Equip). This equipped character takes no damage during the attack step.",
+    "keywords": [],
+    "affiliations": [
+      "Neutral None"
+    ],
+    "isImplemented": false,
+    "set": "BFF",
+    "abilityTemplate": null
+  },
+  {
+    "id": "BFF122",
+    "name": "Magic Sword",
+    "subtitle": "Paragon Gear",
+    "type": "Action",
+    "purchaseCost": 4,
+    "energyTypes": [],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "Equip (attach to a character with Equip). Characters damaged by this equipped character are knocked out at the end of the attack step.",
+    "keywords": [],
+    "affiliations": [
+      "Neutral None"
+    ],
+    "isImplemented": false,
+    "set": "BFF",
+    "abilityTemplate": null
+  },
+  {
+    "id": "BFF123",
+    "name": "Limited Wish",
+    "subtitle": "Paragon Spell",
+    "type": "Action",
+    "purchaseCost": 5,
+    "energyTypes": [],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "Search your bag for a character die and field it on its level 1 side. **Also move a Tarrasque from the field to the prep area.",
+    "keywords": [],
+    "affiliations": [
+      "Neutral None"
+    ],
+    "isImplemented": false,
+    "set": "BFF",
+    "abilityTemplate": null
+  },
+  {
+    "id": "BFF124",
+    "name": "Prismatic Spray",
+    "subtitle": "Paragon Spell",
+    "type": "Action",
+    "purchaseCost": 5,
+    "energyTypes": [],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "Swap two of your non-NPC characters with 2 opposing characters until the end of the turn (each player plays them as if they own them). If the opposing characters are unblocked during your attack, they do not go to the used pile (they stay in the field).",
+    "keywords": [],
+    "affiliations": [
+      "Neutral None"
     ],
     "isImplemented": false,
     "set": "BFF",
@@ -42920,6 +43262,44 @@
       "Hellfire Club"
     ],
     "isImplemented": true,
+    "set": "DPS",
+    "abilityTemplate": null
+  },
+  {
+    "id": "DPS133",
+    "name": "Supreme Intelligence",
+    "subtitle": "Merciless",
+    "type": "Character",
+    "purchaseCost": 12,
+    "energyTypes": [
+      "Mask"
+    ],
+    "dieLimit": 2,
+    "levels": [
+      {
+        "fieldingCost": 1,
+        "attack": 4,
+        "defense": 4,
+        "burstStars": null
+      },
+      {
+        "fieldingCost": 2,
+        "attack": 5,
+        "defense": 6,
+        "burstStars": null
+      },
+      {
+        "fieldingCost": 2,
+        "attack": 7,
+        "defense": 6,
+        "burstStars": null
+      }
+    ],
+    "statsMissing": false,
+    "rawText": "Supreme Intelligence costs 1 less to purchase for each Loyalty Counter on it. When you purchase Ronan the Accuser, or attack with a Ronan the Accuser character die, put a Loyalty Counter on Supreme Intelligence\\'s card.",
+    "keywords": [],
+    "affiliations": [],
+    "isImplemented": false,
     "set": "DPS",
     "abilityTemplate": null
   },
@@ -137417,6 +137797,46 @@
     "abilityTemplate": null
   },
   {
+    "id": "YGO066",
+    "name": "Slifer the Sky Dragon",
+    "subtitle": "Growing Ever Stronger",
+    "type": "Character",
+    "purchaseCost": 8,
+    "energyTypes": [
+      "Bolt"
+    ],
+    "dieLimit": 3,
+    "levels": [
+      {
+        "fieldingCost": 1,
+        "attack": 7,
+        "defense": 5,
+        "burstStars": null
+      },
+      {
+        "fieldingCost": 2,
+        "attack": 8,
+        "defense": 6,
+        "burstStars": null
+      },
+      {
+        "fieldingCost": 3,
+        "attack": 10,
+        "defense": 8,
+        "burstStars": null
+      }
+    ],
+    "statsMissing": false,
+    "rawText": "When summoned, you may pay 1 life to spin a die up one level.",
+    "keywords": [],
+    "affiliations": [
+      "Egyption God"
+    ],
+    "isImplemented": false,
+    "set": "YGO",
+    "abilityTemplate": null
+  },
+  {
     "id": "YGO067",
     "name": "Summoned Skull",
     "subtitle": "Lightning Storm",
@@ -137507,6 +137927,46 @@
     "rawText": "Knock out all sidekicks (both players').",
     "keywords": [],
     "affiliations": [],
+    "isImplemented": false,
+    "set": "YGO",
+    "abilityTemplate": null
+  },
+  {
+    "id": "YGO070",
+    "name": "The Winged Dragon of Ra",
+    "subtitle": "Solar Deity",
+    "type": "Character",
+    "purchaseCost": 7,
+    "energyTypes": [
+      "Bolt"
+    ],
+    "dieLimit": 3,
+    "levels": [
+      {
+        "fieldingCost": 1,
+        "attack": 5,
+        "defense": 7,
+        "burstStars": null
+      },
+      {
+        "fieldingCost": 2,
+        "attack": 6,
+        "defense": 8,
+        "burstStars": null
+      },
+      {
+        "fieldingCost": 3,
+        "attack": 8,
+        "defense": 10,
+        "burstStars": null
+      }
+    ],
+    "statsMissing": false,
+    "rawText": "When summoned, choose an opposing monster and roll it. If it does not roll a monster face, move it to the prep area.",
+    "keywords": [],
+    "affiliations": [
+      "Egyption God"
+    ],
     "isImplemented": false,
     "set": "YGO",
     "abilityTemplate": null
@@ -138658,6 +139118,46 @@
     "abilityTemplate": null
   },
   {
+    "id": "YGO101",
+    "name": "Slifer the Sky Dragon",
+    "subtitle": "Lightning Blast",
+    "type": "Character",
+    "purchaseCost": 7,
+    "energyTypes": [
+      "Bolt"
+    ],
+    "dieLimit": 2,
+    "levels": [
+      {
+        "fieldingCost": 1,
+        "attack": 7,
+        "defense": 5,
+        "burstStars": null
+      },
+      {
+        "fieldingCost": 2,
+        "attack": 8,
+        "defense": 6,
+        "burstStars": null
+      },
+      {
+        "fieldingCost": 3,
+        "attack": 10,
+        "defense": 8,
+        "burstStars": null
+      }
+    ],
+    "statsMissing": false,
+    "rawText": "Global: Pay Bolt to deal 1 damage to target monster.",
+    "keywords": [],
+    "affiliations": [
+      "Egyption God"
+    ],
+    "isImplemented": false,
+    "set": "YGO",
+    "abilityTemplate": null
+  },
+  {
     "id": "YGO102",
     "name": "Summoned Skull",
     "subtitle": "Lightning Strike",
@@ -138793,6 +139293,46 @@
     "abilityTemplate": null
   },
   {
+    "id": "YGO106",
+    "name": "The Winged Dragon of Ra",
+    "subtitle": "The Most Powerful Egyptian God",
+    "type": "Character",
+    "purchaseCost": 8,
+    "energyTypes": [
+      "Bolt"
+    ],
+    "dieLimit": 2,
+    "levels": [
+      {
+        "fieldingCost": 1,
+        "attack": 5,
+        "defense": 7,
+        "burstStars": null
+      },
+      {
+        "fieldingCost": 2,
+        "attack": 6,
+        "defense": 8,
+        "burstStars": null
+      },
+      {
+        "fieldingCost": 3,
+        "attack": 8,
+        "defense": 10,
+        "burstStars": null
+      }
+    ],
+    "statsMissing": false,
+    "rawText": "ERRATA: When summoned, reroll target opposing monster die. If it does not roll a monster face, move it to the Prep Area (otherwise return it to the Field Zone).",
+    "keywords": [],
+    "affiliations": [
+      "Egyption God"
+    ],
+    "isImplemented": false,
+    "set": "YGO",
+    "abilityTemplate": null
+  },
+  {
     "id": "YGO107",
     "name": "Obelisk the Tormentor",
     "subtitle": "Intimidator",
@@ -138824,6 +139364,46 @@
     ],
     "statsMissing": false,
     "rawText": "While this monster is active, your opponent must pay 1 life to summon a monster.",
+    "keywords": [],
+    "affiliations": [
+      "Egyption God"
+    ],
+    "isImplemented": false,
+    "set": "YGO",
+    "abilityTemplate": null
+  },
+  {
+    "id": "YGO108",
+    "name": "Slifer the Sky Dragon",
+    "subtitle": "Thunderforce Attack",
+    "type": "Character",
+    "purchaseCost": 8,
+    "energyTypes": [
+      "Bolt"
+    ],
+    "dieLimit": 1,
+    "levels": [
+      {
+        "fieldingCost": 1,
+        "attack": 7,
+        "defense": 5,
+        "burstStars": null
+      },
+      {
+        "fieldingCost": 2,
+        "attack": 8,
+        "defense": 6,
+        "burstStars": null
+      },
+      {
+        "fieldingCost": 3,
+        "attack": 10,
+        "defense": 8,
+        "burstStars": null
+      }
+    ],
+    "statsMissing": false,
+    "rawText": "When summoned, knock out all opposing sidekicks. While this monster is active, sidekicks cost 3 extra energy to summon. Global: Pay Bolt and move a sidekick die from your prep area to the used pile to deal 1 damage to target player.",
     "keywords": [],
     "affiliations": [
       "Egyption God"
@@ -138866,6 +139446,46 @@
     "rawText": "When summoned, opposing monsters knocked out in combat this turn go to the used pile. Fusion: Before your attack, if you move two different Thousand Dragon Fusions from the field to your prep area, you may move this die from this card to your prep area. Global: Pay Bolt. The next action die you buy this turn costs 2 less energy.",
     "keywords": [],
     "affiliations": [],
+    "isImplemented": false,
+    "set": "YGO",
+    "abilityTemplate": null
+  },
+  {
+    "id": "YGO110",
+    "name": "The Winged Dragon of Ra",
+    "subtitle": "Blaze Cannon",
+    "type": "Character",
+    "purchaseCost": 8,
+    "energyTypes": [
+      "Bolt"
+    ],
+    "dieLimit": 1,
+    "levels": [
+      {
+        "fieldingCost": 1,
+        "attack": 5,
+        "defense": 7,
+        "burstStars": null
+      },
+      {
+        "fieldingCost": 2,
+        "attack": 6,
+        "defense": 8,
+        "burstStars": null
+      },
+      {
+        "fieldingCost": 3,
+        "attack": 8,
+        "defense": 10,
+        "burstStars": null
+      }
+    ],
+    "statsMissing": false,
+    "rawText": "When this monster attacks, spin down all monsters except Egyptian Gods one level.",
+    "keywords": [],
+    "affiliations": [
+      "Egyption God"
+    ],
     "isImplemented": false,
     "set": "YGO",
     "abilityTemplate": null

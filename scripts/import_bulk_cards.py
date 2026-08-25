@@ -61,6 +61,15 @@ EPIC_SUBS = {"Epic Basic Action"}
 ID_RE = re.compile(r"^[A-Za-z]+\d+$")
 BURST_ONLY_RE = re.compile(r"^[-*]+(\s[-*]+){2}$")
 FACE_RE = re.compile(r"^(\*{0,2})(\d)(\d)(\d)(\*{0,2})$")
+# Same shape, one extra digit: "3108" and "3810" are both fielding-cost 3
+# plus three digits, but the first is 10A/8D and the second is 8A/10D.
+# Nothing in the string says which, so the split cannot be inferred - it
+# has to be stated per card. Only the YGO Egyptian God cards need this.
+FACE_10_RE = re.compile(r"^(\*{0,2})(\d)(\d{3})(\*{0,2})$")
+DOUBLE_DIGIT_STAT = {
+    "Slifer the Sky Dragon": "attack",      # 175 286 3108 -> 3/10/8
+    "The Winged Dragon of Ra": "defense",   # 157 268 3810 -> 3/8/10
+}
 RARITY_TO_DIE_LIMIT = {"Common": 4, "Uncommon": 3, "Rare": 2, "Super": 1, "Super-Rare": 1, "Chase": 1}
 
 _single_kw_alts = [re.escape(k) for k in PURE_KEYWORDS] + [re.escape(k) + r" \d+" for k in PARAM_KEYWORDS]
@@ -96,7 +105,7 @@ def existing_hand_curated_ids():
 PLACEHOLDER_FACES = [{"fieldingCost": 0, "attack": 0, "defense": 0, "burstStars": None}] * 3
 
 
-def parse_faces(statline):
+def parse_faces(statline, name=None):
     # A few rows end their stat line with a stray sentence period
     # ("022 123 133." - all three Constantine printings). Trailing '*'
     # is meaningful (burst) and must survive; '.' never is.
@@ -106,9 +115,15 @@ def parse_faces(statline):
     faces = []
     for g in groups:
         m = FACE_RE.match(g)
-        if not m:
-            return None
-        lead, f, a, d, trail = m.groups()
+        if m:
+            lead, f, a, d, trail = m.groups()
+        else:
+            m10 = FACE_10_RE.match(g)
+            hint = DOUBLE_DIGIT_STAT.get(name)
+            if not m10 or hint is None:
+                return None
+            lead, f, mid, trail = m10.groups()
+            a, d = (mid[:2], mid[2:]) if hint == "attack" else (mid[:1], mid[1:])
         stars = len(lead) + len(trail)
         faces.append({
             "fieldingCost": int(f), "attack": int(a), "defense": int(d),
@@ -132,6 +147,16 @@ def parse_energy(raw):
     if not parts or any(p not in VALID_ENERGY for p in parts):
         return None
     return parts
+
+
+# Action cards printed with no energy type of their own (the BFF
+# equipment - Magic Helmet, Magic Sword, Limited Wish) show up as
+# "Generic", "None" or blank. That is not missing data: it is the same
+# "no energy type" Basic Actions already have (rule 1.2.4/1.3.10, and
+# SampleCards.cs:182), so it maps to an empty list rather than a skip.
+# Generic is an EnergyKind, never an EnergyType - the enum has only the
+# four specific types, which is exactly why [] is the right shape.
+GENERIC_ENERGY = {"", "None", "Generic"}
 
 
 def parse_affiliations(raw):
@@ -298,16 +323,19 @@ def classify_row(code, row):
             levels = PLACEHOLDER_FACES
             stats_missing = True
         else:
-            levels = parse_faces(statline)
+            levels = parse_faces(statline, name)
             if levels is None:
                 return None, "character unparseable stat line"
         if rarity not in RARITY_TO_DIE_LIMIT:
             return None, "unknown rarity"
         die_limit = RARITY_TO_DIE_LIMIT[rarity]
     elif card_type == "Action":
-        energy_type = parse_energy(energy_raw)
-        if energy_type is None:
-            return None, "action bad/missing energy"
+        if energy_raw in GENERIC_ENERGY:
+            energy_type = []
+        else:
+            energy_type = parse_energy(energy_raw)
+            if energy_type is None:
+                return None, "action bad/missing energy"
         levels = []
     else:
         levels = []
