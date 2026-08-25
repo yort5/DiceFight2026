@@ -59,6 +59,14 @@ VALID_ENERGY = {"Fist", "Bolt", "Mask", "Shield"}
 BASIC_ACTION_SUBS = {"Basic Action Card", "Basic Action Cards", "Basic Action"}
 EPIC_SUBS = {"Epic Basic Action"}
 ID_RE = re.compile(r"^[A-Za-z]+\d+$")
+# The PROMO tab is not one set but every promo ever printed, and it
+# numbers ids digits-first in ~19 different shapes: "1AvXop", "5DC2016",
+# "1WKO16DC", "143WF". Deliberately NOT folded into ID_RE - the main sets
+# have one consistent shape worth keeping strict, and promos are the ones
+# likely to sprout new shapes, so that complexity stays contained here
+# (the user's call). Loose on shape, strict on the thing that matters:
+# every id must still be unique, which main() already enforces.
+PROMO_ID_RE = re.compile(r"^\d+[A-Za-z][A-Za-z0-9]*$")
 BURST_ONLY_RE = re.compile(r"^[-*]+(\s[-*]+){2}$")
 FACE_RE = re.compile(r"^(\*{0,2})(\d)(\d)(\d)(\*{0,2})$")
 # Same shape, one extra digit: "3108" and "3810" are both fielding-cost 3
@@ -69,6 +77,7 @@ FACE_10_RE = re.compile(r"^(\*{0,2})(\d)(\d{3})(\*{0,2})$")
 DOUBLE_DIGIT_STAT = {
     "Slifer the Sky Dragon": "attack",      # 175 286 3108 -> 3/10/8
     "The Winged Dragon of Ra": "defense",   # 157 268 3810 -> 3/8/10
+    "White Lantern Dove": "defense",        # 022 033 1410 -> 1/4/10
 }
 RARITY_TO_DIE_LIMIT = {"Common": 4, "Uncommon": 3, "Rare": 2, "Super": 1, "Super-Rare": 1, "Chase": 1}
 
@@ -298,7 +307,7 @@ def classify_row(code, row):
         ability = ""
     statline = norm(row[8])
 
-    if not ID_RE.match(card_id):
+    if not (PROMO_ID_RE if code == "PROMO" else ID_RE).match(card_id):
         return None, "bad id format"
 
     if subtitle in BASIC_ACTION_SUBS:

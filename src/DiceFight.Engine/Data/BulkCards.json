@@ -1,5 +1,402 @@
 [
   {
+    "id": "10DC2016",
+    "name": "Focus Power",
+    "subtitle": "Basic Action Card",
+    "type": "BasicAction",
+    "purchaseCost": 3,
+    "energyTypes": [],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "Spin one target character die up or down one level. */** Instead, spin two target character dice up or down one level.",
+    "keywords": [],
+    "affiliations": [],
+    "isImplemented": false,
+    "set": "PROMO",
+    "abilityTemplate": null
+  },
+  {
+    "id": "10M2017",
+    "name": "Power Bolt",
+    "subtitle": "Basic Action Card",
+    "type": "BasicAction",
+    "purchaseCost": 3,
+    "energyTypes": [],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "Deal 2 damage to targe character die or player.",
+    "keywords": [],
+    "affiliations": [],
+    "isImplemented": false,
+    "set": "PROMO",
+    "abilityTemplate": null
+  },
+  {
+    "id": "137TOA",
+    "name": "Brazen Pegasus",
+    "subtitle": "Basic Action Card",
+    "type": "BasicAction",
+    "purchaseCost": 4,
+    "energyTypes": [],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "Up to two character dice you control can only be blocked by two or more character dice (until end of turn).",
+    "keywords": [],
+    "affiliations": [],
+    "isImplemented": false,
+    "set": "PROMO",
+    "abilityTemplate": null
+  },
+  {
+    "id": "1AvXop",
+    "name": "Teamwork",
+    "subtitle": "Basic Action Card",
+    "type": "BasicAction",
+    "purchaseCost": 3,
+    "energyTypes": [],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "Each of your fielded characters gains +1A and +1D for each other of your fielded characters that shares a team affiliation with it.",
+    "keywords": [],
+    "affiliations": [],
+    "isImplemented": false,
+    "set": "PROMO",
+    "abilityTemplate": null
+  },
+  {
+    "id": "1JLOP",
+    "name": "Pandora's Box",
+    "subtitle": "Trinity War",
+    "type": "Action",
+    "purchaseCost": 3,
+    "energyTypes": [],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "When your characters are blocking or are blocked by Villains those dice get +1A and +1D until end of turn. Global: Pay Shield. Target character gains the Villain affiliation.",
+    "keywords": [],
+    "affiliations": [],
+    "isImplemented": false,
+    "set": "PROMO",
+    "abilityTemplate": null
+  },
+  {
+    "id": "1M2022",
+    "name": "Explosion",
+    "subtitle": "Basic Action Card",
+    "type": "BasicAction",
+    "purchaseCost": 4,
+    "energyTypes": [],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "Deal 2 damage to each player and character die. You may also spend any number of bolt energy, for each that you do you may deal 1 damage to target character die. ** Deal 1 additional damage to each player and character die that Explosion deals damage to.",
+    "keywords": [],
+    "affiliations": [],
+    "isImplemented": false,
+    "set": "PROMO",
+    "abilityTemplate": null
+  },
+  {
+    "id": "1WD2018",
+    "name": "Grombrindal's Fury",
+    "subtitle": "Basic Action Card",
+    "type": "BasicAction",
+    "purchaseCost": 4,
+    "energyTypes": [],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "Deal 2 damage to target character die. You may then reroll this die. If it was an action face, you may repeat this effect.",
+    "keywords": [],
+    "affiliations": [],
+    "isImplemented": false,
+    "set": "PROMO",
+    "abilityTemplate": null
+  },
+  {
+    "id": "1sk2017",
+    "name": "Rigorous Training",
+    "subtitle": "Sidekick Card",
+    "type": "Action",
+    "purchaseCost": 0,
+    "energyTypes": [],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "All Sidekicks get +1D.",
+    "keywords": [],
+    "affiliations": [],
+    "isImplemented": false,
+    "set": "PROMO",
+    "abilityTemplate": null
+  },
+  {
+    "id": "2AvXop",
+    "name": "Rally!",
+    "subtitle": "Basic Action Card",
+    "type": "BasicAction",
+    "purchaseCost": 3,
+    "energyTypes": [],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "Move up to 2 Sidekicks from your used pile to the field. **Move 3 Sidekicks instead.",
+    "keywords": [],
+    "affiliations": [],
+    "isImplemented": false,
+    "set": "PROMO",
+    "abilityTemplate": null
+  },
+  {
+    "id": "2M2022",
+    "name": "Focus",
+    "subtitle": "Basic Action Card",
+    "type": "BasicAction",
+    "purchaseCost": 3,
+    "energyTypes": [],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "Spin target character die up or down one level. ** Spin all character dice up or down one level. Global: Pay 1. Spin target character die you control down 1 level.",
+    "keywords": [],
+    "affiliations": [],
+    "isImplemented": false,
+    "set": "PROMO",
+    "abilityTemplate": null
+  },
+  {
+    "id": "3AvXop",
+    "name": "Deflection",
+    "subtitle": "Basic Action Card",
+    "type": "BasicAction",
+    "purchaseCost": 3,
+    "energyTypes": [],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "Choose an energy type. Characters of that type get +1D. **Those characters get +3D instead. Global: Pay Shield. Prevent 1 damage to a character.",
+    "keywords": [],
+    "affiliations": [],
+    "isImplemented": false,
+    "set": "PROMO",
+    "abilityTemplate": null
+  },
+  {
+    "id": "3JLOP",
+    "name": "House of Mystery",
+    "subtitle": "Trinity War",
+    "type": "Action",
+    "purchaseCost": 4,
+    "energyTypes": [
+      "Bolt"
+    ],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "Put all dice in the Field Zone that are the same as another die in the Field Zone into their owner's Used Pile.",
+    "keywords": [],
+    "affiliations": [],
+    "isImplemented": false,
+    "set": "PROMO",
+    "abilityTemplate": null
+  },
+  {
+    "id": "3M2020",
+    "name": "Slingers",
+    "subtitle": "Basic Action Card",
+    "type": "BasicAction",
+    "purchaseCost": 5,
+    "energyTypes": [],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "At the beginning of your attack step, your opponent chooses 1 of your character dice that can't attack this turn. Two target character dice can't block this turn. Global: Pay Mask. Target character die must attack this turn.",
+    "keywords": [],
+    "affiliations": [],
+    "isImplemented": false,
+    "set": "PROMO",
+    "abilityTemplate": null
+  },
+  {
+    "id": "3M2022",
+    "name": "Hellfire Gala",
+    "subtitle": "Basic Action Card",
+    "type": "BasicAction",
+    "purchaseCost": 6,
+    "energyTypes": [],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "Roll 2 dice from your bag. Each player fields three Sidekick dice from their Used Pile. If there are 16 or more dice in the Field Zone, win the game.",
+    "keywords": [],
+    "affiliations": [],
+    "isImplemented": false,
+    "set": "PROMO",
+    "abilityTemplate": null
+  },
+  {
+    "id": "3WOLOP",
+    "name": "Batmobile",
+    "subtitle": "From Wayne Enterprises",
+    "type": "Action",
+    "purchaseCost": 3,
+    "energyTypes": [
+      "Bolt"
+    ],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "You may purchase or field a die with Batman\u2122 in its card name or subtitle for 2 less than normal. ** Batman or Robin instead. (Purchase costs may not be reduced below 1) Global: Pay Shield. Your Batman dice get +1D this turn.",
+    "keywords": [],
+    "affiliations": [],
+    "isImplemented": false,
+    "set": "PROMO",
+    "abilityTemplate": null
+  },
+  {
+    "id": "4AvXop",
+    "name": "Teleport",
+    "subtitle": "Basic Action Card",
+    "type": "BasicAction",
+    "purchaseCost": 4,
+    "energyTypes": [],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "Swap your fielded character with a character die of the same energy type from your used pile or prep area. Spin it to the same level. */**Spin the new character up a level.",
+    "keywords": [],
+    "affiliations": [],
+    "isImplemented": false,
+    "set": "PROMO",
+    "abilityTemplate": null
+  },
+  {
+    "id": "4M2022",
+    "name": "Mutant Armor",
+    "subtitle": "Basic Action Card",
+    "type": "BasicAction",
+    "purchaseCost": 3,
+    "energyTypes": [],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "Continuous: Prevent up to 2 damage to target character die and move this die to your Used Pile. If you have an active X-Men character, also gain 1 life.",
+    "keywords": [],
+    "affiliations": [],
+    "isImplemented": false,
+    "set": "PROMO",
+    "abilityTemplate": null
+  },
+  {
+    "id": "5AvXop",
+    "name": "Collateral Damage",
+    "subtitle": "Basic Action Card",
+    "type": "BasicAction",
+    "purchaseCost": 4,
+    "energyTypes": [],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "Deal one damage to your opponent for each opposing character you knock out this turn.",
+    "keywords": [],
+    "affiliations": [],
+    "isImplemented": false,
+    "set": "PROMO",
+    "abilityTemplate": null
+  },
+  {
+    "id": "5M2016",
+    "name": "Villainous Pact",
+    "subtitle": "Basic Action Card",
+    "type": "BasicAction",
+    "purchaseCost": 4,
+    "energyTypes": [],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "Your opponent chooses one non-Villain character. All other non-villain character dice cannot block this turn. Global: Pay Mask. Once per turn, during your turn, if you have no dice in your Prep Area, you may draw a die and place it in your Prep Area.",
+    "keywords": [],
+    "affiliations": [],
+    "isImplemented": false,
+    "set": "PROMO",
+    "abilityTemplate": null
+  },
+  {
+    "id": "5M2022",
+    "name": "Power Bolt",
+    "subtitle": "Basic Action Card",
+    "type": "BasicAction",
+    "purchaseCost": 3,
+    "energyTypes": [],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "Deal 2 damage to target character die or player.",
+    "keywords": [],
+    "affiliations": [],
+    "isImplemented": false,
+    "set": "PROMO",
+    "abilityTemplate": null
+  },
+  {
+    "id": "6AvXop",
+    "name": "Takedown",
+    "subtitle": "Basic Action Card",
+    "type": "BasicAction",
+    "purchaseCost": 3,
+    "energyTypes": [],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "Deal 2 damage to a non-Shield character. If it is a Villain, deal 4 damage instead. Global: Pay Mask. Target character is gains the Villain affiliation until the end of the turn.",
+    "keywords": [],
+    "affiliations": [],
+    "isImplemented": false,
+    "set": "PROMO",
+    "abilityTemplate": null
+  },
+  {
+    "id": "7DC2016",
+    "name": "Thrown Car",
+    "subtitle": "Basic Action Card",
+    "type": "BasicAction",
+    "purchaseCost": 4,
+    "energyTypes": [],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "Up to two character dice in your Field Zone get +1A and Overcrush until end of turn.",
+    "keywords": [
+      "Overcrush"
+    ],
+    "affiliations": [],
+    "isImplemented": false,
+    "set": "PROMO",
+    "abilityTemplate": null
+  },
+  {
+    "id": "9M2019",
+    "name": "Wallop",
+    "subtitle": "Basic Action Card",
+    "type": "BasicAction",
+    "purchaseCost": 4,
+    "energyTypes": [],
+    "dieLimit": 3,
+    "levels": [],
+    "statsMissing": false,
+    "rawText": "KO target level 1 character die. ** Instead, KO target level 1 or level 2 character die. Global: Pay fist. Target blocked character die deals no damage.",
+    "keywords": [],
+    "affiliations": [],
+    "isImplemented": false,
+    "set": "PROMO",
+    "abilityTemplate": null
+  },
+  {
     "id": "AI001",
     "name": "Arnim Zola",
     "subtitle": "Scientist Supreme",
@@ -337,6 +734,86 @@
     "abilityTemplate": null
   },
   {
+    "id": "AI011",
+    "name": "Black Widow",
+    "subtitle": "Red Alert",
+    "type": "Character",
+    "purchaseCost": 2,
+    "energyTypes": [
+      "Fist"
+    ],
+    "dieLimit": 4,
+    "levels": [
+      {
+        "fieldingCost": 0,
+        "attack": 2,
+        "defense": 1,
+        "burstStars": null
+      },
+      {
+        "fieldingCost": 0,
+        "attack": 2,
+        "defense": 2,
+        "burstStars": null
+      },
+      {
+        "fieldingCost": 1,
+        "attack": 3,
+        "defense": 3,
+        "burstStars": null
+      }
+    ],
+    "statsMissing": false,
+    "rawText": "When fielded, you may KO target Sidekick character die. Global: Pay Fist. Once per turn, target character die must attack this turn (if able).",
+    "keywords": [],
+    "affiliations": [
+      "Avengers"
+    ],
+    "isImplemented": false,
+    "set": "AI",
+    "abilityTemplate": null
+  },
+  {
+    "id": "AI012",
+    "name": "Black Widow",
+    "subtitle": "The Widow's Bite",
+    "type": "Character",
+    "purchaseCost": 2,
+    "energyTypes": [
+      "Fist"
+    ],
+    "dieLimit": 4,
+    "levels": [
+      {
+        "fieldingCost": 0,
+        "attack": 2,
+        "defense": 1,
+        "burstStars": null
+      },
+      {
+        "fieldingCost": 0,
+        "attack": 2,
+        "defense": 2,
+        "burstStars": null
+      },
+      {
+        "fieldingCost": 1,
+        "attack": 3,
+        "defense": 3,
+        "burstStars": null
+      }
+    ],
+    "statsMissing": false,
+    "rawText": "When fielded, your other character dice get +1A (until end of turn). Global: Pay Fist. Once per turn, target character die must attack this turn (if able).",
+    "keywords": [],
+    "affiliations": [
+      "Avengers"
+    ],
+    "isImplemented": false,
+    "set": "AI",
+    "abilityTemplate": null
+  },
+  {
     "id": "AI013",
     "name": "Captain America",
     "subtitle": "Living Legend",
@@ -571,6 +1048,126 @@
     "keywords": [],
     "affiliations": [
       "Avengers"
+    ],
+    "isImplemented": false,
+    "set": "AI",
+    "abilityTemplate": null
+  },
+  {
+    "id": "AI019",
+    "name": "Dormammu",
+    "subtitle": "Call Upon the Shadowy Shapes",
+    "type": "Character",
+    "purchaseCost": 6,
+    "energyTypes": [
+      "Mask"
+    ],
+    "dieLimit": 4,
+    "levels": [
+      {
+        "fieldingCost": 1,
+        "attack": 5,
+        "defense": 5,
+        "burstStars": null
+      },
+      {
+        "fieldingCost": 2,
+        "attack": 7,
+        "defense": 6,
+        "burstStars": null
+      },
+      {
+        "fieldingCost": 2,
+        "attack": 8,
+        "defense": 8,
+        "burstStars": null
+      }
+    ],
+    "statsMissing": false,
+    "rawText": "While Dormammu is active, non Billain character dice cost your opponents 1 more to purchase.",
+    "keywords": [],
+    "affiliations": [
+      "Villains"
+    ],
+    "isImplemented": false,
+    "set": "AI",
+    "abilityTemplate": null
+  },
+  {
+    "id": "AI020",
+    "name": "Dormammu",
+    "subtitle": "From Here to Eternity",
+    "type": "Character",
+    "purchaseCost": 7,
+    "energyTypes": [
+      "Mask"
+    ],
+    "dieLimit": 4,
+    "levels": [
+      {
+        "fieldingCost": 1,
+        "attack": 5,
+        "defense": 5,
+        "burstStars": null
+      },
+      {
+        "fieldingCost": 2,
+        "attack": 7,
+        "defense": 6,
+        "burstStars": null
+      },
+      {
+        "fieldingCost": 2,
+        "attack": 8,
+        "defense": 8,
+        "burstStars": null
+      }
+    ],
+    "statsMissing": false,
+    "rawText": "While Dormammu is active, character dice cost 1 more to field and Global Abilities cost 1 more to use.",
+    "keywords": [],
+    "affiliations": [
+      "Villains"
+    ],
+    "isImplemented": false,
+    "set": "AI",
+    "abilityTemplate": null
+  },
+  {
+    "id": "AI021",
+    "name": "Dormammu",
+    "subtitle": "Crimson Bands of Cyttorak",
+    "type": "Character",
+    "purchaseCost": 6,
+    "energyTypes": [
+      "Mask"
+    ],
+    "dieLimit": 4,
+    "levels": [
+      {
+        "fieldingCost": 1,
+        "attack": 5,
+        "defense": 5,
+        "burstStars": null
+      },
+      {
+        "fieldingCost": 2,
+        "attack": 7,
+        "defense": 6,
+        "burstStars": null
+      },
+      {
+        "fieldingCost": 2,
+        "attack": 8,
+        "defense": 8,
+        "burstStars": null
+      }
+    ],
+    "statsMissing": false,
+    "rawText": "While Dormammu is active, at the end of each player's turn, KO the character die with the lowest purchase cost controlled by the active player (you break ties) (Sidekick dice are considered to have a purchase cost of 0).",
+    "keywords": [],
+    "affiliations": [
+      "Villains"
     ],
     "isImplemented": false,
     "set": "AI",
@@ -22806,7 +23403,50 @@
     "rawText": "You may not use ? energy to purchase this die, this text may not be ignored. While White Lantern Aquaman is active, whenever your opponent fields a Sidekick, deal 1 damage to your opponent.",
     "keywords": [],
     "affiliations": [
-      "White Lantern"
+      "White Lanterns"
+    ],
+    "isImplemented": false,
+    "set": "BAT",
+    "abilityTemplate": null
+  },
+  {
+    "id": "BAT122",
+    "name": "White Lantern Dove",
+    "subtitle": "The Awareness to Live",
+    "type": "Character",
+    "purchaseCost": 4,
+    "energyTypes": [
+      "Bolt",
+      "Fist",
+      "Mask",
+      "Shield"
+    ],
+    "dieLimit": 1,
+    "levels": [
+      {
+        "fieldingCost": 0,
+        "attack": 2,
+        "defense": 2,
+        "burstStars": null
+      },
+      {
+        "fieldingCost": 0,
+        "attack": 3,
+        "defense": 3,
+        "burstStars": null
+      },
+      {
+        "fieldingCost": 1,
+        "attack": 4,
+        "defense": 10,
+        "burstStars": null
+      }
+    ],
+    "statsMissing": false,
+    "rawText": "You may not use ? energy to purchase this die, this text may not be ignored. While White Lantern Dove is active, whenever a character deals damage to you, deal 1 damage to your opponent.",
+    "keywords": [],
+    "affiliations": [
+      "White Lanterns"
     ],
     "isImplemented": false,
     "set": "BAT",
@@ -22849,7 +23489,7 @@
     "rawText": "You may not use ? energy to purchase this die, this text may not be ignored. While White Lantern Hal Jordan is active, whenever you flip a character card, if that character is active, deal 1 damage to your opponent.",
     "keywords": [],
     "affiliations": [
-      "White Lantern"
+      "White Lanterns"
     ],
     "isImplemented": false,
     "set": "BAT",
@@ -22892,7 +23532,7 @@
     "rawText": "You may not use ? energy to purchase this die, this text may not be ignored. While White Lantern Superman is active, whenever an opposing Villain character die is KO'd, deal 1 damage to your opponent.",
     "keywords": [],
     "affiliations": [
-      "White Lantern"
+      "White Lanterns"
     ],
     "isImplemented": false,
     "set": "BAT",

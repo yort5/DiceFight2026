@@ -8657,3 +8657,47 @@ cost 12, and BAT White Lanterns read "White Lantern".
 - GAF spells the affiliation "White Lanterns" while BAT now spells it
   "White Lantern", so the two sets' cards land in different affiliation
   buckets in the Team Builder filter.
+
+---
+
+## PROMO ids, Dove, and where Max Dice actually comes from (2026-08-25)
+
+**PROMO ids get their own pattern.** The PROMO tab is not a set - it is
+every promo ever printed, numbered digits-first in ~19 shapes ("1AvXop",
+"5DC2016", "1WKO16DC", "143WF"). Per the user, that complexity stays
+contained rather than being folded into `ID_RE`: the main sets have one
+consistent shape worth keeping strict, and promos are the ones likely to
+sprout new shapes. `PROMO_ID_RE` (`^\d+[A-Za-z][A-Za-z0-9]*$`) is loose
+on shape and matches all 127 rows, while uniqueness - the property that
+actually matters - is still enforced by main()'s `seen_ids`. Verified no
+promo id collides with a main-set id.
+
+That took "bad id format" from 127 skips to zero, and 23 promo Basic
+Actions/Actions now import.
+
+**Where Max Dice comes from.** Worth recording, since it surprised the
+user: die limit is not a column anywhere in the sheet. It is DERIVED
+from column 5 - headed "Rarity" on older tabs, "Stripe" on newer ones,
+same values either way - via `RARITY_TO_DIE_LIMIT`: Common 4, Uncommon
+3, Rare 2, Super/Super-Rare/Chase 1.
+
+That is why promos are stuck: their column 5 reads "Promo" for all 127
+rows, which is a *provenance* label, not a rarity, and carries no
+die-limit information. The 3 stragglers in other sets (FUS143 Belaphoss,
+WF143 Bat-Mite, CW143 Squirrel Girl) are the same problem - promo
+printings filed under their original set.
+
+Also landed from the user's sheet fixes: White Lantern Dove (10D, the
+third `DOUBLE_DIGIT_STAT` entry), the White Lanterns affiliation now
+consistent across BAT and GAF (8 cards, one bucket), and the missing
+digits on Black Widow AI011/AI012 and Dormammu AI019-021.
+
+BulkCards.json 3752 -> 3781. All 708 tests pass.
+
+**Open, needing sheet data.** 104 promo characters + those 3, pending a
+die-limit source. Two promo characters have energy "None" (9JLOP The
+Outsider, 1WKO16DC Terry McGinnis). And two promo ids are used twice -
+5DC2016 is both Lex Luthor "Legion of Doom" and Stargirl "DC Bombshell";
+6DC2016 is both Scarecrow "Legion of Doom" and Lois Lane "DC Bombshell"
+- two 2016 DC promo series sharing one numbering scheme. The importer
+keeps the first and drops the second as "duplicate id within sheet".
