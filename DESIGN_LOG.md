@@ -8503,3 +8503,62 @@ server up, clicked through to the Team Builder, exercised the dropdown
 and checkbox. Counts nest sensibly - 343 with no format, 273 Silver,
 230 Bronze, 224 Bronze + Orange Ban - with no page errors. `npx tsc
 --noEmit` and `npm run build` both clean.
+
+---
+
+## Orange Ban unmatched entries: two causes, both fixed (2026-08-25)
+
+Chased down the 12 Orange Ban entries that matched no card. The user's
+instinct was right - every one of them IS on the reference sheet. The
+misses had two unrelated causes.
+
+**Cause 1: spelling disagreements (6 entries).** The ban list and the
+sheet were transcribed from different sources and disagree:
+
+| Card | Ban list | Sheet / catalog |
+|---|---|---|
+| Venom | Angelo Fortunado | Angelo Fortunato |
+| Doomcaliber Knight | Doomcaliber | Doomcalibur |
+| Hulk | Power of Attorney | Power of Attourney |
+| Mr. Fixit | Muscle for Hire | Muscle of Hire |
+| Wrecker | Enchanted Crowbar | Enchanged Crowbar |
+| Vulcan | Aggression | Aggession |
+
+Note the correction to the previous entry above: "Aggession" is NOT a v1
+typo. v1 imported it faithfully; the SHEET has the typo, as it does for
+four of the other five. Only Venom's is the ban list's own error.
+
+Recorded as `OrangeBanEntry.alsoMatches` rather than "correcting" either
+side, since neither is authoritative over the other and a silent edit
+would erase the evidence that they disagree.
+
+**Cause 2: the catalog was genuinely short (the rest).** Comparing sheet
+rows against BulkCards.json per set showed shortfalls everywhere, and
+two sets essentially unimported: DPS 6/152, MSW 10/152. Re-running the
+importer explained why - MSW's stat-line column is empty for all 136 of
+its characters, so every one failed "character unparseable stat line".
+DPS was pure staleness: the importer accepts 151/152 DPS rows today, so
+BulkCards.json simply predated that tab being filled in.
+
+Per the user's call, characters with a BLANK stat line now import with a
+0/0/0 placeholder (`PLACEHOLDER_FACES`) and a `statsMissing: true` flag,
+instead of being dropped - deliberately absurd rather than guessed, so
+the unfinished data is obvious, and forced to `isImplemented: false`
+last (after template matching) since an unfieldable die is not playable
+however simple its text. Also fixed a stray trailing period in the stat
+line ('022 123 133.', all three Constantine printings).
+
+Result: BulkCards.json 3492 -> 3652 cards; the merged API catalog is
+3852. Orange Ban matching went 52/64 -> **63/64**. All 708 tests pass
+(161 V2 + 547 Engine).
+
+**Not done, needs a call.** The last unmatched entry, Typhoid Mary: Red
+Rubber Boots, has energy `Bolt/Mask`. v1's `CardDef.EnergyTypes` is
+ALREADY a list, but BulkCards.json's row schema stores a single
+`energyType` and `BulkCardCatalog.cs:51` reads one value. Teaching the
+importer to emit a list would recover 76 dual-energy cards, but it
+changes v1 data schema plus a v1 engine file, so it was left for the
+user rather than taken unasked. Remaining skips beyond those 76: 12
+blank/'None' energy, 6 'Generic' energy, 6 YGO Egyptian God cards whose
+double-digit stat lines are genuinely ambiguous ('3108' = 3/10/8 but
+'3810' = 3/8/10), and Supreme Intelligence: Merciless with a blank cost.

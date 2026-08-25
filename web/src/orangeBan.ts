@@ -18,6 +18,19 @@ export interface OrangeBanEntry {
   readonly name: string;
   /** null = all printings of this character in this set. */
   readonly subtitle: string | null;
+  /**
+   * Alternate spellings this card appears under in OUR catalog.
+   *
+   * The ban list and the card catalog are transcribed from different
+   * sources and disagree on a handful of spellings - in most cases the
+   * source spreadsheet the catalog is imported from carries the typo
+   * ("Power of Attourney", "Muscle of Hire", "Enchanged Crowbar",
+   * "Aggession", "Doomcalibur"), and in one case the ban list does
+   * ("Angelo Fortunado" for Angelo Fortunato). Rather than silently
+   * "correcting" either source, the mismatch is recorded here so the
+   * matcher succeeds and the disagreement stays visible.
+   */
+  readonly alsoMatches?: readonly { readonly name?: string; readonly subtitle?: string }[];
 }
 
 export const ORANGE_BAN_LIST: readonly OrangeBanEntry[] = [
@@ -28,14 +41,14 @@ export const ORANGE_BAN_LIST: readonly OrangeBanEntry[] = [
   { set: "AvX", name: "Hulk", subtitle: "Green Goliath" },
   { set: "AvX", name: "Nick Fury", subtitle: "Patch" },
   { set: "AvX", name: "Nova", subtitle: "The Human Rocket" },
-  { set: "AvX", name: "Venom", subtitle: "Angelo Fortunado" },
+  { set: "AvX", name: "Venom", subtitle: "Angelo Fortunado", alsoMatches: [{ subtitle: "Angelo Fortunato" }] },
   // UXM
   { set: "UXM", name: "Imprisoned", subtitle: "Basic Action Card" },
   { set: "UXM", name: "Relentless", subtitle: "Basic Action Card" },
   { set: "UXM", name: "Falcon", subtitle: "Recon" },
   // YGO
   { set: "YGO", name: "Swords of Revealing Light", subtitle: "Basic Action Card" },
-  { set: "YGO", name: "Doomcaliber Knight", subtitle: "Fiendish Fighter" },
+  { set: "YGO", name: "Doomcaliber Knight", subtitle: "Fiendish Fighter", alsoMatches: [{ name: "Doomcalibur Knight" }] },
   { set: "YGO", name: "Jinzo", subtitle: "Trap Destroyer" },
   { set: "YGO", name: "Ring of Magnetism", subtitle: "Action Attraction" },
   // BFF
@@ -77,9 +90,9 @@ export const ORANGE_BAN_LIST: readonly OrangeBanEntry[] = [
   { set: "TOA", name: "Yuan-ti Pureblood", subtitle: "Epic Humanoid" },
   { set: "TOA", name: "Ring of Winter", subtitle: "Epic Magical Object" },
   // THOR
-  { set: "THOR", name: "Hulk", subtitle: "Power of Attorney" },
-  { set: "THOR", name: "Mr. Fixit", subtitle: "Muscle for Hire" },
-  { set: "THOR", name: "Wrecker", subtitle: "Enchanted Crowbar" },
+  { set: "THOR", name: "Hulk", subtitle: "Power of Attorney", alsoMatches: [{ subtitle: "Power of Attourney" }] },
+  { set: "THOR", name: "Mr. Fixit", subtitle: "Muscle for Hire", alsoMatches: [{ subtitle: "Muscle of Hire" }] },
+  { set: "THOR", name: "Wrecker", subtitle: "Enchanted Crowbar", alsoMatches: [{ subtitle: "Enchanged Crowbar" }] },
   // JUS
   { set: "JUS", name: "Green Lantern", subtitle: "Human" },
   // XMF
@@ -100,7 +113,7 @@ export const ORANGE_BAN_LIST: readonly OrangeBanEntry[] = [
   { set: "DPS", name: "Gladiator", subtitle: null },
   { set: "DPS", name: "Lilandra", subtitle: "Majestrix" },
   { set: "DPS", name: "Master Mold", subtitle: "Endless Sentinels" },
-  { set: "DPS", name: "Vulcan", subtitle: "Aggression" },
+  { set: "DPS", name: "Vulcan", subtitle: "Aggression", alsoMatches: [{ subtitle: "Aggession" }] },
   // SKC
   { set: "SKC", name: "Hawkman", subtitle: null },
   { set: "SKC", name: "Barry Allen", subtitle: "Master of the Speed Force" },
@@ -121,10 +134,34 @@ function normalize(value: string): string {
 
 const BY_SET_AND_NAME = new Map<string, OrangeBanEntry[]>();
 for (const entry of ORANGE_BAN_LIST) {
-  const key = `${entry.set}|${normalize(entry.name)}`;
-  const bucket = BY_SET_AND_NAME.get(key);
-  if (bucket) bucket.push(entry);
-  else BY_SET_AND_NAME.set(key, [entry]);
+  const names = new Set([entry.name, ...(entry.alsoMatches ?? []).flatMap((v) => (v.name ? [v.name] : []))]);
+  for (const name of names) {
+    const key = `${entry.set}|${normalize(name)}`;
+    const bucket = BY_SET_AND_NAME.get(key);
+    if (bucket) bucket.push(entry);
+    else BY_SET_AND_NAME.set(key, [entry]);
+  }
+}
+
+function subtitleMatches(wantedRaw: string, card: { subtitle: string | null }): boolean {
+  const wanted = normalize(wantedRaw);
+  const actual = normalize(card.subtitle ?? "");
+  // Basic Action cards are listed as "<name>: Basic Action Card" while
+  // the catalog stores just "Basic Action" / "Epic Basic Action".
+  if (wanted === "basicactioncard") return actual.includes("basicaction");
+  return wanted === actual;
+}
+
+function matchesEntry(
+  entry: OrangeBanEntry,
+  card: { name: string; subtitle: string | null },
+): boolean {
+  if (entry.subtitle === null) return true; // "(All)" - every printing
+  if (subtitleMatches(entry.subtitle, card)) return true;
+  return (entry.alsoMatches ?? []).some((v) => {
+    if (v.name !== undefined && normalize(v.name) !== normalize(card.name)) return false;
+    return v.subtitle === undefined ? true : subtitleMatches(v.subtitle, card);
+  });
 }
 
 export function isOrangeBanned(card: {
@@ -135,13 +172,5 @@ export function isOrangeBanned(card: {
   if (!card.set) return false;
   const matches = BY_SET_AND_NAME.get(`${card.set}|${normalize(card.name)}`);
   if (!matches) return false;
-  return matches.some((entry) => {
-    if (entry.subtitle === null) return true; // "(All)" - every printing
-    const wanted = normalize(entry.subtitle);
-    const actual = normalize(card.subtitle ?? "");
-    // Basic Action cards are listed as "<name>: Basic Action Card" while
-    // the catalog stores just "Basic Action" / "Epic Basic Action".
-    if (wanted === "basicactioncard") return actual.includes("basicaction");
-    return wanted === actual;
-  });
+  return matches.some((entry) => matchesEntry(entry, card));
 }

@@ -83,8 +83,23 @@ def existing_hand_curated_ids():
     return set(re.findall(r'^\s*"([A-Z]+\d+)",', text, re.MULTILINE))
 
 
+# Some set tabs simply have not had their stat-line column filled in yet
+# - as of 2026-08-25 that is every character on the MSW tab (136 rows) and
+# a scattering elsewhere (Constantine, Ring of Magnetism). Those cards are
+# real and belong in the catalog for team-building and for the Orange Ban
+# list to match against, so they import with a deliberately absurd 0/0
+# placeholder rather than being dropped: a card that cannot be fielded and
+# hits for nothing is unmistakably unfinished data, where a guessed
+# statline would quietly look legitimate. `statsMissing` flags them so the
+# placeholder can be found and replaced once the sheet catches up.
+PLACEHOLDER_FACES = [{"fieldingCost": 0, "attack": 0, "defense": 0, "burstStars": None}] * 3
+
+
 def parse_faces(statline):
-    groups = statline.split()
+    # A few rows end their stat line with a stray sentence period
+    # ("022 123 133." - all three Constantine printings). Trailing '*'
+    # is meaningful (burst) and must survive; '.' never is.
+    groups = statline.rstrip(".").split()
     if len(groups) != 3:
         return None
     faces = []
@@ -255,13 +270,18 @@ def classify_row(code, row):
     levels = None
     die_limit = 3
     energy_type = None
+    stats_missing = False
 
     if card_type == "Character":
         if energy_raw not in VALID_ENERGY:
             return None, "character bad/multi/missing energy"
-        levels = parse_faces(statline)
-        if levels is None:
-            return None, "character unparseable stat line"
+        if not statline:
+            levels = PLACEHOLDER_FACES
+            stats_missing = True
+        else:
+            levels = parse_faces(statline)
+            if levels is None:
+                return None, "character unparseable stat line"
         if rarity not in RARITY_TO_DIE_LIMIT:
             return None, "unknown rarity"
         die_limit = RARITY_TO_DIE_LIMIT[rarity]
@@ -288,6 +308,13 @@ def classify_row(code, row):
             is_implemented = True
             keywords = sorted(set(keywords) | set(extra_keywords))
 
+    if stats_missing:
+        # A placeholder statline is missing data, not finished data - the
+        # die cannot be fielded, so the card is not playable no matter how
+        # simple or well-templated its ability text is. This deliberately
+        # runs last, after template matching may have set the flag.
+        is_implemented = False
+
     entry = {
         "id": card_id,
         "name": name,
@@ -297,6 +324,7 @@ def classify_row(code, row):
         "energyType": energy_type,
         "dieLimit": die_limit,
         "levels": levels,
+        "statsMissing": stats_missing,
         "rawText": ability,
         "keywords": keywords,
         "affiliations": parse_affiliations(row[6] if len(row) > 6 else ""),
