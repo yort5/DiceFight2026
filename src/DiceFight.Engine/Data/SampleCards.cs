@@ -748,12 +748,12 @@ public static class SampleCards
             new CharacterFace(FieldingCost: 2, Attack: 4, Defense: 3)
         ], set: "CW");
 
-    // X-Men Forever's Madalyne Pryor, "Red Queen" printing - purely the
+    // X-Men Forever's Madelyne Pryor, "Red Queen" printing - purely the
     // Energy Drain keyword (base X=1), no other text. Fully engine-level
     // like Deadly/Overcrush: no target or choice - see
     // CombatEngine.ResolveEnergyDrain/DieStats.EnergyDrainAmount.
-    public static readonly CardDef MadalynePryor = Character(
-        "XMF035", "Madalyne Pryor", "Red Queen", dieLimit: 4,
+    public static readonly CardDef MadelynePryor = Character(
+        "XMF035", "Madelyne Pryor", "Red Queen", dieLimit: 4,
         "Energy Drain (Spin engaged character dice down 1 level.)",
         purchaseCost: 2, energyType: EnergyType.Mask,
         keywords: [new KeywordInstance("Energy Drain")],
@@ -4302,7 +4302,7 @@ public static class SampleCards
             JaneFoster, Starfire, Kang, KingHyperion, CasketOfAncientWinters, DailyBugle, Escape,
             AlfredPennyworthCaretaker, AlfredPennyworthMI5, AlfredPennyworthToughAsNails,
             AntManAmplify, Cyclops, Wasp, BlackWidow, Polaris, CosmicCubeInfinitePossibilities, Parademon, Darkseid,
-            Deathbird, WaspPixie, MadalynePryor, TheSpot, Ricochet, ScarletSpider, DrowMercenary,
+            Deathbird, WaspPixie, MadelynePryor, TheSpot, Ricochet, ScarletSpider, DrowMercenary,
             SupermanKalEl, BlackMantaDeepSeaDeviant, BizarroMoreThanAMonster,
             SpideysLastStand, TheRock, BigE, RipHunterNavigateTheSandsOfTime, StarfireStarbolts,
             JamilahShipwreckedOnChult,

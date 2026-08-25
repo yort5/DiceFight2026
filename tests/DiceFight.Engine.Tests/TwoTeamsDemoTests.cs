@@ -3077,7 +3077,7 @@ public class TwoTeamsDemoTests
     }
 
     [Fact]
-    public void MadalynePryorEnergyDrain_SpinsDownHerEngagedAttacker()
+    public void MadelynePryorEnergyDrain_SpinsDownHerEngagedAttacker()
     {
         var state = BuildTwoTeamGame();
         state.ActivePlayerId = "teamA";
@@ -3087,22 +3087,22 @@ public class TwoTeamsDemoTests
         attacker.Status = DieStatus.Character;
         attacker.Level = 3;
 
-        var madalyne = new DieInstance
+        var madelyne = new DieInstance
         {
-            Id = "teamB-madalyne-1", CardId = SampleCards.MadalynePryor.Id, OwnerId = "teamB", ControllerId = "teamB",
+            Id = "teamB-madelyne-1", CardId = SampleCards.MadelynePryor.Id, OwnerId = "teamB", ControllerId = "teamB",
             Zone = Zone.FieldZone, Status = DieStatus.Character, Level = 1,
         };
-        state.Dice.Add(madalyne);
+        state.Dice.Add(madelyne);
 
         TurnEngine.EnterAttackStep(state);
         var queue = new AbilityQueue();
         CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
         var assignment = new CombatAssignment();
-        assignment.AssignBlocker(attacker.Id, madalyne.Id);
-        CombatEngine.DeclareBlockers(state, assignment, [madalyne.Id]);
+        assignment.AssignBlocker(attacker.Id, madelyne.Id);
+        CombatEngine.DeclareBlockers(state, assignment, [madelyne.Id]);
 
         Assert.Equal(2, attacker.Level); // spun down 1 the moment blockers were assigned
-        Assert.Equal(1, madalyne.Level); // Madalyne herself is untouched by her own keyword
+        Assert.Equal(1, madelyne.Level); // Madelyne herself is untouched by her own keyword
     }
 
     [Fact]
