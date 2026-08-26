@@ -958,6 +958,17 @@
   font-size: 10px;
 }
 
+/* Min/Max sit on one line, each select hugging its own label. */
+.card-catalog-cost label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.card-catalog-cost select {
+  padding: 1px 2px;
+}
+
 /* ---- Team Builder: rarity colour-coding ----
    Each rarity's colour is defined ONCE as --rarity-colour on the shared
    class, then reused by the catalog row stripe, the team sidebar stripe

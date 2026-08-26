@@ -177,6 +177,11 @@ export function TeamBuilderPage() {
   const [activeAffiliations, setActiveAffiliations] = useState<Set<string>>(new Set());
   const [activeSets, setActiveSets] = useState<Set<string>>(new Set());
   const [activeRarities, setActiveRarities] = useState<Set<string>>(new Set());
+  // null means "unbounded" so the filter stays off until the user touches
+  // it - and so a catalog that later gains a costlier card is not silently
+  // excluded by a default that was baked in today.
+  const [minCost, setMinCost] = useState<number | null>(null);
+  const [maxCost, setMaxCost] = useState<number | null>(null);
   // Defaults to TRUE: the catalog is useful as a reference long before the
   // simulator covers it, and in this phase it gets far more use than the
   // game does, so hiding four fifths of the cards by default is backwards.
@@ -370,6 +375,17 @@ export function TeamBuilderPage() {
     [cards],
   );
 
+  // Built from the catalog, not hardcoded: the old Teambuilder's list
+  // stopped at 10 and our data already has a 12 (Supreme Intelligence:
+  // Merciless), which a fixed list would have made unreachable.
+  const costRange = useMemo(() => {
+    const costs = (cards ?? []).map((c) => c.purchaseCost);
+    if (costs.length === 0) return [];
+    const lo = Math.min(...costs);
+    const hi = Math.max(...costs);
+    return Array.from({ length: hi - lo + 1 }, (_, i) => lo + i);
+  }, [cards]);
+
   function toggle(set: Set<string>, setSet: (s: Set<string>) => void, value: string) {
     const next = new Set(set);
     if (next.has(value)) next.delete(value);
@@ -393,6 +409,8 @@ export function TeamBuilderPage() {
       if (activeEnergyTypes.size > 0 && !c.energyTypes.some((e) => activeEnergyTypes.has(e))) return false;
       if (activeAffiliations.size > 0 && !c.affiliations.some((a) => activeAffiliations.has(a))) return false;
       if (activeSets.size > 0 && (!c.set || !activeSets.has(c.set))) return false;
+      if (minCost !== null && c.purchaseCost < minCost) return false;
+      if (maxCost !== null && c.purchaseCost > maxCost) return false;
       const tier = rarityTier(c.rarity);
       if (activeRarities.size > 0 && (!tier || !activeRarities.has(tier))) return false;
       if (activeFormat && (!c.set || !activeFormat.sets.has(c.set))) return false;
@@ -408,7 +426,7 @@ export function TeamBuilderPage() {
         c.rawText.toLowerCase().includes(needle)
       );
     });
-  }, [cards, deferredSearch, activeTypes, activeEnergyTypes, activeAffiliations, activeSets, activeRarities, showUnimplemented, activeFormat, applyOrangeBan]);
+  }, [cards, deferredSearch, activeTypes, activeEnergyTypes, activeAffiliations, activeSets, activeRarities, minCost, maxCost, showUnimplemented, activeFormat, applyOrangeBan]);
 
   const sorted = useMemo(() => {
     const dir = sort.direction === "asc" ? 1 : -1;
@@ -484,6 +502,39 @@ export function TeamBuilderPage() {
                   {r}
                 </label>
               ))}
+            </fieldset>
+            <fieldset className="card-catalog-cost">
+              <legend>Cost</legend>
+              <label>
+                Min
+                <select
+                  value={minCost ?? ""}
+                  onChange={(e) => {
+                    const v = e.target.value === "" ? null : Number(e.target.value);
+                    setMinCost(v);
+                    // Keep the range coherent rather than letting the user
+                    // land on min > max, which silently matches nothing.
+                    if (v !== null && maxCost !== null && v > maxCost) setMaxCost(v);
+                  }}
+                >
+                  <option value="">Any</option>
+                  {costRange.map((n) => <option key={n} value={n}>{n}</option>)}
+                </select>
+              </label>
+              <label>
+                Max
+                <select
+                  value={maxCost ?? ""}
+                  onChange={(e) => {
+                    const v = e.target.value === "" ? null : Number(e.target.value);
+                    setMaxCost(v);
+                    if (v !== null && minCost !== null && v < minCost) setMinCost(v);
+                  }}
+                >
+                  <option value="">Any</option>
+                  {costRange.map((n) => <option key={n} value={n}>{n}</option>)}
+                </select>
+              </label>
             </fieldset>
             <details className="card-catalog-affiliations">
               <summary>

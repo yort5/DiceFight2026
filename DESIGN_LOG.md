@@ -9016,3 +9016,31 @@ lacks" rather than silently producing a short team.
 
 All 708 tests pass; `tsc --noEmit` and `npm run build` clean; no page
 errors.
+
+---
+
+## Cost filter (2026-08-26)
+
+Ported the old Teambuilder's min/max cost filter, which this one was
+missing. Two selects, both defaulting to "Any" so the filter stays off
+until touched.
+
+The range is **built from the catalog rather than hardcoded**: the old
+tool's list stopped at 10, and our data already contains a 12 (Supreme
+Intelligence: Merciless, whose blank cost the user fixed in the sheet
+earlier today), which a fixed 0-10 list would have made unreachable.
+Deriving it also means a costlier card added later cannot be silently
+excluded by a default baked in today.
+
+Picking a max below the current min (or vice versa) drags the other end
+with it, rather than leaving the user on an impossible range that
+silently matches nothing.
+
+Verified in headless Chromium, and the counts are self-consistent by
+inclusion-exclusion: cost <= 3 gives 1354, cost >= 3 gives 3636, cost
+== 3 gives 906, and 1354 + 3636 - 906 = 4084, exactly the catalog size.
+Also checked the two extremes resolve to single cards (cost 0 and cost
+12) and that clearing both selects returns the full 4084.
+
+All 708 tests pass; `tsc --noEmit` and `npm run build` clean; no page
+errors.
