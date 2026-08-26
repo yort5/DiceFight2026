@@ -8929,3 +8929,40 @@ very different text (Vulcan has three), so it is what tells them apart.
 All 708 tests pass; `tsc --noEmit` and `npm run build` clean; verified in
 headless Chromium against a character, a dual-energy character and a
 Basic Action, with zero horizontal page overflow and no page errors.
+
+---
+
+## Team panel scrolling fix (2026-08-26)
+
+The user reported the Team panel scrolling oddly: it moves slightly,
+then stops dead until the very bottom of the page. That is the exact
+signature of a `position: sticky` box TALLER than the viewport - it pins
+at `top`, and everything below the fold becomes unreachable, because
+there is nothing left to scroll it into view. Measured before changing
+anything: with six cards the panel was **1302px tall in a 900px
+viewport**, pinned at top 24 with its bottom at 1326 - 426px of it
+simply could not be reached. Adding stats and printed text to each entry
+is what pushed it over.
+
+Fix: cap the panel at `calc(100vh - 48px)` and let the CARD LIST scroll
+inside it, so the counts at the top and the buttons at the bottom stay
+put - the panel's whole job. Two details that are easy to get wrong:
+
+- `.team-list` needs `min-height: 0`. A flex child defaults to
+  `min-height: auto` and refuses to shrink below its content, which
+  would have pushed the buttons off the bottom instead of scrolling.
+- `.team-sidebar` needs `box-sizing: border-box`. Without it the panel
+  is content-box, so its 12px padding and 1px border add ON TOP of
+  max-height - measured 878px against an intended 852px, exactly enough
+  to clip "Start Game with This Team".
+
+Verified across scroll positions: pinned at 24..876 in a 900px viewport
+from scrollY 400 all the way to the bottom of the page, buttons visible
+throughout, and every entry reachable via the list's own scroll. Also
+checked at a 700px viewport. No page errors; all 708 tests pass.
+
+Known cosmetic edge: at scrollY 0 the panel starts below the app header,
+so it hangs 23px past the fold and the last button is just clipped until
+you scroll slightly. Left alone - sizing for that case would permanently
+waste 47px of list height in the pinned state, which is where the panel
+actually lives.

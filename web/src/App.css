@@ -1026,6 +1026,18 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  /* A sticky box TALLER than the viewport pins at `top` and its lower
+     part becomes unreachable - you scroll, it stops moving, and the
+     bottom only appears once the page itself ends. Now that each entry
+     carries stats and full printed text the panel easily exceeds the
+     viewport, so it is capped here and the card list scrolls inside it
+     instead (below). The counts at the top and the buttons at the
+     bottom stay visible either way, which is the point of the panel. */
+  max-height: calc(100vh - 48px);
+  /* Without this the panel is content-box, so its 12px padding and 1px
+     border add ON TOP of max-height and it overhangs the fold by exactly
+     26px - enough to clip "Start Game with This Team". */
+  box-sizing: border-box;
 }
 
 .team-sidebar h3 {
@@ -1049,6 +1061,14 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  /* The one part that scrolls. min-height:0 is required - a flex child
+     defaults to min-height:auto and would refuse to shrink below its
+     content, pushing the buttons off the bottom instead of scrolling. */
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+  /* Room for the scrollbar so it never sits on top of the Remove buttons. */
+  padding-right: 4px;
 }
 
 .team-list-item {
