@@ -38,6 +38,63 @@ public static class BulkCardCatalog
 
     public static IReadOnlyDictionary<string, string> Rarities => CachedRarity.Value;
 
+    // Keyed by normalized "name|subtitle", not by card id: the old tool
+    // has no notion of our ids, and matching on the printed identity is
+    // what lets a promo reprint resolve to its original set's code.
+    private static readonly Lazy<OldCodeMaps> CachedOldCodes = new(LoadOldCodes);
+
+    private sealed record OldCodeMaps(
+        Dictionary<string, string> BySetAndCard, Dictionary<string, string> ByCard);
+
+    private static OldCodeMaps LoadOldCodes()
+    {
+        using var stream = typeof(BulkCardCatalog).Assembly
+            .GetManifestResourceStream("DiceFight.Engine.Data.OldTeamBuilderCodes.json")
+            ?? throw new InvalidOperationException("OldTeamBuilderCodes.json embedded resource not found.");
+        return JsonSerializer.Deserialize<OldCodeMaps>(stream, JsonOptions)
+            ?? throw new InvalidOperationException("OldTeamBuilderCodes.json deserialized to null.");
+    }
+
+    // Prefer the card's OWN set, so a Basic Action reprinted across sets
+    // resolves to the printing actually chosen (their art differs). The
+    // unqualified fallback is what lets a promo reprint resolve to the
+    // original set the old tool files it under.
+    public static string? OldTeamBuilderCodeFor(string? set, string name, string? subtitle)
+    {
+        var maps = CachedOldCodes.Value;
+        var key = NormalizeCardKey(name, subtitle);
+        if (set is not null && maps.BySetAndCard.TryGetValue($"{set.ToLowerInvariant()}|{key}", out var bySet))
+        {
+            return bySet;
+        }
+        return maps.ByCard.TryGetValue(key, out var byCard) ? byCard : null;
+    }
+
+    public static string NormalizeCardKey(string name, string? subtitle) =>
+        $"{Simplify(name)}|{NormalizeSubtitle(subtitle)}";
+
+    // The two sources spell the Basic Action subtitle three ways between
+    // them ("Basic Action", "Basic Action Card", "Basic Action Cards").
+    // Must stay identical to normalize_subtitle() in extract_maxdice.py.
+    private static string NormalizeSubtitle(string? subtitle)
+    {
+        var value = Simplify(subtitle);
+        if (value.StartsWith("epicbasicaction", StringComparison.Ordinal)) return "epicbasicaction";
+        if (value.StartsWith("basicaction", StringComparison.Ordinal)) return "basicaction";
+        return value;
+    }
+
+    private static string Simplify(string? value) =>
+        new(( value ?? "").ToLowerInvariant().Where(char.IsLetterOrDigit).ToArray());
+
+    private static IReadOnlyDictionary<string, string> LoadMap(string resource)
+    {
+        using var stream = typeof(BulkCardCatalog).Assembly.GetManifestResourceStream(resource)
+            ?? throw new InvalidOperationException($"{resource} embedded resource not found.");
+        return JsonSerializer.Deserialize<Dictionary<string, string>>(stream, JsonOptions)
+            ?? throw new InvalidOperationException($"{resource} deserialized to null.");
+    }
+
     private static IReadOnlyDictionary<string, string> LoadRarityUncached()
     {
         using var stream = typeof(BulkCardCatalog).Assembly

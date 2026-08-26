@@ -194,6 +194,7 @@ export function TeamBuilderPage() {
   const [team, setTeam] = useState<Map<string, number>>(new Map());
   const [strictRules, setStrictRules] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [copiedOld, setCopiedOld] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
 
@@ -282,6 +283,36 @@ export function TeamBuilderPage() {
     const next = new Map(team);
     next.set(cardId, count);
     setTeam(next);
+  }
+
+  // The old Teambuilder (tb.dicecoalition.com) takes a team as
+  //   ?view&cards=<count>x<code>;<count>x<code>...
+  // with non-Basic-Action cards first, matching its own maketeamlink().
+  // Codes come from the API (CardDef.oldTeamBuilderCode) rather than being
+  // derived from our ids - that tool files promo REPRINTS under the set
+  // they were first printed in, so 104 cards would otherwise be wrong.
+  // Useful until this Team Builder has card images of its own.
+  const OLD_TEAM_BUILDER_URL = "https://tb.dicecoalition.com/index.php";
+
+  function buildOldTeamLink(): { url: string; missing: CardDef[] } {
+    const missing: CardDef[] = [];
+    const parts: string[] = [];
+    for (const { card, count } of [...characterEntries, ...basicActionEntries]) {
+      if (card.oldTeamBuilderCode) parts.push(`${count}x${card.oldTeamBuilderCode}`);
+      else missing.push(card);
+    }
+    return { url: `${OLD_TEAM_BUILDER_URL}?view&cards=${parts.join(";")}`, missing };
+  }
+
+  async function copyOldTeamLink() {
+    const { url, missing } = buildOldTeamLink();
+    await navigator.clipboard.writeText(url);
+    setCopiedOld(
+      missing.length === 0
+        ? "Copied!"
+        : `Copied without ${missing.length} card(s) the old tool lacks`,
+    );
+    setTimeout(() => setCopiedOld(null), 3000);
   }
 
   async function copyTeamLink() {
@@ -673,6 +704,14 @@ export function TeamBuilderPage() {
 
           <button onClick={copyTeamLink} disabled={team.size === 0}>
             {copied ? "Copied!" : "Copy team link"}
+          </button>
+
+          <button
+            onClick={copyOldTeamLink}
+            disabled={team.size === 0}
+            title={`Opens the team in the old Teambuilder at ${OLD_TEAM_BUILDER_URL}, which has card images.`}
+          >
+            {copiedOld ?? "Copy OLD team link"}
           </button>
 
           <button

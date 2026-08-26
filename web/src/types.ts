@@ -22,6 +22,9 @@ export interface CardDef {
   /** Printed rarity - display only, drives no rules. Null if the card
    *  is not on the reference sheet. */
   rarity: string | null;
+  /** This card's id in the old Teambuilder (tb.dicecoalition.com), e.g.
+   *  "135dps". Null for cards that tool never had. */
+  oldTeamBuilderCode: string | null;
   dieLimit: number;
   levels: CharacterFace[];
   rawText: string;

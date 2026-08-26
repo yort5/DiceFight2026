@@ -140,7 +140,7 @@ def load_max_dice():
 
 def lookup_die_limit(max_dice, name, subtitle):
     exact, by_name = max_dice
-    key = f"{normalize_key(name)}|{normalize_key(subtitle)}"
+    key = f"{normalize_key(name)}|{normalize_subtitle(subtitle)}"
     if key in exact:
         return exact[key], "teambuilder"
     hit = by_name.get(normalize_key(name))
@@ -151,6 +151,18 @@ def lookup_die_limit(max_dice, name, subtitle):
 
 def normalize_key(s):
     return re.sub(r"[^a-z0-9]", "", (s or "").lower())
+
+
+# Must stay identical to normalize_subtitle() in extract_maxdice.py, which
+# writes the keys this looks up - the two sources spell the Basic Action
+# subtitle three ways between them.
+def normalize_subtitle(s):
+    v = normalize_key(s)
+    if v.startswith("epicbasicaction"):
+        return "epicbasicaction"
+    if v.startswith("basicaction"):
+        return "basicaction"
+    return v
 
 
 def existing_hand_curated_ids():

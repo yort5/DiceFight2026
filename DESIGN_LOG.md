@@ -8966,3 +8966,53 @@ so it hangs 23px past the fold and the last button is just clipped until
 you scroll slightly. Left alone - sizing for that case would permanently
 waste 47px of list height in the pinned state, which is where the panel
 actually lives.
+
+---
+
+## "Copy OLD team link" - open a team in the old Teambuilder (2026-08-26)
+
+Until this Team Builder has card images of its own, a second button under
+"Copy team link" produces a link the OLD Teambuilder
+(https://tb.dicecoalition.com/index.php) will open, where the images are.
+
+**The format**, read out of that tool's own `maketeamlink()`:
+`?view&cards=<count>x<code>;<count>x<code>...`, non-Basic-Actions first,
+where a code is `<position in set><set name>` per its `num2cardname()`
+(`a%1000 + setnames[a/1000|0]`).
+
+**The codes are extracted, not derived**, and that turned out to matter.
+The obvious shortcut - reverse our own id, so `DPS135` -> `135dps` -
+disagrees with reality on **104 cards**: the old tool files promo
+REPRINTS under the set they were first printed in, so the DC2016 promo of
+Focus Power is `26avx`, not `10dc2016`. `extract_maxdice.py` (already
+parsing that tool for max dice) now also emits
+`Data/OldTeamBuilderCodes.json`, embedded and stamped onto the merged
+catalog in `BuildCatalog()` next to rarity.
+
+Two matching subtleties, both found by testing rather than reasoning:
+
+- The subtitle is spelled three ways between the sources ("Basic Action",
+  "Basic Action Card", "Basic Action Cards"), which silently cost 62
+  cards their code. Collapsed on both sides - `normalize_subtitle()` in
+  Python and `NormalizeSubtitle()` in C# must stay identical. This also
+  improved the max-dice lookup: exact matches 3402 -> 3414.
+- The map is keyed BOTH set-qualified and bare, preferring the card's own
+  set. Without that, our DPS Archnemesis resolved to the ASM printing
+  purely on iteration order - and Basic Action art differs by set, which
+  defeats the point of the link. The bare key remains the fallback, and
+  is exactly what makes a promo reprint find its original set.
+
+**Verified end to end against the real tool, not just by inspection.**
+Its index.php is only two PHP lines, so inlining cards.php and stubbing
+the one external `w3.js` call makes it run offline. Fed our generated
+link, it restored all five cards with matching names and subtitles
+(Archnemesis as `1dps`, Focus Power as `26avx`), and **regenerated a
+serial string identical to ours** - the strongest available proof the
+encoding is right.
+
+477 of 4084 cards have no code, being newer than that tool. They are
+skipped and the button says so: "Copied without N card(s) the old tool
+lacks" rather than silently producing a short team.
+
+All 708 tests pass; `tsc --noEmit` and `npm run build` clean; no page
+errors.

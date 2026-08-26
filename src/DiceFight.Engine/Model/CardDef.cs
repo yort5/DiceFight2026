@@ -30,6 +30,14 @@ public sealed record CardDef
     // absent from the reference sheet.
     public string? Rarity { get; init; }
 
+    // This card's identifier in the OLD Teambuilder (tb.dicecoalition.com)
+    // - "135dps", "26avx", "1avxop". Display only, and deliberately NOT
+    // derived from our own Id: the old tool files promo reprints under
+    // the set they were first printed in, so e.g. the DC2016 promo of
+    // Focus Power is "26avx", not "10dc2016" (104 cards differ this way).
+    // Null for cards that tool never had.
+    public string? OldTeamBuilderCode { get; init; }
+
     // Rule 1.2.10/1.2.11 - Max # on the card; Basic Actions always use 3.
     public required int DieLimit { get; init; }
 

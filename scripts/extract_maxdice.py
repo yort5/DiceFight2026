@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
-"""Extracts each card's max-dice (die limit) from the old Teambuilder's
-card data into scripts/maxdice.json, for import_bulk_cards.py to read.
+"""Extracts per-card data from the old Teambuilder that our own sources
+do not have: max dice (-> scripts/maxdice.json, read by
+import_bulk_cards.py) and each card's old-Teambuilder code
+(-> src/DiceFight.Engine/Data/OldTeamBuilderCodes.json, embedded and
+served on the API so the web client can build "open this team in the old
+Teambuilder" links).
 
 WHY THIS EXISTS: the reference Google Sheet has no die-limit column, and
 die limit is NOT derivable from rarity - the previous importer inferred
@@ -31,8 +35,11 @@ from collections import defaultdict
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-CARDS_PHP = Path.home() / "DiceMasters" / "Teambuilder" / "cards.php"
+TEAMBUILDER = Path.home() / "DiceMasters" / "Teambuilder"
+CARDS_PHP = TEAMBUILDER / "cards.php"
+INDEX_PHP = TEAMBUILDER / "index.php"
 OUTPUT_PATH = REPO_ROOT / "scripts" / "maxdice.json"
+OLD_CODES_PATH = REPO_ROOT / "src" / "DiceFight.Engine" / "Data" / "OldTeamBuilderCodes.json"
 
 # set_names order in cards.php, used only to resolve which arrays use the
 # 7-character D&D header (dndsets = [2,8,23,38,39,40] in index.php).
@@ -58,8 +65,32 @@ def normalize(s):
     return re.sub(r"[^a-z0-9]", "", (s or "").lower())
 
 
+# The two sources spell the Basic Action subtitle three ways between them
+# ("Basic Action", "Basic Action Card", "Basic Action Cards"), which would
+# otherwise cost 62 cards their code. Collapsed to one form on both sides
+# - this must stay identical to BulkCardCatalog.NormalizeCardKey in C#.
+def normalize_subtitle(s):
+    v = normalize(s)
+    if v.startswith("epicbasicaction"):
+        return "epicbasicaction"
+    if v.startswith("basicaction"):
+        return "basicaction"
+    return v
+
+
 def header_width(array_name):
     return 7 if (array_name in DND_SETS or array_name in DND_PROMO_ARRAYS) else 5
+
+
+def array_to_set_name():
+    """arrayVar -> the set name the old tool uses in team codes.
+
+    From its index.php's init(setid, arrayVar, setName, trsName) calls.
+    Note these are NOT our set codes: the old tool splits promos into
+    their own sets (avxop, dc2016, wko16dc, m2019, ...), which is exactly
+    why the codes have to be read rather than derived."""
+    text = INDEX_PHP.read_text(encoding="utf-8", errors="replace")
+    return {m[1]: m[2].lower() for m in re.findall(r"init\((\d+),([a-z0-9_]+),'([^']+)'", text)}
 
 
 def main():
@@ -68,22 +99,38 @@ def main():
     text = CARDS_PHP.read_text(encoding="utf-8", errors="replace")
     blocks = re.findall(r"^\s*var ([a-z0-9_]+) = \[(.*?)^\s*\];", text, re.M | re.S)
 
+    set_names = array_to_set_name()
+
     # (name, subtitle) -> {maxdice: [array names]}
     seen = defaultdict(lambda: defaultdict(list))
+    old_codes = {}
+    old_codes_by_set = {}
     total = 0
     for array_name, body in blocks:
         if NOT_CARD_ARRAYS.search(array_name):
             continue
         width = header_width(array_name)
-        for raw in ENTRY_RE.findall(body):
+        for position, raw in enumerate(ENTRY_RE.findall(body)):
             entry = raw.replace("\\'", "'").replace('\\"', '"').replace("\\\\", "\\")
             if len(entry) <= width or not entry[4].isdigit():
                 continue
             parts = entry[width:].split("|")
             if len(parts) < 2:
                 continue
-            key = f"{normalize(parts[0])}|{normalize(parts[1])}"
+            key = f"{normalize(parts[0])}|{normalize_subtitle(parts[1])}"
             seen[key][int(entry[4])].append(array_name)
+            # The team-link code is "<position in this set><set name>",
+            # per the old tool's num2cardname(): a%1000 + setnames[a/1000].
+            if array_name in set_names:
+                code = f"{position + 1}{set_names[array_name]}"
+                # Two maps. The set-qualified one is preferred at lookup
+                # time so a card resolves to ITS OWN printing: several
+                # Basic Actions are reprinted verbatim across sets, and
+                # picking an arbitrary one would show the wrong set's art.
+                # The bare key is the fallback, and is what makes a promo
+                # reprint resolve to the original set that has it.
+                old_codes_by_set[f"{set_names[array_name]}|{key}"] = code
+                old_codes[key] = code
             total += 1
 
     lookup, conflicts = {}, {}
@@ -98,7 +145,14 @@ def main():
     OUTPUT_PATH.write_text(
         json.dumps({"maxDice": lookup, "conflicts": conflicts}, indent=1, sort_keys=True) + "\n",
         encoding="utf-8")
+    OLD_CODES_PATH.write_text(
+        json.dumps({"bySetAndCard": dict(sorted(old_codes_by_set.items())),
+                    "byCard": dict(sorted(old_codes.items()))}, indent=1) + "\n", encoding="utf-8")
+
     print(f"Scanned {len(blocks)} arrays, {total} card entries.")
+    print(f"Wrote {len(old_codes)} old-Teambuilder codes "
+          f"({len(old_codes_by_set)} set-qualified) to "
+          f"{OLD_CODES_PATH.relative_to(REPO_ROOT)}")
     print(f"Wrote {len(lookup)} unambiguous name+subtitle -> max dice entries "
           f"to {OUTPUT_PATH.relative_to(REPO_ROOT)}")
     print(f"Ambiguous (same name+subtitle, differing limits): {len(conflicts)}")

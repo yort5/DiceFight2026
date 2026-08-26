@@ -4367,9 +4367,11 @@ public static class SampleCards
         var rarities = BulkCardCatalog.Rarities;
         foreach (var (id, card) in catalog.ToList())
         {
-            if (rarities.TryGetValue(id, out var rarity))
+            rarities.TryGetValue(id, out var rarity);
+            var oldCode = BulkCardCatalog.OldTeamBuilderCodeFor(card.Set, card.Name, card.Subtitle);
+            if (rarity is not null || oldCode is not null)
             {
-                catalog[id] = card with { Rarity = rarity };
+                catalog[id] = card with { Rarity = rarity ?? card.Rarity, OldTeamBuilderCode = oldCode };
             }
         }
         return catalog;
