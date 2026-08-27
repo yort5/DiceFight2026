@@ -9093,3 +9093,37 @@ Verified in headless Chromium: a team survives a reload, a `?cards=`
 link overrides it, Clear empties it and the empty state persists. All
 708 tests pass; `tsc --noEmit` and `npm run build` clean; no page errors
 and zero horizontal overflow.
+
+---
+
+## Per-level stat columns, Set column first (2026-08-27)
+
+The catalog's Field / Atk / Def trio only ever showed level 1, which is
+rarely the level you care about. Replaced with **L1 / L2 / L3**, each
+cell `fielding • attack • defense`.
+
+The bullet is the point, not decoration. Run-together digits are
+genuinely ambiguous once a stat hits double figures - "3108" reads as
+3/10/8 or 3/1/08 - and that is not hypothetical: it is exactly what made
+Slifer, The Winged Dragon of Ra and White Lantern Dove unparseable from
+the sheet earlier this week, each needing a hand ruling. "3•10•8" cannot
+be misread. The cells use `tabular-nums` and `white-space: nowrap` so
+the separators line up and a wrap can never reintroduce the ambiguity.
+
+Sorting a composite cell has to pick something: it sorts by **attack**,
+and the column header's tooltip says so. Cards with no levels (Actions,
+Basic Actions) show "-" and sort last ascending.
+
+**Set moved to the first column**, ahead of Name, per the user.
+
+Verified in headless Chromium against the three formerly-ambiguous
+cards - Slifer L3 `3•10•8`, Ra L3 `3•8•10`, Dove L3 `1•4•10` - plus a
+Basic Action showing "-", and L3 sorting descending to put Slifer's 10
+attack on top. Zero horizontal overflow, no page errors.
+
+**Worth recording: `npx tsc --noEmit` in web/ checks nothing.** The root
+tsconfig is solution-style (references only), so that command exits 0
+regardless. It happily passed a file calling a function that no longer
+existed. The real check is `tsc -b` (what `npm run build` runs), which
+caught it immediately. Use `npm run build` for type verification, not
+`tsc --noEmit`.

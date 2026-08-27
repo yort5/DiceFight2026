@@ -958,6 +958,14 @@
   font-size: 10px;
 }
 
+/* Level cells: fixed-width digits so the bullets line up column to
+   column, and no wrapping - "3\2022 10\2022 8" split across two lines would
+   reintroduce exactly the ambiguity the bullets exist to remove. */
+.card-catalog-table td.card-level {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .card-catalog-search {
   display: flex;
   flex-direction: column;

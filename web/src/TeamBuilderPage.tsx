@@ -75,25 +75,32 @@ function decodeTeam(search: string): Map<string, number> {
 
 type SortKey =
   | "name" | "type" | "affiliations" | "set" | "purchaseCost" | "energyTypes" | "dieLimit"
-  | "fieldingCost" | "attack" | "defense" | "implemented";
+  | "level1" | "level2" | "level3" | "implemented";
 
-interface Level1Face {
-  fieldingCost: number;
-  attack: number;
-  defense: number;
+// One column per level, replacing the old single-level Field/Atk/Def
+// trio: which level you want is usually the whole question, and the
+// catalog only ever showed level 1.
+//
+// The parts are separated by a bullet rather than run together, because
+// run-together digits are genuinely ambiguous once a stat reaches double
+// figures - "3108" reads as either 3/10/8 or 3/1/08, which is exactly
+// the confusion the sheet's own stat lines caused for Slifer, Ra and
+// White Lantern Dove (see DESIGN_LOG.md). "3•10•8" cannot be misread.
+const STAT_SEPARATOR = "\u2022";
+
+function levelText(card: CardDef, index: number): string {
+  const face = card.levels[index];
+  if (!face) return "-";
+  return [face.fieldingCost, face.attack, face.defense].join(STAT_SEPARATOR);
 }
 
-// Deliberate simplification vs. the old reference tool (which sorted by
-// all 3 levels) - only Level 1 stats are sortable/shown as columns here;
-// the full level progression is still available via the row's tooltip.
-// Action/Basic Action cards have no levels at all.
-function level1(card: CardDef): Level1Face | null {
-  const face = card.levels[0];
-  return face ? { fieldingCost: face.fieldingCost, attack: face.attack, defense: face.defense } : null;
+// Sorting a composite F-A-D cell has to pick something; attack is what
+// people actually rank characters by, and the column header says so.
+function levelSortValue(card: CardDef, index: number): number {
+  return card.levels[index]?.attack ?? -1;
 }
 
 function sortValue(card: CardDef, key: SortKey): string | number {
-  const l1 = level1(card);
   switch (key) {
     case "name":
       return card.name.toLowerCase();
@@ -109,12 +116,12 @@ function sortValue(card: CardDef, key: SortKey): string | number {
       return card.energyTypes.join(",");
     case "dieLimit":
       return card.dieLimit;
-    case "fieldingCost":
-      return l1?.fieldingCost ?? -1;
-    case "attack":
-      return l1?.attack ?? -1;
-    case "defense":
-      return l1?.defense ?? -1;
+    case "level1":
+      return levelSortValue(card, 0);
+    case "level2":
+      return levelSortValue(card, 1);
+    case "level3":
+      return levelSortValue(card, 2);
     case "implemented":
       return card.isImplemented ? 1 : 0;
   }
@@ -154,17 +161,19 @@ function rarityClass(rarity: string | null): string {
 // full re-render on every keystroke (see the design doc's scaling note).
 const MAX_ROWS = 200;
 
-const COLUMNS: { key: SortKey; label: string }[] = [
+const LEVEL_TITLE = `Fielding cost ${STAT_SEPARATOR} attack ${STAT_SEPARATOR} defense. Sorts by attack.`;
+
+const COLUMNS: { key: SortKey; label: string; title?: string }[] = [
+  { key: "set", label: "Set" },
   { key: "name", label: "Name" },
   { key: "type", label: "Type" },
   { key: "affiliations", label: "Affiliation" },
-  { key: "set", label: "Set" },
   { key: "purchaseCost", label: "Cost" },
   { key: "energyTypes", label: "Energy" },
   { key: "dieLimit", label: "Max" },
-  { key: "fieldingCost", label: "Field" },
-  { key: "attack", label: "Atk" },
-  { key: "defense", label: "Def" },
+  { key: "level1", label: "L1", title: LEVEL_TITLE },
+  { key: "level2", label: "L2", title: LEVEL_TITLE },
+  { key: "level3", label: "L3", title: LEVEL_TITLE },
   { key: "implemented", label: "OK" },
 ];
 
@@ -665,7 +674,7 @@ export function TeamBuilderPage() {
                   <tr>
                     <th />
                     {COLUMNS.map((col) => (
-                      <th key={col.key} onClick={() => toggleSort(col.key)}>
+                      <th key={col.key} title={col.title} onClick={() => toggleSort(col.key)}>
                         {col.label}
                         {sort.key === col.key && <span className="sort-arrow">{sort.direction === "asc" ? " ▲" : " ▼"}</span>}
                       </th>
@@ -674,7 +683,6 @@ export function TeamBuilderPage() {
                 </thead>
                 <tbody>
                   {visible.map((c) => {
-                    const l1 = level1(c);
                     const add = canAddCard(c);
                     return (
                       <Fragment key={c.id}>
@@ -689,19 +697,19 @@ export function TeamBuilderPage() {
                             +
                           </button>
                         </td>
+                        <td title={c.set ? SET_NAMES[c.set] : undefined}>{c.set ?? "-"}</td>
                         <td>
                           {c.name}
                           {c.subtitle && <span className="hint"> — {c.subtitle}</span>}
                         </td>
                         <td>{c.type}</td>
                         <td>{c.affiliations.join(", ") || "-"}</td>
-                        <td title={c.set ? SET_NAMES[c.set] : undefined}>{c.set ?? "-"}</td>
                         <td>{c.purchaseCost}</td>
                         <td>{c.energyTypes.join("/")}</td>
                         <td>{c.dieLimit}</td>
-                        <td>{l1?.fieldingCost ?? "-"}</td>
-                        <td>{l1?.attack ?? "-"}</td>
-                        <td>{l1?.defense ?? "-"}</td>
+                        <td className="card-level" title={LEVEL_TITLE}>{levelText(c, 0)}</td>
+                        <td className="card-level" title={LEVEL_TITLE}>{levelText(c, 1)}</td>
+                        <td className="card-level" title={LEVEL_TITLE}>{levelText(c, 2)}</td>
                         <td>{c.isImplemented ? "✓" : ""}</td>
                       </tr>
                       {/* Printed text on its own full-width row rather than
