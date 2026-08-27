@@ -9044,3 +9044,52 @@ Also checked the two extremes resolve to single cards (cost 0 and cost
 
 All 708 tests pass; `tsc --noEmit` and `npm run build` clean; no page
 errors.
+
+---
+
+## Five pieces of user feedback (2026-08-27)
+
+**Teams now survive a restart.** Saved to `localStorage` on every change
+and restored on load. A shared `?cards=` link still wins, so opening
+someone else's team never resurrects your own; only with no link do we
+fall back to what was saved. Two details: the save effect is gated on a
+`teamRestored` flag, or the initial empty team would overwrite the saved
+one before the restore runs; and every access is wrapped in try/catch,
+since storage *throws* in some privacy modes rather than returning empty.
+
+**Max dice is now explicit** in the team panel - "1/4" instead of "1",
+and "3/3 dice" for Basic Actions. The + button already stopped at the
+limit, but people who track dice physically never discover a limit that
+way.
+
+**"Too light" was objectively true.** Measured the light theme before
+changing anything: body text 5.73:1, card subtitles **3.04:1**, rules
+text **4.11:1**, filter legends **2.76:1** - three of five fail WCAG AA.
+The base `--text` was `#6b6375`, and because most muted UI is that colour
+at reduced opacity, darkening it to `#3d3747` lifted everything at once;
+a few opacities were raised alongside. Now 11.44 / 6.19 / 8.95 / 6.19:1
+- all AA, most AAA. Dark mode was already fine and stayed so (7.04:1
+body, 4.95:1 minimum), since only the light `:root` changed. Note the
+site already follows the OS dark-mode preference; there is no manual
+toggle.
+
+**Search operators**, ported from the old tool's `regexfilter`:
+`a & b` both, `a | b` either (loosest precedence), `~a` exclude, `^a`
+name starts with. A query containing none of those characters is still a
+plain substring match, so nothing needs escaping in the common case.
+Two deliberate differences: that tool had separate name and text boxes,
+so a bare term here matches name, subtitle, affiliation and rules text
+together; and its `^` anchored whichever field the box targeted, while
+ours always means the card's NAME, which is what "starts with" means to
+a person. Lives in `web/src/cardSearch.ts` with 13 cases checked
+including half-typed input - a lone `~` must exclude nothing rather than
+everything, or the table blanks while you type. The syntax is printed
+under the search box, not left in a tooltip.
+
+**Clear button** at the top of the Team panel, behind a confirm, disabled
+when the team is already empty.
+
+Verified in headless Chromium: a team survives a reload, a `?cards=`
+link overrides it, Clear empties it and the empty state persists. All
+708 tests pass; `tsc --noEmit` and `npm run build` clean; no page errors
+and zero horizontal overflow.

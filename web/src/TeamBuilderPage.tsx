@@ -1,4 +1,5 @@
 import { Fragment, useDeferredValue, useEffect, useMemo, useState } from "react";
+import { matchesQuery } from "./cardSearch";
 import { api } from "./api";
 import { stashPendingGame } from "./gameHandoff";
 import { navigate } from "./router";
@@ -197,6 +198,7 @@ export function TeamBuilderPage() {
     direction: "asc",
   });
   const [team, setTeam] = useState<Map<string, number>>(new Map());
+  const [teamRestored, setTeamRestored] = useState(false);
   const [strictRules, setStrictRules] = useState(true);
   const [copied, setCopied] = useState(false);
   const [copiedOld, setCopiedOld] = useState<string | null>(null);
@@ -207,21 +209,63 @@ export function TeamBuilderPage() {
     api.getCards().then(setCards).catch((e) => setError(String(e)));
   }, []);
 
+  // Teams survive a browser restart. A shared ?cards= link still wins, so
+  // opening someone else's team never silently resurrects your own; only
+  // when there is no link do we fall back to what was saved here.
+  // Everything is wrapped in try/catch: storage throws outright in some
+  // privacy modes rather than just coming back empty.
+  const STORAGE_KEY = "dicefight.teamBuilder.team";
+
+  function loadSavedTeam(): Map<string, number> {
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if (!raw) return new Map();
+      const parsed: unknown = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return new Map();
+      const out = new Map<string, number>();
+      for (const entry of parsed) {
+        if (Array.isArray(entry) && typeof entry[0] === "string" && Number.isInteger(entry[1]) && entry[1] > 0) {
+          out.set(entry[0], entry[1]);
+        }
+      }
+      return out;
+    } catch {
+      return new Map();
+    }
+  }
+
   // Load a shared team link once the catalog is available to resolve
   // its ids against - silently drops any id that doesn't resolve
   // (stale/typo'd link) rather than hard-failing.
   useEffect(() => {
     if (!cards) return;
     const fromUrl = decodeTeam(window.location.search);
-    if (fromUrl.size === 0) return;
+    const source = fromUrl.size > 0 ? fromUrl : loadSavedTeam();
+    if (source.size === 0) {
+      setTeamRestored(true);
+      return;
+    }
     const cardById = new Map(cards.map((c) => [c.id, c]));
     const resolved = new Map<string, number>();
-    for (const [id, count] of fromUrl) {
+    for (const [id, count] of source) {
       if (cardById.has(id)) resolved.set(id, count);
     }
     setTeam(resolved);
+    setTeamRestored(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cards !== null]);
+
+  // Only save AFTER the restore has run, or the initial empty team would
+  // overwrite what we are about to load.
+  useEffect(() => {
+    if (!teamRestored) return;
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify([...team.entries()]));
+    } catch {
+      // Storage unavailable (private mode, blocked site data) - the tool
+      // still works, teams just do not survive a restart.
+    }
+  }, [team, teamRestored]);
 
   const cardById = useMemo(() => new Map((cards ?? []).map((c) => [c.id, c])), [cards]);
 
@@ -415,16 +459,11 @@ export function TeamBuilderPage() {
       if (activeRarities.size > 0 && (!tier || !activeRarities.has(tier))) return false;
       if (activeFormat && (!c.set || !activeFormat.sets.has(c.set))) return false;
       if (applyOrangeBan && isOrangeBanned(c)) return false;
-      if (needle.length === 0) return true;
-      // Deliberately NOT matched against the set code or set name: a
-      // search for "Thor" should find Thor, not all 137 cards in the Thor
-      // set. Picking a set is a filtering task and has its own checkboxes.
-      return (
-        c.name.toLowerCase().includes(needle) ||
-        (c.subtitle?.toLowerCase().includes(needle) ?? false) ||
-        c.affiliations.some((a) => a.toLowerCase().includes(needle)) ||
-        c.rawText.toLowerCase().includes(needle)
-      );
+      // Set code and set name are deliberately NOT searched: "Thor"
+      // should find Thor, not all 137 cards in the Thor set. Picking a set
+      // is a filtering task and has its own checkboxes. Operator syntax
+      // (& | ~ ^) lives in cardSearch.ts.
+      return matchesQuery(c, needle);
     });
   }, [cards, deferredSearch, activeTypes, activeEnergyTypes, activeAffiliations, activeSets, activeRarities, minCost, maxCost, showUnimplemented, activeFormat, applyOrangeBan]);
 
@@ -458,12 +497,23 @@ export function TeamBuilderPage() {
           </p>
 
           <div className="card-catalog-filters">
+            <div className="card-catalog-search">
             <input
               type="text"
               placeholder="Search name, subtitle, or text..."
+              title={"Matches name, subtitle, affiliation and rules text.\n\n" +
+                     "a & b   both      a | b   either\n" +
+                     "~a      exclude   ^a      name starts with"}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
+            {/* Stated, not just a tooltip - nobody discovers operators by
+                hovering a text box. */}
+            <div className="hint card-catalog-search-syntax">
+              <code>a &amp; b</code> both · <code>a | b</code> either ·{" "}
+              <code>~a</code> exclude · <code>^a</code> starts with
+            </div>
+            </div>
             <fieldset>
               <legend>Type</legend>
               {allTypes.map((t) => (
@@ -673,7 +723,18 @@ export function TeamBuilderPage() {
         </div>
 
         <div className="team-sidebar">
-          <h3>Team</h3>
+          <div className="team-sidebar-header">
+            <h3>Team</h3>
+            <button
+              className="team-clear-button"
+              disabled={team.size === 0}
+              onClick={() => {
+                if (window.confirm("Remove all cards from this team?")) setTeam(new Map());
+              }}
+            >
+              Clear
+            </button>
+          </div>
           <p className="hint">
             {uniqueNames.size}/{MAX_UNIQUE_CARDS} cards, {totalDice}/{MAX_DICE} dice,{" "}
             {basicActionEntries.length}/{MAX_BASIC_ACTIONS} Basic Actions
@@ -693,17 +754,24 @@ export function TeamBuilderPage() {
                       <div className="team-card-name">{card.name}</div>
                       {card.subtitle && <div className="hint">{card.subtitle}</div>}
                     </div>
+                  {/* "n / max" rather than a bare n: the + button stops at
+                      the die limit, but people who track dice physically
+                      never discover the limit that way. */}
                   {isBasicActionFamily(card) ? (
-                    <span className="hint">{count} dice</span>
+                    <span className="team-dice-count" title="Dice used / max dice for this card">
+                      {count}/{card.dieLimit} dice
+                    </span>
                   ) : (
-                    <span className="team-stepper">
+                    <span className="team-stepper" title="Dice used / max dice for this card">
                       <button
                         disabled={count <= 1}
                         onClick={() => setCount(card.id, count - 1)}
                       >
                         −
                       </button>
-                      {count}
+                      <span className="team-dice-count">
+                        {count}<span className="team-dice-max">/{card.dieLimit}</span>
+                      </span>
                       <button
                         disabled={!canIncrement(card, count)}
                         onClick={() => setCount(card.id, count + 1)}
