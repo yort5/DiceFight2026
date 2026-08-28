@@ -966,6 +966,20 @@
   white-space: nowrap;
 }
 
+/* Icons sit on the text baseline and scale with it, so a line of rules
+   text keeps its rhythm instead of growing around a fixed-size image. */
+.card-icon {
+  height: 1.05em;
+  width: auto;
+  vertical-align: -0.15em;
+  margin: 0 1px;
+}
+
+/* Each Global gets its own line, set apart from the card's own text. */
+.card-text-global {
+  margin-top: 3px;
+}
+
 .card-catalog-search {
   display: flex;
   flex-direction: column;

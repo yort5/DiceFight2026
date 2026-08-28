@@ -9127,3 +9127,48 @@ regardless. It happily passed a file calling a function that no longer
 existed. The real check is `tsc -b` (what `npm run build` runs), which
 caught it immediately. Use `npm run build` for type verification, not
 `tsc --noEmit`.
+
+---
+
+## Energy/sidekick icons and distinct Globals (2026-08-28)
+
+Card text now renders the energy words as icons and sets each Global on
+its own bold-labelled line. `web/src/CardText.tsx`.
+
+**The icons are the old Teambuilder's own** - its `e1`-`e4.png` (mask,
+fist, bolt, shield) and `pawn.png` (sidekick), identified through its
+`iconid`/`iconname` maps and checked against what the user pasted.
+Copied into `src/assets` so they resolve offline; Vite inlines them
+(all under 1KB), so no extra requests and nothing to deploy separately.
+
+**Display only - search is untouched.** `matchesQuery` still runs on the
+raw string, so "Pay Mask" finds the cards whose text now shows an icon
+(verified: 102 results). The `alt` text carries the word, so the line
+still reads correctly copied, read aloud, or if an image fails.
+
+**Two data hazards, both settled from the data rather than guessed:**
+
+- Some proper names merely CONTAIN these words. Scanning every card's
+  rules text turned up exactly **18** such occurrences, all accounted
+  for by two names: "Iron Fist" (15) and "Black Bolt" (3, which covers
+  "King Black Bolt"). Those are protected before the word scan.
+  Everything else is genuine - including "Pay Bolt Bolt", which really
+  is two icons. `PROTECTED_NAMES` is small, and the comment says how to
+  re-derive it.
+- **24 cards write their energy as a raw Discord emoji code** the sheet
+  author pasted in - `<:Fist:366516545284866048>` - which had been
+  displaying as literal noise. Only four such forms exist, all
+  unambiguously energy, so they render as icons too. Zero raw codes
+  remain on screen.
+
+`4M2015` Iron Fist is the case that exercises both at once: the name
+appears twice and must stay literal, while an emoji-code Fist in the
+same sentence must become an icon. Verified it does.
+
+**Globals** split onto their own line with `Global:` in bold (weight
+700, `display: block`), in both the catalog and the team sidebar, since
+"what Globals does this team have" is a thing people scan for. Note the
+old tool also bolds Ritual:/Heroic:/Fusion:; only Global: was asked for.
+
+86 icons render across the first 200 rows with none broken. All 708
+tests pass; `npm run build` clean; no page errors.

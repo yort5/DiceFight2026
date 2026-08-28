@@ -1,5 +1,6 @@
 import { Fragment, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { matchesQuery } from "./cardSearch";
+import { CardText } from "./CardText";
 import { api } from "./api";
 import { stashPendingGame } from "./gameHandoff";
 import { navigate } from "./router";
@@ -717,7 +718,7 @@ export function TeamBuilderPage() {
                           real room to read instead of squeezing the stats. */}
                       <tr className={`card-text-row ${rarityClass(c.rarity)}`}>
                         <td colSpan={COLUMNS.length + 1}>
-                          {c.rawText || <span className="hint">(blank text box)</span>}
+                          <CardText text={c.rawText} />
                         </td>
                       </tr>
                       </Fragment>
@@ -814,7 +815,7 @@ export function TeamBuilderPage() {
                       ))}
                     </div>
                   )}
-                  <div className="team-card-text">{card.rawText || "(blank text box)"}</div>
+                  <div className="team-card-text"><CardText text={card.rawText} /></div>
                 </li>
               ))}
             </ul>
