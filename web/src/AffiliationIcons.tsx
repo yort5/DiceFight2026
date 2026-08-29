@@ -15,10 +15,10 @@
 //
 // A logo the file for which is not there yet falls back to the generated
 // badge below, rather than being listed as missing anywhere in the code.
-// Two are in that state today - the old tool names aBORDER (Black Order)
-// and aHAND (the Hand) in its own icon map but never drew them, and 404s
-// on them itself. Dropping either file into public/affiliations is all it
-// takes for it to start showing; nothing here needs to change.
+// Dropping the file into public/affiliations is all it takes for it to
+// start showing; nothing here needs to change. That is how aBORDER
+// (Black Order) and aHAND (the Hand) arrived - the old tool names both in
+// its icon map but never drew them, and 404s on them to this day.
 //
 // Cards newer than that tool carry no codes at all; they fall back to a
 // logo per affiliation NAME (see affiliationIndex.ts), and to a generated
