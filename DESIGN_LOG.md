@@ -9366,3 +9366,41 @@ combined logos.
 Verified in both themes: 128 chips with no broken images and no failed
 requests, selection and filtering working from the chips, and the results
 table still on screen with either filter open.
+
+## Standalone logos for the combined-only affiliations (2026-08-29)
+
+Follow-up to the filter chips. Rule 2 of the name-to-logo index ("take a
+logo if every card carrying this name shows the same single one") is the
+rule that can hand back a COMBINED image - one picture with two logos
+stacked in it, because a card with two affiliations carries one logo
+covering both. `aKIUM` is the Imperium eagle above the Ultramarines;
+`aASS` is the Sinister Six "6" above the Villain mark. Correct on a card
+that is both, wrong on a filter chip that means one.
+
+Every name rule 2 resolves is now pinned to the standalone logo from the
+same icon set: Ultramarine `aKUM`, Space Wolves `aKSW`, Chaos `aKC`,
+Death Guard `aKDG`, Sinister Six `aASS1`, Orange Lanterns `aWO`, Black
+Lantern(s) `WKbw` (copied in as `aWKbw.png` to fit the `a<code>.png`
+scheme the Lantern files predate).
+
+**Imperium** was the one this left with no logo at all: it is printed on
+48 cards and every one of them is Imperium PLUS a faction, stacked with
+Ultramarines on 23 and with Space Wolves on 21, so rule 2's unanimity
+test failed and it fell through to a generated badge. Pinned to `aKI`,
+the standalone Imperium eagle.
+
+**A logo whose file is missing now falls back to the generated badge** at
+load time rather than being listed as absent in the code. Two are in that
+state: the old tool names `aBORDER` (Black Order) and `aHAND` (the Hand)
+in its own icon map but never drew them, and 404s on them itself.
+Dropping either file into `web/public/affiliations` is all it takes -
+nothing in the code needs to change, and the same holds for any logo
+added later.
+
+The 20 names still on a generated badge are, apart from those two and the
+sheet's "a: X b: Y" combined cells, all misspellings or singular/plural
+variants of a name that already has a logo - fixing them in the sheet is
+what earns the real one: "X-men" (6 PROMO cards), "Avenger" (4 AOU Thor),
+"Zombie" (8 AOU), "Zombies" (4 ASM), "Eveil Equip" (TOA021), "Team arrow"
+(12DC2016), "???" (3 THOR), "none" (2 BAT), "Superstar" (BIT017),
+"Marvel Knights Affiliation" (2 PROMO).

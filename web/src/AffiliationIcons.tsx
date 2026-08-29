@@ -13,12 +13,19 @@
 // again if inlined, and only the handful of logos actually on screen ever
 // gets fetched.
 //
-// Two codes have no image in the old tool at all (the Black Order and
-// the Hand). Cards newer than that tool have no codes at all; they fall
-// back to a logo per affiliation NAME (see affiliationIndex.ts), and to
-// a generated badge below where even that comes up empty.
+// A logo the file for which is not there yet falls back to the generated
+// badge below, rather than being listed as missing anywhere in the code.
+// Two are in that state today - the old tool names aBORDER (Black Order)
+// and aHAND (the Hand) in its own icon map but never drew them, and 404s
+// on them itself. Dropping either file into public/affiliations is all it
+// takes for it to start showing; nothing here needs to change.
+//
+// Cards newer than that tool carry no codes at all; they fall back to a
+// logo per affiliation NAME (see affiliationIndex.ts), and to a generated
+// badge where even that comes up empty.
 
-import { affiliationIconUrl, hasAffiliationIcon } from "./affiliationIndex";
+import { useState } from "react";
+import { affiliationIconUrl } from "./affiliationIndex";
 
 // A stand-in for the affiliations whose logo we do not have - either the
 // old tool never drew one, or the name is a one-off misspelling of one
@@ -42,17 +49,27 @@ function hue(name: string): number {
   return h;
 }
 
-export function AffiliationBadge({ name, code }: { name: string; code?: string }) {
-  if (code && hasAffiliationIcon(code)) {
-    return <img className="affiliation-icon" src={affiliationIconUrl(code)} alt={name} title={name} />;
+export function AffiliationBadge({ name, code, label }: { name: string; code?: string; label?: string }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const text = label ?? name;
+  if (code && !imageFailed) {
+    return (
+      <img
+        className="affiliation-icon"
+        src={affiliationIconUrl(code)}
+        alt={text}
+        title={text}
+        onError={() => setImageFailed(true)}
+      />
+    );
   }
   const h = hue(name);
   return (
     <span
       className="affiliation-icon affiliation-icon-generated"
-      title={`${name} (no logo yet)`}
+      title={`${text} (no logo yet)`}
       role="img"
-      aria-label={name}
+      aria-label={text}
       style={{ background: `hsl(${h} 55% 42%)` }}
     >
       {initials(name)}
@@ -72,12 +89,11 @@ export function AffiliationIcons(
 ) {
   const label = names.join(", ");
   if (names.length === 0 && codes.length === 0) return <span>-</span>;
-  const drawable = codes.filter(hasAffiliationIcon);
-  if (drawable.length > 0) {
+  if (codes.length > 0) {
     return (
       <span className="affiliation-icons" title={label}>
-        {drawable.map((code) => (
-          <img key={code} className="affiliation-icon" src={affiliationIconUrl(code)} alt={label} />
+        {codes.map((code) => (
+          <AffiliationBadge key={code} name={names[0] ?? code} code={code} label={label} />
         ))}
       </span>
     );
