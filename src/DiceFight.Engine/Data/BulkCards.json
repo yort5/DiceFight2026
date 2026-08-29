@@ -108,8 +108,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimit": 1,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -250,8 +250,8 @@
     "energyTypes": [
       "Shield"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 2,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -291,8 +291,8 @@
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -376,7 +376,7 @@
       "Fist"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -403,7 +403,7 @@
       "Fast"
     ],
     "affiliations": [
-      "Team arrow"
+      "Team Arrow"
     ],
     "isImplemented": false,
     "set": "PROMO",
@@ -418,8 +418,8 @@
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -558,8 +558,8 @@
       "Bolt",
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 3,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -827,7 +827,7 @@
       "Mask"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -870,8 +870,8 @@
       "Mask",
       "Shield"
     ],
-    "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimit": 3,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -914,7 +914,7 @@
       "Fist"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -1015,7 +1015,7 @@
       "Bolt"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -1056,7 +1056,7 @@
       "Fist"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -1081,7 +1081,7 @@
     "rawText": "While Deadpool is active, damage dealt to your Deadpool, Lady Deadpool, Kidpool, and Dogpool character dice is reduced by 1.",
     "keywords": [],
     "affiliations": [
-      "Deadpool Affiliation"
+      "Deadpool"
     ],
     "isImplemented": false,
     "set": "PROMO",
@@ -1096,8 +1096,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -1139,8 +1139,8 @@
       "Bolt",
       "Mask"
     ],
-    "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimit": 5,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -1226,7 +1226,7 @@
     "rawText": "While active, if your opponent has no active Villain characters, draw an additional die during the clear and draw step.",
     "keywords": [],
     "affiliations": [
-      "X-men"
+      "X-Men"
     ],
     "isImplemented": false,
     "set": "PROMO",
@@ -1280,8 +1280,8 @@
     "type": "BasicAction",
     "purchaseCost": 4,
     "energyTypes": [],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 3,
+    "dieLimitSource": "teambuilder",
     "levels": [],
     "statsMissing": false,
     "rawText": "Deal 2 damage to target character die. You may then reroll this die. If it was an action face, you may repeat this effect.",
@@ -1300,8 +1300,8 @@
     "energyTypes": [
       "Bolt"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -1505,8 +1505,8 @@
     "energyTypes": [
       "Shield"
     ],
-    "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimit": 1,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -1665,8 +1665,8 @@
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimit": 2,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -1709,7 +1709,7 @@
       "Shield"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -1736,7 +1736,7 @@
       "Regenerate"
     ],
     "affiliations": [
-      "Deadpool Affiliation"
+      "Deadpool"
     ],
     "isImplemented": false,
     "set": "PROMO",
@@ -1751,8 +1751,8 @@
     "energyTypes": [
       "Shield"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -1792,8 +1792,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 6,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -2038,7 +2038,7 @@
       "Bolt"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -2079,7 +2079,7 @@
       "Shield"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -2119,8 +2119,8 @@
     "energyTypes": [
       "Shield"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -2223,7 +2223,7 @@
       "Fist"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -2248,7 +2248,7 @@
     "rawText": "When Daredevil attacks alone, blocking character dice get -1A.",
     "keywords": [],
     "affiliations": [
-      "Marvel Knights Affiliation"
+      "Marvel Knights"
     ],
     "isImplemented": false,
     "set": "PROMO",
@@ -2263,8 +2263,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -2291,7 +2291,7 @@
       "Overcrush"
     ],
     "affiliations": [
-      "X-men"
+      "X-Men"
     ],
     "isImplemented": false,
     "set": "PROMO",
@@ -2306,8 +2306,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -2345,8 +2345,8 @@
     "type": "BasicAction",
     "purchaseCost": 5,
     "energyTypes": [],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 3,
+    "dieLimitSource": "teambuilder",
     "levels": [],
     "statsMissing": false,
     "rawText": "At the beginning of your attack step, your opponent chooses 1 of your character dice that can't attack this turn. Two target character dice can't block this turn. Global: Pay Mask. Target character die must attack this turn.",
@@ -2363,8 +2363,8 @@
     "type": "BasicAction",
     "purchaseCost": 6,
     "energyTypes": [],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 3,
+    "dieLimitSource": "teambuilder",
     "levels": [],
     "statsMissing": false,
     "rawText": "Roll 2 dice from your bag. Each player fields three Sidekick dice from their Used Pile. If there are 16 or more dice in the Field Zone, win the game.",
@@ -2547,7 +2547,7 @@
       "Mask"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -2589,8 +2589,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimit": 1,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -2631,7 +2631,7 @@
       "Bolt"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -2749,8 +2749,8 @@
     "energyTypes": [
       "Bolt"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -2775,7 +2775,7 @@
     "rawText": "While Punisher is active, when you take damage from an opposing \"When fielded,\" ability, deal an equal amount of damage to your opponent.",
     "keywords": [],
     "affiliations": [
-      "Marvel Knights Affiliation"
+      "Marvel Knights"
     ],
     "isImplemented": false,
     "set": "PROMO",
@@ -2790,8 +2790,8 @@
     "energyTypes": [
       "Shield"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -2818,7 +2818,7 @@
       "Regenerate"
     ],
     "affiliations": [
-      "X-men"
+      "X-Men"
     ],
     "isImplemented": false,
     "set": "PROMO",
@@ -2834,7 +2834,7 @@
       "Shield"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -2874,8 +2874,8 @@
     "type": "BasicAction",
     "purchaseCost": 3,
     "energyTypes": [],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 3,
+    "dieLimitSource": "teambuilder",
     "levels": [],
     "statsMissing": false,
     "rawText": "Continuous: Prevent up to 2 damage to target character die and move this die to your Used Pile. If you have an active X-Men character, also gain 1 life.",
@@ -2994,8 +2994,8 @@
     "energyTypes": [
       "Shield"
     ],
-    "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimit": 1,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -3037,7 +3037,7 @@
       "Shield"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -3138,7 +3138,7 @@
       "Shield"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -3178,8 +3178,8 @@
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -3263,7 +3263,7 @@
     "rawText": "You may spin down a friendly character with the X-Men affiliation to give Kitty Pryde +2A and +2D until the end of your turn (you may use this ability any time you could use a Global Ability).",
     "keywords": [],
     "affiliations": [
-      "X-men"
+      "X-Men"
     ],
     "isImplemented": false,
     "set": "PROMO",
@@ -3337,8 +3337,8 @@
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimit": 2,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -3380,7 +3380,7 @@
       "Mask"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -3463,7 +3463,7 @@
       "Fist"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -3504,7 +3504,7 @@
       "Mask"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -3547,7 +3547,7 @@
       "Mask"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -3613,7 +3613,7 @@
     "rawText": "Wolverine may attack a character with the Villain affiliation in the field instead of your opponent (he may be blocked normally).",
     "keywords": [],
     "affiliations": [
-      "X-men"
+      "X-Men"
     ],
     "isImplemented": false,
     "set": "PROMO",
@@ -3730,8 +3730,8 @@
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -3811,7 +3811,7 @@
       "Mask"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -3852,7 +3852,7 @@
       "Mask"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -3892,8 +3892,8 @@
     "energyTypes": [
       "Bolt"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -3962,7 +3962,7 @@
     "rawText": "When you are attacked, you may spin up Marvel Girl one level. If you do, gain 2 life.",
     "keywords": [],
     "affiliations": [
-      "X-men"
+      "X-Men"
     ],
     "isImplemented": false,
     "set": "PROMO",
@@ -4060,7 +4060,7 @@
       "Shield"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -4142,7 +4142,7 @@
       "Shield"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -4183,7 +4183,7 @@
       "Fist"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -4224,7 +4224,7 @@
       "Shield"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -4426,8 +4426,8 @@
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -4467,8 +4467,8 @@
     "energyTypes": [
       "Shield"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -4568,8 +4568,8 @@
     "energyTypes": [
       "Bolt"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -4609,8 +4609,8 @@
     "energyTypes": [
       "Bolt"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -4650,8 +4650,8 @@
     "energyTypes": [
       "Bolt"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -4691,8 +4691,8 @@
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder-name",
     "levels": [],
     "statsMissing": false,
     "rawText": "Avenger character dice cost 1 less to purchase and are free to field (until end of turn) */**Also, Prep a die from your bag. Global: Pay Mask. Target character die in your reserve pool or Field Zone gains Avenger (until end of turn).",
@@ -4711,8 +4711,8 @@
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [],
     "statsMissing": false,
     "rawText": "Your Avenger character dice get +2A and +2D (until end of turn). */**Also, Prep a die from your bag. Global: Pay Mask. Target character die in your reserve pool or Field Zone gains Avenger (until end of turn).",
@@ -4731,8 +4731,8 @@
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [],
     "statsMissing": false,
     "rawText": "Draw 3 dice. Roll any Avenger character dice you draw and place them in your Reserve Pool. Place the rest in your Used Pile. */**Also, Prep a die from your bag. Global: Pay Mask. Target character die in your reserve pool or Field Zone gains Avenger (until end of turn).",
@@ -4751,8 +4751,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -4792,8 +4792,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -4833,8 +4833,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -4874,8 +4874,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -4915,8 +4915,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -4956,8 +4956,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -4997,8 +4997,8 @@
     "energyTypes": [
       "Shield"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -5038,8 +5038,8 @@
     "energyTypes": [
       "Shield"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -5079,8 +5079,8 @@
     "energyTypes": [
       "Shield"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -5121,7 +5121,7 @@
       "Mask"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -5162,7 +5162,7 @@
       "Mask"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -5203,7 +5203,7 @@
       "Mask"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -5244,7 +5244,7 @@
       "Mask"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -5285,7 +5285,7 @@
       "Mask"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -5326,7 +5326,7 @@
       "Mask"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -5367,7 +5367,7 @@
       "Fist"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -5410,7 +5410,7 @@
       "Fist"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -5451,7 +5451,7 @@
       "Fist"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -5491,8 +5491,8 @@
     "energyTypes": [
       "Shield"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -5579,8 +5579,8 @@
     "energyTypes": [
       "Shield"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -5620,8 +5620,8 @@
     "energyTypes": [
       "Shield"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -5661,8 +5661,8 @@
     "energyTypes": [
       "Shield"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -5702,8 +5702,8 @@
     "energyTypes": [
       "Shield"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -5743,8 +5743,8 @@
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -5784,8 +5784,8 @@
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -5825,8 +5825,8 @@
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -5867,7 +5867,7 @@
       "Fist"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -5908,7 +5908,7 @@
       "Fist"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -5949,7 +5949,7 @@
       "Fist"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -5989,8 +5989,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -6030,8 +6030,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -6071,8 +6071,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -6112,8 +6112,8 @@
     "energyTypes": [
       "Bolt"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -6153,8 +6153,8 @@
     "energyTypes": [
       "Bolt"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -6194,8 +6194,8 @@
     "energyTypes": [
       "Bolt"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -6236,7 +6236,7 @@
       "Mask"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -6277,7 +6277,7 @@
       "Mask"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -6318,7 +6318,7 @@
       "Mask"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -6359,7 +6359,7 @@
       "Bolt"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -6400,7 +6400,7 @@
       "Bolt"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -6456,8 +6456,8 @@
     "type": "BasicAction",
     "purchaseCost": 4,
     "energyTypes": [],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 3,
+    "dieLimitSource": "teambuilder",
     "levels": [],
     "statsMissing": false,
     "rawText": "Deal X damage to all opposing character dice, where X is the lowest D value among all active opposing character dice. If no opposing character dice are KO'd by this effect, Prep this die.",
@@ -6474,8 +6474,8 @@
     "type": "BasicAction",
     "purchaseCost": 2,
     "energyTypes": [],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 3,
+    "dieLimitSource": "teambuilder",
     "levels": [],
     "statsMissing": false,
     "rawText": "Target character die you control has A equal to D of target opposing character die (until end of turn). Those two character dice deal damage to each other equal to their A.",
@@ -6492,8 +6492,8 @@
     "type": "BasicAction",
     "purchaseCost": 4,
     "energyTypes": [],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 3,
+    "dieLimitSource": "teambuilder",
     "levels": [],
     "statsMissing": false,
     "rawText": "Choose an active character die. Deal damage equal to that character die's level to all opposing character dice.",
@@ -6510,8 +6510,8 @@
     "type": "BasicAction",
     "purchaseCost": 4,
     "energyTypes": [],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 3,
+    "dieLimitSource": "teambuilder",
     "levels": [],
     "statsMissing": false,
     "rawText": "Continuous: At the beginning of your opponent's turn, choose an energy type. All character dice of that energy type must attack this turn and deal no combat damage. If any of those character dice are unblocked, they remain in the Field Zone rather than being placed in the Used Pile at end of turn. At the end of your opponent's Attack Step send this die to your Used Pile.",
@@ -6528,8 +6528,8 @@
     "type": "BasicAction",
     "purchaseCost": 3,
     "energyTypes": [],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 3,
+    "dieLimitSource": "teambuilder",
     "levels": [],
     "statsMissing": false,
     "rawText": "Two target character dice you control get +1A and +1D. */** Also, they gain Overcrush. Global: Pay bolt. Target character die gets +1A.",
@@ -6548,8 +6548,8 @@
     "type": "BasicAction",
     "purchaseCost": 4,
     "energyTypes": [],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 3,
+    "dieLimitSource": "teambuilder",
     "levels": [],
     "statsMissing": false,
     "rawText": "Draw and roll a die for each different energy type among your active character dice. (Sidekicks do not have an energy type.) (Rolled dice are placed in the Reserve Pool.)",
@@ -6584,8 +6584,8 @@
     "type": "BasicAction",
     "purchaseCost": 3,
     "energyTypes": [],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 3,
+    "dieLimitSource": "teambuilder",
     "levels": [],
     "statsMissing": false,
     "rawText": "Target character die is considered to be level 1 (A and D values, fielding cost, and bursts if any) and is unblockable (until end of turn). Global: Pay maskmask. Spin target character die down 1 level.",
@@ -6602,8 +6602,8 @@
     "type": "BasicAction",
     "purchaseCost": 3,
     "energyTypes": [],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 3,
+    "dieLimitSource": "teambuilder",
     "levels": [],
     "statsMissing": false,
     "rawText": "Continuous: Whenever you could use a Global Ability, you may send this die to your Used Pile. If you do, return all dice controlled by a player other than their owner to their owner's Field Zone, and return all dice temporarily in the Field Zone to where they originally came from.",
@@ -8161,7 +8161,7 @@
     "rawText": "",
     "keywords": [],
     "affiliations": [
-      "Avenger"
+      "Avengers"
     ],
     "isImplemented": true,
     "set": "AOU",
@@ -8202,7 +8202,7 @@
     "rawText": "Every time Thor takes damage, reduce that damage by 1.",
     "keywords": [],
     "affiliations": [
-      "Avenger"
+      "Avengers"
     ],
     "isImplemented": false,
     "set": "AOU",
@@ -8243,7 +8243,7 @@
     "rawText": "Thor can't be targeted by opposing Action dice that would target one character.",
     "keywords": [],
     "affiliations": [
-      "Avenger"
+      "Avengers"
     ],
     "isImplemented": false,
     "set": "AOU",
@@ -18451,7 +18451,7 @@
     "rawText": "When fielded, KO all non-Zombies Green Goblin dice and deal 1 damage to all opponents for each Sidekick in their Field Zone. When Spider-Man would be KO'd, send him to the Used Pile instead.",
     "keywords": [],
     "affiliations": [
-      "Zombies"
+      "Zombie"
     ],
     "isImplemented": false,
     "set": "ASM",
@@ -18492,7 +18492,7 @@
     "rawText": "When fielded, KO all non-Zombie Kingpin dice. While Zombie Kingpin is active, your Sidekicks can't be blocked by Sidekicks and Spider-Man costs extra to purchase.",
     "keywords": [],
     "affiliations": [
-      "Zombies"
+      "Zombie"
     ],
     "isImplemented": false,
     "set": "ASM",
@@ -18533,7 +18533,7 @@
     "rawText": "When fielded, KO all non-Zombies Morbius dice. While Zombie Morbius is active, any Villains characters with purchase cost 6 or more costs 2 less to purchase and Spider-Man can't block.",
     "keywords": [],
     "affiliations": [
-      "Zombies"
+      "Zombie"
     ],
     "isImplemented": false,
     "set": "ASM",
@@ -18574,7 +18574,7 @@
     "rawText": "When fielded, KO all non-Zombie Venom dice. When Zombie Venom attacks, you may pay 1 to force target character to block. Spider-Man must block Zombie Venom if able.",
     "keywords": [],
     "affiliations": [
-      "Zombies"
+      "Zombie"
     ],
     "isImplemented": false,
     "set": "ASM",
@@ -27952,9 +27952,7 @@
     "statsMissing": false,
     "rawText": "a: KO target character die you control and gain 1 life. */** Then, flip this card. b: Begin the game with this side face-down. KO target character die you control and target character die you don't control. Then, flip this card.",
     "keywords": [],
-    "affiliations": [
-      "none"
-    ],
+    "affiliations": [],
     "isImplemented": false,
     "set": "BAT",
     "abilityTemplate": null
@@ -28015,9 +28013,7 @@
     "statsMissing": false,
     "rawText": "a: Deal each player 1 damage for every Action die in their Field Zone. */** Then, flip this card. b: Begin the game with this side face-down. You may purchace an Action die with cost 3 or lower for free. Deal 1 damage to each player. Then, flip this card.",
     "keywords": [],
-    "affiliations": [
-      "none"
-    ],
+    "affiliations": [],
     "isImplemented": false,
     "set": "BAT",
     "abilityTemplate": null
@@ -61339,8 +61335,8 @@
       "Mask",
       "Shield"
     ],
-    "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimit": 1,
+    "dieLimitSource": "default",
     "levels": [
       {
         "fieldingCost": 1,
@@ -85347,7 +85343,7 @@
       "Shield"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -85388,7 +85384,7 @@
       "Shield"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -85429,7 +85425,7 @@
       "Shield"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -85469,8 +85465,8 @@
     "energyTypes": [
       "Shield"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -85512,8 +85508,8 @@
     "energyTypes": [
       "Shield"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -85553,8 +85549,8 @@
     "energyTypes": [
       "Shield"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -85594,8 +85590,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -85635,8 +85631,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -85678,8 +85674,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -85719,8 +85715,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -85763,8 +85759,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -85806,8 +85802,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -85848,7 +85844,7 @@
       "Mask"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -85930,7 +85926,7 @@
       "Mask"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -86094,7 +86090,7 @@
       "Mask"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -86135,7 +86131,7 @@
       "Mask"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -86176,7 +86172,7 @@
       "Mask"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -86217,7 +86213,7 @@
       "Mask"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -86260,7 +86256,7 @@
       "Mask"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -86303,7 +86299,7 @@
       "Mask"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -103177,8 +103173,8 @@
     "type": "BasicAction",
     "purchaseCost": 3,
     "energyTypes": [],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 3,
+    "dieLimitSource": "teambuilder",
     "levels": [],
     "statsMissing": false,
     "rawText": "Roll a character die from your Used Pile. If it rolls a character face, field it for free. Otherwise, Prep it,.",
@@ -103195,8 +103191,8 @@
     "type": "BasicAction",
     "purchaseCost": 4,
     "energyTypes": [],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 3,
+    "dieLimitSource": "teambuilder",
     "levels": [],
     "statsMissing": false,
     "rawText": "KO target level 1 character die. ** Instead, KO target level 1 or level 2 character die. Global: Pay Fist. Target blocked character die deals no damage.",
@@ -103213,8 +103209,8 @@
     "type": "BasicAction",
     "purchaseCost": 2,
     "energyTypes": [],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 3,
+    "dieLimitSource": "teambuilder",
     "levels": [],
     "statsMissing": false,
     "rawText": "Deal 1 damage to target player or character die. If you have an active character with Immortal, instead deal 2 damage. Global: Pay Bolt. Once during your turn, deal 1 damage to target player if you have no character dice in the Field Zone.",
@@ -103249,8 +103245,8 @@
     "type": "BasicAction",
     "purchaseCost": 3,
     "energyTypes": [],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 3,
+    "dieLimitSource": "teambuilder",
     "levels": [],
     "statsMissing": false,
     "rawText": "Each time you field a Sidekick this turn, reduce the fielding cost of another character die by 1 and Prep a die from your bag.",
@@ -103267,8 +103263,8 @@
     "type": "BasicAction",
     "purchaseCost": 2,
     "energyTypes": [],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 3,
+    "dieLimitSource": "teambuilder",
     "levels": [],
     "statsMissing": false,
     "rawText": "Target character die gets +2A and +1D until end of turn. Global: Pay Mask Mask. Once during your turn, you may remove one of your character dice from the Field Xone untl end of turn.",
@@ -103285,8 +103281,8 @@
     "type": "BasicAction",
     "purchaseCost": 2,
     "energyTypes": [],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 3,
+    "dieLimitSource": "teambuilder",
     "levels": [],
     "statsMissing": false,
     "rawText": "Prep a die from your Used Pile.",
@@ -103359,8 +103355,8 @@
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -103400,8 +103396,8 @@
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -103440,7 +103436,7 @@
       "Shield"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -103464,7 +103460,9 @@
     "statsMissing": false,
     "rawText": "Prevent the first 2 damage dealt to each Beta Ray Bill die each turn.",
     "keywords": [],
-    "affiliations": [],
+    "affiliations": [
+      "Guardians of the Galaxy"
+    ],
     "isImplemented": false,
     "set": "THOR",
     "abilityTemplate": null
@@ -103478,8 +103476,8 @@
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [],
     "statsMissing": false,
     "rawText": "Deal 2 damage to target character die. */** If Daredevil is active, also deal 2 damage to another target character die or opponent.",
@@ -103498,8 +103496,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -103539,8 +103537,8 @@
     "energyTypes": [
       "Shield"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -103578,8 +103576,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -103660,8 +103658,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -103702,7 +103700,7 @@
       "Mask"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -103742,8 +103740,8 @@
     "energyTypes": [
       "Bolt"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -103781,8 +103779,8 @@
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 2,
@@ -103821,7 +103819,7 @@
       "Mask"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -103861,8 +103859,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -103900,8 +103898,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -103941,8 +103939,8 @@
     "energyTypes": [
       "Bolt"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -103983,7 +103981,7 @@
       "Shield"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -104023,8 +104021,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [],
     "statsMissing": false,
     "rawText": "Replace target character die's A with double its printed A (until end of turn).",
@@ -104043,8 +104041,8 @@
     "energyTypes": [
       "Shield"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -104086,8 +104084,8 @@
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -104127,8 +104125,8 @@
     "energyTypes": [
       "Bolt"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -104168,8 +104166,8 @@
     "energyTypes": [
       "Bolt"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -104209,8 +104207,8 @@
     "energyTypes": [
       "Bolt"
     ],
-    "dieLimit": 3,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [],
     "statsMissing": false,
     "rawText": "KO all level 1 character dice other than Thor. ** Also, KO all level 2 character dice.",
@@ -104229,8 +104227,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -104268,8 +104266,8 @@
     "energyTypes": [
       "Shield"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -104349,7 +104347,7 @@
       "Bolt"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -104389,8 +104387,8 @@
     "energyTypes": [
       "Bolt"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -104428,8 +104426,8 @@
     "energyTypes": [
       "Bolt"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -104469,8 +104467,8 @@
     "energyTypes": [
       "Bolt"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder-name",
     "levels": [
       {
         "fieldingCost": 1,
@@ -104510,8 +104508,8 @@
     "energyTypes": [
       "Shield"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -104551,8 +104549,8 @@
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -104590,8 +104588,8 @@
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -104631,8 +104629,8 @@
     "energyTypes": [
       "Shield"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [],
     "statsMissing": false,
     "rawText": "Until the end of your turn, when you field a character die, you may move one copy of that character die from your Used Pile to the Field Zone at the same level.",
@@ -104733,8 +104731,8 @@
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -104774,8 +104772,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -104815,8 +104813,8 @@
     "energyTypes": [
       "Bolt"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -104856,8 +104854,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -104897,8 +104895,8 @@
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -104938,8 +104936,8 @@
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -104978,7 +104976,7 @@
       "Shield"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -105003,7 +105001,7 @@
     "rawText": "Beta Ray Bill cannot be targeted by action dice or Global Abilites.",
     "keywords": [],
     "affiliations": [
-      "???"
+      "Guardians of the Galaxy"
     ],
     "isImplemented": false,
     "set": "THOR",
@@ -105018,8 +105016,8 @@
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [],
     "statsMissing": false,
     "rawText": "Move target character die to this card. Return it to the Field Zone at end of turn.",
@@ -105038,8 +105036,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -105079,8 +105077,8 @@
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -105118,8 +105116,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -105160,7 +105158,7 @@
       "Fist"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -105200,8 +105198,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -105240,7 +105238,7 @@
       "Mask"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -105280,8 +105278,8 @@
     "energyTypes": [
       "Bolt"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -105321,8 +105319,8 @@
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 2,
@@ -105361,7 +105359,7 @@
       "Mask"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -105401,8 +105399,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder-name",
     "levels": [
       {
         "fieldingCost": 1,
@@ -105440,8 +105438,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -105481,8 +105479,8 @@
     "energyTypes": [
       "Bolt"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -105523,7 +105521,7 @@
       "Shield"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -105563,8 +105561,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [],
     "statsMissing": false,
     "rawText": "Character dice you control with Immortal get +2A and +2D and gain Overcrush (until end of turn).",
@@ -105585,8 +105583,8 @@
     "energyTypes": [
       "Shield"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder-name",
     "levels": [
       {
         "fieldingCost": 0,
@@ -105626,8 +105624,8 @@
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -105667,8 +105665,8 @@
     "energyTypes": [
       "Bolt"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -105708,8 +105706,8 @@
     "energyTypes": [
       "Bolt"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -105749,8 +105747,8 @@
     "energyTypes": [
       "Bolt"
     ],
-    "dieLimit": 3,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [],
     "statsMissing": false,
     "rawText": "Deal 1 damage to target character die for each Bolt in your Reserve Pool. */** Also, deal that same amount of damage to target opponent.",
@@ -105769,8 +105767,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -105808,8 +105806,8 @@
     "energyTypes": [
       "Shield"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -105850,7 +105848,7 @@
       "Shield"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -105889,7 +105887,7 @@
       "Bolt"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -105968,8 +105966,8 @@
     "energyTypes": [
       "Bolt"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -106009,8 +106007,8 @@
     "energyTypes": [
       "Bolt"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -106050,8 +106048,8 @@
     "energyTypes": [
       "Shield"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -106091,8 +106089,8 @@
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -106130,8 +106128,8 @@
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -106171,8 +106169,8 @@
     "energyTypes": [
       "Shield"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [],
     "statsMissing": false,
     "rawText": "When you field a character die this turn, you may Prep a die of the same energy type in your Used Pile. ** Also, Prep a die from your bag.",
@@ -106273,8 +106271,8 @@
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -106314,8 +106312,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -106355,8 +106353,8 @@
     "energyTypes": [
       "Shield"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -106394,8 +106392,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -106435,8 +106433,8 @@
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -106476,8 +106474,8 @@
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -106501,9 +106499,7 @@
     "statsMissing": false,
     "rawText": "Immortal (Except when purchased, when this die would go to the Used Pile, instead add it to your bag.) Balder can only be blocked by 2 or more character dice.",
     "keywords": [],
-    "affiliations": [
-      "???"
-    ],
+    "affiliations": [],
     "isImplemented": false,
     "set": "THOR",
     "abilityTemplate": null
@@ -106518,7 +106514,7 @@
       "Shield"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -106543,7 +106539,7 @@
     "rawText": "When Beta Ray Bill attacks, KO target Bolt character die of equal or lower level.",
     "keywords": [],
     "affiliations": [
-      "???"
+      "Guardians of the Galaxy"
     ],
     "isImplemented": false,
     "set": "THOR",
@@ -106558,8 +106554,8 @@
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [],
     "statsMissing": false,
     "rawText": "Choose target opposing character die and reroll it. If it rolls an energy face, move it to the used pile. Otherwise return it to the Field Zone at its origional level. Global: Pay 0. Once per turn on your turn, spin one of your Sidekick character dice to its Mask face.",
@@ -106578,8 +106574,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -106619,8 +106615,8 @@
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -106658,8 +106654,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -106700,7 +106696,7 @@
       "Fist"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -106740,8 +106736,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -106782,7 +106778,7 @@
       "Mask"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -106822,8 +106818,8 @@
     "energyTypes": [
       "Bolt"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -106861,8 +106857,8 @@
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 2,
@@ -106901,7 +106897,7 @@
       "Mask"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -106941,8 +106937,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -106980,8 +106976,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -107021,8 +107017,8 @@
     "energyTypes": [
       "Bolt"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -107063,7 +107059,7 @@
       "Shield"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -107103,8 +107099,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [],
     "statsMissing": false,
     "rawText": "You may purchase a character die with Immortal for 3 less (minimum 1) and add it to your bag (until end of turn). **Instead you may purchase it for 4 less (minimum 1). Global: Pay 0. Once per turn, spin one of your Sidekick character die to its Fist face.",
@@ -107123,8 +107119,8 @@
     "energyTypes": [
       "Shield"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -107164,8 +107160,8 @@
     "energyTypes": [
       "Bolt"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -107205,8 +107201,8 @@
     "energyTypes": [
       "Bolt"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -107246,8 +107242,8 @@
     "energyTypes": [
       "Bolt"
     ],
-    "dieLimit": 3,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [],
     "statsMissing": false,
     "rawText": "Deal 1 damage to target character die, then deal 2 damage to a target character die that hasn't been damaged by this effect. Continue increasing damage dealt and selecing new targets in this way until a character die is KO'd or all character dice have been damaged. Global: Pay 0. Once per turn on your turn, spin one of your Sidekick character dice to its Bolt face.",
@@ -107266,8 +107262,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -107305,8 +107301,8 @@
     "energyTypes": [
       "Shield"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -107347,7 +107343,7 @@
       "Shield"
     ],
     "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -107426,8 +107422,8 @@
     "energyTypes": [
       "Bolt"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -107465,8 +107461,8 @@
     "energyTypes": [
       "Bolt"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -107506,8 +107502,8 @@
     "energyTypes": [
       "Shield"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -107547,8 +107543,8 @@
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -107586,8 +107582,8 @@
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder-name",
     "levels": [
       {
         "fieldingCost": 1,
@@ -107627,8 +107623,8 @@
     "energyTypes": [
       "Shield"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [],
     "statsMissing": false,
     "rawText": "ERRATA: When you field a character die from your Reserve Pool, you may field target character die in your Used Pile on the same level for free. (The Bifrost doesn't trigger itself.) Global: Pay 0. Once per turn on your turn, spin one of your Sidekick character dice to its Shield face.",
@@ -107647,8 +107643,8 @@
     "energyTypes": [
       "Mask"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder-name",
     "levels": [
       {
         "fieldingCost": 1,
@@ -107688,8 +107684,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -107729,8 +107725,8 @@
     "energyTypes": [
       "Shield"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -107768,8 +107764,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -107809,8 +107805,8 @@
     "energyTypes": [
       "Bolt"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -107850,8 +107846,8 @@
     "energyTypes": [
       "Bolt"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -107974,7 +107970,7 @@
       "Shield"
     ],
     "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -108013,7 +108009,7 @@
       "Fist"
     ],
     "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -108052,7 +108048,7 @@
       "Mask"
     ],
     "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -108091,7 +108087,7 @@
       "Bolt"
     ],
     "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 1,
@@ -112610,7 +112606,7 @@
   },
   {
     "id": "TOA013",
-    "name": "AAsimar Paladin",
+    "name": "Aasimar Paladin",
     "subtitle": "Lesser Order of the Gauntlet",
     "type": "Character",
     "purchaseCost": 3,
@@ -112942,15 +112938,15 @@
   },
   {
     "id": "TOA021",
-    "name": "Capatin Elok Jaharwon",
+    "name": "Captain Elok Jaharwon",
     "subtitle": "Captain of the Dragonfang",
     "type": "Character",
     "purchaseCost": 4,
     "energyTypes": [
       "Shield"
     ],
-    "dieLimit": 1,
-    "dieLimitSource": "default",
+    "dieLimit": 4,
+    "dieLimitSource": "teambuilder",
     "levels": [
       {
         "fieldingCost": 0,
@@ -112975,7 +112971,7 @@
     "rawText": "While Captian Elok Jaharwon has gear equipped, he gains +3A Captian Elok Jaharwon counts as a pirate, this text cannot be ignored",
     "keywords": [],
     "affiliations": [
-      "Eveil Equip"
+      "Evil Equip"
     ],
     "isImplemented": false,
     "set": "TOA",
@@ -125619,8 +125615,8 @@
     "energyTypes": [
       "Shield"
     ],
-    "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimit": 1,
+    "dieLimitSource": "default",
     "levels": [
       {
         "fieldingCost": 0,
@@ -127035,8 +127031,8 @@
     "energyTypes": [
       "Fist"
     ],
-    "dieLimit": 4,
-    "dieLimitSource": "teambuilder-name",
+    "dieLimit": 1,
+    "dieLimitSource": "default",
     "levels": [
       {
         "fieldingCost": 1,

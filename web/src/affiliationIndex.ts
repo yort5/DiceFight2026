@@ -59,6 +59,10 @@ const OVERRIDES: Record<string, string> = {
   "Orange Lanterns": "WO",
   "Black Lantern": "WKbw",
   "Black Lanterns": "WKbw",
+  // None of the twelve Marvel Zombies cards exist in the old tool, so
+  // there is nothing to learn from - but it drew the logo anyway, and
+  // aDZOM is unambiguously it.
+  Zombie: "DZOM",
 };
 
 export function buildAffiliationIconIndex(cards: readonly CardDef[]): Record<string, string> {

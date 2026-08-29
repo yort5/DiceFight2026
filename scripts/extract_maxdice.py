@@ -59,22 +59,13 @@ OUTPUT_PATH = REPO_ROOT / "scripts" / "maxdice.json"
 OLD_CODES_PATH = REPO_ROOT / "src" / "DiceFight.Engine" / "Data" / "OldTeamBuilderCodes.json"
 AFFILIATION_PATH = REPO_ROOT / "src" / "DiceFight.Engine" / "Data" / "AffiliationIcons.json"
 
-# set_names order in cards.php, used only to resolve which arrays use the
-# 7-character D&D header (dndsets = [2,8,23,38,39,40] in index.php).
-SET_NAMES = [
-    "avx", "uxm", "bff", "ygo", "jl", "aou", "wol", "asm", "fus", "wf", "tmnt", "cw",
-    "gaf", "drs", "dp", "hhs", "imw", "bat", "def", "sww", "smc", "gotg", "xfc", "toa",
-    "thor", "ai", "ki", "jll", "hq", "bfu", "ork", "sw", "jus", "doom", "myst", "xmf",
-    "xfo", "dxm", "tiw", "aiw", "zhn", "wwe", "bit", "tag", "ig", "dps", "skc", "msw",
-]
-DND_SETS = {SET_NAMES[i] for i in (2, 8, 23, 38, 39, 40)}
-# The promo arrays that belong to those same D&D lines - named after the
-# product rather than the set, so they cannot be looked up in SET_NAMES.
-DND_PROMO_ARRAYS = {"bff_op", "bff_promo", "wd_op2018"}
-
-# Arrays in cards.php that are not card lists (colour tables, affiliation
-# maps, per-set die-face data).
-NOT_CARD_ARRAYS = re.compile(r"(_aff|_dice)$|^(raritycolor|affiliation_properites)$")
+# init()'s 4th argument is the "trs" set a card list belongs to, and
+# index.php widens the header to 7 characters for exactly these six -
+# `is_dnd` in its own init(). Taking it from the argument rather than
+# from a hardcoded list of array names is what gets the D&D PROMO arrays
+# right: wkop_2016_dd is a 7-character set because its trs is "fus",
+# which no amount of looking at its name would tell you.
+DND_TRS = {"bff", "fus", "toa", "tiw", "aiw", "zhn"}
 
 ENTRY_RE = re.compile(r"'((?:[^'\\]|\\.)*)'")
 
@@ -104,23 +95,88 @@ def normalize_subtitle(s):
     return v
 
 
-def header_width(array_name):
-    return 7 if (array_name in DND_SETS or array_name in DND_PROMO_ARRAYS) else 5
+def split_args(text):
+    """The argument list of one init(...) call, respecting [] and quotes.
+
+    A plain comma split does not survive `init(3,uxmop,'UXMop','uxm',
+    ['avx','uxm'])`, and matching the whole call with one regex does not
+    survive the stray spaces in `init(11,aou,'AoU','aou', [], aou_aff)` -
+    which is how the whole AoU set silently went missing once."""
+    args, current, depth, quote = [], "", 0, None
+    for ch in text:
+        if quote:
+            current += ch
+            quote = None if ch == quote else quote
+            continue
+        if ch in "'\"":
+            quote, current = ch, current + ch
+            continue
+        if ch == "[":
+            depth += 1
+        elif ch == "]":
+            depth -= 1
+        if ch == "," and depth == 0:
+            args.append(current.strip())
+            current = ""
+        else:
+            current += ch
+    args.append(current.strip())
+    return args
 
 
-def affiliation_maps():
-    """arrayVar -> {header char: icon code}, from index.php's init() calls.
+def parse_init_calls():
+    """One entry per init(setid, array, 'SetName', 'trs', dice, affmap).
 
-    Most sets pass a map as init()'s 6th argument; the earliest ones pass
-    none and use the header character as the icon code directly."""
+    These are the old tool's own set definitions, and the only place that
+    says which card array is which set, how wide its header is, and which
+    affiliation map decodes it."""
     text = INDEX_PHP.read_text(encoding="utf-8", errors="replace")
-    inits = re.findall(
-        r"init\((\d+),([a-z0-9_]+),'([^']+)','([a-z0-9_]+)'(?:,([^,)]+))?(?:,([a-z0-9_]+))?\)", text)
     cards = CARDS_PHP.read_text(encoding="utf-8", errors="replace")
     named = {}
-    for m in re.finditer(r"var ([a-z0-9_]+_aff) = \{(.*?)\};", cards, re.S):
+    for m in re.finditer(r"var ([a-z0-9_]+_aff)\s*=\s*\{(.*?)\};", cards, re.S):
         named[m.group(1)] = dict(re.findall(r"(\w+)\s*:\s*['\"]([^'\"]*)['\"]", m.group(2)))
-    return {arr: (named.get(aff) if aff else None) for _, arr, _, _, _, aff in inits}
+
+    calls = {}
+    for match in re.finditer(r"init\(", text):
+        i, depth, body = match.end(), 1, ""
+        while i < len(text) and depth:
+            ch = text[i]
+            depth += ch in "([" and 1 or (ch in ")]" and -1 or 0)
+            if depth:
+                body += ch
+            i += 1
+        args = split_args(body)
+        # Skips `function init(setid,set,setname,...)` itself, whose
+        # arguments are bare identifiers rather than literals.
+        if len(args) < 4 or not args[2].startswith("'"):
+            continue
+        array_name = args[1]
+        trs = args[3].strip("'\"")
+        calls[array_name] = {
+            "set_name": args[2].strip("'\"").lower(),
+            "width": 7 if trs in DND_TRS else 5,
+            "aff_map": named.get(args[5]) if len(args) > 5 and args[5] else None,
+        }
+    return calls
+
+
+def card_arrays(text):
+    """arrayVar -> its body, for every `var x = [ ... ];` in cards.php.
+
+    Scanning declaration to declaration rather than matching each array
+    with one regex: the file mixes `var ai =[` with `var aou = [`, and a
+    single pattern kept skipping arrays outright - ai, ki and thor by the
+    spacing, and eight promo arrays by a neighbour's close swallowing
+    their declaration. That silently cost ~290 cards their max dice,
+    their old-Teambuilder code and their affiliation logo."""
+    decls = list(re.finditer(r"^[ \t]*var ([a-z0-9_]+)\s*=\s*\[", text, re.M))
+    blocks = {}
+    for i, match in enumerate(decls):
+        end = decls[i + 1].start() if i + 1 < len(decls) else len(text)
+        body = text[match.end():end]
+        close = re.search(r"^[ \t]*\];", body, re.M)
+        blocks[match.group(1)] = body[:close.start()] if close else body
+    return blocks
 
 
 def affiliation_icons(entry, aff_map):
@@ -132,25 +188,15 @@ def affiliation_icons(entry, aff_map):
     return [code for code in value.split("/") if code and code != "0"]
 
 
-def array_to_set_name():
-    """arrayVar -> the set name the old tool uses in team codes.
-
-    From its index.php's init(setid, arrayVar, setName, trsName) calls.
-    Note these are NOT our set codes: the old tool splits promos into
-    their own sets (avxop, dc2016, wko16dc, m2019, ...), which is exactly
-    why the codes have to be read rather than derived."""
-    text = INDEX_PHP.read_text(encoding="utf-8", errors="replace")
-    return {m[1]: m[2].lower() for m in re.findall(r"init\((\d+),([a-z0-9_]+),'([^']+)'", text)}
-
-
 def main():
     if not CARDS_PHP.exists():
         raise SystemExit(f"Old Teambuilder not found at {CARDS_PHP}")
     text = CARDS_PHP.read_text(encoding="utf-8", errors="replace")
-    blocks = re.findall(r"^\s*var ([a-z0-9_]+) = \[(.*?)^\s*\];", text, re.M | re.S)
-
-    set_names = array_to_set_name()
-    aff_maps = affiliation_maps()
+    blocks = card_arrays(text)
+    sets = parse_init_calls()
+    missing = [a for a in sets if a not in blocks]
+    if missing:
+        raise SystemExit(f"init() names card arrays that cards.php does not define: {missing}")
 
     # (name, subtitle) -> {maxdice: [array names]}
     seen = defaultdict(lambda: defaultdict(list))
@@ -160,10 +206,13 @@ def main():
     affiliations = {}
     affiliations_by_set = {}
     total = 0
-    for array_name, body in blocks:
-        if NOT_CARD_ARRAYS.search(array_name):
+    for array_name, body in blocks.items():
+        # Only the arrays init() actually names are card lists; the rest
+        # are colour tables, affiliation maps and per-set die data.
+        if array_name not in sets:
             continue
-        width = header_width(array_name)
+        spec = sets[array_name]
+        width = spec["width"]
         for position, raw in enumerate(ENTRY_RE.findall(body)):
             entry = raw.replace("\\'", "'").replace('\\"', '"').replace("\\\\", "\\")
             if len(entry) <= width or not entry[4].isdigit():
@@ -176,23 +225,21 @@ def main():
             pairs = [SPLIT_ENERGY[m] for m in SPLIT_ENERGY_RE.findall(entry)]
             if pairs:
                 split_energy[key] = pairs
-            if array_name in aff_maps:
-                icons = affiliation_icons(entry, aff_maps[array_name])
-                affiliations.setdefault(key, icons)
-                if array_name in set_names:
-                    affiliations_by_set.setdefault(f"{set_names[array_name]}|{key}", icons)
+            set_name = spec["set_name"]
+            icons = affiliation_icons(entry, spec["aff_map"])
+            affiliations.setdefault(key, icons)
+            affiliations_by_set.setdefault(f"{set_name}|{key}", icons)
             # The team-link code is "<position in this set><set name>",
             # per the old tool's num2cardname(): a%1000 + setnames[a/1000].
-            if array_name in set_names:
-                code = f"{position + 1}{set_names[array_name]}"
-                # Two maps. The set-qualified one is preferred at lookup
-                # time so a card resolves to ITS OWN printing: several
-                # Basic Actions are reprinted verbatim across sets, and
-                # picking an arbitrary one would show the wrong set's art.
-                # The bare key is the fallback, and is what makes a promo
-                # reprint resolve to the original set that has it.
-                old_codes_by_set[f"{set_names[array_name]}|{key}"] = code
-                old_codes[key] = code
+            code = f"{position + 1}{set_name}"
+            # Two maps. The set-qualified one is preferred at lookup
+            # time so a card resolves to ITS OWN printing: several
+            # Basic Actions are reprinted verbatim across sets, and
+            # picking an arbitrary one would show the wrong set's art.
+            # The bare key is the fallback, and is what makes a promo
+            # reprint resolve to the original set that has it.
+            old_codes_by_set[f"{set_name}|{key}"] = code
+            old_codes[key] = code
             total += 1
 
     lookup, conflicts = {}, {}
@@ -215,7 +262,7 @@ def main():
         json.dumps({"bySetAndCard": dict(sorted(old_codes_by_set.items())),
                     "byCard": dict(sorted(old_codes.items()))}, indent=1) + "\n", encoding="utf-8")
 
-    print(f"Scanned {len(blocks)} arrays, {total} card entries.")
+    print(f"Scanned {len(sets)} card arrays, {total} entries.")
     print(f"Wrote {len(old_codes)} old-Teambuilder codes "
           f"({len(old_codes_by_set)} set-qualified) to "
           f"{OLD_CODES_PATH.relative_to(REPO_ROOT)}")

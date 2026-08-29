@@ -9404,3 +9404,59 @@ what earns the real one: "X-men" (6 PROMO cards), "Avenger" (4 AOU Thor),
 "Zombie" (8 AOU), "Zombies" (4 ASM), "Eveil Equip" (TOA021), "Team arrow"
 (12DC2016), "???" (3 THOR), "none" (2 BAT), "Superstar" (BIT017),
 "Marvel Knights Affiliation" (2 PROMO).
+
+## The old Teambuilder parser was silently skipping 11 sets (2026-08-29)
+
+Chasing why "Zombie" and "Avenger" still had no logo after the sheet was
+corrected turned up something much larger: `extract_maxdice.py` had been
+dropping whole card arrays without a word.
+
+Two separate parsing bugs, both of the "regex nearly fits" kind:
+
+- The array pattern was `^\s*var ([a-z0-9_]+) = \[`, with a literal space
+  before the bracket. `cards.php` mixes that with `var ai =[`, so **ai,
+  ki and thor** were never seen at all - 218 cards. Worse, because
+  `findall` returns non-overlapping matches, a neighbouring array's close
+  could swallow a declaration outright, which took **eight promo arrays**
+  (dctw, dc_op2016/17, m_op2016/17/19/20/22) with it.
+- The `init()` pattern could not survive its own arguments. A dice list
+  like `['avx','uxm']` contains commas, and `init(11,aou,'AoU','aou', [],
+  aou_aff)` has stray spaces - so the entire **AoU set's affiliation map**
+  went unread and its 146 cards got no logo.
+
+Both are now parsed rather than pattern-matched: declaration-to-
+declaration scanning for the arrays, and a bracket-and-quote-aware
+argument splitter for `init()`. The script also asserts that every array
+`init()` names actually resolved, so a future silent drop is a crash
+instead.
+
+The D&D header width comes from `init()`'s trs argument now too, matching
+`is_dnd` in the tool's own code, rather than from a hand-kept list of
+array names. That list had `wd_op2018` wrong and missed `wkop_2016_dd`.
+
+**What it was costing.** 3,800 entries scanned became 4,079:
+
+| | before | after |
+| --- | --- | --- |
+| max-dice entries | 3,733 | 3,995 |
+| old-Teambuilder codes | 3,733 | 3,995 |
+| cards with an affiliation logo | 2,620 | 2,922 |
+| cards falling back to die limit 1 | 250 | 86 |
+
+**177 cards had the wrong max dice** and now have the real one - THOR, AI,
+KI and a long tail of promos, which had been defaulting to 1 or matching
+by name to some other printing's value. That is a team-legality number,
+so it mattered. The same cards had no old-Teambuilder code either, which
+means "Copy OLD team link" had been quietly dropping them.
+
+Two names also earned real logos from the recovered sets (Avenger,
+Deadpool), and "Zombie" is pinned to `aDZOM` - the old tool drew that
+logo but has none of the twelve Marvel Zombies cards to hang it on.
+
+The 12 names still on a generated badge are: the two the tool names but
+never drew (Black Order, the Hand); "Superstar" (BIT017 - every other WWE
+card says "Legends"); the sheet's two "a: X b: Y" combined cells; and
+seven that are the D&D alignment/type columns bleeding into the
+affiliation field (Neutral, Neutral None, Evil, Evil Equip, Equip, Good
+Equip None, Neutral Equip None - 79 cards). Those last are a sheet
+structure question, not a spelling one.
