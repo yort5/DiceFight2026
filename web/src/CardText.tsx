@@ -1,27 +1,23 @@
 import type { ReactNode } from "react";
-import boltIcon from "./assets/energy-bolt.png";
-import fistIcon from "./assets/energy-fist.png";
-import maskIcon from "./assets/energy-mask.png";
-import shieldIcon from "./assets/energy-shield.png";
-import sidekickIcon from "./assets/sidekick.png";
+import { Icon } from "./GameIcon";
+import {
+  ENERGY_ICONS,
+  GENERIC_ENERGY_ICONS,
+  SIDEKICK_ICON,
+  SPLIT_ENERGY_ICONS,
+  WILD_ENERGY_ICON,
+  type GameIcon,
+} from "./gameIcons";
 
-// Renders a card's printed text: energy/sidekick words become icons, and
-// each "Global:" ability starts its own line with the keyword in bold.
+// Renders a card's printed text: the symbols a real card prints become
+// icons, and each "Global:" ability starts its own line with the keyword
+// in bold.
 //
 // This is DISPLAY ONLY. Search still runs against the raw string (see
 // cardSearch.ts), so "Pay Mask" finds cards whose text now shows an icon.
 // Nothing here touches the data.
-//
-// The icons are the old Teambuilder's own (e1-e4.png and pawn.png),
-// copied into src/assets so they resolve offline and get hashed by Vite.
 
-const ICONS: Record<string, { src: string; label: string }> = {
-  bolt: { src: boltIcon, label: "Bolt" },
-  fist: { src: fistIcon, label: "Fist" },
-  mask: { src: maskIcon, label: "Mask" },
-  shield: { src: shieldIcon, label: "Shield" },
-  sidekick: { src: sidekickIcon, label: "Sidekick" },
-};
+const ENERGY = "bolt|fist|mask|shield";
 
 // Proper names that merely CONTAIN one of those words and must stay as
 // text. Derived from the catalog rather than guessed: scanning every
@@ -31,31 +27,42 @@ const ICONS: Record<string, { src: string; label: string }> = {
 // else - including "Pay Bolt Bolt", which really is two icons - is a
 // genuine reference. Re-check this list if the catalog gains cards.
 const PROTECTED_NAMES = ["Iron Fist", "Black Bolt"];
-
-// 24 cards write their energy as a raw Discord emoji code the sheet
-// author pasted in - "<:Fist:366516545284866048>". Only these four forms
-// occur, all unambiguously energy, so they become icons too rather than
-// being displayed as the noise they currently are.
-const EMOJI_CODE_RE = /<:(bolt|fist|mask|shield):\d+>/gi;
-
-const WORD_RE = new RegExp(
-  `${EMOJI_CODE_RE.source}|\\b(${Object.keys(ICONS).join("|")})(s?)\\b`,
-  "gi",
-);
 const PROTECTED_RE = new RegExp(`(${PROTECTED_NAMES.join("|")})`, "gi");
 
-function EnergyIcon({ kind }: { kind: string }) {
-  const icon = ICONS[kind];
-  // alt carries the word so the text still reads correctly when copied,
-  // read aloud, or when the image fails to load.
-  return <img className="card-icon" src={icon.src} alt={icon.label} title={icon.label} />;
-}
+// One pass over the text. In order of precedence:
+//
+//  1. A raw Discord emoji code. 24 cards have one pasted into the sheet
+//     ("<:Fist:366516545284866048>"); only these four forms occur and
+//     all are unambiguously energy, so they render like the words do.
+//  2. "Bolt/Mask" - two DIFFERENT energies joined by a slash, which the
+//     importer writes for the split "either energy" symbol. The `(?<!\/)`
+//     and `(?!\s*\/)` guards keep it from eating a pair out of the middle
+//     of "Bolt/Fist/Mask/Shield", which is a list of all four types and
+//     renders as four separate icons.
+//  3. A bare "bolt"/"fist"/"mask"/"shield"/"sidekick", with an optional
+//     plural "s" kept as text so "sidekicks" reads as icon + "s".
+//  4. "pay 2" - generic energy, printed as a numeral in a circle. The
+//     lookahead drops "pay 2 life" (not energy at all) and "Pay 1 SHIELD"
+//     (a count of a specific energy, where the icon follows on its own).
+//  5. "?" immediately before "energy" - the wild face.
+const TOKEN_RE = new RegExp(
+  [
+    `<:(${ENERGY}):\\d+>`,
+    `(?<!\\/)\\b(${ENERGY})\\s*\\/\\s*(${ENERGY})\\b(?!\\s*\\/)`,
+    `\\b(${ENERGY}|sidekick)(s?)\\b`,
+    `\\b(pays?)\\s+(\\d)\\b(?!\\s*(?:life|${ENERGY}))`,
+    `(\\?)(?=\\s*energy\\b)`,
+  ].join("|"),
+  "gi",
+);
 
-/** Replaces energy/sidekick words with icons, leaving protected names alone. */
+/** Replaces printed symbols with icons, leaving protected names alone. */
 function withIcons(text: string, keyPrefix: string): ReactNode[] {
   const out: ReactNode[] = [];
   let key = 0;
-  // Split on the protected names first so the word scan never sees them.
+  const push = (icon: GameIcon) => out.push(<Icon key={`${keyPrefix}-i${key++}`} icon={icon} />);
+
+  // Split on the protected names first so the token scan never sees them.
   for (const chunk of text.split(PROTECTED_RE)) {
     if (chunk.length === 0) continue;
     if (PROTECTED_NAMES.some((n) => n.toLowerCase() === chunk.toLowerCase())) {
@@ -63,14 +70,26 @@ function withIcons(text: string, keyPrefix: string): ReactNode[] {
       continue;
     }
     let last = 0;
-    for (const m of chunk.matchAll(WORD_RE)) {
+    for (const m of chunk.matchAll(TOKEN_RE)) {
+      const [emoji, splitA, splitB, word, plural, payVerb, payAmount, wildcard] = m.slice(1);
       const at = m.index ?? 0;
       if (at > last) out.push(chunk.slice(last, at));
-      // Group 1 is the emoji-code form, group 2 the bare word.
-      const kind = (m[1] ?? m[2]).toLowerCase();
-      out.push(<EnergyIcon key={`${keyPrefix}-i${key++}`} kind={kind} />);
-      // Keep a trailing plural: "sidekicks" reads as icon + "s".
-      if (m[3]) out.push(m[3]);
+      if (emoji) {
+        push(ENERGY_ICONS[emoji.toLowerCase()]);
+      } else if (splitA) {
+        push(SPLIT_ENERGY_ICONS[`${splitA.toLowerCase()}/${splitB.toLowerCase()}`]);
+      } else if (word) {
+        const kind = word.toLowerCase();
+        push(kind === "sidekick" ? SIDEKICK_ICON : ENERGY_ICONS[kind]);
+        if (plural) out.push(plural);
+      } else if (payVerb) {
+        // The verb stays as written ("Pay"/"pays"); only the amount
+        // becomes a symbol.
+        out.push(`${payVerb} `);
+        push(GENERIC_ENERGY_ICONS[payAmount]);
+      } else if (wildcard) {
+        push(WILD_ENERGY_ICON);
+      }
       last = at + m[0].length;
     }
     if (last < chunk.length) out.push(chunk.slice(last));

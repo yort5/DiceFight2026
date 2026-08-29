@@ -88413,7 +88413,7 @@
       }
     ],
     "statsMissing": true,
-    "rawText": "When Mister Sinister is KO'd, you may KO an opposing character die of cost 4 or less. Global: Pay Bolt Mask. Each player chooses one of their character dice to take 3 damage.",
+    "rawText": "When Mister Sinister is KO'd, you may KO an opposing character die of cost 4 or less. Global: Pay Bolt/Mask. Each player chooses one of their character dice to take 3 damage.",
     "keywords": [],
     "affiliations": [
       "Villain"
@@ -89190,7 +89190,7 @@
       }
     ],
     "statsMissing": true,
-    "rawText": "While Apocalypse is active, when you could use a Global Ability, you may pay Bolt Mask and field sidekick from your Used Pile and bag until you have 4 sidekick in the Field Zone.",
+    "rawText": "While Apocalypse is active, when you could use a Global Ability, you may pay Bolt/Mask and field sidekick from your Used Pile and bag until you have 4 sidekick in the Field Zone.",
     "keywords": [],
     "affiliations": [],
     "isImplemented": false,
@@ -90040,7 +90040,7 @@
       }
     ],
     "statsMissing": true,
-    "rawText": "If Mister Sinister would be KO'd, you may KO one of your sidekick instead. Global: Pay Bolt Mask. Each player chooses one of their character dice to take 3 damage.",
+    "rawText": "If Mister Sinister would be KO'd, you may KO one of your sidekick instead. Global: Pay Bolt/Mask. Each player chooses one of their character dice to take 3 damage.",
     "keywords": [],
     "affiliations": [
       "Villain"
@@ -94064,7 +94064,7 @@
       }
     ],
     "statsMissing": false,
-    "rawText": "Global: Pay Bolt Fist. Deal 1 damage to target character die, lose 1 life.",
+    "rawText": "Global: Pay Bolt/Fist. Deal 1 damage to target character die, lose 1 life.",
     "keywords": [],
     "affiliations": [
       "Villain"

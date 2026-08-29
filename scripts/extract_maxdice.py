@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Extracts per-card data from the old Teambuilder that our own sources
-do not have: max dice (-> scripts/maxdice.json, read by
-import_bulk_cards.py) and each card's old-Teambuilder code
+do not have: max dice and split-energy symbols (-> scripts/maxdice.json,
+read by import_bulk_cards.py) and each card's old-Teambuilder code
 (-> src/DiceFight.Engine/Data/OldTeamBuilderCodes.json, embedded and
 served on the API so the web client can build "open this team in the old
 Teambuilder" links).
@@ -20,6 +20,15 @@ followed by "Name|Subtitle|Ability|...". Per index.php:
     [4] MAX DICE, and  p_src = set[i].substring(is_dnd ? 7 : 5)
 so the header is 5 characters wide, except in the D&D sets where it is
 7, and max dice is always character 4.
+
+SPLIT ENERGY: the old tool writes a card's printed symbols as bracketed
+tokens ([B], [PAWN], [2]), and among them are the six two-colour "either
+energy" symbols - [BM] is one Bolt OR one Mask, which is a different cost
+from [B][M], one Bolt AND one Mask. The reference sheet flattens both to
+the same words ("pay Bolt Mask"), so the distinction is unrecoverable
+from the sheet alone. Four cards in the whole game use one, and this is
+the only source that knows which; each is emitted as the pair of energy
+names to rewrite as "Bolt/Mask" in the sheet text.
 
 Output is keyed by normalized name+subtitle rather than by set code,
 because the promo arrays (avxop, m_op2019, wd_op2018, ...) do not
@@ -59,6 +68,14 @@ DND_PROMO_ARRAYS = {"bff_op", "bff_promo", "wd_op2018"}
 NOT_CARD_ARRAYS = re.compile(r"(_aff|_dice)$|^(raritycolor|affiliation_properites)$")
 
 ENTRY_RE = re.compile(r"'((?:[^'\\]|\\.)*)'")
+
+# The old tool's icon tokens for the six split "either energy" symbols,
+# in its own letter order (B)olt (F)ist (M)ask (S)hield.
+SPLIT_ENERGY = {
+    "BF": ("Bolt", "Fist"), "BM": ("Bolt", "Mask"), "BS": ("Bolt", "Shield"),
+    "FM": ("Fist", "Mask"), "FS": ("Fist", "Shield"), "MS": ("Mask", "Shield"),
+}
+SPLIT_ENERGY_RE = re.compile(r"\[(" + "|".join(SPLIT_ENERGY) + r")\]")
 
 
 def normalize(s):
@@ -105,6 +122,7 @@ def main():
     seen = defaultdict(lambda: defaultdict(list))
     old_codes = {}
     old_codes_by_set = {}
+    split_energy = {}
     total = 0
     for array_name, body in blocks:
         if NOT_CARD_ARRAYS.search(array_name):
@@ -119,6 +137,9 @@ def main():
                 continue
             key = f"{normalize(parts[0])}|{normalize_subtitle(parts[1])}"
             seen[key][int(entry[4])].append(array_name)
+            pairs = [SPLIT_ENERGY[m] for m in SPLIT_ENERGY_RE.findall(entry)]
+            if pairs:
+                split_energy[key] = pairs
             # The team-link code is "<position in this set><set name>",
             # per the old tool's num2cardname(): a%1000 + setnames[a/1000].
             if array_name in set_names:
@@ -143,7 +164,8 @@ def main():
             conflicts[key] = {str(v): sorted(set(a)) for v, a in by_value.items()}
 
     OUTPUT_PATH.write_text(
-        json.dumps({"maxDice": lookup, "conflicts": conflicts}, indent=1, sort_keys=True) + "\n",
+        json.dumps({"maxDice": lookup, "conflicts": conflicts,
+                    "splitEnergy": split_energy}, indent=1, sort_keys=True) + "\n",
         encoding="utf-8")
     OLD_CODES_PATH.write_text(
         json.dumps({"bySetAndCard": dict(sorted(old_codes_by_set.items())),
@@ -155,6 +177,9 @@ def main():
           f"{OLD_CODES_PATH.relative_to(REPO_ROOT)}")
     print(f"Wrote {len(lookup)} unambiguous name+subtitle -> max dice entries "
           f"to {OUTPUT_PATH.relative_to(REPO_ROOT)}")
+    print(f"Cards printing a split \"either energy\" symbol: {len(split_energy)}")
+    for key, pairs in sorted(split_energy.items()):
+        print(f"    {key}: {['/'.join(p) for p in pairs]}")
     print(f"Ambiguous (same name+subtitle, differing limits): {len(conflicts)}")
     for key, opts in list(conflicts.items())[:10]:
         print(f"    {key}: {opts}")

@@ -9172,3 +9172,75 @@ old tool also bolds Ritual:/Heroic:/Fusion:; only Global: was asked for.
 
 86 icons render across the first 200 rows with none broken. All 708
 tests pass; `npm run build` clean; no page errors.
+
+## The rest of the icon set: split energy, generic energy, Energy column (2026-08-29)
+
+Four pieces of feedback on the icons that shipped yesterday.
+
+**"Bolt OR Mask", not "Bolt and Mask".** Real cards print six two-colour
+split symbols meaning *either* energy, and they are a different cost from
+two separate symbols. The reference sheet flattens both to the same
+words - "pay Bolt Mask" - so the distinction cannot be recovered from the
+sheet at all.
+
+The tempting heuristic, "two DIFFERENT adjacent energies means OR", is
+wrong: checking the old Teambuilder's bracketed tokens, `[B][S]`, `[F][M]`,
+`[F][S]`, `[B][F]`, `[M][S]` and `[M][F]` appear 14 times as genuine
+*and* costs, against only 4 uses of a split symbol in the entire game
+(`[BM]` x3, `[BF]` x1). So the old tool is the only authority, and it is
+now mined for this: `extract_maxdice.py` emits a `splitEnergy` map beside
+the max-dice data, and `import_bulk_cards.py` rewrites those four cards'
+text to `Bolt/Mask`. The diff was exactly 4 lines of `BulkCards.json` -
+Apocalypse "Baron", Mister Sinister "Battleworld" and "Twisted
+Experimenter", Darkseid "Uxas".
+
+A `X/Y` pair renders as the one split symbol. The guards on that pattern
+matter: `Bolt/Fist/Mask/Shield` (Firestorm's "one of each energy type")
+must stay four separate icons, not two split ones, so the pair must be
+neither preceded nor followed by another `/energy`.
+
+What did NOT need changing: text that spells out "target Bolt or Shield
+character die" keeps two icons around the word "or" - which is exactly
+what the old tool does with `[B] or [S]`. Only the cases where the sheet
+*dropped* the word were broken.
+
+**The rest of the old tool's icons are now in `web/src/assets`**, with
+`README.md` there as the inventory and `src/gameIcons.ts` as the
+registry (`src/GameIcon.tsx` renders them). Newly used: the six split
+symbols, generic energy 0-9, and the `?` wild face. Copied in but not
+wired up: the double-energy faces, action, flip, burst, equip and the
+D&D alignment marks. The ~120 affiliation logos are deliberately not
+copied - the Affiliation column is still text, and wiring it up is its
+own decision.
+
+**Generic energy** ("Pay 2." on a card is a numeral in a circle, not the
+number two) now renders as its symbol. The rule is deliberately narrow:
+only the amount in `pay N`, and only where the next word is neither
+"life" (`pay 2 life` is not energy at all) nor an energy name (`Pay 1
+SHIELD` is a count of a specific energy, whose icon follows on its own).
+Cross-checked against the old tool: of the `pay N` sites it also knew
+about, 106 carry a real `[N]` token and the rest are cases where the old
+tool simply left the digit bare, none a false positive. "costs N less"
+was left as a digit - the old tool is itself inconsistent there, and a
+cost delta reads fine as a number.
+
+**The Energy column is icons now**, which is what the old tool's own
+energy column does (a direct `e<n>.png` lookup). A dual-energy character
+gets the split symbol - the same six images, meaning "both" here rather
+than "either", so the column labels them by type rather than reusing the
+cost wording. The ~20 cards with all four types get four icons. Column
+width drops from ~90px to 60px, and that 60 is now the *header* "Energy",
+not the content. The energy filter checkboxes got icons too.
+
+**Globals** are separated by 0.7em rather than 3px - half of the table's
+1.4 line-height, so it reads as a distinct block without the airiness of
+a full blank line. (`0.5lh` would say that directly but is too new to
+depend on.)
+
+Verified by rendering all 3,884 cards' text through `CardText` offline:
+1,543 icons, none broken, no leftover emoji codes, and the only symbols
+used are the ones intended. In the browser: search still matches the
+words ("Pay Mask" 102 rows, "pay 2" 63), 283 icons over 200 rows with
+none broken, 187 of 200 energy cells iconified (the other 13 are Action
+and Basic Action cards, which have no energy type). 708 tests pass,
+`npm run build` and `oxlint` clean, no page errors.

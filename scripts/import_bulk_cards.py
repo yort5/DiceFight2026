@@ -138,6 +138,32 @@ def load_max_dice():
     return exact, {n: v for n, v in by_name.items() if v is not None}
 
 
+def load_split_energy():
+    """name+subtitle key -> [("Bolt", "Mask"), ...] from maxdice.json.
+
+    Four cards print a split "either energy" symbol - one Bolt OR one
+    Mask - which the sheet flattens to the same words as a Bolt AND Mask
+    cost. The old Teambuilder keeps them apart (see extract_maxdice.py),
+    so its list is the authority for rewriting them."""
+    if not MAXDICE_PATH.exists():
+        return {}
+    data = json.loads(MAXDICE_PATH.read_text(encoding="utf-8"))
+    return {k: [tuple(p) for p in v] for k, v in data.get("splitEnergy", {}).items()}
+
+
+def apply_split_energy(ability, pairs):
+    """Rewrites "Bolt Mask" to "Bolt/Mask" so the display layer can show
+    the one split symbol instead of two separate ones. Each pair is
+    rewritten once - a card printing the symbol twice lists it twice."""
+    for first, second in pairs:
+        # Either order, but never the same energy twice - "Mask Mask" is a
+        # genuine two-symbol cost and must not collapse into a split one.
+        pattern = re.compile(rf"\b(?:({first})\s+({second})|({second})\s+({first}))\b", re.I)
+        ability = pattern.sub(
+            lambda m: "/".join(g for g in m.groups() if g), ability, count=1)
+    return ability
+
+
 def lookup_die_limit(max_dice, name, subtitle):
     exact, by_name = max_dice
     key = f"{normalize_key(name)}|{normalize_subtitle(subtitle)}"
@@ -361,7 +387,7 @@ def match_ability_template(ability, name):
     return None
 
 
-def classify_row(code, row, max_dice):
+def classify_row(code, row, max_dice, split_energy):
     if len(row) < 9 or not row[0].strip():
         return None, "empty row"
     card_id = row[0].strip()
@@ -373,6 +399,9 @@ def classify_row(code, row, max_dice):
     ability = norm(row[7])
     if is_no_ability_placeholder(ability):
         ability = ""
+    split_pairs = split_energy.get(f"{normalize_key(name)}|{normalize_subtitle(subtitle)}")
+    if split_pairs:
+        ability = apply_split_energy(ability, split_pairs)
     statline = norm(row[8])
 
     if not (PROMO_ID_RE if code == "PROMO" else ID_RE).match(card_id):
@@ -458,6 +487,7 @@ def classify_row(code, row, max_dice):
 
 def main():
     max_dice = load_max_dice()
+    split_energy = load_split_energy()
     existing_ids = existing_hand_curated_ids()
     print(f"Excluding {len(existing_ids)} already hand-curated ids from bulk import.")
 
@@ -486,7 +516,7 @@ def main():
             if card_id in seen_ids:
                 reasons["duplicate id within sheet"] += 1
                 continue
-            entry, skip_reason = classify_row(code, row, max_dice)
+            entry, skip_reason = classify_row(code, row, max_dice, split_energy)
             if entry is None:
                 reasons[skip_reason] += 1
                 continue

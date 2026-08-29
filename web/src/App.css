@@ -975,9 +975,24 @@
   margin: 0 1px;
 }
 
-/* Each Global gets its own line, set apart from the card's own text. */
+/* Each Global gets its own line, set apart from the card's own text by
+   half a line of space - enough to read as a separate ability at a
+   glance without the airiness of a full blank line in a dense table.
+   (0.7em is half of the table's 1.4 line-height; `lh` would say that
+   directly but is too new to rely on.) */
 .card-text-global {
-  margin-top: 3px;
+  margin-top: 0.7em;
+}
+
+/* Energy is icons only, so the column needs no more room than the widest
+   symbol and should not wrap the pair a dual-energy card shows. */
+.card-catalog-table td.card-energy,
+.card-catalog-table th.card-energy {
+  width: 1px;
+  white-space: nowrap;
+  text-align: center;
+  padding-left: 4px;
+  padding-right: 4px;
 }
 
 .card-catalog-search {

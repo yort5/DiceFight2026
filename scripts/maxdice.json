@@ -3734,5 +3734,31 @@
   "zombie|lesserundead": 4,
   "zombie|minionundead": 3,
   "zombie|paragonundead": 4
+ },
+ "splitEnergy": {
+  "apocalypse|baron": [
+   [
+    "Bolt",
+    "Mask"
+   ]
+  ],
+  "darkseid|uxas": [
+   [
+    "Bolt",
+    "Fist"
+   ]
+  ],
+  "mistersinister|battleworld": [
+   [
+    "Bolt",
+    "Mask"
+   ]
+  ],
+  "mistersinister|twistedexperimenter": [
+   [
+    "Bolt",
+    "Mask"
+   ]
+  ]
  }
 }

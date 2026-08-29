@@ -1,6 +1,7 @@
 import { Fragment, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { matchesQuery } from "./cardSearch";
 import { CardText } from "./CardText";
+import { EnergyTypes } from "./GameIcon";
 import { api } from "./api";
 import { stashPendingGame } from "./gameHandoff";
 import { navigate } from "./router";
@@ -164,13 +165,13 @@ const MAX_ROWS = 200;
 
 const LEVEL_TITLE = `Fielding cost ${STAT_SEPARATOR} attack ${STAT_SEPARATOR} defense. Sorts by attack.`;
 
-const COLUMNS: { key: SortKey; label: string; title?: string }[] = [
+const COLUMNS: { key: SortKey; label: string; title?: string; className?: string }[] = [
   { key: "set", label: "Set" },
   { key: "name", label: "Name" },
   { key: "type", label: "Type" },
   { key: "affiliations", label: "Affiliation" },
   { key: "purchaseCost", label: "Cost" },
-  { key: "energyTypes", label: "Energy" },
+  { key: "energyTypes", label: "Energy", className: "card-energy" },
   { key: "dieLimit", label: "Max" },
   { key: "level1", label: "L1", title: LEVEL_TITLE },
   { key: "level2", label: "L2", title: LEVEL_TITLE },
@@ -546,7 +547,7 @@ export function TeamBuilderPage() {
                     checked={activeEnergyTypes.has(t)}
                     onChange={() => toggle(activeEnergyTypes, setActiveEnergyTypes, t)}
                   />
-                  {t}
+                  <EnergyTypes types={[t]} /> {t}
                 </label>
               ))}
             </fieldset>
@@ -675,7 +676,7 @@ export function TeamBuilderPage() {
                   <tr>
                     <th />
                     {COLUMNS.map((col) => (
-                      <th key={col.key} title={col.title} onClick={() => toggleSort(col.key)}>
+                      <th key={col.key} className={col.className} title={col.title} onClick={() => toggleSort(col.key)}>
                         {col.label}
                         {sort.key === col.key && <span className="sort-arrow">{sort.direction === "asc" ? " ▲" : " ▼"}</span>}
                       </th>
@@ -706,7 +707,7 @@ export function TeamBuilderPage() {
                         <td>{c.type}</td>
                         <td>{c.affiliations.join(", ") || "-"}</td>
                         <td>{c.purchaseCost}</td>
-                        <td>{c.energyTypes.join("/")}</td>
+                        <td className="card-energy"><EnergyTypes types={c.energyTypes} /></td>
                         <td>{c.dieLimit}</td>
                         <td className="card-level" title={LEVEL_TITLE}>{levelText(c, 0)}</td>
                         <td className="card-level" title={LEVEL_TITLE}>{levelText(c, 1)}</td>
@@ -800,7 +801,7 @@ export function TeamBuilderPage() {
                       a build decision, and the panel is narrow. */}
                   <div className="team-card-meta">
                     <span className="team-card-cost" title="Purchase cost">{card.purchaseCost}</span>
-                    <span>{card.energyTypes.join("/") || "No energy type"}</span>
+                    <span>{card.energyTypes.length > 0 ? <EnergyTypes types={card.energyTypes} /> : "No energy type"}</span>
                     {card.affiliations.length > 0 && <span>{card.affiliations.join(", ")}</span>}
                   </div>
                   {card.levels.length > 0 && (
