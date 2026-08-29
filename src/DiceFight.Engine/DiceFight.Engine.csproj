@@ -11,6 +11,7 @@
     <EmbeddedResource Include="Data\BulkCards.json" />
     <EmbeddedResource Include="Data\CardRarity.json" />
     <EmbeddedResource Include="Data\OldTeamBuilderCodes.json" />
+    <EmbeddedResource Include="Data\AffiliationIcons.json" />
   </ItemGroup>
 
 </Project>

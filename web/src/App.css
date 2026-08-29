@@ -958,12 +958,69 @@
   font-size: 10px;
 }
 
-/* Level cells: fixed-width digits so the bullets line up column to
-   column, and no wrapping - "3\2022 10\2022 8" split across two lines would
-   reintroduce exactly the ambiguity the bullets exist to remove. */
+/* Level cells hold a die face, which sets its own width. */
 .card-catalog-table td.card-level {
-  font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+/* A character die's printed face in the catalog: fielding cost top left,
+   attack top right, defense bottom right, burst bottom left. Same corners
+   as the board's `.die-face` badge above (which puts damage taken in the
+   otherwise-unused lower left), but sized for a dense table rather than a
+   40px chip - hence its own class rather than a shared one.
+
+   The grid is given explicit rows and a fixed height rather than left to
+   size itself: the corners are a fixed 2x2 whatever they contain, so a
+   face with a double-digit stat or a double burst must stay exactly as
+   tall as an empty one, or the table rows would jitter row to row. */
+.card-die-face {
+  display: inline-grid;
+  grid-template-columns: auto auto;
+  grid-template-rows: 1fr 1fr;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 5px;
+  box-sizing: border-box;
+  height: 28px;
+  min-width: 32px;
+  padding: 0 3px;
+  border: 1px solid rgba(127, 127, 127, 0.5);
+  border-radius: 3px;
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.card-die-face-cost,
+.card-die-face-bursts {
+  text-align: left;
+}
+
+.card-die-face-attack,
+.card-die-face-defense {
+  text-align: right;
+  /* Attack and defense are what a face is read for; cost and burst are
+     the supporting corners, so they sit back a little. */
+  font-weight: 600;
+}
+
+.card-die-face-cost {
+  opacity: 0.7;
+}
+
+.card-die-face-bursts {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.card-die-face-burst-icon {
+  height: 8px;
+  width: 8px;
+  opacity: 0.8;
 }
 
 /* Icons sit on the text baseline and scale with it, so a line of rules
@@ -975,6 +1032,15 @@
   margin: 0 1px;
 }
 
+/* The black-and-white symbols are dark ink on white, drawn for a printed
+   card. On a dark page they have to flip or they sink into it - the four
+   energy types are coloured discs and stay as they are. */
+@media (prefers-color-scheme: dark) {
+  .card-icon-mono {
+    filter: invert(1);
+  }
+}
+
 /* Each Global gets its own line, set apart from the card's own text by
    half a line of space - enough to read as a separate ability at a
    glance without the airiness of a full blank line in a dense table.
@@ -982,6 +1048,27 @@
    directly but is too new to rely on.) */
 .card-text-global {
   margin-top: 0.7em;
+}
+
+/* Affiliation is logos where we have them, text where we do not, so the
+   column stays narrow but must not squash a card carrying two logos. */
+.card-catalog-table td.card-affiliation,
+.card-catalog-table th.card-affiliation {
+  width: 1px;
+  white-space: nowrap;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+.affiliation-icons {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.affiliation-icon {
+  height: 19px;
+  width: auto;
 }
 
 /* Energy is icons only, so the column needs no more room than the widest

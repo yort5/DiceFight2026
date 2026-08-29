@@ -38,6 +38,15 @@ public sealed record CardDef
     // Null for cards that tool never had.
     public string? OldTeamBuilderCode { get; init; }
 
+    // The affiliation logos this card is printed with, as the old
+    // Teambuilder's icon codes ("2" = Avengers, "ASS" = the combined
+    // Sinister-Six-and-Villain mark). Display only. NOT derivable from
+    // Affiliations above: one logo often covers two affiliations, and the
+    // same affiliation word is drawn with different logos in different
+    // universes. Empty for cards that tool never had, or with no
+    // affiliation at all.
+    public IReadOnlyList<string> AffiliationIcons { get; init; } = [];
+
     // Rule 1.2.10/1.2.11 - Max # on the card; Basic Actions always use 3.
     public required int DieLimit { get; init; }
 

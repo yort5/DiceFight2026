@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Extracts per-card data from the old Teambuilder that our own sources
 do not have: max dice and split-energy symbols (-> scripts/maxdice.json,
-read by import_bulk_cards.py) and each card's old-Teambuilder code
-(-> src/DiceFight.Engine/Data/OldTeamBuilderCodes.json, embedded and
-served on the API so the web client can build "open this team in the old
-Teambuilder" links).
+read by import_bulk_cards.py), each card's old-Teambuilder code
+(-> src/DiceFight.Engine/Data/OldTeamBuilderCodes.json) and its
+affiliation icons (-> src/DiceFight.Engine/Data/AffiliationIcons.json),
+both embedded and served on the API for the web client.
 
 WHY THIS EXISTS: the reference Google Sheet has no die-limit column, and
 die limit is NOT derivable from rarity - the previous importer inferred
@@ -30,6 +30,14 @@ from the sheet alone. Four cards in the whole game use one, and this is
 the only source that knows which; each is emitted as the pair of energy
 names to rewrite as "Bolt/Mask" in the sheet text.
 
+AFFILIATION ICONS: the sheet gives affiliations as free text, and its
+123 distinct spellings do not map cleanly onto logos - "Villains" alone
+is drawn with two different logos depending on the universe, and a card
+with two affiliations is often drawn with ONE combined logo (Doctor
+Octopus is a single Sinister-Six-and-Villain mark, not two). The old tool
+stores the icon per card instead, as character [3] of the header passed
+through the set's own affiliation map, so that is what we take.
+
 Output is keyed by normalized name+subtitle rather than by set code,
 because the promo arrays (avxop, m_op2019, wd_op2018, ...) do not
 correspond to sheet set codes at all. Entries whose printings disagree
@@ -49,6 +57,7 @@ CARDS_PHP = TEAMBUILDER / "cards.php"
 INDEX_PHP = TEAMBUILDER / "index.php"
 OUTPUT_PATH = REPO_ROOT / "scripts" / "maxdice.json"
 OLD_CODES_PATH = REPO_ROOT / "src" / "DiceFight.Engine" / "Data" / "OldTeamBuilderCodes.json"
+AFFILIATION_PATH = REPO_ROOT / "src" / "DiceFight.Engine" / "Data" / "AffiliationIcons.json"
 
 # set_names order in cards.php, used only to resolve which arrays use the
 # 7-character D&D header (dndsets = [2,8,23,38,39,40] in index.php).
@@ -99,6 +108,30 @@ def header_width(array_name):
     return 7 if (array_name in DND_SETS or array_name in DND_PROMO_ARRAYS) else 5
 
 
+def affiliation_maps():
+    """arrayVar -> {header char: icon code}, from index.php's init() calls.
+
+    Most sets pass a map as init()'s 6th argument; the earliest ones pass
+    none and use the header character as the icon code directly."""
+    text = INDEX_PHP.read_text(encoding="utf-8", errors="replace")
+    inits = re.findall(
+        r"init\((\d+),([a-z0-9_]+),'([^']+)','([a-z0-9_]+)'(?:,([^,)]+))?(?:,([a-z0-9_]+))?\)", text)
+    cards = CARDS_PHP.read_text(encoding="utf-8", errors="replace")
+    named = {}
+    for m in re.finditer(r"var ([a-z0-9_]+_aff) = \{(.*?)\};", cards, re.S):
+        named[m.group(1)] = dict(re.findall(r"(\w+)\s*:\s*['\"]([^'\"]*)['\"]", m.group(2)))
+    return {arr: (named.get(aff) if aff else None) for _, arr, _, _, _, aff in inits}
+
+
+def affiliation_icons(entry, aff_map):
+    """The icon codes on one card entry, or [] for "no affiliation"."""
+    value = aff_map[entry[3]] if aff_map is not None else entry[3]
+    if value is None:
+        return []
+    # "X/Y" is a card drawn with two separate logos; "0" is none.
+    return [code for code in value.split("/") if code and code != "0"]
+
+
 def array_to_set_name():
     """arrayVar -> the set name the old tool uses in team codes.
 
@@ -117,12 +150,15 @@ def main():
     blocks = re.findall(r"^\s*var ([a-z0-9_]+) = \[(.*?)^\s*\];", text, re.M | re.S)
 
     set_names = array_to_set_name()
+    aff_maps = affiliation_maps()
 
     # (name, subtitle) -> {maxdice: [array names]}
     seen = defaultdict(lambda: defaultdict(list))
     old_codes = {}
     old_codes_by_set = {}
     split_energy = {}
+    affiliations = {}
+    affiliations_by_set = {}
     total = 0
     for array_name, body in blocks:
         if NOT_CARD_ARRAYS.search(array_name):
@@ -140,6 +176,11 @@ def main():
             pairs = [SPLIT_ENERGY[m] for m in SPLIT_ENERGY_RE.findall(entry)]
             if pairs:
                 split_energy[key] = pairs
+            if array_name in aff_maps:
+                icons = affiliation_icons(entry, aff_maps[array_name])
+                affiliations.setdefault(key, icons)
+                if array_name in set_names:
+                    affiliations_by_set.setdefault(f"{set_names[array_name]}|{key}", icons)
             # The team-link code is "<position in this set><set name>",
             # per the old tool's num2cardname(): a%1000 + setnames[a/1000].
             if array_name in set_names:
@@ -167,6 +208,9 @@ def main():
         json.dumps({"maxDice": lookup, "conflicts": conflicts,
                     "splitEnergy": split_energy}, indent=1, sort_keys=True) + "\n",
         encoding="utf-8")
+    AFFILIATION_PATH.write_text(
+        json.dumps({"bySetAndCard": dict(sorted(affiliations_by_set.items())),
+                    "byCard": dict(sorted(affiliations.items()))}, indent=1) + "\n", encoding="utf-8")
     OLD_CODES_PATH.write_text(
         json.dumps({"bySetAndCard": dict(sorted(old_codes_by_set.items())),
                     "byCard": dict(sorted(old_codes.items()))}, indent=1) + "\n", encoding="utf-8")
@@ -177,6 +221,11 @@ def main():
           f"{OLD_CODES_PATH.relative_to(REPO_ROOT)}")
     print(f"Wrote {len(lookup)} unambiguous name+subtitle -> max dice entries "
           f"to {OUTPUT_PATH.relative_to(REPO_ROOT)}")
+    with_icon = sum(1 for v in affiliations.values() if v)
+    print(f"Wrote affiliation icons for {len(affiliations)} cards "
+          f"({with_icon} with at least one) to {AFFILIATION_PATH.relative_to(REPO_ROOT)}")
+    used = sorted({c for v in affiliations.values() for c in v})
+    print(f"    {len(used)} distinct icons: {' '.join(used)}")
     print(f"Cards printing a split \"either energy\" symbol: {len(split_energy)}")
     for key, pairs in sorted(split_energy.items()):
         print(f"    {key}: {['/'.join(p) for p in pairs]}")

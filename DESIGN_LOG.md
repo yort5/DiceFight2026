@@ -9244,3 +9244,71 @@ words ("Pay Mask" 102 rows, "pay 2" 63), 283 icons over 200 rows with
 none broken, 187 of 200 energy cells iconified (the other 13 are Action
 and Basic Action cards, which have no energy type). 708 tests pass,
 `npm run build` and `oxlint` clean, no page errors.
+
+## Die-face squares, affiliation logos, separate dual-energy symbols (2026-08-29)
+
+**L1/L2/L3 are die faces now**, laid out the way the physical die is
+printed: fielding cost top left, attack top right, defense bottom right,
+burst mark bottom left.
+
+    +-----+
+    | 1 5 |
+    | * 2 |
+    +-----+
+
+Two precedents agree on those corners. The old Teambuilder's `gendice1`
+builds exactly this 2x2 out of the four characters of a level's stat
+line, and `PlayerBoard.tsx`'s die chips have used it in the game view all
+along (with damage taken in the otherwise-unused lower left). Copying it
+retires the `1•5•2` bullet text and the ambiguity that made the bullet
+necessary - there is no separator to misparse and no order to remember.
+
+The catalog's version is `.card-die-face`, deliberately NOT the board's
+`.die-face`: same corners, but a 28px table cell rather than a 40px chip.
+Worth stating because the first cut did reuse the name, which silently
+overrode the board's badge. The grid gets explicit rows and a fixed
+height so a face with a double-digit stat or a double burst is exactly as
+tall as an empty one, or 200 rows would jitter.
+
+The burst is drawn as an inline SVG rather than the old tool's burst.png,
+which is black ink on an opaque white background and would show as a
+white block in dark mode. Same reasoning as `DieIcon.tsx`'s SVGs: at the
+8px this corner allows, a `currentColor` shape stays crisp and takes the
+theme for free.
+
+**Affiliation logos.** The affiliation *text* cannot pick the logo: the
+sheet's 123 distinct spellings do not map onto the art. "Villains" is
+drawn with two different logos depending on the universe, and one logo
+often covers two affiliations at once - Doctor Octopus prints a single
+combined Sinister-Six-and-Villain mark, not two (319 cards are like
+this). So the icon is taken per card from the old tool, where it lives as
+character [3] of the header passed through the set's own affiliation map;
+`extract_maxdice.py` now emits `AffiliationIcons.json` alongside its
+other outputs, and it rides to the client on `CardDef` next to `Rarity`
+and `OldTeamBuilderCode`. 2,620 cards get a logo; the rest fall back to
+their affiliation text (627 are newer than that tool, and two codes -
+the Black Order and the Hand - have no image in it at all).
+
+These 97 images sit in `web/public/affiliations`, not in `src/assets`
+with the symbols: at ~154KB they would add more than half the JS bundle
+again if Vite inlined them, and only the handful on screen is ever
+fetched. The card symbols stay inlined - they are tiny and appear in
+nearly every row.
+
+**Dual-energy characters show both symbols**, not the split one. The
+split symbol means "either energy" in a cost; reusing it for "both" (as
+the old tool's energy column does) asks one image to mean two opposite
+things. Four-energy characters already showed four symbols, and this just
+makes the two consistent. The split symbols are now only ever the OR case
+in card text.
+
+**Dark mode**: the black-and-white symbols - generic energy, the `?` wild
+face, the Sidekick pawn - are dark ink on white, drawn for a printed
+card, and were sinking into the page. They carry a `card-icon-mono` class
+that inverts them under `prefers-color-scheme: dark`; the four energy
+types are coloured discs and are left alone.
+
+Verified in the browser in both themes: 555 die faces, 17 burst marks,
+124 affiliation logos with none broken and no failed requests, four
+separate symbols on a four-energy character, and the mono icons inverting
+only in dark. 708 tests pass; `npm run build` and `oxlint` clean.

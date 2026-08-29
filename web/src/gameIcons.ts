@@ -42,6 +42,11 @@ export interface GameIcon {
   /** The word the icon replaces. Used as alt text, so the line still
    *  reads correctly when copied, read aloud, or when images fail. */
   label: string;
+  /** True for the black-and-white symbols (generic energy, the wild
+   *  face, the Sidekick pawn). The four energy types are coloured discs
+   *  that read on any background; these are dark ink on white, so they
+   *  have to be inverted in dark mode or they sink into the page. */
+  mono?: boolean;
 }
 
 /** The four energy types, keyed by their lowercase name. */
@@ -59,9 +64,9 @@ export const ENERGY_ICONS: Record<string, GameIcon> = {
  * which is the difference between "pay Bolt or Mask" and "pay Bolt and
  * Mask" - see the `X/Y` handling in CardText.tsx.
  *
- * The same symbols mark a dual-energy character in the Energy column,
- * which is what the old Teambuilder used them for (its energy column is
- * a direct `e<n>.png` lookup on the card's energy code).
+ * OR is the only thing these mean here. The old Teambuilder also used
+ * them to mark a dual-energy CHARACTER, where the same image has to be
+ * read as "both"; the Energy column shows two separate symbols instead.
  */
 export const SPLIT_ENERGY_ICONS: Record<string, GameIcon> = {
   "bolt/fist": { src: boltOrFist, label: "Bolt or Fist" },
@@ -79,18 +84,10 @@ for (const key of Object.keys(SPLIT_ENERGY_ICONS)) {
 /** Generic energy - any type will do. Printed as a numeral in a circle. */
 export const GENERIC_ENERGY_ICONS: Record<string, GameIcon> = Object.fromEntries(
   [generic0, generic1, generic2, generic3, generic4, generic5, generic6, generic7, generic8, generic9].map(
-    (src, n) => [String(n), { src, label: String(n) }],
+    (src, n) => [String(n), { src, label: String(n), mono: true }],
   ),
 );
 
-export const SIDEKICK_ICON: GameIcon = { src: sidekick, label: "Sidekick" };
+export const SIDEKICK_ICON: GameIcon = { src: sidekick, label: "Sidekick", mono: true };
 /** The "?" wild face, which counts as any energy type. */
-export const WILD_ENERGY_ICON: GameIcon = { src: wild, label: "?" };
-
-/** Looks up one or two energy names as a single icon, or null. */
-export function energyIcon(types: readonly string[]): GameIcon | null {
-  const key = types.map((t) => t.toLowerCase()).join("/");
-  if (types.length === 1) return ENERGY_ICONS[key] ?? null;
-  if (types.length === 2) return SPLIT_ENERGY_ICONS[key] ?? null;
-  return null;
-}
+export const WILD_ENERGY_ICON: GameIcon = { src: wild, label: "?", mono: true };

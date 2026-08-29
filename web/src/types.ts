@@ -25,6 +25,10 @@ export interface CardDef {
   /** This card's id in the old Teambuilder (tb.dicecoalition.com), e.g.
    *  "135dps". Null for cards that tool never had. */
   oldTeamBuilderCode: string | null;
+  /** The old Teambuilder's affiliation logo codes for this card, e.g.
+   *  ["2"]. Display only; see AffiliationIcons.tsx for why these are not
+   *  derived from `affiliations`. Empty when unknown. */
+  affiliationIcons: string[];
   dieLimit: number;
   levels: CharacterFace[];
   rawText: string;

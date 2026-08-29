@@ -1,6 +1,8 @@
 import { Fragment, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { matchesQuery } from "./cardSearch";
 import { CardText } from "./CardText";
+import { AffiliationIcons } from "./AffiliationIcons";
+import { DieFace, DIE_FACE_TITLE } from "./DieFace";
 import { EnergyTypes } from "./GameIcon";
 import { api } from "./api";
 import { stashPendingGame } from "./gameHandoff";
@@ -82,20 +84,6 @@ type SortKey =
 // One column per level, replacing the old single-level Field/Atk/Def
 // trio: which level you want is usually the whole question, and the
 // catalog only ever showed level 1.
-//
-// The parts are separated by a bullet rather than run together, because
-// run-together digits are genuinely ambiguous once a stat reaches double
-// figures - "3108" reads as either 3/10/8 or 3/1/08, which is exactly
-// the confusion the sheet's own stat lines caused for Slifer, Ra and
-// White Lantern Dove (see DESIGN_LOG.md). "3•10•8" cannot be misread.
-const STAT_SEPARATOR = "\u2022";
-
-function levelText(card: CardDef, index: number): string {
-  const face = card.levels[index];
-  if (!face) return "-";
-  return [face.fieldingCost, face.attack, face.defense].join(STAT_SEPARATOR);
-}
-
 // Sorting a composite F-A-D cell has to pick something; attack is what
 // people actually rank characters by, and the column header says so.
 function levelSortValue(card: CardDef, index: number): number {
@@ -163,19 +151,17 @@ function rarityClass(rarity: string | null): string {
 // full re-render on every keystroke (see the design doc's scaling note).
 const MAX_ROWS = 200;
 
-const LEVEL_TITLE = `Fielding cost ${STAT_SEPARATOR} attack ${STAT_SEPARATOR} defense. Sorts by attack.`;
-
 const COLUMNS: { key: SortKey; label: string; title?: string; className?: string }[] = [
   { key: "set", label: "Set" },
   { key: "name", label: "Name" },
   { key: "type", label: "Type" },
-  { key: "affiliations", label: "Affiliation" },
+  { key: "affiliations", label: "Affiliation", className: "card-affiliation" },
   { key: "purchaseCost", label: "Cost" },
   { key: "energyTypes", label: "Energy", className: "card-energy" },
   { key: "dieLimit", label: "Max" },
-  { key: "level1", label: "L1", title: LEVEL_TITLE },
-  { key: "level2", label: "L2", title: LEVEL_TITLE },
-  { key: "level3", label: "L3", title: LEVEL_TITLE },
+  { key: "level1", label: "L1", title: DIE_FACE_TITLE },
+  { key: "level2", label: "L2", title: DIE_FACE_TITLE },
+  { key: "level3", label: "L3", title: DIE_FACE_TITLE },
   { key: "implemented", label: "OK" },
 ];
 
@@ -705,13 +691,13 @@ export function TeamBuilderPage() {
                           {c.subtitle && <span className="hint"> — {c.subtitle}</span>}
                         </td>
                         <td>{c.type}</td>
-                        <td>{c.affiliations.join(", ") || "-"}</td>
+                        <td className="card-affiliation"><AffiliationIcons codes={c.affiliationIcons} names={c.affiliations} /></td>
                         <td>{c.purchaseCost}</td>
                         <td className="card-energy"><EnergyTypes types={c.energyTypes} /></td>
                         <td>{c.dieLimit}</td>
-                        <td className="card-level" title={LEVEL_TITLE}>{levelText(c, 0)}</td>
-                        <td className="card-level" title={LEVEL_TITLE}>{levelText(c, 1)}</td>
-                        <td className="card-level" title={LEVEL_TITLE}>{levelText(c, 2)}</td>
+                        <td className="card-level"><DieFace face={c.levels[0]} /></td>
+                        <td className="card-level"><DieFace face={c.levels[1]} /></td>
+                        <td className="card-level"><DieFace face={c.levels[2]} /></td>
                         <td>{c.isImplemented ? "✓" : ""}</td>
                       </tr>
                       {/* Printed text on its own full-width row rather than
@@ -802,16 +788,18 @@ export function TeamBuilderPage() {
                   <div className="team-card-meta">
                     <span className="team-card-cost" title="Purchase cost">{card.purchaseCost}</span>
                     <span>{card.energyTypes.length > 0 ? <EnergyTypes types={card.energyTypes} /> : "No energy type"}</span>
-                    {card.affiliations.length > 0 && <span>{card.affiliations.join(", ")}</span>}
+                    {card.affiliations.length > 0 && (
+                      <span><AffiliationIcons codes={card.affiliationIcons} names={card.affiliations} /></span>
+                    )}
                   </div>
                   {card.levels.length > 0 && (
                     // Every level, not just level 1: whether a die is worth
                     // running often turns on what its level 2/3 faces do, and
                     // the main table only ever shows level 1.
-                    <div className="team-card-levels" title="Per level: fielding cost / attack / defense">
+                    <div className="team-card-levels">
                       {card.levels.map((l, i) => (
                         <span key={i}>
-                          <span className="hint">L{i + 1}</span> {l.fieldingCost}/{l.attack}/{l.defense}
+                          <span className="hint">L{i + 1}</span> <DieFace face={l} />
                         </span>
                       ))}
                     </div>

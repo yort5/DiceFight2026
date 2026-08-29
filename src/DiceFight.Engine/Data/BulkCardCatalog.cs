@@ -70,6 +70,34 @@ public static class BulkCardCatalog
         return maps.ByCard.TryGetValue(key, out var byCard) ? byCard : null;
     }
 
+    // Same shape and same set-first preference as the old-code maps
+    // above, and for the same reason: a card should resolve to its own
+    // printing before it falls back to another set's.
+    private static readonly Lazy<AffiliationIconMaps> CachedAffiliationIcons = new(LoadAffiliationIcons);
+
+    private sealed record AffiliationIconMaps(
+        Dictionary<string, List<string>> BySetAndCard, Dictionary<string, List<string>> ByCard);
+
+    private static AffiliationIconMaps LoadAffiliationIcons()
+    {
+        using var stream = typeof(BulkCardCatalog).Assembly
+            .GetManifestResourceStream("DiceFight.Engine.Data.AffiliationIcons.json")
+            ?? throw new InvalidOperationException("AffiliationIcons.json embedded resource not found.");
+        return JsonSerializer.Deserialize<AffiliationIconMaps>(stream, JsonOptions)
+            ?? throw new InvalidOperationException("AffiliationIcons.json deserialized to null.");
+    }
+
+    public static IReadOnlyList<string> AffiliationIconsFor(string? set, string name, string? subtitle)
+    {
+        var maps = CachedAffiliationIcons.Value;
+        var key = NormalizeCardKey(name, subtitle);
+        if (set is not null && maps.BySetAndCard.TryGetValue($"{set.ToLowerInvariant()}|{key}", out var bySet))
+        {
+            return bySet;
+        }
+        return maps.ByCard.TryGetValue(key, out var byCard) ? byCard : [];
+    }
+
     public static string NormalizeCardKey(string name, string? subtitle) =>
         $"{Simplify(name)}|{NormalizeSubtitle(subtitle)}";
 

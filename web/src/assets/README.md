@@ -44,7 +44,7 @@ double-energy face and two separate symbols as the same words ("Bolt
 Bolt"), so we cannot tell them apart and render two single symbols, which
 costs the same either way.
 
-The old Teambuilder also has ~120 affiliation logos (`a*.png` - Avengers,
-X-Men, Villain, each Lantern corps, and so on), keyed by the same
-`iconid` map. Those are not copied in; the Affiliation column is text
-today.
+The affiliation logos live in `public/affiliations` instead, not here:
+there are 97 of them at ~154KB, which is more than half the JS bundle
+again if inlined, and only the few actually on screen ever get fetched.
+See `src/AffiliationIcons.tsx`.

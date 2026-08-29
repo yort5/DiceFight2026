@@ -4360,18 +4360,25 @@ public static class SampleCards
             catalog.TryAdd(bulkCard.Id, bulkCard);
         }
 
-        // Rarity is stamped on here, after the merge, so the hand-curated
-        // cards get it too without 200 Character(...) call sites each
-        // repeating a display-only value. Cards absent from the sheet
-        // (Tokens, anything invented) simply keep a null Rarity.
+        // Rarity, the old tool's code and the affiliation logos are all
+        // stamped on here, after the merge, so the hand-curated cards get
+        // them too without 200 Character(...) call sites each repeating a
+        // display-only value. Cards absent from the sheet (Tokens,
+        // anything invented) simply keep their own values.
         var rarities = BulkCardCatalog.Rarities;
         foreach (var (id, card) in catalog.ToList())
         {
             rarities.TryGetValue(id, out var rarity);
             var oldCode = BulkCardCatalog.OldTeamBuilderCodeFor(card.Set, card.Name, card.Subtitle);
-            if (rarity is not null || oldCode is not null)
+            var icons = BulkCardCatalog.AffiliationIconsFor(card.Set, card.Name, card.Subtitle);
+            if (rarity is not null || oldCode is not null || icons.Count > 0)
             {
-                catalog[id] = card with { Rarity = rarity ?? card.Rarity, OldTeamBuilderCode = oldCode };
+                catalog[id] = card with
+                {
+                    Rarity = rarity ?? card.Rarity,
+                    OldTeamBuilderCode = oldCode,
+                    AffiliationIcons = icons.Count > 0 ? icons : card.AffiliationIcons,
+                };
             }
         }
         return catalog;
