@@ -1,7 +1,8 @@
 import { Fragment, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { matchesQuery } from "./cardSearch";
 import { CardText } from "./CardText";
-import { AffiliationIcons } from "./AffiliationIcons";
+import { AffiliationBadge, AffiliationIcons } from "./AffiliationIcons";
+import { buildAffiliationIconIndex } from "./affiliationIndex";
 import { DieFace, DIE_FACE_TITLE } from "./DieFace";
 import { EnergyTypes } from "./GameIcon";
 import { api } from "./api";
@@ -407,6 +408,10 @@ export function TeamBuilderPage() {
     () => [...new Set((cards ?? []).flatMap((c) => c.affiliations))].sort(),
     [cards],
   );
+  // One logo per affiliation name, learned from the catalog - see
+  // affiliationIcons.ts. Used by the filter, which has only a name to go
+  // on, and as the fallback for cards the old tool never had.
+  const affiliationIconIndex = useMemo(() => buildAffiliationIconIndex(cards ?? []), [cards]);
   // Same collapsible-checkbox treatment as Affiliation, for the same
   // reason - "just the cards in a set" is a filtering task, not a
   // free-text search. A card without a known Set never matches an
@@ -583,30 +588,45 @@ export function TeamBuilderPage() {
                 </select>
               </label>
             </fieldset>
-            <details className="card-catalog-affiliations">
+            {/* Affiliation and Set open across the full width of the
+                filter bar rather than down a narrow column: 128 and 49
+                options stacked vertically pushed the results table off
+                the screen, which is the one thing you need to still see
+                while you pick. Affiliation is logos only - the logo is
+                all a card itself shows, so it is what people match on -
+                with the name on hover. */}
+            <details className="card-catalog-chips">
               <summary>
                 Affiliation{activeAffiliations.size > 0 ? ` (${activeAffiliations.size} selected)` : ` (${allAffiliations.length})`}
               </summary>
-              <div className="card-catalog-affiliations-options">
+              <div className="card-catalog-chip-options">
                 {allAffiliations.map((a) => (
-                  <label key={a}>
+                  <label
+                    key={a}
+                    className={`affiliation-chip${activeAffiliations.has(a) ? " selected" : ""}`}
+                    title={a}
+                  >
                     <input
                       type="checkbox"
                       checked={activeAffiliations.has(a)}
                       onChange={() => toggle(activeAffiliations, setActiveAffiliations, a)}
                     />
-                    {a}
+                    <AffiliationBadge name={a} code={affiliationIconIndex[a]} />
                   </label>
                 ))}
               </div>
             </details>
-            <details className="card-catalog-affiliations">
+            <details className="card-catalog-chips">
               <summary>
                 Set{activeSets.size > 0 ? ` (${activeSets.size} selected)` : ` (${allSets.length})`}
               </summary>
-              <div className="card-catalog-affiliations-options">
+              <div className="card-catalog-chip-options">
                 {allSets.map((s) => (
-                  <label key={s} title={SET_NAMES[s] ?? s}>
+                  <label
+                    key={s}
+                    className={`set-chip${activeSets.has(s) ? " selected" : ""}`}
+                    title={SET_NAMES[s] ?? s}
+                  >
                     <input
                       type="checkbox"
                       checked={activeSets.has(s)}
@@ -691,7 +711,7 @@ export function TeamBuilderPage() {
                           {c.subtitle && <span className="hint"> — {c.subtitle}</span>}
                         </td>
                         <td>{c.type}</td>
-                        <td className="card-affiliation"><AffiliationIcons codes={c.affiliationIcons} names={c.affiliations} /></td>
+                        <td className="card-affiliation"><AffiliationIcons codes={c.affiliationIcons} names={c.affiliations} index={affiliationIconIndex} /></td>
                         <td>{c.purchaseCost}</td>
                         <td className="card-energy"><EnergyTypes types={c.energyTypes} /></td>
                         <td>{c.dieLimit}</td>
@@ -789,7 +809,7 @@ export function TeamBuilderPage() {
                     <span className="team-card-cost" title="Purchase cost">{card.purchaseCost}</span>
                     <span>{card.energyTypes.length > 0 ? <EnergyTypes types={card.energyTypes} /> : "No energy type"}</span>
                     {card.affiliations.length > 0 && (
-                      <span><AffiliationIcons codes={card.affiliationIcons} names={card.affiliations} /></span>
+                      <span><AffiliationIcons codes={card.affiliationIcons} names={card.affiliations} index={affiliationIconIndex} /></span>
                     )}
                   </div>
                   {card.levels.length > 0 && (

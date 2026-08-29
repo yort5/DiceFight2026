@@ -14,25 +14,77 @@
 // gets fetched.
 //
 // Two codes have no image in the old tool at all (the Black Order and
-// the Hand); those cards fall back to their affiliation text, as do the
-// ~630 cards newer than that tool.
+// the Hand). Cards newer than that tool have no codes at all; they fall
+// back to a logo per affiliation NAME (see affiliationIndex.ts), and to
+// a generated badge below where even that comes up empty.
 
-export function AffiliationIcons({ codes, names }: { codes: readonly string[]; names: readonly string[] }) {
+import { affiliationIconUrl, hasAffiliationIcon } from "./affiliationIndex";
+
+// A stand-in for the affiliations whose logo we do not have - either the
+// old tool never drew one, or the name is a one-off misspelling of one
+// that does. Drawn rather than shipped so that a name appearing for the
+// first time still gets something recognisable in the filter, and so it
+// is obvious at a glance which are real logos and which are waiting on
+// one. Deliberately plain: initials on a disc, hue derived from the name
+// so the same affiliation is the same colour every time.
+function initials(name: string): string {
+  // "a: Batman Family b: Villains" - the a:/b: markers are the sheet's
+  // way of writing two affiliations in one cell, not part of the name.
+  const words = name.replace(/\b[ab]:\s*/g, "").match(/[A-Za-z0-9]+/g);
+  if (!words || words.length === 0) return "?";
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+}
+
+function hue(name: string): number {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360;
+  return h;
+}
+
+export function AffiliationBadge({ name, code }: { name: string; code?: string }) {
+  if (code && hasAffiliationIcon(code)) {
+    return <img className="affiliation-icon" src={affiliationIconUrl(code)} alt={name} title={name} />;
+  }
+  const h = hue(name);
+  return (
+    <span
+      className="affiliation-icon affiliation-icon-generated"
+      title={`${name} (no logo yet)`}
+      role="img"
+      aria-label={name}
+      style={{ background: `hsl(${h} 55% 42%)` }}
+    >
+      {initials(name)}
+    </span>
+  );
+}
+
+/**
+ * One row's worth of logos. The card's own codes win where it has them -
+ * that is the printing in front of you, combined marks and all. A card
+ * the old tool never had falls back to a logo per affiliation NAME, from
+ * the index the catalog is used to build, and to a generated badge for
+ * the names that index cannot resolve.
+ */
+export function AffiliationIcons(
+  { codes, names, index }: { codes: readonly string[]; names: readonly string[]; index: Record<string, string> },
+) {
   const label = names.join(", ");
-  if (codes.length === 0) return <span>{label || "-"}</span>;
+  if (names.length === 0 && codes.length === 0) return <span>-</span>;
+  const drawable = codes.filter(hasAffiliationIcon);
+  if (drawable.length > 0) {
+    return (
+      <span className="affiliation-icons" title={label}>
+        {drawable.map((code) => (
+          <img key={code} className="affiliation-icon" src={affiliationIconUrl(code)} alt={label} />
+        ))}
+      </span>
+    );
+  }
   return (
     <span className="affiliation-icons" title={label}>
-      {codes.map((code) => (
-        <img
-          key={code}
-          className="affiliation-icon"
-          src={`${import.meta.env.BASE_URL}affiliations/a${code}.png`}
-          alt={label}
-          // A code whose image the old tool never had would otherwise
-          // leave a broken-image glyph in the middle of the table.
-          onError={(e) => { e.currentTarget.style.display = "none"; }}
-        />
-      ))}
+      {names.map((name) => <AffiliationBadge key={name} name={name} code={index[name]} />)}
     </span>
   );
 }

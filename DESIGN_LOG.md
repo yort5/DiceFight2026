@@ -9312,3 +9312,57 @@ Verified in the browser in both themes: 555 die faces, 17 burst marks,
 124 affiliation logos with none broken and no failed requests, four
 separate symbols on a four-energy character, and the mono icons inverting
 only in dark. 708 tests pass; `npm run build` and `oxlint` clean.
+
+## Affiliation and Set filters go horizontal, and get logos (2026-08-29)
+
+Both were collapsible columns capped at 320px wide, so opening either
+one stacked its options - 128 affiliations, 49 sets - straight down the
+page and pushed the results table off screen, which is the one thing you
+need to still see while you are picking. Open, they now take the full
+width of the filter bar and their options wrap across it: affiliation is
+four short rows, set is three, and the table stays in view.
+
+**Affiliation chips are logos only**, with the name on hover. That is
+what a card itself shows - the printed card carries the logo and not the
+word - so it is what people match on, and it is what makes 128 options
+fit in four rows at all. The checkbox is still there for the keyboard and
+for screen readers, just visually replaced by the chip's selected state.
+
+**Picking one logo per affiliation NAME** is a different problem from the
+per-card logos added earlier today, and there is no source for it: one
+logo often covers two affiliations at once, so name and logo do not line
+up. It is learned from the catalog instead (`affiliationIndex.ts`), which
+means it keeps working as cards are added:
+
+1. Cards whose affiliation list and logo list are the same length pair up
+   one-to-one, and each pairing votes. Most names settle here; where
+   printings disagree the majority wins.
+2. Names left over take a logo only if every card carrying that name
+   shows the same single logo. This is what picks up the combined marks -
+   Sinister Six, the Warhammer factions, Black and Orange Lanterns - and
+   rescues 10 names.
+3. 21 names are left, and they get a generated badge.
+
+**"Villains" is pinned to the red V.** It is drawn two ways across the
+game and the vote already prefers the V 219 to 131, but pinning it means
+a future set cannot quietly flip it. Note this applies to the FILTER
+only: a card's own row still shows the logo that printing actually
+carries, which is what lets you match a row against the card in your
+hand. Filtering is by name either way, so a "Villains" filter returns
+both.
+
+**Generated badges** stand in for the affiliations we have no logo for:
+initials on a disc, hue hashed from the name so the same affiliation is
+the same colour every time. Drawn rather than shipped, so a name
+appearing for the first time still gets something, and so it is obvious
+which are real logos and which are waiting on one. The 21 are mostly
+one-off misspellings of a name that does have a logo ("X-men",
+"Avenger", "Zombies", "Eveil Equip"), plus the two the old tool names
+but never drew (the Black Order and the Hand - it 404s on them itself,
+which is why they now fall through to a badge rather than leaving a
+broken image), plus "Imperium", which genuinely maps to two different
+combined logos.
+
+Verified in both themes: 128 chips with no broken images and no failed
+requests, selection and filtering working from the chips, and the results
+table still on screen with either filter open.

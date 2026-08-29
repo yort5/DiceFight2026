@@ -903,11 +903,11 @@
   white-space: nowrap;
 }
 
-.card-catalog-affiliations {
-  max-width: 320px;
-}
-
-.card-catalog-affiliations summary {
+/* Affiliation and Set. Closed they sit inline with the other filters;
+   open they take the whole width of the bar and their options wrap
+   across it, so 128 logos are four short rows rather than one long
+   column that pushes the results off screen. */
+.card-catalog-chips summary {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -915,14 +915,76 @@
   cursor: pointer;
 }
 
-.card-catalog-affiliations[open] summary {
-  margin-bottom: 4px;
+.card-catalog-chips[open] {
+  flex-basis: 100%;
 }
 
-.card-catalog-affiliations-options {
+.card-catalog-chips[open] summary {
+  margin-bottom: 6px;
+}
+
+.card-catalog-chip-options {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 10px;
+  gap: 4px;
+}
+
+/* The checkbox itself is hidden: the whole chip is the hit target, and
+   selection reads better as a highlighted tile than as a tick beside a
+   logo. It stays in the DOM so the control is still a real checkbox to
+   the keyboard and to a screen reader. */
+.affiliation-chip input,
+.set-chip input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.affiliation-chip,
+.set-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 3px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.affiliation-chip:hover,
+.set-chip:hover {
+  background: rgba(127, 127, 127, 0.2);
+}
+
+.affiliation-chip:has(input:focus-visible),
+.set-chip:has(input:focus-visible) {
+  outline: 2px solid #6ea8ff;
+  outline-offset: 1px;
+}
+
+.affiliation-chip.selected,
+.set-chip.selected {
+  border-color: #6ea8ff;
+  background: rgba(110, 168, 255, 0.22);
+}
+
+/* Unselected logos sit back a little so the chosen ones stand out in a
+   grid this dense. */
+.affiliation-chip:not(.selected) .affiliation-icon {
+  opacity: 0.75;
+}
+
+.set-chip {
+  font-size: 12px;
+  padding: 3px 7px;
+  min-width: 46px;
+  font-variant-numeric: tabular-nums;
+}
+
+.affiliation-chip .affiliation-icon {
+  height: 26px;
 }
 
 .card-catalog-scroll {
@@ -1069,6 +1131,30 @@
 .affiliation-icon {
   height: 19px;
   width: auto;
+}
+
+/* Stand-in for an affiliation we have no logo for yet - initials on a
+   coloured disc. Sized from the icon it replaces so a mixed row stays
+   level. */
+.affiliation-icon-generated {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.affiliation-chip .affiliation-icon-generated {
+  width: 26px;
+  height: 26px;
+  font-size: 11px;
 }
 
 /* Energy is icons only, so the column needs no more room than the widest
