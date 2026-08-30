@@ -92,64 +92,18 @@
   border: 1px solid #6ea8ff;
 }
 
-.advance-label {
-  font-size: 12px;
-  opacity: 0.65;
-}
-
 .status-bar .hint {
   font-size: 12px;
   font-style: italic;
   opacity: 0.8;
 }
 
-.turn-controls {
-  margin-bottom: 12px;
-  padding: 8px 10px;
-  border: 1px dashed rgba(127, 127, 127, 0.35);
-  border-radius: 8px;
-}
-
-.turn-controls summary {
-  font-size: 12px;
-  opacity: 0.65;
-  cursor: pointer;
-}
-
-.turn-controls-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-  margin-top: 8px;
-}
-
-.turn-controls button,
 .status-bar button,
 .app-header button {
   font-size: 13px;
   padding: 6px 10px;
   border-radius: 6px;
   cursor: pointer;
-}
-
-.turn-controls button:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.advance-btn {
-  font-weight: 700;
-  background: #6ea8ff;
-  color: #06122b;
-  border: none;
-}
-
-.advance-btn:disabled {
-  background: rgba(127, 127, 127, 0.25);
-  color: inherit;
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 
 /* ---- How to Play modal ---- */
@@ -397,6 +351,204 @@
   color: inherit;
 }
 
+/* ---- Turn rail ----
+
+   Life, where the turn is, and what to do next. The step list is a
+   read-only progress display - rule 2.2.4 forbids going back, so the
+   only way forward is the Now panel's buttons, which appear only when
+   the server would accept them. */
+
+.side-column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.turn-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.life-panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.life-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px 6px;
+  border-radius: 10px;
+  border: 1px solid;
+}
+
+.life-panel.theirs {
+  background: oklch(0.3 0.05 250 / 0.18);
+  border-color: oklch(0.6 0.09 250 / 0.45);
+}
+
+.life-panel.yours {
+  background: oklch(0.32 0.07 70 / 0.18);
+  border-color: oklch(0.7 0.11 70 / 0.45);
+}
+
+.life-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  opacity: 0.75;
+}
+
+.life-value {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.rail-panel {
+  padding: 10px 12px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(127, 127, 127, 0.3);
+}
+
+.rail-panel h3 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  opacity: 0.8;
+  margin: 0 0 8px;
+}
+
+.turn-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.turn-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 5px 7px;
+  border-radius: 7px;
+  border: 1px solid transparent;
+}
+
+.turn-step-dot {
+  width: 9px;
+  height: 9px;
+  margin-top: 4px;
+  border-radius: 50%;
+  flex: none;
+  border: 1px solid currentColor;
+}
+
+.turn-step.past {
+  opacity: 0.55;
+}
+
+.turn-step.past .turn-step-dot {
+  background: currentColor;
+}
+
+.turn-step.current {
+  background: oklch(0.62 0.11 70 / 0.18);
+  border-color: oklch(0.7 0.11 70 / 0.6);
+}
+
+.turn-step.current .turn-step-dot {
+  background: oklch(0.76 0.13 70);
+  border-color: oklch(0.76 0.13 70);
+}
+
+.turn-step.future {
+  opacity: 0.5;
+}
+
+.turn-step-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.turn-step-label {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.turn-step-hint {
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+.now-panel {
+  border-color: oklch(0.7 0.11 70 / 0.45);
+}
+
+.now-eyebrow {
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  opacity: 0.7;
+}
+
+/* Keeps the uppercase treatment .rail-panel h3 gives every rail heading;
+   only the size and weight change. */
+.now-title {
+  font-size: 15px;
+  letter-spacing: 0.08em;
+  opacity: 1;
+  margin: 2px 0 6px;
+}
+
+.now-guidance,
+.now-note {
+  font-size: 12px;
+  margin: 0 0 8px;
+  line-height: 1.4;
+}
+
+.now-note {
+  opacity: 0.7;
+  font-style: italic;
+}
+
+.now-button {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(127, 127, 127, 0.4);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+/* Only the first action is the one the step is really asking for. */
+.now-button.primary {
+  font-weight: 700;
+  border-color: oklch(0.76 0.13 70);
+  background: oklch(0.76 0.13 70);
+  color: oklch(0.2 0.03 70);
+  box-shadow: 0 2px 0 oklch(0.5 0.09 60);
+}
+
+.now-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
 /* ---- The table ----
 
    One dark felt surface holding both mats and the combat lane between
@@ -508,11 +660,6 @@
   margin: 0;
   flex: 1;
   letter-spacing: 0.04em;
-}
-
-.board-header .life {
-  font-size: 20px;
-  font-weight: 700;
 }
 
 .zone {

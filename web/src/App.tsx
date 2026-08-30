@@ -11,6 +11,7 @@ import { GlobalAbilitiesPanel, type GlobalAbilityFlow } from "./GlobalAbilitiesP
 import { HowToPlay } from "./HowToPlay";
 import { PendingChoicePanel } from "./PendingChoicePanel";
 import { PlayerBoard, type Selection } from "./PlayerBoard";
+import { TurnRail } from "./TurnRail";
 import { navigate } from "./router";
 import { facesFor } from "./dieFaces";
 import { isRoll, useDiceRoll, type RollTarget } from "./useDiceRoll";
@@ -382,82 +383,22 @@ function App() {
       {game && gameId && (
         <div className="app-layout game-layout">
           <div className="main-column">
+            {/* Step and life live in the rail now (see TurnRail); this
+                keeps only what is about the table itself. */}
             <section className="status-bar">
-              <div>
-                <strong>Step:</strong> {game.currentStep}
-                {game.currentStep === "Attack" && <> / {game.attackSubStep}</>}
-              </div>
               <div>
                 <strong>Active:</strong> {game.activePlayerId}
               </div>
               {game.isFirstTurn && <div className="badge">First turn</div>}
-
-              <span className="advance-label">Advance to:</span>
-              {advanceOptions.map((opt) => (
-                <button
-                  key={opt.key}
-                  className="advance-btn"
-                  disabled={busy || !!game.pendingChoice}
-                  onClick={() => run(opt.run, opt.rolledDieIds)}
-                >
-                  {opt.label}
-                </button>
-              ))}
               {canDeclareAttackers && (
                 <span className="hint">Select attacker(s) on the board, then use the panel below.</span>
               )}
             </section>
 
-            <details className="turn-controls">
-              <summary>Manual step actions (advanced)</summary>
-              <div className="turn-controls-buttons">
-                <button
-                  disabled={busy || !!game.pendingChoice || !canClearAndDraw}
-                  onClick={() => run(() => api.clearAndDraw(gameId))}
-                >
-                  Clear &amp; Draw
-                </button>
-                <button
-                  disabled={busy || !!game.pendingChoice || !(canAdvanceToRollAndReroll || canAdvanceToMain)}
-                  onClick={() => run(() => api.advanceStep(gameId))}
-                >
-                  Advance Step
-                </button>
-                <button
-                  disabled={busy || !!game.pendingChoice || !canRoll}
-                  onClick={() => run(() => api.roll(gameId), unrolledStepDice.map((d) => d.id))}
-                >
-                  Roll {canRoll ? `(${unrolledStepDice.length} dice)` : ""}
-                </button>
-                <button
-                  disabled={busy || !!game.pendingChoice || !canEnterAttack}
-                  onClick={() => run(() => api.enterAttackStep(gameId))}
-                >
-                  Enter Attack Step
-                </button>
-                <button
-                  disabled={busy || !!game.pendingChoice || !canSkipAttack}
-                  onClick={() => run(() => api.skipAttackStep(gameId))}
-                >
-                  Skip Attack Step
-                </button>
-                <button disabled={busy || !!game.pendingChoice || !canDeclareBlockers} onClick={confirmBlockers}>
-                  Declare Blockers ({combatAssignments.length === 0 ? "none" : `${combatAssignments.length} assigned`})
-                </button>
-                <button
-                  disabled={busy || !!game.pendingChoice || !canAssignDamage}
-                  onClick={() => run(() => api.assignCombatDamage(gameId, [], []))}
-                >
-                  Assign Combat Damage (no blocks)
-                </button>
-                <button
-                  disabled={busy || !!game.pendingChoice || !canCleanUp}
-                  onClick={() => run(() => api.cleanUp(gameId))}
-                >
-                  End Turn (Clean up)
-                </button>
-              </div>
-            </details>
+            {/* The old "Manual step actions (advanced)" panel is gone: every
+                button on it is now in the rail's Now panel, which shows only
+                what is actually legal. Declare Blockers was already routed
+                through DeclareBlockersPanel rather than a quick action. */}
 
             {game.pendingChoice ? (
               <PendingChoicePanel
@@ -595,7 +536,6 @@ function App() {
                 isActive={game.activePlayerId === game.playerTwo.id}
                 mine={false}
                 mirrored
-                life={game.playerTwo.life}
                 dice={game.dice.filter((d) => d.ownerId === game.playerTwo.id)}
                 cardsById={cardsById}
                 selection={selection}
@@ -621,7 +561,6 @@ function App() {
                 title={`${game.playerOne.name} (${game.playerOne.id})`}
                 isActive={game.activePlayerId === game.playerOne.id}
                 mine
-                life={game.playerOne.life}
                 dice={game.dice.filter((d) => d.ownerId === game.playerOne.id)}
                 cardsById={cardsById}
                 selection={selection}
@@ -634,7 +573,19 @@ function App() {
             </section>
           </div>
 
-          <GlobalAbilitiesPanel
+          <div className="side-column">
+            <TurnRail
+              game={game}
+              note={canDeclareAttackers ? "Select your attackers on the board first." : undefined}
+              actions={advanceOptions.map((opt) => ({
+                key: opt.key,
+                label: opt.label,
+                disabled: busy || !!game.pendingChoice,
+                onClick: () => run(opt.run, opt.rolledDieIds),
+              }))}
+            />
+
+            <GlobalAbilitiesPanel
             game={game}
             dice={game.dice}
             cardsById={cardsById}
@@ -654,7 +605,8 @@ function App() {
             }
             onSkipTargets={() => globalFlow && submitGlobalAbility(globalFlow.energyIds, [])}
             onCancel={cancelGlobalAbility}
-          />
+            />
+          </div>
         </div>
       )}
     </div>

@@ -40,7 +40,6 @@ export function PlayerBoard(props: {
   /** The far side of the table - rows run in the opposite order so this
    *  mat's Field Zone meets the near player's across the lane. */
   mirrored?: boolean;
-  life: number;
   dice: Die[];
   cardsById: Map<string, CardDef>;
   selection: Selection;
@@ -60,9 +59,10 @@ export function PlayerBoard(props: {
 
   return (
     <div className={`board${props.isActive ? " active" : ""}${props.mirrored ? " mirrored" : ""}`}>
+      {/* Life lives in the rail now (TurnRail's life panels), so the mat
+          is labelled with the player and nothing else. */}
       <div className="board-header">
         <h2>{props.title}</h2>
-        <div className="life">{props.life} life</div>
       </div>
 
       <div className={`mat${props.mirrored ? " mirrored" : ""}`}>

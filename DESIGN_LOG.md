@@ -9632,3 +9632,44 @@ rows, 552 die faces, 273 logos, no overflow. 708 tests pass.
 Still to come: the shared sideboard (which needs the engine to own Basic
 Action dice in a shared pool - see stage 1's note) and the right-hand
 rail (life, turn sequence, the Now panel, the log).
+
+## Match-table redesign, stage 4: the rail (2026-08-30)
+
+The right-hand column is now the design's rail: two life panels, the turn
+sequence, and a **Now** panel.
+
+**The turn sequence is read-only on purpose.** Rule 2.2.4 forbids going
+back a step, so the five steps are a progress display - current filled
+amber, past dimmed and solid, future hollow - and the only way forward is
+the Now panel below them. Those buttons come from the `advanceOptions`
+list App.tsx already builds off its `can*` guards, so a button appears
+only when the server would accept it. Primary first, ghost after.
+
+The Now panel names what is actually being asked for, which for the
+Attack Step means the sub-step rather than the step: "Attack · Declare
+Blockers", with a line saying that the defender assigns blockers and that
+any number may gang up on one attacker.
+
+**Two things it let us delete.** "Manual step actions (advanced)" is gone
+- every button on it is in the Now panel now, and its Declare Blockers
+was already superseded by `DeclareBlockersPanel`. Life left the mat
+headers, since the rail owns it; each mat is now labelled with just its
+player, like the design's name rules. The CSS those left behind went too.
+
+**One thing the rail got wrong on the first pass, worth recording.** It
+said "First turn - no attacking (rule 2.7.1)". That is not what
+`IsFirstTurn` does: per `TurnEngine`, it changes the DRAW (three dice
+plus a fourth set Out of Play, rule 2.3.3) and nothing else. Corrected
+rather than dropped - it is real information, it was just attached to the
+wrong rule.
+
+**Not built, and why:** the design's Log panel needs a server-side event
+log, and `GameState` has none - that is engine work, not layout. Same
+shape of blocker as the shared sideboard, which needs Basic Action dice
+to live in a shared pool rather than one set per player.
+
+Verified by playing a whole turn using nothing but the Now panel: Clear &
+Draw, Roll & Reroll, Roll, Main, then Attack, where it correctly hands
+over to the board ("Select your attackers on the board first") because
+the next move is a selection rather than a button. No overflow, no page
+errors, Team Builder unaffected, 708 tests pass.
