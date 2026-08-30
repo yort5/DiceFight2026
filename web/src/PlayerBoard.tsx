@@ -9,17 +9,23 @@ export interface Selection {
   secondary: string[];
 }
 
-// Spatial layout follows the physical playmat's cross shape (per user
-// feedback on the first pass): Attack Zone spans the top, Field Zone
-// spans below it, then Used Pile/Reserve Pool/Prep Area sit side by side
-// ("roll dice here" is the middle one) - Used Pile and Prep Area flank
-// the Reserve Pool, not the Field Zone. Out of Play sits directly under
-// Used Pile (familiar pairing), and the Bag spans the bottom. DiceFromBag/
-// DiceFromPrep (this engine's transient pre-Roll staging zones - see the
-// Zone enum remarks - not real physical zones) are paired with each
-// other in their own row under the Bag, rather than nested under Bag/Prep
-// Area individually. The Unpurchased roster stays off the mat grid, as a
-// low-traffic reference zone underneath it.
+// One player's half of the table. The two mats FACE each other: the
+// near player's runs Field Zone at the top down to the Bag, and the far
+// player's is mirrored so its Field Zone is at the bottom. Both Field
+// Zones therefore sit against the combat lane between them, and the two
+// halves read as one board rather than as two lists side by side.
+//
+// Within a mat, the left column is the die cycle - Used Pile, Out of
+// Play, Bag - and the right column is what is coming back - Prep Area,
+// Intimidated, Carried From Prep - with the Reserve Pool between them
+// spanning two rows, because it is the dice tray and wants the height.
+// DiceFromBag/DiceFromPrep are this engine's transient pre-Roll staging
+// zones (see the Zone enum remarks), not physical ones, so they sit in
+// the bottom staging row rather than nested under Bag/Prep Area.
+//
+// The Attack Zone is NOT here: attackers belong in the combat lane, next
+// to whatever is blocking them (see CombatLane.tsx). The Unpurchased
+// roster stays off the mat grid, as a low-traffic reference zone.
 export function PlayerBoard(props: {
   title: string;
   isActive: boolean;
@@ -31,6 +37,9 @@ export function PlayerBoard(props: {
   turnOffsets?: Record<string, number>;
   /** True while a roll is in flight; shakes the Reserve Pool. */
   rolling?: boolean;
+  /** The far side of the table - rows run in the opposite order so this
+   *  mat's Field Zone meets the near player's across the lane. */
+  mirrored?: boolean;
   life: number;
   dice: Die[];
   cardsById: Map<string, CardDef>;
@@ -50,21 +59,15 @@ export function PlayerBoard(props: {
   const dicein = (zone: string) => dice.filter((d) => d.zone === zone);
 
   return (
-    <div className={`board${props.isActive ? " active" : ""}`}>
+    <div className={`board${props.isActive ? " active" : ""}${props.mirrored ? " mirrored" : ""}`}>
       <div className="board-header">
         <h2>{props.title}</h2>
         <div className="life">{props.life} life</div>
       </div>
 
-      <div className="mat">
-        <div className="mat-slot mat-attack">
-          <ZoneSection zone="AttackZone" prominent dice={dicein("AttackZone")} {...zoneProps} />
-        </div>
+      <div className={`mat${props.mirrored ? " mirrored" : ""}`}>
         <div className="mat-slot mat-field">
           <ZoneSection zone="FieldZone" prominent dice={dicein("FieldZone")} {...zoneProps} />
-        </div>
-        <div className="mat-slot mat-intimidated">
-          <ZoneSection zone="Intimidated" dice={dicein("Intimidated")} {...zoneProps} />
         </div>
         <div className="mat-slot mat-used">
           <ZoneSection zone="UsedPile" dice={dicein("UsedPile")} {...zoneProps} />
@@ -79,6 +82,9 @@ export function PlayerBoard(props: {
         </div>
         <div className="mat-slot mat-outofplay">
           <ZoneSection zone="OutOfPlay" dice={dicein("OutOfPlay")} {...zoneProps} />
+        </div>
+        <div className="mat-slot mat-intimidated">
+          <ZoneSection zone="Intimidated" dice={dicein("Intimidated")} {...zoneProps} />
         </div>
         <div className="mat-slot mat-bag">
           <ZoneSection zone="Bag" dice={dicein("Bag")} {...zoneProps} />

@@ -4,12 +4,19 @@
    board is designed around that width and keeps it; the Team Builder is
    a wide data table plus a sidebar and wants the room, so it opts out.
    :has() degrades safely - browsers without it just keep the old width. */
-#root:has(.team-builder-layout) {
+#root:has(.team-builder-layout),
+#root:has(.game-layout) {
   width: min(1800px, 100%);
 }
 
-.app:has(.team-builder-layout) {
+/* #root is a column flexbox, so `.app`'s `margin: 0 auto` makes it
+   shrink to its content rather than fill the width - which left the game
+   table at ~870px inside a 1700px root. The wide pages ask for the room
+   explicitly. */
+.app:has(.team-builder-layout),
+.app:has(.game-layout) {
   max-width: 1800px;
+  width: 100%;
 }
 
 .app {
@@ -17,6 +24,9 @@
   margin: 0 auto;
   padding: 24px;
   text-align: left;
+  /* The wide pages set `width: 100%` below; without this the padding
+     would push them 48px past #root and scroll the page sideways. */
+  box-sizing: border-box;
 }
 
 .app-layout {
@@ -387,48 +397,121 @@
   color: inherit;
 }
 
-/* ---- Boards ---- */
+/* ---- The table ----
 
-.boards {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
+   One dark felt surface holding both mats and the combat lane between
+   them, rather than two bordered panels side by side. The dice are drawn
+   for this surface (see DieCube's `signal` faces), and the mirroring is
+   the point: both Field Zones sit against the lane, so an attacker is
+   directly opposite whatever is blocking it. */
+
+.game-table {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 14px;
+  background: radial-gradient(
+    120% 90% at 50% 50%,
+    oklch(0.34 0.035 155) 0%,
+    oklch(0.24 0.028 155) 58%,
+    oklch(0.17 0.02 155) 100%
+  );
+  color: oklch(0.93 0.008 90);
 }
 
-@media (max-width: 950px) {
-  .boards {
-    grid-template-columns: 1fr;
-  }
+/* The table is always dark, whichever theme the rest of the page is in,
+   so anything inside it that would otherwise take a themed colour -
+   headings, the roster summary - is set here rather than inherited. */
+.game-table h2,
+.game-table h3,
+.game-table .roster summary {
+  color: oklch(0.93 0.008 90);
+}
+
+.game-table .die-chip {
+  border-color: oklch(0.5 0.02 155 / 0.5);
+  background: oklch(0.3 0.02 155 / 0.45);
+  color: oklch(0.93 0.008 90);
+}
+
+.game-table .die-chip:disabled {
+  opacity: 0.4;
+}
+
+.game-table .die-chip.selected {
+  border-color: oklch(0.78 0.12 70);
+  background: oklch(0.5 0.09 70 / 0.26);
+}
+
+.game-table .die-chip.primary {
+  border-color: oklch(0.84 0.12 70);
+  background: oklch(0.58 0.11 70 / 0.34);
+}
+
+.game-table .empty-hint,
+.game-table .chip-status {
+  color: oklch(0.72 0.015 110);
+  opacity: 0.85;
 }
 
 .board {
-  border: 1px solid rgba(127, 127, 127, 0.25);
   border-radius: 10px;
-  padding: 12px 14px;
+  padding: 8px 10px;
+  background: oklch(0.22 0.02 155 / 0.55);
+  border: 1px solid oklch(0.4 0.025 155 / 0.5);
 }
 
+/* The active player's mat is lifted, not recoloured - the two team hues
+   (70 yours, 250 theirs) are already doing the "whose is this" job. */
 .board.active {
-  border-color: #6ea8ff;
-  box-shadow: 0 0 0 1px rgba(110, 168, 255, 0.4);
+  border-color: oklch(0.7 0.11 70 / 0.7);
+  box-shadow: 0 0 0 1px oklch(0.7 0.11 70 / 0.35);
 }
 
 .board-header {
   display: flex;
   align-items: baseline;
   gap: 12px;
-  border-bottom: 1px solid rgba(127, 127, 127, 0.3);
-  padding-bottom: 6px;
-  margin-bottom: 8px;
+  border-bottom: 1px solid oklch(0.5 0.02 155 / 0.35);
+  padding-bottom: 5px;
+  margin-bottom: 7px;
+}
+
+/* Each half is labelled on its OUTER edge, away from the lane: the far
+   mat (on top) keeps its header above, the near mat moves its below. */
+.board {
+  display: flex;
+  flex-direction: column;
+}
+
+.board:not(.mirrored) .board-header {
+  order: 2;
+  border-bottom: none;
+  border-top: 1px solid oklch(0.5 0.02 155 / 0.35);
+  padding: 5px 0 0;
+  margin: 7px 0 0;
+}
+
+/* The roster is a reference list, not part of the mat - it sits against
+   the header on the outer edge either way. */
+.board .roster {
+  order: 1;
+}
+
+.board:not(.mirrored) .roster {
+  order: 3;
 }
 
 .board-header h2 {
-  font-size: 16px;
+  font-size: 14px;
   margin: 0;
   flex: 1;
+  letter-spacing: 0.04em;
 }
 
 .board-header .life {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
 }
 
@@ -436,18 +519,12 @@
   margin-bottom: 8px;
 }
 
-.zone.prominent {
-  padding: 6px 8px;
-  border-radius: 6px;
-  background: rgba(127, 127, 127, 0.06);
-}
-
 .zone h3 {
-  font-size: 11px;
+  font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  opacity: 0.65;
-  margin: 4px 0;
+  letter-spacing: 0.12em;
+  opacity: 0.75;
+  margin: 2px 0 4px;
 }
 
 .empty-hint {
@@ -456,46 +533,50 @@
   opacity: 0.4;
 }
 
-/* ---- Mat layout (rule 1.5 - loosely follows the physical playmat's
-   cross shape and color coding: Attack Zone on top, Used Pile/Field
-   Zone/Prep Area side by side, Reserve Pool across the middle, Bag at
-   the bottom) ---- */
+/* ---- Mat layout ----
+
+   Left column is the die cycle (Used Pile, Out of Play, Bag), right is
+   what is coming back (Prep Area, Intimidated, Carried From Prep), and
+   the Reserve Pool sits between them across two rows because it is the
+   tray and wants the height. The Field Zone spans the width, against the
+   lane. Mirrored, the rows run in the opposite order. */
 
 .mat {
   display: grid;
-  grid-template-columns: 1fr 2fr 1fr;
+  grid-template-columns: 196px minmax(0, 1fr) 196px;
   grid-template-areas:
-    "attack      attack  attack"
-    "field       field   field"
-    "intimidated intimidated intimidated"
-    "used        reserve prep"
-    "outofplay   reserve prep"
-    "bag         bag     bag"
-    "drawn       drawn   carried";
+    "field     field   field"
+    "used      reserve prep"
+    "outofplay reserve intimidated"
+    "bag       drawn   carried";
   gap: 8px;
-  margin-bottom: 10px;
 }
 
-@media (max-width: 640px) {
-  .mat {
+.mat.mirrored {
+  grid-template-areas:
+    "bag       drawn   carried"
+    "outofplay reserve intimidated"
+    "used      reserve prep"
+    "field     field   field";
+}
+
+@media (max-width: 900px) {
+  .mat,
+  .mat.mirrored {
     grid-template-columns: 1fr;
     grid-template-areas:
-      "attack"
       "field"
-      "intimidated"
       "reserve"
       "used"
       "prep"
       "outofplay"
+      "intimidated"
       "bag"
       "drawn"
       "carried";
   }
 }
 
-.mat-attack {
-  grid-area: attack;
-}
 .mat-field {
   grid-area: field;
 }
@@ -527,28 +608,224 @@
 .mat-slot .zone {
   margin-bottom: 0;
   height: 100%;
+  border-radius: 9px;
+  padding: 5px 9px 7px;
+  border: 1px solid transparent;
 }
 
-.zone-attack {
-  background: rgba(255, 107, 107, 0.1);
-}
+/* Zone colours: field green, the tray recessed and amber-edged, the die
+   cycle blue, Prep amber, the transient staging zones violet. */
 .zone-field {
-  background: rgba(110, 220, 130, 0.12);
+  background: oklch(0.34 0.04 145 / 0.34);
+  border-color: oklch(0.52 0.06 145 / 0.45);
 }
 .zone-reserve {
-  background: rgba(110, 168, 255, 0.1);
+  background: oklch(0.19 0.02 250 / 0.66);
+  border-color: oklch(0.46 0.04 70 / 0.4);
+  box-shadow: inset 0 4px 14px oklch(0.1 0.02 250 / 0.8);
+  min-height: 82px;
 }
-.zone-used {
-  background: rgba(110, 168, 255, 0.07);
+.zone-used,
+.zone-bag {
+  background: oklch(0.27 0.015 250 / 0.5);
+  border-color: oklch(0.42 0.02 250 / 0.5);
 }
 .zone-prep {
-  background: rgba(255, 179, 71, 0.12);
-}
-.zone-bag {
-  background: rgba(127, 127, 127, 0.08);
+  background: oklch(0.32 0.04 70 / 0.3);
+  border-color: oklch(0.48 0.055 70 / 0.42);
 }
 .zone-staging {
-  background: rgba(160, 130, 255, 0.1);
+  background: oklch(0.28 0.025 300 / 0.4);
+  border-color: oklch(0.44 0.03 300 / 0.45);
+}
+.zone-attack {
+  background: oklch(0.3 0.05 25 / 0.3);
+  border-color: oklch(0.5 0.07 25 / 0.4);
+}
+
+/* ---- Combat lane ----
+
+   One grid for the whole lane - a label column plus one column per
+   attack, and three rows: the far slot, the divider, the near slot.
+   Because every column shares those rows, the divider seam can be a
+   single element spanning them all rather than an overlay pinned to a
+   hardcoded pixel offset (which is how the design prototype does it, and
+   which its own notes flag as the fragile choice). */
+
+.combat-lane {
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid oklch(0.5 0.07 25 / 0.4);
+  background: linear-gradient(
+    180deg,
+    oklch(0.3 0.055 250 / 0.34) 0%,
+    oklch(0.28 0.05 250 / 0.2) 47%,
+    oklch(0.3 0.06 60 / 0.2) 53%,
+    oklch(0.32 0.07 60 / 0.34) 100%
+  );
+  overflow-x: auto;
+}
+
+.lane-grid {
+  display: grid;
+  grid-template-rows: minmax(84px, auto) 34px minmax(84px, auto);
+  gap: 4px 8px;
+  min-width: 100%;
+}
+
+/* The seam: where the two halves meet, running the full width behind
+   the markers. */
+.lane-seam {
+  grid-row: 2;
+  grid-column: 1 / -1;
+  align-self: center;
+  z-index: 0;
+  height: 6px;
+  margin: 0 -12px;
+  background: linear-gradient(
+    180deg,
+    oklch(0.56 0.12 250) 0%,
+    oklch(0.68 0.17 25) 50%,
+    oklch(0.82 0.14 70) 100%
+  );
+  box-shadow: 0 0 18px oklch(0.62 0.14 25 / 0.5);
+}
+
+.lane-label-far,
+.lane-label-mid,
+.lane-label-near {
+  grid-column: 1;
+  align-self: center;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  line-height: 1.3;
+}
+
+.lane-label-far {
+  grid-row: 1;
+  align-self: start;
+  color: oklch(0.76 0.09 25);
+}
+
+/* Sits below the seam rather than behind it. */
+.lane-label-mid {
+  grid-row: 2;
+  align-self: end;
+  color: oklch(0.78 0.02 155);
+  opacity: 0.7;
+}
+
+.lane-label-near {
+  grid-row: 3;
+  align-self: end;
+  text-align: right;
+  color: oklch(0.82 0.1 70);
+}
+
+.lane-slot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 4px;
+  border-radius: 9px;
+}
+
+.lane-slot.filled {
+  background: oklch(0.3 0.045 250 / 0.35);
+  border: 1px solid oklch(0.5 0.06 250 / 0.5);
+}
+
+.lane-slot.filled.attacker {
+  background: oklch(0.32 0.06 70 / 0.32);
+  border-color: oklch(0.56 0.08 70 / 0.5);
+}
+
+.lane-slot.empty {
+  background: oklch(0.28 0.02 155 / 0.16);
+  border: 1px dashed oklch(0.48 0.02 155 / 0.45);
+}
+
+.lane-slot-hint {
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.5;
+}
+
+/* Sits in the divider row, above the seam. */
+.lane-connector {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lane-marker {
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  background: oklch(0.58 0.13 25);
+  color: oklch(0.16 0.02 25);
+}
+
+/* An attacker nothing is blocking - the damage is going to the player,
+   so it pulses rather than sitting still. */
+.lane-marker.unblocked {
+  background: oklch(0.76 0.14 70);
+  animation: df-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes df-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lane-marker.unblocked {
+    animation: none;
+  }
+}
+
+.lane-die {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 2px 5px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.lane-die.selected {
+  background: oklch(0.5 0.09 70 / 0.26);
+  border-color: oklch(0.72 0.11 70 / 0.8);
+}
+
+.lane-die-name {
+  font-size: 9.5px;
+  line-height: 1.15;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lane-die-stats {
+  font-size: 9px;
+  opacity: 0.7;
+  white-space: nowrap;
 }
 
 .roster summary {

@@ -3,6 +3,7 @@ import { api } from "./api";
 import { ActionTray } from "./ActionTray";
 import { InfiltrateWindowPanel, RangeWindowPanel, TagOutWindowPanel } from "./AttackWindowPanels";
 import { DamageSplitPanel, DeclareBlockersPanel } from "./CombatPanel";
+import { CombatLane } from "./CombatLane";
 import { DeclareAttackersPanel } from "./DeclareAttackersPanel";
 import { dieLabel } from "./dieHelpers";
 import { readPendingGame } from "./gameHandoff";
@@ -379,7 +380,7 @@ function App() {
       {showHowToPlay && <HowToPlay onClose={() => setShowHowToPlay(false)} />}
 
       {game && gameId && (
-        <div className="app-layout">
+        <div className="app-layout game-layout">
           <div className="main-column">
             <section className="status-bar">
               <div>
@@ -584,13 +585,18 @@ function App() {
               />
             )}
 
-            <section className="boards">
+            {/* The table: the two mats face each other across the combat
+                lane, so both Field Zones sit against it and an attacker
+                stands opposite whatever is blocking it. Player two is on
+                the far side, mirrored. */}
+            <section className="game-table">
               <PlayerBoard
-                title={`${game.playerOne.name} (${game.playerOne.id})`}
-                isActive={game.activePlayerId === game.playerOne.id}
-                mine
-                life={game.playerOne.life}
-                dice={game.dice.filter((d) => d.ownerId === game.playerOne.id)}
+                title={`${game.playerTwo.name} (${game.playerTwo.id})`}
+                isActive={game.activePlayerId === game.playerTwo.id}
+                mine={false}
+                mirrored
+                life={game.playerTwo.life}
+                dice={game.dice.filter((d) => d.ownerId === game.playerTwo.id)}
                 cardsById={cardsById}
                 selection={selection}
                 onGroupClick={handleGroupClick}
@@ -599,12 +605,24 @@ function App() {
                 turnOffsets={offsets}
                 rolling={rolling}
               />
+
+              <CombatLane
+                dice={game.dice}
+                cardsById={cardsById}
+                assignments={combatAssignments}
+                nearPlayerId={game.playerOne.id}
+                selection={selection}
+                onGroupClick={handleGroupClick}
+                spins={spins}
+                turnOffsets={offsets}
+              />
+
               <PlayerBoard
-                title={`${game.playerTwo.name} (${game.playerTwo.id})`}
-                isActive={game.activePlayerId === game.playerTwo.id}
-                mine={false}
-                life={game.playerTwo.life}
-                dice={game.dice.filter((d) => d.ownerId === game.playerTwo.id)}
+                title={`${game.playerOne.name} (${game.playerOne.id})`}
+                isActive={game.activePlayerId === game.playerOne.id}
+                mine
+                life={game.playerOne.life}
+                dice={game.dice.filter((d) => d.ownerId === game.playerOne.id)}
                 cardsById={cardsById}
                 selection={selection}
                 onGroupClick={handleGroupClick}

@@ -9572,3 +9572,63 @@ at the randomised 520-640ms, settle at 430ms, the resting 340ms
 transition restored afterwards, the shake raised and cleared, and the
 face actually pointing at the camera matching what the server rolled
 every time. A single-die reroll animates exactly one die. 708 tests pass.
+
+## Match-table redesign, stage 3: the table (2026-08-30)
+
+The two mats now FACE each other across a combat lane, on one dark felt
+surface, which is what the dark `signal` dice from stage 1 were drawn
+for. Player two's mat is mirrored, so both Field Zones sit against the
+lane and an attacker stands directly opposite whatever is blocking it.
+
+**Mat rows.** Left column is the die cycle (Used Pile, Out of Play, Bag),
+right is what is coming back (Prep Area, Intimidated, Carried From Prep),
+and the Reserve Pool sits between them spanning two rows, because it is
+the tray and wants the height - which is also how it gets the design's
+82px minimum without a magic number. The Field Zone spans the width,
+against the lane. `grid-template-areas` is simply listed in the opposite
+order for the mirrored mat.
+
+The Attack Zone is no longer a mat zone at all: attackers belong in the
+lane, beside their blockers. Each mat's name and life move to its OUTER
+edge, away from the lane, so the two halves are labelled like two players
+sitting across a table.
+
+**The lane is one grid, not a grid per column.** The design prototype
+positions its divider with three absolutely-placed rules at hardcoded
+offsets (`top: 129px`, `135px`, `148px`) and its own README says the
+offsets are load-bearing and that a real flex child would be better. It
+is a real grid row here: a label column plus one column per attack, three
+rows, so every column shares the row lines and the seam is a single
+element spanning `1 / -1`. Nothing needs recomputing if a slot's height
+changes. Two things that took a second pass:
+
+- Every cell is placed EXPLICITLY (`gridColumn: i + 2`). With
+  `grid-auto-flow: column` the seam - which spans the whole of row 2 -
+  blocked auto-placement out of that row, and the markers scattered.
+- A trailing `1fr` column is what lets the seam reach the end of the
+  lane rather than stopping after the last attack.
+
+Markers follow the design: "N on blocker" for a single blocker, an even
+"split n / m" for a gang block (the split is the attacking player's
+choice per rule 2.7.4.3.4 - this shows the default the damage panel
+starts from, it decides nothing), and a pulsing amber "N to face" for an
+unblocked attacker. With no attack declared the lane shows three empty
+pairs, so it reads as a place attacks will appear rather than as a gap.
+
+**A layout trap worth recording.** `#root` is a column flexbox, so
+`.app`'s `margin: 0 auto` made it shrink to its content - the table came
+out 869px wide inside a 1700px root. The wide pages now ask for
+`width: 100%` explicitly, which in turn needed `box-sizing: border-box`
+on `.app` or its 24px padding pushed 48px past `#root` and scrolled the
+page sideways. Checked for horizontal overflow at 1700 and 1200, and on
+the pre-game screen.
+
+Verified with a real attack driven through the API and handed to the
+client the way the Team Builder's "Start Game" does (via the
+`df2026:pendingGame` sessionStorage bridge) - a useful harness for any UI
+state that takes many steps to reach. The Team Builder is unaffected: 200
+rows, 552 die faces, 273 logos, no overflow. 708 tests pass.
+
+Still to come: the shared sideboard (which needs the engine to own Basic
+Action dice in a shared pool - see stage 1's note) and the right-hand
+rail (life, turn sequence, the Now panel, the log).
