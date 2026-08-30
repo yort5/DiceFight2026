@@ -10,7 +10,10 @@ import { stashPendingGame } from "./gameHandoff";
 import { navigate } from "./router";
 import { SET_NAMES } from "./sets";
 import { FORMATS } from "./formats";
-import { capsFor, isCapped, legalityOf, RULESETS, STANDARD_CAPS, type Caps, type RulesetId } from "./rulesets";
+import {
+  capsFor, enforcesUniqueNames, isCapped, legalityOf, RULESETS, STANDARD_CAPS,
+  type Caps, type RulesetId,
+} from "./rulesets";
 import { ORANGE_BAN_LIST, isOrangeBanned } from "./orangeBan";
 import type { CardDef } from "./types";
 
@@ -345,6 +348,12 @@ export function TeamBuilderPage() {
   const characterEntries = useMemo(() => teamEntries.filter((e) => !isBasicActionFamily(e.card)), [teamEntries]);
   const basicActionEntries = useMemo(() => teamEntries.filter((e) => isBasicActionFamily(e.card)), [teamEntries]);
   const uniqueNames = useMemo(() => new Set(characterEntries.map((e) => e.card.name)), [characterEntries]);
+
+  // The cap counts CARDS, not distinct names. Under Standard the two are
+  // the same thing, because rule 2.1.5 forbids duplicates - but Freeform
+  // and Custom allow two copies of a character, and two cards should
+  // count as two.
+  const cardCount = characterEntries.length;
   const totalDice = useMemo(() => characterEntries.reduce((sum, e) => sum + e.count, 0), [characterEntries]);
 
   // Real rules 2.1.1/2.1.3/2.1.4/2.1.5: up to 8 unique-named Character/
@@ -357,11 +366,11 @@ export function TeamBuilderPage() {
 
   const legality = useMemo(
     () => legalityOf(ruleset, caps, {
-      cards: uniqueNames.size,
+      cards: cardCount,
       dice: totalDice,
       basicActions: basicActionEntries.length,
     }),
-    [ruleset, caps, uniqueNames, totalDice, basicActionEntries],
+    [ruleset, caps, cardCount, totalDice, basicActionEntries],
   );
 
   function canAddCard(card: CardDef): { ok: boolean; reason?: string } {
@@ -372,11 +381,13 @@ export function TeamBuilderPage() {
       }
       return { ok: true };
     }
-    // Rule 2.1.5 is not a cap and is enforced under EVERY ruleset: two
-    // cards with the same name are the same card, which no house format
-    // can make playable with physical cards either.
-    if (uniqueNames.has(card.name)) return { ok: false, reason: `Already have a card named "${card.name}".` };
-    if (uniqueNames.size >= caps.cards) {
+    // Rule 2.1.5 - one card per name. Standard only: running two copies
+    // of a character is a normal house-format thing to do, so Freeform
+    // and Custom allow it (see rulesets.ts).
+    if (enforcesUniqueNames(ruleset) && uniqueNames.has(card.name)) {
+      return { ok: false, reason: `Already have a card named "${card.name}" — allowed under Freeform or Custom.` };
+    }
+    if (cardCount >= caps.cards) {
       return { ok: false, reason: `Already have ${caps.cards} cards — raise the cap in Custom, or switch to Freeform.` };
     }
     if (totalDice + 1 > caps.dice) {
@@ -878,7 +889,7 @@ export function TeamBuilderPage() {
                 <strong>{totalDice}{isCapped(caps.dice) ? `/${caps.dice}` : ""}</strong>
               </span>
               <span className="legality-cards">
-                {uniqueNames.size}{isCapped(caps.cards) ? `/${caps.cards}` : ""} cards ·{" "}
+                {cardCount}{isCapped(caps.cards) ? `/${caps.cards}` : ""} cards ·{" "}
                 {basicActionEntries.length}{isCapped(caps.basicActions) ? `/${caps.basicActions}` : ""} basic actions
               </span>
             </div>

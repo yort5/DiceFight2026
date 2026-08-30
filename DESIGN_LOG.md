@@ -9875,3 +9875,53 @@ Standard -> Freeform -> Standard leaves the team exactly as it was.
 Verified in the browser across all three rulesets, including lowering a
 Custom dice cap under the team's own dice: 5/3 dice, meter 3 filled and
 2 over, note switched, start disabled, team intact.
+
+## Real die faces for Crossover and four-energy characters (2026-08-30)
+
+Two corrections from the user to `dieFaces.ts`'s energy faces, neither of
+which is derivable from the reference sheet - it records what a card
+COSTS to buy, not what its die shows - so they are written down as data:
+
+- A **Crossover** character (one costing two different energy types, as
+  every such card in GAF does) has a **split double** covering both types
+  and a **GENERIC** single. Cosmic Treadmill's double is fist/mask. Not
+  two faces of one type, which is what we were drawing.
+- A card costing **all four types** has a **WILD** single and a split
+  double whose pair is per card, following no rule. The eight White
+  Lanterns are now listed by name in `FOUR_ENERGY_DOUBLES`:
+  Aquaman fist+shield, Dove mask+shield, Hal Jordan bolt+mask, Superman
+  bolt+fist, Batman bolt+shield, Deadman bolt+fist, Sinestro fist+mask,
+  Wonder Woman mask+shield.
+
+Twelve more four-energy cards exist - each set's 121-124 slots - and are
+not known yet, so they fall back to a flagged placeholder (the first two
+of their listed types). They are Deadpool's DP121-124, Guardians of the
+Galaxy's GOTG121-124 and X-Men First Class's XFC121-124.
+
+`CubeFace`'s energy variant grew a `secondIcon`, and `DieCube` looks the
+pair up in `SPLIT_ENERGY_ICONS` - the same six split symbols the card
+text already uses for "pay X or Y". Verified by rendering: White Lantern
+Aquaman's cube carries "Fist or Shield" and "?", Wonder Woman's "Mask or
+Shield" and "?", and a plain Mask character is unchanged.
+
+**A gap this opens, worth deciding before it matters.**
+`PlaceholderDiceRoller` can only ever roll `EnergyKind.Specific` of
+`card.EnergyTypes.FirstOrDefault()`. It cannot produce a generic, a wild,
+or a split face at all - so a Crossover character can never actually roll
+the generic single it prints, and a White Lantern can never roll its
+wild. The cube copes (`facesFor` forces the server's real face into the
+set), but the underlying roll is wrong. Fixing it needs a rules answer we
+do not have: what a fist/mask double actually PROVIDES when rolled - one
+of each type, or two of either.
+
+## Team Builder: rule 2.1.5 is Standard-only (2026-08-30)
+
+Per the user: only Standard enforces "a team cannot have multiple cards
+with exactly the same card name". Freeform and Custom allow two copies of
+a character, which is a normal house-format thing to do.
+
+That has a knock-on the brief did not mention: the card cap can no longer
+count DISTINCT NAMES. Under Standard the two are the same thing, because
+2.1.5 forbids duplicates - but once duplicates are legal, two cards must
+count as two. The count is `characterEntries.length` now, and the name
+set is used only for the 2.1.5 check.

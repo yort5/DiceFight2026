@@ -7,11 +7,11 @@
 // ruleset is a set of caps, and a house format is a first-class choice
 // rather than an escape hatch.
 //
-// What is NOT a cap, and stays enforced under every ruleset: rule 2.1.5's
-// "a team cannot have multiple cards with exactly the same card name" is
-// a property of the cards, not a number, and a team that breaks it cannot
-// be played with physically either - two identical cards are one card.
-// Freeform relaxes the counting rules, not the game.
+// One rule is not a number and so is not a cap: rule 2.1.5's "a team
+// cannot have multiple cards with exactly the same card name". Standard
+// enforces it; Freeform and Custom do not, because running two copies of
+// a character is exactly the kind of thing a house format does, and the
+// user's call is that only Standard should hold the line.
 
 export type RulesetId = "standard" | "freeform" | "custom";
 
@@ -48,6 +48,11 @@ export function capsFor(ruleset: RulesetId, custom: Caps): Caps {
   if (ruleset === "freeform") return FREEFORM_CAPS;
   if (ruleset === "custom") return custom;
   return STANDARD_CAPS;
+}
+
+/** Rule 2.1.5 - one card per name. Standard only; see the note above. */
+export function enforcesUniqueNames(ruleset: RulesetId): boolean {
+  return ruleset === "standard";
 }
 
 export function isCapped(value: number): boolean {

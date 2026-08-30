@@ -6,10 +6,23 @@ import type { CardDef, Die } from "./types";
 //
 // WHAT WE ACTUALLY KNOW. No source of real per-card face layouts exists
 // (see PlaceholderDiceRoller.cs, which says the same thing about the
-// roll side). What we know is the typical composition - three character
-// faces, two double-energy, one single - and that real cards depart from
-// it: Franklin's Galactus has FOUR character faces, and some characters
-// that cost two energy types carry a generic side.
+// roll side). What we know, from the user:
+//
+//   - The typical composition is three character faces, two double-energy
+//     and one single, all of the card's own energy type.
+//   - Franklin's Galactus has FOUR character faces.
+//   - A CROSSOVER character - one that costs two different energy types,
+//     as every such card in GAF does - has a SPLIT double (Cosmic
+//     Treadmill's is fist/mask) and a GENERIC single, not two faces of
+//     one type.
+//   - A card costing all four types has a WILD single, and a split double
+//     whose pair follows no pattern - it is per card. The eight White
+//     Lanterns are listed in FOUR_ENERGY_DOUBLES below; the twelve other
+//     four-energy cards (DP/GOTG/XFC's 121-124) are not known yet and
+//     fall back to a flagged placeholder.
+//
+// None of this is in the reference sheet, which records only what a card
+// costs to buy, so it cannot be derived - it is written down here.
 //
 // So the set below is a plausible default, and the ONE face that is
 // really true - the face the server says the die is showing - is forced
@@ -37,7 +50,10 @@ export const FACE_ORIENTATIONS: readonly (readonly [number, number])[] = [
 
 export type CubeFace =
   | { kind: "character"; level: number; fieldingCost: number; attack: number; defense: number }
-  | { kind: "energy"; icon: IconKind; amount: number }
+  // `secondIcon` is the other half of a split face - a Crossover
+  // character's double shows both of its energy types in one symbol, not
+  // two symbols side by side.
+  | { kind: "energy"; icon: IconKind; secondIcon?: IconKind; amount: number }
   // The engine tracks a burst count per Action face, but DieDto does not
   // carry it, so an Action face is just an Action face on the client.
   | { kind: "action" };
@@ -67,9 +83,62 @@ const ACTION_FACES: CubeFace[] = [
   { kind: "energy", icon: "Generic", amount: 2 },
 ];
 
-function energyIconFor(card: CardDef | undefined): IconKind {
-  const type = card?.energyTypes[0];
-  return type === "Bolt" || type === "Fist" || type === "Mask" || type === "Shield" ? type : "Generic";
+const ENERGY_ICONS_BY_NAME: Record<string, IconKind> = {
+  Bolt: "Bolt", Fist: "Fist", Mask: "Mask", Shield: "Shield",
+};
+
+// The double-energy face of a card that costs all four types. There is no
+// rule deriving these - each card just prints a pair - so they are data,
+// from the user. Keyed by card name: all eight are unique names.
+const FOUR_ENERGY_DOUBLES: Record<string, [IconKind, IconKind]> = {
+  "White Lantern Aquaman": ["Fist", "Shield"],
+  "White Lantern Dove": ["Mask", "Shield"],
+  "White Lantern Hal Jordan": ["Bolt", "Mask"],
+  "White Lantern Superman": ["Bolt", "Fist"],
+  "White Lantern Batman": ["Bolt", "Shield"],
+  "White Lantern Deadman": ["Bolt", "Fist"],
+  "White Lantern Sinestro": ["Fist", "Mask"],
+  "White Lantern Wonder Woman": ["Mask", "Shield"],
+};
+
+function energyIcons(card: CardDef | undefined): IconKind[] {
+  return (card?.energyTypes ?? []).map((t) => ENERGY_ICONS_BY_NAME[t]).filter((i): i is IconKind => i != null);
+}
+
+/**
+ * The three energy faces of a character die, from what its card costs.
+ *
+ * One type: two doubles and a single, all of that type. Two or three (a
+ * Crossover): the doubles are split symbols covering both types and the
+ * single is generic. Four: the single is Wild.
+ */
+function characterEnergyFaces(card: CardDef | undefined): CubeFace[] {
+  const icons = energyIcons(card);
+  if (icons.length <= 1) {
+    const icon = icons[0] ?? "Generic";
+    return [
+      { kind: "energy", icon, amount: 2 },
+      { kind: "energy", icon, amount: 2 },
+      { kind: "energy", icon, amount: 1 },
+    ];
+  }
+  if (icons.length >= 4) {
+    // The Wild single is right for all of them; the pair is per card, and
+    // only the eight White Lanterns are known. The other twelve fall back
+    // to the first two of their listed types - a placeholder, and the
+    // only face composition here still guessing at anything.
+    const pair = (card && FOUR_ENERGY_DOUBLES[card.name]) ?? [icons[0], icons[1]];
+    return [
+      { kind: "energy", icon: pair[0], secondIcon: pair[1], amount: 2 },
+      { kind: "energy", icon: pair[0], secondIcon: pair[1], amount: 2 },
+      { kind: "energy", icon: "Wild", amount: 1 },
+    ];
+  }
+  return [
+    { kind: "energy", icon: icons[0], secondIcon: icons[1], amount: 2 },
+    { kind: "energy", icon: icons[0], secondIcon: icons[1], amount: 2 },
+    { kind: "energy", icon: "Generic", amount: 1 },
+  ];
 }
 
 function defaultFaces(die: Die, card: CardDef | undefined): CubeFace[] {
@@ -92,13 +161,10 @@ function defaultFaces(die: Die, card: CardDef | undefined): CubeFace[] {
   }));
   if (faces.length === 0) faces.push(SIDEKICK_FACE);
 
-  // The rest are energy of the card's own type, doubles first - the
-  // typical printing is two doubles to one single.
-  const icon = energyIconFor(card);
-  const remaining = FACE_COUNT - faces.length;
-  for (let i = 0; i < remaining; i++) {
-    faces.push({ kind: "energy", icon, amount: i < remaining - 1 ? 2 : 1 });
-  }
+  // The rest are energy. A four-level card (Galactus) has room for only
+  // two of the three, so the single - the least interesting - goes first.
+  const energy = characterEnergyFaces(card);
+  faces.push(...energy.slice(energy.length - (FACE_COUNT - faces.length)));
   return faces;
 }
 
@@ -122,7 +188,9 @@ function currentFace(die: Die, card: CardDef | undefined): CubeFace | null {
 function sameFace(a: CubeFace, b: CubeFace): boolean {
   if (a.kind !== b.kind) return false;
   if (a.kind === "character" && b.kind === "character") return a.level === b.level;
-  if (a.kind === "energy" && b.kind === "energy") return a.icon === b.icon && a.amount === b.amount;
+  if (a.kind === "energy" && b.kind === "energy") {
+    return a.icon === b.icon && a.secondIcon === b.secondIcon && a.amount === b.amount;
+  }
   return a.kind === "action" && b.kind === "action";
 }
 

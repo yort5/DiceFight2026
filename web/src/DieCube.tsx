@@ -1,4 +1,6 @@
-import { ENERGY_ICONS, GENERIC_ENERGY_ICONS, SIDEKICK_ICON, WILD_ENERGY_ICON, type GameIcon } from "./gameIcons";
+import {
+  ENERGY_ICONS, GENERIC_ENERGY_ICONS, SIDEKICK_ICON, SPLIT_ENERGY_ICONS, WILD_ENERGY_ICON, type GameIcon,
+} from "./gameIcons";
 import actionIcon from "./assets/action.png";
 import { FACE_ORIENTATIONS, FACE_TRANSFORMS, type CubeFace } from "./dieFaces";
 
@@ -25,6 +27,12 @@ function faceIcon(face: CubeFace): { icon: GameIcon; mono: boolean } | null {
   if (face.icon === "Pawn") return { icon: SIDEKICK_ICON, mono: true };
   if (face.icon === "Generic") {
     return { icon: GENERIC_ENERGY_ICONS[String(face.amount)] ?? GENERIC_ENERGY_ICONS["1"], mono: true };
+  }
+  // A Crossover character's double covers both of its energy types, and
+  // prints as the one split symbol rather than two icons.
+  if (face.secondIcon) {
+    const split = SPLIT_ENERGY_ICONS[`${face.icon.toLowerCase()}/${face.secondIcon.toLowerCase()}`];
+    if (split) return { icon: split, mono: false };
   }
   const icon = ENERGY_ICONS[face.icon.toLowerCase()];
   return icon ? { icon, mono: false } : null;
