@@ -9673,3 +9673,57 @@ Draw, Roll & Reroll, Roll, Main, then Attack, where it correctly hands
 over to the board ("Select your attackers on the board first") because
 the next move is a selection rather than a button. No overflow, no page
 errors, Team Builder unaffected, 708 tests pass.
+
+## Basic Action cards become community property (2026-08-30)
+
+The design's shared sideboard turned out to need an engine change, so this
+went to the rulebook first. The comprehensive rules are unambiguous:
+
+- **2.1.2** - "Basic Action cards are community property and are placed in
+  the center of table. Either player can purchase Basic Action dice during
+  the game. These cards start with 3 Basic Action dice apiece."
+- **1.2.11** - "All Basic Action cards have a 'Use 3' die limit. Each
+  Basic Action card will always use this fixed number of Basic Action dice
+  in every game."
+- **2.1.4** - "Dice on Basic Action cards are not included in the total
+  number of dice on a team."
+
+**Most of this was already right, which is worth saying.**
+`TurnEngine.Purchase` has always allowed either player to buy a Basic
+Action die regardless of who brought it (its own comment cites 2.6.2.1/
+2.1.2), `DiceFor` filters by ControllerId so a bought die correctly moves
+to the buyer's zones, rule 1.1.4's "owner stays the bringer" is already
+modelled, and the Team Builder's dice total already counts only
+characters, per 2.1.4. Three things were not:
+
+1. **Set-up instantiated per player.** If both players brought the same
+   Basic Action there were two independent piles of dice rather than one
+   card in the centre to contend over. `TeamSetup` now creates community
+   cards once per distinct card across both teams.
+2. **The count came from `CardDef.DieLimit`**, which is imported
+   reference data - and 14 of the 297 Basic Actions in it said 1. Rule
+   1.2.11 is not per-printing, so it wins: `TeamSetup` fixes the number at
+   3, and `import_bulk_cards.py` now writes 3 for every Basic Action
+   (`dieLimitSource: "rule-1.2.11"`) so the data agrees rather than being
+   silently overridden.
+3. **They were drawn inside a player's roster**, which read as if they
+   were that player's to buy. `CommunityCards` puts them between the two
+   mats, labelled "shared · either player may buy", with the dice left on
+   each card - a count that now genuinely counts down as EITHER player
+   buys.
+
+`TeamSetup.SetupTeamDice(state, player, catalog)` became
+`TeamSetup.SetupDice(state, catalog)`, since deduplicating across teams
+needs to see both. Die ids are unchanged (`{bringer}-{cardId}-{n}`), so
+nothing that references one had to move.
+
+Four tests cover the new behaviour: characters still get a set each when
+both players bring the same one, a shared Basic Action gets one set,
+different Basic Actions get their own, and the count is 3 whatever
+`DieLimit` says.
+
+Verified in the browser: four Basic Action cards in the centre at 3 dice
+apiece, rosters down from 38/36 to 32/30, and buying one takes it from
+"3 left" to "2 left". Both Cosmic Cubes are on the table at once - two
+different cards sharing a name - so the rows carry the subtitle. 551
+engine tests pass (up from 547).

@@ -418,6 +418,14 @@ def classify_row(code, row, max_dice, split_energy):
 
     levels = None
     die_limit, die_limit_source = lookup_die_limit(max_dice, name, subtitle)
+    if card_type in ("BasicAction", "EpicBasicAction"):
+        # Rule 1.2.11 - "All Basic Action cards have a 'Use 3' die limit.
+        # Each Basic Action card will always use this fixed number of Basic
+        # Action dice in every game." The old Teambuilder records 3 for
+        # nearly all of them but 1 for a handful; the rule is not
+        # per-printing, so it wins. TeamSetup enforces the same number
+        # again at set-up, so a stale value here cannot reach a game.
+        die_limit, die_limit_source = 3, "rule-1.2.11"
     energy_type = []
     stats_missing = False
 

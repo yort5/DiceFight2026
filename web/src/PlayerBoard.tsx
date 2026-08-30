@@ -2,7 +2,7 @@ import { DieCube, type CubeSpin } from "./DieCube";
 import { DieIcon } from "./DieIcon";
 import { facesFor } from "./dieFaces";
 import type { CardDef, Die } from "./types";
-import { groupDice } from "./dieHelpers";
+import { groupDice, isCommunityCard } from "./dieHelpers";
 
 export interface Selection {
   primary: string | null;
@@ -56,6 +56,9 @@ export function PlayerBoard(props: {
     mine: props.mine, spins: props.spins, turnOffsets: props.turnOffsets,
   };
   const dicein = (zone: string) => dice.filter((d) => d.zone === zone);
+  const roster = dicein("Unpurchased").filter(
+    (d) => !isCommunityCard(d.cardId ? cardsById.get(d.cardId) : undefined),
+  );
 
   return (
     <div className={`board${props.isActive ? " active" : ""}${props.mirrored ? " mirrored" : ""}`}>
@@ -97,9 +100,12 @@ export function PlayerBoard(props: {
         </div>
       </div>
 
+      {/* Basic Actions are community property and are drawn in the
+          centre of the table instead (rule 2.1.2, CommunityCards), so a
+          roster is only this player's own cards. */}
       <details className="roster">
-        <summary>Unpurchased roster ({dicein("Unpurchased").length})</summary>
-        <ZoneSection zone="Unpurchased" bare dice={dicein("Unpurchased")} {...zoneProps} />
+        <summary>Unpurchased roster ({roster.length})</summary>
+        <ZoneSection zone="Unpurchased" bare dice={roster} {...zoneProps} />
       </details>
     </div>
   );

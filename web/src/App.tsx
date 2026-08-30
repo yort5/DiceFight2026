@@ -4,6 +4,7 @@ import { ActionTray } from "./ActionTray";
 import { InfiltrateWindowPanel, RangeWindowPanel, TagOutWindowPanel } from "./AttackWindowPanels";
 import { DamageSplitPanel, DeclareBlockersPanel } from "./CombatPanel";
 import { CombatLane } from "./CombatLane";
+import { CommunityCards } from "./CommunityCards";
 import { DeclareAttackersPanel } from "./DeclareAttackersPanel";
 import { dieLabel } from "./dieHelpers";
 import { readPendingGame } from "./gameHandoff";
@@ -544,6 +545,14 @@ function App() {
                 spins={spins}
                 turnOffsets={offsets}
                 rolling={rolling}
+              />
+
+              {/* Between the two mats, because it belongs to neither. */}
+              <CommunityCards
+                dice={game.dice}
+                cardsById={cardsById}
+                selection={selection}
+                onGroupClick={handleGroupClick}
               />
 
               <CombatLane

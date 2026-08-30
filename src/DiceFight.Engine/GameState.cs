@@ -274,10 +274,12 @@ public sealed class GameState
                 });
             }
 
-            // Rule 2.1.3 - each team's Character/Action/Basic Action dice
-            // sit unpurchased on their cards until bought.
-            TeamSetup.SetupTeamDice(state, player, catalog);
         }
+
+        // Rule 2.1.3/2.1.2 - each team's Character and Action dice sit
+        // unpurchased on their cards, and the Basic Action cards sit in
+        // the centre of the table for either player to buy from.
+        TeamSetup.SetupDice(state, catalog);
 
         return state;
     }

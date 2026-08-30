@@ -3,6 +3,15 @@ import type { CardDef, Die } from "./types";
 
 const SIDEKICK_FACE = { fieldingCost: 0, attack: 1, defense: 1 };
 
+/**
+ * Rule 2.1.2 - a Basic Action card is community property: it sits in the
+ * centre of the table rather than on either roster, and either player may
+ * purchase from it. Mirrors TeamSetup.IsCommunityCard on the engine side.
+ */
+export function isCommunityCard(card: CardDef | undefined): boolean {
+  return card?.type === "BasicAction" || card?.type === "EpicBasicAction";
+}
+
 // Which face icon a die is currently showing, if any (rule 1.6.8's
 // Sidekick face set, plus energy/Action faces generally) - a plain
 // Character face (non-Sidekick) has no icon here since real character
