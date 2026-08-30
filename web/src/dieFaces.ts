@@ -16,10 +16,8 @@ import type { CardDef, Die } from "./types";
 //     Treadmill's is fist/mask) and a GENERIC single, not two faces of
 //     one type.
 //   - A card costing all four types has a WILD single, and a split double
-//     whose pair follows no pattern - it is per card. The eight White
-//     Lanterns are listed in FOUR_ENERGY_DOUBLES below; the twelve other
-//     four-energy cards (DP/GOTG/XFC's 121-124) are not known yet and
-//     fall back to a flagged placeholder.
+//     whose pair follows no pattern - it is per card. All twenty such
+//     cards are listed in FOUR_ENERGY_DOUBLES below.
 //
 // None of this is in the reference sheet, which records only what a card
 // costs to buy, so it cannot be derived - it is written down here.
@@ -72,12 +70,14 @@ const SIDEKICK_FACES: CubeFace[] = [
   { kind: "energy", icon: "Shield", amount: 1 },
 ];
 
-// A Basic Action die: three Action faces (blank / single / double burst)
-// and three double-Generic energy faces.
-const ACTION_FACES: CubeFace[] = [
-  { kind: "action" },
-  { kind: "action" },
-  { kind: "action" },
+// Three Action faces (blank / single / double burst) - the half of an
+// action die that is not energy. A BASIC Action die's other three are
+// double-Generic (rule 1.3.10: "Basic Action dice provide generic
+// energy"); a plain Action card has an energy type of its own and takes
+// the same three faces a Character of that type would.
+const ACTION_FACES: CubeFace[] = [{ kind: "action" }, { kind: "action" }, { kind: "action" }];
+
+const BASIC_ACTION_ENERGY: CubeFace[] = [
   { kind: "energy", icon: "Generic", amount: 2 },
   { kind: "energy", icon: "Generic", amount: 2 },
   { kind: "energy", icon: "Generic", amount: 2 },
@@ -89,16 +89,36 @@ const ENERGY_ICONS_BY_NAME: Record<string, IconKind> = {
 
 // The double-energy face of a card that costs all four types. There is no
 // rule deriving these - each card just prints a pair - so they are data,
-// from the user. Keyed by card name: all eight are unique names.
+// from the user. Every such card is its set's 121-124 slot, and all
+// twenty are covered here; the names are the catalog's, which are longer
+// than the ones players use for two of them ("Captain Britain Iron Man",
+// "Charles Xavier, Juggernaut"). All are unique names.
 const FOUR_ENERGY_DOUBLES: Record<string, [IconKind, IconKind]> = {
+  // BAT
   "White Lantern Aquaman": ["Fist", "Shield"],
   "White Lantern Dove": ["Mask", "Shield"],
   "White Lantern Hal Jordan": ["Bolt", "Mask"],
   "White Lantern Superman": ["Bolt", "Fist"],
+  // GAF
   "White Lantern Batman": ["Bolt", "Shield"],
   "White Lantern Deadman": ["Bolt", "Fist"],
   "White Lantern Sinestro": ["Fist", "Mask"],
   "White Lantern Wonder Woman": ["Mask", "Shield"],
+  // DP
+  "Captain America with Mjolnir": ["Bolt", "Shield"],
+  "Charles Xavier, Juggernaut": ["Fist", "Shield"],
+  "Phoenix Force Magneto": ["Bolt", "Mask"],
+  "Wolverine Lord of Vampires": ["Fist", "Mask"],
+  // GOTG
+  "Captain Britain Iron Man": ["Bolt", "Mask"],
+  "Groot Thor": ["Bolt", "Fist"],
+  "King Black Bolt": ["Fist", "Shield"],
+  "Punisher Sorcerer Supreme": ["Mask", "Shield"],
+  // XFC
+  "Blink In-Betweener": ["Bolt", "Mask"],
+  "Cosmic X-23": ["Mask", "Shield"],
+  "Czar Colossus": ["Fist", "Shield"],
+  "Phoenix Storm": ["Bolt", "Fist"],
 };
 
 function energyIcons(card: CardDef | undefined): IconKind[] {
@@ -123,10 +143,9 @@ function characterEnergyFaces(card: CardDef | undefined): CubeFace[] {
     ];
   }
   if (icons.length >= 4) {
-    // The Wild single is right for all of them; the pair is per card, and
-    // only the eight White Lanterns are known. The other twelve fall back
-    // to the first two of their listed types - a placeholder, and the
-    // only face composition here still guessing at anything.
+    // The Wild single is right for all of them; the pair is per card. The
+    // fallback covers a four-energy card printed after this list was
+    // written, rather than any card in the catalog today.
     const pair = (card && FOUR_ENERGY_DOUBLES[card.name]) ?? [icons[0], icons[1]];
     return [
       { kind: "energy", icon: pair[0], secondIcon: pair[1], amount: 2 },
@@ -141,9 +160,24 @@ function characterEnergyFaces(card: CardDef | undefined): CubeFace[] {
   ];
 }
 
+// Appends energy faces until the die has six, whatever the card's own
+// three are. More than three slots to fill means repeating a double
+// (a card with fewer than three levels); fewer means dropping one.
+function fillEnergy(faces: CubeFace[], energy: CubeFace[]): CubeFace[] {
+  while (faces.length < FACE_COUNT) {
+    const remaining = FACE_COUNT - faces.length;
+    faces.push(remaining <= energy.length ? energy[energy.length - remaining] : energy[0]);
+  }
+  return faces;
+}
+
 function defaultFaces(die: Die, card: CardDef | undefined): CubeFace[] {
   if (!die.cardId) return SIDEKICK_FACES;
-  if (card?.type === "BasicAction" || card?.type === "EpicBasicAction") return ACTION_FACES;
+  if (card?.type === "BasicAction" || card?.type === "EpicBasicAction") {
+    return [...ACTION_FACES, ...BASIC_ACTION_ENERGY];
+  }
+  // A plain Action card is an action die too, but with its own energy.
+  if (card?.type === "Action") return fillEnergy([...ACTION_FACES], characterEnergyFaces(card));
 
   // Character faces come first and in level order, so a face's index IS
   // its level - which is what lets a spin be a quarter-turn of the cube.
@@ -162,10 +196,8 @@ function defaultFaces(die: Die, card: CardDef | undefined): CubeFace[] {
   if (faces.length === 0) faces.push(SIDEKICK_FACE);
 
   // The rest are energy. A four-level card (Galactus) has room for only
-  // two of the three, so the single - the least interesting - goes first.
-  const energy = characterEnergyFaces(card);
-  faces.push(...energy.slice(energy.length - (FACE_COUNT - faces.length)));
-  return faces;
+  // two of the three, and loses a double rather than its single.
+  return fillEnergy(faces, characterEnergyFaces(card));
 }
 
 /** The face the server says this die is showing, or null if it shows none. */

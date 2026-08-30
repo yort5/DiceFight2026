@@ -9925,3 +9925,33 @@ count DISTINCT NAMES. Under Standard the two are the same thing, because
 2.1.5 forbids duplicates - but once duplicates are legal, two cards must
 count as two. The count is `characterEntries.length` now, and the name
 set is used only for the 2.1.5 check.
+
+## All twenty four-energy cards, and two face bugs the sweep caught (2026-08-30)
+
+The user supplied the remaining twelve double-energy pairs, so
+`FOUR_ENERGY_DOUBLES` now covers every four-energy card in the catalog -
+each set's 121-124 slots, across BAT, GAF, DP, GOTG and XFC. Verified
+against the data: 20 names in the table, 20 four-energy cards, no
+mismatches either way.
+
+Sweeping every card through `facesFor` to check that turned up two bugs
+in the previous entry's rewrite, neither visible on the cards I had
+spot-checked:
+
+- **190 Action cards were getting three faces, not six.** The energy
+  faces were appended with `slice(energy.length - remaining)`, which
+  truncates when there is room for MORE than three rather than padding.
+  It only bit cards with fewer than three levels - which is every plain
+  Action card, since they have none. Replaced with a `fillEnergy` loop
+  that always reaches six.
+- **A plain Action card was being drawn as a Character.** It is an action
+  die: three Action faces and three energy. Unlike a BASIC Action die,
+  whose energy is Generic (rule 1.3.10), it has an energy type of its
+  own - 176 of the 190 do - so it takes the same three energy faces a
+  Character of that type would. `House of Mystery` (Bolt) is now
+  `action action action 2Bolt 2Bolt Bolt`.
+
+The catalog now resolves to exactly two shapes and no malformed dice:
+3,397 characters as three levels plus three energy, and 487 action-family
+cards (293 Basic Action, 190 Action, 4 Epic) as three action faces plus
+three energy.
