@@ -9727,3 +9727,49 @@ apiece, rosters down from 38/36 to 32/30, and buying one takes it from
 "3 left" to "2 left". Both Cosmic Cubes are on the table at once - two
 different cards sharing a name - so the rows carry the subtitle. 551
 engine tests pass (up from 547).
+
+## Correction: two copies of a Basic Action are two cards (2026-08-30)
+
+The previous entry consolidated a Basic Action brought by both players
+into one card with one set of dice. **That was wrong**, and the user
+caught why: a card like Huge Smash with a "once per turn" Global would
+lose a use.
+
+The rules say so directly, in three places:
+
+- **3.4.2.4** - "Global abilities on opposing cards are considered
+  separate from your own, even if they have the same text."
+- **2.6.5.3** - "If both players have a card with the same Global ability
+  having the condition 'only once per turn', a player may pay for that
+  Global ability twice in the same turn because there are two cards with
+  that Global ability available."
+- **3.3.3** talks about "the Basic Action cards brought by your opponent"
+  as distinct things, and 2.1.2's "3 dice apiece" is per card.
+
+So the dedupe is reverted: each player's Basic Action is its own card in
+the centre, with its own 3 dice. The two genuinely good parts of the
+previous change stand - the fixed count of 3 (rule 1.2.11) and moving
+them out of the per-player rosters into the centre.
+
+**And underneath it was a real bug the question exposed.**
+`GlobalsUsedThisTurn` was a `HashSet<string>` keyed by cardId, so even
+before the dedupe, two copies of a card shared ONE once-per-turn use -
+exactly what 2.6.5.3 says must not happen. It is a `Dictionary<string,
+int>` now, and the allowance is the number of copies of that card on the
+table (1 or 2, since a team cannot hold the same card twice per rule
+2.1.5). The single-copy case is unchanged.
+
+Worth knowing: **V2 keys this differently** - `HashSet<(PlayerId,
+CardId)>`, i.e. once per turn per USER. That reading also fails 2.6.5.3,
+just differently: with two copies on the table a player still only gets
+one use, because the key does not know which copy. Left alone for now,
+but the two engines disagree and V2 should be settled before it ships.
+
+Four tests cover it: one copy allows one use; two copies let a single
+player pay twice (the scenario 2.6.5.3 describes verbatim); the two uses
+are shared between the players rather than two each; and Clean Up resets
+the allowance. The Basic Actions panel keys its rows by bringer and card
+so both copies appear, tagged "yours"/"theirs" - but only when a card is
+actually duplicated, since otherwise it is noise.
+
+555 engine tests pass (up from 551).

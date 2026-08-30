@@ -551,6 +551,7 @@ function App() {
               <CommunityCards
                 dice={game.dice}
                 cardsById={cardsById}
+                nearPlayerId={game.playerOne.id}
                 selection={selection}
                 onGroupClick={handleGroupClick}
               />

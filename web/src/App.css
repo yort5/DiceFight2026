@@ -884,8 +884,20 @@
   white-space: nowrap;
 }
 
-/* Shared, so this counts down as EITHER player buys - a die your
-   opponent takes is one you cannot. */
+/* Shown only when both players brought the same card, so the two rows
+   can be told apart. Either player may still buy from either. */
+.community-owner {
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 8.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  white-space: nowrap;
+  background: oklch(0.4 0.05 300 / 0.55);
+}
+
+/* Counts down as EITHER player buys - a die your opponent takes is one
+   you cannot. */
 .community-left {
   font-size: 9.5px;
   opacity: 0.75;

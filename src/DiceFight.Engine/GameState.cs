@@ -26,8 +26,17 @@ public sealed class GameState
     public bool EpicBasicActionUsedThisTurn { get; set; }
 
     // Card-text-driven once-per-turn Global limiters (e.g. Falcon's "Once
-    // during your turn"), keyed by cardId; reset in CleanUp.
-    public HashSet<string> GlobalsUsedThisTurn { get; } = [];
+    // during your turn"), counted per cardId; reset in CleanUp.
+    //
+    // A COUNT rather than a set because the allowance is per copy of the
+    // card on the table, not per card name. Rule 3.4.2.4 - "Global
+    // abilities on opposing cards are considered separate from your own,
+    // even if they have the same text" - and rule 2.6.5.3 spells out the
+    // consequence: if both players brought the same card, "a player may
+    // pay for that Global ability twice in the same turn because there
+    // are two cards with that Global ability available". See
+    // TurnEngine.GlobalUseAllowance.
+    public Dictionary<string, int> GlobalsUsedThisTurn { get; } = [];
 
     // Die ids forced to block this turn (e.g. Invisible Woman's Global),
     // enforced by CombatEngine.DeclareBlockers; reset in CleanUp.

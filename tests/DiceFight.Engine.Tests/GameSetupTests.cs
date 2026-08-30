@@ -86,14 +86,18 @@ public class GameSetupTests
     }
 
     // Rule 2.1.2 - Basic Action cards are community property in the centre
-    // of the table, so two players bringing the same one share ONE set of
-    // dice rather than getting a pile each.
+    // of the table, but they still belong to whoever brought them: two
+    // players bringing the same one puts TWO cards in the centre, each
+    // with its own dice ("3 dice apiece"). Rule 3.4.2.4 is the reason this
+    // matters beyond the dice - two copies are two separate Globals.
     [Fact]
-    public void Setup_BasicActionBroughtByBothPlayers_IsOneSharedSetOfDice()
+    public void Setup_BasicActionBroughtByBothPlayers_IsTwoCardsWithTheirOwnDice()
     {
         var state = NewGameWith(["boom"], ["boom"], BasicAction("boom"));
 
-        Assert.Equal(TeamSetup.BasicActionDiceCount, DiceOf(state, "boom"));
+        Assert.Equal(TeamSetup.BasicActionDiceCount * 2, DiceOf(state, "boom"));
+        Assert.Equal(TeamSetup.BasicActionDiceCount, state.Dice.Count(d => d.CardId == "boom" && d.OwnerId == "p1"));
+        Assert.Equal(TeamSetup.BasicActionDiceCount, state.Dice.Count(d => d.CardId == "boom" && d.OwnerId == "p2"));
     }
 
     [Fact]

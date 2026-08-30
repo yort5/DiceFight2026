@@ -14,10 +14,16 @@ namespace DiceFight.Engine;
 //
 //   Basic Action cards are COMMUNITY PROPERTY (rule 2.1.2) - they sit in
 //   the centre of the table and either player may purchase from them, as
-//   TurnEngine.Purchase already allows. So they are instantiated ONCE per
-//   distinct card across both teams, not once per player: if both players
-//   bring the same Basic Action, that is one card in the centre with one
-//   set of dice to contend over, not two independent piles.
+//   TurnEngine.Purchase already allows. They still belong to whoever
+//   brought them, though: if both players bring the same Basic Action
+//   that is TWO cards in the centre, each with its own dice. Rule 2.1.2
+//   says the cards start with 3 dice "apiece"; 3.3.3 talks about "the
+//   Basic Action cards brought by your opponent" as distinct things; and
+//   3.4.2.4 is explicit that "Global abilities on opposing cards are
+//   considered separate from your own, even if they have the same text",
+//   which 2.6.5.3 then spells out - two copies means a once-per-turn
+//   Global can be paid for twice. Collapsing them would quietly delete
+//   that second use.
 //
 // NOTE: rule 2.1.3's 20-dice team cap and 2.1.1's "up to 8 unique cards"
 // are team-*construction* legality rules (whether a given TeamCardIds list
@@ -37,18 +43,13 @@ public static class TeamSetup
 
     public static void SetupDice(GameState state, IReadOnlyDictionary<string, CardDef> catalog)
     {
-        var communityCardsDone = new HashSet<string>();
-
         foreach (var player in new[] { state.PlayerOne, state.PlayerTwo })
         {
             foreach (var cardId in player.TeamCardIds)
             {
                 if (!catalog.TryGetValue(cardId, out var card)) continue;
 
-                var isCommunity = card.Type is CardType.BasicAction or CardType.EpicBasicAction;
-                if (isCommunity && !communityCardsDone.Add(cardId)) continue;
-
-                var dieCount = isCommunity ? BasicActionDiceCount : card.DieLimit;
+                var dieCount = IsCommunityCard(card) ? BasicActionDiceCount : card.DieLimit;
                 for (var i = 0; i < dieCount; i++)
                 {
                     state.Dice.Add(new DieInstance

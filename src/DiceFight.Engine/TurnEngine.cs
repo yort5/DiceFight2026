@@ -378,6 +378,19 @@ public static class TurnEngine
     // Generic energy (Basic Action dice) never does. Always purchases for
     // the Active player - the Inactive player's only Main Step actions are
     // Global abilities (rule 2.6.6.3).
+    // How many times a "once per turn" Global on this card may be used
+    // this turn: once per COPY of the card on the table. Rule 3.4.2.4
+    // makes two identical cards two separate abilities, and 2.6.5.3 says
+    // in as many words that a player may then pay for it twice. A team
+    // cannot hold the same card twice (rule 2.1.5), so this is 1 or 2.
+    private static int GlobalUseAllowance(GameState state, string cardId)
+    {
+        var copies = 0;
+        if (state.PlayerOne.TeamCardIds.Contains(cardId)) copies++;
+        if (state.PlayerTwo.TeamCardIds.Contains(cardId)) copies++;
+        return Math.Max(1, copies);
+    }
+
     public static void Purchase(GameState state, string dieId, IReadOnlyList<string> energyDieIdsToSpend)
     {
         if (state.CurrentStep != TurnStep.Main)
@@ -1127,8 +1140,16 @@ public static class TurnEngine
         // turn") - checked before payment is even validated, so a rejected
         // attempt (wrong energy, etc.) after this point doesn't burn the
         // use, but a plain "already used it" attempt fails fast too.
-        if (ability.OncePerTurn && state.GlobalsUsedThisTurn.Contains(cardId))
-            throw new InvalidOperationException($"{card.Name}'s Global ability can only be used once per turn.");
+        if (ability.OncePerTurn)
+        {
+            var allowance = GlobalUseAllowance(state, cardId);
+            if (state.GlobalsUsedThisTurn.GetValueOrDefault(cardId) >= allowance)
+            {
+                throw new InvalidOperationException(allowance > 1
+                    ? $"{card.Name}'s Global ability has already been used {allowance} times this turn (once per copy)."
+                    : $"{card.Name}'s Global ability can only be used once per turn.");
+            }
+        }
 
         // Jean Grey ("Xavier's Dream"/DPS075, "Marvel Girl"/DPS115) -
         // "your opponent must pay 1 extra to use a Global Ability."
@@ -1171,7 +1192,8 @@ public static class TurnEngine
 
         ResolveWhenXMenEnergySpentOnGlobalOrField(state, queue, playerId, energyDice);
 
-        if (ability.OncePerTurn) state.GlobalsUsedThisTurn.Add(cardId);
+        if (ability.OncePerTurn)
+            state.GlobalsUsedThisTurn[cardId] = state.GlobalsUsedThisTurn.GetValueOrDefault(cardId) + 1;
 
         // Rule 3.1.5 - the source of a non-damage Global ability is the
         // player who paid for it, not a specific die.
