@@ -55,7 +55,7 @@ public class MatchLogTests
         state.CurrentStep = TurnStep.RollAndReroll;
         foreach (var die in state.DiceIn("p1", Zone.Bag).Take(2)) die.Zone = Zone.DiceFromBag;
 
-        TurnEngine.Roll(state, new FixedRoller(new RolledFace(DieStatus.Energy, 0, EnergyKind.Wild)));
+        TurnEngine.Roll(state, FaceRoller.Energy(EnergyKind.Wild));
 
         var line = Assert.Single(state.Log);
         Assert.Equal("p1", line.PlayerId);
@@ -71,13 +71,9 @@ public class MatchLogTests
         state.CurrentStep = TurnStep.RollAndReroll;
         state.DiceIn("p1", Zone.Bag).First().Zone = Zone.DiceFromBag;
 
-        TurnEngine.Roll(state, new FixedRoller(new RolledFace(DieStatus.SidekickCharacter, 1)));
+        TurnEngine.Roll(state, FaceRoller.Character(1));
 
         Assert.Contains("Sidekick L1", Assert.Single(state.Log).Text);
     }
 
-    private sealed class FixedRoller(RolledFace face) : IDiceRoller
-    {
-        public RolledFace Roll(DieInstance die, CardDef? card) => face;
-    }
 }

@@ -31,6 +31,12 @@ public sealed class DieInstance
     public EnergyKind EnergyKind { get; set; } = EnergyKind.None;
     public EnergyType? ProvidedEnergyType { get; set; }
 
+    // The other half of a SPLIT double - a Crossover character's double
+    // face provides one of each of its two energy types rather than two
+    // of one (see the Crossover glossary entry, and DieFaces). Null on
+    // every other face, including a plain double.
+    public EnergyType? SecondProvidedEnergyType { get; set; }
+
     // How much energy this face is worth (1, or 2 for a "double" face -
     // see the rulebook's Doubles rule). Only meaningful when Status ==
     // Energy. A double that's only partially spent "spins down" to a

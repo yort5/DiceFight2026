@@ -7,25 +7,26 @@ using Xunit;
 
 namespace DiceFight.Engine.Tests;
 
-// A fake roller lets step tests be deterministic without modeling real
-// physical die face tables yet (see TurnEngine.RolledFace remarks).
-file sealed class FixedRoller(
-    DieStatus status, int level, EnergyKind energyKind = EnergyKind.None,
-    EnergyType? providedEnergyType = null, int EnergyAmount = 1, int? burstStars = null)
-    : IDiceRoller
-{
-    public RolledFace Roll(DieInstance die, CardDef? card) => new(status, level, energyKind, providedEnergyType, EnergyAmount, burstStars);
-}
-
-// Distinguishes "rerolled" from "kept as originally rolled" by giving each
-// successive Roll() call, across the test's whole Roll+Reroll sequence, a
-// strictly increasing Level - a die that gets rolled twice (Roll, then
-// Reroll) ends up with a visibly different Level than one only ever
-// rolled once.
+// Distinguishes "rerolled" from "kept as originally rolled" by walking a
+// different face on each successive Roll() call across the test's whole
+// Roll+Reroll sequence - a die rolled twice (Roll, then Reroll) ends up
+// visibly on a different face than one only ever rolled once.
+//
+// Used to fabricate an ever-increasing Level instead, which a real die
+// cannot do: a Sidekick has exactly one character face (rule 1.6.8).
+// Walking the index is the same idea against faces that actually exist.
 file sealed class SequentialRoller : IDiceRoller
 {
     private int _calls;
-    public RolledFace Roll(DieInstance die, CardDef? card) => new(DieStatus.SidekickCharacter, ++_calls);
+    public int Roll(DieInstance die, CardDef? card, int faceCount) => _calls++ % faceCount;
+}
+
+// What a die is showing, for tests that care that a face CHANGED rather
+// than what it changed to.
+file static class FaceSignature
+{
+    public static string Of(DieInstance die) =>
+        $"{die.Status}/{die.Level}/{die.EnergyKind}/{die.ProvidedEnergyType}/{die.EnergyAmount}";
 }
 
 public class TurnEngineTests
@@ -730,7 +731,7 @@ public class TurnEngineTests
         TurnEngine.AdvanceStep(state); // Main is skipped for this test's purposes; just move past ClearAndDraw
         state.CurrentStep = TurnStep.RollAndReroll;
 
-        TurnEngine.Roll(state, new FixedRoller(DieStatus.SidekickCharacter, 1));
+        TurnEngine.Roll(state, FaceRoller.Character(1));
 
         var reserve = state.DiceIn("p1", Zone.ReservePool).ToList();
         Assert.Equal(5, reserve.Count); // 4 fresh draws + the 1 carried over from the Prep Area
@@ -753,7 +754,7 @@ public class TurnEngineTests
         TurnEngine.AdvanceStep(state);
         state.CurrentStep = TurnStep.RollAndReroll;
 
-        TurnEngine.Roll(state, new FixedRoller(DieStatus.Energy, 0, EnergyKind.Specific, EnergyType.Bolt));
+        TurnEngine.Roll(state, FaceRoller.Energy(EnergyKind.Specific, EnergyType.Bolt));
 
         var reserve = state.DiceIn("p1", Zone.ReservePool).ToList();
         Assert.All(reserve, d => Assert.Equal(EnergyKind.Specific, d.EnergyKind));
@@ -766,16 +767,30 @@ public class TurnEngineTests
     [Fact]
     public void Roll_ActionDieOnADoubleBurstFace_PersistsBurstStars()
     {
-        var state = CreateNewGame();
-        state.IsFirstTurn = false;
-        TurnEngine.ClearAndDraw(state, new Random(1));
-        TurnEngine.AdvanceStep(state);
+        // A real action die, not a Sidekick: only action dice have burst
+        // faces at all, so this used to pass only because the roller
+        // could invent a face the die did not have.
+        var card = new CardDef
+        {
+            Id = "burst-action", Name = "Burst Action", Type = CardType.BasicAction,
+            PurchaseCost = 2, DieLimit = 3,
+        };
+        var state = GameState.NewGame(
+            new Dictionary<string, CardDef> { [card.Id] = card },
+            new Player { Id = "p1", Name = "Player One" },
+            new Player { Id = "p2", Name = "Player Two" });
         state.CurrentStep = TurnStep.RollAndReroll;
+        var die = new DieInstance
+        {
+            Id = "p1-burst-action-1", CardId = card.Id, OwnerId = "p1", ControllerId = "p1",
+            Zone = Zone.DiceFromBag,
+        };
+        state.Dice.Add(die);
 
-        TurnEngine.Roll(state, new FixedRoller(DieStatus.Action, 0, burstStars: 2));
+        TurnEngine.Roll(state, FaceRoller.Action(burstStars: 2));
 
-        var reserve = state.DiceIn("p1", Zone.ReservePool).ToList();
-        Assert.All(reserve, d => Assert.Equal(2, d.BurstStars));
+        Assert.Equal(Zone.ReservePool, die.Zone);
+        Assert.Equal(2, die.BurstStars);
     }
 
     [Fact]
@@ -787,7 +802,7 @@ public class TurnEngineTests
         TurnEngine.AdvanceStep(state);
         state.CurrentStep = TurnStep.RollAndReroll;
 
-        TurnEngine.Roll(state, new FixedRoller(DieStatus.Energy, 0));
+        TurnEngine.Roll(state, FaceRoller.AnyEnergy());
 
         var reserve = state.DiceIn("p1", Zone.ReservePool).ToList();
         Assert.All(reserve, d => Assert.Null(d.BurstStars));
@@ -806,13 +821,13 @@ public class TurnEngineTests
         TurnEngine.Roll(state, roller);
         var reserve = state.DiceIn("p1", Zone.ReservePool).ToList();
         var toReroll = reserve[0];
-        var levelsAfterRoll = reserve.ToDictionary(d => d.Id, d => d.Level);
+        var facesAfterRoll = reserve.ToDictionary(d => d.Id, FaceSignature.Of);
 
         TurnEngine.Reroll(state, new AbilityQueue(), roller, [toReroll.Id]);
 
-        Assert.NotEqual(levelsAfterRoll[toReroll.Id], toReroll.Level); // rerolled
+        Assert.NotEqual(facesAfterRoll[toReroll.Id], FaceSignature.Of(toReroll)); // rerolled
         foreach (var die in reserve.Where(d => d.Id != toReroll.Id))
-            Assert.Equal(levelsAfterRoll[die.Id], die.Level); // everyone else kept as originally rolled
+            Assert.Equal(facesAfterRoll[die.Id], FaceSignature.Of(die)); // everyone else kept as originally rolled
         Assert.All(reserve, d => Assert.Equal(Zone.ReservePool, d.Zone)); // reroll doesn't move anyone
 
         // Rule 2.4.3/2.4.4 - the reroll decision is made once; nothing else
@@ -870,7 +885,7 @@ public class TurnEngineTests
 
         // Nothing selected to reroll - the die stays exactly as it was
         // rolled, so Energize should fire once the step closes.
-        TurnEngine.Reroll(state, queue, new FixedRoller(DieStatus.Energy, 1), []);
+        TurnEngine.Reroll(state, queue, FaceRoller.AnyEnergy(), []);
 
         Assert.Equal(1, queue.Count);
         Assert.Equal(TriggerType.Energize, queue.Pending[0].Trigger);
@@ -885,7 +900,7 @@ public class TurnEngineTests
 
         // Rerolling it lands on single energy this time - Energize checks
         // the step's final state, not the initial roll it's replacing.
-        TurnEngine.Reroll(state, queue, new FixedRoller(DieStatus.Energy, 1, EnergyKind.Generic), [die.Id]);
+        TurnEngine.Reroll(state, queue, FaceRoller.Energy(EnergyKind.Generic), [die.Id]);
 
         Assert.Equal(0, queue.Count);
     }
@@ -896,7 +911,7 @@ public class TurnEngineTests
         var (state, die) = CreateEnergizeGame(energyAmount: 2);
         var queue = new AbilityQueue();
 
-        var roller = new FixedRoller(DieStatus.Energy, 1, EnergyKind.Generic, EnergyAmount: 2);
+        var roller = FaceRoller.Energy(EnergyKind.Generic, amount: 2);
         TurnEngine.Reroll(state, queue, roller, [die.Id]);
 
         Assert.Equal(1, queue.Count);
@@ -919,7 +934,7 @@ public class TurnEngineTests
         TurnEngine.AdvanceStep(state);
         state.CurrentStep = TurnStep.RollAndReroll;
 
-        TurnEngine.Roll(state, new FixedRoller(DieStatus.SidekickCharacter, 1));
+        TurnEngine.Roll(state, FaceRoller.Character(1));
 
         Assert.Equal(4, state.DiceIn("p1", Zone.ReservePool).Count()); // just this turn's draw
         Assert.Equal(Zone.PrepArea, lateEntrant.Zone); // untouched - waits for next turn
@@ -933,7 +948,7 @@ public class TurnEngineTests
 
         TurnEngine.ClearAndDraw(state, new Random(1));
         TurnEngine.AdvanceStep(state);
-        TurnEngine.Roll(state, new FixedRoller(DieStatus.Energy, 0));
+        TurnEngine.Roll(state, FaceRoller.AnyEnergy());
         TurnEngine.AdvanceStep(state);
         Assert.Equal(TurnStep.Main, state.CurrentStep);
 
@@ -981,7 +996,7 @@ public class TurnEngineTests
         state.IsFirstTurn = false;
         TurnEngine.ClearAndDraw(state, new Random(1));
         TurnEngine.AdvanceStep(state);
-        TurnEngine.Roll(state, new FixedRoller(DieStatus.Energy, 0, EnergyKind.Specific, EnergyType.Mask));
+        TurnEngine.Roll(state, FaceRoller.Energy(EnergyKind.Specific, EnergyType.Mask));
         var rolled = state.DiceIn("p1", Zone.ReservePool).ToList();
         Assert.All(rolled, d => Assert.Equal(DieStatus.Energy, d.Status)); // sanity - actually rolled
 
@@ -1006,9 +1021,9 @@ public class TurnEngineTests
         state.IsFirstTurn = false;
         TurnEngine.ClearAndDraw(state, new Random(1));
         TurnEngine.AdvanceStep(state);
-        TurnEngine.Roll(state, new SequentialRoller()); // each die gets a different Level
+        TurnEngine.Roll(state, new SequentialRoller()); // each die lands on a different face
         var rolled = state.DiceIn("p1", Zone.ReservePool).ToList();
-        Assert.True(rolled.Select(d => d.Level).Distinct().Count() > 1); // sanity - genuinely different faces
+        Assert.True(rolled.Select(FaceSignature.Of).Distinct().Count() > 1); // sanity - genuinely different faces
 
         state.CurrentStep = TurnStep.ClearAndDraw;
         TurnEngine.ClearAndDraw(state, new Random(2));
@@ -1031,7 +1046,7 @@ public class TurnEngineTests
         state.IsFirstTurn = false;
         TurnEngine.ClearAndDraw(state, new Random(1));
         TurnEngine.AdvanceStep(state);
-        TurnEngine.Roll(state, new FixedRoller(DieStatus.Energy, 0, EnergyKind.Wild));
+        TurnEngine.Roll(state, FaceRoller.Energy(EnergyKind.Wild));
         TurnEngine.AdvanceStep(state); // Main
 
         // One energy die spent (-> Out of Play), one Action die rolled but
@@ -1174,7 +1189,12 @@ public class TurnEngineTests
         {
             Id = "regen-engaged", Name = "Regen Engaged", Type = CardType.Character,
             PurchaseCost = 2, DieLimit = 4,
-            Levels = [new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 1)],
+            Levels =
+            [
+                new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 1),
+                new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 2),
+                new CharacterFace(FieldingCost: 2, Attack: 3, Defense: 3),
+            ],
             Keywords = [new KeywordInstance("Regenerate")],
         };
         var state = GameState.NewGame(
@@ -1190,7 +1210,7 @@ public class TurnEngineTests
         state.DeadlyEngagedDieIds[engaged.Id] = ["deadly-source"];
 
         state.CurrentStep = TurnStep.CleanUp;
-        TurnEngine.CleanUp(state, new FixedRoller(DieStatus.Character, 2));
+        TurnEngine.CleanUp(state, FaceRoller.Character(2));
 
         Assert.Equal(Zone.FieldZone, engaged.Zone); // Regenerated, not KO'd
         Assert.Equal(2, engaged.Level);
@@ -1729,7 +1749,12 @@ public class TurnEngineTests
         {
             Id = "reroll-target", Name = "Reroll Target", Type = CardType.Character,
             PurchaseCost = 2, DieLimit = 4,
-            Levels = [new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 1)],
+            Levels =
+            [
+                new CharacterFace(FieldingCost: 0, Attack: 1, Defense: 1),
+                new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 2),
+                new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3),
+            ],
         };
         var state = GameState.NewGame(
             new Dictionary<string, CardDef> { [labTest.Id] = labTest, [targetCard.Id] = targetCard },
@@ -1755,7 +1780,7 @@ public class TurnEngineTests
         queue.Drain(ability => EffectInterpreter.Execute(
             ability.Effect,
             new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [target.Id],
-                Roller: new FixedRoller(DieStatus.Character, level: 3))));
+                Roller: FaceRoller.Character(3))));
 
         Assert.Equal(DieStatus.Character, target.Status);
         Assert.Equal(3, target.Level);

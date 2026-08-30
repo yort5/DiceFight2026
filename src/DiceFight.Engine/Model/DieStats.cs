@@ -16,7 +16,7 @@ public static class DieStats
     // does THIS die's own card do" goes through this now, rather than
     // reimplementing its own VirtualCardId-or-CardId lookup. Deliberately
     // NOT used for GetFace/GetMaxLevel/EffectiveAttack's face lookup, the
-    // physical roll-face composition (PlaceholderDiceRoller), affiliation
+    // physical roll-face composition (DieFaces), affiliation
     // (DieStats.HasAffiliation), or energy type - "ignore text" reads as
     // the rules-text box specifically (keywords, triggered/static
     // abilities), not fixed printed attributes a blanked card still
@@ -744,9 +744,7 @@ public static class DieStats
     {
         if (roller is not null && HasKeyword(state, die, "Regenerate"))
         {
-            var cardId = die.VirtualCardId ?? die.CardId;
-            var card = cardId is not null ? state.CardCatalog.GetValueOrDefault(cardId) : null;
-            var result = roller.Roll(die, card);
+            var result = DieFaces.Roll(state, roller, die);
             if (result.Status is DieStatus.Character or DieStatus.SidekickCharacter)
             {
                 die.Zone = Zone.FieldZone; // "back to the field... but not the Attack Zone"
@@ -755,6 +753,7 @@ public static class DieStats
                 die.Damage = 0;
                 die.EnergyKind = EnergyKind.None;
                 die.ProvidedEnergyType = null;
+                die.SecondProvidedEnergyType = null;
                 die.EnergyAmount = 1;
                 die.AppliedModifiers.Clear(); // rule 3.4.5.4 - lifetime ends when it leaves the Field Zone (it never did here, but it's a fresh face)
                 die.AppliedKeywords.Clear();

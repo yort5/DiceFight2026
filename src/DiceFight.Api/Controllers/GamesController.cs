@@ -73,7 +73,7 @@ public sealed class GamesController(GameStore store) : ControllerBase
     public ActionResult<GameStateDto> Roll(string gameId)
     {
         var state = RequireNoPendingChoice(gameId);
-        TurnEngine.Roll(state, new PlaceholderDiceRoller(new Random()));
+        TurnEngine.Roll(state, new RandomDiceRoller(new Random()));
         return Ok(GameStateDto.From(gameId, state));
     }
 
@@ -82,7 +82,7 @@ public sealed class GamesController(GameStore store) : ControllerBase
     {
         var state = RequireNoPendingChoice(gameId);
         var queue = new AbilityQueue();
-        TurnEngine.Reroll(state, queue, new PlaceholderDiceRoller(new Random()), request.RerollDieIds);
+        TurnEngine.Reroll(state, queue, new RandomDiceRoller(new Random()), request.RerollDieIds);
         Drain(state, queue, null);
         return Ok(GameStateDto.From(gameId, state));
     }
@@ -110,7 +110,7 @@ public sealed class GamesController(GameStore store) : ControllerBase
     {
         var state = RequireNoPendingChoice(gameId);
         var queue = new AbilityQueue();
-        TurnEngine.UseActionDie(state, queue, request.DieId, roller: new PlaceholderDiceRoller(new Random()));
+        TurnEngine.UseActionDie(state, queue, request.DieId, roller: new RandomDiceRoller(new Random()));
         Drain(state, queue, request.TargetDieIds);
         return Ok(GameStateDto.From(gameId, state));
     }
@@ -251,7 +251,7 @@ public sealed class GamesController(GameStore store) : ControllerBase
                 g => (IReadOnlyDictionary<string, int>)g.ToDictionary(s => s.BlockerDieId, s => s.Amount));
 
         var queue = new AbilityQueue();
-        CombatEngine.AssignCombatDamage(state, queue, assignment, splits, new PlaceholderDiceRoller(new Random()));
+        CombatEngine.AssignCombatDamage(state, queue, assignment, splits, new RandomDiceRoller(new Random()));
         Drain(state, queue, null);
         return Ok(GameStateDto.From(gameId, state));
     }
@@ -267,7 +267,7 @@ public sealed class GamesController(GameStore store) : ControllerBase
         // same KO's WhenKOd/Retaliation/WhenAnotherDieKOd reactions fire
         // (see TurnEngine.ResolveKOReactions) instead of the documented
         // gap CleanUp used to have.
-        TurnEngine.CleanUp(state, new PlaceholderDiceRoller(new Random()), queue);
+        TurnEngine.CleanUp(state, new RandomDiceRoller(new Random()), queue);
         Drain(state, queue, null);
         return Ok(GameStateDto.From(gameId, state));
     }
@@ -334,7 +334,7 @@ public sealed class GamesController(GameStore store) : ControllerBase
     private static void Drain(GameState state, AbilityQueue queue, IReadOnlyList<string>? targetDieIds)
     {
         var targets = targetDieIds ?? [];
-        var roller = new PlaceholderDiceRoller(new Random());
+        var roller = new RandomDiceRoller(new Random());
         queue.Drain(
             ability => EffectInterpreter.Execute(
                 ability.Effect,

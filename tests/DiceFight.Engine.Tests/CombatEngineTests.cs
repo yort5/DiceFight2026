@@ -11,11 +11,6 @@ namespace DiceFight.Engine.Tests;
 // A roller that always returns the same fixed face - lets Regenerate
 // tests control exactly what a KO'd die rerolls to, without modeling real
 // physical face tables (see PlaceholderDiceRoller remarks).
-file sealed class FixedRoller(DieStatus status, int level) : IDiceRoller
-{
-    public RolledFace Roll(DieInstance die, CardDef? card) => new(status, level);
-}
-
 public class CombatEngineTests
 {
     private static (GameState state, DieInstance bruiser, DieInstance unblockedAttacker, DieInstance sidekickBlocker)
@@ -262,7 +257,12 @@ public class CombatEngineTests
         {
             Id = "regen-blocker", Name = "Regen Blocker", Type = CardType.Character,
             PurchaseCost = 2, DieLimit = 4,
-            Levels = [new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 1)],
+            Levels =
+            [
+                new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 1),
+                new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 2),
+                new CharacterFace(FieldingCost: 2, Attack: 3, Defense: 3),
+            ],
             Keywords = [new KeywordInstance("Regenerate")],
         };
         var catalog = new Dictionary<string, CardDef> { [bruiserCard.Id] = bruiserCard, [regenCard.Id] = regenCard };
@@ -309,7 +309,7 @@ public class CombatEngineTests
         // Zone"). It's alive, but no longer blocking - Overcrush's "removes
         // all of its blockers" condition doesn't require them dead, just
         // gone from the fight, so the leftover still carries through.
-        var roller = new FixedRoller(DieStatus.Character, 1);
+        var roller = FaceRoller.Character(1);
         var result = CombatEngine.AssignCombatDamage(state, queue, assignment, splits, roller);
 
         Assert.DoesNotContain(regenBlocker.Id, result.KOdDieIds); // never actually KO'd...
@@ -332,7 +332,7 @@ public class CombatEngineTests
             [bruiser.Id] = new Dictionary<string, int> { [regenBlocker.Id] = 5 },
         };
 
-        var roller = new FixedRoller(DieStatus.Character, 2); // rolls Level 2
+        var roller = FaceRoller.Character(2); // rolls Level 2
         var result = CombatEngine.AssignCombatDamage(state, queue, assignment, splits, roller);
 
         Assert.DoesNotContain(regenBlocker.Id, result.KOdDieIds);
@@ -357,7 +357,7 @@ public class CombatEngineTests
             [bruiser.Id] = new Dictionary<string, int> { [regenBlocker.Id] = 5 },
         };
 
-        var roller = new FixedRoller(DieStatus.Energy, 0); // rolls an energy face, not a character face
+        var roller = FaceRoller.AnyEnergy(); // rolls an energy face, not a character face
         var result = CombatEngine.AssignCombatDamage(state, queue, assignment, splits, roller);
 
         Assert.Contains(regenBlocker.Id, result.KOdDieIds);

@@ -14,11 +14,6 @@ public class EffectInterpreterTests
 {
     // Lets a Regenerate test control exactly what a KO'd die rerolls to,
     // mirroring CombatEngineTests' FixedRoller.
-    private sealed class FixedRoller(DieStatus status, int level) : IDiceRoller
-    {
-        public RolledFace Roll(DieInstance die, CardDef? card) => new(status, level);
-    }
-
     private static GameState CreateState(IReadOnlyDictionary<string, CardDef>? catalog = null) =>
         GameState.NewGame(
             catalog ?? SampleCards.BuildCatalog(),
@@ -145,7 +140,12 @@ public class EffectInterpreterTests
         {
             Id = "regen-target", Name = "Regen Target", Type = CardType.Character,
             PurchaseCost = 2, DieLimit = 4,
-            Levels = [new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 1)],
+            Levels =
+            [
+                new CharacterFace(FieldingCost: 1, Attack: 1, Defense: 1),
+                new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 2),
+                new CharacterFace(FieldingCost: 2, Attack: 3, Defense: 3),
+            ],
             Keywords = [new KeywordInstance("Regenerate")],
         };
         var catalog = new Dictionary<string, CardDef> { [regenCard.Id] = regenCard };
@@ -157,7 +157,7 @@ public class EffectInterpreterTests
         };
         state.Dice.Add(target);
 
-        var roller = new FixedRoller(DieStatus.Character, 2);
+        var roller = FaceRoller.Character(2);
         EffectInterpreter.Execute(
             new DealDamage(1, TargetSpec.CharacterDie("t")),
             new EffectContext(state, "p1", SourceDieId: null, _ => [target.Id], Roller: roller));
@@ -297,7 +297,7 @@ public class EffectInterpreterTests
         };
         state.Dice.Add(target);
 
-        var roller = new FixedRoller(DieStatus.Character, 2);
+        var roller = FaceRoller.AnyCharacter();
         EffectInterpreter.Execute(
             new DealDamage(1, TargetSpec.CharacterDie("t")),
             new EffectContext(state, "p1", SourceDieId: null, _ => [target.Id], Roller: roller));
@@ -365,7 +365,7 @@ public class EffectInterpreterTests
         };
         state.Dice.Add(target);
 
-        var roller = new FixedRoller(DieStatus.Character, 2); // would regenerate it, if Sacrifice went through ForceKO
+        var roller = FaceRoller.AnyCharacter(); // would regenerate it, if Sacrifice went through ForceKO
         EffectInterpreter.Execute(
             new Sacrifice(TargetSpec.CharacterDie("t", TargetOwnership.Own)),
             new EffectContext(state, "p1", SourceDieId: null, _ => [target.Id], Roller: roller));
@@ -653,7 +653,7 @@ public class EffectInterpreterTests
 
         EffectInterpreter.Execute(
             new DrawAndChooseOneToRoll(2),
-            new EffectContext(state, "p1", SourceDieId: null, _ => [], Roller: new FixedRoller(DieStatus.SidekickCharacter, 1)));
+            new EffectContext(state, "p1", SourceDieId: null, _ => [], Roller: FaceRoller.Character(1)));
 
         Assert.NotNull(state.PendingChoice);
         Assert.False(state.PendingChoice!.AllowMultiple);
@@ -680,7 +680,7 @@ public class EffectInterpreterTests
 
         EffectInterpreter.Execute(
             new DrawAndChooseOneToRoll(2),
-            new EffectContext(state, "p1", SourceDieId: null, _ => [], Roller: new FixedRoller(DieStatus.SidekickCharacter, 1)));
+            new EffectContext(state, "p1", SourceDieId: null, _ => [], Roller: FaceRoller.Character(1)));
 
         Assert.Null(state.PendingChoice); // no real choice among which
         Assert.Single(state.DiceIn("p1", Zone.ReservePool), d => d.Status == DieStatus.SidekickCharacter);
@@ -694,7 +694,7 @@ public class EffectInterpreterTests
 
         EffectInterpreter.Execute(
             new DrawAndChooseOneToRoll(2),
-            new EffectContext(state, "p1", SourceDieId: null, _ => [], Roller: new FixedRoller(DieStatus.SidekickCharacter, 1)));
+            new EffectContext(state, "p1", SourceDieId: null, _ => [], Roller: FaceRoller.Character(1)));
 
         Assert.Null(state.PendingChoice);
     }
@@ -714,7 +714,7 @@ public class EffectInterpreterTests
         var ability = SampleCards.GambitAceInTheHole.Abilities.Single(a => a.Trigger == TriggerType.WhenFielded);
         EffectInterpreter.Execute(
             ability.Effect,
-            new EffectContext(state, "p1", gambit.Id, _ => [], Roller: new FixedRoller(DieStatus.SidekickCharacter, 1)));
+            new EffectContext(state, "p1", gambit.Id, _ => [], Roller: FaceRoller.Character(1)));
 
         Assert.NotNull(state.PendingChoice);
         Assert.Equal(2, state.PendingChoice!.CandidateDieIds.Count);
@@ -735,7 +735,7 @@ public class EffectInterpreterTests
         var ability = SampleCards.GambitAceInTheHole.Abilities.Single(a => a.Trigger == TriggerType.WhenFielded);
         EffectInterpreter.Execute(
             ability.Effect,
-            new EffectContext(state, "p1", gambit.Id, _ => [], Roller: new FixedRoller(DieStatus.SidekickCharacter, 1)));
+            new EffectContext(state, "p1", gambit.Id, _ => [], Roller: FaceRoller.Character(1)));
 
         Assert.Null(state.PendingChoice);
         Assert.Equal(bagCountBefore - 1, state.DiceIn("p1", Zone.Bag).Count());
@@ -1409,7 +1409,7 @@ public class EffectInterpreterTests
         // Same shape as BlackPantherEnergize's own test - reroll nothing,
         // so Phoenix stays on its double-energy face and CheckEnergize
         // (invoked internally at the end of Roll and Reroll) sees it.
-        TurnEngine.Reroll(state, queue, new FixedRoller(DieStatus.Energy, 1), []);
+        TurnEngine.Reroll(state, queue, FaceRoller.AnyEnergy(), []);
 
         Assert.Equal(1, queue.Count);
         Assert.Equal(TriggerType.Energize, queue.Pending[0].Trigger);

@@ -4,6 +4,14 @@ import type { CardDef, Die } from "./types";
 
 // The six faces of a physical die, for the 3D cube in DieCube.tsx.
 //
+// MIRRORS src/DiceFight.Engine/DieFaces.cs, which is the authority - the
+// engine rolls against its table, and this one only draws. They are kept
+// as two copies deliberately: serving six faces per card would add ~2MB
+// to an already 3MB /api/cards payload, for a detail that only matters
+// for the five faces nobody is looking at. The face the die is REALLY
+// showing always comes from the server (see facesFor), so a drift
+// between them can only ever change scenery.
+//
 // WHAT WE ACTUALLY KNOW. No source of real per-card face layouts exists
 // (see PlaceholderDiceRoller.cs, which says the same thing about the
 // roll side). What we know, from the user:
@@ -204,7 +212,14 @@ function defaultFaces(die: Die, card: CardDef | undefined): CubeFace[] {
 function currentFace(die: Die, card: CardDef | undefined): CubeFace | null {
   if (die.status === "Energy") {
     const icon = dieIconKind(die);
-    return icon ? { kind: "energy", icon, amount: Math.max(1, die.energyAmount) } : null;
+    if (!icon) return null;
+    // A split double the server rolled - one of each of a Crossover's two
+    // types - so the cube shows the same split symbol the card prints.
+    const second = die.secondProvidedEnergyType;
+    const secondIcon = second === "Bolt" || second === "Fist" || second === "Mask" || second === "Shield"
+      ? second
+      : undefined;
+    return { kind: "energy", icon, secondIcon, amount: Math.max(1, die.energyAmount) };
   }
   if (die.status === "Action") return { kind: "action" };
   if (die.status === "SidekickCharacter") return SIDEKICK_FACE;

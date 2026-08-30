@@ -674,9 +674,7 @@ public static class CombatEngine
                     .Any(d => DieStats.GetCard(state, d)?.GrantsRerollsUnblockedAttackerToPrepAreaIfCharacterFace ?? false);
                 if (hasActiveLilandra)
                 {
-                    var attackerCardId = attacker.VirtualCardId ?? attacker.CardId;
-                    var attackerCard = attackerCardId is not null ? state.CardCatalog.GetValueOrDefault(attackerCardId) : null;
-                    var result = roller!.Roll(attacker, attackerCard);
+                    var result = DieFaces.Roll(state, roller!, attacker);
                     if (result.Status is DieStatus.Character or DieStatus.SidekickCharacter)
                     {
                         attacker.Status = result.Status;

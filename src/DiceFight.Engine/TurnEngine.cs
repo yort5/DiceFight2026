@@ -8,7 +8,7 @@ namespace DiceFight.Engine;
 // IDiceRoller exists so the turn engine's zone/step mechanics can be built
 // and tested independent of where face results come from (a weighted roll
 // against a rules-accurate default face composition - see
-// DiceFight.Api.PlaceholderDiceRoller - a real per-card face table if one
+// DiceFight.Api.RandomDiceRoller - a real per-card face table if one
 // is ever sourced, or a human reporting a physical die). EnergyKind/
 // ProvidedEnergyType/EnergyAmount only matter when Status is Energy - the
 // roller decides them as part of the face itself (which specific energy
@@ -21,15 +21,24 @@ public readonly record struct RolledFace(
     EnergyKind EnergyKind = EnergyKind.None,
     EnergyType? ProvidedEnergyType = null,
     int EnergyAmount = 1,
+    // The OTHER type on a split double - a Crossover character's double
+    // is one of each of its two energy types, not two of one (see the
+    // Crossover glossary entry). Null on every other face.
+    EnergyType? SecondProvidedEnergyType = null,
     // Only meaningful when Status == Action - a Basic Action/Action die's
     // face is one of blank/single-/double-burst (see DieInstance.
     // BurstStars's own remarks for why this needs to persist per-die
     // rather than being derived, unlike a Character die's burst symbol).
     int? BurstStars = null);
 
+// Rolling a die is now only "which side came up" - the sides themselves
+// are DieFaces' business. That split is what lets a die have faces the
+// roller has no vocabulary for (a split double, a wild), and what lets a
+// die with other than six sides work without changing the roller.
 public interface IDiceRoller
 {
-    RolledFace Roll(DieInstance die, CardDef? card);
+    /// <summary>A 0-based face index, less than <paramref name="faceCount"/>.</summary>
+    int Roll(DieInstance die, CardDef? card, int faceCount);
 }
 
 public static class TurnEngine
@@ -364,26 +373,25 @@ public static class TurnEngine
 
     private static void ApplyRoll(GameState state, IDiceRoller roller, DieInstance die)
     {
-        var cardId = die.VirtualCardId ?? die.CardId;
-        var card = cardId is not null ? state.CardCatalog.GetValueOrDefault(cardId) : null;
-        var result = roller.Roll(die, card);
+        var result = DieFaces.Roll(state, roller, die);
         die.Status = result.Status;
         die.Level = result.Level;
 
         if (die.Status == DieStatus.Energy)
         {
             // Rule 1.3.10/1.4.2 - what an energy face provides is a
-            // property of which specific face got rolled, decided by the
-            // roller (see RolledFace remarks), not inferred here from the
-            // die's card.
+            // property of which specific face got rolled - looked up in
+            // DieFaces, not inferred here from the die's card.
             die.EnergyKind = result.EnergyKind;
             die.ProvidedEnergyType = result.ProvidedEnergyType;
+            die.SecondProvidedEnergyType = result.SecondProvidedEnergyType;
             die.EnergyAmount = result.EnergyAmount;
         }
         else
         {
             die.EnergyKind = EnergyKind.None;
             die.ProvidedEnergyType = null;
+            die.SecondProvidedEnergyType = null;
             die.EnergyAmount = 1;
         }
 
@@ -1015,7 +1023,7 @@ public static class TurnEngine
                 .Any(d => DieStats.GetCard(state, d)?.GrantsRerollsOpponentsFieldedContinuousDie ?? false);
             if (hasActiveMoira)
             {
-                var result = roller!.Roll(die, card);
+                var result = DieFaces.Roll(state, roller!, die);
                 if (result.Status == DieStatus.Action)
                 {
                     die.Status = result.Status;
@@ -1241,7 +1249,7 @@ public static class TurnEngine
     //
     // The rulebook's "Doubles" rule matters once a die's face is worth 2
     // and only part of it is needed: a typed double (e.g. double Fist, the
-    // usual case on a character die - see PlaceholderDiceRoller) "spins
+    // usual case on a character die - see DieFaces) "spins
     // down" to its single-energy face of the same type and stays in the
     // Reserve Pool, still spendable later this turn. A Generic double
     // (e.g. a Basic Action die, which has no single-energy face to spin

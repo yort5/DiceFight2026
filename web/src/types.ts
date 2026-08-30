@@ -52,6 +52,9 @@ export interface Die {
   damage: number;
   energyKind: string;
   providedEnergyType: string | null;
+  /** The other half of a split double - a Crossover character's double
+   *  provides one of each of its two energy types. Null otherwise. */
+  secondProvidedEnergyType: string | null;
   energyAmount: number;
   isVirtualEnergy: boolean;
 }

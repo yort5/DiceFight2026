@@ -5,7 +5,7 @@ namespace DiceFight.V2.Data;
 // Shared die-construction helpers for every migrated card (Phase 8
 // tasks 2/4). Real physical face LAYOUT is NOT recoverable from v1's
 // data model - v1 never stored per-die faces at all; its
-// PlaceholderDiceRoller synthesizes a face shape at roll time (see its
+// DieFaces holds the face composition (see its
 // own remarks). v2's DieDefinition needs real face data, so migration
 // uses ONE documented convention, stated here once rather than
 // re-flagged on every card:

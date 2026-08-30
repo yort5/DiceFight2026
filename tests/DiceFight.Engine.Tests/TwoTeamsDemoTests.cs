@@ -21,11 +21,6 @@ namespace DiceFight.Engine.Tests;
 // A fake roller lets the Energize/DrawDice tests be deterministic without
 // modeling real physical die face tables (see TurnEngine.RolledFace
 // remarks) - same shape as TurnEngineTests' own file-scoped FixedRoller.
-file sealed class FixedRoller(DieStatus status, int level) : IDiceRoller
-{
-    public RolledFace Roll(DieInstance die, CardDef? card) => new(status, level);
-}
-
 public class TwoTeamsDemoTests
 {
     // extraTeamACardIds/extraTeamBCardIds: lets a test pull a real card
@@ -471,7 +466,7 @@ public class TwoTeamsDemoTests
             ability.Effect,
             new EffectContext(
                 state, ability.ControllerId, ability.SourceDieId, _ => [opposingTarget.Id],
-                Roller: new FixedRoller(DieStatus.Energy, 1))));
+                Roller: FaceRoller.AnyEnergy())));
 
         Assert.Equal(Zone.UsedPile, opposingTarget.Zone);
     }
@@ -501,7 +496,7 @@ public class TwoTeamsDemoTests
             ability.Effect,
             new EffectContext(
                 state, ability.ControllerId, ability.SourceDieId, _ => [opposingTarget.Id],
-                Roller: new FixedRoller(DieStatus.Character, 2))));
+                Roller: FaceRoller.Character(2))));
 
         Assert.Equal(Zone.FieldZone, opposingTarget.Zone);
         Assert.Equal(2, opposingTarget.Level); // actually rerolled, just landed on a character face again
@@ -536,7 +531,7 @@ public class TwoTeamsDemoTests
             ability.Effect,
             new EffectContext(
                 state, ability.ControllerId, ability.SourceDieId, _ => [firstTarget.Id, secondTarget.Id],
-                Roller: new FixedRoller(DieStatus.Energy, 1))));
+                Roller: FaceRoller.AnyEnergy())));
 
         Assert.Equal(Zone.UsedPile, firstTarget.Zone);
         Assert.Equal(Zone.UsedPile, secondTarget.Zone);
@@ -566,7 +561,7 @@ public class TwoTeamsDemoTests
         opposingTarget.Level = 1;
 
         var queue = new AbilityQueue();
-        TurnEngine.Reroll(state, queue, new FixedRoller(DieStatus.Energy, 1), []);
+        TurnEngine.Reroll(state, queue, FaceRoller.AnyEnergy(), []);
 
         Assert.Equal(1, queue.Count);
         Assert.Equal(TriggerType.Energize, queue.Pending[0].Trigger);
@@ -574,7 +569,7 @@ public class TwoTeamsDemoTests
         queue.Drain(ability => EffectInterpreter.Execute(
             ability.Effect,
             new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [opposingTarget.Id],
-                Roller: new FixedRoller(DieStatus.Energy, 1))));
+                Roller: FaceRoller.AnyEnergy())));
 
         Assert.Equal(DieStatus.Energy, opposingTarget.Status); // rerolled off its character face
     }
@@ -612,7 +607,7 @@ public class TwoTeamsDemoTests
         Assert.Equal(attackBefore + 2, DieStats.EffectiveAttack(state, target));
 
         state.CurrentStep = TurnStep.CleanUp;
-        TurnEngine.CleanUp(state, new FixedRoller(DieStatus.Energy, 1), queue);
+        TurnEngine.CleanUp(state, FaceRoller.AnyEnergy(), queue);
 
         Assert.False(DieStats.HasKeyword(state, target, "Overcrush"));
         Assert.Equal(attackBefore, DieStats.EffectiveAttack(state, target));
@@ -833,7 +828,7 @@ public class TwoTeamsDemoTests
         queue.Drain(ability => EffectInterpreter.Execute(
             ability.Effect,
             new EffectContext(
-                state, ability.ControllerId, ability.SourceDieId, _ => [], Roller: new FixedRoller(DieStatus.Energy, 1))));
+                state, ability.ControllerId, ability.SourceDieId, _ => [], Roller: FaceRoller.AnyEnergy())));
 
         Assert.Equal(bagCountBefore - 1, state.DiceIn("teamA", Zone.Bag).Count());
     }
@@ -886,7 +881,7 @@ public class TwoTeamsDemoTests
         xMenDie.Zone = Zone.UsedPile;
 
         var queue = new AbilityQueue();
-        TurnEngine.Reroll(state, queue, new FixedRoller(DieStatus.Energy, 1), []);
+        TurnEngine.Reroll(state, queue, FaceRoller.AnyEnergy(), []);
 
         Assert.Equal(1, queue.Count);
         Assert.Equal(TriggerType.Energize, queue.Pending[0].Trigger);
@@ -955,7 +950,7 @@ public class TwoTeamsDemoTests
         target.Level = 1;
 
         var queue = new AbilityQueue();
-        TurnEngine.Reroll(state, queue, new FixedRoller(DieStatus.Energy, 1), []);
+        TurnEngine.Reroll(state, queue, FaceRoller.AnyEnergy(), []);
 
         Assert.Equal(1, queue.Count);
         Assert.Equal(TriggerType.Energize, queue.Pending[0].Trigger);
@@ -964,7 +959,7 @@ public class TwoTeamsDemoTests
             ability.Effect,
             new EffectContext(
                 state, ability.ControllerId, ability.SourceDieId, _ => [target.Id],
-                Roller: new FixedRoller(DieStatus.Character, 3))));
+                Roller: FaceRoller.Character(3))));
 
         Assert.Equal(1, target.Damage);
         Assert.Equal(DieStatus.Character, cyclopsDie.Status); // rerolled itself
@@ -992,7 +987,7 @@ public class TwoTeamsDemoTests
         Assert.NotEqual(0, attackBefore);
 
         var queue = new AbilityQueue();
-        TurnEngine.Reroll(state, queue, new FixedRoller(DieStatus.Energy, 1), []);
+        TurnEngine.Reroll(state, queue, FaceRoller.AnyEnergy(), []);
         Assert.Equal(1, queue.Count);
         Assert.Equal(TriggerType.Energize, queue.Pending[0].Trigger);
 
@@ -1002,7 +997,7 @@ public class TwoTeamsDemoTests
         Assert.Equal(0, DieStats.EffectiveAttack(state, target));
 
         state.CurrentStep = TurnStep.CleanUp;
-        TurnEngine.CleanUp(state, new FixedRoller(DieStatus.Energy, 1));
+        TurnEngine.CleanUp(state, FaceRoller.AnyEnergy());
 
         Assert.Equal(attackBefore, DieStats.EffectiveAttack(state, target));
     }
@@ -1156,7 +1151,7 @@ public class TwoTeamsDemoTests
         target.Level = 1;
 
         var queue = new AbilityQueue();
-        TurnEngine.Reroll(state, queue, new FixedRoller(DieStatus.Energy, 1), []);
+        TurnEngine.Reroll(state, queue, FaceRoller.AnyEnergy(), []);
         Assert.Equal(1, queue.Count);
         Assert.Equal(TriggerType.Energize, queue.Pending[0].Trigger);
 
@@ -1292,7 +1287,7 @@ public class TwoTeamsDemoTests
         jubileeDie.EnergyAmount = 2;
 
         var queue = new AbilityQueue();
-        TurnEngine.Reroll(state, queue, new FixedRoller(DieStatus.Energy, 1), []);
+        TurnEngine.Reroll(state, queue, FaceRoller.AnyEnergy(), []);
         Assert.Equal(1, queue.Count);
         Assert.Equal(TriggerType.Energize, queue.Pending[0].Trigger);
 
@@ -1322,7 +1317,7 @@ public class TwoTeamsDemoTests
         jubileeDie.EnergyAmount = 2;
 
         var queue = new AbilityQueue();
-        TurnEngine.Reroll(state, queue, new FixedRoller(DieStatus.Energy, 1), []);
+        TurnEngine.Reroll(state, queue, FaceRoller.AnyEnergy(), []);
         queue.Drain(ability => EffectInterpreter.Execute(
             ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [])));
 
@@ -1791,7 +1786,7 @@ public class TwoTeamsDemoTests
         magnetoDie.Level = 2;
 
         var queue = new AbilityQueue();
-        TurnEngine.Reroll(state, queue, new FixedRoller(DieStatus.Energy, 1), []);
+        TurnEngine.Reroll(state, queue, FaceRoller.AnyEnergy(), []);
         Assert.Equal(1, queue.Count);
         Assert.Equal(TriggerType.Energize, queue.Pending[0].Trigger);
 
@@ -1941,7 +1936,7 @@ public class TwoTeamsDemoTests
             ability.Effect,
             new EffectContext(
                 state, ability.ControllerId, ability.SourceDieId, _ => [target.Id],
-                Roller: new FixedRoller(DieStatus.Energy, 1))));
+                Roller: FaceRoller.AnyEnergy())));
 
         Assert.Equal(DieStatus.Energy, target.Status); // rerolled off its character face
     }
@@ -1972,7 +1967,7 @@ public class TwoTeamsDemoTests
             ability.Effect,
             new EffectContext(
                 state, ability.ControllerId, ability.SourceDieId, _ => [fistTarget.Id],
-                Roller: new FixedRoller(DieStatus.Energy, 1))));
+                Roller: FaceRoller.AnyEnergy())));
 
         Assert.Equal(Zone.ReservePool, fistTarget.Zone); // landed on an energy face
     }
@@ -2173,7 +2168,7 @@ public class TwoTeamsDemoTests
         Assert.Contains("teamA", state.UsedDamageRedirectThisTurn);
 
         state.CurrentStep = TurnStep.CleanUp;
-        TurnEngine.CleanUp(state, new FixedRoller(DieStatus.Energy, 1));
+        TurnEngine.CleanUp(state, FaceRoller.AnyEnergy());
 
         Assert.DoesNotContain("teamA", state.UsedDamageRedirectThisTurn);
     }
@@ -2348,7 +2343,7 @@ public class TwoTeamsDemoTests
         state.ActivePlayerId = "teamA";
         state.CurrentStep = TurnStep.CleanUp;
 
-        TurnEngine.CleanUp(state, new FixedRoller(DieStatus.Energy, 1));
+        TurnEngine.CleanUp(state, FaceRoller.AnyEnergy());
 
         Assert.Empty(state.BlankedDieIds);
         Assert.Empty(state.BlankedControllerIds);
@@ -2432,7 +2427,7 @@ public class TwoTeamsDemoTests
         state.ActivePlayerId = "teamA";
         state.CurrentStep = TurnStep.CleanUp;
 
-        TurnEngine.CleanUp(state, new FixedRoller(DieStatus.Energy, 1));
+        TurnEngine.CleanUp(state, FaceRoller.AnyEnergy());
 
         Assert.Empty(state.ImmuneToActionAndGlobalTargetingControllerIds);
     }
@@ -2756,12 +2751,12 @@ public class TwoTeamsDemoTests
         var bagCountBefore = state.DiceIn("teamA", Zone.Bag).Count();
 
         var queue = new AbilityQueue();
-        TurnEngine.Reroll(state, queue, new FixedRoller(DieStatus.Energy, 1), []);
+        TurnEngine.Reroll(state, queue, FaceRoller.AnyEnergy(), []);
 
         Assert.Equal(1, queue.Count);
         Assert.Equal(TriggerType.Energize, queue.Pending[0].Trigger);
 
-        var drawRoller = new FixedRoller(DieStatus.SidekickCharacter, 3);
+        var drawRoller = FaceRoller.Character(1); // a Sidekick's only character face
         queue.Drain(ability => EffectInterpreter.Execute(
             ability.Effect,
             new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [], Roller: drawRoller, Queue: queue)));
@@ -4200,7 +4195,7 @@ public class TwoTeamsDemoTests
         }
 
         var queue = new AbilityQueue();
-        TurnEngine.Reroll(state, queue, new FixedRoller(DieStatus.Energy, 1), []);
+        TurnEngine.Reroll(state, queue, FaceRoller.AnyEnergy(), []);
 
         Assert.Equal(1, queue.Count);
         Assert.Equal(TriggerType.Energize, queue.Pending[0].Trigger);
@@ -4230,7 +4225,7 @@ public class TwoTeamsDemoTests
         onlyXMen.Zone = Zone.FieldZone; onlyXMen.Status = DieStatus.Character; onlyXMen.Level = 1;
 
         var queue = new AbilityQueue();
-        TurnEngine.Reroll(state, queue, new FixedRoller(DieStatus.Energy, 1), []);
+        TurnEngine.Reroll(state, queue, FaceRoller.AnyEnergy(), []);
         queue.Drain(ability => EffectInterpreter.Execute(
             ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [])));
 
@@ -4397,7 +4392,7 @@ public class TwoTeamsDemoTests
         queue.Drain(ability => EffectInterpreter.Execute(
             ability.Effect,
             new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [],
-                Roller: new FixedRoller(DieStatus.Energy, 1))));
+                Roller: FaceRoller.AnyEnergy())));
 
         Assert.Equal(DieStatus.Energy, opposingDie.Status); // rerolled off its character face
         Assert.Contains("teamA", state.CantFieldCharacterDiceThisTurn);
@@ -4435,7 +4430,7 @@ public class TwoTeamsDemoTests
         queue.Drain(ability => EffectInterpreter.Execute(
             ability.Effect,
             new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [],
-                Roller: new FixedRoller(DieStatus.Energy, 1))));
+                Roller: FaceRoller.AnyEnergy())));
 
         Assert.Equal(DieStatus.Character, opposingDie.Status); // untouched - condition wasn't met
         Assert.DoesNotContain("teamA", state.CantFieldCharacterDiceThisTurn);
@@ -4515,7 +4510,7 @@ public class TwoTeamsDemoTests
         EffectInterpreter.Execute(
             ability.Effect,
             new EffectContext(state, "teamA", SourceDieId: null, _ => [],
-                Random: new Random(1), Roller: new FixedRoller(DieStatus.Energy, 1)));
+                Random: new Random(1), Roller: FaceRoller.AnyEnergy()));
 
         Assert.Equal(reservePoolCountBefore + 3, state.DiceIn("teamA", Zone.ReservePool).Count());
     }
@@ -4531,7 +4526,7 @@ public class TwoTeamsDemoTests
         EffectInterpreter.Execute(
             ability.Effect,
             new EffectContext(state, "teamA", SourceDieId: null, _ => [],
-                Random: new Random(1), Roller: new FixedRoller(DieStatus.Energy, 1)));
+                Random: new Random(1), Roller: FaceRoller.AnyEnergy()));
 
         Assert.Equal(reservePoolCountBefore + 1, state.DiceIn("teamA", Zone.ReservePool).Count());
     }
@@ -4685,7 +4680,7 @@ public class TwoTeamsDemoTests
         Assert.Equal(3, bishopDie.Level);
 
         // Opponent-caused reroll - blocked via the real Reroll EffectNode/ApplyRoll choke point.
-        var roller = new FixedRoller(DieStatus.Character, 1);
+        var roller = FaceRoller.Character(1);
         EffectInterpreter.Execute(
             new Reroll(TargetSpec.Self), new EffectContext(state, "teamB", bishopDie.Id, _ => [], Roller: roller));
         Assert.Equal(3, bishopDie.Level); // untouched - a real reroll would have reset it to level 1
@@ -4727,7 +4722,7 @@ public class TwoTeamsDemoTests
             new SpinToEnergyFace(TargetSpec.Self, Amount: 1), new EffectContext(state, "teamB", wolverineDie.Id, _ => []));
         Assert.Equal(DieStatus.Character, wolverineDie.Status); // blocked - still a character face
 
-        var roller = new FixedRoller(DieStatus.Energy, 1);
+        var roller = FaceRoller.AnyEnergy();
         EffectInterpreter.Execute(
             new Reroll(TargetSpec.Self), new EffectContext(state, "teamB", wolverineDie.Id, _ => [], Roller: roller));
         Assert.Equal(DieStatus.Character, wolverineDie.Status); // blocked - still a character face
@@ -4849,14 +4844,14 @@ public class TwoTeamsDemoTests
         var queue = new AbilityQueue();
         // Rolls an action face - lands in the Field Zone after all (the
         // "they may field it normally" clause, simplified to always).
-        TurnEngine.UseActionDie(state, queue, labTestDie.Id, roller: new FixedRoller(DieStatus.Action, 0));
+        TurnEngine.UseActionDie(state, queue, labTestDie.Id, roller: FaceRoller.Action());
         Assert.Equal(Zone.FieldZone, labTestDie.Zone);
         Assert.Equal(DieStatus.Action, labTestDie.Status);
 
         var labTestDie2 = FindUnpurchased(state, "teamB", SampleCards.LabTest.Id);
         labTestDie2.Zone = Zone.ReservePool; labTestDie2.Status = DieStatus.Action;
         // Rolls a non-action face - sent to the Used Pile instead.
-        TurnEngine.UseActionDie(state, queue, labTestDie2.Id, roller: new FixedRoller(DieStatus.Energy, 1));
+        TurnEngine.UseActionDie(state, queue, labTestDie2.Id, roller: FaceRoller.AnyEnergy());
         Assert.Equal(Zone.UsedPile, labTestDie2.Zone);
         Assert.Equal(DieStatus.Unrolled, labTestDie2.Status);
     }
@@ -4918,7 +4913,7 @@ public class TwoTeamsDemoTests
         CombatEngine.DeclareBlockers(state, assignment, []); // unblocked
 
         var splits = new Dictionary<string, IReadOnlyDictionary<string, int>>();
-        CombatEngine.AssignCombatDamage(state, queue, assignment, splits, new FixedRoller(DieStatus.Character, 2));
+        CombatEngine.AssignCombatDamage(state, queue, assignment, splits, FaceRoller.Character(2));
 
         Assert.Equal(Zone.PrepArea, attacker.Zone); // rerolled to a character face - Prep Area, not Out of Play/Used Pile
         Assert.Equal(DieStatus.Character, attacker.Status);
@@ -5183,7 +5178,7 @@ public class TwoTeamsDemoTests
         var ability = SampleCards.MakingTheTeam.Abilities.Single(a => a.Trigger == TriggerType.WhenUsed);
         EffectInterpreter.Execute(
             ability.Effect,
-            new EffectContext(state, "teamA", SourceDieId: null, _ => [used.Id], Roller: new FixedRoller(DieStatus.Character, 2)));
+            new EffectContext(state, "teamA", SourceDieId: null, _ => [used.Id], Roller: FaceRoller.Character(2)));
 
         Assert.Equal(Zone.FieldZone, used.Zone);
         Assert.Equal(DieStatus.Character, used.Status);
@@ -5201,7 +5196,7 @@ public class TwoTeamsDemoTests
         var ability = SampleCards.MakingTheTeam.Abilities.Single(a => a.Trigger == TriggerType.WhenUsed);
         EffectInterpreter.Execute(
             ability.Effect,
-            new EffectContext(state, "teamA", SourceDieId: null, _ => [used.Id], Roller: new FixedRoller(DieStatus.Energy, 1)));
+            new EffectContext(state, "teamA", SourceDieId: null, _ => [used.Id], Roller: FaceRoller.AnyEnergy()));
 
         Assert.Equal(Zone.PrepArea, used.Zone);
         Assert.Equal(DieStatus.Unrolled, used.Status);
@@ -5422,7 +5417,7 @@ public class TwoTeamsDemoTests
 
         var opponentLifeBefore = state.PlayerTwo.Life;
         state.CurrentStep = TurnStep.CleanUp;
-        TurnEngine.CleanUp(state, new FixedRoller(DieStatus.Energy, 1));
+        TurnEngine.CleanUp(state, FaceRoller.AnyEnergy());
 
         Assert.Equal(opponentLifeBefore - 2, state.PlayerTwo.Life); // only Colossus itself (level 2) qualifies
     }
@@ -5603,7 +5598,7 @@ public class TwoTeamsDemoTests
         Assert.True(DieStats.HasAffiliation(state, target, "Brotherhood of Mutants"));
 
         state.CurrentStep = TurnStep.CleanUp;
-        TurnEngine.CleanUp(state, new FixedRoller(DieStatus.Energy, 1));
+        TurnEngine.CleanUp(state, FaceRoller.AnyEnergy());
 
         Assert.False(DieStats.HasAffiliation(state, target, "X-Men")); // expired at Clean Up
     }
@@ -5932,7 +5927,7 @@ public class TwoTeamsDemoTests
         var baseAttack = DieStats.EffectiveAttack(state, target);
 
         var queue = new AbilityQueue();
-        TurnEngine.Reroll(state, queue, new FixedRoller(DieStatus.Energy, 1), []);
+        TurnEngine.Reroll(state, queue, FaceRoller.AnyEnergy(), []);
         Assert.Equal(1, queue.Count);
         Assert.Equal(TriggerType.Energize, queue.Pending[0].Trigger);
 
@@ -6047,7 +6042,7 @@ public class TwoTeamsDemoTests
         usedPileXMen.Zone = Zone.UsedPile;
 
         var queue = new AbilityQueue();
-        TurnEngine.Reroll(state, queue, new FixedRoller(DieStatus.Energy, 1), []);
+        TurnEngine.Reroll(state, queue, FaceRoller.AnyEnergy(), []);
         Assert.Equal(1, queue.Count);
         Assert.Equal(TriggerType.Energize, queue.Pending[0].Trigger);
 

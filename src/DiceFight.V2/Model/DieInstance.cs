@@ -32,7 +32,7 @@ public sealed record AppliedModifier(
 // up from the die's own DieDefinition.Faces[CurrentFaceIndex] on demand
 // (GameState.GetDieDefinition). This is only possible because v2 dice
 // carry real per-die face data from the start (Appendix B), which v1
-// never had (see PlaceholderDiceRoller's own remarks) - not a simplified
+// never had (see DieFaces's own remarks) - not a simplified
 // port, a genuine improvement the new data model enables.
 public sealed class DieInstance
 {

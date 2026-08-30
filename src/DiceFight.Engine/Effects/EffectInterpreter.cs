@@ -1136,13 +1136,12 @@ public static class EffectInterpreter
                 ctx.State, die, ctx.ControllerId, DieStats.RerollOrSpinMechanism.Reroll))
             return;
 
-        var cardId = die.VirtualCardId ?? die.CardId;
-        var card = cardId is not null ? ctx.State.CardCatalog.GetValueOrDefault(cardId) : null;
-        var result = ctx.Roller!.Roll(die, card);
+        var result = DieFaces.Roll(ctx.State, ctx.Roller!, die);
         die.Status = result.Status;
         die.Level = result.Level;
         die.EnergyKind = result.Status == DieStatus.Energy ? result.EnergyKind : EnergyKind.None;
         die.ProvidedEnergyType = result.Status == DieStatus.Energy ? result.ProvidedEnergyType : null;
+        die.SecondProvidedEnergyType = result.Status == DieStatus.Energy ? result.SecondProvidedEnergyType : null;
         die.EnergyAmount = result.Status == DieStatus.Energy ? result.EnergyAmount : 1;
         die.BurstStars = result.Status == DieStatus.Action ? result.BurstStars : null;
 

@@ -426,7 +426,7 @@ public sealed record Spin(TargetSpec Target, int LevelDelta, int AttackBonusPerA
 // direct conversion, not a level-delta the way Spin above is (rule
 // 3.7.5's own framing treats "spin to an energy face" as its own thing,
 // distinct from spinning a Character die's level). Reuses the exact
-// single-vs-double energy-face formula PlaceholderDiceRoller already
+// single-vs-double energy-face formula DieFaces already
 // uses for a natural Character-die roll (EnergyKind.Specific,
 // ProvidedEnergyType from the target's own card, since Dice Masters
 // energy faces are always the card's own printed type) rather than

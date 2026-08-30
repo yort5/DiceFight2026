@@ -10010,3 +10010,69 @@ clauses (a Crossover die satisfies "only X may block" on any of its
 types; it counts as every one of its types for abilities triggering on
 energy results) and Crosspulse. No card in the data carries either
 keyword today, though 16 and 13 cards mention them in their text.
+
+## The roller only rolls now: face composition moved to DieFaces (2026-08-30)
+
+The user's suggestion, and it is the right shape: a roller should say
+which SIDE came up and nothing else, leaving the die itself to say what
+is on that side.
+
+`PlaceholderDiceRoller` owned both jobs, and the coupling was the reason a
+Crossover character could never roll the generic face it prints - the
+roller only had vocabulary for "N of one energy type", so faces outside
+that shape simply did not exist. Now:
+
+- `IDiceRoller.Roll(die, card, faceCount)` returns a face INDEX.
+- `DieFaces.Of(die, card)` is the face table, and `DieFaces.Roll(...)`
+  composes the two. Every roll in the engine goes through it - five call
+  sites that each resolved the die's card by hand now state it once.
+- `PlaceholderDiceRoller` became `RandomDiceRoller`, whose whole body is
+  `random.Next(faceCount)`. The name was honest before and is honest
+  again: the uncertainty about real per-card layouts did not go away, it
+  moved to `DieFaces`, which is where real data would land.
+
+Three things fall out for free: a Crossover can roll its split double and
+its generic, a four-energy card its wild, and a die with other than six
+sides needs no roller change at all - only a different-length face list.
+V2 already worked this way (`IDiceRoller.Roll(die)` returning an index
+into `DieDefinition.Faces`), so this is v1 catching up.
+
+**What it cost, and what that caught.** Test rollers could previously
+hand back an invented face; now they have to name one the die really has.
+`FaceRoller.Character(2)` finds that face or throws with the die's actual
+faces listed. Seven tests failed on the conversion, every one of them a
+real fiction:
+
+- Four Regenerate tests rolled a synthetic one-level card "to Level 2".
+  Given the three levels a real character card has, they read as written
+  again.
+- `Roll_ActionDieOnADoubleBurstFace_PersistsBurstStars` rolled the
+  starting SIDEKICKS onto an Action face. Sidekicks have no Action face
+  (rule 1.6.8). It builds a real Basic Action die now.
+- Two rolled a Sidekick to "Level 3"; a Sidekick has exactly one
+  character face.
+
+Also fixed en route: padding a short face list repeated the SINGLE energy
+face, so a one-level character came out with three singles and no second
+double. And `SingleEnergyFace` used `FirstOrDefault` on a struct, so "no
+single face" came back as a zeroed face instead of null - caught by its
+own test.
+
+Fifteen new tests cover the table: six faces for every die shape, a
+Sidekick's rule-1.6.8 composition, character faces first and in level
+order (which is what makes a spin a quarter turn), the Crossover split
+double and generic single, the four-energy wild, Basic Action versus
+Action energy, the spin-down face for each, and that rolling index N
+lands on face N.
+
+**Known duplication, deliberate.** `web/src/dieFaces.ts` still mirrors the
+table for drawing the cube. Serving six faces per card would add ~2MB to
+an already 3MB `/api/cards` payload. The face the die is really showing
+always comes from the server - `DieDto` carries `SecondProvidedEnergyType`
+now - so drift between the two can only ever change scenery, never what
+the die reports.
+
+Still open, unchanged: `SpendEnergy` does not yet know that a split double
+is one of EACH type, nor that it spins down to the face `DieFaces.
+SingleEnergyFace` now returns. That is the next piece, and the table it
+needs is in place.
