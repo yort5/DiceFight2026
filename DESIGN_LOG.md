@@ -9955,3 +9955,58 @@ The catalog now resolves to exactly two shapes and no malformed dice:
 3,397 characters as three levels plus three energy, and 487 action-family
 cards (293 Basic Action, 190 Action, 4 Epic) as three action faces plus
 three energy.
+
+## Virtual generic energy expired two steps too late (2026-08-30)
+
+Checking the user's question about partially spending a Generic double
+turned up a live rules bug. Three rules independently say when virtual
+generic energy is lost, and all say the same thing:
+
+- **1.4.5** "must be spent by the end of the Main Step, or it will be lost"
+- **2.6.1.6** "keep the other as a 'virtual' generic energy until the end
+  of the Main Step"
+- **2.6.7.1(2)** "At the end of the Main Step [...] any unspent virtual
+  generic energy is lost"
+
+We dropped it in **Clean Up**, two steps later - and the code even cited
+2.6.7.1(2) while doing so. So the active player could bank a half-spent
+Basic Action die's generic energy in Main and still spend it in the
+Attack Step, on action dice and Globals. Now dropped by `EndMainStep`,
+called from every path out of Main (AdvanceStep, EnterAttackStep,
+SkipAttackStep). Clean Up keeps the sweep as a backstop for a turn that
+never had a Main Step.
+
+Everything else about partial Generic spending was already right: the
+Active player banks the leftover (2.6.1.6), the Inactive player loses it
+because such a die has no single-energy face to spin down to (2.6.1.5).
+
+Four tests: each of the three exits from Main drops it, and advancing
+INTO Main keeps it (a short draw's virtual energy, rule 1.4.4, is meant
+to be spendable in Main).
+
+## Two promos were typed as Action cards, not Basic Actions (2026-08-30)
+
+Card type is read from the subtitle, which works because a Basic Action
+card almost always has "Basic Action Card" there. Two promos carry a real
+flavour subtitle instead - `1JLOP Pandora's Box` and `3JLOP House of
+Mystery`, both "Trinity War" - and were typed as plain Action cards.
+
+That matters now that the two have different die faces: an Action die's
+energy faces are its own type (Batarang: one bolt and two double-bolt),
+while a Basic Action die's are double-Generic (rule 1.3.10). House of
+Mystery was also carrying a spurious Bolt energy type from the sheet,
+which typing it correctly drops - Basic Actions have no energy type.
+
+The old Teambuilder settles both: its header records no energy type and
+the "Use 3" die limit that rule 1.2.11 gives every Basic Action card,
+where Batarang has an energy type and its own limit of 4. Listed
+explicitly in the importer rather than inferred from those two signals -
+it is two cards, and a real Action card could legitimately have neither.
+
+Counts move as expected: Basic Actions 293 -> 295, Actions 190 -> 188.
+
+**Left as a known gap, at the user's call**: the Crossover keyword's other
+clauses (a Crossover die satisfies "only X may block" on any of its
+types; it counts as every one of its types for abilities triggering on
+energy results) and Crosspulse. No card in the data carries either
+keyword today, though 16 and 13 cards mention them in their text.

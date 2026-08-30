@@ -66,6 +66,22 @@ VALID_ENERGY = {"Fist", "Bolt", "Mask", "Shield"}
 
 BASIC_ACTION_SUBS = {"Basic Action Card", "Basic Action Cards", "Basic Action"}
 EPIC_SUBS = {"Epic Basic Action"}
+
+# Card type is read from the subtitle, which works because a Basic Action
+# card almost always has "Basic Action Card" there. Two promos carry a
+# real flavour subtitle instead and were being typed as plain Action
+# cards - which matters, because an Action die has energy faces of its own
+# type while a Basic Action die's are double-Generic (rule 1.3.10).
+#
+# The old Teambuilder settles both: its header records no energy type and
+# the "Use 3" die limit rule 1.2.11 gives every Basic Action card, where a
+# real Action card like Batarang has an energy type and its own limit of
+# 4. Listed explicitly rather than inferred from that pair of signals - it
+# is two cards, and a real Action card could legitimately have neither.
+BASIC_ACTION_BY_NAME = {
+    ("Pandora's Box", "Trinity War"),
+    ("House of Mystery", "Trinity War"),
+}
 ID_RE = re.compile(r"^[A-Za-z]+\d+$")
 # The PROMO tab is not one set but every promo ever printed, and it
 # numbers ids digits-first in ~19 different shapes: "1AvXop", "5DC2016",
@@ -407,7 +423,9 @@ def classify_row(code, row, max_dice, split_energy):
     if not (PROMO_ID_RE if code == "PROMO" else ID_RE).match(card_id):
         return None, "bad id format"
 
-    if subtitle in BASIC_ACTION_SUBS:
+    if (name, subtitle) in BASIC_ACTION_BY_NAME:
+        card_type = "BasicAction"
+    elif subtitle in BASIC_ACTION_SUBS:
         card_type = "BasicAction"
     elif subtitle in EPIC_SUBS:
         card_type = "EpicBasicAction"

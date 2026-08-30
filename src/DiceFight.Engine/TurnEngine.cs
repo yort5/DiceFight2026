@@ -51,7 +51,21 @@ public static class TurnEngine
         if (index < 0 || index == StepOrder.Length - 1)
             throw new InvalidOperationException(
                 "Cannot advance past Clean Up - call CleanUp(...) to end the turn instead.");
+        if (state.CurrentStep == TurnStep.Main) EndMainStep(state);
         state.CurrentStep = StepOrder[index + 1];
+    }
+
+    // Rule 2.6.7.1(2) - "At the end of the Main Step [...] any unspent
+    // virtual generic energy is lost", which rules 1.4.5 and 2.6.1.6 both
+    // state independently ("must be spent by the end of the Main Step").
+    //
+    // This used to happen in Clean Up, two steps later, which let the
+    // active player carry banked virtual energy into the Attack Step and
+    // spend it on action dice and Globals there. Called from every path
+    // out of the Main Step: AdvanceStep, EnterAttackStep, SkipAttackStep.
+    private static void EndMainStep(GameState state)
+    {
+        state.Dice.RemoveAll(d => d.IsVirtualEnergy);
     }
 
     // Rule 2.3 - Clear and Draw Step.
@@ -1605,6 +1619,7 @@ public static class TurnEngine
     {
         if (state.CurrentStep != TurnStep.Main)
             throw new InvalidOperationException("Must be in the Main Step to enter the Attack Step.");
+        EndMainStep(state);
         state.CurrentStep = TurnStep.Attack;
         state.AttackSubStep = AttackSubStep.DeclareAttackers;
 
@@ -1643,6 +1658,7 @@ public static class TurnEngine
             throw new InvalidOperationException($"{names} must attack this turn - cannot skip the Attack Step.");
         }
 
+        EndMainStep(state);
         state.CurrentStep = TurnStep.CleanUp;
     }
 
@@ -1741,12 +1757,10 @@ public static class TurnEngine
         }
 
         // Unspent virtual generic energy does not carry over (rule 1.4.5/
-        // 2.6.7.1(2)) - removed outright rather than swept to the Used
-        // Pile like a real die, since it was never a physical one. Covers
-        // both players, not just the one whose turn is ending - the
-        // inactive player can bank virtual energy too (e.g. partially
-        // spending a Generic double to pay for a Global on the active
-        // player's turn), and it's just as fictional.
+        // 2.6.7.1(2)) - normally already gone, since EndMainStep drops it
+        // where the rule actually says to. This is a backstop for any
+        // path that reaches Clean Up without passing through the Main
+        // Step (a turn that never had one, or a future caller).
         state.Dice.RemoveAll(d => d.IsVirtualEnergy);
 
         // Keyword Experience - "All Character dice with this keyword
