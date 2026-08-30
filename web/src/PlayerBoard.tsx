@@ -1,4 +1,4 @@
-import { DieCube } from "./DieCube";
+import { DieCube, type CubeSpin } from "./DieCube";
 import { DieIcon } from "./DieIcon";
 import { facesFor } from "./dieFaces";
 import type { CardDef, Die } from "./types";
@@ -26,6 +26,11 @@ export function PlayerBoard(props: {
   /** The local player's board - tints their dice apart from the
    *  opponent's, which is the only difference between the two. */
   mine: boolean;
+  /** Roll animation state, by die id - see useDiceRoll.ts. */
+  spins?: Record<string, CubeSpin>;
+  turnOffsets?: Record<string, number>;
+  /** True while a roll is in flight; shakes the Reserve Pool. */
+  rolling?: boolean;
   life: number;
   dice: Die[];
   cardsById: Map<string, CardDef>;
@@ -38,7 +43,10 @@ export function PlayerBoard(props: {
   selectableEnergyIds?: Set<string> | null;
 }) {
   const { dice, cardsById, selection, onGroupClick, selectableEnergyIds } = props;
-  const zoneProps = { cardsById, selection, onGroupClick, selectableEnergyIds, mine: props.mine };
+  const zoneProps = {
+    cardsById, selection, onGroupClick, selectableEnergyIds,
+    mine: props.mine, spins: props.spins, turnOffsets: props.turnOffsets,
+  };
   const dicein = (zone: string) => dice.filter((d) => d.zone === zone);
 
   return (
@@ -61,7 +69,9 @@ export function PlayerBoard(props: {
         <div className="mat-slot mat-used">
           <ZoneSection zone="UsedPile" dice={dicein("UsedPile")} {...zoneProps} />
         </div>
-        <div className="mat-slot mat-reserve">
+        {/* The Reserve Pool is the dice tray, so it is the one zone that
+            reacts to a roll - it shakes as the dice launch. */}
+        <div className={`mat-slot mat-reserve${props.rolling ? " rolling" : ""}`}>
           <ZoneSection zone="ReservePool" prominent dice={dicein("ReservePool")} {...zoneProps} />
         </div>
         <div className="mat-slot mat-prep">
@@ -133,6 +143,8 @@ function ZoneSection(props: {
   onGroupClick: (ids: string[]) => void;
   selectableEnergyIds?: Set<string> | null;
   mine: boolean;
+  spins?: Record<string, CubeSpin>;
+  turnOffsets?: Record<string, number>;
   prominent?: boolean;
   bare?: boolean;
 }) {
@@ -167,7 +179,14 @@ function ZoneSection(props: {
                 {/* One cube per die in the zones where a face is really
                     up, so what the die is showing is the object itself
                     rather than a badge beside a label. */}
-                <DieCube {...facesFor(group.die, props.cardsById)} size={40} mine={props.mine} damage={group.damage} />
+                <DieCube
+                  {...facesFor(group.die, props.cardsById)}
+                  size={40}
+                  mine={props.mine}
+                  damage={group.damage}
+                  spin={props.spins?.[group.die.id]}
+                  turnOffset={props.turnOffsets?.[group.die.id]}
+                />
                 <span className="chip-label">
                   {group.label}
                   {countSuffix}

@@ -6,6 +6,9 @@ import type { CardDef, Die, GameState } from "./types";
 interface ContextualAction {
   key: string;
   label: string;
+  /** Dice this action deliberately rolls, so the roll animation plays
+   *  even when a die lands on the face it was already showing. */
+  rolledDieIds?: string[];
   hint: string;
   // Most actions fire one API call directly; Field on a WhenFielded-
   // targeting card instead hands off to App's own energy-then-target flow
@@ -26,7 +29,7 @@ export function ActionTray(props: {
   cardsById: Map<string, CardDef>;
   selection: Selection;
   busy: boolean;
-  onRun: (action: () => Promise<GameState>) => void;
+  onRun: (action: () => Promise<GameState>, rolledDieIds?: string[]) => void;
   onClear: () => void;
   onFieldNeedsTarget: (dieId: string, energyIds: string[]) => void;
 }) {
@@ -104,6 +107,7 @@ export function ActionTray(props: {
       label: "Reroll Selected",
       hint: "One-time decision - rerolls just the selected dice and immediately advances to Main",
       run: () => api.reroll(game.gameId, [primaryDie.id, ...secondaryIds]),
+      rolledDieIds: [primaryDie.id, ...secondaryIds],
     });
   }
 
@@ -124,7 +128,7 @@ export function ActionTray(props: {
       <div className="tray-actions">
         {actions.map((a) => (
           <div key={a.key} className="tray-action">
-            <button disabled={busy} onClick={() => (a.run ? onRun(a.run) : a.start?.())}>
+            <button disabled={busy} onClick={() => (a.run ? onRun(a.run, a.rolledDieIds) : a.start?.())}>
               {a.label}
             </button>
             <span className="hint">{a.hint}</span>

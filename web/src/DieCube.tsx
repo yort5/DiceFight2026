@@ -1,6 +1,6 @@
 import { ENERGY_ICONS, GENERIC_ENERGY_ICONS, SIDEKICK_ICON, WILD_ENERGY_ICON, type GameIcon } from "./gameIcons";
 import actionIcon from "./assets/action.png";
-import type { CubeFace } from "./dieFaces";
+import { FACE_ORIENTATIONS, FACE_TRANSFORMS, type CubeFace } from "./dieFaces";
 
 // A die as a real CSS 3D cube rather than a flat badge, so the face
 // pointing at the player is a face of an object you could pick up.
@@ -13,21 +13,6 @@ import type { CubeFace } from "./dieFaces";
 //
 // Sizes are all derived from `size` so one component covers the 30px
 // dice in a gang block and the 50px one in the attack slot.
-
-// Where each face sits on the cube.
-const FACE_TRANSFORMS = [
-  "",
-  "rotateY(180deg)",
-  "rotateY(90deg)",
-  "rotateY(-90deg)",
-  "rotateX(90deg)",
-  "rotateX(-90deg)",
-];
-
-// The cube rotation that brings face i to the front: [rotateX, rotateY].
-const FACE_ORIENTATIONS: readonly (readonly [number, number])[] = [
-  [0, 0], [0, -180], [0, -90], [0, 90], [-90, 0], [90, 0],
-];
 
 // The monochrome icons - wild, generic, sidekick, action - are dark ink
 // on white and have to flip on these dark faces. The four energy types
@@ -73,13 +58,19 @@ export function DieCube(props: {
   damage?: number;
   /** Mid-roll transform; omitted, the cube sits at rest on `index`. */
   spin?: CubeSpin;
+  /** Full turns this die accumulated when it was last rolled, kept so
+   *  that dropping the spin leaves it exactly where it landed - and so a
+   *  later spin up or down is a quarter turn from there rather than a
+   *  rewind of the whole roll. See useDiceRoll.ts. */
+  turnOffset?: number;
 }) {
   const { faces, index, size, mine, spin } = props;
   const half = size / 2;
   const hue = mine ? 62 : 250;
+  const offset = props.turnOffset ?? 0;
   const resting = FACE_ORIENTATIONS[index] ?? FACE_ORIENTATIONS[0];
-  const rx = spin ? spin.rx : resting[0];
-  const ry = spin ? spin.ry : resting[1];
+  const rx = spin ? spin.rx : resting[0] + offset;
+  const ry = spin ? spin.ry : resting[1] + offset;
   const rz = spin ? spin.rz : 0;
   const tx = spin ? spin.tx : 0;
   const ty = spin ? spin.ty : 0;

@@ -9523,3 +9523,52 @@ Verified in a real game: dice roll into the Reserve Pool as cubes, six
 distinct face transforms each, and the face actually pointing at the
 camera (read with `elementFromPoint`) matches what the server rolled.
 708 tests pass; build and lint clean.
+
+## Match-table redesign, stage 2: the roll (2026-08-30)
+
+Two CSS transitions per die, no physics engine, per the handoff: a
+**flight** that throws the die at its target face plus two to four extra
+full turns, overshooting on every axis, lifted and scattered sideways;
+then a **settle** to the exact resting orientation, back on the mat. The
+bounce is the overshoot in the settle curve rather than a third stage.
+The Reserve Pool - the dice tray - shakes for 420ms as they launch.
+
+**The result is the server's, always.** The animation only chooses how
+the die gets there: `useDiceRoll` is handed the face index the server
+landed on and aims at it. While a spin exists for a die, `DieCube` drives
+the cube from that rather than from the die's face index, so a re-render
+mid-flight cannot snap it to its resting pose - the caution the handoff
+called out.
+
+**One departure from the prototype, and it fixes a real flaw.** The
+prototype drops a die's spin state when the die is spun up or down, which
+means the cube unwinds all the accumulated turns - a 720-degree rewind
+where the rules say quarter turn. Here the turn offset is *kept* after
+the animation ends (`offsets`, separate from the transient `spins`), and
+the resting transform is `FACE_ORIENTATIONS[face] + offset`. Dropping the
+spin therefore leaves the die exactly where it landed, and a later spin
+is a true quarter turn from there. Verified: dice come to rest on
+`rotateX(-990deg) rotateY(-1080deg)` and stay there.
+
+**What counts as a roll.** Every server call already goes through
+`run()`, so comparing the state before and after catches a roll wherever
+it came from - the Roll button, a reroll, or a card effect that rerolls
+dice of its own accord. `isRoll` says a roll is a change of status, or an
+energy face becoming a *different* energy face; changing level while
+still on a character face is a spin, and rule 2.6.1.6's double-spun-down-
+to-single is a spin too. Those get the quarter turn for free.
+
+A diff alone is not quite enough, though: reroll a Bolt and get a Bolt
+again and nothing would move, leaving the player unable to tell the
+reroll happened. So `run()` takes an optional `rolledDieIds` naming the
+dice an action deliberately rolled, and those animate regardless.
+
+**Reduced motion** is respected properly rather than by shortening the
+timings: `useDiceRoll` skips the tumble entirely and the die is simply
+already on its face, with no shake and no accumulated turns.
+
+Verified in a real game across both motion settings: flight transitions
+at the randomised 520-640ms, settle at 430ms, the resting 340ms
+transition restored afterwards, the shake raised and cleared, and the
+face actually pointing at the camera matching what the server rolled
+every time. A single-die reroll animates exactly one die. 708 tests pass.

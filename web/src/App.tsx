@@ -11,6 +11,8 @@ import { HowToPlay } from "./HowToPlay";
 import { PendingChoicePanel } from "./PendingChoicePanel";
 import { PlayerBoard, type Selection } from "./PlayerBoard";
 import { navigate } from "./router";
+import { facesFor } from "./dieFaces";
+import { isRoll, useDiceRoll, type RollTarget } from "./useDiceRoll";
 import type { BlockAssignment, CardDef, DamageSplit, GameState, RangeAssignment, TagOutUse } from "./types";
 import "./App.css";
 
@@ -40,6 +42,9 @@ function App() {
   // DeclareBlockers" error). This ref is checked synchronously inside the
   // click handler itself, so it closes that gap regardless of render timing.
   const busyRef = useRef(false);
+  // Roll animation state. Transient and client-only: the result itself is
+  // already decided by the server before any of this runs.
+  const { spins, offsets, rolling, launch: launchRoll } = useDiceRoll();
 
   useEffect(() => {
     api.getCards().then(setCards).catch((e) => setError(String(e)));
@@ -71,14 +76,19 @@ function App() {
     });
   }
 
-  async function run(action: () => Promise<GameState>) {
+  // `rolledDieIds` names the dice an action deliberately rolled. Without
+  // it a reroll that lands the same face again would not move at all, and
+  // the player could not tell it had happened.
+  async function run(action: () => Promise<GameState>, rolledDieIds?: string[]) {
     if (busyRef.current) return;
     busyRef.current = true;
     setError(null);
     setBusy(true);
     try {
+      const previous = game;
       const next = await action();
       setGame(next);
+      if (previous) animateRolledDice(previous, next, rolledDieIds);
       clearSelection();
       if (next.currentStep !== "Attack") setCombatAssignments([]);
     } catch (e) {
@@ -87,6 +97,24 @@ function App() {
       busyRef.current = false;
       setBusy(false);
     }
+  }
+
+  // Every server call comes through run(), so comparing the state before
+  // and after is enough to catch a roll wherever it came from - the Roll
+  // button, a reroll, or a card effect that rerolls dice on its own. What
+  // counts as a roll rather than a spin is isRoll()'s call.
+  function animateRolledDice(previous: GameState, next: GameState, rolledDieIds?: string[]) {
+    const before = new Map(previous.dice.map((d) => [d.id, d]));
+    const explicit = new Set(rolledDieIds ?? []);
+    const targets: RollTarget[] = [];
+    for (const die of next.dice) {
+      const was = before.get(die.id);
+      if (!was) continue;
+      if (!explicit.has(die.id) && !isRoll(was, die)) continue;
+      const { index } = facesFor(die, cardsById);
+      targets.push({ dieId: die.id, faceIndex: index });
+    }
+    launchRoll(targets);
   }
 
   // A Global ability isn't tied to a die selection the way everything
@@ -285,7 +313,13 @@ function App() {
 
   // The one or two buttons worth putting front and center: whatever
   // actually moves the turn forward from exactly where it is right now.
-  type AdvanceOption = { key: string; label: string; run: () => Promise<GameState> };
+  type AdvanceOption = {
+    key: string;
+    label: string;
+    run: () => Promise<GameState>;
+    /** Dice this option deliberately rolls - see run(). */
+    rolledDieIds?: string[];
+  };
   const advanceOptions: AdvanceOption[] = [];
   if (gameId && canClearAndDraw) {
     advanceOptions.push({ key: "clear-and-draw", label: "Clear & Draw", run: () => api.clearAndDraw(gameId) });
@@ -294,7 +328,12 @@ function App() {
     advanceOptions.push({ key: "to-roll", label: "Roll & Reroll ▶", run: () => api.advanceStep(gameId) });
   }
   if (gameId && canRoll) {
-    advanceOptions.push({ key: "roll", label: `Roll (${unrolledStepDice.length} dice)`, run: () => api.roll(gameId) });
+    advanceOptions.push({
+      key: "roll",
+      label: `Roll (${unrolledStepDice.length} dice)`,
+      run: () => api.roll(gameId),
+      rolledDieIds: unrolledStepDice.map((d) => d.id),
+    });
   }
   if (gameId && canAdvanceToMain) {
     advanceOptions.push({ key: "to-main", label: "Main ▶", run: () => api.advanceStep(gameId) });
@@ -358,7 +397,7 @@ function App() {
                   key={opt.key}
                   className="advance-btn"
                   disabled={busy || !!game.pendingChoice}
-                  onClick={() => run(opt.run)}
+                  onClick={() => run(opt.run, opt.rolledDieIds)}
                 >
                   {opt.label}
                 </button>
@@ -385,7 +424,7 @@ function App() {
                 </button>
                 <button
                   disabled={busy || !!game.pendingChoice || !canRoll}
-                  onClick={() => run(() => api.roll(gameId))}
+                  onClick={() => run(() => api.roll(gameId), unrolledStepDice.map((d) => d.id))}
                 >
                   Roll {canRoll ? `(${unrolledStepDice.length} dice)` : ""}
                 </button>
@@ -556,6 +595,9 @@ function App() {
                 selection={selection}
                 onGroupClick={handleGroupClick}
                 selectableEnergyIds={globalEnergySelectableIds}
+                spins={spins}
+                turnOffsets={offsets}
+                rolling={rolling}
               />
               <PlayerBoard
                 title={`${game.playerTwo.name} (${game.playerTwo.id})`}
@@ -567,6 +609,9 @@ function App() {
                 selection={selection}
                 onGroupClick={handleGroupClick}
                 selectableEnergyIds={globalEnergySelectableIds}
+                spins={spins}
+                turnOffsets={offsets}
+                rolling={rolling}
               />
             </section>
           </div>

@@ -593,6 +593,34 @@
   opacity: 0.65;
 }
 
+/* The tray shakes as the dice launch - 420ms, once per roll. Respects a
+   reduced-motion preference, where the dice simply appear on their faces. */
+@keyframes df-shake {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  15% { transform: translate3d(-3px, 1px, 0) rotate(-0.5deg); }
+  35% { transform: translate3d(4px, -2px, 0) rotate(0.6deg); }
+  55% { transform: translate3d(-3px, 2px, 0) rotate(-0.4deg); }
+  78% { transform: translate3d(2px, -1px, 0) rotate(0.25deg); }
+}
+
+.mat-slot.rolling {
+  animation: df-shake 420ms ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mat-slot.rolling {
+    animation: none;
+  }
+
+  /* The roll itself is skipped in useDiceRoll; this covers the quarter
+     turn a spin up or down would otherwise animate. */
+  .die-cube,
+  .die-cube-shadow {
+    transition-duration: 1ms !important;
+    transition-delay: 0ms !important;
+  }
+}
+
 /* ---- The 3D die ----
 
    A real CSS cube: six faces placed with translateZ, the whole cube

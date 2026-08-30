@@ -18,6 +18,23 @@ import type { CardDef, Die } from "./types";
 // scenery. That is the honest arrangement, and it means a future real
 // face table can replace `defaultFaces` without touching anything else.
 
+// Cube geometry. Where each face sits, and the cube rotation that brings
+// face i forward - [rotateX, rotateY] in degrees. Here rather than in
+// DieCube.tsx so the roll animation can aim at a face without importing
+// a component.
+export const FACE_TRANSFORMS = [
+  "",
+  "rotateY(180deg)",
+  "rotateY(90deg)",
+  "rotateY(-90deg)",
+  "rotateX(90deg)",
+  "rotateX(-90deg)",
+];
+
+export const FACE_ORIENTATIONS: readonly (readonly [number, number])[] = [
+  [0, 0], [0, -180], [0, -90], [0, 90], [-90, 0], [90, 0],
+];
+
 export type CubeFace =
   | { kind: "character"; level: number; fieldingCost: number; attack: number; defense: number }
   | { kind: "energy"; icon: IconKind; amount: number }
