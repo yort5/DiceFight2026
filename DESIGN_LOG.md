@@ -9823,3 +9823,55 @@ rather than showing a die id. 559 engine tests pass (up from 555).
 we did not take (the `carved` ivory dice, the `rail` step UI) and the
 roster strips, which are still the old collapsed `<details>` rather than
 the design's portrait cards.
+
+## Team Builder redesign, stage 1: rulesets replace "Strict rules" (2026-08-30)
+
+A second Claude Design handoff arrived, for the Team Builder. Same review
+discipline as the match table: every file and symbol it names exists
+(`strictRules`, `minCost`/`maxCost`, `MAX_ROWS`, `copyTeamLink`,
+`copyOldTeamLink`, `matchesQuery`, `RARITY_TIERS`, the format list), so
+it was written against the repo. Five things it gets wrong, recorded
+before building anything on them:
+
+1. It says **React 18**; the app is React 19.
+2. It gives the Energy filter a **Wild** chip. No card in the catalog has
+   Wild as an energy type - `energyTypes` is only Bolt/Fist/Mask/Shield -
+   so that chip would match nothing.
+3. Its **cost curve has 8 columns** (cost 1-8). Real purchase costs run 0
+   to 12; nine cards cost more than 8, and cost-0 cards exist. The curve
+   needs a 0 and an 8+ bucket or it silently drops them.
+4. It expects to **migrate `strictRules: false` from localStorage**. That
+   checkbox was never persisted - only the team was - so there is nothing
+   to migrate and the branch would be dead code. Removed.
+5. Its ruleset model is **caps only** (cards / dice / basic actions), and
+   says nothing about rule 2.1.5, "a team cannot have multiple cards with
+   exactly the same card name". Implementing caps alone would let
+   Standard accept two cards with the same name, which is illegal. That
+   check is NOT a cap and stays enforced under every ruleset, Freeform
+   included: two identical cards are one card, and no house format makes
+   that playable with physical cards either.
+
+Also worth noting rather than fixing: the redesign's four sort chips
+(Name / Cost / L1 Attack / Set) drop sorting by type, affiliation,
+energy, max dice, L2 and L3, all of which the current table header
+sorting offers - and the L1/L2/L3 columns were a specific request.
+
+**What this stage builds.** `rulesets.ts` and the roster's legality
+strip: three rulesets (Standard 8/20/2, Freeform uncapped, Custom with
+its own steppers), a dice meter of one pip per die the ruleset allows,
+and a legality note. The caps drive `canAddCard`, `canIncrement` and
+whether a game can be started.
+
+The point is that a house format is now a first-class choice rather than
+an escape hatch. "Strict rules" off meant *no* validation, which is a bad
+model for what people actually do - a house format is usually the
+tournament rules with one number changed.
+
+Going over a cap never truncates a team: the dice past the cap turn red
+in the meter, the note says "you can still share and print this team, but
+not start a game with it", and only the start button disables. Switching
+Standard -> Freeform -> Standard leaves the team exactly as it was.
+
+Verified in the browser across all three rulesets, including lowering a
+Custom dice cap under the team's own dice: 5/3 dice, meter 3 filled and
+2 over, note switched, start disabled, team intact.

@@ -10,6 +10,7 @@ import { stashPendingGame } from "./gameHandoff";
 import { navigate } from "./router";
 import { SET_NAMES } from "./sets";
 import { FORMATS } from "./formats";
+import { capsFor, isCapped, legalityOf, RULESETS, STANDARD_CAPS, type Caps, type RulesetId } from "./rulesets";
 import { ORANGE_BAN_LIST, isOrangeBanned } from "./orangeBan";
 import type { CardDef } from "./types";
 
@@ -20,13 +21,37 @@ import type { CardDef } from "./types";
 // opens the live digital game - e.g. building a team to play with
 // physical dice. The engine itself never enforces team-construction
 // legality (house rules/alternate formats are common - see
-// TeamSetup.cs's own remarks) - only this page's "Strict rules"
-// checkbox does, and it can be turned off.
+// TeamSetup.cs's own remarks) - only this page does, and which limits it
+// applies is the player's choice of ruleset (see rulesets.ts).
 
 const BASIC_ACTION_TYPES = new Set(["BasicAction", "EpicBasicAction"]);
-const MAX_UNIQUE_CARDS = 8;
-const MAX_DICE = 20;
-const MAX_BASIC_ACTIONS = 2;
+
+// The three numbers a Custom ruleset lets you set. Minimums are 1 rather
+// than 0 - a cap of zero is a team you cannot build, which is never what
+// someone reaching for a house format wants.
+const CUSTOM_CAP_FIELDS: readonly { key: keyof Caps; label: string; min: number }[] = [
+  { key: "cards", label: "Cards", min: 1 },
+  { key: "dice", label: "Dice", min: 1 },
+  { key: "basicActions", label: "Basic Actions", min: 0 },
+];
+
+// The dice a team has against the cap it is allowed, one pip per die.
+// Reading "14/20" takes a moment; reading a bar does not.
+function DiceMeter({ used, cap }: { used: number; cap: number }) {
+  // Uncapped, the meter still has to be *some* length - it shows the
+  // standard 20 as a frame of reference, growing if the team goes past it.
+  const slots = isCapped(cap) ? Math.max(cap, used) : Math.max(STANDARD_CAPS.dice, used);
+  return (
+    <span className="dice-meter" role="img" aria-label={`${used} dice${isCapped(cap) ? ` of ${cap}` : ""}`}>
+      {Array.from({ length: slots }, (_, i) => (
+        <span
+          key={i}
+          className={`dice-pip${i < used ? (isCapped(cap) && i >= cap ? " over" : " filled") : ""}`}
+        />
+      ))}
+    </span>
+  );
+}
 
 function isBasicActionFamily(card: CardDef): boolean {
   return BASIC_ACTION_TYPES.has(card.type);
@@ -197,7 +222,11 @@ export function TeamBuilderPage() {
   });
   const [team, setTeam] = useState<Map<string, number>>(new Map());
   const [teamRestored, setTeamRestored] = useState(false);
-  const [strictRules, setStrictRules] = useState(true);
+  // Replaces the old `strictRules` on/off checkbox - see rulesets.ts for
+  // why a house format deserves caps of its own rather than "validation
+  // off". Restored from localStorage below, alongside the team.
+  const [ruleset, setRuleset] = useState<RulesetId>("standard");
+  const [customCaps, setCustomCaps] = useState<Caps>(STANDARD_CAPS);
   const [copied, setCopied] = useState(false);
   const [copiedOld, setCopiedOld] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
@@ -213,6 +242,7 @@ export function TeamBuilderPage() {
   // Everything is wrapped in try/catch: storage throws outright in some
   // privacy modes rather than just coming back empty.
   const STORAGE_KEY = "dicefight.teamBuilder.team";
+  const RULESET_KEY = "dicefight.teamBuilder.ruleset";
 
   function loadSavedTeam(): Map<string, number> {
     try {
@@ -231,6 +261,44 @@ export function TeamBuilderPage() {
       return new Map();
     }
   }
+
+  // The ruleset is restored once, on mount.
+  //
+  // No migration is needed despite the redesign brief expecting one: the
+  // old "Strict rules" checkbox was never persisted (only the team was),
+  // so nobody has a saved `strictRules: false` to carry over. Everyone
+  // starts on Standard, which is what the checkbox defaulted to anyway.
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(RULESET_KEY);
+      if (raw) {
+        const parsed: unknown = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") {
+          const saved = parsed as { ruleset?: unknown; caps?: unknown };
+          if (saved.ruleset === "standard" || saved.ruleset === "freeform" || saved.ruleset === "custom") {
+            setRuleset(saved.ruleset);
+          }
+          const caps = saved.caps as Partial<Caps> | undefined;
+          if (caps && [caps.cards, caps.dice, caps.basicActions].every((n) => Number.isInteger(n) && (n as number) >= 0)) {
+            setCustomCaps(caps as Caps);
+          }
+        }
+      }
+    } catch {
+      // Storage unavailable - the default ruleset is the right fallback.
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!teamRestored) return;
+    try {
+      window.localStorage.setItem(RULESET_KEY, JSON.stringify({ ruleset, caps: customCaps }));
+    } catch {
+      // Same as the team above - the tool works, the choice just does not
+      // survive a restart.
+    }
+  }, [ruleset, customCaps, teamRestored]);
 
   // Load a shared team link once the catalog is available to resolve
   // its ids against - silently drops any id that doesn't resolve
@@ -285,32 +353,42 @@ export function TeamBuilderPage() {
   // cap" counts as a violation - a team still being built naturally
   // passes through 0/1 Basic Actions or fewer than 8 cards on the way
   // to a complete team, that's not illegal, just incomplete.
-  const violations = useMemo(() => {
-    const list: string[] = [];
-    if (uniqueNames.size > MAX_UNIQUE_CARDS) list.push(`${uniqueNames.size}/${MAX_UNIQUE_CARDS} unique cards`);
-    if (totalDice > MAX_DICE) list.push(`${totalDice}/${MAX_DICE} dice`);
-    if (basicActionEntries.length > MAX_BASIC_ACTIONS) list.push(`${basicActionEntries.length}/${MAX_BASIC_ACTIONS} Basic Actions`);
-    return list;
-  }, [uniqueNames, totalDice, basicActionEntries]);
+  const caps = useMemo(() => capsFor(ruleset, customCaps), [ruleset, customCaps]);
+
+  const legality = useMemo(
+    () => legalityOf(ruleset, caps, {
+      cards: uniqueNames.size,
+      dice: totalDice,
+      basicActions: basicActionEntries.length,
+    }),
+    [ruleset, caps, uniqueNames, totalDice, basicActionEntries],
+  );
 
   function canAddCard(card: CardDef): { ok: boolean; reason?: string } {
     if (team.has(card.id)) return { ok: false, reason: "Already on the team." };
-    if (!strictRules) return { ok: true };
     if (isBasicActionFamily(card)) {
-      if (basicActionEntries.length >= MAX_BASIC_ACTIONS) {
-        return { ok: false, reason: `Already have ${MAX_BASIC_ACTIONS} Basic Actions.` };
+      if (basicActionEntries.length >= caps.basicActions) {
+        return { ok: false, reason: `Already have ${caps.basicActions} Basic Actions.` };
       }
       return { ok: true };
     }
+    // Rule 2.1.5 is not a cap and is enforced under EVERY ruleset: two
+    // cards with the same name are the same card, which no house format
+    // can make playable with physical cards either.
     if (uniqueNames.has(card.name)) return { ok: false, reason: `Already have a card named "${card.name}".` };
-    if (uniqueNames.size >= MAX_UNIQUE_CARDS) return { ok: false, reason: `Already have ${MAX_UNIQUE_CARDS} cards.` };
-    if (totalDice + 1 > MAX_DICE) return { ok: false, reason: `Would exceed ${MAX_DICE} dice.` };
+    if (uniqueNames.size >= caps.cards) {
+      return { ok: false, reason: `Already have ${caps.cards} cards — raise the cap in Custom, or switch to Freeform.` };
+    }
+    if (totalDice + 1 > caps.dice) {
+      return { ok: false, reason: `Would exceed the ${caps.dice}-dice cap — raise it in Custom, or switch to Freeform.` };
+    }
     return { ok: true };
   }
 
   function canIncrement(card: CardDef, count: number): boolean {
     if (count >= card.dieLimit) return false;
-    if (strictRules && totalDice + 1 > MAX_DICE) return false;
+    // Basic Action dice sit outside the dice cap (rule 2.1.4).
+    if (!isBasicActionFamily(card) && totalDice + 1 > caps.dice) return false;
     return true;
   }
 
@@ -751,13 +829,62 @@ export function TeamBuilderPage() {
               Clear
             </button>
           </div>
-          <p className="hint">
-            {uniqueNames.size}/{MAX_UNIQUE_CARDS} cards, {totalDice}/{MAX_DICE} dice,{" "}
-            {basicActionEntries.length}/{MAX_BASIC_ACTIONS} Basic Actions
-          </p>
-          {violations.length > 0 && (
-            <p className="team-violations">Over the rules: {violations.join(", ")}</p>
+          {/* The ruleset drives everything below it: the dice meter's
+              length, what counts as over, and which adds are blocked. */}
+          <div className="ruleset-picker" role="group" aria-label="Ruleset">
+            {RULESETS.map((option) => (
+              <button
+                key={option.id}
+                className={`ruleset-option${ruleset === option.id ? " selected" : ""}`}
+                aria-pressed={ruleset === option.id}
+                onClick={() => setRuleset(option.id)}
+              >
+                <span className="ruleset-label">{option.label}</span>
+                <span className="ruleset-note">{option.note}</span>
+              </button>
+            ))}
+          </div>
+
+          {ruleset === "custom" && (
+            <div className="custom-caps">
+              {CUSTOM_CAP_FIELDS.map(({ key, label, min }) => (
+                <div className="custom-cap" key={key}>
+                  <span className="custom-cap-label">{label}</span>
+                  <span className="custom-cap-stepper">
+                    <button
+                      disabled={customCaps[key] <= min}
+                      onClick={() => setCustomCaps({ ...customCaps, [key]: customCaps[key] - 1 })}
+                      aria-label={`Fewer ${label}`}
+                    >
+                      −
+                    </button>
+                    <span className="custom-cap-value">{customCaps[key]}</span>
+                    <button
+                      onClick={() => setCustomCaps({ ...customCaps, [key]: customCaps[key] + 1 })}
+                      aria-label={`More ${label}`}
+                    >
+                      +
+                    </button>
+                  </span>
+                </div>
+              ))}
+            </div>
           )}
+
+          <div className="legality-strip">
+            <div className="legality-counts">
+              <span className="legality-dice">
+                <span className="legality-caption">Dice</span>
+                <strong>{totalDice}{isCapped(caps.dice) ? `/${caps.dice}` : ""}</strong>
+              </span>
+              <span className="legality-cards">
+                {uniqueNames.size}{isCapped(caps.cards) ? `/${caps.cards}` : ""} cards ·{" "}
+                {basicActionEntries.length}{isCapped(caps.basicActions) ? `/${caps.basicActions}` : ""} basic actions
+              </span>
+            </div>
+            <DiceMeter used={totalDice} cap={caps.dice} />
+            <p className={`legality-note${legality.ok ? "" : " over"}`}>{legality.note}</p>
+          </div>
 
           {characterEntries.length === 0 && basicActionEntries.length === 0 ? (
             <p className="hint">No cards yet - click "+" on a card to add it.</p>
@@ -830,15 +957,6 @@ export function TeamBuilderPage() {
             </ul>
           )}
 
-          <label className="team-strict-toggle">
-            <input
-              type="checkbox"
-              checked={strictRules}
-              onChange={(e) => setStrictRules(e.target.checked)}
-            />
-            Strict rules (2.1.1/2.1.3-2.1.5)
-          </label>
-
           <button onClick={copyTeamLink} disabled={team.size === 0}>
             {copied ? "Copied!" : "Copy team link"}
           </button>
@@ -853,12 +971,12 @@ export function TeamBuilderPage() {
 
           <button
             className="team-start-game-button"
-            disabled={team.size === 0 || violations.length > 0 || starting}
+            disabled={team.size === 0 || !legality.ok || starting}
             title={
               team.size === 0
                 ? "Add some cards first."
-                : violations.length > 0
-                  ? `Fix team violations first: ${violations.join(", ")}`
+                : !legality.ok
+                  ? `Over the ruleset's limits: ${legality.note}`
                   : undefined
             }
             onClick={startGame}

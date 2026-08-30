@@ -1905,6 +1905,186 @@
   padding-right: 4px;
 }
 
+/* ---- Ruleset picker and legality strip ----
+
+   The old "Strict rules" checkbox could only be on or off. A ruleset is
+   a set of caps instead, so a house format (10 characters, say) is a
+   first-class choice rather than an absence of rules. See rulesets.ts. */
+
+.ruleset-picker {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+  margin-bottom: 8px;
+}
+
+.ruleset-option {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  text-align: left;
+  padding: 5px 7px 6px;
+  border-radius: 8px;
+  border: 1px solid rgba(127, 127, 127, 0.4);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.ruleset-option.selected {
+  border-color: oklch(0.7 0.1 70);
+  background: oklch(0.62 0.11 70 / 0.22);
+}
+
+.ruleset-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.ruleset-note {
+  font-size: 9.5px;
+  opacity: 0.7;
+  line-height: 1.25;
+}
+
+/* Only shown for Custom - a dashed inset so it reads as a setting of the
+   ruleset above rather than another panel. */
+.custom-caps {
+  display: flex;
+  gap: 8px;
+  padding: 6px 8px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  border: 1px dashed oklch(0.6 0.08 70 / 0.6);
+}
+
+.custom-cap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.custom-cap-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.7;
+}
+
+.custom-cap-stepper {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.custom-cap-stepper button {
+  width: 19px;
+  height: 19px;
+  padding: 0;
+  border-radius: 5px;
+  border: 1px solid rgba(127, 127, 127, 0.45);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.custom-cap-stepper button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.custom-cap-value {
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  min-width: 2ch;
+  text-align: center;
+}
+
+.legality-strip {
+  margin-bottom: 10px;
+}
+
+.legality-counts {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.legality-dice {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.legality-caption {
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  opacity: 0.7;
+}
+
+.legality-dice strong {
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+
+.legality-cards {
+  font-size: 10.5px;
+  opacity: 0.75;
+}
+
+/* One pip per die the ruleset allows - "14/20" takes a moment to read,
+   a bar does not. */
+.dice-meter {
+  display: flex;
+  gap: 2px;
+  margin: 5px 0 4px;
+}
+
+.dice-pip {
+  flex: 1;
+  height: 9px;
+  border-radius: 3px;
+  background: rgba(127, 127, 127, 0.18);
+  border: 1px solid rgba(127, 127, 127, 0.3);
+}
+
+.dice-pip.filled {
+  background: oklch(0.72 0.13 70);
+  border-color: oklch(0.72 0.13 70);
+}
+
+/* Past the cap - the team is still shown in full, just marked. */
+.dice-pip.over {
+  background: oklch(0.62 0.18 25);
+  border-color: oklch(0.62 0.18 25);
+}
+
+.legality-note {
+  font-size: 10.5px;
+  line-height: 1.35;
+  margin: 0;
+  opacity: 0.8;
+}
+
+.legality-note.over {
+  color: oklch(0.55 0.16 25);
+  opacity: 1;
+}
+
+@media (prefers-color-scheme: dark) {
+  .legality-note.over {
+    color: oklch(0.75 0.14 25);
+  }
+}
+
 .card-catalog-search {
   display: flex;
   flex-direction: column;
