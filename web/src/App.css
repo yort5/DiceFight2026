@@ -593,6 +593,119 @@
   opacity: 0.65;
 }
 
+/* ---- The 3D die ----
+
+   A real CSS cube: six faces placed with translateZ, the whole cube
+   rotated to bring one of them forward. Spinning a die up or down is
+   then a quarter turn of this element on one transition, rather than a
+   separate animation that has to be kept in step with the level.
+
+   Everything sizes off the inline `size`, so the same component serves a
+   30px die in a gang block and a 50px one in the attack slot; only what
+   cannot be expressed per-size lives here. */
+
+.die-cube-box {
+  position: relative;
+  display: inline-block;
+  margin: 0 auto;
+  flex: none;
+}
+
+.die-cube {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+}
+
+.die-cube-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid;
+  backface-visibility: hidden;
+  font-variant-numeric: tabular-nums;
+  color: oklch(0.95 0.02 90);
+}
+
+/* The shadow is what sells the roll - it darkens and shrinks as the die
+   lifts, and slides with it. */
+.die-cube-shadow {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* Stands in for card art on a character face. */
+.die-cube-art {
+  position: absolute;
+  inset: 14%;
+  border-radius: 3px;
+  background: repeating-linear-gradient(45deg, currentColor 0 1px, transparent 1px 5px);
+  opacity: 0.16;
+}
+
+/* The printed corners: fielding cost upper-left, attack upper-right,
+   defense lower-right - the same reading order as the catalog's
+   .card-die-face, and as the physical die. Damage takes the fourth
+   corner, which the printed die leaves empty. */
+.die-cube-cost,
+.die-cube-attack,
+.die-cube-defense,
+.die-cube-damage {
+  position: absolute;
+  line-height: 1;
+}
+
+.die-cube-cost {
+  left: 8%;
+  top: 5%;
+  font-size: 0.78em;
+  opacity: 0.8;
+}
+
+.die-cube-attack {
+  right: 8%;
+  top: 5%;
+  font-weight: 700;
+}
+
+.die-cube-defense {
+  right: 8%;
+  bottom: 5%;
+  font-weight: 700;
+}
+
+.die-cube-damage {
+  left: 8%;
+  bottom: 5%;
+  font-size: 0.7em;
+  font-weight: 700;
+  color: oklch(0.72 0.17 25);
+}
+
+.die-cube-icon {
+  height: auto;
+  mix-blend-mode: screen;
+}
+
+.die-cube-icon-mono {
+  filter: invert(1);
+}
+
+/* A double-energy face prints the symbol once with a 2 beside it. */
+.die-cube-amount {
+  position: absolute;
+  right: 10%;
+  bottom: 6%;
+  font-size: 0.62em;
+  font-weight: 700;
+  opacity: 0.85;
+}
+
 /* ---- Character die-face badge (fielding cost upper-left, attack
    upper-right, defense lower-right - matching the reference card
    photos; damage taken fills the otherwise-unused lower-left corner) ---- */

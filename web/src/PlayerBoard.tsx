@@ -1,4 +1,6 @@
+import { DieCube } from "./DieCube";
 import { DieIcon } from "./DieIcon";
+import { facesFor } from "./dieFaces";
 import type { CardDef, Die } from "./types";
 import { groupDice } from "./dieHelpers";
 
@@ -21,6 +23,9 @@ export interface Selection {
 export function PlayerBoard(props: {
   title: string;
   isActive: boolean;
+  /** The local player's board - tints their dice apart from the
+   *  opponent's, which is the only difference between the two. */
+  mine: boolean;
   life: number;
   dice: Die[];
   cardsById: Map<string, CardDef>;
@@ -33,7 +38,7 @@ export function PlayerBoard(props: {
   selectableEnergyIds?: Set<string> | null;
 }) {
   const { dice, cardsById, selection, onGroupClick, selectableEnergyIds } = props;
-  const zoneProps = { cardsById, selection, onGroupClick, selectableEnergyIds };
+  const zoneProps = { cardsById, selection, onGroupClick, selectableEnergyIds, mine: props.mine };
   const dicein = (zone: string) => dice.filter((d) => d.zone === zone);
 
   return (
@@ -127,6 +132,7 @@ function ZoneSection(props: {
   selection: Selection;
   onGroupClick: (ids: string[]) => void;
   selectableEnergyIds?: Set<string> | null;
+  mine: boolean;
   prominent?: boolean;
   bare?: boolean;
 }) {
@@ -145,41 +151,31 @@ function ZoneSection(props: {
         ).length;
         const isPrimary = group.ids.includes(props.selection.primary ?? "");
         const countSuffix = group.count > 1 ? ` ×${group.count}` : "";
-        const showCharacterFace = rolled && group.characterFace;
-        const showIconFace = rolled && !showCharacterFace && group.iconKind;
+        const showCube = rolled && (group.characterFace != null || group.iconKind != null);
         const isSelectable = !restrictToSelectable || group.ids.every((id) => props.selectableEnergyIds!.has(id));
         return (
           <button
             key={group.key}
-            className={`die-chip${selectedCount > 0 ? " selected" : ""}${isPrimary ? " primary" : ""}${showCharacterFace || showIconFace ? " has-face" : ""}${isSelectable ? "" : " ineligible"}`}
+            className={`die-chip${selectedCount > 0 ? " selected" : ""}${isPrimary ? " primary" : ""}${showCube ? " has-face" : ""}${isSelectable ? "" : " ineligible"}`}
             onClick={() => props.onGroupClick(group.ids)}
             disabled={!isSelectable}
             title={isSelectable ? group.tooltip : "Not eligible for what you're currently doing"}
             data-die-ids={group.ids.join(",")}
           >
-            {showCharacterFace ? (
+            {showCube ? (
               <>
-                <div className="die-face">
-                  <span className="face-cost">{group.characterFace!.fieldingCost}</span>
-                  <span className="face-attack">{group.characterFace!.attack}</span>
-                  {group.damage > 0 && <span className="face-damage">-{group.damage}</span>}
-                  <span className="face-defense">{group.characterFace!.defense}</span>
-                </div>
+                {/* One cube per die in the zones where a face is really
+                    up, so what the die is showing is the object itself
+                    rather than a badge beside a label. */}
+                <DieCube {...facesFor(group.die, props.cardsById)} size={40} mine={props.mine} damage={group.damage} />
                 <span className="chip-label">
                   {group.label}
                   {countSuffix}
                 </span>
-              </>
-            ) : showIconFace ? (
-              <>
-                <div className="die-face energy-face">
-                  <DieIcon kind={group.iconKind} size={22} />
-                  {group.energyAmount > 1 && <span className="face-amount">{group.energyAmount}</span>}
-                </div>
-                <span className="chip-label">
-                  {group.label}
-                  {countSuffix}
-                </span>
+                {/* The cube is aria-hidden - a cube keeps all six faces
+                    in the DOM - so the face it is showing has to be said
+                    in text here, as it was when this was a flat badge. */}
+                {group.statusText && <span className="chip-status">{group.statusText}</span>}
               </>
             ) : (
               <>

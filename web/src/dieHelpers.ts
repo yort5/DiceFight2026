@@ -70,9 +70,9 @@ export function dieStatusText(die: Die, cardsById: Map<string, CardDef>): string
     return die.energyAmount > 1 ? `${die.energyAmount} ${kind}` : kind;
   }
   if (die.status === "Character" || die.status === "SidekickCharacter") {
-    // Attack/defense are drawn on the die-face badge itself (see
-    // PlayerBoard's character-face chip rendering) - this stays as the
-    // plain-text fallback description (used in the hover tooltip context).
+    // Attack/defense are printed on the die itself (DieCube) - this is
+    // the text alongside it, and the whole description everywhere the
+    // die is not drawn.
     const dmg = die.damage > 0 ? `, ${die.damage} dmg` : "";
     return `L${die.level}${dmg}`;
   }
@@ -117,6 +117,10 @@ export interface DieGroup {
   energyAmount: number;
   count: number;
   ids: string[];
+  /** One of the grouped dice - they are interchangeable by definition,
+   *  so any of them answers "what is this showing". Kept so a consumer
+   *  can derive more than the fields above (DieCube's face set). */
+  die: Die;
 }
 
 function buildDieGroup(key: string, die: Die, cardsById: Map<string, CardDef>): DieGroup {
@@ -131,6 +135,7 @@ function buildDieGroup(key: string, die: Die, cardsById: Map<string, CardDef>): 
     energyAmount: die.energyAmount,
     count: 1,
     ids: [die.id],
+    die,
   };
 }
 

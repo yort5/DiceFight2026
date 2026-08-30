@@ -549,6 +549,7 @@ function App() {
               <PlayerBoard
                 title={`${game.playerOne.name} (${game.playerOne.id})`}
                 isActive={game.activePlayerId === game.playerOne.id}
+                mine
                 life={game.playerOne.life}
                 dice={game.dice.filter((d) => d.ownerId === game.playerOne.id)}
                 cardsById={cardsById}
@@ -559,6 +560,7 @@ function App() {
               <PlayerBoard
                 title={`${game.playerTwo.name} (${game.playerTwo.id})`}
                 isActive={game.activePlayerId === game.playerTwo.id}
+                mine={false}
                 life={game.playerTwo.life}
                 dice={game.dice.filter((d) => d.ownerId === game.playerTwo.id)}
                 cardsById={cardsById}

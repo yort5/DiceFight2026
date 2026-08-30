@@ -9460,3 +9460,66 @@ seven that are the D&D alignment/type columns bleeding into the
 affiliation field (Neutral, Neutral None, Evil, Evil Equip, Equip, Good
 Equip None, Neutral Equip None - 79 cards). Those last are a sheet
 structure question, not a spelling one.
+
+## Match-table redesign, stage 1: the dice become real (2026-08-30)
+
+A design handoff for the in-match screen arrived (`Match Table.dc.html` +
+README, built in Claude Design). It is a full redesign: two playmats
+facing each other across a shared combat lane, a shared sideboard for
+Basic Actions and Globals, identifiable dice in every pile, and - the
+centrepiece - real 3D dice. Taking it in stages, dice first, since the
+die is the one piece that is self-contained and works inside the current
+board.
+
+**What the handoff got right, and where it disagreed with the code.**
+Every file, symbol and helper it names exists; it was written against the
+repo. Three real conflicts, found by checking rather than assuming:
+
+- It specifies a character die as "three level faces, two single-energy
+  faces and one double". `PlaceholderDiceRoller` rolls the opposite - two
+  doubles, one single - and the user confirms the roller is right, but
+  also that **the composition genuinely varies**: Franklin's Galactus has
+  four character faces, and some dual-energy characters carry a generic
+  side. So a fixed face table is wrong in principle, whichever way round.
+- Its shared Basic Actions sideboard is an ENGINE change, not a layout
+  one: `TeamSetup.SetupTeamDice` gives each player their own Basic Action
+  dice in their own Unpurchased zone.
+- `#root` is a fixed `1126px`, not a max-width - the design needs 1420.
+
+**The face model that came out of that.** `dieFaces.ts` builds a
+plausible default set (the typical three-character-two-double-one-single,
+with the character count taken from `CardDef.levels.length` rather than
+hardcoded), and then forces the face the SERVER says the die is showing
+into it, overwriting a same-kind face if the default has no match. So
+whatever the engine rolls, the face pointing at the player is exactly
+that result and the other five are scenery. That is the honest
+arrangement given no real face table exists, and a real one can replace
+`defaultFaces` without touching anything else.
+
+Two gaps worth recording while they are visible: no sheet row has more
+than three levels, so Galactus's fourth face is not in our data at all;
+and `PlaceholderDiceRoller` only ever rolls three character faces, so it
+could not roll a fourth even if it were.
+
+**The die.** `DieCube.tsx` is a real CSS cube - six faces placed with
+`translateZ(size/2)` after a rotation, the cube rotated to bring one
+forward. Spinning a die up or down is then a quarter turn of the same
+element on one transition, with no separate animation to keep in step
+with the level. Everything sizes off one `size` prop, so the same
+component covers a 30px die in a gang block and a 50px one in an attack
+slot. A shadow tracks the lift and scatter on the same transition, which
+is what will make the roll read as physical when that lands.
+
+The `signal` theme (dark faces, hue 62 for your dice / 250 for theirs) is
+the reviewed default. On today's light board the dice read as dark stamps;
+that resolves when the dark felt table lands in a later stage.
+
+One thing the cube costs: it keeps all six faces in the DOM, so the chip's
+accessible name was reading out every face at once. The cube is
+`aria-hidden` and the face it shows is stated in text beside it - which
+also restores the caption the flat badge used to carry.
+
+Verified in a real game: dice roll into the Reserve Pool as cubes, six
+distinct face transforms each, and the face actually pointing at the
+camera (read with `elementFromPoint`) matches what the server rolled.
+708 tests pass; build and lint clean.
