@@ -11,6 +11,7 @@ import { readPendingGame } from "./gameHandoff";
 import { GlobalAbilitiesPanel, type GlobalAbilityFlow } from "./GlobalAbilitiesPanel";
 import { HowToPlay } from "./HowToPlay";
 import { PendingChoicePanel } from "./PendingChoicePanel";
+import { MatchLog } from "./MatchLog";
 import { PlayerBoard, type Selection } from "./PlayerBoard";
 import { TurnRail } from "./TurnRail";
 import { navigate } from "./router";
@@ -594,6 +595,8 @@ function App() {
                 onClick: () => run(opt.run, opt.rolledDieIds),
               }))}
             />
+
+            <MatchLog entries={game.log} nearPlayerId={game.playerOne.id} />
 
             <GlobalAbilitiesPanel
             game={game}

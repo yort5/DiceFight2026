@@ -68,17 +68,26 @@ public sealed record PendingChoiceDto(
         new(pending.ControllerId, pending.Description, pending.CandidateDieIds, pending.AllowMultiple);
 }
 
+// One line of the match log. PlayerId is null for anything the game did
+// rather than a player - the client colours by side off it.
+public sealed record GameLogEntryDto(int Seq, string? PlayerId, string Text)
+{
+    public static GameLogEntryDto From(GameLogEntry entry) => new(entry.Seq, entry.PlayerId, entry.Text);
+}
+
 public sealed record GameStateDto(
     string GameId, string ActivePlayerId, string CurrentStep, string AttackSubStep,
     bool IsFirstTurn, bool EpicBasicActionUsedThisTurn,
-    PlayerDto PlayerOne, PlayerDto PlayerTwo, IReadOnlyList<DieDto> Dice, PendingChoiceDto? PendingChoice)
+    PlayerDto PlayerOne, PlayerDto PlayerTwo, IReadOnlyList<DieDto> Dice, PendingChoiceDto? PendingChoice,
+    IReadOnlyList<GameLogEntryDto> Log)
 {
     public static GameStateDto From(string gameId, GameState state) => new(
         gameId, state.ActivePlayerId, state.CurrentStep.ToString(), state.AttackSubStep.ToString(),
         state.IsFirstTurn, state.EpicBasicActionUsedThisTurn,
         PlayerDto.From(state.PlayerOne), PlayerDto.From(state.PlayerTwo),
         state.Dice.Select(DieDto.From).ToList(),
-        state.PendingChoice is { } pending ? PendingChoiceDto.From(pending) : null);
+        state.PendingChoice is { } pending ? PendingChoiceDto.From(pending) : null,
+        state.Log.Select(GameLogEntryDto.From).ToList());
 }
 
 // ---- Request bodies ----

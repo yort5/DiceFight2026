@@ -67,6 +67,10 @@ public static class CombatEngine
         // Out's "you may choose" windows this one isn't optional - but
         // it still needs a real sub-window since which opposing die each
         // Range die targets is a genuine choice. See ResolveRange.
+        state.LogEvent(state.ActivePlayerId,
+            $"{state.NameOf(state.ActivePlayerId)} attacks with " +
+            $"{DescribeDice(state, attackerDieIds)}.");
+
         var hasRangeTrigger = attackerDieIds.Any(id => DieStats.HasKeyword(state, FindDie(state, id), "Range"));
         state.AttackSubStep = hasRangeTrigger ? AttackSubStep.RangeWindow : AttackSubStep.DeclareBlockers;
     }
@@ -241,6 +245,18 @@ public static class CombatEngine
         // (or explicitly no-op through) a sub-step that has nothing to
         // offer. Tag Out's own window is checked by NextSubStepAfterBlockers
         // below when Infiltrate's isn't reachable at all.
+        // One line per attacker, since "who is blocking what" is the
+        // thing a player rereads the log for.
+        var defenderId = state.OpponentOf(state.ActivePlayerId);
+        foreach (var attacker in state.DiceIn(state.ActivePlayerId, Zone.AttackZone))
+        {
+            var blockers = assignment.BlockersOf(attacker.Id);
+            state.LogEvent(defenderId, blockers.Count == 0
+                ? $"{DisplayName(state, attacker)} is unblocked."
+                : $"{state.NameOf(defenderId)} blocks {DisplayName(state, attacker)} with " +
+                  $"{DescribeDice(state, blockers)}.");
+        }
+
         var hasInfiltrateChoice = state.DiceIn(state.ActivePlayerId, Zone.AttackZone)
             .Any(d => assignment.BlockersOf(d.Id).Count == 0 && DieStats.HasKeyword(state, d, "Infiltrate"));
 
@@ -613,6 +629,14 @@ public static class CombatEngine
         var inactivePlayer = state.GetPlayer(state.OpponentOf(state.ActivePlayerId));
         var attackers = state.DiceIn(state.ActivePlayerId, Zone.AttackZone).ToList();
 
+        // Life is read before and after rather than instrumenting every
+        // path that can change it - unblocked attackers, Overcrush
+        // leftovers, and whatever "when damaged" abilities did all land in
+        // the same number, and the log wants the outcome, not the
+        // bookkeeping.
+        var defenderLifeBefore = inactivePlayer.Life;
+        var attackerLifeBefore = state.GetPlayer(state.ActivePlayerId).Life;
+
         // Overcrush needs, per Overcrush attacker, its attack value, its
         // still-live blockers' total defense, and the *originally declared*
         // blocker list (to check afterward whether every one of them is
@@ -743,6 +767,8 @@ public static class CombatEngine
 
         state.AttackSubStep = AttackSubStep.Done;
         state.CurrentStep = TurnStep.CleanUp;
+
+        LogCombatOutcome(state, koDieIds, defenderLifeBefore, attackerLifeBefore);
 
         return new CombatResult(koDieIds);
     }
@@ -923,6 +949,58 @@ public static class CombatEngine
         state.Dice.SingleOrDefault(d => d.Id == id)
         ?? throw new InvalidOperationException($"No die with id '{id}'.");
 
+    private static void LogCombatOutcome(
+        GameState state, IReadOnlyList<string> koDieIds, int defenderLifeBefore, int attackerLifeBefore)
+    {
+        var attackerId = state.ActivePlayerId;
+        var defenderId = state.OpponentOf(attackerId);
+
+        var dealt = defenderLifeBefore - state.GetPlayer(defenderId).Life;
+        if (dealt > 0)
+        {
+            state.LogEvent(attackerId,
+                $"{state.NameOf(defenderId)} takes {dealt} damage ({state.GetPlayer(defenderId).Life} life left).");
+        }
+
+        // Retaliation and the like can send damage back the other way.
+        var takenBack = attackerLifeBefore - state.GetPlayer(attackerId).Life;
+        if (takenBack > 0)
+        {
+            state.LogEvent(defenderId,
+                $"{state.NameOf(attackerId)} takes {takenBack} damage ({state.GetPlayer(attackerId).Life} life left).");
+        }
+
+        foreach (var dieId in koDieIds)
+        {
+            var die = state.Dice.FirstOrDefault(d => d.Id == dieId);
+            if (die is null) continue;
+            state.LogEvent(die.ControllerId, $"{DisplayName(state, die)} is knocked out.");
+        }
+    }
+
+    // "Big Barda L2 and Robin L1" - names and levels, comma-separated with
+    // a final "and", because these lines are read as sentences.
+    private static string DescribeDice(GameState state, IReadOnlyList<string> dieIds)
+    {
+        var names = dieIds
+            .Select(id => state.Dice.FirstOrDefault(d => d.Id == id))
+            .Where(d => d is not null)
+            .Select(d => $"{DisplayName(state, d!)} L{d!.Level}")
+            .ToList();
+        return names.Count switch
+        {
+            0 => "nothing",
+            1 => names[0],
+            _ => $"{string.Join(", ", names.Take(names.Count - 1))} and {names[^1]}",
+        };
+    }
+
+    // A Sidekick die has no card (rule 1.6.8 - they are not part of the
+    // team's card list), so it needs naming explicitly rather than falling
+    // through to the die id, which leaks into the match log and error
+    // messages alike.
     private static string DisplayName(GameState state, DieInstance die) =>
-        die.CardId is { } cardId && state.CardCatalog.TryGetValue(cardId, out var card) ? card.Name : die.Id;
+        die.CardId is { } cardId && state.CardCatalog.TryGetValue(cardId, out var card) ? card.Name
+        : die.CardId is null ? "Sidekick"
+        : die.Id;
 }

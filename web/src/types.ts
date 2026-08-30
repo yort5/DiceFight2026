@@ -56,6 +56,13 @@ export interface Die {
   isVirtualEnergy: boolean;
 }
 
+export interface GameLogEntry {
+  seq: number;
+  /** Who did it, or null for something the game itself did. */
+  playerId: string | null;
+  text: string;
+}
+
 export interface PlayerState {
   id: string;
   name: string;
@@ -100,6 +107,9 @@ export interface GameState {
   playerTwo: PlayerState;
   dice: Die[];
   pendingChoice: PendingChoice | null;
+  /** What has happened, oldest first. Written by the engine, so both
+   *  players see the same account. Capped at the 200 most recent. */
+  log: GameLogEntry[];
 }
 
 // Rule 2.7.2.2 - one pair per (attacker, blocker); a given attacker can

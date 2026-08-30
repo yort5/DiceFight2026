@@ -253,6 +253,8 @@ public static class TurnEngine
 
         foreach (var die in dice)
             die.Zone = Zone.ReservePool;
+
+        LogRoll(state, "rolls", dice);
     }
 
     // rerollDieIds is the player's rule-2.4.3 decision, made after seeing
@@ -267,8 +269,12 @@ public static class TurnEngine
             throw new InvalidOperationException($"Expected RollAndReroll step, was {state.CurrentStep}.");
 
         var rerollSet = rerollDieIds.ToHashSet();
-        foreach (var die in state.DiceIn(state.ActivePlayerId, Zone.ReservePool).Where(d => rerollSet.Contains(d.Id)))
+        var rerolled = state.DiceIn(state.ActivePlayerId, Zone.ReservePool).Where(d => rerollSet.Contains(d.Id)).ToList();
+        foreach (var die in rerolled)
             ApplyRoll(state, roller, die);
+
+        if (rerolled.Count > 0) LogRoll(state, "rerolls", rerolled);
+        else state.LogEvent(state.ActivePlayerId, $"{state.NameOf(state.ActivePlayerId)} takes no reroll.");
 
         // Keyword Energize - checked once against the Roll and Reroll
         // step's *final* state, not the initial roll: a die rerolled off
@@ -531,6 +537,9 @@ public static class TurnEngine
         var purchaser = state.GetPlayer(state.ActivePlayerId);
         purchaser.PurchasedDieThisTurn = true;
         if (card.Type == CardType.Character) purchaser.PurchasedCharacterDieThisTurn = true;
+
+        state.LogEvent(state.ActivePlayerId,
+            $"{state.NameOf(state.ActivePlayerId)} purchases {card.Name} for {effectiveCost}.");
     }
 
     // Rule 2.6.3 - Field Character Dice, one of the four Main Step game
@@ -635,6 +644,9 @@ public static class TurnEngine
                 EnqueueTriggered(state, queue, teamwatcher, TriggerType.Teamwatch);
             }
         }
+
+        state.LogEvent(state.ActivePlayerId,
+            $"{state.NameOf(state.ActivePlayerId)} fields {DisplayName(state, die)} at level {die.Level}.");
 
         ResolveWhenAnotherDieFielded(state, queue, die);
     }
@@ -1021,6 +1033,9 @@ public static class TurnEngine
         {
             die.Zone = Zone.OutOfPlay; // rule 2.6.4.1
         }
+
+        state.LogEvent(state.ActivePlayerId,
+            $"{state.NameOf(state.ActivePlayerId)} uses the {DisplayName(state, die)} action die.");
     }
 
     // Rule 2.6.4.2/2.6.4.3 and Appendix 1's Continuous entry - the second
@@ -1191,6 +1206,8 @@ public static class TurnEngine
             requiredType => $"{card.Name}'s Global ability requires at least one {requiredType} energy.");
 
         ResolveWhenXMenEnergySpentOnGlobalOrField(state, queue, playerId, energyDice);
+
+        state.LogEvent(playerId, $"{state.NameOf(playerId)} uses {card.Name}'s Global ability.");
 
         if (ability.OncePerTurn)
             state.GlobalsUsedThisTurn[cardId] = state.GlobalsUsedThisTurn.GetValueOrDefault(cardId) + 1;
@@ -1363,8 +1380,36 @@ public static class TurnEngine
     // For user-facing error messages - a card's name reads far better than
     // its raw die id (e.g. "teamB-falcon-1"), and which team it belongs to
     // is already visible elsewhere in the UI, not worth repeating here.
+    // "rolls 4 dice: Bolt, Wild, Shield, Harley Quinn L1" - the faces are
+    // the interesting part of a roll, so they go in the line rather than
+    // just a count.
+    private static void LogRoll(GameState state, string verb, IReadOnlyList<DieInstance> dice)
+    {
+        if (dice.Count == 0) return;
+        var faces = string.Join(", ", dice.Select(d => FaceDescription(state, d)));
+        state.LogEvent(state.ActivePlayerId,
+            $"{state.NameOf(state.ActivePlayerId)} {verb} {dice.Count} " +
+            $"{(dice.Count == 1 ? "die" : "dice")}: {faces}.");
+    }
+
+    private static string FaceDescription(GameState state, DieInstance die) => die.Status switch
+    {
+        DieStatus.Energy when die.EnergyKind == EnergyKind.Specific && die.ProvidedEnergyType is { } type =>
+            die.EnergyAmount > 1 ? $"{die.EnergyAmount} {type}" : type.ToString(),
+        DieStatus.Energy => die.EnergyAmount > 1 ? $"{die.EnergyAmount} {die.EnergyKind}" : die.EnergyKind.ToString(),
+        DieStatus.Action => "Action",
+        DieStatus.Character or DieStatus.SidekickCharacter => $"{DisplayName(state, die)} L{die.Level}",
+        _ => DisplayName(state, die),
+    };
+
+    // A Sidekick die has no card (rule 1.6.8 - they are not part of the
+    // team's card list), so it needs naming explicitly rather than falling
+    // through to the die id, which leaks into the match log and error
+    // messages alike.
     private static string DisplayName(GameState state, DieInstance die) =>
-        die.CardId is { } cardId && state.CardCatalog.TryGetValue(cardId, out var card) ? card.Name : die.Id;
+        die.CardId is { } cardId && state.CardCatalog.TryGetValue(cardId, out var card) ? card.Name
+        : die.CardId is null ? "Sidekick"
+        : die.Id;
 
     // Shared by TurnEngine.Field and CombatEngine - enqueues every ability
     // on a die's card matching the given trigger. Internal so CombatEngine
@@ -1759,6 +1804,7 @@ public static class TurnEngine
 
         // Card-text once-per-turn Global limiters (e.g. Falcon) reset too.
         state.GlobalsUsedThisTurn.Clear();
+        state.LogEvent(activeId, $"{state.NameOf(activeId)} ends their turn.");
 
         // Rule-text turn-scoped flags reset (Invisible Woman's forced
         // blockers, Starfire's "purchased a die this turn" check,

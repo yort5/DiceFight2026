@@ -9773,3 +9773,53 @@ so both copies appear, tagged "yours"/"theirs" - but only when a card is
 actually duplicated, since otherwise it is noise.
 
 555 engine tests pass (up from 551).
+
+## Match-table redesign, stage 5: the log (2026-08-30)
+
+The last unbuilt panel from the handoff, and the one that needed the
+engine: `GameState` had no record of what happened.
+
+**Written by the engine, not diffed by the client.** One action can
+cascade through a whole queue of abilities, and only the engine knows
+that was one thing a player did - a client diffing state would either
+miss it or shatter it into a dozen lines. It also means both players read
+the same account. `GameState.LogEvent(playerId, text)` appends, and the
+emit points are the public entry points a player actually calls: Roll,
+Reroll, Purchase, Field, UseActionDie, UseGlobalAbility, DeclareAttackers,
+DeclareBlockers, AssignCombatDamage, CleanUp.
+
+Two shapes worth noting:
+
+- **Rolls spell out the faces** ("rolls 3 dice: Mask, Sidekick L1, Wild")
+  rather than a count, because the faces are what the player is about to
+  make decisions from - and it matches the design's own sample log.
+- **Combat damage is read from life before and after** rather than
+  instrumenting every path that can change it. Unblocked attackers,
+  Overcrush leftovers and "when damaged" abilities all land in the same
+  number, and the log wants the outcome, not the bookkeeping. Retaliation
+  sending damage back the other way falls out of the same comparison.
+
+The text is third person ("Team A fields...") because the same state is
+served to both players and only the client knows which side is reading;
+the entry carries the player id and the client colours amber/blue off
+that, per the design.
+
+**Capped at 200 lines**, oldest dropped, since it rides on every API
+response. `Seq` keeps counting past the cap so the numbering stays honest
+about what was dropped.
+
+**A bug the log surfaced.** `DisplayName` returned the raw die id for any
+die with no card - which is every Sidekick (rule 1.6.8: they are not part
+of the team's card list). The first log read "Team A fields
+teamA-sidekick-0", and the same string had been leaking into error
+messages all along. Both copies of `DisplayName` now name a card-less die
+"Sidekick".
+
+Four tests: numbering from one, the cap keeping the newest 200 while Seq
+keeps counting, a roll naming its faces, and a Sidekick face being named
+rather than showing a die id. 559 engine tests pass (up from 555).
+
+**That completes the handoff** apart from the two variants it offered and
+we did not take (the `carved` ivory dice, the `rail` step UI) and the
+roster strips, which are still the old collapsed `<details>` rather than
+the design's portrait cards.

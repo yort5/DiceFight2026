@@ -15,6 +15,32 @@ public sealed class GameState
     public List<DieInstance> Dice { get; } = [];
 
     public string ActivePlayerId { get; set; } = string.Empty;
+
+    // A running account of what happened, oldest first, for the match
+    // log. Written by the engine at the points a player actually does
+    // something (see LogEvent's callers) rather than by the client
+    // guessing from state diffs, so both players see the same story and
+    // an action that resolved several abilities is still one line.
+    //
+    // Capped: a long game would otherwise grow this without bound, and
+    // it rides on every API response. The oldest lines are dropped, which
+    // is the right end to lose - Seq keeps the numbering honest.
+    private const int MaxLogEntries = 200;
+
+    public List<GameLogEntry> Log { get; } = [];
+
+    private int _logSeq;
+
+    /// <summary>Records one line. `playerId` null means the game itself did it.</summary>
+    public void LogEvent(string? playerId, string text)
+    {
+        Log.Add(new GameLogEntry(++_logSeq, playerId, text));
+        if (Log.Count > MaxLogEntries) Log.RemoveRange(0, Log.Count - MaxLogEntries);
+    }
+
+    /// <summary>The player's display name, for log text.</summary>
+    public string NameOf(string playerId) =>
+        playerId == PlayerOne.Id ? PlayerOne.Name : playerId == PlayerTwo.Id ? PlayerTwo.Name : playerId;
     public TurnStep CurrentStep { get; set; } = TurnStep.ClearAndDraw;
     public AttackSubStep AttackSubStep { get; set; } = AttackSubStep.NotInAttack;
 
