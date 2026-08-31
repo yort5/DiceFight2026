@@ -10288,3 +10288,63 @@ guard and deleting the stale-pending cleanup each fail one.
 Verified four ways: the controller tests; the four panel faces rendered
 in a real browser for both seats; and over HTTP, that the endpoint routes
 and returns 401 unseated / 400 out of step.
+
+## Team Builder, stage 2: the roster becomes the team's real shape (2026-08-31)
+
+Stage 1 built the ruleset model; this draws it. The team was a text list
+in a sidebar, which is a strange thing for the artifact the page exists
+to make. It is now one tile per slot the ruleset allows, with each card's
+dice as pips - so "am I legal, and where is the room left" is read at a
+glance rather than parsed out of "3/8 cards, 7/20 dice". The counts line
+stays; it is the precise version of the same answer.
+
+**Pips, twice, deliberately different.** The dice meter's pips are the
+ruleset's twenty; a tile's pips are that card's own `dieLimit`, filled to
+what you own. Two bars meaning different things must not look alike, so
+the tile pips are square, dashed when unowned, and shaded like a die
+face. Past a dozen they stop being countable at a glance and `DicePips`
+falls back to a fraction - no real card is close, but bulk data has
+surprised this catalog before.
+
+**Nothing is ever truncated, so the tiles say what is wrong.** Switching
+Freeform to Standard leaves a nine-card team showing nine tiles; the ones
+past the cap now carry the same red the dice meter uses. Share, print and
+the old-builder link all stay enabled - only "Play with this team"
+disables, because only starting a game actually requires legality.
+
+**Basic Actions get their own violet grid**, matching the match table's
+colour for community property, captioned "N dice - outside the dice cap"
+(rule 2.1.4) where that fact applies rather than in a note somewhere.
+
+**One primary action.** "Start Game" used to sit third in a stack of
+three identical buttons, reading as the least important rather than the
+point of the page. It is now a single full-width primary, with Share
+link / Print list / Old builder / Clear demoted to a ghost row.
+
+**Rarity gained a letter** (C/U/R/SR/CH/P) alongside the colour. Colour
+alone fails anyone who cannot separate the stripes, and it fails every
+printout. The colours themselves are untouched - they match the old
+Teambuilder's, which was a deliberate choice.
+
+**Print list** is new, and needed a real sheet: printing the page as it
+stood would give you dark panels and 200 catalog rows. There is now a
+hidden team sheet that is the only thing print shows. First attempt used
+`visibility: hidden` on everything else and printed five words per line -
+a hidden sibling still reserves its space, so the sheet stayed trapped in
+the roster's 404px column. Removing the chrome from the layout outright,
+and flattening the grid and the sticky panel, gives the sheet the paper.
+
+The list view is kept, and gained the rarity badges: when you are
+checking text rather than shape, a dense list beats tiles. Which view
+you are in persists, but deliberately does NOT travel in the share link -
+the link describes what the team IS, not how you happen to be looking
+at it.
+
+Verified in a browser across all three rulesets: slot counts (Standard
+pads to 8, Freeform keeps two ghost slots, Custom follows its own cap),
+a Custom cap dropped to 2 against a 9-card team (7 tiles marked over,
+none dropped), the per-tile steppers, view and team surviving a reload,
+and the print sheet under print media with the catalog gone.
+
+Stages 3-5 (filter rail, result-row restyle, Team Shape panel) are still
+to come.

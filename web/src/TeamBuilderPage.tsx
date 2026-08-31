@@ -175,6 +175,55 @@ function rarityClass(rarity: string | null): string {
   }
 }
 
+// Rarity as a LETTER as well as a colour. Colour alone fails anyone who
+// cannot separate the red and green stripes, and it fails everyone in
+// print. The colours themselves stay exactly as they are - they match the
+// old Teambuilder's stripes, which is a deliberate fidelity choice.
+function rarityLetter(rarity: string | null): string | null {
+  switch (rarityTier(rarity)) {
+    case "Common": return "C";
+    case "Uncommon": return "U";
+    case "Rare": return "R";
+    case "Super Rare": return "SR";
+    case "Chase": return "CH";
+    case "Promo": return "P";
+    default: return null;
+  }
+}
+
+function RarityBadge({ rarity }: { rarity: string | null }) {
+  const letter = rarityLetter(rarity);
+  if (!letter) return null;
+  return (
+    <span className={`rarity-badge ${rarityClass(rarity)}`} title={rarityTier(rarity) ?? undefined}>
+      {letter}
+    </span>
+  );
+}
+
+// One pip per die the CARD allows, filled to the number you own - so the
+// per-card ceiling is visible without hovering or reading a fraction.
+// Above about a dozen the pips stop being countable at a glance and the
+// fraction does the job better; no real card comes close, but bulk data
+// has surprised this catalog before.
+const MAX_LEGIBLE_PIPS = 12;
+
+// At module scope, not inside the component with the other storage keys:
+// the roster-view state reads it in its lazy initialiser, which runs
+// before those declarations are reached.
+const ROSTER_VIEW_KEY = "dicefight.teamBuilder.rosterView";
+
+function DicePips({ count, limit }: { count: number; limit: number }) {
+  if (limit > MAX_LEGIBLE_PIPS) return <span className="slot-dice-count">{count}/{limit}</span>;
+  return (
+    <span className="slot-pips" role="img" aria-label={`${count} of ${limit} dice`}>
+      {Array.from({ length: limit }, (_, i) => (
+        <span key={i} className={`slot-pip${i < count ? " owned" : ""}`} />
+      ))}
+    </span>
+  );
+}
+
 // Rendered before the row cap below applies, so typing narrows the
 // visible count too - keeps a huge future catalog from ever forcing a
 // full re-render on every keystroke (see the design doc's scaling note).
@@ -230,6 +279,17 @@ export function TeamBuilderPage() {
   // off". Restored from localStorage below, alongside the team.
   const [ruleset, setRuleset] = useState<RulesetId>("standard");
   const [customCaps, setCustomCaps] = useState<Caps>(STANDARD_CAPS);
+  // Slots draws the team's shape; List is denser and shows rules text.
+  // Persisted because it is a working preference, not part of the team -
+  // it deliberately does NOT travel in the share link, which describes
+  // what the team IS rather than how you happen to be looking at it.
+  const [rosterView, setRosterView] = useState<"slots" | "list">(() => {
+    try {
+      return window.localStorage.getItem(ROSTER_VIEW_KEY) === "list" ? "list" : "slots";
+    } catch {
+      return "slots";
+    }
+  });
   const [copied, setCopied] = useState(false);
   const [copiedOld, setCopiedOld] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
@@ -336,6 +396,15 @@ export function TeamBuilderPage() {
     }
   }, [team, teamRestored]);
 
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(ROSTER_VIEW_KEY, rosterView);
+    } catch {
+      // Same as the team above - unavailable storage costs a preference,
+      // not the page.
+    }
+  }, [rosterView]);
+
   const cardById = useMemo(() => new Map((cards ?? []).map((c) => [c.id, c])), [cards]);
 
   const teamEntries = useMemo(
@@ -363,6 +432,19 @@ export function TeamBuilderPage() {
   // passes through 0/1 Basic Actions or fewer than 8 cards on the way
   // to a complete team, that's not illegal, just incomplete.
   const caps = useMemo(() => capsFor(ruleset, customCaps), [ruleset, customCaps]);
+
+  // How many tiles to draw. Never fewer than the team has cards, so
+  // switching Standard -> Freeform (or dropping a Custom cap below the
+  // team) can never hide a card that is still on the team - the extras
+  // show and colour as over-cap instead. Uncapped, there are always two
+  // ghost slots to grow into rather than a grid that ends exactly where
+  // you stopped.
+  const characterSlotCount = isCapped(caps.cards)
+    ? Math.max(caps.cards, cardCount)
+    : cardCount + 2;
+  const basicActionSlotCount = isCapped(caps.basicActions)
+    ? Math.max(caps.basicActions, basicActionEntries.length)
+    : basicActionEntries.length + 1;
 
   const legality = useMemo(
     () => legalityOf(ruleset, caps, {
@@ -829,16 +911,19 @@ export function TeamBuilderPage() {
 
         <div className="team-sidebar">
           <div className="team-sidebar-header">
-            <h3>Team</h3>
-            <button
-              className="team-clear-button"
-              disabled={team.size === 0}
-              onClick={() => {
-                if (window.confirm("Remove all cards from this team?")) setTeam(new Map());
-              }}
-            >
-              Clear
-            </button>
+            <h3>Your team</h3>
+            <div className="roster-view-toggle" role="group" aria-label="Roster view">
+              {(["slots", "list"] as const).map((view) => (
+                <button
+                  key={view}
+                  className={rosterView === view ? "selected" : ""}
+                  aria-pressed={rosterView === view}
+                  onClick={() => setRosterView(view)}
+                >
+                  {view === "slots" ? "Slots" : "List"}
+                </button>
+              ))}
+            </div>
           </div>
           {/* The ruleset drives everything below it: the dice meter's
               length, what counts as over, and which adds are blocked. */}
@@ -897,13 +982,125 @@ export function TeamBuilderPage() {
             <p className={`legality-note${legality.ok ? "" : " over"}`}>{legality.note}</p>
           </div>
 
-          {characterEntries.length === 0 && basicActionEntries.length === 0 ? (
+          {/* The roster drawn as its real SHAPE - one tile per slot the
+              ruleset allows, dice as pips - so legality is read at a
+              glance rather than parsed out of "3/8 cards, 7/20 dice".
+              The list view is kept for the same reason the old community
+              builder kept one: when you are checking text rather than
+              shape, a dense list beats tiles. */}
+          {rosterView === "slots" ? (
+            <div className="roster-scroll">
+              <div className="slot-grid">
+                {Array.from({ length: characterSlotCount }, (_, i) => {
+                  const entry = characterEntries[i];
+                  if (!entry) {
+                    return (
+                      <div className="slot-tile empty" key={`empty-${i}`}>
+                        <span className="slot-number">{i + 1}</span>
+                        <span className="slot-empty-label">Empty slot</span>
+                      </div>
+                    );
+                  }
+                  const { card, count } = entry;
+                  const overCap = isCapped(caps.cards) && i >= caps.cards;
+                  return (
+                    <div
+                      className={`slot-tile ${rarityClass(card.rarity)}${overCap ? " over" : ""}`}
+                      key={card.id}
+                      title={overCap ? `Past the ${caps.cards}-card cap for this ruleset.` : undefined}
+                    >
+                      <div className="slot-top">
+                        <RarityBadge rarity={card.rarity} />
+                        <span className="slot-set">{card.set}</span>
+                        <button
+                          className="slot-remove"
+                          onClick={() => removeCard(card.id)}
+                          aria-label={`Remove ${card.name}`}
+                          title={`Remove ${card.name}`}
+                        >
+                          ×
+                        </button>
+                      </div>
+                      <div className="slot-name" title={card.name}>{card.name}</div>
+                      {card.subtitle && <div className="slot-subtitle" title={card.subtitle}>{card.subtitle}</div>}
+                      <div className="slot-meta">
+                        <span className="slot-cost" title="Purchase cost">{card.purchaseCost}</span>
+                        {card.energyTypes.length > 0 && <EnergyTypes types={card.energyTypes} />}
+                        {card.affiliations.length > 0 && (
+                          <span className="slot-affiliations">
+                            <AffiliationIcons
+                              codes={card.affiliationIcons}
+                              names={card.affiliations}
+                              index={affiliationIconIndex}
+                            />
+                          </span>
+                        )}
+                      </div>
+                      <div className="slot-dice">
+                        <button
+                          disabled={count <= 1}
+                          onClick={() => setCount(card.id, count - 1)}
+                          aria-label={`One fewer ${card.name} die`}
+                        >
+                          −
+                        </button>
+                        <DicePips count={count} limit={card.dieLimit} />
+                        <button
+                          disabled={!canIncrement(card, count)}
+                          onClick={() => setCount(card.id, count + 1)}
+                          aria-label={`One more ${card.name} die`}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Basic Actions get their own grid, in the same violet the
+                  match table uses for community property - they are shared
+                  with the opponent, and their dice sit outside the dice cap
+                  (rule 2.1.4). Two facts worth stating where they apply. */}
+              <div className="slot-grid basic-action-grid">
+                {Array.from({ length: basicActionSlotCount }, (_, i) => {
+                  const entry = basicActionEntries[i];
+                  if (!entry) {
+                    return (
+                      <div className="slot-tile basic-action empty" key={`ba-empty-${i}`}>
+                        <span className="slot-empty-label">Basic Action — empty</span>
+                      </div>
+                    );
+                  }
+                  const { card, count } = entry;
+                  return (
+                    <div className="slot-tile basic-action" key={card.id}>
+                      <div className="slot-top">
+                        <span className="slot-caption">Basic Action</span>
+                        <button
+                          className="slot-remove"
+                          onClick={() => removeCard(card.id)}
+                          aria-label={`Remove ${card.name}`}
+                          title={`Remove ${card.name}`}
+                        >
+                          ×
+                        </button>
+                      </div>
+                      <div className="slot-name" title={card.name}>{card.name}</div>
+                      <div className="slot-ba-dice">{count} dice · outside the dice cap</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : characterEntries.length === 0 && basicActionEntries.length === 0 ? (
             <p className="hint">No cards yet - click "+" on a card to add it.</p>
           ) : (
             <ul className="team-list">
               {[...characterEntries, ...basicActionEntries].map(({ card, count }) => (
                 <li key={card.id} className={`team-list-item ${rarityClass(card.rarity)}`}>
                   <div className="team-card-header">
+                    <RarityBadge rarity={card.rarity} />
                     <div className="team-card-identity">
                       <div className="team-card-name">{card.name}</div>
                       {card.subtitle && <div className="hint">{card.subtitle}</div>}
@@ -938,11 +1135,6 @@ export function TeamBuilderPage() {
                     Remove
                   </button>
                   </div>
-                  {/* Cost / energy / affiliation, the details that actually
-                      drive team selection - energy especially, since you are
-                      usually either balancing it or committing to one type.
-                      Type and Set are deliberately left out: neither changes
-                      a build decision, and the panel is narrow. */}
                   <div className="team-card-meta">
                     <span className="team-card-cost" title="Purchase cost">{card.purchaseCost}</span>
                     <span>{card.energyTypes.length > 0 ? <EnergyTypes types={card.energyTypes} /> : "No energy type"}</span>
@@ -950,50 +1142,95 @@ export function TeamBuilderPage() {
                       <span><AffiliationIcons codes={card.affiliationIcons} names={card.affiliations} index={affiliationIconIndex} /></span>
                     )}
                   </div>
-                  {card.levels.length > 0 && (
-                    // Every level, not just level 1: whether a die is worth
-                    // running often turns on what its level 2/3 faces do, and
-                    // the main table only ever shows level 1.
-                    <div className="team-card-levels">
-                      {card.levels.map((l, i) => (
-                        <span key={i}>
-                          <span className="hint">L{i + 1}</span> <DieFace face={l} />
-                        </span>
-                      ))}
-                    </div>
-                  )}
                   <div className="team-card-text"><CardText text={card.rawText} /></div>
                 </li>
               ))}
             </ul>
           )}
 
-          <button onClick={copyTeamLink} disabled={team.size === 0}>
-            {copied ? "Copied!" : "Copy team link"}
-          </button>
-
+          {/* One primary action, everything else demoted to a ghost row.
+              Before this, "Start Game" sat third in a stack of equals and
+              read as the least important of the three. */}
           <button
-            onClick={copyOldTeamLink}
-            disabled={team.size === 0}
-            title={`Opens the team in the old Teambuilder at ${OLD_TEAM_BUILDER_URL}, which has card images.`}
-          >
-            {copiedOld ?? "Copy OLD team link"}
-          </button>
-
-          <button
-            className="team-start-game-button"
+            className="team-play-button"
             disabled={team.size === 0 || !legality.ok || starting}
-            title={
-              team.size === 0
-                ? "Add some cards first."
-                : !legality.ok
-                  ? `Over the ruleset's limits: ${legality.note}`
-                  : undefined
-            }
+            title={team.size === 0 ? "Add some cards first." : !legality.ok ? legality.note : undefined}
             onClick={startGame}
           >
-            {starting ? "Starting..." : "Start Game with This Team"}
+            {starting ? "Starting..." : "Play with this team"}
           </button>
+
+          <div className="team-secondary-actions">
+            <button onClick={copyTeamLink} disabled={team.size === 0}>
+              {copied ? "Copied!" : "Share link"}
+            </button>
+            <button
+              onClick={() => window.print()}
+              disabled={team.size === 0}
+              title="Print a plain team sheet for physical play."
+            >
+              Print list
+            </button>
+            <button
+              onClick={copyOldTeamLink}
+              disabled={team.size === 0}
+              title={`Opens the team in the old Teambuilder at ${OLD_TEAM_BUILDER_URL}, which has card images.`}
+            >
+              {copiedOld ?? "Old builder"}
+            </button>
+            <button
+              disabled={team.size === 0}
+              onClick={() => {
+                if (window.confirm("Remove all cards from this team?")) setTeam(new Map());
+              }}
+            >
+              Clear
+            </button>
+          </div>
+          <p className="team-actions-footnote">Team autosaves · link keeps counts and ruleset</p>
+
+          {/* What "Print list" prints. Hidden on screen, and the only
+              thing NOT hidden on paper - printing the page itself would
+              produce three columns of dark panels and a 200-row catalog.
+              A team sheet for physical play wants the opposite: the cards,
+              their dice counts, and the text, in ink you can read. */}
+          <div className="team-print-sheet" aria-hidden="true">
+            <h1>Dice Masters team</h1>
+            <p className="team-print-summary">
+              {cardCount} {cardCount === 1 ? "card" : "cards"} · {totalDice} dice ·{" "}
+              {basicActionEntries.length} basic {basicActionEntries.length === 1 ? "action" : "actions"} ·{" "}
+              {RULESETS.find((r) => r.id === ruleset)?.label ?? ruleset}
+            </p>
+            <table>
+              <thead>
+                <tr>
+                  <th>Dice</th>
+                  <th>Card</th>
+                  <th>Cost</th>
+                  <th>Set</th>
+                  <th>Text</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...characterEntries, ...basicActionEntries].map(({ card, count }) => (
+                  <tr key={card.id}>
+                    <td>{count}</td>
+                    <td>
+                      <strong>{card.name}</strong>
+                      {card.subtitle && <> — {card.subtitle}</>}
+                      {/* The letter, not the colour: a rarity stripe is
+                          the first thing a monochrome printer loses. */}
+                      {rarityLetter(card.rarity) && <> [{rarityLetter(card.rarity)}]</>}
+                    </td>
+                    <td>{card.purchaseCost}</td>
+                    <td>{card.set}</td>
+                    <td>{card.rawText}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
           {startError && <div className="error">{startError}</div>}
         </div>
       </div>
