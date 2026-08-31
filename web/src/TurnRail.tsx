@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { GameState } from "./types";
 
 // The rail beside the table: who has how much life, where the turn is,
@@ -56,11 +57,17 @@ export function TurnRail(props: {
   /** Shown under the guidance when the next move is a board selection
    *  rather than a button. */
   note?: string;
+  /** Link that hands the other seat to someone else - null when this
+   *  browser holds only one seat. */
+  inviteLink?: string | null;
 }) {
   const { game } = props;
   const you = props.nearPlayerId === game.playerTwo.id ? game.playerTwo : game.playerOne;
   const them = props.nearPlayerId === game.playerTwo.id ? game.playerOne : game.playerTwo;
   const currentIndex = STEPS.findIndex((s) => s.key === game.currentStep);
+  // The other player is mid-turn: say so, rather than leaving the panel
+  // looking like something is stuck.
+  const waiting = game.activePlayerId !== props.nearPlayerId;
   const inAttack = game.currentStep === "Attack" && game.attackSubStep !== "NotInAttack";
   const title = inAttack ? `Attack · ${spaced(game.attackSubStep)}` : (STEPS[currentIndex]?.label ?? game.currentStep);
   const guidance = inAttack
@@ -98,6 +105,8 @@ export function TurnRail(props: {
         </ol>
       </div>
 
+      {props.inviteLink && <InvitePanel link={props.inviteLink} />}
+
       <div className="rail-panel now-panel">
         <span className="now-eyebrow">Now</span>
         <h3 className="now-title">{title}</h3>
@@ -119,9 +128,45 @@ export function TurnRail(props: {
           </button>
         ))}
         {props.actions.length === 0 && (
-          <p className="now-note">Nothing to advance right now - finish what is on the board.</p>
+          <p className="now-note">
+            {waiting
+              ? `Waiting for ${them.name} to move.`
+              : "Nothing to advance right now - finish what is on the board."}
+          </p>
         )}
       </div>
+    </div>
+  );
+}
+
+// The invite is the only way a second person gets into the game, so it
+// sits in the rail until someone takes it - not behind a menu.
+function InvitePanel({ link }: { link: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="rail-panel invite-panel">
+      <h3>Invite an opponent</h3>
+      <p className="now-note">
+        Send this link. Whoever opens it takes the other side - so send it to one person.
+      </p>
+      {/* Deliberately NOT .now-button: that class means "a move you can
+          make in this step", and copying a link is not one. */}
+      <button
+        className="rail-button"
+        onClick={async () => {
+          try {
+            await navigator.clipboard.writeText(link);
+            setCopied(true);
+            window.setTimeout(() => setCopied(false), 2000);
+          } catch {
+            // Clipboard blocked (insecure origin, denied permission) -
+            // the link is selectable below either way.
+          }
+        }}
+      >
+        {copied ? "Copied!" : "Copy invite link"}
+      </button>
+      <input className="invite-link" readOnly value={link} onFocus={(e) => e.currentTarget.select()} />
     </div>
   );
 }

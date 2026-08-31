@@ -15,10 +15,14 @@ import { MatchLog } from "./MatchLog";
 import { PlayerBoard, type Selection } from "./PlayerBoard";
 import { TurnRail } from "./TurnRail";
 import { navigate } from "./router";
+import { claimSeatFromUrl, inviteLink, nameClaimedSeat } from "./seats";
 import { facesFor } from "./dieFaces";
 import { isRoll, useDiceRoll, type RollTarget } from "./useDiceRoll";
 import type { BlockAssignment, CardDef, DamageSplit, GameState, RangeAssignment, TagOutUse } from "./types";
 import "./App.css";
+
+// Turn-based, so a couple of seconds between checks is imperceptible.
+const POLL_INTERVAL_MS = 2000;
 
 function App() {
   const [cards, setCards] = useState<CardDef[] | null>(null);
@@ -53,6 +57,44 @@ function App() {
   useEffect(() => {
     api.getCards().then(setCards).catch((e) => setError(String(e)));
   }, []);
+
+  // An invite link carries a game id and a seat token. Claim the seat,
+  // load the game, and let the board render from whichever side the
+  // server says that token holds.
+  useEffect(() => {
+    const claim = claimSeatFromUrl();
+    if (!claim) return;
+    api.getGame(claim.gameId)
+      .then((joined) => {
+        if (joined.yourPlayerId) nameClaimedSeat(claim.gameId, joined.yourPlayerId);
+        setGame(joined);
+      })
+      .catch((e) => setError(`Could not join that game: ${e instanceof Error ? e.message : String(e)}`));
+  }, []);
+
+  // While a game is open, watch for the other player's moves. Turn-based,
+  // so a couple of seconds is imperceptible - and comparing one version
+  // number keeps a quiet game from redrawing the board every tick.
+  const gameId = game?.gameId ?? null;
+  const gameVersion = game?.version ?? 0;
+  useEffect(() => {
+    if (!gameId) return;
+    let cancelled = false;
+    const timer = window.setInterval(async () => {
+      if (busyRef.current) return; // never race our own action
+      try {
+        const latest = await api.getGame(gameId);
+        if (!cancelled && latest.version !== gameVersion) setGame(latest);
+      } catch {
+        // A poll failing is not worth an error banner - the next one in
+        // two seconds either works or the player is already stuck.
+      }
+    }, POLL_INTERVAL_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [gameId, gameVersion]);
 
   // The board is drawn from the seat this browser holds, not from a fixed
   // side. `you` is the near mat, the amber half of the lane, and the
@@ -273,7 +315,6 @@ function App() {
     await run(() => api.assignCombatDamage(gameId, combatAssignments, splits));
   }
 
-  const gameId = game?.gameId;
 
   // While a Global ability flow is collecting payment, only the chosen
   // payer's own Reserve Pool energy dice are legal to click - everything
@@ -332,14 +373,20 @@ function App() {
     /** Dice this option deliberately rolls - see run(). */
     rolledDieIds?: string[];
   };
+  // Every entry below is the ACTIVE player's move (the defender's
+  // decisions go through their own panels), so none of them belong to a
+  // player waiting for their turn. The server would refuse them with a
+  // 403 anyway - this is so the button is never offered in the first
+  // place, which matters now that the other seat is a different person.
+  const yourTurn = game !== null && game.activePlayerId === you;
   const advanceOptions: AdvanceOption[] = [];
-  if (gameId && canClearAndDraw) {
+  if (gameId && yourTurn && canClearAndDraw) {
     advanceOptions.push({ key: "clear-and-draw", label: "Clear & Draw", run: () => api.clearAndDraw(gameId) });
   }
-  if (gameId && canAdvanceToRollAndReroll) {
+  if (gameId && yourTurn && canAdvanceToRollAndReroll) {
     advanceOptions.push({ key: "to-roll", label: "Roll & Reroll ▶", run: () => api.advanceStep(gameId) });
   }
-  if (gameId && canRoll) {
+  if (gameId && yourTurn && canRoll) {
     advanceOptions.push({
       key: "roll",
       label: `Roll (${unrolledStepDice.length} dice)`,
@@ -347,13 +394,13 @@ function App() {
       rolledDieIds: unrolledStepDice.map((d) => d.id),
     });
   }
-  if (gameId && canAdvanceToMain) {
+  if (gameId && yourTurn && canAdvanceToMain) {
     advanceOptions.push({ key: "to-main", label: "Main ▶", run: () => api.advanceStep(gameId) });
   }
-  if (gameId && canEnterAttack) {
+  if (gameId && yourTurn && canEnterAttack) {
     advanceOptions.push({ key: "enter-attack", label: "Attack ▶", run: () => api.enterAttackStep(gameId) });
   }
-  if (gameId && canSkipAttack) {
+  if (gameId && yourTurn && canSkipAttack) {
     advanceOptions.push({
       key: "skip-attack",
       label: "Clean Up (skip attack) ▶",
@@ -372,7 +419,7 @@ function App() {
       run: () => api.assignCombatDamage(gameId, [], []),
     });
   }
-  if (gameId && canCleanUp) {
+  if (gameId && yourTurn && canCleanUp) {
     advanceOptions.push({ key: "clean-up", label: "End Turn ▶", run: () => api.cleanUp(gameId) });
   }
 
@@ -596,6 +643,7 @@ function App() {
             <TurnRail
               game={game}
               nearPlayerId={you}
+              inviteLink={inviteLink(game.gameId)}
               note={canDeclareAttackers ? "Select your attackers on the board first." : undefined}
               actions={advanceOptions.map((opt) => ({
                 key: opt.key,

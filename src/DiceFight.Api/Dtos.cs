@@ -96,16 +96,21 @@ public sealed record GameStateDto(
     IReadOnlyList<GameLogEntryDto> Log,
     // Which side the caller holds. Null only for a response built before
     // a seat was resolved (game creation, which returns the seats itself).
-    string? YourPlayerId = null)
+    string? YourPlayerId = null,
+    // Increments on every action; the client polls for a change in this
+    // rather than diffing whole game states.
+    int Version = 0)
 {
-    public static GameStateDto From(string gameId, GameState state, string? yourPlayerId = null) => new(
+    public static GameStateDto From(
+        string gameId, GameState state, string? yourPlayerId = null, int version = 0) => new(
         gameId, state.ActivePlayerId, state.CurrentStep.ToString(), state.AttackSubStep.ToString(),
         state.IsFirstTurn, state.EpicBasicActionUsedThisTurn,
         PlayerDto.From(state.PlayerOne), PlayerDto.From(state.PlayerTwo),
         state.Dice.Select(DieDto.From).ToList(),
         state.PendingChoice is { } pending ? PendingChoiceDto.From(pending) : null,
         state.Log.Select(GameLogEntryDto.From).ToList(),
-        yourPlayerId);
+        yourPlayerId,
+        version);
 }
 
 // ---- Request bodies ----

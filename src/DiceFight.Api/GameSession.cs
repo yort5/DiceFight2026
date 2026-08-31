@@ -24,6 +24,16 @@ public sealed class GameSession
     public required GameState State { get; init; }
     public required IReadOnlyList<Seat> Seats { get; init; }
 
+    // Bumped on every action. The opponent's browser polls the game and
+    // only re-renders when this changes, so a quiet game costs one cheap
+    // comparison every couple of seconds rather than a constant redraw.
+    // Interlocked because two seats can act in the same instant.
+    private int _version;
+
+    public int Version => Volatile.Read(ref _version);
+
+    public void MarkChanged() => Interlocked.Increment(ref _version);
+
     /// <summary>Which side this token holds, or null if it holds none.</summary>
     public string? PlayerIdFor(string? token) =>
         token is null ? null : Seats.FirstOrDefault(s => FixedTimeEquals(s.Token, token))?.PlayerId;

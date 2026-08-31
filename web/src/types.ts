@@ -113,6 +113,9 @@ export interface GameState {
   /** Which side the caller holds - the board renders from this seat.
    *  Null only before a seat has been resolved. */
   yourPlayerId: string | null;
+  /** Increments on every action - how the opponent's browser tells a real
+   *  change from a quiet poll. */
+  version: number;
   /** What has happened, oldest first. Written by the engine, so both
    *  players see the same account. Capped at the 200 most recent. */
   log: GameLogEntry[];

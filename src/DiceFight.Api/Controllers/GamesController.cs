@@ -383,9 +383,17 @@ public sealed class GamesController(GameStore store) : ControllerBase
     }
 
     // Every response says which side the caller holds, so the client can
-    // render the board from that seat without being told separately.
-    private GameStateDto Result(string gameId, GameState state) =>
-        GameStateDto.From(gameId, state, _seatPlayerId);
+    // render the board from that seat without being told separately, and
+    // carries the game's version so the other player's browser can tell a
+    // real change from a quiet poll.
+    private GameStateDto Result(string gameId, GameState state)
+    {
+        var session = store.GetSession(gameId);
+        // A POST that got this far changed something - GET is the only
+        // read, and it must not make the opponent think a turn happened.
+        if (HttpMethods.IsPost(Request.Method)) session.MarkChanged();
+        return GameStateDto.From(gameId, state, _seatPlayerId, session.Version);
+    }
 
     private GameState RequireNoPendingChoice(string gameId)
     {

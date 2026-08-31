@@ -10191,3 +10191,47 @@ limitation surfaced by the actor rules: `resolve-range` takes BOTH
 players' assignments in a single call, because rule-wise Range is
 simultaneous. It is the active player's to submit today; a real
 two-party flow needs its own design.
+
+## Multiplayer, stage 2: invite links and live updates (2026-08-31)
+
+Two people can now play. Persistence stays out of scope at the user's
+call - a server restart ends the game, which is fine for now.
+
+**The invite link IS the invitation.** `inviteLink()` builds a URL
+carrying the game id and the OTHER seat's token; opening it claims that
+seat, loads the game, and immediately strips the token from the address
+bar (a bearer secret in a URL is one screenshot away from being someone
+else's). A browser holding only one seat gets no invite panel - you
+cannot invite anyone to a seat you were invited to, and the link would be
+carrying your own secret if it tried.
+
+A claimed token does not say which side it holds, so the seat is stored
+nameless and named from the server's `yourPlayerId` on the first response.
+
+**Updates by polling, not push.** Every action bumps `GameSession.
+Version`; the other browser polls the game every two seconds and re-renders
+only when that number changes. Turn-based play makes two seconds
+imperceptible, and a version comparison keeps a quiet game from redrawing
+the board every tick. Polls skip while an action of our own is in flight,
+and a failed poll is silent - the next one either works or the player is
+already stuck, and neither case is improved by an error banner.
+
+Push (SSE) would be nicer and is a drop-in later; it is not worth the
+connection lifecycle for a game where the other player is thinking.
+
+**A bug the second browser exposed**: the advance buttons were offered to
+whoever was looking, not to whoever's turn it was. The server refused
+them with a 403, so nothing illegal could happen - but a button that
+always errors is worse than no button. `advanceOptions` is gated on
+`yourTurn` now, and the Now panel says "Waiting for Team B to move."
+
+Also separated `.now-button` from the invite button's `.rail-button`:
+`.now-button` means "a move you can make in this step", and copying a
+link is not one. My own test caught it by clicking the invite button as
+if it were the turn action.
+
+Verified with two browser contexts on one game: the guest joins by link
+and sees its own mat near with the life panels swapped, gets no buttons
+while waiting, follows the host's whole turn without reloading (step,
+log and dice all update), and receives the turn when the host ends theirs
+- at which point the host is the one waiting.
