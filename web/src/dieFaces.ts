@@ -267,6 +267,19 @@ export function facesFor(die: Die, cardsById: Map<string, CardDef>): DieFaces {
   return { faces, index: slot };
 }
 
+/**
+ * The single-energy face a double spins down to when only half of it is
+ * spent (rule 2.6.1.4). Null when the die has no single-energy face at
+ * all - a Basic Action die, whose energy faces are all doubles.
+ *
+ * Mirrors DieFaces.SingleEnergyFace on the engine side, which is the
+ * authority; this copy exists to warn before the player commits.
+ */
+export function spinDownFace(die: Die, cardsById: Map<string, CardDef>): CubeFace | null {
+  const card = die.cardId ? cardsById.get(die.cardId) : undefined;
+  return defaultFaces(die, card).find((f) => f.kind === "energy" && f.amount === 1) ?? null;
+}
+
 /** How many faces of this die are character faces (what a spin can reach). */
 export function characterFaceCount(faces: CubeFace[]): number {
   return faces.filter((face) => face.kind === "character").length;

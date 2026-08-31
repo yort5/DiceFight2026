@@ -526,6 +526,17 @@ public static class TurnEngine
                 effectiveCost += surcharge.Amount;
         }
 
+        // Crossover glossary entry - "Their cost cannot be reduced to
+        // avoid paying each type of energy to purchase their dice", and
+        // rule 2.6.2.3's own example: a 3-cost bolt-fist Crossover
+        // reduced to 1 still costs a bolt AND a fist. So a discount can
+        // never take the cost below one energy per required type.
+        // Without this floor, SpendEnergy stops consuming dice at the
+        // discounted amount and the second type is never paid - which
+        // made a discounted Crossover unbuyable rather than cheap.
+        var distinctTypes = card.EnergyTypes.Distinct().Count();
+        if (distinctTypes > 1) effectiveCost = Math.Max(effectiveCost, distinctTypes);
+
         var energyDice = energyDieIdsToSpend.Select(id => FindEnergyDie(state, id)).ToList();
         SpendEnergy(
             state, state.ActivePlayerId, energyDice, effectiveCost, card.EnergyTypes, Zone.OutOfPlay,
@@ -1266,6 +1277,31 @@ public static class TurnEngine
     // missingTypeMessage is only ever needed when requiredTypes is
     // non-empty (Field has none - fielding cost has no type requirement,
     // rule 2.6.3.2), so it's optional.
+    // Which of the consumed dice is only half-spent, if any - always the
+    // last one needed, since every die before it was required in full.
+    private static DieInstance? PartiallySpent(IReadOnlyList<DieInstance> consumed, int overspend) =>
+        overspend > 0 && consumed.Count > 0 ? consumed[^1] : null;
+
+    // A die satisfies a required type if it shows that type on either
+    // half of a split face, or if it is Wild (one of any type).
+    private static bool Provides(DieInstance die, EnergyType type) =>
+        die.EnergyKind == EnergyKind.Wild ||
+        (die.EnergyKind == EnergyKind.Specific &&
+         (die.ProvidedEnergyType == type || die.SecondProvidedEnergyType == type));
+
+    // Covers more than one type, so it should be spent on a type nothing
+    // else can cover only as a last resort.
+    private static bool IsFlexible(DieInstance die) =>
+        die.EnergyKind == EnergyKind.Wild || die.SecondProvidedEnergyType is not null;
+
+    private static DieInstance? FindEnergyFor(
+        Dictionary<DieInstance, int> claims, EnergyType type, Func<DieInstance, bool> predicate)
+    {
+        foreach (var (die, remaining) in claims)
+            if (remaining > 0 && predicate(die) && Provides(die, type)) return die;
+        return null;
+    }
+
     private static void SpendEnergy(
         GameState state, string payerId, IReadOnlyList<DieInstance> chosenDice, int amountNeeded,
         IReadOnlyList<EnergyType> requiredTypes, Zone destinationZone,
@@ -1283,15 +1319,27 @@ public static class TurnEngine
         if (used < amountNeeded)
             throw new InvalidOperationException(insufficientMessage());
 
-        var unclaimed = new List<DieInstance>(consumed);
+        // Rule 2.6.2.3's example - one energy per required type, never
+        // reused. A die can claim as many types as it is spending energy
+        // on, which for a Crossover's SPLIT double means both of its own
+        // types at once: that face is one of EACH type, not two of one.
+        // The die being partially spent contributes only what is spent.
+        var claims = consumed.ToDictionary(d => d, d => d == PartiallySpent(consumed, used - amountNeeded)
+            ? d.EnergyAmount - (used - amountNeeded)
+            : d.EnergyAmount);
+
+        // Most-constrained first: a die that can only ever satisfy one
+        // type is matched before a split double, and a Wild last, so a
+        // legal payment is never rejected because a wildcard was spent on
+        // a type something else had to cover.
         foreach (var requiredType in requiredTypes.Distinct())
         {
-            var match = unclaimed.FirstOrDefault(d =>
-                d.EnergyKind == EnergyKind.Wild ||
-                (d.EnergyKind == EnergyKind.Specific && d.ProvidedEnergyType == requiredType));
+            var match = FindEnergyFor(claims, requiredType, d => Provides(d, requiredType) && !IsFlexible(d))
+                ?? FindEnergyFor(claims, requiredType, d => Provides(d, requiredType))
+                ?? FindEnergyFor(claims, requiredType, d => d.EnergyKind == EnergyKind.Wild);
             if (match is null)
                 throw new InvalidOperationException(missingTypeMessage!(requiredType));
-            unclaimed.Remove(match); // rule 2.6.2.3's example - one energy per required type, not reused
+            claims[match] -= 1;
         }
 
         var overspend = used - amountNeeded;
@@ -1315,25 +1363,38 @@ public static class TurnEngine
 
             if (isPartial)
             {
-                if (die.EnergyKind == EnergyKind.Generic)
+                // Rule 2.6.1.4 - spin the die down to its single-energy
+                // face. WHICH face that is belongs to the die, not to
+                // what it happens to be showing: a plain double spins to
+                // the same type, but a Crossover's split double spins to
+                // its GENERIC face and a four-energy card's to its WILD
+                // one (the Crossover glossary entry, clause 2). Asking
+                // DieFaces is also how rule 2.6.1.5's "cannot be spun to
+                // a single energy face" becomes a real question rather
+                // than a guess from the current face's kind.
+                var single = DieFaces.SingleEnergyFace(die, DieStats.GetCard(state, die));
+                if (single is { } face)
                 {
+                    die.EnergyKind = face.EnergyKind;
+                    die.ProvidedEnergyType = face.ProvidedEnergyType;
+                    die.SecondProvidedEnergyType = face.SecondProvidedEnergyType;
+                    die.EnergyAmount = overspend;
+                }
+                else
+                {
+                    // No single-energy face at all - a Basic Action die,
+                    // whose energy faces are all double Generic.
                     die.Zone = destinationZone;
                     if (destinationZone == Zone.UsedPile) die.ResetToUnrolled();
 
                     // Rule 2.6.1.6 only grants the "keep the other as
                     // virtual generic energy" banking to the Active player.
-                    // Rule 2.6.1.5's framing for the Inactive player (a
-                    // double-only die "cannot be spun to a single energy
-                    // face," so the unused half is simply lost) implies the
-                    // same for a Generic double - the Inactive player has no
-                    // Main Step of their own to spend banked energy in
-                    // anyway.
+                    // Rule 2.6.1.5's framing for the Inactive player (the
+                    // unused half is simply lost) is the other side of it -
+                    // and they have no Main Step of their own to spend
+                    // banked energy in anyway.
                     if (payerId == state.ActivePlayerId)
                         AddVirtualGenericEnergy(state, payerId, overspend);
-                }
-                else
-                {
-                    die.EnergyAmount = overspend; // "spin down" to the single-energy face
                 }
             }
             else

@@ -10076,3 +10076,58 @@ Still open, unchanged: `SpendEnergy` does not yet know that a split double
 is one of EACH type, nor that it spins down to the face `DieFaces.
 SingleEnergyFace` now returns. That is the next piece, and the table it
 needs is in place.
+
+## Crossover energy: one of each, and the spin-down that follows (2026-08-31)
+
+With `DieFaces` in place, the interaction the user described is real.
+Three changes to `SpendEnergy` and `Purchase`:
+
+**A split double is one of EACH type.** The type-matching loop used to ask
+only `ProvidedEnergyType == requiredType` and let a die claim exactly one
+requirement. A Crossover's double covers both of its types, and spending
+both halves satisfies both - so claims are now counted against how much of
+each die is actually being spent, and a split face can claim twice.
+
+The matching also got an ordering it did not have: most-constrained
+first. A die that can only serve one type is matched before a split
+double, and a Wild last. Without that, a legal payment could be rejected
+because the Wild happened to come first in the list and got spent on a
+type something else could have covered. There is a test for exactly that.
+
+**The spin-down target comes from the die, not from what it is showing.**
+Rule 2.6.1.4 says a half-spent double spins to its single-energy face,
+and the Crossover glossary entry says which face that is: "spin the die
+down to its single energy face (depicting either [generic] or a ?)". So
+`SpendEnergy` asks `DieFaces.SingleEnergyFace` rather than assuming the
+same type. A plain double still spins to its own type; a Crossover's to
+GENERIC; a four-energy card's to WILD.
+
+That also turned rule 2.6.1.5's "the die cannot be spun to a single energy
+face" into a real question instead of a guess. It used to be inferred from
+`EnergyKind == Generic`, which happened to be true of Basic Action dice;
+now it is "does this die have a single-energy face at all", which is what
+the rule says and what a Crossover needs.
+
+**A Crossover's cost cannot be discounted below one of each type.** The
+glossary is explicit - "Their cost cannot be reduced to avoid paying each
+type of energy" - and rule 2.6.2.3's example spells it out: a 3-cost
+bolt-fist Crossover reduced to 1 still costs a bolt AND a fist. Without
+the floor, `SpendEnergy` stopped consuming at the discounted amount and
+the second type was never claimed, which made a discounted Crossover
+**unbuyable** rather than cheap. Reproduced before fixing.
+
+**The UI says what the trade is before it is made.** A split face reads
+"Bolt + Fist" rather than "2 Bolt", which hid half of what the die was
+worth, and its tooltip says what half-spending would turn it into -
+"spins this die down to Generic" for a Crossover, "to Wild" for a
+four-energy card. That last one is the point: spinning down to wild is
+strictly more flexible than the type given up, so it is a move worth
+making on purpose, and it only works if the player can see it coming.
+
+Six new tests, and one more test fiction retired on the way: the
+`GiveDoubleEnergy` helper stamped double faces onto SIDEKICK dice, which
+have none (rule 1.6.8 gives them five single-energy faces). It now takes a
+die whose card really has that face - a Basic Action die for a double
+Generic, a character of that type for a typed double.
+
+580 engine tests pass.

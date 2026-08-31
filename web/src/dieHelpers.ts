@@ -1,3 +1,4 @@
+import { spinDownFace } from "./dieFaces";
 import type { IconKind } from "./DieIcon";
 import type { CardDef, Die } from "./types";
 
@@ -71,6 +72,11 @@ export function hasKeyword(die: Die, cardsById: Map<string, CardDef>, keyword: s
 // A short description of what a die is currently showing, for the chip.
 export function dieStatusText(die: Die, cardsById: Map<string, CardDef>): string {
   if (die.status === "Energy") {
+    // A Crossover's split double is one of EACH type, so naming only the
+    // first would hide half of what the die is worth.
+    if (die.secondProvidedEnergyType && die.providedEnergyType) {
+      return `${die.providedEnergyType} + ${die.secondProvidedEnergyType}`;
+    }
     const kind = die.energyKind === "Specific" && die.providedEnergyType ? die.providedEnergyType : die.energyKind;
     // A "double" face (rulebook's Doubles rule) is worth 2 - worth calling
     // out in the fallback text too, not just the enlarged rolled-zone
@@ -106,13 +112,25 @@ export function dieStatusText(die: Die, cardsById: Map<string, CardDef>): string
 // the handful of real cards, like Colossus, that genuinely have none).
 export function dieTooltip(die: Die, cardsById: Map<string, CardDef>): string | undefined {
   if (die.isVirtualEnergy) {
-    return "Virtual generic energy - a stand-in for a physical die (from a draw shortfall, or the unspent half of a double). Lost at Clean Up if unspent.";
+    return "Virtual generic energy - a stand-in for a physical die (from a draw shortfall, or the unspent half of a double). Must be spent by the end of the Main Step (rule 1.4.5).";
   }
   if (!die.cardId) return undefined;
   const card = cardsById.get(die.cardId);
   if (!card) return undefined;
   const header = card.subtitle ? `${card.name} — ${card.subtitle}` : card.name;
-  return `${header}\n\n${card.rawText || "(blank text box)"}`;
+  // Half-spending a split double is a real decision - it does not leave
+  // the other type behind, it spins the die to its generic (or wild)
+  // face. Worth saying BEFORE the energy is committed.
+  const warning = die.secondProvidedEnergyType ? `\n\n${spinDownWarning(die, cardsById)}` : "";
+  return `${header}${warning}\n\n${card.rawText || "(blank text box)"}`;
+}
+
+/** What half-spending this split double would turn it into. */
+function spinDownWarning(die: Die, cardsById: Map<string, CardDef>): string {
+  const single = spinDownFace(die, cardsById);
+  const lands = single?.kind === "energy" ? single.icon : "its single-energy face";
+  return `Spending only one half spins this die down to ${lands} - ` +
+    `the other type is no longer available (rule 2.6.1.4).`;
 }
 
 export interface DieGroup {

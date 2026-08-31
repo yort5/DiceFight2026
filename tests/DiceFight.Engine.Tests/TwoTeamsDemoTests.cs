@@ -69,19 +69,32 @@ public class TwoTeamsDemoTests
     // A "double" energy face (rulebook's Doubles rule) - worth 2 when
     // spent, either wholesale or partially ("spun down" - see
     // TurnEngine.SpendEnergy) depending how much of it a payment needs.
-    private static List<DieInstance> GiveDoubleEnergy(
-        GameState state, string playerId, int count, EnergyKind kind, EnergyType? providedType = null)
+    // A die showing a double-energy face - on a die that actually HAS
+    // one. Sidekicks do not: rule 1.6.8 gives them five SINGLE-energy
+    // faces, so stamping a double on one (as this helper used to) made a
+    // die that could not exist, and spinning it down had nowhere sensible
+    // to land. A double Generic means a Basic Action die; a typed double
+    // means a character die of that type.
+    private static DieInstance GiveDoubleEnergy(
+        GameState state, string playerId, EnergyKind kind, EnergyType? providedType = null)
     {
-        var dice = state.DiceIn(playerId, Zone.Bag).Take(count).ToList();
-        foreach (var die in dice)
+        var die = state.DiceIn(playerId, Zone.Unpurchased).FirstOrDefault(d =>
         {
-            die.Zone = Zone.ReservePool;
-            die.Status = DieStatus.Energy;
-            die.EnergyKind = kind;
-            die.ProvidedEnergyType = providedType;
-            die.EnergyAmount = 2;
-        }
-        return dice;
+            var card = d.CardId is null ? null : state.CardCatalog.GetValueOrDefault(d.CardId);
+            if (card is null) return false;
+            return kind == EnergyKind.Generic
+                ? card.Type is CardType.BasicAction or CardType.EpicBasicAction
+                : card.Type == CardType.Character && card.EnergyTypes.Count == 1
+                  && card.EnergyTypes[0] == providedType;
+        }) ?? throw new InvalidOperationException(
+            $"No card on {playerId}'s team has a double {providedType?.ToString() ?? kind.ToString()} face.");
+
+        die.Zone = Zone.ReservePool;
+        die.Status = DieStatus.Energy;
+        die.EnergyKind = kind;
+        die.ProvidedEnergyType = providedType;
+        die.EnergyAmount = 2;
+        return die;
     }
 
     [Fact]
@@ -2519,7 +2532,7 @@ public class TwoTeamsDemoTests
         bigBardaDie.Status = DieStatus.Character;
         bigBardaDie.Level = 1; // fielding cost 1
 
-        var doubleFist = GiveDoubleEnergy(state, "teamA", 1, EnergyKind.Specific, EnergyType.Fist)[0];
+        var doubleFist = GiveDoubleEnergy(state, "teamA", EnergyKind.Specific, EnergyType.Fist);
 
         TurnEngine.Field(state, new AbilityQueue(), bigBardaDie.Id, [doubleFist.Id]);
 
@@ -2540,7 +2553,7 @@ public class TwoTeamsDemoTests
         bigBardaDie.Status = DieStatus.Character;
         bigBardaDie.Level = 3; // fielding cost 2 - exactly what a double provides
 
-        var doubleFist = GiveDoubleEnergy(state, "teamA", 1, EnergyKind.Specific, EnergyType.Fist)[0];
+        var doubleFist = GiveDoubleEnergy(state, "teamA", EnergyKind.Specific, EnergyType.Fist);
 
         TurnEngine.Field(state, new AbilityQueue(), bigBardaDie.Id, [doubleFist.Id]);
 
@@ -2562,7 +2575,7 @@ public class TwoTeamsDemoTests
         // A Generic double (e.g. a Basic Action die) has no single-energy
         // face to "spin down" to - unlike a typed double, so it moves out
         // fully and the unspent half becomes tracked virtual energy.
-        var doubleGeneric = GiveDoubleEnergy(state, "teamA", 1, EnergyKind.Generic)[0];
+        var doubleGeneric = GiveDoubleEnergy(state, "teamA", EnergyKind.Generic);
 
         TurnEngine.Field(state, new AbilityQueue(), bigBardaDie.Id, [doubleGeneric.Id]);
 
@@ -2588,7 +2601,7 @@ public class TwoTeamsDemoTests
         firstBigBarda.Zone = Zone.ReservePool;
         firstBigBarda.Status = DieStatus.Character;
         firstBigBarda.Level = 1; // fielding cost 1
-        var doubleGeneric = GiveDoubleEnergy(state, "teamA", 1, EnergyKind.Generic)[0];
+        var doubleGeneric = GiveDoubleEnergy(state, "teamA", EnergyKind.Generic);
         TurnEngine.Field(state, new AbilityQueue(), firstBigBarda.Id, [doubleGeneric.Id]);
         var virtualDie = Assert.Single(state.Dice, d => d.IsVirtualEnergy);
         Assert.Equal(1, virtualDie.EnergyAmount);
@@ -2617,7 +2630,7 @@ public class TwoTeamsDemoTests
         bigBardaDie.Zone = Zone.ReservePool;
         bigBardaDie.Status = DieStatus.Character;
         bigBardaDie.Level = 1; // fielding cost 1
-        var doubleGeneric = GiveDoubleEnergy(state, "teamA", 1, EnergyKind.Generic)[0];
+        var doubleGeneric = GiveDoubleEnergy(state, "teamA", EnergyKind.Generic);
         TurnEngine.Field(state, new AbilityQueue(), bigBardaDie.Id, [doubleGeneric.Id]);
         Assert.Single(state.Dice, d => d.IsVirtualEnergy);
 
@@ -2656,7 +2669,7 @@ public class TwoTeamsDemoTests
         state.CurrentStep = TurnStep.Main;
         state.ActivePlayerId = "teamA"; // teamB is the Inactive player here
 
-        var doubleGeneric = GiveDoubleEnergy(state, "teamB", 1, EnergyKind.Generic)[0];
+        var doubleGeneric = GiveDoubleEnergy(state, "teamB", EnergyKind.Generic);
 
         var queue = new AbilityQueue();
         TurnEngine.UseGlobalAbility(state, queue, anyEnergyGlobal.Id, "teamB", [doubleGeneric.Id]);
