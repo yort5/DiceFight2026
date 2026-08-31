@@ -10403,3 +10403,70 @@ narrowing the count, the find box narrowing 123 affiliations to 1,
 removing a chip putting the rail back in sync, Clear all, the drag and
 shift-click ranges, adds still reaching the roster, print hiding both
 rail and catalog, and the layout collapsing at 1000px.
+
+## Team Builder, stages 4 and 5: result rows and Team Shape (2026-08-31)
+
+**Stage 4 - the results stop being a table.** Reading a card meant
+tracking it across eleven columns, and its three levels were three
+numbers under three headers. Each result is now a row: rarity spine and
+letter badge, name, subtitle, type, the printed text in full, and a
+stats block on the right holding the cost, the energy, the three levels
+drawn as actual die faces, and the affiliations.
+
+The die-face square already existed (`DieFace`, built for the L1/L2/L3
+columns); it just needed room. The level label goes UNDER each face
+rather than inside it, because the die's own bottom-left corner belongs
+to the burst mark and a double burst needs it more than the label does.
+
+**The "OK" column is gone.** A tick meant "the engine can run this" and
+a blank looked like missing data, which is the wrong reading twice over:
+a card the engine cannot run is not broken, it is simply not simulated.
+Cards now carry a dashed "paper only" pill instead, which says what it
+means and only appears when it applies.
+
+**Add buttons say which of three things they are**: addable, already on
+the team (green tick, not a refusal), or blocked by a cap - dashed, still
+visible, with `canAddCard`'s reason as the tooltip. Those reasons already
+name the fix ("raise it in Custom, or switch to Freeform") rather than
+only the refusal.
+
+**Sorting moved into the filter bar** now that there are no headers to
+click. Eleven sort keys became four - name, cost, L1 attack, set - which
+is what anyone actually orders a card catalog by; the other seven were
+sortable only because they were columns.
+
+**Stage 5 - the Team Shape panel.** The slot grid says which cards are on
+the team; this says what they add up to. Dice by purchase cost as a
+curve, the energy mix as one proportional bar, average cost per die,
+how many dice the engine can actually run, and affiliation overlap as
+"logo · N dice" - the fastest read on whether an affiliation-dependent
+team really has the bodies. All measured in DICE, not cards: a card you
+run four of shapes the team four times over. Hidden while the team is
+empty, because four empty charts are not worth looking at.
+
+Two corrections to the design brief here. Its energy palette (bolt
+yellow, fist red) disagrees with this app's own energy icons - and the
+legend of those icons sits directly under the bar, so the bar's colours
+are now sampled from the icons themselves. And its 64px curve is too
+short for a 44px bar plus a count above it and a cost below; the count
+overflowed into the panel heading.
+
+**A data fix found by drawing the text bigger**: three cards carried
+backslash-escaped apostrophes from the sheet ("can\'t"), which rendered
+literally. Fixed in `BulkCards.json` and in `import_bulk_cards.py`'s
+`norm()`, so the next import does not bring them back.
+
+Also: the type pill was printing the API's enum name ("BasicAction").
+It splits on the capitals now, so a future card type reads correctly
+without being added to a map. And the filter bar no longer claims to be
+"showing the whole catalog" when a search is narrowing it - the search
+box is deliberately not a chip and Clear all leaves it alone, but it
+still filters.
+
+Verified in a browser: 200 rows with all three add-button states, the
+blocked reason, sorting by each chip and reversing, the shape panel's
+curve/energy/stats/affiliations against hand-computed values, and a
+re-run of every stage 2 and 3 check (roster tiles, over-cap marking,
+reload persistence, the drag range, print hiding rail and results).
+
+That completes the redesign: stages 1-5 plus the print sheet.

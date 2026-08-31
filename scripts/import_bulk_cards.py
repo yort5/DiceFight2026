@@ -123,7 +123,11 @@ LOOSE_KEYWORD_RE = re.compile(r"(?:" + "|".join(_single_kw_alts) + r")")
 
 
 def norm(s):
-    return re.sub(r"\s+", " ", s or "").strip()
+    # Three cards reach the sheet with their apostrophes backslash-escaped
+    # ("can\\'t"), presumably from whatever wrote that row. It is an
+    # escape for a language nothing here speaks, and it renders literally
+    # wherever the text is shown, so it is undone at the door.
+    return re.sub(r"\s+", " ", (s or "").replace("\\'", "'")).strip()
 
 
 def fetch_set_csv(code):

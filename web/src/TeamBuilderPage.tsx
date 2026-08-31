@@ -1,9 +1,9 @@
-import { Fragment, useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { matchesQuery } from "./cardSearch";
 import { CardText } from "./CardText";
 import { AffiliationBadge, AffiliationIcons } from "./AffiliationIcons";
 import { buildAffiliationIconIndex } from "./affiliationIndex";
-import { DieFace, DIE_FACE_TITLE } from "./DieFace";
+import { DieFace } from "./DieFace";
 import { EnergyTypes } from "./GameIcon";
 import { api } from "./api";
 import { stashPendingGame } from "./gameHandoff";
@@ -150,6 +150,13 @@ function sortValue(card: CardDef, key: SortKey): string | number {
 // and "Super-Rare" are one tier spelled two ways across the sheet's tabs
 // (171 vs 16 cards), so they collapse into a single option - a "Super
 // Rare only" format has to catch both or it silently drops 16 cards.
+// The API sends the enum name ("BasicAction"); nothing on a real card is
+// spelled that way. Split on the capitals rather than mapping each value
+// so a new card type reads correctly without being added here.
+function typeLabel(type: string): string {
+  return type.replace(/([a-z])([A-Z])/g, "$1 $2");
+}
+
 const RARITY_TIERS = ["Common", "Uncommon", "Rare", "Super Rare", "Chase", "Promo"] as const;
 
 function rarityTier(rarity: string | null): string | null {
@@ -229,18 +236,15 @@ function DicePips({ count, limit }: { count: number; limit: number }) {
 // full re-render on every keystroke (see the design doc's scaling note).
 const MAX_ROWS = 200;
 
-const COLUMNS: { key: SortKey; label: string; title?: string; className?: string }[] = [
-  { key: "set", label: "Set" },
-  { key: "name", label: "Name" },
-  { key: "type", label: "Type" },
-  { key: "affiliations", label: "Affiliation", className: "card-affiliation" },
-  { key: "purchaseCost", label: "Cost" },
-  { key: "energyTypes", label: "Energy", className: "card-energy" },
-  { key: "dieLimit", label: "Max" },
-  { key: "level1", label: "L1", title: DIE_FACE_TITLE },
-  { key: "level2", label: "L2", title: DIE_FACE_TITLE },
-  { key: "level3", label: "L3", title: DIE_FACE_TITLE },
-  { key: "implemented", label: "OK" },
+// Sorting used to live in eleven clickable table headers. Rows have no
+// headers, and eight of those eleven were sorts nobody reaches for -
+// what people actually order this catalog by is a name, a cost, how hard
+// the die hits, or which set it came from.
+const SORTS: { key: SortKey; label: string; title: string }[] = [
+  { key: "name", label: "Name", title: "Sort by card name" },
+  { key: "purchaseCost", label: "Cost", title: "Sort by purchase cost" },
+  { key: "level1", label: "L1 Attack", title: "Sort by level 1 attack" },
+  { key: "set", label: "Set", title: "Sort by set" },
 ];
 
 export function TeamBuilderPage() {
@@ -449,6 +453,43 @@ export function TeamBuilderPage() {
   const basicActionSlotCount = isCapped(caps.basicActions)
     ? Math.max(caps.basicActions, basicActionEntries.length)
     : basicActionEntries.length + 1;
+
+  // The shape of the team, measured in DICE rather than cards - a card
+  // you run four of shapes the team four times over, and the dice are
+  // what you actually draw.
+  const teamShape = useMemo(() => {
+    const byCost = new Map<number, number>();
+    const byEnergy = new Map<string, number>();
+    const byAffiliation = new Map<string, number>();
+    let costTotal = 0;
+    let playableDice = 0;
+
+    for (const { card, count } of characterEntries) {
+      byCost.set(card.purchaseCost, (byCost.get(card.purchaseCost) ?? 0) + count);
+      costTotal += card.purchaseCost * count;
+      if (card.isImplemented) playableDice += count;
+      // A die with two energy types counts once for each: a Crossover
+      // character really is a body for both, which is the whole question
+      // the energy mix is being asked.
+      for (const e of card.energyTypes) byEnergy.set(e, (byEnergy.get(e) ?? 0) + count);
+      for (const a of card.affiliations) byAffiliation.set(a, (byAffiliation.get(a) ?? 0) + count);
+    }
+
+    const curve = [...byCost.entries()].sort((a, b) => a[0] - b[0]).map(([cost, dice]) => ({ cost, dice }));
+    const energyTotal = [...byEnergy.values()].reduce((a, b) => a + b, 0);
+    return {
+      curve,
+      peak: curve.reduce((m, c) => Math.max(m, c.dice), 0),
+      energy: [...byEnergy.entries()].sort((a, b) => b[1] - a[1]).map(([type, dice]) => ({
+        type,
+        dice,
+        share: energyTotal === 0 ? 0 : dice / energyTotal,
+      })),
+      affiliations: [...byAffiliation.entries()].sort((a, b) => b[1] - a[1]).map(([name, dice]) => ({ name, dice })),
+      averageCost: totalDice === 0 ? 0 : costTotal / totalDice,
+      playableDice,
+    };
+  }, [characterEntries, totalDice]);
 
   const legality = useMemo(
     () => legalityOf(ruleset, caps, {
@@ -694,7 +735,12 @@ export function TeamBuilderPage() {
     // screen reader, whatever it happens to look like.
     const chips: { key: string; name: string; label: ReactNode; remove: () => void }[] = [];
     for (const t of activeTypes) {
-      chips.push({ key: `type:${t}`, name: t, label: t, remove: () => removeFrom(activeTypes, setActiveTypes, t) });
+      chips.push({
+        key: `type:${t}`,
+        name: typeLabel(t),
+        label: typeLabel(t),
+        remove: () => removeFrom(activeTypes, setActiveTypes, t),
+      });
     }
     for (const e of activeEnergyTypes) {
       chips.push({
@@ -840,7 +886,7 @@ export function TeamBuilderPage() {
                     aria-pressed={activeTypes.has(t)}
                     onClick={() => toggle(activeTypes, setActiveTypes, t)}
                   >
-                    {t}
+                    {typeLabel(t)}
                   </button>
                 ))}
               </div>
@@ -1022,8 +1068,8 @@ export function TeamBuilderPage() {
         <div className="main-column">
           <h2>Team Builder - Card Search</h2>
           <p className="hint">
-            Browse the full card catalog. "OK" marks the cards whose full printed text is already modeled by
-            the engine; the rest are searchable here but not yet playable in a game.
+            Browse the full card catalog. Cards marked "paper only" are not yet modeled by the game engine -
+            searchable and printable here, fine on a table, just not playable in a simulated game.
           </p>
 
           {/* What is narrowing the results, shown WITH the results. A chip
@@ -1032,7 +1078,15 @@ export function TeamBuilderPage() {
               empty table wondering why. */}
           <div className="active-filter-bar">
             <span className="active-filter-label">Filtering</span>
-            {filterChips.length === 0 && <span className="rail-hint">nothing — showing the whole catalog</span>}
+            {/* The search box is not a chip - Clear all deliberately leaves
+                it alone - but it still narrows the results, so this line
+                must not claim the whole catalog is showing when it is
+                not. */}
+            {filterChips.length === 0 && (
+              <span className="rail-hint">
+                {search.trim() ? "search only — no filters set" : "nothing — showing the whole catalog"}
+              </span>
+            )}
             {filterChips.map((chip) => (
               <button
                 key={chip.key}
@@ -1050,6 +1104,23 @@ export function TeamBuilderPage() {
                 Clear all
               </button>
             )}
+            <span className="result-sorts">
+              <span className="active-filter-label">Sort</span>
+              {SORTS.map((option) => (
+                <button
+                  key={option.key}
+                  className={`sort-chip${sort.key === option.key ? " on" : ""}`}
+                  aria-pressed={sort.key === option.key}
+                  title={`${option.title} (click again to reverse)`}
+                  onClick={() => toggleSort(option.key)}
+                >
+                  {option.label}
+                  {sort.key === option.key && (
+                    <span className="sort-arrow">{sort.direction === "asc" ? "▲" : "▼"}</span>
+                  )}
+                </button>
+              ))}
+            </span>
             <span className="active-filter-count">
               <strong>{sorted.length}</strong> {sorted.length === 1 ? "card" : "cards"}
               {sorted.length > MAX_ROWS && <span className="rail-hint"> · showing first {MAX_ROWS}</span>}
@@ -1060,67 +1131,104 @@ export function TeamBuilderPage() {
             <p className="hint">Loading catalog...</p>
           ) : (
             <>
-              {/* The table has more columns than the narrowed main column
-                  can always fit, so it scrolls inside its own box rather
-                  than sliding under the sticky team sidebar. */}
-              <div className="card-catalog-scroll">
-              <table className="card-catalog-table">
-                <thead>
-                  <tr>
-                    <th />
-                    {COLUMNS.map((col) => (
-                      <th key={col.key} className={col.className} title={col.title} onClick={() => toggleSort(col.key)}>
-                        {col.label}
-                        {sort.key === col.key && <span className="sort-arrow">{sort.direction === "asc" ? " ▲" : " ▼"}</span>}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {visible.map((c) => {
-                    const add = canAddCard(c);
-                    return (
-                      <Fragment key={c.id}>
-                      <tr className={`card-row ${rarityClass(c.rarity)}`}>
-                        <td>
-                          <button
-                            className="team-add-button"
-                            disabled={!add.ok}
-                            title={add.reason}
-                            onClick={() => addCard(c)}
-                          >
-                            +
-                          </button>
-                        </td>
-                        <td title={c.set ? SET_NAMES[c.set] : undefined}>{c.set ?? "-"}</td>
-                        <td>
-                          {c.name}
-                          {c.subtitle && <span className="hint"> — {c.subtitle}</span>}
-                        </td>
-                        <td>{c.type}</td>
-                        <td className="card-affiliation"><AffiliationIcons codes={c.affiliationIcons} names={c.affiliations} index={affiliationIconIndex} /></td>
-                        <td>{c.purchaseCost}</td>
-                        <td className="card-energy"><EnergyTypes types={c.energyTypes} /></td>
-                        <td>{c.dieLimit}</td>
-                        <td className="card-level"><DieFace face={c.levels[0]} /></td>
-                        <td className="card-level"><DieFace face={c.levels[1]} /></td>
-                        <td className="card-level"><DieFace face={c.levels[2]} /></td>
-                        <td>{c.isImplemented ? "✓" : ""}</td>
-                      </tr>
-                      {/* Printed text on its own full-width row rather than
-                          in the Name cell: it spans every column, so it gets
-                          real room to read instead of squeezing the stats. */}
-                      <tr className={`card-text-row ${rarityClass(c.rarity)}`}>
-                        <td colSpan={COLUMNS.length + 1}>
-                          <CardText text={c.rawText} />
-                        </td>
-                      </tr>
-                      </Fragment>
-                    );
-                  })}
-                </tbody>
-              </table>
+              {/* Rows, not a table. The stats a card is chosen on - cost,
+                  energy, its three levels - are a shape you compare
+                  across rows, and a die drawn as a die is read faster
+                  than three numbers in three columns. The printed text
+                  stays fully visible on every row: it is the main thing
+                  people read here, so it gets no hover and no expander. */}
+              <div className="result-rows">
+                {visible.map((c) => {
+                  const add = canAddCard(c);
+                  const onTeam = team.has(c.id);
+                  return (
+                    <div className={`result-row ${rarityClass(c.rarity)}`} key={c.id}>
+                      <div className="result-add">
+                        <button
+                          className={`result-add-button${onTeam ? " on-team" : add.ok ? "" : " blocked"}`}
+                          disabled={!add.ok}
+                          // The reason names the FIX where there is one -
+                          // canAddCard's cap messages say "raise it in
+                          // Custom, or switch to Freeform" rather than
+                          // just refusing.
+                          title={onTeam ? "Already on the team" : (add.reason ?? `Add ${c.name}`)}
+                          aria-label={onTeam ? `${c.name} is already on the team` : `Add ${c.name}`}
+                          onClick={() => addCard(c)}
+                        >
+                          {onTeam ? "✓" : "+"}
+                        </button>
+                        <span className="result-set" title={c.set ? SET_NAMES[c.set] : undefined}>
+                          {c.set ?? "-"}
+                        </span>
+                      </div>
+
+                      <div className="result-identity">
+                        <div className="result-headline">
+                          <RarityBadge rarity={c.rarity} />
+                          <span className="result-name">{c.name}</span>
+                          {c.subtitle && <span className="result-subtitle">{c.subtitle}</span>}
+                          <span className="result-type">{typeLabel(c.type)}</span>
+                          {/* Replaces the "OK" column, whose tick meant
+                              the opposite of what a blank one looked
+                              like it meant. A card the engine cannot run
+                              is not broken - it is fine on a table. */}
+                          {!c.isImplemented && (
+                            <span
+                              className="result-paper"
+                              title="Not yet modeled by the game engine - fine for physical play."
+                            >
+                              paper only
+                            </span>
+                          )}
+                        </div>
+                        <div className="result-text"><CardText text={c.rawText} /></div>
+                      </div>
+
+                      <div className="result-stats">
+                        <div className="stat">
+                          <span className="stat-caption">cost</span>
+                          <span className="stat-cost">{c.purchaseCost}</span>
+                        </div>
+                        {c.energyTypes.length > 0 && (
+                          <div className="stat">
+                            <span className="stat-caption">energy</span>
+                            <span className="stat-energy"><EnergyTypes types={c.energyTypes} /></span>
+                          </div>
+                        )}
+                        {c.levels.length > 0 && (
+                          <div className="stat">
+                            <span className="stat-caption">levels · max {c.dieLimit}</span>
+                            <span className="stat-faces">
+                              {c.levels.map((face, i) => (
+                                <span className="stat-face" key={i}>
+                                  <DieFace face={face} />
+                                  <span className="stat-face-label">L{i + 1}</span>
+                                </span>
+                              ))}
+                            </span>
+                          </div>
+                        )}
+                        {c.affiliations.length > 0 && (
+                          <div className="stat">
+                            <span className="stat-caption">affil</span>
+                            <span className="stat-affiliations">
+                              <AffiliationIcons
+                                codes={c.affiliationIcons}
+                                names={c.affiliations}
+                                index={affiliationIconIndex}
+                              />
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
+              <p className="result-footer">
+                showing {visible.length} of {sorted.length}
+                {sorted.length > MAX_ROWS && " - narrow your search to see the rest"}
+              </p>
             </>
           )}
         </div>
@@ -1362,6 +1470,86 @@ export function TeamBuilderPage() {
                 </li>
               ))}
             </ul>
+          )}
+
+          {/* Aggregate feedback the slot grid cannot give: the grid says
+              WHICH cards are on the team, this says what they add up to.
+              Hidden while the team is empty - four empty charts are not a
+              useful thing to look at. */}
+          {characterEntries.length > 0 && (
+            <div className="team-shape">
+              <h3 className="rail-label">Team shape</h3>
+
+              <div className="shape-curve" role="img" aria-label={
+                teamShape.curve.map((c) => `${c.dice} ${c.dice === 1 ? "die" : "dice"} at cost ${c.cost}`).join(", ")
+              }>
+                {teamShape.curve.map(({ cost, dice }) => (
+                  <div className="shape-curve-column" key={cost}>
+                    <span className="shape-curve-count">{dice}</span>
+                    <span
+                      className="shape-curve-bar"
+                      style={{ height: `${4 + (dice / teamShape.peak) * 40}px` }}
+                    />
+                    <span className="shape-curve-cost">{cost}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="shape-caption">dice by purchase cost</p>
+
+              {teamShape.energy.length > 0 && (
+                <>
+                  <div className="shape-energy">
+                    {teamShape.energy.map(({ type, dice, share }) => (
+                      <span
+                        key={type}
+                        className={`shape-energy-segment energy-${type.toLowerCase()}`}
+                        style={{ flexGrow: share }}
+                        title={`${dice} ${dice === 1 ? "die" : "dice"} with ${type}`}
+                      />
+                    ))}
+                  </div>
+                  <div className="shape-energy-legend">
+                    {teamShape.energy.map(({ type, dice }) => (
+                      <span key={type} className="shape-energy-item">
+                        <EnergyTypes types={[type]} /> {dice}
+                      </span>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              <div className="shape-stats">
+                <div className="shape-stat">
+                  <span className="shape-stat-value">{teamShape.averageCost.toFixed(1)}</span>
+                  <span className="shape-stat-caption">avg cost / die</span>
+                </div>
+                <div
+                  className="shape-stat"
+                  title="Dice whose card the game engine can actually run. The rest are fine on a table."
+                >
+                  <span className="shape-stat-value">{teamShape.playableDice}/{totalDice}</span>
+                  <span className="shape-stat-caption">playable in app</span>
+                </div>
+                <div className="shape-stat">
+                  <span className="shape-stat-value">{teamShape.affiliations.length}</span>
+                  <span className="shape-stat-caption">affiliations</span>
+                </div>
+              </div>
+
+              {/* The fastest read on whether an affiliation-dependent team
+                  actually has the bodies: "X-Men · 3 dice" answers it,
+                  where a list of card names does not. */}
+              {teamShape.affiliations.length > 0 && (
+                <div className="shape-affiliations">
+                  {teamShape.affiliations.map(({ name, dice }) => (
+                    <span className="shape-affiliation" key={name}>
+                      <AffiliationBadge name={name} code={affiliationIconIndex[name]} />
+                      {dice}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
 
           {/* One primary action, everything else demoted to a ghost row.
