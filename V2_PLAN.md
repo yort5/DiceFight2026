@@ -1,11 +1,31 @@
 # DiceFight v2 Core — Implementation Plan
 
-**Status: Phases 0-7 complete; vocabulary FROZEN at the 2026-08-22 gate
-review (`V2_VOCABULARY.md` Part 11); Phase 8 (Dice Masters as a game
-definition / card migration) IN PROGRESS - tasks 1-2 done (2026-08-23),
-task 3 (the two design spikes) needs user sign-off before
-implementation, tasks 4-5 (DPS catalog batches, invariant tests) not
-started.** Update the checkboxes in the Phase Overview as
+**Status (refreshed 2026-08-31): Phases 0-7 complete; vocabulary FROZEN
+at the 2026-08-22 gate review (`V2_VOCABULARY.md` Part 11); Phase 8
+(Dice Masters as a game definition / card migration) IN PROGRESS.**
+
+- **Task 1-2** (config + curated teams) - done 2026-08-23.
+- **Task 3** - became THREE spikes, not two. **Spike B** (live-value
+  Amounts) and **Spike C** (the timing model) were signed off and
+  implemented on 2026-08-24; see `V2_VOCABULARY.md` Parts 13-14.
+  **Spike A** (ability-blanking + named-card lockout) is written up in
+  Part 12 but is **still awaiting sign-off**, and Parts 15-17 have
+  amended its design since it was written - so the proposal a reader
+  needs is now spread across four Parts and wants consolidating before
+  anyone signs anything.
+- **Task 4** (DPS catalog batches) - IN PROGRESS. Two batches landed
+  2026-08-24: **29 of v1's 145 curated DPS cards migrated, 116 to go.**
+- **Task 5** (catalog-wide invariant tests) - not started.
+
+**Also open, and blocking nothing yet**: Part 18's "affiliation as a
+tag" question is analysed but undecided (the user was leaning yes), and
+Part 17 records a third question about the bound-die predicate that is
+still open.
+
+The previous version of this header said tasks 4-5 had not started and
+that both spikes needed sign-off. That was written before the 2026-08-24
+work and had been wrong ever since; it is the sort of thing that sends a
+fresh session off to redo something. Update the checkboxes in the Phase Overview as
 phases complete, and add a one-line note after any phase where reality
 diverged from this plan.
 
