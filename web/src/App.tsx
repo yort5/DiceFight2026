@@ -54,6 +54,14 @@ function App() {
     api.getCards().then(setCards).catch((e) => setError(String(e)));
   }, []);
 
+  // The board is drawn from the seat this browser holds, not from a fixed
+  // side. `you` is the near mat, the amber half of the lane, and the
+  // "yours" colour in the log; `them` is the far one. Playing alone, both
+  // seats are held and `you` follows whichever is being played.
+  const you = game?.yourPlayerId ?? game?.playerOne.id ?? "";
+  const them = game && you === game.playerTwo.id ? game.playerOne : game?.playerTwo;
+  const near = game && you === game.playerTwo.id ? game.playerTwo : game?.playerOne;
+
   const cardsById = useMemo(() => {
     const map = new Map<string, CardDef>();
     for (const c of cards ?? []) map.set(c.id, c);
@@ -534,11 +542,11 @@ function App() {
                 the far side, mirrored. */}
             <section className="game-table">
               <PlayerBoard
-                title={`${game.playerTwo.name} (${game.playerTwo.id})`}
-                isActive={game.activePlayerId === game.playerTwo.id}
+                title={`${them!.name} (${them!.id})`}
+                isActive={game.activePlayerId === them!.id}
                 mine={false}
                 mirrored
-                dice={game.dice.filter((d) => d.ownerId === game.playerTwo.id)}
+                dice={game.dice.filter((d) => d.ownerId === them!.id)}
                 cardsById={cardsById}
                 selection={selection}
                 onGroupClick={handleGroupClick}
@@ -552,7 +560,7 @@ function App() {
               <CommunityCards
                 dice={game.dice}
                 cardsById={cardsById}
-                nearPlayerId={game.playerOne.id}
+                nearPlayerId={you}
                 selection={selection}
                 onGroupClick={handleGroupClick}
               />
@@ -561,7 +569,7 @@ function App() {
                 dice={game.dice}
                 cardsById={cardsById}
                 assignments={combatAssignments}
-                nearPlayerId={game.playerOne.id}
+                nearPlayerId={you}
                 selection={selection}
                 onGroupClick={handleGroupClick}
                 spins={spins}
@@ -569,10 +577,10 @@ function App() {
               />
 
               <PlayerBoard
-                title={`${game.playerOne.name} (${game.playerOne.id})`}
-                isActive={game.activePlayerId === game.playerOne.id}
+                title={`${near!.name} (${near!.id})`}
+                isActive={game.activePlayerId === near!.id}
                 mine
-                dice={game.dice.filter((d) => d.ownerId === game.playerOne.id)}
+                dice={game.dice.filter((d) => d.ownerId === near!.id)}
                 cardsById={cardsById}
                 selection={selection}
                 onGroupClick={handleGroupClick}
@@ -587,6 +595,7 @@ function App() {
           <div className="side-column">
             <TurnRail
               game={game}
+              nearPlayerId={you}
               note={canDeclareAttackers ? "Select your attackers on the board first." : undefined}
               actions={advanceOptions.map((opt) => ({
                 key: opt.key,
@@ -596,7 +605,7 @@ function App() {
               }))}
             />
 
-            <MatchLog entries={game.log} nearPlayerId={game.playerOne.id} />
+            <MatchLog entries={game.log} nearPlayerId={you} />
 
             <GlobalAbilitiesPanel
             game={game}

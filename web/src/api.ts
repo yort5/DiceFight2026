@@ -1,3 +1,4 @@
+import { rememberSeats, tokenFor, type Seat } from "./seats";
 import type { BlockAssignment, CardDef, DamageSplit, GameState, RangeAssignment, TagOutUse } from "./types";
 
 // Relative on purpose: in production the API and built app share one
@@ -5,10 +6,23 @@ import type { BlockAssignment, CardDef, DamageSplit, GameState, RangeAssignment,
 // forwards this to the API dev server - no hardcoded host/CORS needed.
 const BASE_URL = "/api";
 
+// Every game action carries the seat token for that game - the server
+// uses it to decide not just whether the move is legal but whether it is
+// YOURS to make (see GamesController's Actor rules).
+function seatHeader(path: string): Record<string, string> {
+  const gameId = /^\/games\/([^/]+)/.exec(path)?.[1];
+  const token = gameId ? tokenFor(gameId) : null;
+  return token ? { "X-Seat-Token": token } : {};
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     ...options,
-    headers: { "Content-Type": "application/json", ...(options?.headers ?? {}) },
+    headers: {
+      "Content-Type": "application/json",
+      ...seatHeader(path),
+      ...(options?.headers ?? {}),
+    },
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText }));
@@ -19,11 +33,16 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
 export const api = {
   getCards: () => request<CardDef[]>("/cards"),
-  createGame: (teamCardIds?: string[]) =>
-    request<GameState>("/games", {
+  // Creating a game is the one call that hands back seat tokens; they
+  // are stored here so nothing else has to think about them.
+  createGame: async (teamCardIds?: string[]) => {
+    const created = await request<{ game: GameState; seats: Seat[] }>("/games", {
       method: "POST",
       body: JSON.stringify({ teamCardIds: teamCardIds && teamCardIds.length > 0 ? teamCardIds : null }),
-    }),
+    });
+    rememberSeats(created.game.gameId, created.seats);
+    return created.game;
+  },
   getGame: (id: string) => request<GameState>(`/games/${id}`),
 
   advanceStep: (id: string) => request<GameState>(`/games/${id}/advance-step`, { method: "POST" }),

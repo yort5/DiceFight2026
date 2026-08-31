@@ -38,6 +38,20 @@ app.Use(async (context, next) =>
     {
         await next();
     }
+    // Seat problems are their own thing: 401 means "you did not prove
+    // which side you are", 403 means "you did, and it is not your move" -
+    // a distinction the client needs, since only the first is worth
+    // asking the player to re-open their invite link over.
+    catch (SeatRequiredException ex)
+    {
+        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        await context.Response.WriteAsJsonAsync(new { error = ex.Message });
+    }
+    catch (NotYourTurnException ex)
+    {
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        await context.Response.WriteAsJsonAsync(new { error = ex.Message });
+    }
     catch (InvalidOperationException ex)
     {
         context.Response.StatusCode = StatusCodes.Status400BadRequest;

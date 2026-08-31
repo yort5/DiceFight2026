@@ -24,7 +24,7 @@ public sealed class GamesController(GameStore store) : ControllerBase
     // selection UI, and an unscripted opponent card would just sit there
     // doing nothing.
     [HttpPost]
-    public ActionResult<GameStateDto> Create([FromBody] CreateGameRequest? request = null)
+    public ActionResult<CreatedGameDto> Create([FromBody] CreateGameRequest? request = null)
     {
         var catalog = SampleCards.BuildCatalog();
         var teamA = new Player { Id = "teamA", Name = "Team A" };
@@ -44,85 +44,96 @@ public sealed class GamesController(GameStore store) : ControllerBase
         }
 
         var state = GameState.NewGame(catalog, teamA, teamB);
-        var gameId = store.Create(state);
-        return Ok(GameStateDto.From(gameId, state));
+        var session = store.Create(state);
+
+        // Both seats come back, because the creator may be playing alone
+        // (holding both) or about to hand one out as an invite. This is
+        // the ONLY response that carries a seat token - any other one
+        // would be showing the caller their opponent's secret.
+        return Ok(new CreatedGameDto(
+            GameStateDto.From(session.Id, state, state.PlayerOne.Id),
+            session.Seats.Select(seat => new SeatDto(seat.PlayerId, seat.Token)).ToList()));
     }
 
     [HttpGet("{gameId}")]
-    public ActionResult<GameStateDto> Get(string gameId) => Ok(GameStateDto.From(gameId, store.Get(gameId)));
+    public ActionResult<GameStateDto> Get(string gameId)
+    {
+        var (session, _) = RequireSeat(gameId);
+        return Ok(Result(gameId, session.State));
+    }
 
     [HttpPost("{gameId}/advance-step")]
     public ActionResult<GameStateDto> AdvanceStep(string gameId)
     {
-        var state = RequireNoPendingChoice(gameId);
+        var state = RequireTurn(gameId, Actor.Active);
         TurnEngine.AdvanceStep(state);
-        return Ok(GameStateDto.From(gameId, state));
+        return Ok(Result(gameId, state));
     }
 
     [HttpPost("{gameId}/clear-and-draw")]
     public ActionResult<GameStateDto> ClearAndDraw(string gameId)
     {
-        var state = RequireNoPendingChoice(gameId);
+        var state = RequireTurn(gameId, Actor.Active);
         var queue = new AbilityQueue();
         TurnEngine.ClearAndDraw(state, new Random(), queue);
         Drain(state, queue, null);
-        return Ok(GameStateDto.From(gameId, state));
+        return Ok(Result(gameId, state));
     }
 
     [HttpPost("{gameId}/roll")]
     public ActionResult<GameStateDto> Roll(string gameId)
     {
-        var state = RequireNoPendingChoice(gameId);
+        var state = RequireTurn(gameId, Actor.Active);
         TurnEngine.Roll(state, new RandomDiceRoller(new Random()));
-        return Ok(GameStateDto.From(gameId, state));
+        return Ok(Result(gameId, state));
     }
 
     [HttpPost("{gameId}/reroll")]
     public ActionResult<GameStateDto> Reroll(string gameId, [FromBody] RerollRequest request)
     {
-        var state = RequireNoPendingChoice(gameId);
+        var state = RequireTurn(gameId, Actor.Active);
         var queue = new AbilityQueue();
         TurnEngine.Reroll(state, queue, new RandomDiceRoller(new Random()), request.RerollDieIds);
         Drain(state, queue, null);
-        return Ok(GameStateDto.From(gameId, state));
+        return Ok(Result(gameId, state));
     }
 
     [HttpPost("{gameId}/purchase")]
     public ActionResult<GameStateDto> Purchase(string gameId, [FromBody] PurchaseRequest request)
     {
-        var state = RequireNoPendingChoice(gameId);
+        var state = RequireTurn(gameId, Actor.Active);
         TurnEngine.Purchase(state, request.DieId, request.EnergyDieIds);
-        return Ok(GameStateDto.From(gameId, state));
+        return Ok(Result(gameId, state));
     }
 
     [HttpPost("{gameId}/field")]
     public ActionResult<GameStateDto> Field(string gameId, [FromBody] FieldRequest request)
     {
-        var state = RequireNoPendingChoice(gameId);
+        var state = RequireTurn(gameId, Actor.Active);
         var queue = new AbilityQueue();
         TurnEngine.Field(state, queue, request.DieId, request.EnergyDieIds);
         Drain(state, queue, request.TargetDieIds);
-        return Ok(GameStateDto.From(gameId, state));
+        return Ok(Result(gameId, state));
     }
 
     [HttpPost("{gameId}/use-action-die")]
     public ActionResult<GameStateDto> UseActionDie(string gameId, [FromBody] UseActionDieRequest request)
     {
-        var state = RequireNoPendingChoice(gameId);
+        var state = RequireTurn(gameId, Actor.Active);
         var queue = new AbilityQueue();
         TurnEngine.UseActionDie(state, queue, request.DieId, roller: new RandomDiceRoller(new Random()));
         Drain(state, queue, request.TargetDieIds);
-        return Ok(GameStateDto.From(gameId, state));
+        return Ok(Result(gameId, state));
     }
 
     [HttpPost("{gameId}/resolve-continuous-die")]
     public ActionResult<GameStateDto> ResolveContinuousDie(string gameId, [FromBody] ResolveContinuousDieRequest request)
     {
-        var state = RequireNoPendingChoice(gameId);
+        var state = RequireTurn(gameId, Actor.Active);
         var queue = new AbilityQueue();
         TurnEngine.ResolveContinuousDie(state, queue, request.DieId);
         Drain(state, queue, request.TargetDieIds);
-        return Ok(GameStateDto.From(gameId, state));
+        return Ok(Result(gameId, state));
     }
 
     // Dampening Collar (DPS002) - no ability queue involved (see
@@ -132,47 +143,47 @@ public sealed class GamesController(GameStore store) : ControllerBase
     [HttpPost("{gameId}/opponent-resolve-continuous-die")]
     public ActionResult<GameStateDto> OpponentResolveContinuousDie(string gameId, [FromBody] OpponentResolveContinuousDieRequest request)
     {
-        var state = RequireNoPendingChoice(gameId);
+        var state = RequireTurn(gameId, Actor.Inactive);
         TurnEngine.OpponentResolveContinuousDie(state, request.DieId, request.AffiliateDieIdToReturn);
-        return Ok(GameStateDto.From(gameId, state));
+        return Ok(Result(gameId, state));
     }
 
     [HttpPost("{gameId}/use-global-ability")]
     public ActionResult<GameStateDto> UseGlobalAbility(string gameId, [FromBody] UseGlobalAbilityRequest request)
     {
-        var state = RequireNoPendingChoice(gameId);
+        var state = RequireTurn(gameId, Actor.Either);
         var queue = new AbilityQueue();
         TurnEngine.UseGlobalAbility(state, queue, request.CardId, request.PlayerId, request.EnergyDieIds);
         Drain(state, queue, request.TargetDieIds);
-        return Ok(GameStateDto.From(gameId, state));
+        return Ok(Result(gameId, state));
     }
 
     [HttpPost("{gameId}/enter-attack-step")]
     public ActionResult<GameStateDto> EnterAttackStep(string gameId, [FromBody] EnterAttackStepRequest? request = null)
     {
-        var state = RequireNoPendingChoice(gameId);
+        var state = RequireTurn(gameId, Actor.Active);
         var queue = new AbilityQueue();
         TurnEngine.EnterAttackStep(state, queue);
         Drain(state, queue, request?.TargetDieIds);
-        return Ok(GameStateDto.From(gameId, state));
+        return Ok(Result(gameId, state));
     }
 
     [HttpPost("{gameId}/skip-attack-step")]
     public ActionResult<GameStateDto> SkipAttackStep(string gameId)
     {
-        var state = RequireNoPendingChoice(gameId);
+        var state = RequireTurn(gameId, Actor.Active);
         TurnEngine.SkipAttackStep(state);
-        return Ok(GameStateDto.From(gameId, state));
+        return Ok(Result(gameId, state));
     }
 
     [HttpPost("{gameId}/declare-attackers")]
     public ActionResult<GameStateDto> DeclareAttackers(string gameId, [FromBody] DeclareAttackersRequest request)
     {
-        var state = RequireNoPendingChoice(gameId);
+        var state = RequireTurn(gameId, Actor.Active);
         var queue = new AbilityQueue();
         CombatEngine.DeclareAttackers(state, queue, request.AttackerDieIds);
         Drain(state, queue, request.TargetDieIds);
-        return Ok(GameStateDto.From(gameId, state));
+        return Ok(Result(gameId, state));
     }
 
     // Only reachable when DeclareAttackers found at least one Range
@@ -182,26 +193,26 @@ public sealed class GamesController(GameStore store) : ControllerBase
     [HttpPost("{gameId}/resolve-range")]
     public ActionResult<GameStateDto> ResolveRange(string gameId, [FromBody] ResolveRangeRequest request)
     {
-        var state = RequireNoPendingChoice(gameId);
+        var state = RequireTurn(gameId, Actor.Active);
         var queue = new AbilityQueue();
         CombatEngine.ResolveRange(
             state, queue,
             request.ActivePlayerAssignments.Select(a => (a.RangeDieId, a.TargetDieId)).ToList(),
             request.InactivePlayerAssignments.Select(a => (a.RangeDieId, a.TargetDieId)).ToList());
         Drain(state, queue, null);
-        return Ok(GameStateDto.From(gameId, state));
+        return Ok(Result(gameId, state));
     }
 
     [HttpPost("{gameId}/declare-blockers")]
     public ActionResult<GameStateDto> DeclareBlockers(string gameId, [FromBody] DeclareBlockersRequest request)
     {
-        var state = RequireNoPendingChoice(gameId);
+        var state = RequireTurn(gameId, Actor.Inactive);
         var assignment = new CombatAssignment();
         foreach (var a in request.Assignments) assignment.AssignBlocker(a.AttackerDieId, a.BlockerDieId);
         var blockerIds = request.Assignments.Select(a => a.BlockerDieId).Distinct().ToList();
 
         CombatEngine.DeclareBlockers(state, assignment, blockerIds);
-        return Ok(GameStateDto.From(gameId, state));
+        return Ok(Result(gameId, state));
     }
 
     // Only reachable when DeclareBlockers found a real Infiltrate choice
@@ -211,14 +222,14 @@ public sealed class GamesController(GameStore store) : ControllerBase
     [HttpPost("{gameId}/resolve-infiltrate")]
     public ActionResult<GameStateDto> ResolveInfiltrate(string gameId, [FromBody] ResolveInfiltrateRequest request)
     {
-        var state = RequireNoPendingChoice(gameId);
+        var state = RequireTurn(gameId, Actor.Active);
         var assignment = new CombatAssignment();
         foreach (var a in request.Assignments) assignment.AssignBlocker(a.AttackerDieId, a.BlockerDieId);
 
         var queue = new AbilityQueue();
         CombatEngine.ResolveInfiltrate(state, queue, assignment, request.InfiltratingDieIds);
         Drain(state, queue, null);
-        return Ok(GameStateDto.From(gameId, state));
+        return Ok(Result(gameId, state));
     }
 
     // Only reachable when DeclareBlockers/ResolveInfiltrate found a real
@@ -228,19 +239,19 @@ public sealed class GamesController(GameStore store) : ControllerBase
     [HttpPost("{gameId}/resolve-tag-out")]
     public ActionResult<GameStateDto> ResolveTagOut(string gameId, [FromBody] ResolveTagOutRequest request)
     {
-        var state = RequireNoPendingChoice(gameId);
+        var state = RequireTurn(gameId, Actor.Active);
         var uses = request.Uses.Select(u => (u.TagOutDieId, u.TargetDieId)).ToList();
 
         var queue = new AbilityQueue();
         CombatEngine.ResolveTagOut(state, queue, uses);
         Drain(state, queue, null);
-        return Ok(GameStateDto.From(gameId, state));
+        return Ok(Result(gameId, state));
     }
 
     [HttpPost("{gameId}/assign-combat-damage")]
     public ActionResult<GameStateDto> AssignCombatDamage(string gameId, [FromBody] AssignCombatDamageRequest request)
     {
-        var state = RequireNoPendingChoice(gameId);
+        var state = RequireTurn(gameId, Actor.Active);
         var assignment = new CombatAssignment();
         foreach (var a in request.Assignments) assignment.AssignBlocker(a.AttackerDieId, a.BlockerDieId);
 
@@ -253,13 +264,13 @@ public sealed class GamesController(GameStore store) : ControllerBase
         var queue = new AbilityQueue();
         CombatEngine.AssignCombatDamage(state, queue, assignment, splits, new RandomDiceRoller(new Random()));
         Drain(state, queue, null);
-        return Ok(GameStateDto.From(gameId, state));
+        return Ok(Result(gameId, state));
     }
 
     [HttpPost("{gameId}/clean-up")]
     public ActionResult<GameStateDto> CleanUp(string gameId)
     {
-        var state = RequireNoPendingChoice(gameId);
+        var state = RequireTurn(gameId, Actor.Active);
         var queue = new AbilityQueue();
         // roller lets a Deadly-KO'd die with Regenerate reroll instead
         // (previously always null here, so Regenerate silently never
@@ -269,7 +280,7 @@ public sealed class GamesController(GameStore store) : ControllerBase
         // gap CleanUp used to have.
         TurnEngine.CleanUp(state, new RandomDiceRoller(new Random()), queue);
         Drain(state, queue, null);
-        return Ok(GameStateDto.From(gameId, state));
+        return Ok(Result(gameId, state));
     }
 
     // Keyword Corrupt/RedrawFromBag (Cosmic Cube "Infinite Possibilities",
@@ -282,9 +293,15 @@ public sealed class GamesController(GameStore store) : ControllerBase
     [HttpPost("{gameId}/resolve-pending-choice")]
     public ActionResult<GameStateDto> ResolvePendingChoice(string gameId, [FromBody] ResolvePendingChoiceRequest request)
     {
-        var state = store.Get(gameId);
+        var (session, playerId) = RequireSeat(gameId);
+        var state = session.State;
         var pending = state.PendingChoice
             ?? throw new InvalidOperationException("There is no pending choice to resolve.");
+        // The choice belongs to whoever the engine says - which is not
+        // always the active player: plenty of cards make the OPPONENT
+        // choose one of their own dice.
+        if (pending.ControllerId != playerId)
+            throw new NotYourTurnException("That choice belongs to the other player.");
 
         var invalid = request.ChosenDieIds.Where(id => !pending.CandidateDieIds.Contains(id)).ToList();
         if (invalid.Count > 0)
@@ -302,7 +319,7 @@ public sealed class GamesController(GameStore store) : ControllerBase
         state.PendingQueue = null;
         if (queue is not null) Drain(state, queue, null);
 
-        return Ok(GameStateDto.From(gameId, state));
+        return Ok(Result(gameId, state));
     }
 
     // Every action-taking endpoint above (everything except Create/Get/
@@ -310,9 +327,69 @@ public sealed class GamesController(GameStore store) : ControllerBase
     // store.Get - rule 3.2's own resolution-before-anything-else timing
     // means no other game action is legal while a mid-resolution choice
     // (keyword Corrupt/RedrawFromBag) is still waiting to be answered.
+    // Who is allowed to take an action. The ENGINE already enforces the
+    // rules of the game (that it is the Main Step, that this die is
+    // yours); this is the other half - that the caller is the player
+    // whose action it is at all. Before seats, the acting player was a
+    // request parameter, so anyone holding a game id could act as either
+    // side.
+    private enum Actor
+    {
+        /// <summary>Whoever's turn it is - almost everything.</summary>
+        Active,
+        /// <summary>The defender: declaring blockers, and their own windows.</summary>
+        Inactive,
+        /// <summary>Rule 2.6.5.2 - Global abilities are open to both.</summary>
+        Either,
+    }
+
+    // The seat secret rides in a header rather than the body so it is
+    // uniform across GET and POST and never ends up in a request log's
+    // query string.
+    private const string SeatTokenHeader = "X-Seat-Token";
+
+    private string? _seatPlayerId;
+
+    private (GameSession Session, string PlayerId) RequireSeat(string gameId)
+    {
+        var session = store.GetSession(gameId);
+        var token = Request.Headers[SeatTokenHeader].ToString();
+        var playerId = session.PlayerIdFor(string.IsNullOrEmpty(token) ? null : token);
+        if (playerId is null)
+            throw new SeatRequiredException($"A valid {SeatTokenHeader} is required to act in this game.");
+        _seatPlayerId = playerId;
+        return (session, playerId);
+    }
+
+    private GameState RequireTurn(string gameId, Actor actor)
+    {
+        var (session, playerId) = RequireSeat(gameId);
+        var state = session.State;
+        var expected = actor switch
+        {
+            Actor.Active => state.ActivePlayerId,
+            Actor.Inactive => state.OpponentOf(state.ActivePlayerId),
+            _ => playerId,
+        };
+        if (playerId != expected)
+        {
+            throw new NotYourTurnException(actor == Actor.Active
+                ? "It is not your turn."
+                : "That is the other player's decision to make.");
+        }
+        if (state.PendingChoice is not null)
+            throw new InvalidOperationException("Resolve the pending choice before taking another action.");
+        return state;
+    }
+
+    // Every response says which side the caller holds, so the client can
+    // render the board from that seat without being told separately.
+    private GameStateDto Result(string gameId, GameState state) =>
+        GameStateDto.From(gameId, state, _seatPlayerId);
+
     private GameState RequireNoPendingChoice(string gameId)
     {
-        var state = store.Get(gameId);
+        var state = RequireTurn(gameId, Actor.Active);
         if (state.PendingChoice is not null)
             throw new InvalidOperationException("Resolve the pending choice before taking another action.");
         return state;

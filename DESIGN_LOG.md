@@ -10131,3 +10131,63 @@ die whose card really has that face - a Basic Action die for a double
 Generic, a character of that type for a typed double.
 
 580 engine tests pass.
+
+## Multiplayer, stage 1: seats close the identity hole (2026-08-31)
+
+Chosen over resuming v2, on the reasoning that seats/identity/persistence
+sit ABOVE the engine - Phase 9 already plans a parallel `/api/v2/games`
+controller - so none of this is work v2 would make redundant.
+
+**The hole.** Every action took the acting player's id as a REQUEST
+PARAMETER. Anyone with a game id could act as either side. Fine while one
+browser drove both halves; untenable the moment the halves are two people.
+
+**Seats.** A game now has two, each with an opaque bearer token
+(`GameSession.NewToken`, 18 random bytes, base64url). Whoever holds a
+token holds that side - the shared-document-link model, the user's call.
+The token rides in an `X-Seat-Token` header rather than the body, so it is
+uniform across GET and POST and never lands in a query string. Comparison
+is constant-time, so a token cannot be guessed a character at a time.
+
+Creation returns BOTH seats, because the creator may be playing alone -
+holding both, passing the laptop - or about to send one as an invite. It
+is the only response that carries a token; any other would be showing the
+caller their opponent's secret.
+
+**Authorization is per-endpoint, because the rules are.** The engine
+already enforces the rules of the GAME (right step, your die); this is the
+other half - whether the action is yours to take at all. Three actors:
+
+- `Active` for nearly everything.
+- `Inactive` for `declare-blockers` and `opponent-resolve-continuous-die`
+  - the defender's decisions, and it would be a bug for the attacker to
+  be able to make them.
+- `Either` for `use-global-ability`, per rule 2.6.5.2.
+
+`resolve-pending-choice` is its own case: it goes to `PendingChoice.
+ControllerId`, which is not always the active player - plenty of cards
+make the OPPONENT choose one of their own dice.
+
+401 means "you did not prove which side you are", 403 means "you did, and
+it is not your move". Worth separating: only the first is worth asking a
+player to re-open their invite link over.
+
+**The client barely changed, because the redesign had already done it.**
+The match table was built perspective-first - `nearPlayerId` and `mine`
+props on the lane, the log, the community cards and both mats - all
+hardcoded to `game.playerOne.id` in seven places. Those became one `you`
+derived from the server's new `yourPlayerId`, and the board flips.
+
+Verified with two browsers on one game: seat one sees Team A as the near
+mat, seat two sees Team B with the life panels swapped, and seat two
+clicking an action on player one's turn gets "It is not your turn." A
+full turn plays through the rail with every call carrying a seat, and the
+Team Builder's "Start Game with This Team" still works.
+
+**Not yet**: games still die with the API process, there is no invite-link
+route in the client (the test drove it by hand), and the opponent has to
+reload to see anything - live updates are the next piece. One known
+limitation surfaced by the actor rules: `resolve-range` takes BOTH
+players' assignments in a single call, because rule-wise Range is
+simultaneous. It is the active player's to submit today; a real
+two-party flow needs its own design.

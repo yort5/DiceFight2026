@@ -49,6 +49,8 @@ export interface RailAction {
 
 export function TurnRail(props: {
   game: GameState;
+  /** The seat this browser holds - its life panel is the amber one. */
+  nearPlayerId: string;
   /** The legal ways forward right now, primary first. */
   actions: RailAction[];
   /** Shown under the guidance when the next move is a board selection
@@ -56,6 +58,8 @@ export function TurnRail(props: {
   note?: string;
 }) {
   const { game } = props;
+  const you = props.nearPlayerId === game.playerTwo.id ? game.playerTwo : game.playerOne;
+  const them = props.nearPlayerId === game.playerTwo.id ? game.playerOne : game.playerTwo;
   const currentIndex = STEPS.findIndex((s) => s.key === game.currentStep);
   const inAttack = game.currentStep === "Attack" && game.attackSubStep !== "NotInAttack";
   const title = inAttack ? `Attack · ${spaced(game.attackSubStep)}` : (STEPS[currentIndex]?.label ?? game.currentStep);
@@ -67,12 +71,12 @@ export function TurnRail(props: {
     <div className="turn-rail">
       <div className="life-panels">
         <div className="life-panel theirs">
-          <span className="life-label">{game.playerTwo.name}</span>
-          <span className="life-value">{game.playerTwo.life}</span>
+          <span className="life-label">{them.name}</span>
+          <span className="life-value">{them.life}</span>
         </div>
         <div className="life-panel yours">
-          <span className="life-label">{game.playerOne.name}</span>
-          <span className="life-value">{game.playerOne.life}</span>
+          <span className="life-label">{you.name}</span>
+          <span className="life-value">{you.life}</span>
         </div>
       </div>
 

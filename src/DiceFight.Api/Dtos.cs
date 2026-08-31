@@ -79,19 +79,33 @@ public sealed record GameLogEntryDto(int Seq, string? PlayerId, string Text)
     public static GameLogEntryDto From(GameLogEntry entry) => new(entry.Seq, entry.PlayerId, entry.Text);
 }
 
+/// <summary>A side of the game and the secret that holds it.</summary>
+public sealed record SeatDto(string PlayerId, string Token);
+
+/// <summary>
+/// A freshly created game and both of its seats. The creator keeps one
+/// and invites someone to the other; whoever holds a token holds that
+/// seat, so the invite link is the invitation.
+/// </summary>
+public sealed record CreatedGameDto(GameStateDto Game, IReadOnlyList<SeatDto> Seats);
+
 public sealed record GameStateDto(
     string GameId, string ActivePlayerId, string CurrentStep, string AttackSubStep,
     bool IsFirstTurn, bool EpicBasicActionUsedThisTurn,
     PlayerDto PlayerOne, PlayerDto PlayerTwo, IReadOnlyList<DieDto> Dice, PendingChoiceDto? PendingChoice,
-    IReadOnlyList<GameLogEntryDto> Log)
+    IReadOnlyList<GameLogEntryDto> Log,
+    // Which side the caller holds. Null only for a response built before
+    // a seat was resolved (game creation, which returns the seats itself).
+    string? YourPlayerId = null)
 {
-    public static GameStateDto From(string gameId, GameState state) => new(
+    public static GameStateDto From(string gameId, GameState state, string? yourPlayerId = null) => new(
         gameId, state.ActivePlayerId, state.CurrentStep.ToString(), state.AttackSubStep.ToString(),
         state.IsFirstTurn, state.EpicBasicActionUsedThisTurn,
         PlayerDto.From(state.PlayerOne), PlayerDto.From(state.PlayerTwo),
         state.Dice.Select(DieDto.From).ToList(),
         state.PendingChoice is { } pending ? PendingChoiceDto.From(pending) : null,
-        state.Log.Select(GameLogEntryDto.From).ToList());
+        state.Log.Select(GameLogEntryDto.From).ToList(),
+        yourPlayerId);
 }
 
 // ---- Request bodies ----

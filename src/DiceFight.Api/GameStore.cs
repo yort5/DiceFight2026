@@ -3,22 +3,36 @@ using DiceFight.Engine;
 
 namespace DiceFight.Api;
 
-// In-memory only - games don't survive an API restart. Fine for local
-// development; a real deployment would need persistence (and the
-// login/auth layer the project's owner wants in front of the engine).
+// In-memory only - games don't survive an API restart. Fine for one
+// browser driving both sides; a game two people are part-way through
+// needs real persistence, which is the next piece.
 public sealed class GameStore
 {
-    private readonly ConcurrentDictionary<string, GameState> _games = new();
+    private readonly ConcurrentDictionary<string, GameSession> _games = new();
 
-    public string Create(GameState state)
+    public GameSession Create(GameState state)
     {
         var id = Guid.NewGuid().ToString("N")[..8];
-        _games[id] = state;
-        return id;
+        var session = new GameSession
+        {
+            Id = id,
+            State = state,
+            // One seat per side, each with its own secret. The creator
+            // keeps the first and hands the second out as an invite.
+            Seats =
+            [
+                new Seat(state.PlayerOne.Id, GameSession.NewToken()),
+                new Seat(state.PlayerTwo.Id, GameSession.NewToken()),
+            ],
+        };
+        _games[id] = session;
+        return session;
     }
 
-    public GameState Get(string gameId) =>
-        _games.TryGetValue(gameId, out var state)
-            ? state
+    public GameSession GetSession(string gameId) =>
+        _games.TryGetValue(gameId, out var session)
+            ? session
             : throw new KeyNotFoundException($"No game with id '{gameId}'.");
+
+    public GameState Get(string gameId) => GetSession(gameId).State;
 }
