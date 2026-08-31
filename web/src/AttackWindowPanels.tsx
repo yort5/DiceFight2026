@@ -185,89 +185,115 @@ export function TagOutWindowPanel(props: {
 // Range die's own opponent, not necessarily the game's active player).
 // "Add" auto-buckets into the active-vs-inactive assignment list by
 // comparing the Range die's own controller to the active player, so
-// there's no separate side-selector control.
+// The Range window is the only place both players act at once, so this
+// panel is one SIDE's view of it, not the referee's. You assign your own
+// Range dice and nobody else's; the server holds the active player's
+// assignments until the opponent answers, then fires them together.
+//
+// Which means the panel has three faces: assigning, waiting on the
+// opponent, and being waited on. A player with no Range dice never sees
+// it at all - the server resolves past them.
 export function RangeWindowPanel(props: {
   game: GameState;
   dice: Die[];
   cardsById: Map<string, CardDef>;
   selection: Selection;
   busy: boolean;
+  you: string;
   onClearSelection: () => void;
-  onConfirm: (active: RangeAssignment[], inactive: RangeAssignment[]) => void;
+  onConfirm: (assignments: RangeAssignment[]) => void;
 }) {
-  const { game, dice, cardsById, selection, busy } = props;
-  const [activeAssignments, setActiveAssignments] = useState<RangeAssignment[]>([]);
-  const [inactiveAssignments, setInactiveAssignments] = useState<RangeAssignment[]>([]);
+  const { game, dice, cardsById, selection, busy, you } = props;
+  const [assignments, setAssignments] = useState<RangeAssignment[]>([]);
+
+  const youAreActive = you === game.activePlayerId;
+  const yourRangeDice = dice.filter(
+    (d) =>
+      d.controllerId === you &&
+      (d.zone === "FieldZone" || d.zone === "AttackZone") &&
+      hasKeyword(d, cardsById, "Range"),
+  );
+
+  // Submitted and waiting: the active player has spoken and the window is
+  // holding for the opponent.
+  if (youAreActive && game.rangeSubmittedByActivePlayer) {
+    return (
+      <div className="action-tray combat-panel">
+        <p className="hint">
+          Range assigned. Waiting for your opponent to assign theirs - all Range damage is dealt at once.
+        </p>
+      </div>
+    );
+  }
+
+  // Your turn to answer, but only after the active player has gone. They
+  // hold priority (rule 2.6.5.7), and going first is what that buys them.
+  if (!youAreActive && !game.rangeSubmittedByActivePlayer) {
+    return (
+      <div className="action-tray combat-panel">
+        <p className="hint">Waiting for the active player to assign Range.</p>
+      </div>
+    );
+  }
+
+  if (yourRangeDice.length === 0) {
+    return (
+      <div className="action-tray combat-panel">
+        <p className="hint">You control no Range dice. Waiting for the Range window to resolve.</p>
+      </div>
+    );
+  }
 
   const primaryDie = dice.find((d) => d.id === selection.primary) ?? null;
-  const isRangeSelected =
-    primaryDie !== null &&
-    (primaryDie.zone === "FieldZone" || primaryDie.zone === "AttackZone") &&
-    hasKeyword(primaryDie, cardsById, "Range");
+  const isRangeSelected = primaryDie !== null && yourRangeDice.some((d) => d.id === primaryDie.id);
   const targetId = selection.secondary[0];
   const targetDie = targetId ? (dice.find((d) => d.id === targetId) ?? null) : null;
   const isTargetSelected =
     targetDie !== null &&
-    primaryDie !== null &&
-    targetDie.controllerId !== primaryDie.controllerId &&
+    targetDie.controllerId !== you &&
     (targetDie.zone === "FieldZone" || targetDie.zone === "AttackZone") &&
     (targetDie.status === "Character" || targetDie.status === "SidekickCharacter");
 
   function addAssignment() {
     if (!isRangeSelected || !isTargetSelected || !primaryDie || !targetDie) return;
-    const assignment = { rangeDieId: primaryDie.id, targetDieId: targetDie.id };
-    if (primaryDie.controllerId === game.activePlayerId) {
-      setActiveAssignments((prev) => [...prev, assignment]);
-    } else {
-      setInactiveAssignments((prev) => [...prev, assignment]);
-    }
+    setAssignments((prev) => [...prev, { rangeDieId: primaryDie.id, targetDieId: targetDie.id }]);
     props.onClearSelection();
   }
 
-  function removeActive(index: number) {
-    setActiveAssignments((prev) => prev.filter((_, i) => i !== index));
-  }
-
-  function removeInactive(index: number) {
-    setInactiveAssignments((prev) => prev.filter((_, i) => i !== index));
-  }
-
-  function renderList(label: string, list: RangeAssignment[], onRemove: (index: number) => void) {
-    return (
-      <>
-        <p className="hint">{label}</p>
-        {list.length === 0 && <p className="no-actions">None yet.</p>}
-        <ul className="combat-attacker-list">
-          {list.map((a, i) => {
-            const rangeDie = dice.find((d) => d.id === a.rangeDieId);
-            const target = dice.find((d) => d.id === a.targetDieId);
-            return (
-              <li key={`${a.rangeDieId}-${a.targetDieId}-${i}`}>
-                <span className="combat-attacker-name">{rangeDie ? dieLabel(rangeDie, cardsById) : a.rangeDieId}</span>
-                {" → "}
-                <span className="secondary-chip">
-                  {target ? dieLabel(target, cardsById) : a.targetDieId}
-                  <button className="chip-remove" disabled={busy} onClick={() => onRemove(i)}>
-                    x
-                  </button>
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-      </>
-    );
+  function removeAssignment(index: number) {
+    setAssignments((prev) => prev.filter((_, i) => i !== index));
   }
 
   return (
     <div className="action-tray combat-panel">
       <p className="hint">
-        Every active Range die on both sides may deal its Range value to an opposing Character die. Click a Range
-        die, then its target, then "Add Range Damage". Repeat, then confirm.
+        {youAreActive
+          ? "Each of your active Range dice may deal its Range value to an opposing Character die. You assign first; your opponent answers, and both sides' damage lands together."
+          : "The active player has assigned their Range dice. Assign yours - all Range damage is dealt at once, so theirs is already locked in."}
       </p>
 
-      {renderList("Your Range assignments", activeAssignments, removeActive)}
-      {renderList("Opponent's Range assignments", inactiveAssignments, removeInactive)}
+      <p className="hint">Your Range assignments</p>
+      {assignments.length === 0 && <p className="no-actions">None yet.</p>}
+      <ul className="combat-attacker-list">
+        {assignments.map((a, i) => {
+          const rangeDie = dice.find((d) => d.id === a.rangeDieId);
+          const target = dice.find((d) => d.id === a.targetDieId);
+          return (
+            <li key={`${a.rangeDieId}-${a.targetDieId}-${i}`}>
+              <span className="combat-attacker-name">
+                {rangeDie ? dieLabel(rangeDie, cardsById) : a.rangeDieId}
+              </span>
+              {" → "}
+              <span className="secondary-chip">
+                {target ? dieLabel(target, cardsById) : a.targetDieId}
+                <button className="chip-remove" disabled={busy} onClick={() => removeAssignment(i)}>
+                  x
+                </button>
+              </span>
+            </li>
+          );
+        })}
+      </ul>
 
       <div className="selection-summary">
         <span className={primaryDie ? "primary-chip" : "empty-hint"}>
@@ -284,23 +310,21 @@ export function RangeWindowPanel(props: {
           <button disabled={busy || !isRangeSelected || !isTargetSelected} onClick={addAssignment}>
             Add Range Damage
           </button>
-          <span className="hint">Primary = Range die, secondary = its target</span>
+          <span className="hint">Primary = your Range die, secondary = its target</span>
         </div>
         <div className="tray-action">
-          <button disabled={busy} onClick={() => props.onConfirm(activeAssignments, inactiveAssignments)}>
+          <button disabled={busy || assignments.length === 0} onClick={() => props.onConfirm(assignments)}>
             Confirm Range ▶
           </button>
           <span className="hint">
-            {activeAssignments.length + inactiveAssignments.length === 0
-              ? "None queued"
-              : `${activeAssignments.length + inactiveAssignments.length} queued`}
+            {assignments.length === 0 ? "None queued" : `${assignments.length} queued`}
           </span>
         </div>
         <div className="tray-action">
-          <button disabled={busy} onClick={() => props.onConfirm([], [])}>
+          <button disabled={busy} onClick={() => props.onConfirm([])}>
             Skip (no Range damage) ▶
           </button>
-          <span className="hint">Neither side deals Range damage this combat</span>
+          <span className="hint">You deal no Range damage this combat</span>
         </div>
       </div>
     </div>

@@ -34,6 +34,19 @@ public sealed class GameSession
 
     public void MarkChanged() => Interlocked.Increment(ref _version);
 
+    // The Range window is the one place both players decide at once. Rule
+    // 2.7.4.2 has every Range die fire simultaneously, but two browsers
+    // cannot submit simultaneously - so the active player submits first
+    // (rule 2.6.5.7 gives them priority, and priority is exactly what
+    // settles a tie) and their assignments wait here until the opponent
+    // answers. Null means nothing is waiting.
+    //
+    // Deliberately NOT in GameState: no rule has ever been half-resolved,
+    // and an engine that could be caught mid-Range would have to answer
+    // that question everywhere. This is the shape of the conversation, not
+    // the shape of the game.
+    public IReadOnlyList<(string RangeDieId, string TargetDieId)>? PendingRange { get; set; }
+
     /// <summary>Which side this token holds, or null if it holds none.</summary>
     public string? PlayerIdFor(string? token) =>
         token is null ? null : Seats.FirstOrDefault(s => FixedTimeEquals(s.Token, token))?.PlayerId;

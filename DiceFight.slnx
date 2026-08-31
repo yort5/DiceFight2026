@@ -6,6 +6,7 @@
     <Project Path="src/DiceFight.V2/DiceFight.V2.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/DiceFight.Api.Tests/DiceFight.Api.Tests.csproj" />
     <Project Path="tests/DiceFight.Engine.Tests/DiceFight.Engine.Tests.csproj" />
     <Project Path="tests/DiceFight.V2.Tests/DiceFight.V2.Tests.csproj" />
   </Folder>

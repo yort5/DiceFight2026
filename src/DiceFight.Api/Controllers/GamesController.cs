@@ -190,17 +190,65 @@ public sealed class GamesController(GameStore store) : ControllerBase
     // attacker (see CombatEngine.DeclareAttackers's own remarks) - most
     // combats skip straight past AttackSubStep.RangeWindow to
     // DeclareBlockers and never need this endpoint called at all.
-    [HttpPost("{gameId}/resolve-range")]
-    public ActionResult<GameStateDto> ResolveRange(string gameId, [FromBody] ResolveRangeRequest request)
+    //
+    // Both players shoot at once, so both must be heard before anything
+    // resolves, and one browser cannot speak for the other. The active
+    // player submits first and their assignments wait in the session; the
+    // opponent's submission is what fires them. Whoever submits second is
+    // choosing with knowledge of the first submission, which is why the
+    // order is fixed rather than first-come: rule 2.6.5.7 gives the active
+    // player priority, and going first is what that priority buys.
+    //
+    // A player with no Range dice has nothing to decide, so their turn in
+    // the sequence is skipped rather than asked for.
+    [HttpPost("{gameId}/submit-range")]
+    public ActionResult<GameStateDto> SubmitRange(string gameId, [FromBody] SubmitRangeRequest request)
     {
-        var state = RequireTurn(gameId, Actor.Active);
+        var (session, playerId) = RequireSeat(gameId);
+        var state = session.State;
+        if (state.PendingChoice is not null)
+            throw new InvalidOperationException("Resolve the pending choice before taking another action.");
+
+        var activeId = state.ActivePlayerId;
+        var inactiveId = state.OpponentOf(activeId);
+        var mine = request.Assignments.Select(a => (a.RangeDieId, a.TargetDieId)).ToList();
+
+        // Rejected here, while its author is still the one asking. Sending
+        // a bad assignment back as the opponent's error would be useless to
+        // both of them.
+        CombatEngine.ValidateRangeAssignments(state, playerId, mine);
+
+        if (playerId == activeId)
+        {
+            session.PendingRange = mine;
+            // Nobody left to hear from - resolve on the spot rather than
+            // showing a "waiting" panel to a player who will never answer.
+            if (!CombatEngine.HasRangeDice(state, inactiveId)) return Ok(ResolveRangeNow(gameId, session, state, mine, []));
+            return Ok(Result(gameId, state));
+        }
+
+        var active = session.PendingRange;
+        if (active is null)
+        {
+            // The active player either has not submitted yet or has nothing
+            // to submit. Only the second case may proceed.
+            if (CombatEngine.HasRangeDice(state, activeId))
+                throw new NotYourTurnException("The active player assigns Range first.");
+            active = [];
+        }
+        return Ok(ResolveRangeNow(gameId, session, state, active, mine));
+    }
+
+    private GameStateDto ResolveRangeNow(
+        string gameId, GameSession session, GameState state,
+        IReadOnlyList<(string RangeDieId, string TargetDieId)> active,
+        IReadOnlyList<(string RangeDieId, string TargetDieId)> inactive)
+    {
         var queue = new AbilityQueue();
-        CombatEngine.ResolveRange(
-            state, queue,
-            request.ActivePlayerAssignments.Select(a => (a.RangeDieId, a.TargetDieId)).ToList(),
-            request.InactivePlayerAssignments.Select(a => (a.RangeDieId, a.TargetDieId)).ToList());
+        CombatEngine.ResolveRange(state, queue, active, inactive);
         Drain(state, queue, null);
-        return Ok(Result(gameId, state));
+        session.PendingRange = null;
+        return Result(gameId, state);
     }
 
     [HttpPost("{gameId}/declare-blockers")]
@@ -392,7 +440,13 @@ public sealed class GamesController(GameStore store) : ControllerBase
         // A POST that got this far changed something - GET is the only
         // read, and it must not make the opponent think a turn happened.
         if (HttpMethods.IsPost(Request.Method)) session.MarkChanged();
-        return GameStateDto.From(gameId, state, _seatPlayerId, session.Version);
+        // A half-collected Range window cannot outlive the window itself.
+        // Every state change funnels through here, so this is the one place
+        // that catches all the ways combat can move on - resolution, but
+        // also a conceded attack step or a whole new turn.
+        if (state.AttackSubStep != AttackSubStep.RangeWindow) session.PendingRange = null;
+        return GameStateDto.From(
+            gameId, state, _seatPlayerId, session.Version, session.PendingRange is not null);
     }
 
     private GameState RequireNoPendingChoice(string gameId)

@@ -300,9 +300,9 @@ function App() {
     run(() => api.resolveTagOut(gameId, uses));
   }
 
-  function confirmRange(active: RangeAssignment[], inactive: RangeAssignment[]) {
+  function confirmRange(assignments: RangeAssignment[]) {
     if (!gameId) return;
-    run(() => api.resolveRange(gameId, active, inactive));
+    run(() => api.submitRange(gameId, assignments));
   }
 
   function declareAttackers(attackerDieIds: string[], targetDieIds: string[]) {
@@ -516,6 +516,7 @@ function App() {
                 cardsById={cardsById}
                 selection={selection}
                 busy={busy}
+                you={you}
                 onClearSelection={clearSelection}
                 onConfirm={confirmRange}
               />

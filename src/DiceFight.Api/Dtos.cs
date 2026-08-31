@@ -99,10 +99,15 @@ public sealed record GameStateDto(
     string? YourPlayerId = null,
     // Increments on every action; the client polls for a change in this
     // rather than diffing whole game states.
-    int Version = 0)
+    int Version = 0,
+    // True once the active player has assigned Range and the window is
+    // waiting on the opponent. Both browsers need it: one to know it is
+    // still holding, the other to know it is now being asked.
+    bool RangeSubmittedByActivePlayer = false)
 {
     public static GameStateDto From(
-        string gameId, GameState state, string? yourPlayerId = null, int version = 0) => new(
+        string gameId, GameState state, string? yourPlayerId = null, int version = 0,
+        bool rangeSubmittedByActivePlayer = false) => new(
         gameId, state.ActivePlayerId, state.CurrentStep.ToString(), state.AttackSubStep.ToString(),
         state.IsFirstTurn, state.EpicBasicActionUsedThisTurn,
         PlayerDto.From(state.PlayerOne), PlayerDto.From(state.PlayerTwo),
@@ -110,7 +115,8 @@ public sealed record GameStateDto(
         state.PendingChoice is { } pending ? PendingChoiceDto.From(pending) : null,
         state.Log.Select(GameLogEntryDto.From).ToList(),
         yourPlayerId,
-        version);
+        version,
+        rangeSubmittedByActivePlayer);
 }
 
 // ---- Request bodies ----
@@ -160,9 +166,8 @@ public sealed record TagOutUse(string TagOutDieId, string TargetDieId);
 // only cares about the Field Zone, not who's blocking whom).
 public sealed record ResolveTagOutRequest(IReadOnlyList<TagOutUse> Uses);
 public sealed record RangeAssignment(string RangeDieId, string TargetDieId);
-// Both sides' assignments in one request, same shape CombatEngine.
-// ResolveRange itself takes - Range resolves before blockers even exist,
-// so there's no BlockAssignment payload to resend here either.
-public sealed record ResolveRangeRequest(
-    IReadOnlyList<RangeAssignment> ActivePlayerAssignments, IReadOnlyList<RangeAssignment> InactivePlayerAssignments);
+// ONE side's assignments - whichever side is asking. Range is
+// simultaneous, so the server collects both submissions (active player
+// first) and resolves them together; see GamesController.SubmitRange.
+public sealed record SubmitRangeRequest(IReadOnlyList<RangeAssignment> Assignments);
 public sealed record ResolvePendingChoiceRequest(IReadOnlyList<string> ChosenDieIds);

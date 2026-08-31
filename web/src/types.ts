@@ -116,6 +116,9 @@ export interface GameState {
   /** Increments on every action - how the opponent's browser tells a real
    *  change from a quiet poll. */
   version: number;
+  // True while the Range window holds the active player's assignments and
+  // waits on the opponent's.
+  rangeSubmittedByActivePlayer: boolean;
   /** What has happened, oldest first. Written by the engine, so both
    *  players see the same account. Capped at the 200 most recent. */
   log: GameLogEntry[];

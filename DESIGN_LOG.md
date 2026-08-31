@@ -10235,3 +10235,56 @@ and sees its own mat near with the life panels swapped, gets no buttons
 while waiting, follows the host's whole turn without reloading (step,
 log and dice all update), and receives the turn when the host ends theirs
 - at which point the host is the one waiting.
+
+## Multiplayer, stage 3: the Range handshake (2026-08-31)
+
+The Range window is the one place in a turn where both players act at
+once (rule 2.7.4.2 fires every Range die simultaneously), and it was the
+last thing in the game one browser still did on the other's behalf:
+`resolve-range` took both sides' assignments in a single call, submitted
+by the active player. With two people that is one player choosing the
+other's shots.
+
+**The fix is an order, not a lock.** The active player submits first;
+their assignments wait in the session; the opponent's submission is what
+fires both together. Whoever goes second chooses knowing what the first
+submitted, which is exactly why the order has to be fixed rather than
+first-come - and rule 2.6.5.7 already says who wins a tie. Going first
+is what that priority buys, and it matches the user's own framing: the
+active player's input is taken first because that is what settles any
+conflict.
+
+The pending submission lives in `GameSession`, not `GameState`. No rule
+has ever been half-resolved, and an engine that could be caught mid-Range
+would have to answer that question everywhere; this is the shape of the
+conversation, not the shape of the game. It is dropped the moment combat
+leaves the window, so a half-collected window can never fire into a later
+turn at dice that have since moved.
+
+**A player with no Range dice is never asked.** `HasRangeDice` short-
+circuits both halves: if the opponent has none, the active player's
+submission resolves on the spot; if the ACTIVE player has none (their
+Range attacker having left the board), the opponent may go first. Without
+that, a window could sit waiting on someone whose only legal answer is
+"none".
+
+Assignments are validated at submit time rather than at resolution, so a
+bad assignment fails the player who made it. Holding it until the
+opponent submits would fail *their* request with someone else's mistake,
+and neither player could act on that.
+
+`RangeWindowPanel` is now one SIDE's view rather than the referee's, with
+three faces: assigning, waiting on the opponent, and being waited on.
+
+**New: `tests/DiceFight.Api.Tests`.** Seats, turn gating and this
+handshake all live in the controller, which nothing tested - stage 1 and
+stage 2 were both verified only through a browser, and that is twice.
+The tests drive the controller class directly, supplying the two pieces
+of `HttpContext` it actually reads (the seat header and the request
+method); a real host would buy coverage of ASP.NET's routing, not of
+this code. Ten tests, and I checked they bite: deleting the ordering
+guard and deleting the stale-pending cleanup each fail one.
+
+Verified four ways: the controller tests; the four panel faces rendered
+in a real browser for both seats; and over HTTP, that the endpoint routes
+and returns 401 unseated / 400 out of step.

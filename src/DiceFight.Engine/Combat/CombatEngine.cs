@@ -116,7 +116,24 @@ public static class CombatEngine
         state.AttackSubStep = AttackSubStep.DeclareBlockers;
     }
 
-    private static void ValidateRangeAssignments(
+    /// <summary>
+    /// True if <paramref name="playerId"/> controls a die that could take a
+    /// Range shot. A player with none has no decision to make in the Range
+    /// window, so callers can resolve without waiting on them.
+    /// </summary>
+    public static bool HasRangeDice(GameState state, string playerId) =>
+        state.Dice.Any(d =>
+            d.ControllerId == playerId
+            && d.Zone is Zone.FieldZone or Zone.AttackZone
+            && DieStats.HasKeyword(state, d, "Range"));
+
+    /// <summary>
+    /// Checks one side's Range assignments without applying them. Public so
+    /// a caller collecting the two sides separately can reject a bad
+    /// submission while its author is still there to fix it, rather than
+    /// failing the opponent's later request with someone else's error.
+    /// </summary>
+    public static void ValidateRangeAssignments(
         GameState state, string controllerId, IReadOnlyList<(string RangeDieId, string TargetDieId)> assignments)
     {
         foreach (var (rangeDieId, targetDieId) in assignments)

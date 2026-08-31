@@ -103,10 +103,13 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ uses }),
     }),
-  resolveRange: (id: string, activePlayerAssignments: RangeAssignment[], inactivePlayerAssignments: RangeAssignment[]) =>
-    request<GameState>(`/games/${id}/resolve-range`, {
+  // One side's assignments. Range is simultaneous, so the server collects
+  // the active player's first and resolves both together when the
+  // opponent answers - see GamesController.SubmitRange.
+  submitRange: (id: string, assignments: RangeAssignment[]) =>
+    request<GameState>(`/games/${id}/submit-range`, {
       method: "POST",
-      body: JSON.stringify({ activePlayerAssignments, inactivePlayerAssignments }),
+      body: JSON.stringify({ assignments }),
     }),
   assignCombatDamage: (id: string, assignments: BlockAssignment[], damageSplits: DamageSplit[]) =>
     request<GameState>(`/games/${id}/assign-combat-damage`, {
