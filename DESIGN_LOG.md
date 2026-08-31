@@ -10348,3 +10348,58 @@ and the print sheet under print media with the catalog gone.
 
 Stages 3-5 (filter rail, result-row restyle, Team Shape panel) are still
 to come.
+
+## Team Builder, stage 3: the filter rail (2026-08-31)
+
+The filters were a band above the results, so every section you opened
+pushed the table further down - choosing a filter meant losing sight of
+the thing it filtered. They now live in a 272px rail of their own, and
+the layout is the design's three columns: rail, results, roster.
+
+**Cost pips replace two "Any" dropdowns.** One pip per cost the CATALOG
+actually has, not a hardcoded 1-12 - costs run 0-12 today and a future
+set should not silently fall off the end of the control. Click one cost,
+shift-click or drag for a range, click the only selected cost to clear
+it, so the control undoes itself without a separate "any" option.
+
+That drag cost me a bug worth recording. A drag that ends on a different
+pip fires its `click` on the CONTAINER, not on a pip - so the "the
+pointer moved, ignore the click" flag was never consumed, and it swallowed
+the next genuine click instead. The flag is cleared on mouse DOWN now,
+which is the only moment that reliably precedes every click.
+
+**An active-filter bar sits above the results**: one removable chip per
+filter, a Clear all, and the match count. A chip selected three sections
+down a scrolled rail is invisible from where its effect is, which is how
+you end up staring at an empty table wondering why. Clear all
+deliberately does not touch the search box: search is something you typed
+and can see, the chips are selections that get left on by accident.
+
+Every chip carries a plain-text `name` for its tooltip and for a screen
+reader. Several are an icon and nothing else - an affiliation logo, an
+energy symbol - and a button whose only content is an image has no
+accessible name at all.
+
+**Two cascade bugs, both the same shape.** The narrow-viewport rule that
+un-stickies the rail, and the print rule that hides it, both sat EARLIER
+in the file than `.filter-rail`'s own declaration and lost to it on
+source order - so at 1000px the rail still pinned over the results, and
+printing a team still printed the rail. Both overrides now sit after the
+rule they override; the print block was moved to the end of the file,
+where it belongs given it has to beat everything.
+
+Deleted 24 now-dead rules for the old filter band (`.card-catalog-
+filters`, `.affiliation-chip`, `.set-chip` and friends) and the three
+comments that no longer described anything. One touch was worth keeping
+rather than losing with them: unselected affiliation logos still sit
+back slightly, which the rail's grid needs more than the old one did.
+
+Sort chips are NOT here, though the design puts them in this bar: the
+results are still a table with sortable headers, and two sort controls
+would be one too many. They arrive in stage 4 when the headers go.
+
+Verified in a browser: all eight rail sections, each filter kind
+narrowing the count, the find box narrowing 123 affiliations to 1,
+removing a chip putting the rail back in sync, Clear all, the drag and
+shift-click ranges, adds still reaching the roster, print hiding both
+rail and catalog, and the layout collapsing at 1000px.

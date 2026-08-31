@@ -40,7 +40,7 @@
    it needs materially more room than the game board's does. Scoped to
    this page rather than widening .app-layout, which the game shares. */
 .app-layout.team-builder-layout {
-  grid-template-columns: 1fr 404px;
+  grid-template-columns: 272px minmax(0, 1fr) 404px;
 }
 
 @media (max-width: 1100px) {
@@ -1615,135 +1615,6 @@
   opacity: 0.8;
 }
 
-.card-catalog-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  align-items: flex-start;
-  padding: 10px 14px;
-  border-radius: 8px;
-  background: rgba(127, 127, 127, 0.12);
-  margin-bottom: 12px;
-}
-
-.card-catalog-filters input[type="text"] {
-  font-size: 13px;
-  padding: 6px 10px;
-  border-radius: 6px;
-  border: 1px solid rgba(127, 127, 127, 0.4);
-  min-width: 220px;
-}
-
-.card-catalog-filters fieldset {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 10px;
-  border: none;
-  padding: 0;
-  margin: 0;
-  max-width: 320px;
-}
-
-.card-catalog-filters legend {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  opacity: 0.8;
-  padding: 0;
-}
-
-.card-catalog-filters label {
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  white-space: nowrap;
-}
-
-/* Affiliation and Set. Closed they sit inline with the other filters;
-   open they take the whole width of the bar and their options wrap
-   across it, so 128 logos are four short rows rather than one long
-   column that pushes the results off screen. */
-.card-catalog-chips summary {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  opacity: 0.8;
-  cursor: pointer;
-}
-
-.card-catalog-chips[open] {
-  flex-basis: 100%;
-}
-
-.card-catalog-chips[open] summary {
-  margin-bottom: 6px;
-}
-
-.card-catalog-chip-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-/* The checkbox itself is hidden: the whole chip is the hit target, and
-   selection reads better as a highlighted tile than as a tick beside a
-   logo. It stays in the DOM so the control is still a real checkbox to
-   the keyboard and to a screen reader. */
-.affiliation-chip input,
-.set-chip input {
-  position: absolute;
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.affiliation-chip,
-.set-chip {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0;
-  padding: 3px;
-  border: 1px solid transparent;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-.affiliation-chip:hover,
-.set-chip:hover {
-  background: rgba(127, 127, 127, 0.2);
-}
-
-.affiliation-chip:has(input:focus-visible),
-.set-chip:has(input:focus-visible) {
-  outline: 2px solid #6ea8ff;
-  outline-offset: 1px;
-}
-
-.affiliation-chip.selected,
-.set-chip.selected {
-  border-color: #6ea8ff;
-  background: rgba(110, 168, 255, 0.22);
-}
-
-/* Unselected logos sit back a little so the chosen ones stand out in a
-   grid this dense. */
-.affiliation-chip:not(.selected) .affiliation-icon {
-  opacity: 0.75;
-}
-
-.set-chip {
-  font-size: 12px;
-  padding: 3px 7px;
-  min-width: 46px;
-  font-variant-numeric: tabular-nums;
-}
-
-.affiliation-chip .affiliation-icon {
-  height: 26px;
-}
-
 .card-catalog-scroll {
   overflow-x: auto;
   max-width: 100%;
@@ -1906,12 +1777,6 @@
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1;
-}
-
-.affiliation-chip .affiliation-icon-generated {
-  width: 26px;
-  height: 26px;
-  font-size: 11px;
 }
 
 /* Energy is icons only, so the column needs no more room than the widest
@@ -2105,36 +1970,7 @@
   }
 }
 
-.card-catalog-search {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.card-catalog-search-syntax {
-  font-style: normal;
-  font-size: 11px;
-  line-height: 1.3;
-}
-
-.card-catalog-search-syntax code {
-  font-family: var(--mono);
-  font-size: 10px;
-  padding: 0 3px;
-  border-radius: 3px;
-  background: rgba(127, 127, 127, 0.18);
-}
-
 /* Min/Max sit on one line, each select hugging its own label. */
-.card-catalog-cost label {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.card-catalog-cost select {
-  padding: 1px 2px;
-}
 
 /* ---- Team Builder: rarity colour-coding ----
    Each rarity's colour is defined ONCE as --rarity-colour on the shared
@@ -2160,16 +1996,6 @@
 }
 
 /* Filter checkboxes carry a small swatch so the legend is the filter. */
-.card-catalog-filters label[class*="rarity-"]::before {
-  content: "";
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  margin-right: 2px;
-  border-radius: 2px;
-  background: var(--rarity-colour, transparent);
-  vertical-align: -1px;
-}
 
 /* A card occupies two rows: the stats row and its printed text. Only the
    text row carries the bottom border, so the pair reads as one entry. */
@@ -2709,6 +2535,381 @@
   opacity: 0.55;
 }
 
+
+
+
+/* ---- Team Builder: the filter rail ----
+   Filters used to sit in a band above the results, so every section you
+   opened pushed the table further down and choosing a filter meant
+   losing sight of the thing it filtered. In a rail of their own they
+   stay put and the results stay visible. */
+
+.filter-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: sticky;
+  top: 24px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  box-sizing: border-box;
+  font-size: 12px;
+}
+
+/* Stacked at narrow widths, a sticky rail would pin over the results it
+   filters. Stated here rather than in the layout's own media query at
+   the top of the file, which loses to the rule above it on source
+   order. */
+@media (max-width: 1100px) {
+  .filter-rail {
+    position: static;
+    max-height: none;
+  }
+}
+
+.rail-panel {
+  border: 1px solid rgba(127, 127, 127, 0.3);
+  border-radius: 12px;
+  padding: 10px 11px 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rail-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  opacity: 0.7;
+  margin: 0;
+  font-weight: 600;
+}
+
+.rail-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* A rule between sections rather than a gap: seven sections of chips
+   need a line to stop reading as one long field of chips. */
+.rail-section + .rail-section {
+  padding-top: 10px;
+  border-top: 1px solid rgba(127, 127, 127, 0.25);
+}
+
+.rail-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.rail-summary {
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.55;
+}
+
+.rail-hint {
+  font-size: 9.5px;
+  opacity: 0.55;
+  margin: 0;
+}
+
+.rail-search,
+.rail-find {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 9px;
+  border-radius: 8px;
+  border: 1px solid rgba(127, 127, 127, 0.45);
+  background: rgba(127, 127, 127, 0.08);
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+}
+
+.rail-find {
+  padding: 5px 8px;
+  font-size: 11px;
+}
+
+.rail-search:focus,
+.rail-find:focus {
+  outline: none;
+  border-color: oklch(0.66 0.09 70);
+}
+
+.rail-syntax {
+  font-size: 9.5px;
+  opacity: 0.6;
+  line-height: 1.6;
+}
+
+.rail-syntax code {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgba(127, 127, 127, 0.2);
+  font-size: 9.5px;
+}
+
+.rail-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* Affiliation and Set are 128 and 49 options - capped and scrolled so
+   one section cannot own the whole rail. */
+.rail-chips.scroll {
+  max-height: 104px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.rail-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(127, 127, 127, 0.45);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 11.5px;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.rail-chip:hover {
+  border-color: rgba(127, 127, 127, 0.8);
+}
+
+.rail-chip.on {
+  border-color: oklch(0.68 0.09 70);
+  background: oklch(0.62 0.11 70 / 0.28);
+}
+
+/* Logo-only and code-only chips: the content IS the label, so they get
+   the padding of a badge rather than of a worded pill. */
+.rail-chip.icon {
+  padding: 3px 5px;
+  border-radius: 6px;
+}
+
+/* Unselected logos sit back a little so the chosen ones stand out in a
+   grid this dense - carried over from the old chip grid, which had the
+   same problem in more space than the rail has. */
+.rail-chip.icon:not(.on) .affiliation-icon,
+.rail-chip.icon:not(.on) .affiliation-icon-generated {
+  opacity: 0.72;
+}
+
+.rail-chip.code {
+  padding: 3px 7px;
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px;
+}
+
+/* One pip per cost the catalog actually has. Two "Any" dropdowns showed
+   neither the spread of costs nor, at a glance, what was selected. */
+.cost-pips {
+  display: flex;
+  gap: 2px;
+}
+
+.cost-pip {
+  flex: 1;
+  padding: 5px 0 6px;
+  border-radius: 5px;
+  border: 1px solid rgba(127, 127, 127, 0.4);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  /* Dragging across the pips would otherwise select their digits. */
+  user-select: none;
+}
+
+.cost-pip.on {
+  border-color: oklch(0.66 0.09 70);
+  background: oklch(0.62 0.11 70 / 0.35);
+  font-weight: 600;
+}
+
+.rail-options {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rail-option {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  text-align: left;
+  padding: 6px 9px;
+  border-radius: 8px;
+  border: 1px solid rgba(127, 127, 127, 0.4);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.rail-option.on {
+  border-color: oklch(0.68 0.09 70);
+  background: oklch(0.62 0.11 70 / 0.24);
+}
+
+.rail-option-label {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.rail-option-note {
+  font-size: 10px;
+  opacity: 0.65;
+  line-height: 1.3;
+}
+
+/* A switch rather than a checkbox: these two are settings that stay on
+   across sessions, not selections you make and clear. The real input is
+   still there, just visually replaced - so it keeps its focus ring, its
+   label association and its keyboard behaviour. */
+.rail-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.rail-toggle input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.rail-toggle-track {
+  flex: none;
+  width: 30px;
+  height: 17px;
+  border-radius: 999px;
+  border: 1px solid rgba(127, 127, 127, 0.5);
+  background: rgba(127, 127, 127, 0.2);
+  display: inline-flex;
+  align-items: center;
+  padding: 0 1px;
+}
+
+.rail-toggle-knob {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: rgba(127, 127, 127, 0.8);
+  transition: transform 120ms ease, background 120ms ease;
+}
+
+.rail-toggle input:checked + .rail-toggle-track {
+  border-color: oklch(0.7 0.1 70);
+  background: oklch(0.68 0.11 70);
+}
+
+.rail-toggle input:checked + .rail-toggle-track .rail-toggle-knob {
+  transform: translateX(13px);
+  background: #fff;
+}
+
+.rail-toggle input:focus-visible + .rail-toggle-track {
+  outline: 2px solid oklch(0.7 0.1 70);
+  outline-offset: 2px;
+}
+
+/* ---- Team Builder: the active filter bar ----
+   What is narrowing the results, shown with the results. A chip selected
+   three sections down a scrolled rail is invisible from here otherwise,
+   which is how you end up staring at an empty table wondering why. */
+
+.active-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 11px;
+  margin-bottom: 10px;
+  border-radius: 11px;
+  border: 1px solid rgba(127, 127, 127, 0.3);
+}
+
+.active-filter-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  opacity: 0.55;
+}
+
+.active-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 7px 3px 9px;
+  border-radius: 999px;
+  border: 1px solid oklch(0.62 0.08 70 / 0.7);
+  background: oklch(0.62 0.11 70 / 0.22);
+  color: inherit;
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+/* The whole chip is the remove button, so it turns red rather than just
+   the ×: the affordance should not be smaller than the target. */
+.active-filter-chip:hover {
+  border-color: oklch(0.6 0.16 25);
+  background: oklch(0.6 0.16 25 / 0.18);
+}
+
+.active-filter-x {
+  font-size: 13px;
+  line-height: 1;
+  opacity: 0.75;
+}
+
+.active-filter-clear {
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px dashed rgba(127, 127, 127, 0.55);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.active-filter-clear:hover {
+  border-color: oklch(0.6 0.16 25);
+  color: oklch(0.6 0.16 25);
+}
+
+.active-filter-count {
+  margin-left: auto;
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.active-filter-count strong {
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ---- Team Builder: the printed team sheet ----
    Hidden on screen; on paper it is the ONLY thing shown. Printing the
    app as it stands would give you three columns of dark panels and
@@ -2733,7 +2934,8 @@
     display: block;
   }
 
-  .main-column {
+  .main-column,
+  .filter-rail {
     display: none;
   }
 

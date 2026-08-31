@@ -1,4 +1,4 @@
-import { Fragment, useDeferredValue, useEffect, useMemo, useState } from "react";
+import { Fragment, useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { matchesQuery } from "./cardSearch";
 import { CardText } from "./CardText";
 import { AffiliationBadge, AffiliationIcons } from "./AffiliationIcons";
@@ -267,6 +267,10 @@ export function TeamBuilderPage() {
   // separate checkbox layered on top - it is normally used in
   // conjunction with a format rather than instead of one.
   const [formatId, setFormatId] = useState<string>("");
+  // The rail is 272px and there are ~128 affiliations; without a way to
+  // narrow them the section is a scroll hunt. Sets get away without one
+  // (49, and people know the code they want).
+  const [affiliationFilter, setAffiliationFilter] = useState("");
   const [applyOrangeBan, setApplyOrangeBan] = useState(false);
   const [sort, setSort] = useState<{ key: SortKey; direction: "asc" | "desc" }>({
     key: "name",
@@ -603,6 +607,39 @@ export function TeamBuilderPage() {
     return Array.from({ length: hi - lo + 1 }, (_, i) => lo + i);
   }, [cards]);
 
+  // Click a cost to select just it; shift-click, or drag across, to make
+  // it a range. Clicking the only selected cost clears the filter, so the
+  // control undoes itself without a separate "any" option.
+  const [costDragAnchor, setCostDragAnchor] = useState<number | null>(null);
+  // A drag ending on a different pip still fires a click, which would
+  // collapse the range straight back to one cost. This remembers that the
+  // pointer moved, so that click can be ignored.
+  //
+  // It is cleared on mouse DOWN rather than by the click that reads it:
+  // a drag that ends on a different pip fires its click on the container,
+  // not on a pip, so nothing would consume the flag and it would swallow
+  // the next genuine click instead.
+  const costDragged = useRef(false);
+
+  function selectCostRange(a: number, b: number) {
+    setMinCost(Math.min(a, b));
+    setMaxCost(Math.max(a, b));
+  }
+
+  function clickCost(n: number, extend: boolean) {
+    if (costDragged.current) return;
+    if (extend && minCost !== null) {
+      selectCostRange(minCost, n);
+      return;
+    }
+    if (minCost === n && maxCost === n) {
+      setMinCost(null);
+      setMaxCost(null);
+      return;
+    }
+    selectCostRange(n, n);
+  }
+
   function toggle(set: Set<string>, setSet: (s: Set<string>) => void, value: string) {
     const next = new Set(set);
     if (next.has(value)) next.delete(value);
@@ -617,6 +654,108 @@ export function TeamBuilderPage() {
   }
 
   const activeFormat = useMemo(() => FORMATS.find((f) => f.id === formatId), [formatId]);
+
+  const shownAffiliations = useMemo(() => {
+    const needle = affiliationFilter.trim().toLowerCase();
+    if (!needle) return allAffiliations;
+    return allAffiliations.filter((a) => a.toLowerCase().includes(needle));
+  }, [allAffiliations, affiliationFilter]);
+
+  // Clears the FILTERS, not the search box. Search is a thing you typed
+  // and can see; the chips are selections scattered down a rail, which is
+  // exactly what gets left on by accident.
+  function clearAllFilters() {
+    setActiveTypes(new Set());
+    setActiveEnergyTypes(new Set());
+    setActiveRarities(new Set());
+    setActiveAffiliations(new Set());
+    setActiveSets(new Set());
+    setMinCost(null);
+    setMaxCost(null);
+    setFormatId("");
+    setApplyOrangeBan(false);
+    setShowUnimplemented(true);
+  }
+
+  function removeFrom(set: Set<string>, setSet: (s: Set<string>) => void, value: string) {
+    const next = new Set(set);
+    next.delete(value);
+    setSet(next);
+  }
+
+  // Every active filter as one removable chip, so what is narrowing the
+  // results is visible from the results - a selection made three sections
+  // down a scrolled rail is otherwise invisible from where its effect is.
+  const filterChips = useMemo(() => {
+    // `name` is the plain-text version of the label. Several chips are
+    // an icon and nothing else (an affiliation logo, an energy symbol),
+    // and a button whose only content is an image has no accessible name
+    // at all - so every chip carries one for its tooltip and for a
+    // screen reader, whatever it happens to look like.
+    const chips: { key: string; name: string; label: ReactNode; remove: () => void }[] = [];
+    for (const t of activeTypes) {
+      chips.push({ key: `type:${t}`, name: t, label: t, remove: () => removeFrom(activeTypes, setActiveTypes, t) });
+    }
+    for (const e of activeEnergyTypes) {
+      chips.push({
+        key: `energy:${e}`,
+        name: `${e} energy`,
+        label: <><EnergyTypes types={[e]} /> {e}</>,
+        remove: () => removeFrom(activeEnergyTypes, setActiveEnergyTypes, e),
+      });
+    }
+    for (const r of activeRarities) {
+      chips.push({
+        key: `rarity:${r}`,
+        name: r,
+        label: <><RarityBadge rarity={r} /> {r}</>,
+        remove: () => removeFrom(activeRarities, setActiveRarities, r),
+      });
+    }
+    for (const a of activeAffiliations) {
+      chips.push({
+        key: `affiliation:${a}`,
+        name: a,
+        label: <AffiliationBadge name={a} code={affiliationIconIndex[a]} />,
+        remove: () => removeFrom(activeAffiliations, setActiveAffiliations, a),
+      });
+    }
+    for (const st of activeSets) {
+      chips.push({
+        key: `set:${st}`,
+        name: SET_NAMES[st] ?? st,
+        label: st,
+        remove: () => removeFrom(activeSets, setActiveSets, st),
+      });
+    }
+    if (minCost !== null || maxCost !== null) {
+      const label =
+        minCost !== null && maxCost !== null
+          ? minCost === maxCost ? `cost ${minCost}` : `cost ${minCost}–${maxCost}`
+          : minCost !== null ? `cost ${minCost}+` : `cost up to ${maxCost}`;
+      chips.push({ key: "cost", name: label, label, remove: () => { setMinCost(null); setMaxCost(null); } });
+    }
+    if (activeFormat) {
+      chips.push({ key: "format", name: activeFormat.label, label: activeFormat.label, remove: () => setFormatId("") });
+    }
+    if (applyOrangeBan) {
+      chips.push({ key: "ban", name: "Orange Ban list", label: "Orange Ban list", remove: () => setApplyOrangeBan(false) });
+    }
+    // Only a filter when it is OFF - on, it is showing MORE cards, which
+    // is the default and narrows nothing.
+    if (!showUnimplemented) {
+      chips.push({
+        key: "implemented",
+        name: "Engine-ready only",
+        label: "Engine-ready only",
+        remove: () => setShowUnimplemented(true),
+      });
+    }
+    return chips;
+  }, [
+    activeTypes, activeEnergyTypes, activeRarities, activeAffiliations, activeSets,
+    minCost, maxCost, activeFormat, applyOrangeBan, showUnimplemented, affiliationIconIndex,
+  ]);
 
   const filtered = useMemo(() => {
     const needle = deferredSearch.trim().toLowerCase();
@@ -662,18 +801,17 @@ export function TeamBuilderPage() {
       </header>
 
       <div className="app-layout team-builder-layout">
-        <div className="main-column">
-          <h2>Team Builder - Card Search</h2>
-          <p className="hint">
-            Browse the full card catalog. "OK" marks the cards whose full printed text is already modeled by
-            the engine; the rest are searchable here but not yet playable in a game.
-          </p>
-
-          <div className="card-catalog-filters">
-            <div className="card-catalog-search">
+        {/* The filters live in a rail of their own rather than in a band
+            above the results. Stacked above, every section you opened
+            pushed the table further down, so choosing a filter meant
+            losing sight of the thing it filtered. */}
+        <aside className="filter-rail">
+          <section className="rail-panel">
+            <h3 className="rail-label">Search</h3>
             <input
               type="text"
-              placeholder="Search name, subtitle, or text..."
+              className="rail-search"
+              placeholder="name, text, affiliation…"
               title={"Matches name, subtitle, affiliation and rules text.\n\n" +
                      "a & b   both      a | b   either\n" +
                      "~a      exclude   ^a      name starts with"}
@@ -682,168 +820,246 @@ export function TeamBuilderPage() {
             />
             {/* Stated, not just a tooltip - nobody discovers operators by
                 hovering a text box. */}
-            <div className="hint card-catalog-search-syntax">
+            <div className="rail-syntax">
               <code>a &amp; b</code> both · <code>a | b</code> either ·{" "}
               <code>~a</code> exclude · <code>^a</code> starts with
             </div>
+          </section>
+
+          <section className="rail-panel">
+            <div className="rail-section">
+              <div className="rail-section-head">
+                <h3 className="rail-label">Type</h3>
+                {activeTypes.size > 0 && <span className="rail-summary">{activeTypes.size} selected</span>}
+              </div>
+              <div className="rail-chips">
+                {allTypes.map((t) => (
+                  <button
+                    key={t}
+                    className={`rail-chip${activeTypes.has(t) ? " on" : ""}`}
+                    aria-pressed={activeTypes.has(t)}
+                    onClick={() => toggle(activeTypes, setActiveTypes, t)}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
             </div>
-            <fieldset>
-              <legend>Type</legend>
-              {allTypes.map((t) => (
-                <label key={t}>
-                  <input
-                    type="checkbox"
-                    checked={activeTypes.has(t)}
-                    onChange={() => toggle(activeTypes, setActiveTypes, t)}
-                  />
-                  {t}
-                </label>
-              ))}
-            </fieldset>
-            <fieldset>
-              <legend>Energy</legend>
-              {allEnergyTypes.map((t) => (
-                <label key={t}>
-                  <input
-                    type="checkbox"
-                    checked={activeEnergyTypes.has(t)}
-                    onChange={() => toggle(activeEnergyTypes, setActiveEnergyTypes, t)}
-                  />
-                  <EnergyTypes types={[t]} /> {t}
-                </label>
-              ))}
-            </fieldset>
-            <fieldset>
-              <legend>Rarity</legend>
-              {RARITY_TIERS.map((r) => (
-                <label key={r} className={rarityClass(r)}>
-                  <input
-                    type="checkbox"
-                    checked={activeRarities.has(r)}
-                    onChange={() => toggle(activeRarities, setActiveRarities, r)}
-                  />
-                  {r}
-                </label>
-              ))}
-            </fieldset>
-            <fieldset className="card-catalog-cost">
-              <legend>Cost</legend>
-              <label>
-                Min
-                <select
-                  value={minCost ?? ""}
-                  onChange={(e) => {
-                    const v = e.target.value === "" ? null : Number(e.target.value);
-                    setMinCost(v);
-                    // Keep the range coherent rather than letting the user
-                    // land on min > max, which silently matches nothing.
-                    if (v !== null && maxCost !== null && v > maxCost) setMaxCost(v);
-                  }}
-                >
-                  <option value="">Any</option>
-                  {costRange.map((n) => <option key={n} value={n}>{n}</option>)}
-                </select>
-              </label>
-              <label>
-                Max
-                <select
-                  value={maxCost ?? ""}
-                  onChange={(e) => {
-                    const v = e.target.value === "" ? null : Number(e.target.value);
-                    setMaxCost(v);
-                    if (v !== null && minCost !== null && v < minCost) setMinCost(v);
-                  }}
-                >
-                  <option value="">Any</option>
-                  {costRange.map((n) => <option key={n} value={n}>{n}</option>)}
-                </select>
-              </label>
-            </fieldset>
-            {/* Affiliation and Set open across the full width of the
-                filter bar rather than down a narrow column: 128 and 49
-                options stacked vertically pushed the results table off
-                the screen, which is the one thing you need to still see
-                while you pick. Affiliation is logos only - the logo is
-                all a card itself shows, so it is what people match on -
-                with the name on hover. */}
-            <details className="card-catalog-chips">
-              <summary>
-                Affiliation{activeAffiliations.size > 0 ? ` (${activeAffiliations.size} selected)` : ` (${allAffiliations.length})`}
-              </summary>
-              <div className="card-catalog-chip-options">
-                {allAffiliations.map((a) => (
-                  <label
+
+            <div className="rail-section">
+              <div className="rail-section-head">
+                <h3 className="rail-label">Energy</h3>
+                {activeEnergyTypes.size > 0 && <span className="rail-summary">{activeEnergyTypes.size} selected</span>}
+              </div>
+              <div className="rail-chips">
+                {allEnergyTypes.map((t) => (
+                  <button
+                    key={t}
+                    className={`rail-chip${activeEnergyTypes.has(t) ? " on" : ""}`}
+                    aria-pressed={activeEnergyTypes.has(t)}
+                    onClick={() => toggle(activeEnergyTypes, setActiveEnergyTypes, t)}
+                  >
+                    <EnergyTypes types={[t]} /> {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="rail-section">
+              <div className="rail-section-head">
+                <h3 className="rail-label">Rarity</h3>
+                <span className="rail-summary">letter + colour</span>
+              </div>
+              <div className="rail-chips">
+                {RARITY_TIERS.map((r) => (
+                  <button
+                    key={r}
+                    className={`rail-chip${activeRarities.has(r) ? " on" : ""}`}
+                    aria-pressed={activeRarities.has(r)}
+                    onClick={() => toggle(activeRarities, setActiveRarities, r)}
+                  >
+                    <RarityBadge rarity={r} /> {r}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="rail-section">
+              <div className="rail-section-head">
+                <h3 className="rail-label">Purchase cost</h3>
+                <span className="rail-cost-value">
+                  {minCost === null && maxCost === null
+                    ? "any"
+                    : minCost === maxCost ? minCost : `${minCost}–${maxCost}`}
+                </span>
+              </div>
+              {/* One pip per cost the CATALOG actually has, rather than a
+                  hardcoded 1-12: costs run 0-12 today and a future set
+                  should not silently fall off the end of the control. */}
+              <div className="cost-pips" onMouseLeave={() => setCostDragAnchor(null)}>
+                {costRange.map((n) => {
+                  const on = minCost !== null && maxCost !== null && n >= minCost && n <= maxCost;
+                  return (
+                    <button
+                      key={n}
+                      className={`cost-pip${on ? " on" : ""}`}
+                      aria-pressed={on}
+                      title={`Purchase cost ${n}`}
+                      onMouseDown={() => {
+                        costDragged.current = false;
+                        setCostDragAnchor(n);
+                      }}
+                      onMouseEnter={() => {
+                        if (costDragAnchor === null) return;
+                        costDragged.current = true;
+                        selectCostRange(costDragAnchor, n);
+                      }}
+                      onMouseUp={() => setCostDragAnchor(null)}
+                      onClick={(e) => clickCost(n, e.shiftKey)}
+                    >
+                      {n}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="rail-hint">click a cost, drag or shift-click for a range</p>
+            </div>
+
+            <div className="rail-section">
+              <div className="rail-section-head">
+                <h3 className="rail-label">Affiliation</h3>
+                <span className="rail-summary">
+                  {activeAffiliations.size > 0
+                    ? `${activeAffiliations.size} of ${allAffiliations.length}`
+                    : allAffiliations.length}
+                </span>
+              </div>
+              <input
+                type="text"
+                className="rail-find"
+                placeholder="find an affiliation…"
+                value={affiliationFilter}
+                onChange={(e) => setAffiliationFilter(e.target.value)}
+              />
+              {/* Logos only - the logo is all a card itself shows, so it
+                  is what people match on - with the name on hover. */}
+              <div className="rail-chips scroll">
+                {shownAffiliations.map((a) => (
+                  <button
                     key={a}
-                    className={`affiliation-chip${activeAffiliations.has(a) ? " selected" : ""}`}
+                    className={`rail-chip icon${activeAffiliations.has(a) ? " on" : ""}`}
+                    aria-pressed={activeAffiliations.has(a)}
+                    aria-label={a}
                     title={a}
+                    onClick={() => toggle(activeAffiliations, setActiveAffiliations, a)}
                   >
-                    <input
-                      type="checkbox"
-                      checked={activeAffiliations.has(a)}
-                      onChange={() => toggle(activeAffiliations, setActiveAffiliations, a)}
-                    />
                     <AffiliationBadge name={a} code={affiliationIconIndex[a]} />
-                  </label>
+                  </button>
                 ))}
+                {shownAffiliations.length === 0 && <p className="rail-hint">No affiliation matches that.</p>}
               </div>
-            </details>
-            <details className="card-catalog-chips">
-              <summary>
-                Set{activeSets.size > 0 ? ` (${activeSets.size} selected)` : ` (${allSets.length})`}
-              </summary>
-              <div className="card-catalog-chip-options">
-                {allSets.map((s) => (
-                  <label
-                    key={s}
-                    className={`set-chip${activeSets.has(s) ? " selected" : ""}`}
-                    title={SET_NAMES[s] ?? s}
+            </div>
+
+            <div className="rail-section">
+              <div className="rail-section-head">
+                <h3 className="rail-label">Set</h3>
+                <span className="rail-summary">
+                  {activeSets.size > 0 ? `${activeSets.size} of ${allSets.length}` : allSets.length}
+                </span>
+              </div>
+              <div className="rail-chips scroll">
+                {allSets.map((st) => (
+                  <button
+                    key={st}
+                    className={`rail-chip code${activeSets.has(st) ? " on" : ""}`}
+                    aria-pressed={activeSets.has(st)}
+                    title={SET_NAMES[st] ?? st}
+                    onClick={() => toggle(activeSets, setActiveSets, st)}
                   >
-                    <input
-                      type="checkbox"
-                      checked={activeSets.has(s)}
-                      onChange={() => toggle(activeSets, setActiveSets, s)}
-                    />
-                    {s}
-                  </label>
+                    {st}
+                  </button>
                 ))}
               </div>
-            </details>
-            <label title={activeFormat?.description ?? "No format restriction."}>
-              Format{" "}
-              <select value={formatId} onChange={(e) => setFormatId(e.target.value)}>
-                <option value="">No format</option>
-                {FORMATS.map((f) => (
-                  <option key={f.id} value={f.id} title={f.description}>
-                    {f.label}
-                  </option>
+            </div>
+
+            <div className="rail-section">
+              <h3 className="rail-label">Format</h3>
+              <div className="rail-options">
+                {[{ id: "", label: "No format", description: "Every set in the catalog." }, ...FORMATS].map((f) => (
+                  <button
+                    key={f.id}
+                    className={`rail-option${formatId === f.id ? " on" : ""}`}
+                    aria-pressed={formatId === f.id}
+                    onClick={() => setFormatId(f.id)}
+                  >
+                    <span className="rail-option-label">{f.label}</span>
+                    <span className="rail-option-note">{f.description}</span>
+                  </button>
                 ))}
-              </select>
-            </label>
-            <label title={`Hide the ${ORANGE_BAN_LIST.length} cards on the community Orange Ban list. Applies on top of the selected format.`}>
-              <input
-                type="checkbox"
-                checked={applyOrangeBan}
-                onChange={(e) => setApplyOrangeBan(e.target.checked)}
-              />
-              Apply Orange Ban list
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={showUnimplemented}
-                onChange={(e) => setShowUnimplemented(e.target.checked)}
-              />
-              Show not-yet-fully-implemented cards
-            </label>
+              </div>
+              <label className="rail-toggle">
+                <input
+                  type="checkbox"
+                  checked={applyOrangeBan}
+                  onChange={(e) => setApplyOrangeBan(e.target.checked)}
+                />
+                <span className="rail-toggle-track" aria-hidden="true"><span className="rail-toggle-knob" /></span>
+                <span>Apply Orange Ban list ({ORANGE_BAN_LIST.length} cards)</span>
+              </label>
+              <label className="rail-toggle">
+                <input
+                  type="checkbox"
+                  checked={showUnimplemented}
+                  onChange={(e) => setShowUnimplemented(e.target.checked)}
+                />
+                <span className="rail-toggle-track" aria-hidden="true"><span className="rail-toggle-knob" /></span>
+                <span>Include cards the engine can't run yet</span>
+              </label>
+            </div>
+          </section>
+        </aside>
+
+        <div className="main-column">
+          <h2>Team Builder - Card Search</h2>
+          <p className="hint">
+            Browse the full card catalog. "OK" marks the cards whose full printed text is already modeled by
+            the engine; the rest are searchable here but not yet playable in a game.
+          </p>
+
+          {/* What is narrowing the results, shown WITH the results. A chip
+              selected three sections down a scrolled rail is otherwise
+              invisible from here, which is how you end up staring at an
+              empty table wondering why. */}
+          <div className="active-filter-bar">
+            <span className="active-filter-label">Filtering</span>
+            {filterChips.length === 0 && <span className="rail-hint">nothing — showing the whole catalog</span>}
+            {filterChips.map((chip) => (
+              <button
+                key={chip.key}
+                className="active-filter-chip"
+                onClick={chip.remove}
+                aria-label={`Remove filter: ${chip.name}`}
+                title={`Remove filter: ${chip.name}`}
+              >
+                {chip.label}
+                <span className="active-filter-x" aria-hidden="true">×</span>
+              </button>
+            ))}
+            {filterChips.length > 0 && (
+              <button className="active-filter-clear" onClick={clearAllFilters}>
+                Clear all
+              </button>
+            )}
+            <span className="active-filter-count">
+              <strong>{sorted.length}</strong> {sorted.length === 1 ? "card" : "cards"}
+              {sorted.length > MAX_ROWS && <span className="rail-hint"> · showing first {MAX_ROWS}</span>}
+            </span>
           </div>
 
           {cards === null ? (
             <p className="hint">Loading catalog...</p>
           ) : (
             <>
-              <p className="hint">
-                {sorted.length} card(s) match{sorted.length > MAX_ROWS ? ` (showing first ${MAX_ROWS} - narrow your search to see more)` : ""}.
-              </p>
               {/* The table has more columns than the narrowed main column
                   can always fit, so it scrolls inside its own box rather
                   than sliding under the sticky team sidebar. */}
