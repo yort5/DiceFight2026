@@ -3206,3 +3206,82 @@ exactly the kind of thing that silently breaks during migration.)
   ability-resolution choke point.
 - Two scopes and the four derived queries — **unchanged**.
 - The ability-class family — **tailed by declaration**, not modelled.
+
+---
+
+## Part 22 — Affiliation is first-class: IMPLEMENTED (2026-09-01)
+
+Part 18's question, adopted at the Part 20 sign-off and built here.
+Part 17's open fork is settled by the same change.
+
+**`TargetFilter` and `EventFilter` each gain `Affiliations: TagQuery?`**
+alongside `Tags`, and `QueryEngine.GetAffiliations(state, die)` joins the
+query surface. `GetBaseTags` no longer merges `card.Affiliations` into
+the tag set.
+
+What stays a tag: **keywords** (they are abilities — 3.4.7 — and blanking
+has to be able to take them away), the **card name**, **energy symbol
+ids**, and **"sidekick"** (die kind, 1.3.8). What leaves: affiliations
+only. That matches rules 1.2's own closed list of card *attributes*,
+which is the line Part 15 identified and could not draw against a single
+flat string set.
+
+### Why it had to happen before Spike A
+
+Spike A's fourth consultation site is "`GetBaseTags` drops only the
+`card.Keywords` loop". With affiliations still merged in, that site is a
+provenance-filtering exercise inside a five-source union, and every
+future reader has to know which of the five survive blanking. With the
+split it is one loop, guarded. The split does not make blanking possible;
+it makes it legible.
+
+Cyclops "First Class" (DPS025) is the case that shows it: he is
+`Affiliations: ["X-Men"], Keywords: ["Founder"]`. Under blanking he keeps
+X-Men and loses Founder. Before this change both were the string
+`"X-Men"`/`"Founder"` in one set with nothing to tell them apart.
+
+### Migration
+
+Six card filters moved from `Tags:` to `Affiliations:` — Brotherhood of
+Mutants (×3), X-Men (×2), Shi'ar, Villains. Four deliberately did NOT
+move, and each is a small proof the split is drawn in the right place:
+
+| Left as `Tags:` | Because |
+|---|---|
+| `"Founder"` (Cyclops DPS025) | a keyword, not an affiliation |
+| `"Blob"` (Magneto's clause) | a card name |
+| `"Mask"` (CardCatalog) | an energy symbol id |
+| `"sidekick"` | die kind |
+
+Two existing tests failed on the change and both were right to: they
+addressed an affiliation through `Tags`. That is the entire blast radius.
+
+### The validator changed meaning, not strictness
+
+`ValidateCatalog` used to report an affiliation colliding with a **card
+name**. That is now legal, and it matters — the real catalog is full of
+characters named after their own team, and every one of them was an
+error under tag unification.
+
+What it reports instead: an affiliation that doubles as something still
+*in* the tag namespace (a keyword or an energy symbol id). Nothing is
+ambiguous any more, but `Tags:` and `Affiliations:` are near-identical
+filter fields that blanking treats oppositely, so writing one where you
+meant the other silently matches nothing. This is the only place that can
+warn about it.
+
+### Known follow-on: granting an affiliation
+
+Nothing grants an affiliation today — the one `GrantTag` in the migrated
+catalog grants a keyword (Overcrush), and `GetAffiliations` reads printed
+affiliations only. Loki "Chains of Destiny" (AI032, *"when fielded,
+choose an affiliation..."*) is the case in the wider catalog. When it is
+migrated it needs its own granted store, **not** a reuse of
+`GrantedTags` — routing it back through tags would reopen exactly the
+ambiguity this Part closes. Recorded in `GetAffiliations`' own remarks so
+it is found at the point of temptation.
+
+There is also no `includeContinuous` split on the affiliation path, for
+the same reason: nothing grants an affiliation continuously, so there is
+no self-referential aura to break the way `TagAura`s forced `GetBaseTags`
+into existence. Adding granted affiliations later means revisiting that.

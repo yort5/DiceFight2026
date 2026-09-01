@@ -101,7 +101,7 @@ public static class DpsCards
         DieLimit: 3, Affiliations: ["Villains"], Keywords: [],
         RawText: "When fielded, KO target Brotherhood of Mutants character die.",
         Abilities: [new TriggeredAbility(TriggerKind.DieFielded,
-            new Ko(new TargetFilter(Kind: TargetKind.CharacterDie, Tags: new TagQuery(AnyOf: ["Brotherhood of Mutants"]))))],
+            new Ko(new TargetFilter(Kind: TargetKind.CharacterDie, Affiliations: new TagQuery(AnyOf: ["Brotherhood of Mutants"]))))],
         Continuous: []);
 
     public static readonly CardDef MasterMoldUntoldElectronicExpertise = new(
@@ -111,7 +111,7 @@ public static class DpsCards
         DieLimit: 2, Affiliations: ["Villains"], Keywords: [],
         RawText: "When fielded, KO target X-Men character die.",
         Abilities: [new TriggeredAbility(TriggerKind.DieFielded,
-            new Ko(new TargetFilter(Kind: TargetKind.CharacterDie, Tags: new TagQuery(AnyOf: ["X-Men"]))))],
+            new Ko(new TargetFilter(Kind: TargetKind.CharacterDie, Affiliations: new TagQuery(AnyOf: ["X-Men"]))))],
         Continuous: []);
 
     // Part 2 #7's worked expression, including its own finding: "while
@@ -127,7 +127,7 @@ public static class DpsCards
         Abilities: [
             new TriggeredAbility(TriggerKind.DieKOd,
                 new Ko(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Opposing)),
-                Filter: new EventFilter(Ownership: TargetOwnership.Own, Tags: new TagQuery(AnyOf: ["Brotherhood of Mutants"]))),
+                Filter: new EventFilter(Ownership: TargetOwnership.Own, Affiliations: new TagQuery(AnyOf: ["Brotherhood of Mutants"]))),
             new TriggeredAbility(TriggerKind.Global,
                 new Conditional(new TurnFact(TurnFactKind.PrepAreaEmpty), new DrawToZone(1, Zone.PrepArea, Zone.Bag)),
                 EnergyCost: new EnergyCost(1, "Mask"), OncePerTurn: true),
@@ -178,7 +178,7 @@ public static class DpsCards
         Continuous: []);
 
     private static TargetFilter VillainsCharacterDice(int count) =>
-        new(Kind: TargetKind.CharacterDie, Count: count, Tags: new TagQuery(AnyOf: ["Villains"]));
+        new(Kind: TargetKind.CharacterDie, Count: count, Affiliations: new TagQuery(AnyOf: ["Villains"]));
 
     // Part 2 #13's worked expression - validates PerMatch's
     // fixed-multiplier-times-live-count shape. Tailed through DPS batch 1
@@ -212,7 +212,7 @@ public static class DpsCards
         RawText: "When fielded, KO target Shi'ar or X-Men character die. When Dark Phoenix attacks, deal 2 damage to your opponent. Global: Pay Bolt and KO one of your character dice. Your next die you purchase this turn costs 2 less (to a minimum of 1).",
         Abilities: [
             new TriggeredAbility(TriggerKind.DieFielded,
-                new Ko(new TargetFilter(Kind: TargetKind.CharacterDie, Tags: new TagQuery(AnyOf: ["Shi'ar", "X-Men"])))),
+                new Ko(new TargetFilter(Kind: TargetKind.CharacterDie, Affiliations: new TagQuery(AnyOf: ["Shi'ar", "X-Men"])))),
             new TriggeredAbility(TriggerKind.DieAttacks,
                 new DealDamage(new Fixed(2), new TargetFilter(Kind: TargetKind.Player, Ownership: TargetOwnership.Opposing))),
             new TriggeredAbility(TriggerKind.Global,
@@ -429,7 +429,7 @@ public static class DpsCards
                 Else: new DrawToZone(1, Zone.PrepArea, Zone.Bag)),
             EnergyCost: new EnergyCost(1, "Mask"), OncePerTurn: true)],
         Continuous: [new CombatRule(CombatRuleKind.MinBlockers,
-            new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own, Tags: new TagQuery(AnyOf: ["Brotherhood of Mutants"])),
+            new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own, Affiliations: new TagQuery(AnyOf: ["Brotherhood of Mutants"])),
             N: 2)],
         IsImplemented: false);
 

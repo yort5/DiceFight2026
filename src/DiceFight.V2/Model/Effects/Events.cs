@@ -59,6 +59,8 @@ public sealed record DamageDealtPayload(int Amount) : EventPayload;
 public sealed record EventFilter(
     TargetOwnership Ownership = TargetOwnership.Any,
     TagQuery? Tags = null,
+    // Same split as TargetFilter's - see its own remarks.
+    TagQuery? Affiliations = null,
     bool ExcludeSelf = false,
     int? MinPurchaseCost = null,
     StatThreshold? Stat = null,

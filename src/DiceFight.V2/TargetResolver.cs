@@ -76,6 +76,21 @@ public static class TargetResolver
         if (protection is { } p)
             dice = dice.Where(d => QueryEngine.CanBeTargeted(state, d, requestingControllerId, p));
 
+        if (filter.Affiliations is { } affiliations)
+        {
+            dice = dice.Where(d =>
+            {
+                // No includeContinuous split here, unlike Tags: nothing
+                // grants an affiliation continuously (see GetAffiliations'
+                // own remarks), so there is no self-referential aura to
+                // break the way TagAuras needed GetBaseTags.
+                var dieAffiliations = QueryEngine.GetAffiliations(state, d);
+                if (affiliations.AnyOf is { Count: > 0 } anyOf && !anyOf.Any(dieAffiliations.Contains)) return false;
+                if (affiliations.NoneOf is { Count: > 0 } noneOf && noneOf.Any(dieAffiliations.Contains)) return false;
+                return true;
+            });
+        }
+
         if (filter.Tags is { } tags)
         {
             dice = dice.Where(d =>

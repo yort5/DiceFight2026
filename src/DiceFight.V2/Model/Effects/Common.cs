@@ -51,6 +51,14 @@ public sealed record TargetFilter(
     TargetKind Kind = TargetKind.CharacterDie,
     int Count = 1,
     TagQuery? Tags = null,
+    // Affiliation is addressed on its own, not through Tags (Parts 17-20).
+    // The rules define a closed list of card ATTRIBUTES - name, subtitle,
+    // purchase cost, energy type, affiliation, alignment - in which
+    // keywords do not appear, because keywords are abilities. Merging the
+    // two into one string set made "target an X-Men die" and "target an
+    // Overcrush die" the same kind of question, which they are not: one
+    // survives blanking and the other does not.
+    TagQuery? Affiliations = null,
     StatThreshold? Stat = null,
     bool Optional = false,
     bool Self = false,

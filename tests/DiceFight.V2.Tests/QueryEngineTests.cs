@@ -286,4 +286,92 @@ public class QueryEngineTests
     {
         public bool CanBeTargeted(GameState state, DieInstance die, string byPlayerId, ProtectionFrom triggerKind) => false;
     }
+
+    // --- Affiliation is first-class, not a tag (V2_VOCABULARY.md Parts 17-21) ---
+
+    // The whole point of the split, in one test: a card whose AFFILIATION
+    // and whose KEYWORD happen to share a name are two different questions,
+    // and asking one must not answer the other. Before the split both
+    // landed in the same string set and "target an X-Men die" and "target
+    // an Overcrush die" were indistinguishable in kind - which is exactly
+    // the distinction blanking needs, since a blanked die keeps its
+    // affiliation and loses its keyword.
+    private static CardDef AffiliatedCard(string id, IReadOnlyList<string> affiliations, IReadOnlyList<string> keywords) => new(
+        Id: id, Name: $"Card {id}", Subtitle: null, Set: "TEST", CardType: CardType.Character,
+        PurchaseCost: 3, EnergySymbolIds: ["Fist"],
+        Die: new DieDefinition($"{id}Die", [new Face([], Character: new CharacterFaceData(1, 2, 3, 4))]),
+        DieLimit: 1, Affiliations: affiliations, Keywords: keywords,
+        RawText: "", Abilities: [], Continuous: []);
+
+    private static (GameState State, DieInstance Die) StateWith(CardDef card)
+    {
+        var state = BuildMinimalState(card);
+        var die = new DieInstance { Id = "d1", CardId = card.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.FieldZone, CurrentFaceIndex = 0 };
+        state.Dice.Add(die);
+        return (state, die);
+    }
+
+    [Fact]
+    public void GetTags_No_Longer_Contains_Affiliations()
+    {
+        var card = AffiliatedCard("A1", ["X-Men"], ["Overcrush"]);
+        var (state, die) = StateWith(card);
+
+        var tags = QueryEngine.GetTags(state, die);
+
+        Assert.DoesNotContain("X-Men", tags);
+        Assert.Contains("Overcrush", tags);   // keywords ARE abilities and stay
+        Assert.Contains(card.Name, tags);     // so does the card name
+    }
+
+    [Fact]
+    public void GetAffiliations_Returns_The_Printed_Affiliations()
+    {
+        var card = AffiliatedCard("A1", ["X-Men", "Brotherhood of Mutants"], []);
+        var (state, die) = StateWith(card);
+
+        var affiliations = QueryEngine.GetAffiliations(state, die);
+
+        Assert.Equal(["Brotherhood of Mutants", "X-Men"], affiliations.OrderBy(a => a));
+    }
+
+    // A die with no card at all - a Sidekick - has no affiliations and
+    // must not throw asking.
+    [Fact]
+    public void GetAffiliations_Of_A_Cardless_Die_Is_Empty()
+    {
+        var card = AffiliatedCard("A1", ["X-Men"], []);
+        var state = BuildMinimalState(card);
+        // IsSidekick is derived from CardId being null, not settable.
+        var sidekick = new DieInstance { Id = "sk", CardId = null, OwnerId = "p1", ControllerId = "p1", Zone = Zone.FieldZone };
+        state.Dice.Add(sidekick);
+
+        Assert.Empty(QueryEngine.GetAffiliations(state, sidekick));
+    }
+
+    [Fact]
+    public void An_Affiliation_Filter_Does_Not_Match_A_Same_Named_Keyword()
+    {
+        // One die is X-Men by affiliation; the other has "X-Men" as a
+        // KEYWORD. Nothing stops a real catalog from doing this, and the
+        // two must not be confusable.
+        var affiliated = AffiliatedCard("A1", ["X-Men"], []);
+        var keyworded = AffiliatedCard("A2", [], ["X-Men"]);
+        var state = BuildMinimalState(affiliated);
+        ((Dictionary<string, CardDef>)state.CardCatalog)[keyworded.Id] = keyworded;
+        var byAffiliation = new DieInstance { Id = "d1", CardId = affiliated.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.FieldZone, CurrentFaceIndex = 0 };
+        var byKeyword = new DieInstance { Id = "d2", CardId = keyworded.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.FieldZone, CurrentFaceIndex = 0 };
+        state.Dice.Add(byAffiliation);
+        state.Dice.Add(byKeyword);
+
+        var affiliationMatch = TargetResolver.Query(state, "p1",
+            new TargetFilter(Kind: TargetKind.CharacterDie, Count: 2, Affiliations: new TagQuery(AnyOf: ["X-Men"])),
+            new Dictionary<string, string>());
+        var tagMatch = TargetResolver.Query(state, "p1",
+            new TargetFilter(Kind: TargetKind.CharacterDie, Count: 2, Tags: new TagQuery(AnyOf: ["X-Men"])),
+            new Dictionary<string, string>());
+
+        Assert.Equal(["d1"], affiliationMatch);
+        Assert.Equal(["d2"], tagMatch);
+    }
 }

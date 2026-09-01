@@ -434,7 +434,7 @@ public class EffectInterpreterTests
     public void ModifyStat_Set_Replaces_The_Dies_Own_Value_And_Static_Auras_Recompute_On_Top()
     {
         var loisLane = BuildCard("LoisLane", [Level1Char], continuous:
-            [new StatAura(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own, Tags: new TagQuery(AnyOf: ["SuperFriends"])), AtkDelta: new Fixed(1))]);
+            [new StatAura(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own, Affiliations: new TagQuery(AnyOf: ["SuperFriends"])), AtkDelta: new Fixed(1))]);
         var superFriend = BuildCard("SuperFriend", [new Face([], new CharacterFaceData(1, 0, 4, 4))], affiliations: ["SuperFriends"]);
         var state = BuildState(loisLane, superFriend);
         AddDie(state, loisLane, "p1", Zone.FieldZone, 0, "lois");

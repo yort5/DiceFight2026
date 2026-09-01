@@ -65,7 +65,7 @@ public class EventBusTests
     public void Ability_Watching_For_A_Tagged_DieFielded_Enqueues_When_That_Card_Is_Really_Fielded()
     {
         var watcher = BuildCard("Watcher", "Watcher",
-            [new TriggeredAbility(TriggerKind.DieFielded, StubEffect, Filter: new EventFilter(Ownership: TargetOwnership.Own, Tags: new TagQuery(AnyOf: ["Affil"])))]);
+            [new TriggeredAbility(TriggerKind.DieFielded, StubEffect, Filter: new EventFilter(Ownership: TargetOwnership.Own, Affiliations: new TagQuery(AnyOf: ["Affil"])))]);
         var trigger = BuildCard("Trigger", "Trigger", [], affiliations: ["Affil"]);
 
         var config = BuildTinyConfig();

@@ -84,6 +84,14 @@ public static class EventBus
 
         if (filter.ExcludeSelf && evt.SubjectDie?.Id == listener.Id) return false;
 
+        if (filter.Affiliations is { } affiliations)
+        {
+            if (evt.SubjectDie is not { } subjectForAff) return false;
+            var subjectAffiliations = QueryEngine.GetAffiliations(state, subjectForAff);
+            if (affiliations.AnyOf is { Count: > 0 } anyOfAff && !anyOfAff.Any(subjectAffiliations.Contains)) return false;
+            if (affiliations.NoneOf is { Count: > 0 } noneOfAff && noneOfAff.Any(subjectAffiliations.Contains)) return false;
+        }
+
         if (filter.Tags is { } tags)
         {
             if (evt.SubjectDie is not { } subjectForTags) return false; // a tag filter needs a die to read tags from

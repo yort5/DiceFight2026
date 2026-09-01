@@ -44,14 +44,19 @@ public static class GameConfigValidation
         var symbolOrKeywordIds = new HashSet<string>(declaredSymbols);
         symbolOrKeywordIds.UnionWith(keywordIds);
 
-        // A die's tag set is its affiliations + keywords + CARD NAME +
-        // "sidekick" + energy symbol ids (Part 1's tag-unification note).
-        // Every one of those shares a namespace, so a collision anywhere
-        // in it makes a TagQuery silently ambiguous - a filter for the
-        // affiliation "X" would also match a card merely NAMED "X".
-        // Card names were previously unchecked; they are the likeliest
-        // collision in practice, since names are the one part of the tag
-        // set nobody chooses with the namespace in mind.
+        // A die's tag set is its keywords + CARD NAME + "sidekick" +
+        // energy symbol ids. Those share a namespace, so a collision
+        // anywhere in it makes a TagQuery silently ambiguous - a filter
+        // for the keyword "X" would also match a card merely NAMED "X".
+        // Card names are the likeliest collision in practice, being the
+        // one part of the set nobody chooses with the namespace in mind.
+        //
+        // AFFILIATIONS ARE NO LONGER IN THAT NAMESPACE (Parts 17-21).
+        // They have their own query and their own filter field, so an
+        // affiliation may now share a name with a card, a keyword or an
+        // energy symbol without ambiguity - which is just as well, since
+        // the real catalog is full of characters named after the team
+        // they belong to. What that costs is checked below instead.
         var cardNames = new HashSet<string>(cards.Select(c => c.Name));
 
         foreach (var card in cards)
@@ -64,12 +69,20 @@ public static class GameConfigValidation
                     errors.Add($"Card \"{card.Id}\": energy symbol \"{symbolId}\" is not declared in GameConfig.EnergySymbols.");
             }
 
+            // Affiliations are checked for a DIFFERENT hazard now. They
+            // no longer share the tag namespace, so colliding with a CARD
+            // NAME is fine - and that is the collision the real catalog is
+            // full of, since characters are constantly named after their
+            // own team. But an affiliation that doubles as something still
+            // IN the tag namespace is worth reporting: `Tags:` and
+            // `Affiliations:` are near-identical filter fields that
+            // blanking treats oppositely, so writing one where you meant
+            // the other silently matches nothing. This is the only place
+            // that can warn about it.
             foreach (var affiliation in card.Affiliations)
             {
                 if (symbolOrKeywordIds.Contains(affiliation))
-                    errors.Add($"Card \"{card.Id}\": affiliation \"{affiliation}\" collides with a declared energy symbol or keyword id - both would be tags on the same die.");
-                if (cardNames.Contains(affiliation))
-                    errors.Add($"Card \"{card.Id}\": affiliation \"{affiliation}\" collides with a card name - both would be tags on the same die.");
+                    errors.Add($"Card \"{card.Id}\": affiliation \"{affiliation}\" is also a declared energy symbol or keyword id - Tags: and Affiliations: filters address these separately, and blanking removes only the tag-namespace one.");
             }
 
             if (symbolOrKeywordIds.Contains(card.Name))

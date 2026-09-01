@@ -204,7 +204,9 @@ public static class QueryEngine
 
         if (die.CardId is { } cardId && state.CardCatalog.TryGetValue(cardId, out var card))
         {
-            foreach (var affiliation in card.Affiliations) tags.Add(affiliation);
+            // Affiliations are NOT here - they have their own query below
+            // (Parts 17-20). Keywords stay, because a keyword IS an
+            // ability and blanking has to be able to take it away.
             foreach (var keyword in card.Keywords) tags.Add(keyword);
             tags.Add(card.Name);
             foreach (var symbolId in card.EnergySymbolIds) tags.Add(symbolId);
@@ -212,6 +214,28 @@ public static class QueryEngine
 
         foreach (var granted in die.GrantedTags) tags.Add(granted.Tag);
         return tags;
+    }
+
+    /// <summary>
+    /// A die's affiliations. Separate from <see cref="GetTags"/> because
+    /// the rules treat affiliation as a card ATTRIBUTE (1.2's closed
+    /// list) while keywords are abilities - which matters most under
+    /// blanking, where a die loses its keywords and keeps its
+    /// affiliations. Reading them from one merged string set could not
+    /// draw that line.
+    /// </summary>
+    /// <remarks>
+    /// Nothing grants an affiliation yet - the one <c>GrantTag</c> in the
+    /// migrated catalog grants a keyword. When something does (Loki
+    /// AI032's "choose an affiliation" is the case in the wider catalog),
+    /// it needs its own granted store here rather than reusing
+    /// <c>GrantedTags</c>, or the split reopens.
+    /// </remarks>
+    public static IReadOnlySet<string> GetAffiliations(GameState state, DieInstance die)
+    {
+        if (die.CardId is { } cardId && state.CardCatalog.TryGetValue(cardId, out var card))
+            return new HashSet<string>(card.Affiliations);
+        return new HashSet<string>();
     }
 
     // Another plumbing helper - reads whichever of the 7 queries a

@@ -100,7 +100,7 @@ public class GameConfigValidationTests
 
         var errors = config.ValidateCatalog([card]);
 
-        Assert.Contains(errors, e => e.Contains("C001") && e.Contains("collides"));
+        Assert.Contains(errors, e => e.Contains("C001") && e.Contains("also a declared energy symbol or keyword"));
     }
 
     [Fact]
@@ -128,10 +128,10 @@ public class GameConfigValidationTests
         Assert.Contains(errors, e => e.Contains("C002") && e.Contains("no faces"));
     }
 
-    // Tag unification puts affiliations, keywords, card names and energy
-    // symbol ids in ONE namespace, so a collision anywhere in it makes a
-    // TagQuery ambiguous. Card names are the likeliest offender - they
-    // are the one part nobody picks with the namespace in mind.
+    // The tag namespace holds keywords, card names, "sidekick" and energy
+    // symbol ids, so a collision anywhere in it makes a TagQuery
+    // ambiguous. Card names are the likeliest offender - they are the one
+    // part nobody picks with the namespace in mind.
     [Fact]
     public void A_Card_Name_Colliding_With_A_Keyword_Is_Reported()
     {
@@ -143,8 +143,12 @@ public class GameConfigValidationTests
         Assert.Contains(errors, e => e.Contains("card name") && e.Contains("Overcrush"));
     }
 
+    // The inverse of the test above, and the point of Parts 17-21:
+    // affiliations left the tag namespace, so this collision stopped
+    // being one. The real catalog is full of characters named after
+    // their own team, and every one of them used to be an error.
     [Fact]
-    public void An_Affiliation_Colliding_With_A_Card_Name_Is_Reported()
+    public void An_Affiliation_May_Share_A_Name_With_A_Card()
     {
         var config = ValidConfig();
         var named = NamedCard("C1", "Wolverine");
@@ -152,6 +156,22 @@ public class GameConfigValidationTests
 
         var errors = config.ValidateCatalog([named, affiliated]);
 
-        Assert.Contains(errors, e => e.Contains("collides with a card name"));
+        Assert.Empty(errors);
+    }
+
+    // Still worth reporting, for a different reason than before: nothing
+    // is ambiguous, but `Tags:` and `Affiliations:` are near-identical
+    // filter fields that blanking treats oppositely, so a card whose
+    // affiliation doubles as a keyword is a trap for whoever authors the
+    // next filter against it.
+    [Fact]
+    public void An_Affiliation_That_Is_Also_A_Keyword_Is_Reported()
+    {
+        var config = ValidConfig(); // already declares the Overcrush keyword
+        var card = NamedCard("C1", "Kitty Pryde", affiliations: ["Overcrush"]);
+
+        var errors = config.ValidateCatalog([card]);
+
+        Assert.Contains(errors, e => e.Contains("also a declared energy symbol or keyword"));
     }
 }
