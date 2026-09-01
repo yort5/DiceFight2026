@@ -14,8 +14,12 @@ at the 2026-08-22 gate review (`V2_VOCABULARY.md` Part 11); Phase 8
   **Part 20**, which carries the user's decisions and two catalog
   findings that reshaped it: blanking is 22 cards across three scopes,
   34 cards carry a clause-level "cannot be ignored" immunity, and the
-  card-scoped store now serves the lockout family too. Part 20's "The
-  shape to build" is the implementation brief.
+  card-scoped store now serves the lockout family too. Then **Part 21**,
+  which grants the engine authority to DECLARE how blanking works
+  (superseding card wording, normalize-or-tail) and replaces the
+  immunity flag with `PermanentAbilities`/`PermanentContinuous` plus a
+  single `QueryEngine.AbilitiesOf` choke point. Part 20's "The shape to
+  build" plus Part 21's "Net effect" is the implementation brief.
   **Affiliation-as-first-class (Parts 17-18) was adopted in the same
   pass** and should land with or before Spike A - it makes Spike A's
   `GetBaseTags` work nearly trivial.

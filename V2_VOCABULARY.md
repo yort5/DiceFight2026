@@ -3046,3 +3046,163 @@ its `card.Keywords` loop), the resolution-time re-check in
 - **Prismatic Spray "Greater Spell"** (BFF096) — "treated as if they had
   1A and 1D regardless of bonuses" is a stat override that outranks
   modifiers, not blanking. Different mechanism, separate question.
+
+---
+
+## Part 21 — Blanking: the declared model, and PermanentText (2026-09-01)
+
+Two clarifications from the user before sign-off. The second is adopted
+as proposed and makes the design smaller; the first grants an authority
+worth writing down explicitly, and I want to be honest about where I
+would and would not use it.
+
+### The authority: the engine declares how blanking works
+
+> *"Card blanking is one area where the designers continually iterated
+> over the years... taking all the existing text at face value can be
+> confusing or lead to splintering. We can declare, via the rules
+> engine, that THIS is how blanking works, and that can supersede what
+> might be written in the text, especially on some of the older cards.
+> This is also kind of what the comprehensive rules document tried to
+> do."*
+
+Adopted, and it is the right call — it is the difference between one
+mechanism and a mechanism per printing. **The declared model is
+authoritative; card text is normalized onto it, and anything that
+genuinely will not normalize gets tailed rather than growing the
+vocabulary a seventh shape.**
+
+#### The declared model
+
+1. Blanking suppresses **abilities**, never **attributes**. Name,
+   subtitle, purchase cost, energy type, affiliation and alignment
+   always survive (rules 1.2's own closed list), as do face stats and
+   die kind.
+2. Blanking never removes abilities **granted** to a die by something
+   else (Part 16's ruling).
+3. Blanking never removes **permanent** abilities (below).
+4. Blanking has exactly **two scopes** — die and card — and exactly two
+   durations — a stored one-shot with an expiry, or a live continuous
+   registration.
+5. Every printed wording maps onto that. "Ignore the text", "blank",
+   "lose all their card text", "ignore all text on opposing character
+   cards" are the same two templates at different scopes; no card gets
+   its own mechanism for saying it differently.
+
+### Where I would NOT use the authority: the two scopes are load-bearing
+
+The obvious simplification the clarification invites is collapsing die
+scope and card scope into one. I looked at it and recommend against it,
+for two concrete reasons rather than caution:
+
+**Globals force card scope to exist.** v2 already ruled (2026-08-24)
+that Globals are card-scoped, not die-scoped — a Global is addressed as
+`(cardId, abilityIndex)` in `TurnEngine.UseGlobal` and needs no die at
+all. A purely die-scoped blank could therefore never turn a Global off,
+and four of these cards go out of their way to say it does: Shriek
+SMC016 and SMC017, Scarlet Witch MSW125 and Kryptonite WF054 all say
+"including Global Abilities". Collapsing to die scope makes those
+clauses unimplementable.
+
+**The designers' own text says die scope is the default.** Wolverine
+MSW136 spells out *"ignore that character die's card text **for all
+copies of that die**"*. That clause is only worth printing if the
+default is otherwise — which is evidence the distinction is intended
+rather than accidental wording drift. Collapsing to card scope would
+make Wolverine's clause redundant and silently strengthen ~7
+die-scoped cards (the Web Shooters family, Loki, Adam Warlock) by
+blanking every copy a player owns instead of the one targeted.
+
+And the saving would be small: die-scoped and card-scoped suppression
+are the *same store keyed differently*, not two mechanisms. Keeping both
+costs one extra dictionary, not a second design.
+
+### Where I WOULD use it
+
+- **The ability-class family gets normalized or tailed, not modelled.**
+  Angela IG058 ("ignore your opponents' 'When fielded' abilities"),
+  Ant-Man 10M2016 and Dormammu DRS011 (ignore one ability *instance*)
+  are a third shape. Under the declared model they are simply **not
+  blanking** — they are trigger suppression, which is a different
+  question. Tailed, with no third mechanism grown for them.
+- **Cosmetic wording differences are normalized on import**, not
+  preserved. A card that says "lose all their card text" and one that
+  says "ignore all text on opposing character cards" compile to the same
+  expression.
+- **Older cards whose wording contradicts the model lose.** The model
+  wins; the divergence is recorded in the card's comment, the way
+  "Making the Team" already keeps its RawText verbatim while its
+  expression diverges (Part 16).
+
+### PermanentText — adopted, and it replaces the immunity flag
+
+> *"Worst case we could add another property on the card for
+> 'PermanentText' — if it's separate from the CardText, we don't have to
+> worry about it getting ignored, and the resolver could just add that
+> in, even though most of the time it would be blank?"*
+
+**Better than Part 20's `CannotBeIgnored: bool`, and adopted instead.**
+The flag version makes immunity something every filtering site has to
+remember to check; a missed check silently blanks text that should have
+survived. Separate collections make immunity structural — the blanking
+filter only ever sees `Abilities`, and `PermanentAbilities` is simply
+not in that code path. Nothing to forget.
+
+`CardDef` gains two collections alongside the existing ones:
+
+```
+Abilities            // blankable      (unchanged)
+Continuous           // blankable      (unchanged)
+PermanentAbilities   // never blanked  NEW - usually empty
+PermanentContinuous  // never blanked  NEW - usually empty
+```
+
+The 34 immune clauses decompose into these cleanly, because each is
+already a self-contained clause: King Black Bolt's "you may not use ?
+energy to purchase this die" is one continuous restriction; Strahd's
+"doesn't count as an Adventurer" is one static tag denial.
+
+#### One refinement, which is what makes it actually simpler
+
+Two collections are only safer than a flag if **no site enumerates the
+raw collections**. There are exactly four today, so this is cheap to
+close now and expensive later:
+
+| Site | Reads |
+|---|---|
+| `EventBus.Fire` | `card.Abilities` (EventBus.cs:41) |
+| `TurnEngine.UseGlobal` | `card.Abilities[abilityIndex]` (TurnEngine.cs:251-254) |
+| `ContinuousRegistry` | `card.Continuous` (ContinuousRegistry.cs:36) |
+
+All of them route through one accessor instead:
+
+```
+QueryEngine.AbilitiesOf(state, die)  ->  card.PermanentAbilities        (always)
+                                       + card.Abilities                 (unless blanked)
+                                       + die.GrantedAbilities           (always - Part 16)
+```
+
+This is not extra work: the granted-ability store already forces
+`EventBus.Fire` to stop reading `card.Abilities` directly, so the choke
+point has to exist regardless. `PermanentAbilities` then rides in for
+free, and "which abilities does this die have" has exactly one answer in
+exactly one place — which is the property the user was after in asking
+about a single boolean in the first place.
+
+**Implementation hazard, worth writing down now**: `UseGlobal` addresses
+a Global by its **index into `card.Abilities`**. `PermanentAbilities`
+must therefore be a *separate* list, never spliced into that one, or
+every Global's address shifts. The accessor above returns abilities for
+*resolution*; Global *addressing* stays an index into `card.Abilities`
+alone. (A permanent Global would need its own addressing; none of the 34
+immune clauses is a Global, so this is not needed yet — but it is
+exactly the kind of thing that silently breaks during migration.)
+
+### Net effect on Part 20's brief
+
+- `CannotBeIgnored: bool` — **dropped**, replaced by
+  `PermanentAbilities` / `PermanentContinuous`.
+- `QueryEngine.AbilitiesOf(state, die)` — **added** as the single
+  ability-resolution choke point.
+- Two scopes and the four derived queries — **unchanged**.
+- The ability-class family — **tailed by declaration**, not modelled.
