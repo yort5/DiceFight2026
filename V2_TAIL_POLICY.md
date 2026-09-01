@@ -474,3 +474,71 @@ recorded so a future session doesn't re-derive it from scratch.
 | DPS059 | Bishop (I'm Back) | Payment-source visibility - one of the "2 Bishop" cards `V2_PLAN.md`'s Appendix A addendum already named | Ask |
 | DPS071 | Forge (Support Technician) | The purchase surcharge is qualified by the PURCHASED CARD's own cost ("2 or less") - the same card-identity gap Cable "Bosom Buddies" hits, via a threshold instead of a name. Dropping the threshold would silently surcharge every purchase, a real behavior change, not a stated approximation (house rule: never guess wrong silently) | Ask |
 | DPS004 | Greetings from Krakoa | "Each of your dice that spins up gets +2A" is conditioned on whether THAT SPECIFIC die's own spin actually moved it - a per-die outcome-conditioned bonus no template composition reaches (`Spin` has no "and a bonus for whichever ones actually changed" companion) | Ask |
+
+## DPS catalog batch 6 (V2_PLAN.md Phase 8 task 4, 2026-09-01)
+
+14 cards: 8 full, 6 tailed outright (no partials this batch - the two
+new gaps below each killed a whole card, not one clause of it).
+
+### NEW GAP: TargetFilter can't exclude the source die from its own pool
+
+`EventFilter` has `ExcludeSelf` for reactive triggers; `TargetFilter` has
+no equivalent for "match this shape, but never the die granting the
+effect/aura." Two cards hit it independently: Cable "High Stakes"
+("double the printed A of all your OTHER character dice," a one-shot
+triggered effect where Cable himself, now in the Attack Zone, shares a
+zone with the "other" dice being buffed) and Angel "Jean Grey's School"
+("other character dice with Founder get +1A," a continuous aura where
+Angel is herself Founder and herself active at the same moment). Where
+the source's own zone at query time already excludes it - an attacker
+scoped to "Field Zone" while it's sitting in the Attack Zone (Cyclops
+"Utopia Realized"/"Xavier's Dream", this batch's own full migrations) -
+this doesn't bite; it's specifically the same-zone-same-moment case that
+has no expression. Likely shape, not proposed for sign-off yet: a plain
+`ExcludeSelf: bool` on `TargetFilter`, mirroring `EventFilter`'s own
+field, resolved the same way `Self`/`Bound` already are (against the
+`"self"` binding) - watch for a third card before asking.
+
+### NEW GAP: a card can't grant a continuous benefit to ITSELF for something that happens before it's active
+
+Every continuous template requires its own source die to already be in
+the Field or Attack Zone (`ContinuousRegistry.ActiveSourceDice`) before
+it grants anything to a target. That's fine for D'Ken/Mystique-style
+"while I'm active, OTHER dice get X" grants, and fine for Jean Grey
+"Marvel Girl"'s own Global-surcharge clause (only cares whether SHE is
+active). It breaks for her OTHER clause, "Jean Grey is free to field [while
+a different X-Men die is active]" - being free to field is a property she
+needs BEFORE she's fielded, i.e. before she can ever be an
+`ActiveSourceDice` candidate. Genuinely circular with the current
+architecture, not a targeting-shape problem - no `TargetFilter` change
+fixes it. Filed as a real gap; no shape proposed.
+
+### FULL: no new gap
+
+**Cyclops "Utopia Realized" (DPS105)** and **"Xavier's Dream" (DPS140)** -
+"while you have 2+ [Sidekick-gated for the latter] character dice in the
+Field Zone" reads correctly because Cyclops himself is in the Attack
+Zone by the time either check runs (he's the one attacking). "Xavier's
+Dream" is also `Distribute`'s first real second user after its own
+motivating example (`V2_PLAN.md`'s F5 addendum) - "divided how you
+choose among any number of target character dice" is `Count: 0` (the
+full pool, no separate choice) plus the point-by-point `Distribute`
+assignment.
+
+**Jean Grey "Xavier's Dream" (DPS075)** - the `CostModifier(GlobalEnergy,
+Player-scoped Whose)` shape `ContinuousRegistryTests.cs` already had as a
+generic worked example (`V2_VOCABULARY_HISTORY.md` Part 2), migrated as
+a real card for the first time.
+
+### RESOLVED (found while building EmmaFrostFinesse): `MoveToZone` wiped a Reserve-Pool-bound die's face
+
+Emma Frost "Finesse"'s own `Reroll(NonCharacterMoveTo: Zone.ReservePool)`
+exposed that `EffectInterpreter.MoveToZone`'s "leaving Field/Attack Zone"
+reset wiped `CurrentFaceIndex` to null for ANY destination, including the
+Reserve Pool - which `DrawToZone`'s own convention says should keep its
+face ("landing in Reserve Pool means rolled"). A die moved there this
+way ended up dormant and functionally useless as energy. Fixed
+generally (`ShowsFace` now includes `ReservePool` alongside Field/Attack
+Zone in the face-preservation check); `EffectInterpreterTests.cs` has the
+regression test. No sign-off needed - an engine bug, not a vocabulary
+gap.

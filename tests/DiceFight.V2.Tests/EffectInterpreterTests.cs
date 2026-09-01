@@ -310,6 +310,27 @@ public class EffectInterpreterTests
         Assert.Single(ctx.Queue.Pending); // DieFaceChanged
     }
 
+    // A die moved to a genuinely dormant zone (Used Pile, above) goes
+    // fully dormant - no current face. Moved to the Reserve Pool instead
+    // (Emma Frost "Finesse"), it keeps the face it just rolled, matching
+    // DrawToZone's own "landing in Reserve Pool means rolled" convention
+    // - found as a real bug (MoveToZone wiped it unconditionally)
+    // building that card, not anticipated here.
+    [Fact]
+    public void Reroll_Landing_Non_Character_Into_The_Reserve_Pool_Keeps_Its_Face()
+    {
+        var card = BuildCard("T", [Level1Char, FistEnergy1], reactsTo: [TriggerKind.DieFaceChanged]);
+        var state = BuildState(card);
+        AddDie(state, card, "p1", Zone.FieldZone, 0, "self");
+        var ctx = BuildContext(state, "p1", sourceDieId: "self", roller: new FixedRoller(1)); // lands on the energy face
+
+        EffectInterpreter.Execute(new Reroll(new TargetFilter(Self: true), NonCharacterMoveTo: Zone.ReservePool), ctx);
+
+        var die = state.Dice.Single();
+        Assert.Equal(Zone.ReservePool, die.Zone);
+        Assert.Equal(1, die.CurrentFaceIndex); // still showing the energy face it landed on
+    }
+
     [Fact]
     public void Reroll_With_No_Legal_Target_Does_Nothing()
     {

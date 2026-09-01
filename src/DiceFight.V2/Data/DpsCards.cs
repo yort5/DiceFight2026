@@ -563,6 +563,11 @@ public static class DpsCards
         MutantResearchProgram, TightRanks, Radicalization, CorsairRecruitingACrew,
         EmmaFrostManipulative, CableBosomBuddies, BeastFirstClass, EmmaFrostInfluential,
         BishopTorturedTimeline, BishopImBack, ForgeSupportTechnician, GreetingsFromKrakoa,
+        // Batch 6.
+        TakeCover, EmmaFrostFinesse, CyclopsUtopiaRealized, CyclopsXaviersDream,
+        MadelynePryorSisterhood, MagnetoIdealist, JeanGreyXaviersDream, JeanGreyMarvelGirl,
+        AngelJeanGreysSchool, CableHighStakes, Explosion, ForgeReverseEngineer,
+        MadelynePryorAspiring, IcemanXaviersDream,
     ];
 
     // --- Batch 3 (2026-09-01) ---
@@ -1246,5 +1251,262 @@ public static class DpsCards
         DieLimit: 3, Affiliations: [], Keywords: [],
         RawText: "Spin up each character whose card has a Loyalty Counter. Each of your dice that spins up " +
                  "gets +2A.",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    // --- Batch 6 (2026-09-01) ---
+    //
+    // Two recurring gaps surfaced independently this batch, both real,
+    // both tailed rather than fixed inline (see V2_TAIL_POLICY.md):
+    //
+    // 1. TargetFilter has no way to EXCLUDE one specific die (the source
+    //    itself) from a pool it would otherwise match - EventFilter has
+    //    ExcludeSelf for reactive triggers, TargetFilter has nothing
+    //    equivalent. Where the source die's OWN zone at query time
+    //    already excludes it (an attacker scoped to "Field Zone" while
+    //    it's sitting in the Attack Zone) this doesn't bite - Cyclops
+    //    "Utopia Realized"/"Xavier's Dream" below both lean on exactly
+    //    that. Where the source and its "other" targets genuinely share a
+    //    zone at the same moment (Cable "High Stakes"'s attack-trigger
+    //    buff, Angel "Jean Grey's School"'s continuous Founder aura),
+    //    there is no way to express "other" today.
+    //
+    // 2. Every continuous template requires its OWN source die to already
+    //    be active (`ContinuousRegistry.ActiveSourceDice` scans Field/
+    //    Attack Zone only) - a card cannot grant a benefit to ITSELF for
+    //    something that happens BEFORE it's active, like its own fielding
+    //    cost. Jean Grey "Marvel Girl"'s free-fielding clause hits this;
+    //    her identical surcharge clause (Part 2's own worked paper
+    //    example) does not, since it only cares whether SHE is active,
+    //    not the die being priced.
+
+    public static readonly CardDef TakeCover = new(
+        Id: "DPS014", Name: "Take Cover", Subtitle: "Basic Action", Set: "DPS", CardType: CardType.BasicAction,
+        PurchaseCost: 3, EnergySymbolIds: [],
+        Die: MigrationDice.BasicAction("DPS014Die", 1, 2, 0),
+        DieLimit: 3, Affiliations: [], Keywords: [],
+        RawText: "Character dice you control get +2D. */** Target character die gets an extra +3D. Global: " +
+                 "Pay Shield. Target character die gets +1D (until end of turn).",
+        // Both burst levels do the identical +3D - ported as two literal
+        // Conditionals (v1's own shape) rather than inventing an "any
+        // burst" condition for one card.
+        Abilities:
+        [
+            new TriggeredAbility(TriggerKind.DieUsed, new Sequence(
+            [
+                new ModifyStat(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own, Count: 0), DefDelta: 2),
+                new Conditional(new OnBurstFace(BurstLevel.Single), Then: new ModifyStat(new TargetFilter(Kind: TargetKind.CharacterDie), DefDelta: 3)),
+                new Conditional(new OnBurstFace(BurstLevel.Double), Then: new ModifyStat(new TargetFilter(Kind: TargetKind.CharacterDie), DefDelta: 3)),
+            ])),
+            new TriggeredAbility(TriggerKind.Global,
+                new ModifyStat(new TargetFilter(Kind: TargetKind.CharacterDie), DefDelta: 1),
+                EnergyCost: new EnergyCost(1, "Shield")),
+        ],
+        Continuous: []);
+
+    public static readonly CardDef EmmaFrostFinesse = new(
+        Id: "DPS110", Name: "Emma Frost", Subtitle: "Finesse", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 5, EnergySymbolIds: ["Shield"],
+        Die: MigrationDice.Character("DPS110Die", "Shield", (1, 3, 5), (1, 4, 6), (2, 5, 7)),
+        DieLimit: 4, Affiliations: ["X-Men", "Hellfire Club"], Keywords: [],
+        RawText: "While Emma Frost is Active, at the start of your opponents Attack Step, reroll 2 target " +
+                 "Fist character dice your oppoenent controls. Those showing character faces are returned to " +
+                 "the Field Zone, those on energy faces are sent to the Reserve Pool.",
+        // Emma Frost "Manipulative"'s own Ownership: Opposing + Step:
+        // SelectAttackers precedent (batch 5), Reroll's NonCharacterMoveTo
+        // handling "those on energy faces are sent to the Reserve Pool"
+        // (a character-face lander is simply left in the Field Zone by
+        // that primitive, which is what "returned to" already means).
+        Abilities: [new TriggeredAbility(TriggerKind.TurnStepEntered,
+            new Reroll(
+                new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Opposing, Count: 2, Tags: new TagQuery(AnyOf: ["Fist"])),
+                NonCharacterMoveTo: Zone.ReservePool),
+            Filter: new EventFilter(Ownership: TargetOwnership.Opposing, Step: StepIds.SelectAttackers))],
+        Continuous: []);
+
+    public static readonly CardDef CyclopsUtopiaRealized = new(
+        Id: "DPS105", Name: "Cyclops", Subtitle: "Utopia Realized", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 6, EnergySymbolIds: ["Bolt"],
+        Die: MigrationDice.Character("DPS105Die", "Bolt", (1, 4, 2), (1, 5, 3), (1, 6, 4)),
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: [],
+        RawText: "While you have 2 or more character dice in the Field Zone, when Cyclops attacks, deal 3 " +
+                 "damage to target character die.",
+        // No self-exclusion needed - Cyclops is himself in the Attack
+        // Zone (he's the one attacking) by the time this checks the
+        // Field Zone count, same reasoning as this card's own "Xavier's
+        // Dream" printing below.
+        Abilities: [new TriggeredAbility(TriggerKind.DieAttacks, new Conditional(
+            new CountAtLeast(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own, Zones: [Zone.FieldZone]), 2),
+            Then: new DealDamage(new Fixed(3), new TargetFilter(Kind: TargetKind.CharacterDie))))],
+        Continuous: []);
+
+    public static readonly CardDef CyclopsXaviersDream = new(
+        Id: "DPS140", Name: "Cyclops", Subtitle: "Xavier's Dream", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 6, EnergySymbolIds: ["Bolt"],
+        Die: MigrationDice.Character("DPS140Die", "Bolt", (1, 4, 2), (1, 5, 3), (1, 6, 4)),
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: [],
+        RawText: "While you have a Sidekick die active, when Cyclops attacks deal X damage divided how you " +
+                 "choose among any number of target character dice, where X is the number of your character " +
+                 "dice in the Field Zone.",
+        // "Divided how you choose" is Distribute's own motivating example
+        // (V2_PLAN.md's F5 addendum). Count: 0 resolves the full
+        // character-die pool as Distribute's own candidate set, not a
+        // separate choice - the point-by-point assignment IS the choice.
+        Abilities: [new TriggeredAbility(TriggerKind.DieAttacks, new Conditional(
+            new CountAtLeast(new TargetFilter(Kind: TargetKind.AnyDie, Ownership: TargetOwnership.Own, Tags: new TagQuery(AnyOf: ["sidekick"])), 1),
+            Then: new DealDamage(
+                new PerMatch(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own, Zones: [Zone.FieldZone]), 1),
+                new TargetFilter(Kind: TargetKind.CharacterDie, Count: 0),
+                Distribute: true)))],
+        Continuous: []);
+
+    public static readonly CardDef MadelynePryorSisterhood = new(
+        Id: "DPS079", Name: "Madelyne Pryor", Subtitle: "Sisterhood", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 3, EnergySymbolIds: ["Mask"],
+        Die: MigrationDice.Character("DPS079Die", "Mask", (0, 1, 3), (0, 1, 4), (1, 2, 4)),
+        DieLimit: 4, Affiliations: ["Brotherhood of Mutants"], Keywords: [],
+        RawText: "When one of your Brotherhood of Mutants character dice is KO'd besides Madelyne Pryor, put " +
+                 "a Loyalty Counter on her card. (Loyaly Counters give a character die +1A and +1D).",
+        Abilities: [new TriggeredAbility(TriggerKind.DieKOd,
+            new GrantCounter(new TargetFilter(Self: true), "Loyalty", 1),
+            Filter: new EventFilter(Ownership: TargetOwnership.Own, ExcludeSelf: true, Affiliations: new TagQuery(AnyOf: ["Brotherhood of Mutants"])))],
+        Continuous: []);
+
+    public static readonly CardDef MagnetoIdealist = new(
+        Id: "DPS041", Name: "Magneto", Subtitle: "Idealist", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 6, EnergySymbolIds: ["Mask"],
+        Die: MigrationDice.Character("DPS041Die", "Mask", (1, 4, 4), (2, 5, 7), (3, 6, 8)),
+        DieLimit: 2, Affiliations: ["Brotherhood of Mutants"], Keywords: [],
+        RawText: "When one of your Mask character dice is KO'd, put a Loyalty Counter on Magneto's card. " +
+                 "Global: Pay Mask. Once per turn, during your turn, if you have no dice in your Prep Area, " +
+                 "you may draw a die and place it in your Prep Area.",
+        // Ground rule 8 - "you may" gets MayPay, unlike this card's own
+        // "Visionary" printing (already migrated, opposite condition,
+        // and predates this being caught).
+        Abilities:
+        [
+            new TriggeredAbility(TriggerKind.DieKOd,
+                new GrantCounter(new TargetFilter(Self: true), "Loyalty", 1),
+                Filter: new EventFilter(Ownership: TargetOwnership.Own, Tags: new TagQuery(AnyOf: ["Mask"]))),
+            new TriggeredAbility(TriggerKind.Global,
+                new Conditional(new TurnFact(TurnFactKind.PrepAreaEmpty),
+                    Then: new MayPay(Cost: null, Then: new DrawToZone(1, Zone.PrepArea, Zone.Bag))),
+                EnergyCost: new EnergyCost(1, "Mask"), OncePerTurn: true),
+        ],
+        Continuous: []);
+
+    public static readonly CardDef JeanGreyXaviersDream = new(
+        Id: "DPS075", Name: "Jean Grey", Subtitle: "Xavier's Dream", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 4, EnergySymbolIds: ["Bolt"],
+        Die: MigrationDice.Character("DPS075Die", "Bolt", (1, 3, 3), (2, 5, 5), (3, 6, 6)),
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: ["Founder"],
+        RawText: "Founder While Jean Grey and one of your Sidekick dice are active, your opponents must pay " +
+                 "1 extra to use a Global Ability.",
+        // CostModifier(GlobalEnergy, Player-scoped Whose) is Part 2's own
+        // worked paper example for exactly this card - never migrated as
+        // a real one until now.
+        Abilities: [],
+        Continuous: [new CostModifier(CostKind.GlobalEnergy,
+            new TargetFilter(Kind: TargetKind.Player, Ownership: TargetOwnership.Opposing), Delta: 1,
+            ActiveWhen: new CountAtLeast(new TargetFilter(Kind: TargetKind.AnyDie, Ownership: TargetOwnership.Own, Tags: new TagQuery(AnyOf: ["sidekick"])), 1))]);
+
+    public static readonly CardDef JeanGreyMarvelGirl = new(
+        Id: "DPS115", Name: "Jean Grey", Subtitle: "Marvel Girl", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 5, EnergySymbolIds: ["Bolt"],
+        Die: MigrationDice.Character("DPS115Die", "Bolt", (1, 3, 3), (2, 5, 5), (3, 6, 6)),
+        DieLimit: 3, Affiliations: ["X-Men"], Keywords: ["Founder"],
+        RawText: "Founder While Jean Grey is active, your opponent must pay 1 extra to use a Global Ability. " +
+                 "While you have a different X-Men character die in your Field Zone, Jean Grey is free to field.",
+        // The free-fielding clause is a real gap, found trying to build
+        // it: EVERY continuous template requires its own SOURCE die to
+        // already be active (`ContinuousRegistry.ActiveSourceDice` scans
+        // Field/Attack Zone only) before it grants anything - a card
+        // cannot make ITSELF free to field, since by definition it isn't
+        // active yet at the moment its own fielding cost is being asked.
+        // D'Ken/Mystique's own free-fielding grants buff OTHER dice while
+        // already active themselves; this is a different shape (self-
+        // referential, active-before-active) nothing in the vocabulary
+        // reaches. The surcharge half is fine (Part 2's own worked
+        // example, same as this card's own "Xavier's Dream" printing).
+        Abilities: [],
+        Continuous: [new CostModifier(CostKind.GlobalEnergy, new TargetFilter(Kind: TargetKind.Player, Ownership: TargetOwnership.Opposing), Delta: 1)],
+        IsImplemented: false);
+
+    // "Other character dice with Founder" - Angel is herself Founder and
+    // herself active at the same moment as the dice she'd be buffing, so
+    // (unlike Jean Grey "Marvel Girl" above) there is no natural zone/
+    // timing exclusion. TargetFilter has no way to exclude one specific
+    // die from a pool (this batch's own header note). Tailed.
+    public static readonly CardDef AngelJeanGreysSchool = new(
+        Id: "DPS057", Name: "Angel", Subtitle: "Jean Grey's School", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 3, EnergySymbolIds: ["Shield"],
+        Die: MigrationDice.Character("DPS057Die", "Shield", (0, 2, 2), (1, 3, 3), (1, 3, 4)),
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: ["Founder"],
+        RawText: "Founder When Angel is active, other character dice with Founder get +1A.",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    // Same self-exclusion gap, from a triggered ability's own ModifyStat
+    // rather than a continuous aura - Cable is himself in the Attack
+    // Zone (attacking) at the same moment as the "other" dice he'd
+    // double, same zone his own filter would otherwise match.
+    public static readonly CardDef CableHighStakes = new(
+        Id: "DPS102", Name: "Cable", Subtitle: "High Stakes", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 6, EnergySymbolIds: ["Bolt"],
+        Die: MigrationDice.Character("DPS102Die", "Bolt", (1, 3, 2), (2, 3, 3), (2, 5, 5)),
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: [],
+        RawText: "When Cable attacks, double the printed A of all your other character dice.",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    // v1's own call (isImplemented: false) - three real gaps, none a
+    // drop-in reuse: a simultaneous both-players-and-every-die hit, an
+    // arbitrary-energy-spend-for-scaling-damage cost, and a burst-
+    // conditional additional-damage clause on top of both.
+    public static readonly CardDef Explosion = new(
+        Id: "DPS003", Name: "Explosion", Subtitle: "Basic Action", Set: "DPS", CardType: CardType.BasicAction,
+        PurchaseCost: 4, EnergySymbolIds: [],
+        Die: MigrationDice.BasicAction("DPS003Die"),
+        DieLimit: 3, Affiliations: [], Keywords: [],
+        RawText: "Deal 2 damage to each player and character die. You may also spend any number of Bolt " +
+                 "energy, for each that you do you may deal 1 damage to target character die. ** Deal 1 " +
+                 "additional damage to each player and character die that Explosion deals damage to.",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    // v1's own call (isImplemented: false) - "roll an opponent's used
+    // Action die and use its effect if it shows one" needs an opponent's
+    // card's own effect tree resolved under a foreign controller context,
+    // which nothing in the frozen vocabulary reaches.
+    public static readonly CardDef ForgeReverseEngineer = new(
+        Id: "DPS111", Name: "Forge", Subtitle: "Reverse Engineer", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 4, EnergySymbolIds: ["Bolt"],
+        Die: MigrationDice.Character("DPS111Die", "Bolt", (1, 2, 2), (1, 4, 2), (2, 4, 4)),
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: [],
+        RawText: "While Forge is active, if an opponent uses an action die, roll it. If it shows an action " +
+                 "face you may use it's effect.",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    // "If an opponent draws an EXTRA die" needs to know the opponent's
+    // draw was above their normal Clear and Draw count - DiceDrawn is one
+    // of the 8 event kinds with no payload at all (only DieDamaged/
+    // DieFaceChanged carry one), so there's no way to read how many dice
+    // were drawn, let alone whether that was "extra."
+    public static readonly CardDef MadelynePryorAspiring = new(
+        Id: "DPS119", Name: "Madelyne Pryor", Subtitle: "Aspiring", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 3, EnergySymbolIds: ["Mask"],
+        Die: MigrationDice.Character("DPS119Die", "Mask", (0, 1, 3), (0, 1, 4), (1, 2, 4)),
+        DieLimit: 4, Affiliations: ["Brotherhood of Mutants", "Hellfire Club"], Keywords: [],
+        RawText: "While Madelyne Pryor is active, if an opponent draws an extra die during their Clear and " +
+                 "Draw Step, Prep 2 dice from your bag (no matter how many extra dice your opponent draws, " +
+                 "you only Prep 2 dice).",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    // "Iceman's A is equal to his D" is a continuous ABSOLUTE set, not a
+    // delta - StatAura only has AtkDelta/DefDelta (additive), unlike its
+    // one-shot cousin ModifyStat's SetAttack/SetDefense. No continuous
+    // absolute-set mode exists.
+    public static readonly CardDef IcemanXaviersDream = new(
+        Id: "DPS142", Name: "Iceman", Subtitle: "Xavier's Dream", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 4, EnergySymbolIds: ["Bolt"],
+        Die: MigrationDice.Character("DPS142Die", "Bolt", (1, 2, 4), (1, 3, 6), (1, 4, 6)),
+        DieLimit: 3, Affiliations: ["X-Men"], Keywords: ["Founder"],
+        RawText: "Founder While you have a Sidekick die active, Iceman's A is equal to his D.",
         Abilities: [], Continuous: [], IsImplemented: false);
 }

@@ -889,6 +889,17 @@ public static class EffectInterpreter
     // up with Spin(SetLevel:n) against the same (bound) die - the
     // pattern V2_VOCABULARY_HISTORY.md Part 2's Mutation writeup (Finding 12)
     // uses, rather than this helper guessing at a level nothing told it.
+    // "Shows a face" zones are Field/Attack Zone plus Reserve Pool -
+    // DrawToZone's own convention ("landing in ReservePool means rolled;
+    // landing in PrepArea/Bag/UsedPile does not") applies here too. A die
+    // moved OUT of Field/Attack Zone into a dormant zone (Bag/PrepArea/
+    // UsedPile/OutOfPlay/Unpurchased) goes fully dormant; moved into the
+    // Reserve Pool (Emma Frost "Finesse"'s own Reroll(NonCharacterMoveTo:
+    // ReservePool) is the first real user), it keeps the face it just
+    // rolled - the whole point of "energy faces are sent to the Reserve
+    // Pool" is that the die is still usable there.
+    private static bool ShowsFace(Zone zone) => zone is Zone.FieldZone or Zone.AttackZone or Zone.ReservePool;
+
     private static void MoveToZone(GameState state, DieInstance die, Zone toZone)
     {
         var wasActive = die.Zone is Zone.FieldZone or Zone.AttackZone;
@@ -897,7 +908,7 @@ public static class EffectInterpreter
 
         if (wasActive && !enteringActive)
         {
-            die.CurrentFaceIndex = null;
+            if (!ShowsFace(toZone)) die.CurrentFaceIndex = null;
             die.Damage = 0;
             die.AppliedModifiers.Clear();
             die.GrantedTags.Clear();

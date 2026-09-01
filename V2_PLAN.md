@@ -21,13 +21,16 @@ PROGRESS.**
   the `AbilitiesOf`/`ContinuousOf` choke point, `AbilityBlank`, and
   `Lockout` are all live. Affiliation-as-first-class (Parts 17-18, 22)
   landed the same day.
-- **Task 4** (DPS catalog batches) - IN PROGRESS. Five batches landed:
+- **Task 4** (DPS catalog batches) - IN PROGRESS. Six batches landed:
   batches 1-2 on 2026-08-24, batch 3 (10 migrated, 3 partial, 1 tailed -
   D'Ken/Mister Sinister, the two cards Spike A was built for), batch 4
-  (all 15 Energize cards, 13 full + 2 partial), and batch 5 (12 cards: 4
-  full, 4 partial, 4 tailed - see `V2_TAIL_POLICY.md` for a new gap this
-  one surfaced, affiliation-granting) all on 2026-09-01.
-  **66 of v1's 145 curated DPS cards migrated, 79 to go.**
+  (all 15 Energize cards, 13 full + 2 partial), batch 5 (12 cards: 4
+  full, 4 partial, 4 tailed - a new gap, affiliation-granting), and
+  batch 6 (14 cards: 8 full, 6 tailed - two more new gaps, TargetFilter
+  can't exclude the source die from its own pool, and a continuous
+  template can't grant a benefit to its own source before that source is
+  active) all on 2026-09-01. See `V2_TAIL_POLICY.md` for all of them.
+  **80 of v1's 145 curated DPS cards migrated, 65 to go.**
   (A 67th card, Domino "Not Really A Party Girl" (XFO010), was also
   migrated the same day, but sits outside this count entirely - `BonusCards.cs`,
   a one-off from the bulk catalog, not v1's curated 145.)
@@ -1133,3 +1136,37 @@ covering the immediate-check path, the off-double-energy non-fire, the
 drawn-and-rolled case, and the `RequireSelf` cross-fire guard); v1's
 full suite re-run untouched, 580/580. No DPS card count change - this
 was a correctness fix to already-migrated cards, not new migration.
+
+**Phase 8 progress note (2026-09-01, task 4 batch 6)**: 14 cards, 8 full
+(Take Cover, Emma Frost "Finesse", Cyclops "Utopia Realized" and
+"Xavier's Dream," Madelyne Pryor "Sisterhood," Magneto "Idealist," Jean
+Grey "Xavier's Dream" and "Marvel Girl" - the last two only partially;
+see below), 6 tailed. Two new gaps found, both filling a whole card
+rather than one clause: `TargetFilter` has no way to exclude the source
+die from a pool it would otherwise match (`EventFilter.ExcludeSelf`'s
+missing counterpart - Cable "High Stakes," Angel "Jean Grey's School");
+and every continuous template requires its own source die to already be
+active before it grants anything, which breaks a card wanting to make
+ITSELF free to field (Jean Grey "Marvel Girl" - her identical surcharge
+clause is fine, only her free-fielding clause hits this, so she counts
+as full for the former and tailed for the latter). Neither proposed for
+sign-off yet - watching for a third card before asking, per this
+project's own established pattern (affiliation-granting, batch 5).
+
+Also found and fixed a real engine bug while building Emma Frost
+"Finesse": `EffectInterpreter.MoveToZone` wiped `CurrentFaceIndex` to
+null for ANY die leaving the Field/Attack Zone, including into the
+Reserve Pool - which should keep its face (`DrawToZone`'s own "landing
+in Reserve Pool means rolled" convention). A die moved there this way
+was ending up dormant and unusable as energy. Fixed generally, with a
+regression test in `EffectInterpreterTests.cs`.
+
+Two more test-authoring mistakes of the same shape as batch 5's own
+(target's Defense exactly matching damage dealt, so it KO's instead of
+just taking damage) - caught and fixed the same way, picking beefier
+targets.
+
+Verified: `dotnet build DiceFight.slnx` clean; v2 tests 258/258 (11
+new); v1's full suite re-run untouched, 580/580. Status header above
+updated; batches 1-6 total 80/145 DPS cards (81 incl. Domino, tracked
+separately).

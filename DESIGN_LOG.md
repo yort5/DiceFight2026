@@ -10567,3 +10567,25 @@ Full account: `V2_VOCABULARY_HISTORY.md` Part 30, `V2_PLAN.md`'s same-day
 progress note. `dotnet build`/`dotnet test` clean: v2 247/247 (4 new),
 v1 580/580 untouched. No DPS count change - a correctness fix, not new
 migration.
+
+## v2 Phase 8 task 4: DPS batch 6 (2026-09-01)
+
+14 more DPS cards, 8 full, 6 tailed. Two new gaps, each big enough to
+sink a whole card rather than one clause: `TargetFilter` has no
+`ExcludeSelf` counterpart to keep a source die out of a pool it would
+otherwise match (Cable "High Stakes," Angel "Jean Grey's School"); and
+every continuous template needs its own source die already active
+before it grants anything, which breaks a card wanting to make itself
+free to field before it's fielded (half of Jean Grey "Marvel Girl").
+Neither fixed - both filed, watching for a third card before proposing
+a shape, same pattern as batch 5's affiliation-granting gap.
+
+Found and fixed a real bug building Emma Frost "Finesse": rerolling a
+die into the Reserve Pool via `NonCharacterMoveTo` was wiping its face
+entirely, because `MoveToZone`'s "leaving Field/Attack Zone" reset
+didn't know the Reserve Pool is supposed to keep a face (unlike the
+Used Pile, which already had a real user and worked correctly). Fixed
+generally, with a regression test.
+
+`dotnet build`/`dotnet test` clean: v2 258/258 (11 new), v1 580/580
+untouched. 80/145 DPS cards migrated (81 counting Domino).

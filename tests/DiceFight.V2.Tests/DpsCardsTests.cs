@@ -1208,4 +1208,158 @@ public class DpsCardsTests
         Assert.Equal(baselineAtk + 1, QueryEngine.GetAttack(state, sidekick));
         Assert.Equal(baselineDef + 1, QueryEngine.GetDefense(state, sidekick));
     }
+
+    // --- Batch 6 (2026-09-01) ---
+
+    [Fact]
+    public void TakeCover_Gives_Every_Own_Character_Die_Plus_2_Defense_Plus_3_More_On_A_Burst_Face()
+    {
+        foreach (var (faceIndex, expectedBonus) in new[] { (0, 2 + 3), (1, 2 + 3), (2, 2) }) // 0=single burst,1=double,2=none
+        {
+            var state = NewGame();
+            var ally = Active(state, DpsCards.RonanTheAccuserTreason, "p1", level: 1, id: "ally"); // 5A/5D
+            var card = Ready(state, DpsCards.TakeCover, "p1", faceIndex);
+            var queue = new AbilityQueue();
+
+            TurnEngine.UseAction(state, queue, card.Id);
+            Drain(state, queue);
+            Answer(state, "ally"); // the burst clause's own single-target choice, when offered
+
+            Assert.Equal(5 + expectedBonus, QueryEngine.GetDefense(state, ally));
+        }
+    }
+
+    [Fact]
+    public void EmmaFrostFinesse_Rerolls_2_Opposing_Fist_Dice_On_Their_Attack_Step()
+    {
+        var state = NewGame();
+        Active(state, DpsCards.EmmaFrostFinesse, "p1");
+        var fistDie = Active(state, DpsCards.CorsairRecruitingACrew, "p2", level: 2, id: "fist"); // Fist energy
+        var queue = new AbilityQueue();
+
+        EventBus.Fire(state, queue, new GameEvent(TriggerKind.TurnStepEntered, null, "p2", StepIds.SelectAttackers));
+        Drain(state, queue);
+
+        Assert.Equal(0, fistDie.CurrentFaceIndex); // rerolled, Drain's FixedRoller(0)
+    }
+
+    [Fact]
+    public void CyclopsUtopiaRealized_Deals_3_When_At_Least_2_Own_Field_Zone_Dice_Not_Counting_Himself()
+    {
+        var state = NewGame();
+        var cyclops = Active(state, DpsCards.CyclopsUtopiaRealized, "p1", id: "cyclops");
+        var ally = Active(state, DpsCards.RonanTheAccuserTreason, "p1", id: "ally"); // the 2nd Field Zone die
+        // 8D, not Psylocke's own 3D - 3 damage into 3D is lethal, and a
+        // KO'd die resets its own Damage to 0 on leaving the field.
+        var target = Active(state, DpsCards.MagnetoFounderOfTheBrotherhood, "p2", level: 3, id: "target");
+        var queue = new AbilityQueue();
+
+        EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieAttacks, cyclops, "p1", state.CurrentStepId));
+        Drain(state, queue);
+        Answer(state, "target");
+
+        Assert.Equal(3, target.Damage);
+    }
+
+    [Fact]
+    public void CyclopsXaviersDream_Divides_Damage_Equal_To_Field_Zone_Count_While_A_Sidekick_Is_Active()
+    {
+        var state = NewGame();
+        var cyclops = Active(state, DpsCards.CyclopsXaviersDream, "p1", id: "cyclops");
+        Active(state, DpsCards.RonanTheAccuserTreason, "p1", id: "ally"); // 2nd own Field Zone die
+        Sidekick(state, "p1", Zone.FieldZone, 0, "sk"); // satisfies "a Sidekick die active"
+        var target = Active(state, DpsCards.PsylockeTelepath, "p2", level: 3, id: "target");
+        var queue = new AbilityQueue();
+
+        EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieAttacks, cyclops, "p1", state.CurrentStepId));
+        Drain(state, queue);
+        // X = 2 (cyclops + ally, both still in the Field Zone - this test
+        // fires DieAttacks directly rather than running real combat, so
+        // Cyclops never actually moves to the Attack Zone). Distribute
+        // asks "assign 1 damage" once per point of X.
+        for (var i = 0; i < 2; i++) Answer(state, "target");
+
+        Assert.Equal(2, target.Damage);
+    }
+
+    [Fact]
+    public void MadelynePryorSisterhood_Gains_A_Loyalty_Counter_When_ANOTHER_Brotherhood_Die_Is_KOd()
+    {
+        var state = NewGame();
+        var madelyne = Active(state, DpsCards.MadelynePryorSisterhood, "p1");
+        var ally = Active(state, DpsCards.MagnetoFounderOfTheBrotherhood, "p1", id: "ally");
+        var queue = new AbilityQueue();
+
+        EffectInterpreter.KoDie(state, queue, ally, triggersKOAbilities: true);
+        Drain(state, queue);
+
+        Assert.Equal(1, state.Counters[("p1", DpsCards.MadelynePryorSisterhood.Id, "Loyalty")]);
+    }
+
+    [Fact]
+    public void MadelynePryorSisterhood_Does_Not_Gain_A_Counter_From_Her_Own_KO()
+    {
+        var state = NewGame();
+        var madelyne = Active(state, DpsCards.MadelynePryorSisterhood, "p1");
+        var queue = new AbilityQueue();
+
+        EffectInterpreter.KoDie(state, queue, madelyne, triggersKOAbilities: true);
+        Drain(state, queue);
+
+        Assert.False(state.Counters.ContainsKey(("p1", DpsCards.MadelynePryorSisterhood.Id, "Loyalty")));
+    }
+
+    [Fact]
+    public void MagnetoIdealist_Gains_A_Loyalty_Counter_When_A_Mask_Die_Is_KOd()
+    {
+        var state = NewGame();
+        var magneto = Active(state, DpsCards.MagnetoIdealist, "p1");
+        var maskDie = Active(state, DpsCards.PsylockeTelepath, "p1", id: "mask"); // Mask energy
+        var queue = new AbilityQueue();
+
+        EffectInterpreter.KoDie(state, queue, maskDie, triggersKOAbilities: true);
+        Drain(state, queue);
+
+        Assert.Equal(1, state.Counters[("p1", DpsCards.MagnetoIdealist.Id, "Loyalty")]);
+    }
+
+    [Fact]
+    public void MagnetoIdealist_Global_May_Draw_When_Prep_Area_Is_Empty()
+    {
+        var state = NewGame();
+        var magneto = Active(state, DpsCards.MagnetoIdealist, "p1");
+        Sidekick(state, "p1", Zone.ReservePool, 1, "mask-energy"); // Wild energy, pays Mask
+        var queue = new AbilityQueue();
+        var before = state.DiceIn("p1", Zone.PrepArea).Count();
+
+        TurnEngine.UseGlobal(state, queue, DpsCards.MagnetoIdealist.Id, "p1", abilityIndex: 1, ["mask-energy"]); // index 1 - the DieKOd ability is index 0
+        Drain(state, queue);
+        Answer(state, magneto.Id); // MayPay accept
+
+        Assert.Equal(before + 1, state.DiceIn("p1", Zone.PrepArea).Count());
+    }
+
+    [Fact]
+    public void JeanGreyXaviersDream_Surcharges_Opponent_Globals_Only_While_A_Sidekick_Is_Active()
+    {
+        var state = NewGame();
+        Active(state, DpsCards.JeanGreyXaviersDream, "p1");
+        var card = Ready(state, DpsCards.MagnetoFounderOfTheBrotherhood, "p2", 1);
+        var ability = DpsCards.MagnetoFounderOfTheBrotherhood.Abilities.Single(a => a.Trigger == TriggerKind.Global);
+        var baseline = QueryEngine.GetGlobalEnergyCost(state, DpsCards.MagnetoFounderOfTheBrotherhood, ability, "p2");
+
+        Sidekick(state, "p1", Zone.FieldZone, 0, "sk");
+
+        Assert.Equal(baseline + 1, QueryEngine.GetGlobalEnergyCost(state, DpsCards.MagnetoFounderOfTheBrotherhood, ability, "p2"));
+    }
+
+    [Fact]
+    public void JeanGreyMarvelGirl_Surcharges_Opponent_Globals_While_Active()
+    {
+        var state = NewGame();
+        Active(state, DpsCards.JeanGreyMarvelGirl, "p1");
+        var ability = DpsCards.MagnetoFounderOfTheBrotherhood.Abilities.Single(a => a.Trigger == TriggerKind.Global);
+
+        Assert.True(QueryEngine.GetGlobalEnergyCost(state, DpsCards.MagnetoFounderOfTheBrotherhood, ability, "p2") > 0);
+    }
 }
