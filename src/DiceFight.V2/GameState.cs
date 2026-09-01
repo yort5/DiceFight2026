@@ -71,7 +71,7 @@ public sealed class GameState
     // instead of one dictionary per counter kind).
     public Dictionary<(string PlayerId, string CardId, string CounterName), int> Counters { get; } = [];
 
-    // CARD-SCOPED suppression (V2_VOCABULARY.md Parts 20-21), keyed the
+    // CARD-SCOPED suppression (V2_VOCABULARY_HISTORY.md Parts 20-21), keyed the
     // same way Counters is. Three independent things one card can have
     // turned off for one player:
     //

@@ -78,7 +78,7 @@ public static class CardCatalog
         Abilities: [],
         Continuous: [new StatAura(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own), AtkDelta: new Fixed(1), DefDelta: new Fixed(1))]);
 
-    // Finding 4 (V2_VOCABULARY.md Part 1) - "[M] character die" = a Mask-
+    // Finding 4 (V2_VOCABULARY_HISTORY.md Part 1) - "[M] character die" = a Mask-
     // tagged CharacterDie filter, since printed energy symbol is part of
     // every die's tag set.
     public static readonly CardDef Dazzler = new(
@@ -121,7 +121,7 @@ public static class CardCatalog
         RawText: "Switch life totals with your opponent.",
         Abilities: [], Continuous: [], IsImplemented: false);
 
-    // V2_VOCABULARY.md Part 1's own MayPay motivating example. BindAs
+    // V2_VOCABULARY_HISTORY.md Part 1's own MayPay motivating example. BindAs
     // remembers the damaged die so the Conditional can check TargetWasKOd
     // against that same die (Finding 9's binding table).
     public static readonly CardDef ShockingGrasp = new(

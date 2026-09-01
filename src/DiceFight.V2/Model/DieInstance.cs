@@ -69,7 +69,7 @@ public sealed class DieInstance
     // blanking does not touch these: rule 3.4.8.2 explains blanking as
     // abilities being lost "because dice refer to their card to initiate
     // or trigger their abilities", and a granted ability does not come
-    // from the blanked card (V2_VOCABULARY.md Part 16, user ruling).
+    // from the blanked card (V2_VOCABULARY_HISTORY.md Part 16, user ruling).
     public List<GrantedAbility> GrantedAbilities { get; } = [];
 
     // DIE-SCOPED blanking - this die's own text ignored, leaving other
@@ -77,14 +77,14 @@ public sealed class DieInstance
     // Loki "Powerful Magic", Adam Warlock. Wolverine "No More
     // Distractions" prints "for all copies of that die" precisely because
     // that is NOT the default, which is the evidence the two scopes are
-    // intended rather than wording drift (V2_VOCABULARY.md Part 21).
+    // intended rather than wording drift (V2_VOCABULARY_HISTORY.md Part 21).
     //
     // Only one-shot blanks live here. A conditional blank is recomputed
     // on read - see QueryEngine.AbilitiesActive.
     public List<DieSuppression> Suppressions { get; } = [];
 
     // This-turn-only combat restrictions (CombatFlag effect template) -
-    // no Duration param on the record itself (V2_VOCABULARY.md Part 1),
+    // no Duration param on the record itself (V2_VOCABULARY_HISTORY.md Part 1),
     // since every real CombatFlag use in Dice Masters card text is
     // "(this turn)" - always EndOfTurn scoped, cleared alongside
     // AppliedModifiers/GrantedTags at CleanUp. Read by Phase 7's combat,

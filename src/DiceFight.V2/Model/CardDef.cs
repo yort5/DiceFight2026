@@ -47,7 +47,7 @@ public static class CardTypes
 
 // Appendix B. Affiliations/Keywords contribute to the die's tag set
 // alongside its card name and (Finding 4) its EnergySymbolId - see
-// V2_VOCABULARY.md Part 1's tag-unification note; there is no separate
+// V2_VOCABULARY_HISTORY.md Part 1's tag-unification note; there is no separate
 // "affiliation filter" or "keyword filter" anywhere in the effect
 // vocabulary, deliberately, because Tags already covers all of it.
 public sealed record CardDef(
@@ -73,7 +73,7 @@ public sealed record CardDef(
     IReadOnlyList<TriggeredAbility> Abilities,
     IReadOnlyList<ContinuousDef> Continuous,
     bool IsImplemented = true,
-    // Text that CANNOT be ignored (V2_VOCABULARY.md Part 21). 34 cards
+    // Text that CANNOT be ignored (V2_VOCABULARY_HISTORY.md Part 21). 34 cards
     // print a clause immune to blanking - King Black Bolt's "you may not
     // use ? energy to purchase this die, this text may not be ignored",
     // Strahd's "doesn't count as an Adventurer, this text cannot be

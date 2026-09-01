@@ -145,7 +145,7 @@ public static class QueryEngine
 
     // Floor 1 - the game's own "to a minimum of 1" purchase-discount text
     // (Dark Phoenix "Enemy of the Shi'ar" et al.) - erratum corrected
-    // 2026-08-22 (V2_VOCABULARY.md Part 4), was wrongly floor 0 in an
+    // 2026-08-22 (V2_VOCABULARY_HISTORY.md Part 4), was wrongly floor 0 in an
     // earlier draft of this plan.
     public static int GetPurchaseCost(GameState state, CardDef card, string payerId)
     {
@@ -227,7 +227,7 @@ public static class QueryEngine
             // ability and blanking has to be able to take it away - which
             // is what this guard does, and it is the ONLY one of the five
             // sources merged here that blanking touches (rule 3.4.7.2;
-            // V2_VOCABULARY.md Part 16's correction).
+            // V2_VOCABULARY_HISTORY.md Part 16's correction).
             if (AbilitiesActive(state, die))
                 foreach (var keyword in card.Keywords) tags.Add(keyword);
             tags.Add(card.Name);
@@ -324,7 +324,7 @@ public static class QueryEngine
     /// Blanking is not consulted yet - the suppression stores land in the
     /// next increment, and when they do the ONLY line that changes is the
     /// card's-own-text one below. Permanent and granted are unconditional
-    /// by construction (V2_VOCABULARY.md Parts 16 and 21).
+    /// by construction (V2_VOCABULARY_HISTORY.md Parts 16 and 21).
     /// </remarks>
     public static IEnumerable<TriggeredAbility> AbilitiesOf(GameState state, DieInstance die)
     {

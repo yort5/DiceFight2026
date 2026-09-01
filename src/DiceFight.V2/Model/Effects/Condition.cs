@@ -1,6 +1,6 @@
 namespace DiceFight.V2.Model.Effects;
 
-// The 7 condition kinds (V2_VOCABULARY.md Part 1), each its own record
+// The 7 condition kinds (V2_VOCABULARY_HISTORY.md Part 1), each its own record
 // rather than one bloated record with a pile of nullable per-kind params -
 // v1's own Conditional/EffectCondition grew into exactly that shape and it
 // was one of the audit's own complaints (ARCHITECTURE_REVIEW.md). Every

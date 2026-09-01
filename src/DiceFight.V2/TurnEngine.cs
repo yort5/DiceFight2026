@@ -169,7 +169,7 @@ public static class TurnEngine
         if (!isCommunity && die.OwnerId != state.ActivePlayerId)
             throw new InvalidOperationException($"Die '{dieId}' belongs to your opponent's team and isn't a Basic Action.");
 
-        // Blob / Drax (V2_VOCABULARY.md Part 20). Card-scoped and
+        // Blob / Drax (V2_VOCABULARY_HISTORY.md Part 20). Card-scoped and
         // per-player: the same card stays purchasable by its other owner.
         if (!QueryEngine.CanPurchase(state, state.ActivePlayerId, card.Id))
             throw new InvalidOperationException($"'{card.Name}' cannot be purchased right now.");
@@ -264,7 +264,7 @@ public static class TurnEngine
         // Routing this through QueryEngine.AbilitiesOf would shift every
         // Global's index the moment a card gained PermanentAbilities, so
         // permanent text must never be spliced into this list
-        // (V2_VOCABULARY.md Part 21). None of the 34 immune clauses is a
+        // (V2_VOCABULARY_HISTORY.md Part 21). None of the 34 immune clauses is a
         // Global, so nothing needs that today.
         //
         // Blanking a Global is card-scoped too, and lands with the
@@ -446,7 +446,7 @@ public static class TurnEngine
             // MORE Clean Up (the granter's opponent's turn) and expires at
             // the Clean Up that hands control back to the granter - i.e.
             // exactly "gone by the start of your next turn" (see
-            // V2_VOCABULARY.md Part 1's Duration note). Permanent never
+            // V2_VOCABULARY_HISTORY.md Part 1's Duration note). Permanent never
             // expires on its own.
             die.AppliedModifiers.RemoveAll(m =>
                 m.Duration == Duration.EndOfTurn ||

@@ -22,7 +22,7 @@ implemented (Apocalypse, HarleyQuinn, CaptainMarvel, Dazzler,
 ShockingGrasp, FranklinsGalactus, GodEmperorDoom, Groot fit cleanly;
 Casket of Ancient Winters is Approximate - see its row) and 11 are
 tailed Ask below. This is a lower fit rate than the DPS set's own
-~82% (V2_VOCABULARY.md Part 11) for a specific, known reason: the
+~82% (V2_VOCABULARY_HISTORY.md Part 11) for a specific, known reason: the
 curated rosters were deliberately built by v1's own author to exercise
 one live example of each Attack-Step keyword the web client needs
 (Call Out, Infiltrate, Tag Out, Range, Intimidate) - and Phase 7's own

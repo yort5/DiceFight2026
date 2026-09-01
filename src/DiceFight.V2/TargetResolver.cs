@@ -5,7 +5,7 @@ namespace DiceFight.V2;
 
 // TargetFilter -> candidate id resolution (V2_PLAN.md Phase 5 task 1, a
 // port of v1 LegalTargets.Query's good ideas onto the closed 11-field
-// filter shape - V2_VOCABULARY.md Part 1). Self/Bound bypass the query
+// filter shape - V2_VOCABULARY_HISTORY.md Part 1). Self/Bound bypass the query
 // entirely and resolve straight from the ability's own binding table
 // (BindAs/Bound, Finding 9) instead - "self" and "event" are the two
 // reserved names (EffectInterpreter seeds them from QueuedAbility.

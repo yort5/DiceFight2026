@@ -3,7 +3,7 @@ using DiceFight.V2.Model.Effects;
 
 namespace DiceFight.V2;
 
-// The 7 condition kinds (V2_VOCABULARY.md Part 1), each a pure read of
+// The 7 condition kinds (V2_VOCABULARY_HISTORY.md Part 1), each a pure read of
 // current GameState - no PendingChoice involved anywhere here, matching
 // V2_PLAN.md Phase 5's own framing ("conditions are pure state reads, so
 // [live ActiveWhen evaluation] is safe"). CheckBinding names resolve

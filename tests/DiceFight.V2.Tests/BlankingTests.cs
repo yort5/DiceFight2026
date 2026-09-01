@@ -4,7 +4,7 @@ using DiceFight.V2.Model.Effects;
 
 namespace DiceFight.V2.Tests;
 
-// Spike A (V2_VOCABULARY.md Parts 19-21, signed off 2026-09-01).
+// Spike A (V2_VOCABULARY_HISTORY.md Parts 19-21, signed off 2026-09-01).
 //
 // What blanking removes is a narrower cut than "the die does nothing",
 // and the narrowness is the whole design: a blanked die keeps every

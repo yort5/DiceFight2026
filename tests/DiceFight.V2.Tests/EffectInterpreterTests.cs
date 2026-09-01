@@ -196,7 +196,7 @@ public class EffectInterpreterTests
         // Kind: AnyDie - a dormant Used Pile die has no current face, so
         // the default CharacterDie kind (which reads the CURRENT face,
         // matching in-play/combat semantics) would never match it; the
-        // vocabulary's own Rally example (V2_VOCABULARY.md Part 2) uses
+        // vocabulary's own Rally example (V2_VOCABULARY_HISTORY.md Part 2) uses
         // AnyDie for exactly this reason when reaching into dormant zones.
         EffectInterpreter.Execute(new MoveDie(new TargetFilter(Ownership: TargetOwnership.Own, Zones: [Zone.UsedPile], Kind: TargetKind.AnyDie), Zone.FieldZone), ctx);
 
@@ -585,7 +585,7 @@ public class EffectInterpreterTests
         Assert.Empty(state.Dice);
     }
 
-    // --- GrantAbility (V2_VOCABULARY.md Parts 16, 20-21) ---
+    // --- GrantAbility (V2_VOCABULARY_HISTORY.md Parts 16, 20-21) ---
 
     [Fact]
     public void GrantAbility_Adds_An_Ability_That_Expires_At_CleanUp()

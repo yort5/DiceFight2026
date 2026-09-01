@@ -1,6 +1,6 @@
 namespace DiceFight.V2.Model.Effects;
 
-// The 6 continuous templates (V2_VOCABULARY.md Part 1) - the replacement
+// The 6 continuous templates (V2_VOCABULARY_HISTORY.md Part 1) - the replacement
 // for v1's 39 one-per-card Grants* CardDef flags (ARCHITECTURE_REVIEW.md's
 // central finding: zero reuse, per-card engine edits). ActiveWhen (Finding
 // 2) is on the base type since every template gained it identically - a
@@ -40,7 +40,7 @@ public sealed record CombatRule(CombatRuleKind Kind, TargetFilter Target, int? N
 // Source (Finding 10) is the ability-vs-combat damage axis v1's
 // DieStats.ApplyDamage already proved out as a real distinction, not a
 // hypothetical one. Amplify/Double (Finding 14): see the fixed ordering
-// rule in V2_VOCABULARY.md Part 1/11 - multipliers apply before flat
+// rule in V2_VOCABULARY_HISTORY.md Part 1/11 - multipliers apply before flat
 // reductions, decided once at adoption time rather than left for each
 // card's interpreter case to relitigate.
 public enum DamageModifierMode { Reduce, RedirectToSelf, PreventNonCombat, Amplify, Double }

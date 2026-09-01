@@ -1,7 +1,7 @@
 namespace DiceFight.V2.Model;
 
 // The rulebook's PHASES (starter rulebook TURN SUMMARY). Since Spike C
-// (V2_VOCABULARY.md Part 13) this is the grouping label on a step, not
+// (V2_VOCABULARY_HISTORY.md Part 13) this is the grouping label on a step, not
 // the step itself - the engine's actual position is a cursor into
 // GameConfig.Steps, an ordered flat list of TurnStepDef. Flattening the
 // ORDER while keeping this as a grouping tag is what lets code still ask

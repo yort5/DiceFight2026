@@ -6,7 +6,7 @@ namespace DiceFight.V2;
 // Amount resolution (Fixed | PerMatch) - extracted in Phase 6 so
 // EffectInterpreter (an ability's own Amount fields) and
 // ContinuousRegistry (a StatAura's AtkDelta/DefDelta) share the identical
-// Fixed/PerMatch/Distinct/Unit logic (V2_VOCABULARY.md Part 1) instead of
+// Fixed/PerMatch/Distinct/Unit logic (V2_VOCABULARY_HISTORY.md Part 1) instead of
 // each having their own copy. Bindings lets a PerMatch filter reference
 // "self" (or any other bound name) the same way TargetFilter resolution
 // does - a continuous aura seeds "self" with its own source die id, an

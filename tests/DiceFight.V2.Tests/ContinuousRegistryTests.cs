@@ -6,7 +6,7 @@ namespace DiceFight.V2.Tests;
 // V2_PLAN.md Phase 6 acceptance: a test per continuous template,
 // including an aura appearing/disappearing as its source die enters/
 // leaves the field, two auras stacking additively, and the Phase 0 paper
-// expressions for the 5 ex-Grants* cards (V2_VOCABULARY.md Part 2,
+// expressions for the 5 ex-Grants* cards (V2_VOCABULARY_HISTORY.md Part 2,
 // Bucket C) running as real card definitions.
 public class ContinuousRegistryTests
 {
@@ -95,7 +95,7 @@ public class ContinuousRegistryTests
         Assert.Equal(3, QueryEngine.GetPurchaseCost(state, target, "p2")); // not the granter's own controller
     }
 
-    // --- PermanentContinuous (V2_VOCABULARY.md Part 21) ---
+    // --- PermanentContinuous (V2_VOCABULARY_HISTORY.md Part 21) ---
 
     // The continuous half of the permanent/blankable split. Nothing
     // blanks it yet, so what this pins is that ContinuousOf reads the
@@ -171,7 +171,7 @@ public class ContinuousRegistryTests
     {
         // Double (x2) then Reduce(1): 1 damage -> 2 (doubled) -> 1 (reduced).
         // If reduction applied first instead, 1 -> 0 -> 0, a different result -
-        // this proves the fixed ordering rule (V2_VOCABULARY.md Part 1/11).
+        // this proves the fixed ordering rule (V2_VOCABULARY_HISTORY.md Part 1/11).
         var source = BuildCard("Source", [Level1Char], [
             new DamageModifier(DamageModifierMode.Double, new TargetFilter(Self: true)),
             new DamageModifier(DamageModifierMode.Reduce, new TargetFilter(Self: true), Amount: 1),
@@ -204,7 +204,7 @@ public class ContinuousRegistryTests
         Assert.True(QueryEngine.CanBeTargeted(state, die, "p2", ProtectionFrom.Action)); // different trigger kind
     }
 
-    // --- Phase 0 paper examples (V2_VOCABULARY.md Part 2, Bucket C) ---
+    // --- Phase 0 paper examples (V2_VOCABULARY_HISTORY.md Part 2, Bucket C) ---
 
     [Fact]
     public void Paper_Example_CaptainMarvel_AlphaFlight_Grants_AtkAndDef_To_Own_Character_Dice()

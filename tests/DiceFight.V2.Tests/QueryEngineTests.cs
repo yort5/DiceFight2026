@@ -287,7 +287,7 @@ public class QueryEngineTests
         public bool CanBeTargeted(GameState state, DieInstance die, string byPlayerId, ProtectionFrom triggerKind) => false;
     }
 
-    // --- Affiliation is first-class, not a tag (V2_VOCABULARY.md Parts 17-21) ---
+    // --- Affiliation is first-class, not a tag (V2_VOCABULARY_HISTORY.md Parts 17-21) ---
 
     // The whole point of the split, in one test: a card whose AFFILIATION
     // and whose KEYWORD happen to share a name are two different questions,

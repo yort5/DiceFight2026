@@ -23,7 +23,7 @@ public enum TargetKind
 
 // The five stat kinds a TargetFilter/EventFilter can threshold on, plus
 // Counter for reading a named per-card counter back (Finding 13 -
-// V2_VOCABULARY.md Part 1/10). Counter entries must also set
+// V2_VOCABULARY_HISTORY.md Part 1/10). Counter entries must also set
 // StatThreshold.CounterName; the other five ignore it.
 public enum StatKind
 {
@@ -35,7 +35,7 @@ public enum StatKind
     Counter,
 }
 
-// ONE threshold (V2_VOCABULARY.md Part 1 - "ONE threshold" is a closed-
+// ONE threshold (V2_VOCABULARY_HISTORY.md Part 1 - "ONE threshold" is a closed-
 // vocabulary decision, not an oversight: a card needing two simultaneous
 // stat thresholds hasn't come up, and TargetFilter deliberately doesn't
 // generalize to a list until one does).
@@ -43,7 +43,7 @@ public sealed record StatThreshold(StatKind Kind, string? CounterName = null, in
 
 public sealed record TagQuery(IReadOnlyList<string>? AnyOf = null, IReadOnlyList<string>? NoneOf = null);
 
-// The single target-filter shape (V2_VOCABULARY.md Part 1, frozen 2026-08-22,
+// The single target-filter shape (V2_VOCABULARY_HISTORY.md Part 1, frozen 2026-08-22,
 // Finding 14 gate). BindAs/Bound/AnsweredBy are deliberately on every
 // TargetFilter rather than a separate "reactive target" type - the closed-
 // vocabulary bet is that one shape covers active targeting, reactive-trigger
@@ -81,12 +81,12 @@ public sealed record TargetFilter(
 // symbols shown rather than dice). A live-value source ("this die's own
 // current stat", "the triggering event's own amount") is deliberately NOT
 // part of this closed set - that's the deferred live-value-Amounts spike
-// (V2_VOCABULARY.md Part 4/11).
+// (V2_VOCABULARY_HISTORY.md Part 4/11).
 public abstract record Amount;
 public sealed record Fixed(int Value) : Amount;
 public sealed record PerMatch(TargetFilter Filter, int Multiplier, bool Distinct = false, CountUnit Unit = CountUnit.Dice) : Amount;
 
-// Spike B (V2_VOCABULARY.md Part 12, adopted 2026-08-24) - the two
+// Spike B (V2_VOCABULARY_HISTORY.md Part 12, adopted 2026-08-24) - the two
 // live-value sources.
 //
 // StatOf reads a bound die's stat as CAPTURED AT BIND TIME, not as it

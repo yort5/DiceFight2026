@@ -1,6 +1,6 @@
 namespace DiceFight.V2.Model;
 
-// Appendix B (V2_PLAN.md) / V2_VOCABULARY.md Part 1. A GameConfig is a
+// Appendix B (V2_PLAN.md) / V2_VOCABULARY_HISTORY.md Part 1. A GameConfig is a
 // whole game DEFINITION - the classic Dice Masters ruleset is one config
 // among possibly-many (see Direction C, ARCHITECTURE_REVIEW.md Part 3);
 // nothing in the engine should hardcode energy symbols, keyword ids, dice
@@ -14,7 +14,7 @@ public sealed record GameConfig(
     IReadOnlyList<BasicDicePoolEntry> BasicDicePool,
     int BasicActionSlots)
 {
-    // Spike C (V2_VOCABULARY.md Part 13) - the game's ordered step list.
+    // Spike C (V2_VOCABULARY_HISTORY.md Part 13) - the game's ordered step list.
     // Data, not an enum, so a Direction-C variant reorders, removes, or
     // inserts steps with zero engine change. Defaults to the standard
     // rulebook order; a config only needs to set this if it differs.

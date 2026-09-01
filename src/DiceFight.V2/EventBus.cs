@@ -6,7 +6,7 @@ namespace DiceFight.V2;
 // Fires a GameEvent against every active die's own TriggeredAbility list
 // and enqueues the matches (V2_PLAN.md Phase 4 tasks 1+3) - the
 // replacement for v1's TriggerType enum + three *DieMatch filter records
-// (one event shape, one filter shape, per V2_VOCABULARY.md Part 1).
+// (one event shape, one filter shape, per V2_VOCABULARY_HISTORY.md Part 1).
 public static class EventBus
 {
     // Rule 3.2.2's own ordering, ported from v1: the ACTIVE player's

@@ -3,7 +3,7 @@ using DiceFight.V2.Model.Effects;
 
 namespace DiceFight.V2;
 
-// Compiles every CardDef.Continuous entry (V2_VOCABULARY.md Part 1's 6
+// Compiles every CardDef.Continuous entry (V2_VOCABULARY_HISTORY.md Part 1's 6
 // continuous templates) into the query-modifier/interceptor registries
 // QueryEngine/EffectInterpreter read (Phase 3/5) - the replacement for
 // v1's 39 one-per-card Grants* CardDef flags (ARCHITECTURE_REVIEW.md's
@@ -70,7 +70,7 @@ public static class ContinuousRegistry
 
     // A blanked die grants nothing. V1 answered this the same way, via
     // its DieStats.GetCard choke point, and V2_PLAN.md Phase 8 task 3
-    // asked the question explicitly - match it (V2_VOCABULARY.md Part 19).
+    // asked the question explicitly - match it (V2_VOCABULARY_HISTORY.md Part 19).
     private static IEnumerable<DieInstance> ActiveSourceDice(GameState state, CardDef card) =>
         state.Dice.Where(d => d.CardId == card.Id
             && d.Zone is Zone.FieldZone or Zone.AttackZone
@@ -114,7 +114,7 @@ public static class ContinuousRegistry
 
     // --- CostModifier. Purchase/GlobalEnergy are card+payer scoped, so
     // `Whose` is expected to resolve to PLAYER ids (Kind:Player - Jean
-    // Grey "Xavier's Dream", V2_VOCABULARY.md Part 2); Fielding/
+    // Grey "Xavier's Dream", V2_VOCABULARY_HISTORY.md Part 2); Fielding/
     // ActionDieUse are DIE scoped, so `Whose` is expected to resolve to
     // DIE ids instead (Kind:CharacterDie - Deadpool "Collect THIS!",
     // same Part 2 example). One field, two id spaces depending on which
@@ -244,7 +244,7 @@ public static class ContinuousRegistry
         // Protection is always against the OPPONENT of the granting
         // player (every real card text reads "your opponent can't
         // target..." - Angel "Xavier's Dream" is the precedent, see
-        // V2_VOCABULARY.md Part 2) - a source never blocks its own
+        // V2_VOCABULARY_HISTORY.md Part 2) - a source never blocks its own
         // controller's own targeting.
         public bool CanBeTargeted(GameState state, DieInstance die, string byPlayerId, ProtectionFrom triggerKind)
         {

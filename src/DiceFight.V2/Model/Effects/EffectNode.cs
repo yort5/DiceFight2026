@@ -2,7 +2,7 @@ using DiceFight.V2.Model;
 
 namespace DiceFight.V2.Model.Effects;
 
-// The 18 effect templates (V2_VOCABULARY.md Part 1, frozen 2026-08-22).
+// The 18 effect templates (V2_VOCABULARY_HISTORY.md Part 1, frozen 2026-08-22).
 // This is the closed vocabulary itself - the whole point of the v2
 // rewrite (ARCHITECTURE_REVIEW.md) is that this list does NOT grow per
 // card the way v1's 49-node EffectNode.cs did. A card that doesn't fit
@@ -75,7 +75,7 @@ public sealed record ModifyStat(
 public sealed record GrantTag(TargetFilter Target, IReadOnlyList<string> Tags, Duration Duration = Duration.EndOfTurn) : EffectNode;
 
 // Grants a whole triggered ability to a die, rather than a tag
-// (V2_VOCABULARY.md Parts 16, 20-21 - signed off 2026-09-01). GrantTag
+// (V2_VOCABULARY_HISTORY.md Parts 16, 20-21 - signed off 2026-09-01). GrantTag
 // can hand a die a KEYWORD; nothing could hand it an ability until now,
 // which is what Lantern Ring needs ("that die gains: deal 1 damage to
 // target player for each matching energy in your Reserve Pool").
@@ -83,7 +83,7 @@ public sealed record GrantTag(TargetFilter Target, IReadOnlyList<string> Tags, D
 // The granted ability survives blanking - see GrantedAbility's remarks.
 public sealed record GrantAbility(TargetFilter Target, TriggeredAbility Ability, Duration Duration = Duration.EndOfTurn) : EffectNode;
 
-// Ignore a DIE's text (V2_VOCABULARY.md Parts 19-21). The default scope -
+// Ignore a DIE's text (V2_VOCABULARY_HISTORY.md Parts 19-21). The default scope -
 // Web Shooters, Loki "Powerful Magic". Other copies of the same card are
 // untouched, which is why Wolverine "No More Distractions" has to print
 // "for all copies of that die" to get the other one.

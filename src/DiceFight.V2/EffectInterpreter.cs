@@ -4,7 +4,7 @@ using DiceFight.V2.Model.Effects;
 namespace DiceFight.V2;
 
 // Executes the 18 closed-vocabulary effect templates (V2_PLAN.md Phase 5,
-// V2_VOCABULARY.md Part 1) against a GameState. Written continuation-
+// V2_VOCABULARY_HISTORY.md Part 1) against a GameState. Written continuation-
 // passing style (`Action onComplete` threaded through every private
 // Execute* helper) rather than v1's flat switch, because Phase 5 - unlike
 // v1's own targeting seam (EffectContext.ResolveTargets, a caller-
@@ -74,7 +74,7 @@ public static class EffectInterpreter
         // Shriek behaviour). This falls out of rule 3.2.5's per-ability
         // snapshots dissolving between queue entries, so it needs no
         // mechanism of its own - but it needs saying, or the check is the
-        // one that gets missed (V2_VOCABULARY.md Part 19).
+        // one that gets missed (V2_VOCABULARY_HISTORY.md Part 19).
         //
         // A granted ability is exempt: it did not come from the blanked
         // card, so nothing severs it (Part 16).
@@ -276,7 +276,7 @@ public static class EffectInterpreter
     // Walks GameState.DamageInterceptors (DamageModifier's registry):
     // PreventNonCombat blocks the instance outright (unless `source`
     // itself is Combat - it's a NON-combat preventer), multipliers apply
-    // before flat reductions (V2_VOCABULARY.md Part 1/11's fixed
+    // before flat reductions (V2_VOCABULARY_HISTORY.md Part 1/11's fixed
     // ordering rule), RedirectToSelf changes who actually takes the
     // (already-modified) hit and who DieDamaged/KO fire against.
     public static DieInstance? MarkDamage(GameState state, AbilityQueue queue, DamageSource source, string id, int amount)
@@ -617,7 +617,7 @@ public static class EffectInterpreter
     // Mirrors ExecuteGrantTag exactly - same Duration handling, same
     // GrantedDuringPlayerId convention. The difference is only what lands
     // on the die, and that blanking never takes this back off again
-    // (V2_VOCABULARY.md Part 16).
+    // (V2_VOCABULARY_HISTORY.md Part 16).
     private static void ExecuteGrantAbility(GrantAbility n, EffectContext ctx, Action onComplete)
     {
         ResolveTarget(ctx, n.Target, ProtectionFor(ctx.Trigger), ids =>
@@ -729,7 +729,7 @@ public static class EffectInterpreter
         onComplete();
     }
 
-    // No Duration param on CombatFlag itself (V2_VOCABULARY.md Part 1) -
+    // No Duration param on CombatFlag itself (V2_VOCABULARY_HISTORY.md Part 1) -
     // every real use is "(this turn)," so DieInstance.CombatFlags is
     // always EndOfTurn-scoped, cleared at CleanUp alongside
     // AppliedModifiers/GrantedTags. Combat itself (reading these) is
@@ -890,7 +890,7 @@ public static class EffectInterpreter
     // needs SOME current face:" defaults to the die's own first (lowest-
     // level) character face; an ability needing a SPECIFIC level follows
     // up with Spin(SetLevel:n) against the same (bound) die - the
-    // pattern V2_VOCABULARY.md Part 2's Mutation writeup (Finding 12)
+    // pattern V2_VOCABULARY_HISTORY.md Part 2's Mutation writeup (Finding 12)
     // uses, rather than this helper guessing at a level nothing told it.
     private static void MoveToZone(GameState state, DieInstance die, Zone toZone)
     {

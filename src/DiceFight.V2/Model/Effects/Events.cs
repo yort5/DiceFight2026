@@ -3,7 +3,7 @@ using DiceFight.V2.Model;
 namespace DiceFight.V2.Model.Effects;
 
 // The 10 events plus paid Global activation as its own trigger kind (not
-// an event) - V2_VOCABULARY.md Part 1. Energize/Awaken are NOT their own
+// an event) - V2_VOCABULARY_HISTORY.md Part 1. Energize/Awaken are NOT their own
 // kinds (unlike v1) - they're EventFilters over DieFaceChanged (Finding 1),
 // since v1's own CheckAwaken comment is the design precedent: a face-
 // change source that skips emission is the silently-never-fires bug
@@ -32,7 +32,7 @@ public enum FaceChangeCause { Roll, Reroll, Spin, Effect }
 // {PriorFace, NewFace, Cause}").
 public abstract record EventPayload;
 
-// The event-specific payload for DieFaceChanged (V2_VOCABULARY.md Part 1) -
+// The event-specific payload for DieFaceChanged (V2_VOCABULARY_HISTORY.md Part 1) -
 // carries full Face payloads, not just kinds, since Energize needs to
 // check symbol count (>= 2) on the new face, not just "is it an energy
 // face." Emitted from EVERY face-mutation site - see the class remarks.
@@ -49,7 +49,7 @@ public sealed record DamageDealtPayload(int Amount) : EventPayload;
 // Stat (Finding 14) mirrors TargetFilter.Stat, checked against the
 // event's own subject die (Deathbird "Usurper" - "when you KO an
 // opposing die with 3D or greater").
-// Step (Spike C, V2_VOCABULARY.md Part 13) names WHICH timing window a
+// Step (Spike C, V2_VOCABULARY_HISTORY.md Part 13) names WHICH timing window a
 // TurnStepEntered listener cares about - a step id from the game's own
 // ordered step list (StepIds). Without it a listener cannot tell
 // TurnStepEntered(cleanup) from TurnStepEntered(select-attackers), which

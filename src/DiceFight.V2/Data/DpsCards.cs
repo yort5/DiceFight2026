@@ -21,7 +21,7 @@ public static class DpsCards
 {
     // --- Basic Actions ---
 
-    // V2_VOCABULARY.md Part 2 #1's worked expression, verbatim.
+    // V2_VOCABULARY_HISTORY.md Part 2 #1's worked expression, verbatim.
     public static readonly CardDef PowerBolt = new(
         Id: "DPS011", Name: "Power Bolt", Subtitle: "Basic Action", Set: "DPS", CardType: CardType.BasicAction,
         PurchaseCost: 3, EnergySymbolIds: [],
@@ -185,7 +185,7 @@ public static class DpsCards
     // because the paper pass wrote its trigger as
     // "TurnStepEntered(EndOfTurn)" without noticing the EventFilter had
     // no step discriminator, so it would equally have fired on entering
-    // its own Attack Step. Un-tailed by Spike C (V2_VOCABULARY.md Part
+    // its own Attack Step. Un-tailed by Spike C (V2_VOCABULARY_HISTORY.md Part
     // 13): `Step: StepIds.CleanUp` names the window precisely, and
     // TurnEngine.CleanUp now emits it.
     public static readonly CardDef ColossusPiotr = new(
@@ -399,7 +399,7 @@ public static class DpsCards
             Delta: -2)]);
 
     // TargetingProtection's first real user - and the card
-    // V2_VOCABULARY.md Part 2 cites for the "protection is always against
+    // V2_VOCABULARY_HISTORY.md Part 2 cites for the "protection is always against
     // the granting player's OPPONENT" reading.
     public static readonly CardDef AngelXaviersDream = new(
         Id: "DPS137", Name: "Angel", Subtitle: "Xavier's Dream", Set: "DPS", CardType: CardType.Character,
@@ -477,7 +477,7 @@ public static class DpsCards
     // and the rolled face stands.
     //
     // DELIBERATE DIVERGENCE from the literal rules text, user-ruled after
-    // the rules validation pass (V2_VOCABULARY.md Part 15, Finding 3).
+    // the rules validation pass (V2_VOCABULARY_HISTORY.md Part 15, Finding 3).
     // The Comprehensive Rules' "Field" glossary says ability-fielded dice
     // are "considered fielded for free on level 1, unless otherwise
     // stated", which read strictly would field this at level 1 regardless
@@ -526,7 +526,7 @@ public static class DpsCards
         RawText: "When Phoenix attacks, deal 3 damage to target character die. If that character die is a Villains character die, you may deal 3 damage to another target character die.",
         Abilities: [], Continuous: [], IsImplemented: false);
 
-    // Confirms V2_VOCABULARY.md Part 2 #14's finding on a second card:
+    // Confirms V2_VOCABULARY_HISTORY.md Part 2 #14's finding on a second card:
     // DamageModifier is a CONTINUOUS template, and this is a one-shot,
     // once-per-turn, optional redirect with a burst-face alternative
     // (prevent instead). None of that is expressible.
@@ -559,7 +559,7 @@ public static class DpsCards
     // --- Batch 3 (2026-09-01) ---
     //
     // Led by the two cards Spike A was built for. D'Ken and Mister
-    // Sinister were both named in V2_VOCABULARY.md Part 12 as motivating
+    // Sinister were both named in V2_VOCABULARY_HISTORY.md Part 12 as motivating
     // the spike, and Part 19 listed Sinister's side-wide half under "what
     // it does NOT close" - BlankCardText's AllOpposing mode closes it.
 

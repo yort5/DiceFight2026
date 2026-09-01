@@ -219,7 +219,7 @@ public class EventBusTests
             TurnEngine.UseGlobal(state, queue, card.Id, "p1", abilityIndex: 0, []));
     }
 
-    // --- The AbilitiesOf choke point (V2_VOCABULARY.md Parts 16, 21) ---
+    // --- The AbilitiesOf choke point (V2_VOCABULARY_HISTORY.md Parts 16, 21) ---
 
     // A card whose ability is PERMANENT still fires. Nothing blanks it
     // yet, so what this really pins is that the permanent list is read at

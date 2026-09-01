@@ -1,5 +1,10 @@
 # DiceFight v2 Core — Implementation Plan
 
+**Vocabulary**: `V2_VOCABULARY.md` states what the vocabulary IS (179
+lines, derived from the code). `V2_VOCABULARY_HISTORY.md` keeps how it
+got there (the 28 parts written 2026-08-22 to 2026-09-01). Cite the
+history for reasoning; code against the spec.
+
 **Status (refreshed 2026-08-31): Phases 0-7 complete; vocabulary FROZEN
 at the 2026-08-22 gate review (`V2_VOCABULARY.md` Part 11); Phase 8
 (Dice Masters as a game definition / card migration) IN PROGRESS.**
