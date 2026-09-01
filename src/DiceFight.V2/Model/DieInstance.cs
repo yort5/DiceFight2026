@@ -63,6 +63,15 @@ public sealed class DieInstance
     public int Damage { get; set; }
     public List<GrantedTag> GrantedTags { get; } = [];
 
+    // Abilities granted to this die by something else (GrantAbility) -
+    // Psylocke handing a die Overcrush, Lantern Ring handing one a whole
+    // triggered ability. Distinct from the card's own list because
+    // blanking does not touch these: rule 3.4.8.2 explains blanking as
+    // abilities being lost "because dice refer to their card to initiate
+    // or trigger their abilities", and a granted ability does not come
+    // from the blanked card (V2_VOCABULARY.md Part 16, user ruling).
+    public List<GrantedAbility> GrantedAbilities { get; } = [];
+
     // This-turn-only combat restrictions (CombatFlag effect template) -
     // no Duration param on the record itself (V2_VOCABULARY.md Part 1),
     // since every real CombatFlag use in Dice Masters card text is
@@ -75,3 +84,5 @@ public sealed class DieInstance
 }
 
 public sealed record GrantedTag(string Tag, Duration Duration, string? GrantedDuringPlayerId = null);
+
+public sealed record GrantedAbility(TriggeredAbility Ability, Duration Duration, string? GrantedDuringPlayerId = null);

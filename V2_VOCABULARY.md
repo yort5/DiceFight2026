@@ -3285,3 +3285,74 @@ There is also no `includeContinuous` split on the affiliation path, for
 the same reason: nothing grants an affiliation continuously, so there is
 no self-referential aura to break the way `TagAura`s forced `GetBaseTags`
 into existence. Adding granted affiliations later means revisiting that.
+
+---
+
+## Part 23 — Spike A, increment 1: the choke point (2026-09-01)
+
+The first of Spike A's increments, and deliberately the one with **no
+blanking in it**. What it builds is the seam blanking will need, plus the
+two things that must never be blanked — so that when suppression arrives,
+exactly one line changes and no site has to be revisited.
+
+### `QueryEngine.AbilitiesOf(state, die)`
+
+One answer to "which abilities does this die have":
+
+```
+card.PermanentAbilities   (always)
+card.Abilities            (unless blanked - the line increment 2 guards)
+die.GrantedAbilities      (always - Part 16's ruling)
+```
+
+with `ContinuousOf(card)` doing the same for the continuous half. Three
+sites used to enumerate `card.Abilities`/`card.Continuous` themselves;
+each would otherwise have had to remember, independently, that permanent
+text is never blanked and granted abilities are never blanked. Three
+chances to forget the same two rules.
+
+`EventBus.Fire` and `ContinuousRegistry` now go through it. **`TurnEngine.
+UseGlobal` deliberately does not**, and carries a comment saying why: a
+Global's address is `(cardId, abilityIndex)` with no die involved, so
+splicing permanent text into that list would shift every Global's index.
+Blanking a Global is card-scoped anyway and belongs with the card-scoped
+store in increment 2.
+
+**A bug this removed on the way**: `EventBus.Fire` skipped cardless dice
+outright (`if (listener.CardId is not { } cardId) continue;`). A Sidekick
+has no printed abilities, but it can be *granted* one — which is exactly
+Lantern Ring — and would have been silently unable to trigger it. The
+guard is gone; `AbilitiesOf` returns nothing for a die with neither.
+
+### `PermanentAbilities` / `PermanentContinuous`
+
+The user's PermanentText proposal, as two nullable collections on
+`CardDef`, usually empty. Immunity is structural rather than a flag: the
+blanking filter only ever sees `Abilities`/`Continuous`, so there is
+nothing for a filtering site to forget to check.
+
+### `GrantAbility` + `DieInstance.GrantedAbilities`
+
+Mirrors `GrantTag` exactly — same `Duration` enum, same
+`GrantedDuringPlayerId` convention, same clearing when a die leaves
+active play (rule 3.4.5.4). The difference is only what lands on the die,
+and that blanking will never take it back off.
+
+### Verification
+
+171 v2 tests (761 across the solution). Five new, and the two expiry
+paths were mutation-checked — deleting the Clean Up sweep and deleting
+the leaves-play clear each fail exactly one.
+
+The permanent tests are worth naming for what they actually pin: nothing
+blanks yet, so what they prove is that the permanent lists are **read at
+all**. A permanent ability that never registers would be silently inert,
+and silence is the failure mode every one of the 34 immune clauses would
+have had.
+
+### Next increment
+
+The two suppression stores (die-scoped, and card-scoped keyed
+`(player, cardId)` with `TextIgnored`/`CantPurchase`/`CantField`), the
+four derived queries over them, and the guard on `AbilitiesOf`'s middle
+line. Then the vocabulary templates that write to those stores.

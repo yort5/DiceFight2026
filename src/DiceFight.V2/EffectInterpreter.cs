@@ -126,6 +126,7 @@ public static class EffectInterpreter
             case SpinToEnergy n: ExecuteSpinToEnergy(n, ctx, onComplete); break;
             case ModifyStat n: ExecuteModifyStat(n, ctx, onComplete); break;
             case GrantTag n: ExecuteGrantTag(n, ctx, onComplete); break;
+            case GrantAbility n: ExecuteGrantAbility(n, ctx, onComplete); break;
             case LifeChange n: ExecuteLifeChange(n, ctx, onComplete); break;
             case PurchaseModifier n: ExecutePurchaseModifier(n, ctx, onComplete); break;
             case CombatFlag n: ExecuteCombatFlag(n, ctx, onComplete); break;
@@ -582,6 +583,21 @@ public static class EffectInterpreter
         });
     }
 
+    // Mirrors ExecuteGrantTag exactly - same Duration handling, same
+    // GrantedDuringPlayerId convention. The difference is only what lands
+    // on the die, and that blanking never takes this back off again
+    // (V2_VOCABULARY.md Part 16).
+    private static void ExecuteGrantAbility(GrantAbility n, EffectContext ctx, Action onComplete)
+    {
+        ResolveTarget(ctx, n.Target, ProtectionFor(ctx.Trigger), ids =>
+        {
+            var grantedDuring = n.Duration == Duration.UntilYourNextTurn ? ctx.State.ActivePlayerId : null;
+            foreach (var id in ids)
+                FindDie(ctx.State, id).GrantedAbilities.Add(new GrantedAbility(n.Ability, n.Duration, grantedDuring));
+            onComplete();
+        });
+    }
+
     private static void ExecuteLifeChange(LifeChange n, EffectContext ctx, Action onComplete)
     {
         var amount = ResolveAmount(ctx, n.Amount); // signed - positive gains, negative loses (n.Amount's own convention)
@@ -775,6 +791,7 @@ public static class EffectInterpreter
             die.Damage = 0;
             die.AppliedModifiers.Clear();
             die.GrantedTags.Clear();
+            die.GrantedAbilities.Clear();
             die.CombatFlags.Clear();
         }
         else if (enteringActive && die.CurrentFaceIndex is null)

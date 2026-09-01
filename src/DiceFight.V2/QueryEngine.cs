@@ -217,6 +217,46 @@ public static class QueryEngine
     }
 
     /// <summary>
+    /// Every triggered ability this die actually has: its card's
+    /// permanent text, its card's ordinary text, and anything granted to
+    /// it. The single answer to "which abilities does this die have".
+    /// </summary>
+    /// <remarks>
+    /// This exists so that nothing enumerates <c>card.Abilities</c>
+    /// directly. Three sites used to (EventBus's listener scan,
+    /// TurnEngine.UseGlobal, ContinuousRegistry), and each would
+    /// otherwise have to remember, independently, that permanent text is
+    /// never blanked and granted abilities are never blanked. That is
+    /// three chances to forget the same two rules.
+    ///
+    /// Blanking is not consulted yet - the suppression stores land in the
+    /// next increment, and when they do the ONLY line that changes is the
+    /// card's-own-text one below. Permanent and granted are unconditional
+    /// by construction (V2_VOCABULARY.md Parts 16 and 21).
+    /// </remarks>
+    public static IEnumerable<TriggeredAbility> AbilitiesOf(GameState state, DieInstance die)
+    {
+        if (die.CardId is { } cardId && state.CardCatalog.TryGetValue(cardId, out var card))
+        {
+            foreach (var ability in card.PermanentAbilities ?? []) yield return ability;
+            foreach (var ability in card.Abilities) yield return ability;
+        }
+
+        foreach (var granted in die.GrantedAbilities) yield return granted.Ability;
+    }
+
+    /// <summary>
+    /// The continuous templates a CARD contributes - permanent first, then
+    /// its ordinary ones. Card-scoped rather than die-scoped because
+    /// ContinuousRegistry compiles per card, not per die.
+    /// </summary>
+    public static IEnumerable<ContinuousDef> ContinuousOf(CardDef card)
+    {
+        foreach (var def in card.PermanentContinuous ?? []) yield return def;
+        foreach (var def in card.Continuous) yield return def;
+    }
+
+    /// <summary>
     /// A die's affiliations. Separate from <see cref="GetTags"/> because
     /// the rules treat affiliation as a card ATTRIBUTE (1.2's closed
     /// list) while keywords are abilities - which matters most under

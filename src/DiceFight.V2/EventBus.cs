@@ -35,10 +35,11 @@ public static class EventBus
 
             foreach (var listener in candidates)
             {
-                if (listener.CardId is not { } cardId) continue;
-                var card = state.CardCatalog[cardId];
-
-                foreach (var ability in card.Abilities)
+                // No cardless-die skip here any more. A Sidekick has no
+                // card and so no printed abilities, but it can be GRANTED
+                // one (Lantern Ring), and AbilitiesOf already returns
+                // nothing for a die that has neither.
+                foreach (var ability in QueryEngine.AbilitiesOf(state, listener))
                 {
                     if (Matches(state, evt, listener, ability))
                         queue.Enqueue(listener.Id, listener.ControllerId, ability.Trigger, ability.Effect, evt.SubjectDie?.Id,

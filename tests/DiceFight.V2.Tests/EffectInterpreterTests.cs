@@ -585,6 +585,44 @@ public class EffectInterpreterTests
         Assert.Empty(state.Dice);
     }
 
+    // --- GrantAbility (V2_VOCABULARY.md Parts 16, 20-21) ---
+
+    [Fact]
+    public void GrantAbility_Adds_An_Ability_That_Expires_At_CleanUp()
+    {
+        var card = BuildCard("T", [Level1Char]);
+        var state = BuildState(card);
+        var die = AddDie(state, card, "p1", Zone.FieldZone, 0);
+        var ctx = BuildContext(state, "p1");
+        var granted = new TriggeredAbility(TriggerKind.DieFielded, new LifeChange(new Fixed(0)));
+
+        EffectInterpreter.Execute(new GrantAbility(new TargetFilter(Ownership: TargetOwnership.Own), granted), ctx);
+        Assert.Contains(granted, QueryEngine.AbilitiesOf(state, die));
+
+        TurnEngine.CleanUp(state, new AbilityQueue());
+        Assert.DoesNotContain(granted, QueryEngine.AbilitiesOf(state, die));
+    }
+
+    // Rule 3.4.5.4's reasoning, the same one GrantedTags already follows:
+    // a die that leaves active play loses what was hung on it, whatever
+    // duration it was granted for.
+    [Fact]
+    public void A_Granted_Ability_Is_Lost_When_The_Die_Leaves_Active_Play()
+    {
+        var card = BuildCard("T", [Level1Char]);
+        var state = BuildState(card);
+        var die = AddDie(state, card, "p1", Zone.FieldZone, 0);
+        var ctx = BuildContext(state, "p1");
+        var granted = new TriggeredAbility(TriggerKind.DieFielded, new LifeChange(new Fixed(0)));
+
+        EffectInterpreter.Execute(new GrantAbility(new TargetFilter(Ownership: TargetOwnership.Own), granted, Duration.Permanent), ctx);
+        Assert.Contains(granted, QueryEngine.AbilitiesOf(state, die));
+
+        EffectInterpreter.Execute(new Ko(new TargetFilter(Ownership: TargetOwnership.Own)), ctx);
+
+        Assert.Empty(die.GrantedAbilities);
+    }
+
     // --- LifeChange ---
 
     [Fact]

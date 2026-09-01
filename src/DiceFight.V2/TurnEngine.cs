@@ -248,6 +248,18 @@ public static class TurnEngine
         // are authoritative and a catalog may legitimately be broader.
         if (!state.CardCatalog.TryGetValue(cardId, out var card))
             throw new InvalidOperationException($"Unknown card '{cardId}'.");
+        // The one place that still indexes card.Abilities directly, and
+        // deliberately so: a Global's ADDRESS is (cardId, abilityIndex),
+        // with no die involved (Globals are card-scoped - rule 2.6.5.2).
+        // Routing this through QueryEngine.AbilitiesOf would shift every
+        // Global's index the moment a card gained PermanentAbilities, so
+        // permanent text must never be spliced into this list
+        // (V2_VOCABULARY.md Part 21). None of the 34 immune clauses is a
+        // Global, so nothing needs that today.
+        //
+        // Blanking a Global is card-scoped too, and lands with the
+        // card-scoped suppression store in the next increment - it
+        // belongs here, not in AbilitiesOf.
         if (abilityIndex < 0 || abilityIndex >= card.Abilities.Count || card.Abilities[abilityIndex].Trigger != TriggerKind.Global)
             throw new InvalidOperationException($"Card '{cardId}' has no Global ability at index {abilityIndex}.");
 
@@ -396,6 +408,7 @@ public static class TurnEngine
                 // still needs this reset once it actually leaves for good.
                 die.Damage = 0;
                 die.GrantedTags.Clear();
+                die.GrantedAbilities.Clear();
                 die.CombatFlags.Clear();
             }
         }
@@ -429,6 +442,9 @@ public static class TurnEngine
             die.GrantedTags.RemoveAll(t =>
                 t.Duration == Duration.EndOfTurn ||
                 (t.Duration == Duration.UntilYourNextTurn && t.GrantedDuringPlayerId != endingPlayerId));
+            die.GrantedAbilities.RemoveAll(a =>
+                a.Duration == Duration.EndOfTurn ||
+                (a.Duration == Duration.UntilYourNextTurn && a.GrantedDuringPlayerId != endingPlayerId));
             die.CombatFlags.Clear();
         }
 

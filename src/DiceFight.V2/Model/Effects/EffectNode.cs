@@ -74,6 +74,15 @@ public sealed record ModifyStat(
 
 public sealed record GrantTag(TargetFilter Target, IReadOnlyList<string> Tags, Duration Duration = Duration.EndOfTurn) : EffectNode;
 
+// Grants a whole triggered ability to a die, rather than a tag
+// (V2_VOCABULARY.md Parts 16, 20-21 - signed off 2026-09-01). GrantTag
+// can hand a die a KEYWORD; nothing could hand it an ability until now,
+// which is what Lantern Ring needs ("that die gains: deal 1 damage to
+// target player for each matching energy in your Reserve Pool").
+//
+// The granted ability survives blanking - see GrantedAbility's remarks.
+public sealed record GrantAbility(TargetFilter Target, TriggeredAbility Ability, Duration Duration = Duration.EndOfTurn) : EffectNode;
+
 // Amount is signed - positive Fixed values gain life, negative ones lose
 // it (v1's separate GainLife/LoseLife collapsed into one shape).
 public sealed record LifeChange(Amount Amount, TargetOwnership Whose = TargetOwnership.Own) : EffectNode;

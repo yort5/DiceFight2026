@@ -36,4 +36,21 @@ public sealed record CardDef(
     string RawText,
     IReadOnlyList<TriggeredAbility> Abilities,
     IReadOnlyList<ContinuousDef> Continuous,
-    bool IsImplemented = true);
+    bool IsImplemented = true,
+    // Text that CANNOT be ignored (V2_VOCABULARY.md Part 21). 34 cards
+    // print a clause immune to blanking - King Black Bolt's "you may not
+    // use ? energy to purchase this die, this text may not be ignored",
+    // Strahd's "doesn't count as an Adventurer, this text cannot be
+    // ignored". Immunity is per CLAUSE, not per card: the rest of those
+    // cards blanks normally.
+    //
+    // Separate collections rather than an immunity flag on each ability,
+    // at the user's suggestion and because it is structurally safer: a
+    // flag is something every filtering site must remember to check,
+    // while a separate list is simply not in the blanking code path.
+    // Nothing to forget.
+    //
+    // Usually empty. Read only through QueryEngine.AbilitiesOf /
+    // ContinuousOf - never enumerate these directly.
+    IReadOnlyList<TriggeredAbility>? PermanentAbilities = null,
+    IReadOnlyList<ContinuousDef>? PermanentContinuous = null);

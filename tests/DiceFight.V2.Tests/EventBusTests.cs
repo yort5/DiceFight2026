@@ -218,4 +218,61 @@ public class EventBusTests
         Assert.Throws<InvalidOperationException>(() =>
             TurnEngine.UseGlobal(state, queue, card.Id, "p1", abilityIndex: 0, []));
     }
+
+    // --- The AbilitiesOf choke point (V2_VOCABULARY.md Parts 16, 21) ---
+
+    // A card whose ability is PERMANENT still fires. Nothing blanks it
+    // yet, so what this really pins is that the permanent list is read at
+    // all - it would be entirely inert if EventBus had kept reading
+    // card.Abilities directly, and the failure mode would be silence.
+    [Fact]
+    public void A_Permanent_Ability_Fires_Like_An_Ordinary_One()
+    {
+        var watcher = BuildCard("Watcher", "Watcher", []) with
+        {
+            PermanentAbilities = [new TriggeredAbility(TriggerKind.DieFielded, StubEffect,
+                Filter: new EventFilter(Ownership: TargetOwnership.Own, Affiliations: new TagQuery(AnyOf: ["Affil"])))],
+        };
+        var trigger = BuildCard("Trigger", "Trigger", [], affiliations: ["Affil"]);
+
+        var config = BuildTinyConfig();
+        var state = BuildState(config, watcher, trigger);
+        var watcherDie = ActiveDie(state, watcher, "p1");
+        var queue = new AbilityQueue();
+        var toField = new DieInstance { Id = "trigger-die", CardId = trigger.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.ReservePool, CurrentFaceIndex = 0 };
+        state.Dice.Add(toField);
+
+        TurnEngine.Field(state, queue, toField.Id, []);
+
+        var pending = Assert.Single(queue.Pending);
+        Assert.Equal(watcherDie.Id, pending.SourceDieId);
+    }
+
+    // Lantern Ring's shape: a die that has no such ability of its own
+    // fires one it was handed. Granted onto a SIDEKICK, which has no card
+    // at all - the case that used to be skipped outright by EventBus's
+    // cardless-die guard.
+    [Fact]
+    public void A_Granted_Ability_Fires_On_A_Die_That_Has_No_Card()
+    {
+        var trigger = BuildCard("Trigger", "Trigger", [], affiliations: ["Affil"]);
+        var config = BuildTinyConfig();
+        var state = BuildState(config, trigger);
+
+        var sidekick = new DieInstance { Id = "sk", CardId = null, OwnerId = "p1", ControllerId = "p1", Zone = Zone.FieldZone };
+        state.Dice.Add(sidekick);
+        sidekick.GrantedAbilities.Add(new GrantedAbility(
+            new TriggeredAbility(TriggerKind.DieFielded, StubEffect,
+                Filter: new EventFilter(Ownership: TargetOwnership.Own, Affiliations: new TagQuery(AnyOf: ["Affil"]))),
+            Duration.EndOfTurn));
+
+        var queue = new AbilityQueue();
+        var toField = new DieInstance { Id = "trigger-die", CardId = trigger.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.ReservePool, CurrentFaceIndex = 0 };
+        state.Dice.Add(toField);
+
+        TurnEngine.Field(state, queue, toField.Id, []);
+
+        var pending = Assert.Single(queue.Pending);
+        Assert.Equal("sk", pending.SourceDieId);
+    }
 }

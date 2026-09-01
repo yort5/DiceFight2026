@@ -95,6 +95,31 @@ public class ContinuousRegistryTests
         Assert.Equal(3, QueryEngine.GetPurchaseCost(state, target, "p2")); // not the granter's own controller
     }
 
+    // --- PermanentContinuous (V2_VOCABULARY.md Part 21) ---
+
+    // The continuous half of the permanent/blankable split. Nothing
+    // blanks it yet, so what this pins is that ContinuousOf reads the
+    // permanent list at all - a permanent aura that never registers would
+    // be silently inert, and every one of the 34 immune clauses is
+    // exactly this shape (King Black Bolt's purchase restriction,
+    // Strahd's "doesn't count as an Adventurer").
+    [Fact]
+    public void A_PermanentContinuous_Aura_Registers_Like_An_Ordinary_One()
+    {
+        var source = BuildCard("Source", [Level1Char]) with
+        {
+            PermanentContinuous = [new TagAura(
+                new TargetFilter(Kind: TargetKind.AnyDie, Ownership: TargetOwnership.Own, Tags: new TagQuery(AnyOf: ["sidekick"])),
+                ["Swarm"])],
+        };
+        var state = BuildState(source);
+        AddDie(state, source, "p1", Zone.FieldZone, 0);
+        var sidekick = new DieInstance { Id = "sk", OwnerId = "p1", ControllerId = "p1", Zone = Zone.FieldZone, CurrentFaceIndex = null };
+        state.Dice.Add(sidekick);
+
+        Assert.Contains("Swarm", QueryEngine.GetTags(state, sidekick));
+    }
+
     // --- TagAura ---
 
     [Fact]

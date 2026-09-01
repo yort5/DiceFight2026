@@ -33,7 +33,7 @@ public static class ContinuousRegistry
     {
         foreach (var card in state.CardCatalog.Values)
         {
-            foreach (var def in card.Continuous)
+            foreach (var def in QueryEngine.ContinuousOf(card))
                 Register(state, card, def);
         }
     }
