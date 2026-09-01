@@ -592,3 +592,62 @@ field - it needs the roster to exist as queryable state first).
 | DPS053 | Supreme Intelligence | "A card with Kree IN ITS NAME" is a substring match; Tags carry the exact printed name only | Ask |
 | DPS038 | Lilandra (Politician) | "If you have purchased a CHARACTER die this turn" - `TurnFact.PurchasedThisTurn` has no character-only variant; approximating would also fire off a Basic Action purchase | Ask |
 | DPS044 | Moira (It's Not a Dream) | Continuous Action die mechanic, still not modeled | Ask |
+
+## DPS catalog batch 8 (V2_PLAN.md Phase 8 task 4, 2026-09-01)
+
+16 cards: 5 full, 3 partial, 8 tailed. The notable finding this batch
+isn't a missing predicate - it's THREE cases of a vocabulary shape that
+was signed off, sometimes even NAMED for the exact card that needed it,
+but never actually wired to a real action anywhere in the engine. Each
+was caught by building the real card, not by inspection:
+
+- **`CombatRuleKind.CantFieldMore`** (Gambit "I Like Solitaire") - declared
+  in the closed vocabulary, no consumer anywhere; `TurnEngine.Field`
+  never checks it.
+- **`EventFilter.Stat` on `DieKOd`** (Deathbird "Usurper" - the
+  vocabulary's OWN canonical worked example for this exact shape,
+  `Common.cs`'s own remarks name the card) - `KoDie` moves the die to
+  the Prep Area BEFORE firing the event, so the stat check reads a
+  dormant die's reset value (0), never the KO'd die's real one.
+  Reordering isn't free either: `TargetWasKOd` and other reactive logic
+  depend on the KO'd die already sitting in the Prep Area by the time
+  abilities resolve.
+- **`CostKind.ActionDieUse`** (Lilandra "Freedom Fighter" - `Finding 14`'s
+  own named motivating example) - registered into `GameState.
+  ActionDieUseCostModifiers` by `ContinuousRegistry`, but nothing reads
+  that list, and `TurnEngine.UseAction` has no cost-charging step at
+  all (using an Action die is free today - there is no base cost to
+  surcharge in the first place).
+
+None of these are vocabulary gaps in the usual sense - the SHAPE exists
+and was signed off. They're implementation debt: a spec-level decision
+that was never carried through to a real code path. All three tailed
+rather than shipping a CostModifier/Condition/rule nothing actually
+reads. Worth a deliberate pass before the DPS sweep finishes, since
+there may be more of these hiding in already-migrated "full" cards that
+happened not to get exercised by a real test.
+
+### FULL
+
+Magik "Better than Belasco" (Awaken - roll a die from the bag), Moira
+"If It's Real" (three independent clauses, all fit), Sabretooth "Do I
+Smell... Weakness?" (`PerMatch` stat-threshold aura), Jubilee "Things
+Never Change", Iceman "Frozen Fists of Fury" (all three the same
+`CountAtLeast(Tags: [NamedCard])` "while X is active" shape, now a
+five-card-deep precedent).
+
+### PARTIAL / TAILED table
+
+| CardId | Name | What's missing | Policy |
+|---|---|---|---|
+| DPS077 | Kitty Pryde (Headmistress) | "Can't be targeted by your opponent" is unqualified - broader than `TargetingProtection`'s own `From: Global\|Action\|Both` (the ONLY targeting axis the engine checks at all; ordinary triggered-ability targeting has no protection hook). The +1A `StatAura` is migrated | Ask |
+| DPS073 | Gladiator (The Empire Must Stand) | The Global is the same "one-shot activation granting temporary continuous-shaped protection" gap Gladiator's own "Psi Resistance" printing hit. The Loyalty-Counter clause (a plain card-name Tag match) is migrated | Ask |
+| DPS061 | Blob (MGH Dependent) | Intimidate still has no Zone. The life-loss clause is migrated | Ask |
+| DPS064 | Corsair (Leading the Starjammers) | "If Corsair's A or D is increased by an effect" needs to react to "my own stat was just modified BY THIS MUCH" - no event or payload reports a stat modification happening at all | Ask |
+| DPS095 | Vulcan (Power Suppression) | "Ignore the abilities of dice blocking or blocked by Vulcan" needs a combat-ENGAGEMENT-scoped target: TargetFilter has no "currently engaged with die X" field | Ask |
+| DPS066 | D'Ken (Obsessed) | v1's own call (`isImplemented: false`) - "use an action die from either player's Used Pile" needs a mechanic v1 itself never built | Ask |
+| DPS060 | Blink (Exiles Team Leader) | "Each of your X-Men dice in the Field Zone" while Blink herself is attacking (same zone, same moment) - the TargetFilter self-exclusion gap (batch 6) | Ask |
+| DPS072 | Gambit (I Like Solitaire) | `CombatRuleKind.CantFieldMore` gap above - the Reroll half fits, but shipping it alone would let a player exploit the missing enforcement | Ask |
+| DPS093 | Supreme Intelligence (Psionic Collective) | Intimidate still has no Zone. Keywords (`Intimidate`, `Overcrush`) are still recorded - Overcrush is engine-native and works regardless | Ask |
+| DPS069 | Deathbird (Usurper) | `DieKOd`/`EventFilter.Stat` timing gap above | Ask |
+| DPS078 | Lilandra (Freedom Fighter) | `CostKind.ActionDieUse` gap above | Ask |

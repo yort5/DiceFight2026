@@ -29,12 +29,17 @@ PROGRESS.**
   (14 cards: 8 full, 6 tailed - two more new gaps, TargetFilter can't
   exclude the source die from its own pool, and a continuous template
   can't grant a benefit to its own source before that source is active),
-  and batch 7 (17 cards: 7 full, 3 partial, 7 tailed - the catalog's
-  first two real Awaken cards, a fourth new gap (no team-roster concept
-  at all), and a real migration-helper limitation fixed along the way -
-  character dice had no way to print a burst face) all on 2026-09-01.
+  batch 7 (17 cards: 7 full, 3 partial, 7 tailed - the catalog's first
+  two real Awaken cards, a fourth new gap (no team-roster concept at
+  all), and a real migration-helper limitation fixed along the way -
+  character dice had no way to print a burst face), and batch 8 (16
+  cards: 5 full, 3 partial, 8 tailed - not a new missing predicate this
+  time, but THREE cases of a signed-off vocabulary shape never actually
+  wired to a real action: `CombatRuleKind.CantFieldMore`, `EventFilter.
+  Stat` on `DieKOd`, and `CostKind.ActionDieUse` all exist in the model
+  but nothing in the engine consumes them) all on 2026-09-01.
   See `V2_TAIL_POLICY.md` for all of them.
-  **97 of v1's 145 curated DPS cards migrated, 48 to go.**
+  **113 of v1's 145 curated DPS cards migrated, 32 to go.**
   (A 67th card, Domino "Not Really A Party Girl" (XFO010), was also
   migrated the same day, but sits outside this count entirely - `BonusCards.cs`,
   a one-off from the bulk catalog, not v1's curated 145.)
@@ -1202,4 +1207,35 @@ not proposed.
 Verified: `dotnet build DiceFight.slnx` clean; v2 tests 271/271 (13
 new); v1's full suite re-run untouched, 580/580. Status header above
 updated; batches 1-7 total 97/145 DPS cards (98 incl. Domino, tracked
+separately).
+
+**Phase 8 progress note (2026-09-01, task 4 batch 8)**: 16 cards, 5
+full, 3 partial, 8 tailed. Different shape of finding than batches 5-7's
+new predicates: three cases this time of a vocabulary shape that was
+signed off - one of them, `CostKind.ActionDieUse`, literally NAMED for
+the card that needed it (Lilandra "Freedom Fighter," Finding 14) - but
+never wired to a real action anywhere in the engine:
+
+- `CombatRuleKind.CantFieldMore` (Gambit "I Like Solitaire") has no
+  consumer; `TurnEngine.Field` never checks it.
+- `EventFilter.Stat` on `DieKOd` (Deathbird "Usurper" - the vocabulary's
+  own canonical worked example for this shape) can't actually see the
+  KO'd die's stats: `KoDie` moves the die to the Prep Area BEFORE firing
+  the event, and a dormant die's stats read as 0. Reordering isn't free -
+  `TargetWasKOd` and other reactive logic depend on the KO'd die already
+  being in the Prep Area by the time abilities resolve.
+- `CostKind.ActionDieUse` (Lilandra) is registered into `GameState.
+  ActionDieUseCostModifiers` by `ContinuousRegistry`, but nothing reads
+  that list, and `TurnEngine.UseAction` has no cost-charging step at all
+  - using an Action die is free today, so there's no base cost to
+  surcharge yet.
+
+All three tailed rather than shipping something nothing actually
+enforces. Worth a deliberate audit pass at some point - since these were
+each caught by building the one real card that exercised them, there
+may be more of the same hiding in cards already marked "full."
+
+Verified: `dotnet build DiceFight.slnx` clean; v2 tests 280/280 (9 new);
+v1's full suite re-run untouched, 580/580. Status header above updated;
+batches 1-8 total 113/145 DPS cards (114 incl. Domino, tracked
 separately).

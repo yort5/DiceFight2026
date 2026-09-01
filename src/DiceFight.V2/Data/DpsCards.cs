@@ -574,6 +574,11 @@ public static class DpsCards
         GladiatorPsiResistance, MystiqueRelentless, DarkPhoenixMalevolent, DeadpoolDraftPick,
         WolverinePureOfHeart, ForgeMoreThanFirepower, SupremeIntelligence, LilandraPolitician,
         MoiraItsNotADream,
+        // Batch 8.
+        MagikBetterThanBelasco, MoiraIfItsReal, SabretoothDoISmellWeakness, JubileeThingsNeverChange,
+        IcemanFrozenFistsOfFury, LilandraFreedomFighter, KittyPrydeHeadmistress, GladiatorTheEmpireMustStand,
+        BlobMGHDependent, CorsairLeadingTheStarjammers, VulcanPowerSuppression, DKenObsessed,
+        BlinkExilesTeamLeader, GambitILikeSolitaire, SupremeIntelligencePsionicCollective, DeathbirdUsurper,
     ];
 
     // --- Batch 3 (2026-09-01) ---
@@ -1774,5 +1779,247 @@ public static class DpsCards
         DieLimit: 3, Affiliations: ["X-Men"], Keywords: [],
         RawText: "While Moira is active, when an opponent fields a Continuous Action die, reroll it. If it " +
                  "lands on an action face, they may field it normally. Otherwise, send it to the Used Pile.",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    // --- Batch 8 (2026-09-01) ---
+    //
+    // A real bug found this batch, before it could ship silently:
+    // Deathbird "Usurper" is the vocabulary's OWN canonical worked
+    // example for EventFilter.Stat on DieKOd ("when you KO an opposing
+    // die with 3D or greater" - Common.cs's own remarks cite this exact
+    // card). Building it for real found that it can never fire.
+    // `EffectInterpreter.KoDie` moves the die to the Prep Area BEFORE
+    // firing DieKOd, and a dormant die's Defense reads as 0
+    // (`GetBaseDefense`'s own `?? 0`) - so `Stat: StatThreshold(Defense,
+    // Min:3)` checked against the event's subject die can never see the
+    // value it needs, no matter how tough the KO'd die was. Reordering
+    // (fire-then-move) isn't a free fix either - `TargetWasKOd`/other
+    // reactive logic relies on the KO'd die ALREADY being in the Prep
+    // Area by the time abilities resolve (Phase 5's own documented
+    // rule). Needs either a captured-at-KO-time value or a different
+    // check point - a real design question, not attempted here. Tailed;
+    // flagged prominently since it affects the vocabulary's own
+    // motivating example, not just this one card.
+
+    public static readonly CardDef MagikBetterThanBelasco = new(
+        Id: "DPS080", Name: "Magik", Subtitle: "Better than Belasco", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 4, EnergySymbolIds: ["Mask"],
+        Die: MigrationDice.Character("DPS080Die", "Mask", (0, 1, 4), (0, 1, 6), (1, 2, 7)),
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: ["Awaken"],
+        RawText: "Awaken Roll a die from your bag.",
+        Abilities: [new TriggeredAbility(TriggerKind.DieFaceChanged, new DrawToZone(1, Zone.ReservePool, Zone.Bag),
+            Filter: new EventFilter(LevelIncreased: true, RequireSelf: true))],
+        Continuous: []);
+
+    public static readonly CardDef MoiraIfItsReal = new(
+        Id: "DPS084", Name: "Moira", Subtitle: "If It's Real", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 3, EnergySymbolIds: ["Shield"],
+        Die: MigrationDice.Character("DPS084Die", "Shield", (0, 0, 1), (0, 1, 2), (1, 2, 2)),
+        DieLimit: 3, Affiliations: ["X-Men"], Keywords: [],
+        RawText: "While Wolverine is active, Moira gets +1D. When fielded, your X-Men character dice get " +
+                 "+1A until end of turn. When Moira is KO'd, Prep a die from your Used Pile.",
+        Abilities:
+        [
+            new TriggeredAbility(TriggerKind.DieFielded,
+                new ModifyStat(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own, Affiliations: new TagQuery(AnyOf: ["X-Men"]), Count: 0), AtkDelta: 1)),
+            new TriggeredAbility(TriggerKind.DieKOd,
+                new MoveDie(new TargetFilter(Kind: TargetKind.AnyDie, Ownership: TargetOwnership.Own, Zones: [Zone.UsedPile]), Zone.PrepArea)),
+        ],
+        Continuous: [new StatAura(new TargetFilter(Self: true), DefDelta: new Fixed(1),
+            ActiveWhen: new CountAtLeast(new TargetFilter(Kind: TargetKind.AnyDie, Tags: new TagQuery(AnyOf: ["Wolverine"])), 1))]);
+
+    public static readonly CardDef SabretoothDoISmellWeakness = new(
+        Id: "DPS091", Name: "Sabretooth", Subtitle: "Do I Smell... Weakness?", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 4, EnergySymbolIds: ["Fist"],
+        Die: MigrationDice.Character("DPS091Die", "Fist", (1, 3, 3), (1, 4, 4), (2, 5, 4)),
+        DieLimit: 4, Affiliations: ["Brotherhood of Mutants"], Keywords: [],
+        RawText: "Sabretooth gets +1A for each opposing character die with 2D or less.",
+        Abilities: [],
+        Continuous: [new StatAura(new TargetFilter(Self: true),
+            AtkDelta: new PerMatch(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Opposing, Stat: new StatThreshold(StatKind.Defense, Max: 2)), 1))]);
+
+    public static readonly CardDef JubileeThingsNeverChange = new(
+        Id: "DPS076", Name: "Jubilee", Subtitle: "Things Never Change", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 2, EnergySymbolIds: ["Bolt"],
+        Die: MigrationDice.Character("DPS076Die", "Bolt", (0, 2, 1), (1, 3, 3), (2, 4, 3)),
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: [],
+        RawText: "While Woverine is active, Jubilee gets +1A.",
+        Abilities: [],
+        Continuous: [new StatAura(new TargetFilter(Self: true), AtkDelta: new Fixed(1),
+            ActiveWhen: new CountAtLeast(new TargetFilter(Kind: TargetKind.AnyDie, Tags: new TagQuery(AnyOf: ["Wolverine"])), 1))]);
+
+    public static readonly CardDef IcemanFrozenFistsOfFury = new(
+        Id: "DPS074", Name: "Iceman", Subtitle: "Frozen Fists of Fury", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 4, EnergySymbolIds: ["Bolt"],
+        Die: MigrationDice.Character("DPS074Die", "Bolt", (1, 2, 4), (1, 3, 6), (1, 4, 6)),
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: ["Founder"],
+        RawText: "Founder When Iceman attacks, if Wolverine is active, deal 3 damage to target character die.",
+        Abilities: [new TriggeredAbility(TriggerKind.DieAttacks, new Conditional(
+            new CountAtLeast(new TargetFilter(Kind: TargetKind.AnyDie, Tags: new TagQuery(AnyOf: ["Wolverine"])), 1),
+            Then: new DealDamage(new Fixed(3), new TargetFilter(Kind: TargetKind.CharacterDie))))],
+        Continuous: []);
+
+    public static readonly CardDef LilandraFreedomFighter = new(
+        Id: "DPS078", Name: "Lilandra", Subtitle: "Freedom Fighter", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 4, EnergySymbolIds: ["Shield"],
+        Die: MigrationDice.Character("DPS078Die", "Shield", (1, 2, 3), (2, 3, 4), (2, 4, 5)),
+        DieLimit: 4, Affiliations: ["Shi'ar"], Keywords: [],
+        RawText: "While Lilandra is active, your opponent must spend 1 to use each Action Die.",
+        // CostKind.ActionDieUse is CostModifier's own named motivating
+        // example (Finding 14) - and, found building this card for real,
+        // is registered into GameState.ActionDieUseCostModifiers by
+        // ContinuousRegistry but read by NOTHING: no query exists for it,
+        // and TurnEngine.UseAction has no cost-charging step at all
+        // (using an Action die is free today - no base cost to surcharge
+        // in the first place). A third instance this batch of the same
+        // shape as CombatRuleKind.CantFieldMore and Deathbird's own
+        // DieKOd/Stat timing gap - a vocabulary shape adopted and even
+        // named for this exact card, never actually wired to a real
+        // action. Tailed rather than building a CostModifier nothing
+        // reads.
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    // The +1A half fits. "Can't be targeted by your opponent" is
+    // unqualified - broader than TargetingProtection's own From: Global|
+    // Action|Both (which, per EffectInterpreter.ProtectionFor, is the
+    // ONLY targeting axis the engine checks at all - ordinary triggered-
+    // ability targeting has no protection check to plug into). Tailed.
+    public static readonly CardDef KittyPrydeHeadmistress = new(
+        Id: "DPS077", Name: "Kitty Pryde", Subtitle: "Headmistress", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 3, EnergySymbolIds: ["Mask"],
+        Die: MigrationDice.Character("DPS077Die", "Mask", (0, 2, 2), (0, 3, 2), (1, 3, 3)),
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: [],
+        RawText: "While Woverine is active, Kitty Pryde gets +1A and can't be targeted by your opponent.",
+        Abilities: [],
+        Continuous: [new StatAura(new TargetFilter(Self: true), AtkDelta: new Fixed(1),
+            ActiveWhen: new CountAtLeast(new TargetFilter(Kind: TargetKind.AnyDie, Tags: new TagQuery(AnyOf: ["Wolverine"])), 1))],
+        IsImplemented: false);
+
+    // The Loyalty-Counter half (a plain card-name Tag match - "Lilandra"
+    // is the exact printed name on every one of her printings, not a
+    // substring case like "Kree") fits. The Global is the exact same
+    // "one-shot activation granting a temporary continuous-shaped
+    // protection" gap Gladiator's own "Psi Resistance" printing already
+    // hit - no template grants continuous-shaped immunity from a single
+    // trigger.
+    public static readonly CardDef GladiatorTheEmpireMustStand = new(
+        Id: "DPS073", Name: "Gladiator", Subtitle: "The Empire Must Stand", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 6, EnergySymbolIds: ["Fist"],
+        Die: MigrationDice.Character("DPS073Die", "Fist", (0, 5, 5), (1, 6, 6), (0, 7, 7)),
+        DieLimit: 4, Affiliations: ["Shi'ar"], Keywords: ["Overcrush"],
+        RawText: "Overcrush When Lilandra is KO'd, put a Loyalty Counter on Gladiator's card. (Loyalty " +
+                 "Counters give character +1A and +1D.) Global: Pay Fist when you attack. Your character " +
+                 "dice can't be the target of Action Dice or Global Abilities (until the end of turn).",
+        Abilities: [new TriggeredAbility(TriggerKind.DieKOd,
+            new GrantCounter(new TargetFilter(Self: true), "Loyalty", 1),
+            Filter: new EventFilter(Tags: new TagQuery(AnyOf: ["Lilandra"])))],
+        Continuous: [],
+        IsImplemented: false);
+
+    // The life-loss half fits. Intimidate itself has no Zone still
+    // (V2_PLAN.md Phase 2's own deferral, still not built).
+    public static readonly CardDef BlobMGHDependent = new(
+        Id: "DPS061", Name: "Blob", Subtitle: "MGH Dependent", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 4, EnergySymbolIds: ["Shield"],
+        Die: MigrationDice.Character("DPS061Die", "Shield", (0, 1, 5), (1, 1, 6), (2, 1, 8)),
+        DieLimit: 4, Affiliations: ["Brotherhood of Mutants"], Keywords: ["Intimidate"],
+        RawText: "When fielded, lose 1 life. Intimidate.",
+        Abilities: [new TriggeredAbility(TriggerKind.DieFielded, new LifeChange(new Fixed(-1)))],
+        Continuous: [],
+        IsImplemented: false);
+
+    // "If Corsair's A or D is increased by an effect, mirror the amount
+    // onto a Sidekick" needs to react to "my OWN stat was just modified
+    // BY THIS MUCH" - no event or payload anywhere reports a stat
+    // modification happening, only face changes/damage/KOs/etc.
+    public static readonly CardDef CorsairLeadingTheStarjammers = new(
+        Id: "DPS064", Name: "Corsair", Subtitle: "Leading the Starjammers", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 4, EnergySymbolIds: ["Fist"],
+        Die: MigrationDice.Character("DPS064Die", "Fist", (0, 3, 4), (1, 3, 5), (1, 4, 5)),
+        DieLimit: 4, Affiliations: [], Keywords: [],
+        RawText: "If Corsair's A or D is increased by an effect, you may increase the A or D of a Sidekick " +
+                 "die you control by the same amount.",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    // "Ignore the abilities of character dice blocking or blocked by
+    // Vulcan" needs a combat-ENGAGEMENT-scoped target ("currently
+    // engaged with a specific die"), which TargetFilter has no field for
+    // (Zones/Ownership/Tags/Stat - none express "blocking/blocked-by
+    // die X specifically").
+    public static readonly CardDef VulcanPowerSuppression = new(
+        Id: "DPS095", Name: "Vulcan", Subtitle: "Power Suppression", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 5, EnergySymbolIds: ["Fist"],
+        Die: MigrationDice.Character("DPS095Die", "Fist", (0, 3, 2), (1, 4, 4), (1, 6, 5)),
+        DieLimit: 4, Affiliations: [], Keywords: [],
+        RawText: "Ignore the abilities of character dice blocking or blocked by Vulcan.",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    // v1's own call (isImplemented: false) - "you may use an action die
+    // from either player's Used Pile" needs a real "use a die you don't
+    // control, from a normally-inert zone" mechanic v1 itself never built.
+    public static readonly CardDef DKenObsessed = new(
+        Id: "DPS066", Name: "D'Ken", Subtitle: "Obsessed", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 4, EnergySymbolIds: ["Shield"],
+        Die: MigrationDice.Character("DPS066Die", "Shield", (0, 4, 4), (1, 5, 5), (2, 6, 6)),
+        DieLimit: 4, Affiliations: ["Villains", "Shi'ar"], Keywords: [],
+        RawText: "While D'Ken is active, if you take combat damage this turn you may use an action die from " +
+                 "either player's Used Pile.",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    // "Each of your X-Men character dice in the Field Zone gains
+    // Infiltrate" - Blink is herself an attacking X-Men die at the same
+    // moment as the "at least 2 OTHER" attackers being counted, sharing
+    // the Attack Zone with them - the same TargetFilter self-exclusion
+    // gap batch 6 first found (Cable "High Stakes").
+    public static readonly CardDef BlinkExilesTeamLeader = new(
+        Id: "DPS060", Name: "Blink", Subtitle: "Exiles Team Leader", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 4, EnergySymbolIds: ["Mask"],
+        Die: MigrationDice.Character("DPS060Die", "Mask", (0, 1, 3), (1, 2, 3), (1, 3, 5)),
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: [],
+        RawText: "When Blink attacks with at least 2 other X-Men character dice, each of your X-Men " +
+                 "character dice in the Field Zone gains Infiltrate.",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    // The Reroll half fits (RerollAndMoveUnlessCharacter's own shape,
+    // already established). "You may not field any more character dice
+    // this turn" names CombatRuleKind.CantFieldMore, which is declared
+    // in the closed vocabulary but has NO consumer anywhere in the
+    // engine - TurnEngine.Field never checks it. Building the Reroll
+    // half alone and silently dropping the enforcement half would let a
+    // player exploit a real rules gap (house rule: never guess wrong
+    // silently), so the whole card is tailed rather than split.
+    public static readonly CardDef GambitILikeSolitaire = new(
+        Id: "DPS072", Name: "Gambit", Subtitle: "I Like Solitaire", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 5, EnergySymbolIds: ["Mask"],
+        Die: MigrationDice.Character("DPS072Die", "Mask", (1, 1, 1), (1, 2, 2), (2, 4, 5)),
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: [],
+        RawText: "When fielded, if you have fielded no other character dice this turn, reroll all opposing " +
+                 "character dice. Move any that roll an energy face to their Used Pile. You may not field " +
+                 "any more character dice this turn.",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    // Intimidate still has no Zone. The keywords themselves (Overcrush,
+    // Intimidate) are recorded even though the ability is tailed - a
+    // printed keyword is real catalog data regardless of whether this
+    // card's own trigger can act on it, and Overcrush is engine-native
+    // (keyed off GetKeywords, no AbilityDef needed) so it still works.
+    public static readonly CardDef SupremeIntelligencePsionicCollective = new(
+        Id: "DPS093", Name: "Supreme Intelligence", Subtitle: "Psionic Collective", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 7, EnergySymbolIds: ["Mask"],
+        Die: MigrationDice.Character("DPS093Die", "Mask", (1, 4, 4), (2, 5, 6), (2, 7, 6)),
+        DieLimit: 4, Affiliations: [], Keywords: ["Intimidate", "Overcrush"],
+        RawText: "Intimidate Overcrush",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    // The vocabulary's own canonical DieKOd + EventFilter.Stat example
+    // (Common.cs's remarks name this exact card) - see this batch's own
+    // header note for why it can't actually fire as designed.
+    public static readonly CardDef DeathbirdUsurper = new(
+        Id: "DPS069", Name: "Deathbird", Subtitle: "Usurper", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 3, EnergySymbolIds: ["Shield"],
+        Die: MigrationDice.Character("DPS069Die", "Shield", (0, 1, 1), (0, 1, 2), (1, 3, 4)),
+        DieLimit: 3, Affiliations: ["Villains", "Shi'ar"], Keywords: [],
+        RawText: "While Deathbird is active, when you KO an opposing character die with 3D or greater, deal " +
+                 "3 damage to your opponent.",
         Abilities: [], Continuous: [], IsImplemented: false);
 }

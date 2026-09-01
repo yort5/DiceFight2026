@@ -10612,3 +10612,21 @@ targeting-shape fix.
 
 `dotnet build`/`dotnet test` clean: v2 271/271 (13 new), v1 580/580
 untouched. 97/145 DPS cards migrated (98 counting Domino).
+
+## v2 Phase 8 task 4: DPS batch 8 (2026-09-01)
+
+16 more DPS cards, 5 full, 3 partial, 8 tailed - 113/145 total. A
+different kind of finding than the last three batches' missing
+predicates: three cases of a vocabulary shape that was already signed
+off - `CombatRuleKind.CantFieldMore`, `EventFilter.Stat` on `DieKOd`
+(the vocabulary's own canonical example, built for Deathbird "Usurper"),
+and `CostKind.ActionDieUse` (literally named for Lilandra "Freedom
+Fighter" when it was adopted) - but never actually wired to a real
+action anywhere in the engine. Each was caught only by building the one
+real card that exercised it; none showed up in any earlier test. All
+three tailed rather than shipping a modifier or condition nothing reads.
+Worth a deliberate audit at some point, since there's no reason to think
+these are the only three.
+
+`dotnet build`/`dotnet test` clean: v2 280/280 (9 new), v1 580/580
+untouched. 113/145 DPS cards migrated (114 counting Domino).

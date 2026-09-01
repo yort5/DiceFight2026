@@ -1591,4 +1591,144 @@ public class DpsCardsTests
         TurnEngine.Purchase(state, queue, toBuy.Id, Energy(state, "p1", 1)); // 3 - 2 = 1
         Assert.Equal(Zone.UsedPile, toBuy.Zone); // default purchase destination (no GoesToZone override)
     }
+
+    // --- Batch 8 (2026-09-01) ---
+
+    [Fact]
+    public void MagikBetterThanBelasco_Rolls_A_Die_From_The_Bag_When_She_Awakens()
+    {
+        var state = NewGame();
+        var magik = Active(state, DpsCards.MagikBetterThanBelasco, "p1", level: 1);
+        Sidekick(state, "p1", Zone.Bag, null, "bag0");
+        var queue = new AbilityQueue();
+        var before = state.DiceIn("p1", Zone.ReservePool).Count();
+        var faces = state.GetDieDefinition(magik).Faces;
+
+        EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieFaceChanged, magik, "p1", state.CurrentStepId,
+            new DieFaceChangedPayload(faces[FirstLevelFace], faces[FirstLevelFace + 1], FaceChangeCause.Spin)));
+        Drain(state, queue);
+
+        Assert.Equal(before + 1, state.DiceIn("p1", Zone.ReservePool).Count());
+    }
+
+    [Fact]
+    public void MoiraIfItsReal_Gets_Plus_1_Defense_Only_While_A_Wolverine_Die_Is_Active()
+    {
+        var state = NewGame();
+        var moira = Active(state, DpsCards.MoiraIfItsReal, "p1");
+        var baseline = QueryEngine.GetDefense(state, moira);
+
+        Active(state, DpsCards.WolverineHardenedByMadripoor, "p1", id: "logan");
+
+        Assert.Equal(baseline + 1, QueryEngine.GetDefense(state, moira));
+    }
+
+    [Fact]
+    public void MoiraIfItsReal_Buffs_All_Own_XMen_Dice_When_Fielded_And_Preps_On_Her_Own_KO()
+    {
+        var state = NewGame();
+        var moira = Ready(state, DpsCards.MoiraIfItsReal, "p1", 1);
+        var ally = Active(state, DpsCards.PsylockeTelepath, "p1", id: "ally"); // X-Men
+        var notXMen = Active(state, DpsCards.MagnetoFounderOfTheBrotherhood, "p1", id: "notXMen");
+        var allyBaseline = QueryEngine.GetAttack(state, ally);
+        var notXMenBaseline = QueryEngine.GetAttack(state, notXMen);
+        var queue = new AbilityQueue();
+
+        TurnEngine.Field(state, queue, moira.Id, []); // level 1 fielding cost 0
+        Drain(state, queue);
+
+        Assert.Equal(allyBaseline + 1, QueryEngine.GetAttack(state, ally));
+        Assert.Equal(notXMenBaseline, QueryEngine.GetAttack(state, notXMen)); // untouched - not X-Men
+
+        var dormant = new Model.DieInstance { Id = "dormant", CardId = DpsCards.PowerBolt.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.UsedPile };
+        state.Dice.Add(dormant);
+        EffectInterpreter.KoDie(state, queue, moira, triggersKOAbilities: true);
+        Drain(state, queue);
+        Answer(state, "dormant");
+
+        Assert.Equal(Zone.PrepArea, dormant.Zone);
+    }
+
+    [Fact]
+    public void SabretoothDoISmellWeakness_Gets_Plus_1_Attack_Per_Opposing_Weak_Defense_Die()
+    {
+        var state = NewGame();
+        var sabretooth = Active(state, DpsCards.SabretoothDoISmellWeakness, "p1");
+        var baseline = QueryEngine.GetAttack(state, sabretooth);
+        Active(state, DpsCards.PsylockeTelepath, "p2", level: 1, id: "weak1"); // 2D
+        Active(state, DpsCards.PsylockeTelepath, "p2", level: 2, id: "weak2"); // 2D
+        Active(state, DpsCards.RonanTheAccuserTreason, "p2", level: 1, id: "tough"); // 5D
+
+        Assert.Equal(baseline + 2, QueryEngine.GetAttack(state, sabretooth));
+    }
+
+    [Fact]
+    public void JubileeThingsNeverChange_Gets_Plus_1_Attack_Only_While_A_Wolverine_Die_Is_Active()
+    {
+        var state = NewGame();
+        var jubilee = Active(state, DpsCards.JubileeThingsNeverChange, "p1");
+        var baseline = QueryEngine.GetAttack(state, jubilee);
+
+        Active(state, DpsCards.WolverineHardenedByMadripoor, "p2", id: "logan"); // either side counts
+
+        Assert.Equal(baseline + 1, QueryEngine.GetAttack(state, jubilee));
+    }
+
+    [Fact]
+    public void IcemanFrozenFistsOfFury_Deals_3_Only_While_A_Wolverine_Die_Is_Active()
+    {
+        var state = NewGame();
+        var iceman = Active(state, DpsCards.IcemanFrozenFistsOfFury, "p1");
+        var target = Active(state, DpsCards.MagnetoFounderOfTheBrotherhood, "p2", level: 3, id: "target"); // 8D
+        var queue = new AbilityQueue();
+
+        EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieAttacks, iceman, "p1", state.CurrentStepId));
+        Drain(state, queue);
+        Assert.Equal(0, target.Damage); // no Wolverine active yet
+
+        Active(state, DpsCards.WolverineHardenedByMadripoor, "p1", id: "logan");
+        EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieAttacks, iceman, "p1", state.CurrentStepId));
+        Drain(state, queue);
+        Answer(state, "target");
+        Assert.Equal(3, target.Damage);
+    }
+
+    [Fact]
+    public void KittyPrydeHeadmistress_Gets_Plus_1_Attack_Only_While_A_Wolverine_Die_Is_Active()
+    {
+        var state = NewGame();
+        var kitty = Active(state, DpsCards.KittyPrydeHeadmistress, "p1");
+        var baseline = QueryEngine.GetAttack(state, kitty);
+
+        Active(state, DpsCards.WolverineHardenedByMadripoor, "p1", id: "logan");
+
+        Assert.Equal(baseline + 1, QueryEngine.GetAttack(state, kitty));
+    }
+
+    [Fact]
+    public void GladiatorTheEmpireMustStand_Gains_A_Loyalty_Counter_When_A_Lilandra_Die_Is_KOd()
+    {
+        var state = NewGame();
+        var gladiator = Active(state, DpsCards.GladiatorTheEmpireMustStand, "p1");
+        var lilandra = Active(state, DpsCards.LilandraFreedomFighter, "p1", id: "lilandra");
+        var queue = new AbilityQueue();
+
+        EffectInterpreter.KoDie(state, queue, lilandra, triggersKOAbilities: true);
+        Drain(state, queue);
+
+        Assert.Equal(1, state.Counters[("p1", DpsCards.GladiatorTheEmpireMustStand.Id, "Loyalty")]);
+    }
+
+    [Fact]
+    public void BlobMGHDependent_Loses_1_Life_When_Fielded()
+    {
+        var state = NewGame();
+        var blob = Ready(state, DpsCards.BlobMGHDependent, "p1", 1);
+        var queue = new AbilityQueue();
+
+        TurnEngine.Field(state, queue, blob.Id, []); // level 1 fielding cost 0
+        Drain(state, queue);
+
+        Assert.Equal(19, state.PlayerOne.Life);
+    }
 }
