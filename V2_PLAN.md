@@ -284,9 +284,14 @@ amount; DieFaceChanged carries {PriorFace, NewFace, Cause: Roll |
 Reroll | Spin | Effect} and MUST be emitted from every face-mutation
 site — roll, reroll, ability spin, energy-face spin — v1's CheckAwaken
 funnel is the precedent; a skipped site is the silently-never-fires
-bug class). Energize/Awaken are EventFilters over DieFaceChanged
-(double-energy NewFace during Roll & Reroll; character-level increase
-with any Cause, respectively), not distinct trigger kinds.
+bug class). Awaken is an EventFilter over DieFaceChanged (a
+character-level increase, any Cause) - built 2026-09-01 as
+`EventFilter.LevelIncreased`.
+
+**Energize is NOT**, despite this plan having said so until 2026-09-01;
+see V2_TAIL_POLICY.md's "Energize is a step boundary" note for why a
+DieFaceChanged filter cannot express it. Neither is a distinct trigger
+kind either way.
 
 A card trigger = (EventKind, EventFilter, Ability).
 EventFilter = { Ownership (relative to listener), TagFilter?,

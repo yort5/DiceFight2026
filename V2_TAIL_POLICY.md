@@ -318,3 +318,55 @@ back to Basic-only fails four tests, widening `IsCommunity` fails three.
 **Epic Basic Action is deliberately not modelled** (user's call). When it
 is, it is a subset of Basic Action and must therefore answer true to BOTH
 `IsActionDie` and `IsCommunity`.
+
+### NEXT UP: Energize is a step boundary, not a face change (2026-09-01)
+
+15 remaining DPS cards need Energize, and it is now unblocked — the
+migrated dice have real double-energy faces to fire on, and their energy
+actually pays. Before anyone builds it, one correction, because
+`V2_PLAN.md` asserted the wrong shape for a week and it is an easy
+mistake to repeat.
+
+v1's own definition (`Enums.cs`, `TriggerType.Energize`):
+
+> "Fires once, **after Roll and Reroll completes**, for any
+> Energize-keyword die that **ended up** on a double-energy face. Not
+> checked against the initial roll — a die rerolled off double energy
+> never triggers it, but a die left alone on a double-energy face does,
+> once the reroll window closes."
+
+**So it cannot be an `EventFilter` over `DieFaceChanged`**, which is what
+the plan claimed. Three cases show why:
+
+| Case | DieFaceChanged filter | Correct |
+|---|---|---|
+| Rolls double energy, then rerolled away | fires (on the roll) | must NOT fire |
+| Rolls double energy, left alone | fires (on the roll) | fires — but at window close, not at the roll |
+| **Already on double energy, never rerolled** | **never fires — no face change happened** | **must fire** |
+
+The third is decisive: `DieFaceChanged` needs a change, and this die has
+none. Energize is a **check over current state at a step boundary**, the
+same shape as "at the end of your turn" cards.
+
+**Likely shape**, not yet signed off:
+
+- `TriggerKind.TurnStepEntered` with `Step` set to whatever follows Roll
+  and Reroll (`StepIds.Main`), so it fires once the window has closed.
+  The listener is the die itself, which `EventBus.Fire` already scans
+  per-die.
+- Plus a condition "this die is on an energy face showing 2+ pips".
+  Nothing expresses that today: `OnFaceKind` distinguishes energy from
+  character but not single from double. `Face.SymbolCount` exists and is
+  what the condition would read. This is the one real vocabulary
+  addition — probably a `MinSymbolCount` on `OnFaceKind`, or a new
+  `StatKind` so the existing `StatThreshold` machinery covers it. The
+  second is likely better: it reuses a shape rather than adding one, and
+  `StatThreshold` already appears on both `TargetFilter` and
+  `EventFilter`.
+- Check the zone question flagged at `V2_PLAN.md`'s Phase 5 notes: v1's
+  `CheckEnergize` has no zone gate, so a die in the Prep Area mid-roll
+  can trigger. Decide deliberately rather than inheriting it.
+
+The MSW020 Black Panther row above is the same gap, filed earlier from
+the other direction ("`EventFilter`/`Condition` have no symbol-count
+check"). Both close together.
