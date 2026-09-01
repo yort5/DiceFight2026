@@ -20,11 +20,16 @@ migration) IN PROGRESS.**
   the `AbilitiesOf`/`ContinuousOf` choke point, `AbilityBlank`, and
   `Lockout` are all live. Affiliation-as-first-class (Parts 17-18, 22)
   landed the same day.
-- **Task 4** (DPS catalog batches) - IN PROGRESS. Four batches landed:
+- **Task 4** (DPS catalog batches) - IN PROGRESS. Five batches landed:
   batches 1-2 on 2026-08-24, batch 3 (10 migrated, 3 partial, 1 tailed -
-  D'Ken/Mister Sinister, the two cards Spike A was built for) and batch 4
-  (all 15 Energize cards, 13 full + 2 partial) both on 2026-09-01.
-  **54 of v1's 145 curated DPS cards migrated, 91 to go.**
+  D'Ken/Mister Sinister, the two cards Spike A was built for), batch 4
+  (all 15 Energize cards, 13 full + 2 partial), and batch 5 (12 cards: 4
+  full, 4 partial, 4 tailed - see `V2_TAIL_POLICY.md` for a new gap this
+  one surfaced, affiliation-granting) all on 2026-09-01.
+  **66 of v1's 145 curated DPS cards migrated, 79 to go.**
+  (A 67th card, Domino "Not Really A Party Girl" (XFO010), was also
+  migrated the same day, but sits outside this count entirely - `BonusCards.cs`,
+  a one-off from the bulk catalog, not v1's curated 145.)
 - **Task 5** (catalog-wide invariant tests) - not started.
 
 The previous version of this header (refreshed 2026-08-31) said Spike A
@@ -1060,3 +1065,40 @@ Verified: `dotnet build DiceFight.slnx` clean; v2 tests 233/233 (19 new:
 5 generic Energize plumbing in `EnergizeTests.cs`, 14 per-card in
 `DpsCardsTests.cs`); v1's full suite re-run untouched, 580/580. Status
 header above updated; batches 1-4 total 54/145 DPS cards.
+
+**Phase 8 progress note (2026-09-01, task 4 batch 5)**: also same-day,
+after a user-requested one-off (Domino "Not Really A Party Girl", XFO010
+- `BonusCards.cs`, new file, deliberately kept out of the DPS count since
+she was never in v1's curated set). 12 more DPS cards: 4 full
+(`MutantResearchProgram`, `CorsairRecruitingACrew`, `EmmaFrostManipulative`,
+`BeastFirstClass`), 4 partial, 4 tailed outright (`V2_TAIL_POLICY.md` has
+the per-card table).
+
+Two real findings, both documented at their own site rather than here:
+`DrawToZone`'s destination zone decides "rolled" vs. not (Part 1's own
+wording) - a card literally printing "draw AND ROLL" needs `Zone.
+ReservePool`, not the `Zone.PrepArea` this session initially reached for
+by pattern-matching the more common "Prep a die from your bag" phrasing;
+caught before commit by checking Groot's (MSW031) own "roll 2 dice from
+your bag" precedent, not by a failing test. And a real, batch-spanning
+vocabulary gap: `GetAffiliations` has no grant fold-in at all (unlike
+`GetTags`), so nothing can express "gains [Affiliation]" any more since
+the affiliation-first-class split - found independently on two different
+cards (Radicalization, Emma Frost "Influential"), which is what makes it
+a real gap rather than a one-off. Not fixed here (needs sign-off); tailed
+and flagged clearly so a third card doesn't get silently mis-approximated.
+
+One card-selection bug worth a general note: a DealDamage test built
+against a target whose Defense exactly equalled the damage dealt (3 into
+3D) KO'd the target instead of just marking damage - `TryResolveKO`
+treats damage >= defense as lethal, and a KO'd die's own `Damage` resets
+to 0 on leaving the field (rule 3.4.5.4's zone-transition reset), which
+made the test's own damage assertion read as "0, unapplied" instead of
+"3, then KO'd." Not an engine bug - a reminder for future test-writing:
+pick damage-assertion targets with headroom above the damage dealt,
+unless the KO is the point.
+
+Verified: `dotnet build DiceFight.slnx` clean; v2 tests 243/243 (10 new:
+2 Domino, 8 batch 5); v1's full suite re-run untouched, 580/580. Status
+header above updated; batches 1-5 total 66/145 DPS cards (67 incl.
+Domino, tracked separately).

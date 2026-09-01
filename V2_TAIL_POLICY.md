@@ -419,3 +419,58 @@ above. 13 fully migrated, 2 partial (both `IsImplemented: false`).
 |---|---|---|---|
 | DPS114 | Iceman (Mr Ice Guy) | The Energize clause ("double target character die's printed A until end of turn") needs a delta equal to a LIVE bound die's own stat - `ModifyStat`'s `AtkDelta`/`DefDelta` are plain `int`, and `SetAttack`'s `StatOf` would only echo the same value back (a no-op), not double it. The continuous half ("your Sidekick dice get +1A while active") is migrated | Ask |
 | DPS047 | Professor X (Dreamer) | The WhenFielded clause ("if you spend an X-Men die to field Professor X, Prep a die from your bag") needs payment-source visibility - same family as the group `V2_PLAN.md`'s Appendix A addendum already designated alter-or-skip (Bishop x2, Forge, this card). The Energize clause is migrated (same shape as Professor X "Uncanny Leadership"'s identical text) | Ask |
+
+## DPS catalog batch 5 (V2_PLAN.md Phase 8 task 4, 2026-09-01)
+
+12 cards: 4 full, 4 partial, 4 tailed outright. First batch to hit the
+affiliation-first-class split's own blind spot - see the new gap below,
+found via two different cards independently.
+
+### NEW GAP: nothing can GRANT an affiliation any more
+
+`GetAffiliations` reads only `CardDef.Affiliations`, with no fold-in of
+anything granted - unlike `GetTags`, which folds in `DieInstance.
+GrantedTags` and every active `TagAura`. Before the affiliation-first-
+class split (Parts 17-18, 22) this worked by accident, because
+affiliations were just tags and `GrantTag` covered both. Two cards this
+batch print "gains [Affiliation]" independently (Radicalization's Global,
+Emma Frost "Influential"'s Sidekick clause) - not a single-card miss.
+The fix shape is presumably a `TagAura`-equivalent for affiliations (or
+widening `TagAura`/`GrantTag` to also touch affiliations, which is a
+question the tag/affiliation split was explicitly built to prevent) - a
+vocabulary question, needs sign-off, not attempted here. Both clauses
+below are tailed against it; watch for a third card before proposing a
+shape.
+
+### NEW GAP (investigated, not migrated this batch): Continuous Basic Action mechanics
+
+Lab Test (DPS005), Organic Steel "Prevent Damage" (DPS010), and Dampening
+Collar (DPS002) are all "Continuous" Basic Actions (rule 1.2.3/2.6.4.2) -
+an Action die that sits in the Field Zone granting an ongoing effect
+rather than resolving once and leaving. `V2_PLAN.md`'s Phase 8 batch-1
+note already flagged `CardType` has no Epic/Continuous distinction yet;
+these three are exactly the cards that would exercise it. Also missing:
+`TriggerType.ContinuousResolve` (the "send this die to your Used Pile to
+[effect]" trigger, not one of the 11 frozen `TriggerKind`s) and a
+one-shot `PreventDamage` template (Organic Steel's own clause - no
+existing template reduces/prevents a SPECIFIC upcoming damage instance,
+as opposed to `DamageModifier`'s continuous reduction). Not attempted -
+recorded so a future session doesn't re-derive it from scratch.
+
+### PARTIAL: clauses migrated minus one
+
+| CardId | Name | What it needs | Policy |
+|---|---|---|---|
+| DPS016 | Tight Ranks | The WhenUsed clause ("at least 3 active dice that share A Team Affiliation") is existential over affiliations - CountAtLeast can only ask "at least N of a NAMED affiliation," not "some affiliation repeats 3+ times." The Global (Counter-threshold ModifyStat) is migrated | Ask |
+| DPS012 | Radicalization | The Global ("target character die gains X-Men or Brotherhood of Mutants") is this batch's affiliation-grant gap. The DealDamage + double-burst Ko half is migrated | Ask |
+| DPS062 | Cable (Bosom Buddies) | The purchase-discount half ("your Deadpool costs 1 less") needs a continuous discount scoped to ONE NAMED CARD - `CostModifier.Whose` is player-scoped for `Purchase`/`GlobalEnergy` (Jean Grey "Xavier's Dream" precedent), with no card-identity field the way the one-shot `PurchaseModifier.CardKind` has. The +2A `StatAura` (card-name tag) is migrated | Ask |
+| DPS030 | Emma Frost (Influential) | "...and gain the Hellfire Club affiliation" is this batch's affiliation-grant gap. The +1A/+1D Sidekick `StatAura` is migrated | Ask |
+
+### TAILED: not attempted
+
+| CardId | Name | What it needs | Policy |
+|---|---|---|---|
+| DPS019 | Bishop (Tortured Timeline) | "Opposing effects can't cause Bishop to be rerolled or spun" protects against specific EFFECT TYPES regardless of whether they target at all - a different axis than `TargetingProtection`'s targeting-by-source-type block. No shape in the frozen vocabulary reaches it | Ask |
+| DPS059 | Bishop (I'm Back) | Payment-source visibility - one of the "2 Bishop" cards `V2_PLAN.md`'s Appendix A addendum already named | Ask |
+| DPS071 | Forge (Support Technician) | The purchase surcharge is qualified by the PURCHASED CARD's own cost ("2 or less") - the same card-identity gap Cable "Bosom Buddies" hits, via a threshold instead of a name. Dropping the threshold would silently surcharge every purchase, a real behavior change, not a stated approximation (house rule: never guess wrong silently) | Ask |
+| DPS004 | Greetings from Krakoa | "Each of your dice that spins up gets +2A" is conditioned on whether THAT SPECIFIC die's own spin actually moved it - a per-die outcome-conditioned bonus no template composition reaches (`Spin` has no "and a bonus for whichever ones actually changed" companion) | Ask |

@@ -559,6 +559,10 @@ public static class DpsCards
         RogueStrengthAbsorption, PsylockeHeiress, JubileeRebelliousNature, MystiqueTaughtByMagneto,
         WolverineHardenedByMadripoor, IcemanMrIceGuy, ProfessorXDreamer, AngelWingsOverTheWorld,
         CableIllDoThisAllDay, ColossusSkilledPainter, ToadLookingForComradery,
+        // Batch 5.
+        MutantResearchProgram, TightRanks, Radicalization, CorsairRecruitingACrew,
+        EmmaFrostManipulative, CableBosomBuddies, BeastFirstClass, EmmaFrostInfluential,
+        BishopTorturedTimeline, BishopImBack, ForgeSupportTechnician, GreetingsFromKrakoa,
     ];
 
     // --- Batch 3 (2026-09-01) ---
@@ -1016,4 +1020,213 @@ public static class DpsCards
         Abilities: [Energize(new MayPay(Cost: null, Then: new Spin(
             new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own, Zones: [Zone.ReservePool]), SetLevel: 1)))],
         Continuous: []);
+
+    // --- Batch 5 (2026-09-01) ---
+    //
+    // First batch since the affiliation-first-class split (Parts 17-18,
+    // 22) to hit cards that GRANT an affiliation rather than just READ
+    // one - and it doesn't work. `GrantTag` only ever touched
+    // `DieInstance.GrantedTags`, which `QueryEngine.GetTags` folds in;
+    // `GetAffiliations` reads ONLY `CardDef.Affiliations` with no grant
+    // fold-in at all, unlike Tags. Two cards below need exactly this
+    // (Radicalization's Global, Emma Frost "Influential"'s Sidekick
+    // clause) - both tailed, not silently no-op'd. Flagged in
+    // `V2_TAIL_POLICY.md` as a real gap the split left open, not
+    // single-card misses.
+
+    public static readonly CardDef MutantResearchProgram = new(
+        Id: "DPS008", Name: "Mutant Research Program", Subtitle: "Basic Action", Set: "DPS", CardType: CardType.BasicAction,
+        PurchaseCost: 2, EnergySymbolIds: [],
+        Die: MigrationDice.BasicAction("DPS008Die"),
+        DieLimit: 3, Affiliations: [], Keywords: [],
+        RawText: "If you have at least 2 active Founder character dice, draw and roll 3 dice. Otherwise, " +
+                 "draw and roll a die.",
+        // ReservePool, not PrepArea - "draw AND ROLL" lands rolled
+        // (Groot's own "roll 2 dice from your bag" precedent), unlike the
+        // "Prep a die from your bag" family elsewhere in this file.
+        Abilities: [new TriggeredAbility(TriggerKind.DieUsed, new Conditional(
+            new CountAtLeast(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own, Tags: new TagQuery(AnyOf: ["Founder"])), 2),
+            Then: new DrawToZone(3, Zone.ReservePool, Zone.Bag),
+            Else: new DrawToZone(1, Zone.ReservePool, Zone.Bag)))],
+        Continuous: []);
+
+    // The Global half fits (Counter is a real Stat kind, Finding 13). The
+    // WhenUsed half needs "at least 3 active dice that share ANY ONE
+    // affiliation" - an EXISTENTIAL over affiliations, not "at least 3 of
+    // a fixed affiliation" - CountAtLeast has no way to ask "does some
+    // value repeat 3+ times across the pool" rather than "does a NAMED
+    // value occur 3+ times". Tailed.
+    public static readonly CardDef TightRanks = new(
+        Id: "DPS016", Name: "Tight Ranks", Subtitle: "Basic Action", Set: "DPS", CardType: CardType.BasicAction,
+        PurchaseCost: 3, EnergySymbolIds: [],
+        Die: MigrationDice.BasicAction("DPS016Die"),
+        DieLimit: 3, Affiliations: [], Keywords: [],
+        RawText: "If you have at least 3 active character dice that share a Team Affiliation, KO target " +
+                 "character die. Global: Pay Shield. Target character die with at least one Loyalty Counter " +
+                 "gets -2A and -2D.",
+        Abilities: [new TriggeredAbility(TriggerKind.Global,
+            new ModifyStat(
+                new TargetFilter(Kind: TargetKind.CharacterDie, Stat: new StatThreshold(StatKind.Counter, CounterName: "Loyalty", Min: 1)),
+                AtkDelta: -2, DefDelta: -2),
+            EnergyCost: new EnergyCost(1, "Shield"))],
+        Continuous: [],
+        IsImplemented: false);
+
+    // The DealDamage/Ko-on-double-burst half fits. The Global
+    // ("gains X-Men or Brotherhood of Mutants") is the affiliation-grant
+    // gap this batch's own header note describes - tailed.
+    public static readonly CardDef Radicalization = new(
+        Id: "DPS012", Name: "Radicalization", Subtitle: "Basic Action", Set: "DPS", CardType: CardType.BasicAction,
+        PurchaseCost: 3, EnergySymbolIds: [],
+        Die: MigrationDice.BasicAction("DPS012Die", 0, 0, 2),
+        DieLimit: 3, Affiliations: [], Keywords: [],
+        RawText: "Deal 3 damage to target X-Men or Brotherhood of Mutants character die. **Also, KO target " +
+                 "Sidekick character die. Global: Pay Shield. Target character die gains X-Men or Brotherhood " +
+                 "of Mutants (until end of turn).",
+        Abilities: [new TriggeredAbility(TriggerKind.DieUsed, new Sequence(
+        [
+            new DealDamage(new Fixed(3), new TargetFilter(Kind: TargetKind.CharacterDie, Affiliations: new TagQuery(AnyOf: ["X-Men", "Brotherhood of Mutants"]))),
+            new Conditional(new OnBurstFace(BurstLevel.Double),
+                Then: new Ko(new TargetFilter(Kind: TargetKind.CharacterDie, Tags: new TagQuery(AnyOf: ["sidekick"])))),
+        ]))],
+        Continuous: [],
+        IsImplemented: false);
+
+    public static readonly CardDef CorsairRecruitingACrew = new(
+        Id: "DPS024", Name: "Corsair", Subtitle: "Recruiting a Crew", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 4, EnergySymbolIds: ["Fist"],
+        Die: MigrationDice.Character("DPS024Die", "Fist", (0, 3, 4), (1, 3, 5), (1, 4, 5)),
+        DieLimit: 4, Affiliations: [], Keywords: [],
+        RawText: "When fielded, place the next die you purchase this turn into your bag.",
+        // Delta: 0 - only the destination-override half of PurchaseModifier
+        // is in play (the one-shot, per-controller "next purchase" queue,
+        // Phase 5's own note).
+        Abilities: [new TriggeredAbility(TriggerKind.DieFielded, new PurchaseModifier(Delta: 0, GoesToZone: Zone.Bag))],
+        Continuous: []);
+
+    // "Opponent's Attack Step" is just Ownership: Opposing on the SAME
+    // TurnStepEntered + Step: SelectAttackers shape Colossus "Piotr"
+    // already uses for "the end of YOUR turn" (Ownership: Own) - Spike
+    // C's own precedent, flipped.
+    public static readonly CardDef EmmaFrostManipulative = new(
+        Id: "DPS070", Name: "Emma Frost", Subtitle: "Manipulative", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 5, EnergySymbolIds: ["Shield"],
+        Die: MigrationDice.Character("DPS070Die", "Shield", (1, 3, 5), (1, 4, 6), (2, 5, 7)),
+        DieLimit: 4, Affiliations: ["Hellfire Club"], Keywords: [],
+        RawText: "While Emma Frost is active, at the start of your opponent's Attack Step, reroll target " +
+                 "character die they control.",
+        Abilities: [new TriggeredAbility(TriggerKind.TurnStepEntered,
+            new Reroll(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Opposing)),
+            Filter: new EventFilter(Ownership: TargetOwnership.Opposing, Step: StepIds.SelectAttackers))],
+        Continuous: []);
+
+    // The +2A half is a plain StatAura keyed on the card-name tag
+    // ("Wolverine character die" precedent, Sabretooth "Am I
+    // Interrupting?"). The purchase-discount half needs a CONTINUOUS
+    // discount scoped to ONE NAMED CARD, not a payer - CostModifier's
+    // `Whose` is player-scoped for Purchase/GlobalEnergy (Part 2's own
+    // Jean Grey example) with no card-identity field at all, unlike the
+    // one-shot `PurchaseModifier`'s `CardKind?`. Tailed.
+    public static readonly CardDef CableBosomBuddies = new(
+        Id: "DPS062", Name: "Cable", Subtitle: "Bosom Buddies", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 4, EnergySymbolIds: ["Bolt"],
+        Die: MigrationDice.Character("DPS062Die", "Bolt", (1, 3, 2), (2, 3, 3), (2, 5, 5)),
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: [],
+        RawText: "While Cable is active, your Deadpool costs 1 less to purchase (to a minimum of 1) and has +2A.",
+        Abilities: [],
+        Continuous: [new StatAura(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own, Tags: new TagQuery(AnyOf: ["Deadpool"])), AtkDelta: new Fixed(2))],
+        IsImplemented: false);
+
+    // ExcludeSelf: true - "a character die with Founder attacks" reads as
+    // ANOTHER die in v1's own trigger choice (WhenAnotherDieAttacks), the
+    // exact shape Cyclops "First Class" already established for the
+    // identical Founder-attacks pattern.
+    public static readonly CardDef BeastFirstClass = new(
+        Id: "DPS058", Name: "Beast", Subtitle: "First Class", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 3, EnergySymbolIds: ["Fist"],
+        Die: MigrationDice.Character("DPS058Die", "Fist", (0, 2, 1), (1, 2, 2), (1, 3, 2)),
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: ["Founder"],
+        RawText: "Founder While Beast is active, when a character die with Founder attacks, Prep a die from " +
+                 "your bag.",
+        Abilities: [new TriggeredAbility(TriggerKind.DieAttacks, new DrawToZone(1, Zone.PrepArea, Zone.Bag),
+            Filter: new EventFilter(Ownership: TargetOwnership.Own, Tags: new TagQuery(AnyOf: ["Founder"]), ExcludeSelf: true))],
+        Continuous: []);
+
+    // The +1A/+1D-to-Sidekicks half is StatAura (Iceman "Mr Ice Guy"'s
+    // own precedent). "...and gain the Hellfire Club affiliation" is this
+    // batch's affiliation-grant gap - tailed.
+    public static readonly CardDef EmmaFrostInfluential = new(
+        Id: "DPS030", Name: "Emma Frost", Subtitle: "Influential", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 4, EnergySymbolIds: ["Shield"],
+        Die: MigrationDice.Character("DPS030Die", "Shield", (1, 3, 5), (1, 4, 6), (2, 5, 7)),
+        DieLimit: 4, Affiliations: ["Hellfire Club"], Keywords: [],
+        RawText: "While Emma Frost is active, your Sidekick dice get +1A and +1D, and gain the Hellfire Club " +
+                 "affiliation.",
+        Abilities: [],
+        Continuous: [new StatAura(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own, Tags: new TagQuery(AnyOf: ["sidekick"])), AtkDelta: new Fixed(1), DefDelta: new Fixed(1))],
+        IsImplemented: false);
+
+    // "Can't be rerolled/spun by OPPOSING effects" is a protection
+    // against specific EFFECT TYPES (Reroll, Spin), not against being
+    // TARGETED at all - `TargetingProtection`'s `From: Global|Action|
+    // Both` blocks targeting by ability SOURCE, which is a different
+    // axis entirely (Bishop can still be targeted by Reroll/Spin from the
+    // controller's OWN effects, and the protection has to survive even
+    // when the effect doesn't target at all - Reroll's own TargetFilter
+    // sometimes IS a choice). No shape in the frozen vocabulary reaches
+    // this. Tailed outright.
+    public static readonly CardDef BishopTorturedTimeline = new(
+        Id: "DPS019", Name: "Bishop", Subtitle: "Tortured Timeline", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 4, EnergySymbolIds: ["Shield"],
+        Die: MigrationDice.Character("DPS019Die", "Shield", (1, 2, 5), (1, 3, 6), (2, 5, 6)),
+        DieLimit: 3, Affiliations: ["X-Men"], Keywords: [],
+        RawText: "Opposing effects can't cause Bishop to be rerolled, or cause you to spin a Bishop die up " +
+                 "or down.",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    // The payment-source visibility gap (V2_PLAN.md's Appendix A
+    // addendum: "2 Bishop, Forge, Professor X") - this is one of the two
+    // Bishops. "If you spend THIS DIE as energy to field a character
+    // die" needs to know what an energy payment was spent ON, which no
+    // event payload carries.
+    public static readonly CardDef BishopImBack = new(
+        Id: "DPS059", Name: "Bishop", Subtitle: "I'm Back", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 4, EnergySymbolIds: ["Shield"],
+        Die: MigrationDice.Character("DPS059Die", "Shield", (1, 2, 5), (1, 3, 6), (2, 5, 6)),
+        DieLimit: 3, Affiliations: ["X-Men"], Keywords: [],
+        RawText: "If you spend this die as energy to field a character die, add this die to your Prep Area.",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    // The surcharge is qualified by the PURCHASED CARD's own cost
+    // ("2 or less") - the same card-identity gap CableBosomBuddies hits,
+    // just via a threshold instead of a name. Dropping the threshold
+    // would silently surcharge every purchase, not just cheap ones - a
+    // real behavior change, not a stated approximation (house rule:
+    // never guess a wrong approximation silently). Tailed outright.
+    public static readonly CardDef ForgeSupportTechnician = new(
+        Id: "DPS071", Name: "Forge", Subtitle: "Support Technician", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 4, EnergySymbolIds: ["Bolt"],
+        Die: MigrationDice.Character("DPS071Die", "Bolt", (1, 2, 2), (1, 4, 2), (2, 4, 4)),
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: [],
+        RawText: "While Forge is active, your opponents must pay 1 more to purchase a die with purchase cost " +
+                 "of 2 or less.",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    // "Each of your dice that spins up gets +2A" is conditioned on
+    // whether THAT SPECIFIC die's own spin actually moved it (a die
+    // already at its max level, spun "up", doesn't move and shouldn't
+    // get the bonus) - a per-die outcome-conditioned bonus bolted onto a
+    // multi-die Spin, which no template composition reaches (Spin has no
+    // "and a bonus for whichever ones actually changed" companion, and
+    // Sequence/Conditional operate on the whole clause, not per resolved
+    // die). v1 needed a dedicated primitive for exactly this
+    // (AttackBonusPerActualSpinUp) for the same reason. Tailed outright.
+    public static readonly CardDef GreetingsFromKrakoa = new(
+        Id: "DPS004", Name: "Greetings from Krakoa", Subtitle: "Basic Action", Set: "DPS", CardType: CardType.BasicAction,
+        PurchaseCost: 3, EnergySymbolIds: [],
+        Die: MigrationDice.BasicAction("DPS004Die"),
+        DieLimit: 3, Affiliations: [], Keywords: [],
+        RawText: "Spin up each character whose card has a Loyalty Counter. Each of your dice that spins up " +
+                 "gets +2A.",
+        Abilities: [], Continuous: [], IsImplemented: false);
 }

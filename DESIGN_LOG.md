@@ -10502,3 +10502,31 @@ Full account: `V2_VOCABULARY_HISTORY.md` Part 29, `V2_TAIL_POLICY.md`'s
 own Energize/batch-4 entries, `V2_PLAN.md`'s status header and Phase 8
 progress note. `dotnet build`/`dotnet test` clean: v2 233/233 (19 new),
 v1 580/580 untouched.
+
+## v2: Domino (a one-off) and DPS batch 5 (2026-09-01)
+
+Same session, two more pieces of work. First, a user-requested favorite -
+Domino "Not Really A Party Girl" (XFO010), trivial once Energize existed.
+New `BonusCards.cs` rather than folding her into `DpsCards.cs`, since
+she's from the bulk catalog, not v1's curated 145-card DPS set, and
+mixing her in would have quietly inflated that count.
+
+Then back to the DPS sweep proper: batch 5, 12 cards (4 full, 4 partial,
+4 tailed). Surfaced a real, batch-spanning gap - `QueryEngine.
+GetAffiliations` never got a grant fold-in when affiliations split off
+from tags (Parts 17-18, 22), so nothing can express "gains [Affiliation]"
+any more. Found on two independent cards (Radicalization, Emma Frost
+"Influential"), which is what makes it a real gap rather than one card's
+bad luck - tailed both, not fixed (needs sign-off). Also caught a
+destination-zone mistake before it shipped (draw-AND-ROLL needs
+`Zone.ReservePool`, not the more common `Zone.PrepArea` "Prep a die from
+your bag" pattern) by checking an existing precedent, not by a failing
+test - and one AFTER a failing test: a DealDamage test picked a target
+whose Defense exactly matched the damage dealt, which KO's the target and
+resets its own Damage to 0, making "0 damage" and "3 damage then KO'd"
+look identical from the assertion's side.
+
+Full account: `V2_PLAN.md`'s Phase 8 progress notes, `V2_TAIL_POLICY.md`'s
+batch-5 entries. `dotnet build`/`dotnet test` clean: v2 243/243 (10 new),
+v1 580/580 untouched. 66/145 DPS cards migrated (67 counting Domino,
+tracked separately).

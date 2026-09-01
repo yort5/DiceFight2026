@@ -1061,4 +1061,146 @@ public class DpsCardsTests
 
         Assert.Equal(1, state.GetCurrentFace(target)!.Character!.Level);
     }
+
+    // --- Batch 5 (2026-09-01) ---
+
+    [Fact]
+    public void MutantResearchProgram_Draws_And_Rolls_3_With_2_Active_Founders_Else_1()
+    {
+        foreach (var (founderCount, expectedDraws) in new[] { (2, 3), (1, 1) })
+        {
+            var state = NewGame();
+            for (var i = 0; i < founderCount; i++)
+                Active(state, DpsCards.BeastCombatReady, "p1", id: $"founder{i}"); // printed Founder keyword
+            var card = Ready(state, DpsCards.MutantResearchProgram, "p1", 0);
+            var queue = new AbilityQueue();
+            // Excluding the action card's own die, which UseAction moves
+            // to Out of Play immediately (before it can be double-counted).
+            var before = state.DiceIn("p1", Zone.ReservePool).Count(d => d.Id != card.Id);
+
+            TurnEngine.UseAction(state, queue, card.Id);
+            Drain(state, queue);
+
+            Assert.Equal(before + expectedDraws, state.DiceIn("p1", Zone.ReservePool).Count(d => d.Id != card.Id));
+        }
+    }
+
+    [Fact]
+    public void TightRanks_Global_Weakens_A_Loyalty_Countered_Die()
+    {
+        var state = NewGame();
+        var target = Active(state, DpsCards.RonanTheAccuserTreason, "p1", level: 1, id: "target"); // 5A/5D
+        state.Counters[("p1", DpsCards.RonanTheAccuserTreason.Id, "Loyalty")] = 1;
+        Sidekick(state, "p1", Zone.ReservePool, 5, "shield-energy"); // face 5 = Shield
+        var queue = new AbilityQueue();
+
+        TurnEngine.UseGlobal(state, queue, DpsCards.TightRanks.Id, "p1", abilityIndex: 0, ["shield-energy"]);
+        Drain(state, queue);
+        Answer(state, "target");
+
+        Assert.Equal(3, QueryEngine.GetAttack(state, target));
+        Assert.Equal(3, QueryEngine.GetDefense(state, target));
+    }
+
+    [Fact]
+    public void Radicalization_Deals_3_To_An_XMen_Or_Brotherhood_Die_And_KOs_A_Sidekick_On_Double_Burst()
+    {
+        var state = NewGame();
+        // Level 3 (6A/8D) so 3 damage doesn't KO it outright - a KO'd die
+        // resets its own Damage back to 0 on leaving the field, which
+        // would make the damage assertion below vacuous.
+        var target = Active(state, DpsCards.MagnetoFounderOfTheBrotherhood, "p2", level: 3, id: "target"); // Brotherhood of Mutants
+        var sidekick = Sidekick(state, "p2", Zone.FieldZone, 0, "sk");
+        var card = Ready(state, DpsCards.Radicalization, "p1", 2); // face index 2 = the double-burst action face
+        var queue = new AbilityQueue();
+
+        TurnEngine.UseAction(state, queue, card.Id);
+        Drain(state, queue);
+        Answer(state, "target"); // no-op if both clauses had a single candidate and auto-resolved
+
+        Assert.Equal(3, target.Damage);
+        Assert.Equal(Zone.PrepArea, sidekick.Zone); // KO'd
+    }
+
+    [Fact]
+    public void CorsairRecruitingACrew_Sends_Its_Controllers_Next_Purchase_To_The_Bag()
+    {
+        var state = NewGame();
+        var corsair = Ready(state, DpsCards.CorsairRecruitingACrew, "p1", 1);
+        var queue = new AbilityQueue();
+
+        TurnEngine.Field(state, queue, corsair.Id, []);
+        Drain(state, queue);
+
+        // NewGame() doesn't seed a team's Unpurchased pool (no
+        // TeamCardIds set) - MisterSinister's own catalog test builds one
+        // by hand the same way.
+        var toBuy = new Model.DieInstance { Id = "unbought", CardId = DpsCards.PowerBolt.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.Unpurchased };
+        state.Dice.Add(toBuy);
+        TurnEngine.Purchase(state, queue, toBuy.Id, Energy(state, "p1", 3)); // PowerBolt costs 3, no type required
+
+        Assert.Equal(Zone.Bag, toBuy.Zone);
+    }
+
+    [Fact]
+    public void EmmaFrostManipulative_Rerolls_On_The_Opponents_Attack_Step_Not_Her_Own()
+    {
+        var state = NewGame();
+        Active(state, DpsCards.EmmaFrostManipulative, "p1");
+        var opposing = Active(state, DpsCards.PsylockeTelepath, "p2", level: 2, id: "opposing");
+        var queue = new AbilityQueue();
+
+        // p1's own attack step - must NOT fire.
+        EventBus.Fire(state, queue, new GameEvent(TriggerKind.TurnStepEntered, null, "p1", StepIds.SelectAttackers));
+        Drain(state, queue);
+        Assert.Equal(FirstLevelFace + 1, opposing.CurrentFaceIndex); // unchanged
+
+        // p2's (the opponent's) attack step - must fire.
+        EventBus.Fire(state, queue, new GameEvent(TriggerKind.TurnStepEntered, null, "p2", StepIds.SelectAttackers));
+        Drain(state, queue);
+        Assert.Equal(0, opposing.CurrentFaceIndex);
+    }
+
+    [Fact]
+    public void CableBosomBuddies_Gives_A_Deadpool_Die_Plus_2_Attack()
+    {
+        var state = NewGame();
+        var deadpool = Active(state, DpsCards.DeadpoolCollectThis, "p1", id: "dp");
+        var baseline = QueryEngine.GetAttack(state, deadpool);
+
+        Active(state, DpsCards.CableBosomBuddies, "p1");
+
+        Assert.Equal(baseline + 2, QueryEngine.GetAttack(state, deadpool));
+    }
+
+    [Fact]
+    public void BeastFirstClass_Preps_A_Die_When_ANOTHER_Founder_Die_Attacks_Not_Its_Own()
+    {
+        var state = NewGame();
+        Active(state, DpsCards.BeastFirstClass, "p1", id: "beast");
+        // IcemanMrIceGuy, not BeastCombatReady - the latter carries its
+        // OWN "when this attacks, Prep a die" ability, which would also
+        // fire from the same DieAttacks event and double the Prep count.
+        var founder = Active(state, DpsCards.IcemanMrIceGuy, "p1", id: "other-founder");
+        var queue = new AbilityQueue();
+
+        EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieAttacks, founder, "p1", state.CurrentStepId));
+        Drain(state, queue);
+
+        Assert.Single(state.DiceIn("p1", Zone.PrepArea));
+    }
+
+    [Fact]
+    public void EmmaFrostInfluential_Gives_Sidekicks_Plus_1_Attack_And_Plus_1_Defense()
+    {
+        var state = NewGame();
+        var sidekick = Sidekick(state, "p1", Zone.FieldZone, 0, "sk");
+        var baselineAtk = QueryEngine.GetAttack(state, sidekick);
+        var baselineDef = QueryEngine.GetDefense(state, sidekick);
+
+        Active(state, DpsCards.EmmaFrostInfluential, "p1");
+
+        Assert.Equal(baselineAtk + 1, QueryEngine.GetAttack(state, sidekick));
+        Assert.Equal(baselineDef + 1, QueryEngine.GetDefense(state, sidekick));
+    }
 }
