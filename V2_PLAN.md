@@ -55,12 +55,17 @@ more "declared but unwired" vocabulary shapes is IN PROGRESS.**
   (XFO010), was migrated on 2026-09-01 too - `BonusCards.cs`, a one-off
   from the bulk catalog, not v1's curated 145.)
 - **Task 5** (catalog-wide invariant tests) - not started.
-- **Audit pass** (2026-09-01, requested after Task 4 closed) - a
-  deliberate sweep over already-migrated full/partial cards looking for
-  more "declared but unwired" vocabulary shapes, the pattern batch 8
-  first surfaced (`CombatRuleKind.CantFieldMore`, `EventFilter.Stat` on
-  `DieKOd`, `CostKind.ActionDieUse`) - each was only caught because one
-  specific card happened to exercise it. IN PROGRESS.
+- **Audit pass** (2026-09-01, requested after Task 4 closed) -
+  **COMPLETE.** Checked every declared enum value/field in
+  `V2_VOCABULARY.md` for a real engine-code consumer (not just a
+  card-data SET), not waiting for a card to expose the gap. One new
+  finding: `CombatRuleKind.CantSpinUp` is declared, was validated as a
+  clean fit for Dampening Collar (DPS002) during Phase 0, but has zero
+  consumer in `ExecuteSpin`/`ExecuteSpinToEnergy` - same shape as
+  `CantFieldMore`. No card currently needs it fixed (Dampening Collar
+  tails for an unrelated reason, the Continuous Basic Action gap).
+  Everything else checked out wired. See `V2_TAIL_POLICY.md`'s
+  "Post-Task-4 audit" section for the full method and results.
 
 The previous version of this header (refreshed 2026-08-31) said Spike A
 was signed off but not implemented, and put the DPS count at 29/145; both

@@ -10672,6 +10672,28 @@ the test choose two explicit, distinct dice.
 
 `dotnet build`/`dotnet test` clean: v2 300/300 (20 new), v1 Engine
 580/580, API 10/10 - all untouched otherwise. **145/145 DPS cards
-migrated - Phase 8 Task 4 is complete.** Next up, per the user: an
-audit pass over already-migrated cards for more "declared but unwired"
-vocabulary shapes, the pattern batch 8 first surfaced.
+migrated - Phase 8 Task 4 is complete.**
+
+## Post-Task-4 vocabulary audit (2026-09-01)
+
+Per the user's request, swept every declared shape in `V2_VOCABULARY.md`
+for a real engine-code consumer, rather than waiting on the next card
+that happens to expose a gap the way batch 8's three findings did.
+Checked all `EventFilter` fields, all `TargetKind`/`CombatFlagKind`/
+`DamageModifierMode`/`DamageSource`/`StatKind`/`SuppressionKind`/
+`ProtectionFrom` values, all 7 Condition kinds, all 4 Amount kinds, both
+Duration expiry paths, all 21 effect templates (including confirming
+`GrantCounter`'s counters and `RememberCard`'s memory both get read
+back later, not just written), and all `CombatRuleKind`/`CostKind`
+values.
+
+One new finding: `CombatRuleKind.CantSpinUp` is declared and was
+validated as a clean fit for Dampening Collar (DPS002) back at Phase 0
+(`V2_VOCABULARY_HISTORY.md` Part 11, finding #47), but has zero
+consumer in `EffectInterpreter`'s `ExecuteSpin`/`ExecuteSpinToEnergy` -
+the same shape as `CantFieldMore`. No card needs it fixed today -
+Dampening Collar tails for an unrelated reason (the Continuous Basic
+Action mechanic still isn't modeled at all), so the clause was never
+reached. Filed in `V2_TAIL_POLICY.md`, not fixed, same call as
+`CantFieldMore`. Everything else checked out already wired - no other
+findings.

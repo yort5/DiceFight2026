@@ -715,3 +715,56 @@ Dream".
 | DPS139 | Corsair (Back from Outer Space) | KO-count-this-turn gap above - `NoKOsThisTurn` is boolean only | Ask |
 
 **Phase 8 Task 4 is now COMPLETE: 145/145 DPS cards migrated.**
+
+## Post-Task-4 audit: "declared but unwired" vocabulary shapes (2026-09-01)
+
+Following batch 8's discovery of three signed-off vocabulary shapes with
+no real consumer (`CombatRuleKind.CantFieldMore`, `EventFilter.Stat` on
+`DieKOd`, `CostKind.ActionDieUse`), the user asked for a deliberate
+sweep of the rest of the vocabulary for the same pattern, rather than
+waiting for the next card that happens to exercise one.
+
+Method: for every declared enum value / field in `V2_VOCABULARY.md`,
+grep for a real READ in engine code (`TurnEngine.cs`,
+`EffectInterpreter.cs`, `CombatEngine.cs`, `ContinuousRegistry.cs`,
+`EventBus.cs`, `QueryEngine.cs`, `TargetResolver.cs`,
+`AmountResolver.cs`, `ConditionEvaluator.cs`) - not just a SET
+(card-data or model declaration). Checked and confirmed WIRED: all 11
+`EventFilter` fields, all 6 `TargetKind` values, all 6
+`CombatFlagKind` values, all 5 `DamageModifierMode` values + all 3
+`DamageSource` values, 3 of 4 `CombatRuleKind` values, 3 of 4
+`CostKind` values, all 7 `StatKind` values, all 7 Condition kinds
+(incl. all 3 `TurnFactKind` values), all 3 `SuppressionKind` values,
+all 3 `ProtectionFrom` values (deliberately scoped to
+`Global`/`DieUsed` triggers only, rule 3.8), all 4 Amount kinds, both
+Duration expiry paths (`EndOfTurn`, `UntilYourNextTurn`'s
+one-more-Clean-Up survival), and all 21 effect templates (each has a
+real `EffectInterpreter` dispatch case) including confirming
+`GrantCounter`'s counters are actually read back by `StatKind.Counter`
+and `RememberCard`'s memory is actually read back by `Lockout`.
+
+### NEW FINDING: `CombatRuleKind.CantSpinUp` — declared, validated as a fit, never wired
+
+`ContinuousDef.cs:34` declares it; `V2_VOCABULARY_HISTORY.md` Part 11
+(finding #47) validated it against Dampening Collar (DPS002) during
+Phase 0 as a clean **Fit** - `CombatRule(CantSpinUp, Opposing)` "matches
+the table directly." But `CombatEngine.cs`'s `ExecuteSpin`/
+`ExecuteSpinToEnergy` (in `EffectInterpreter.cs`) never check
+`state.CombatRules` for it at all - unlike `MinBlockers`/`BlocksN`,
+which both have a real `Validate*` consumer in `CombatEngine.cs` and a
+real card exercising each (Magneto "Visionary" DPS081, Blob "Immovable"
+DPS family). And no card in the catalog ever actually sets it: when
+Dampening Collar (DPS002) was built for real in batch 9, the whole card
+tailed for an unrelated, orthogonal reason - the Continuous Basic
+Action mechanic (rule 1.2.3/2.6.4.2) isn't modeled at all - so the
+`CantSpinUp` clause was never even reached. Same shape as
+`CantFieldMore`: a real consumer needs to be added to
+`ExecuteSpin`/`ExecuteSpinToEnergy` (reject/no-op a spin targeting a
+die a `CantSpinUp` rule covers) before any future card can safely rely
+on it. Filed here rather than fixed - no card currently needs it fixed
+today, same call as `CantFieldMore`.
+
+No other new gaps found. `DiceFromBag`/`DiceFromPrep` (the two `Zone`
+values with zero consumers) were re-confirmed as already-known,
+already-documented (`TurnEngine.cs`'s own comment, `V2_PLAN.md`'s Rip
+Hunter note) rather than a new finding.
