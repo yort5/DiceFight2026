@@ -761,7 +761,11 @@ public static class DpsCards
     // current face, since the trigger itself fires for every candidate
     // die regardless of face. StatKind.SymbolCount is the one real
     // vocabulary addition this needed (user-signed-off).
-    private static TriggeredAbility Energize(EffectNode effect) => new(
+    //
+    // internal, not private - BonusCards.cs (Domino "Not Really A Party
+    // Girl", an out-of-scope one-off) reuses this same canonical shape
+    // rather than re-deriving it.
+    internal static TriggeredAbility Energize(EffectNode effect) => new(
         TriggerKind.TurnStepEntered,
         new Conditional(
             new CountAtLeast(new TargetFilter(Self: true, Stat: new StatThreshold(StatKind.SymbolCount, Min: 2)), 1),
