@@ -147,3 +147,13 @@ public sealed record DrawAndChooseOne(int Count, TargetOwnership PlayerTarget, Z
 // Finding 13 - counters live on the resolved target's own CARD (see
 // GameState's counter store, V2_PLAN.md Phase 2 task 1), not the die.
 public sealed record GrantCounter(TargetFilter Target, string CounterName, int Amount) : EffectNode;
+
+// "Choose an opposing [character] card, replacing all previous choices."
+// The memory Blob, Drax, Shriek "Sonic Beam" and Typhoid Mary all share -
+// a chosen card that a continuous template then reads back.
+//
+// Keyed (player, source card, name) like GameState.Counters, which gives
+// "replacing all previous choices" for free: a second Blob fielded by the
+// same player overwrites the first player's choice rather than stacking,
+// which is what the text says happens.
+public sealed record RememberCard(TargetFilter Target, string MemoryName) : EffectNode;

@@ -58,6 +58,10 @@ public static class ContinuousRegistry
                 break;
 
             case TagAura n: state.TagAuras.Add(new TagAuraModifier(card, n)); break;
+
+            case AbilityBlank n: state.AbilityBlanks.Add(new AbilityBlankModifier(card, n)); break;
+
+            case Lockout n: state.Lockouts.Add(new LockoutModifier(card, n)); break;
             case CombatRule n: state.CombatRules.Add(new CombatRuleModifier(card, n)); break;
             case DamageModifier n: state.DamageInterceptors.Add(new DamageModifierInstance(card, n)); break;
             case TargetingProtection n: state.TargetingInterceptors.Add(new TargetingProtectionInterceptor(card, n)); break;
@@ -143,6 +147,61 @@ public static class ContinuousRegistry
             QualifyingSources(state, card, def.ActiveWhen, def.Target, die.Id).Any();
 
         public IReadOnlyList<string> GetTags(GameState state, DieInstance die) => def.Tags;
+    }
+
+    // --- AbilityBlank ---
+
+    private sealed class AbilityBlankModifier(CardDef card, AbilityBlank def) : IAbilityBlankModifier
+    {
+        public bool AppliesTo(GameState state, DieInstance die) =>
+            // BlankSafeSources, not QualifyingSources: asking whether this
+            // blank's own source is itself blanked must not consult
+            // continuous blanks, or the question evaluates itself. See
+            // QueryEngine.AbilitiesActiveBase.
+            BlankSafeSources(state, card, def.ActiveWhen, def.Target, die.Id).Any();
+    }
+
+    private static IEnumerable<DieInstance> BlankSafeSources(
+        GameState state, CardDef card, Condition? activeWhen, TargetFilter filter, string candidateId) =>
+        state.Dice
+            .Where(d => d.CardId == card.Id
+                && d.Zone is Zone.FieldZone or Zone.AttackZone
+                && QueryEngine.AbilitiesActiveBase(state, d))
+            .Where(src => SourceQualifies(state, src, activeWhen, filter, candidateId));
+
+    // --- Lockout ---
+
+    private sealed class LockoutModifier(CardDef card, Lockout def) : ILockoutModifier
+    {
+        public bool Applies(GameState state, string playerId, string cardId, SuppressionKind kind)
+        {
+            if (def.Kind != kind) return false;
+
+            foreach (var source in ActiveSourceDice(state, card))
+            {
+                // It is the SOURCE's opponent who is locked out, so a Blob
+                // on the other side of the table locks nothing of yours.
+                if (state.OpponentOf(source.ControllerId) != playerId) continue;
+
+                if (def.ActiveWhen is not null
+                    && !ConditionEvaluator.Evaluate(state, source.ControllerId, def.ActiveWhen, Bindings(source), includeContinuous: false))
+                {
+                    continue;
+                }
+
+                // A card named outright (Magneto's Professor X clause), or
+                // one chosen when fielded and read back from the memory.
+                var locked = def.CardId
+                    ?? (def.MemoryName is { } name
+                        && state.Memories.TryGetValue((source.ControllerId, card.Id, name), out var chosen)
+                        ? chosen
+                        : null);
+
+                if (locked == cardId) return true;
+            }
+
+            return false;
+        }
     }
 
     // --- CombatRule (no consumer yet - Phase 7) ---

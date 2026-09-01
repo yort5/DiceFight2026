@@ -3437,3 +3437,85 @@ missed the point of the card.
   enforced, but nothing writes `CantPurchase`/`CantField` yet.
 - **`RememberCard`** - the "choose an opposing card, replacing all
   previous choices" memory both families share.
+
+---
+
+## Part 25 — Spike A, increment 3: the continuous half. SPIKE COMPLETE (2026-09-01)
+
+`AbilityBlank`, `Lockout` and `RememberCard`. With these, Spike A is
+built.
+
+### The recursion, which is real in the rules and not just the code
+
+A continuous blank's own source die has to be checked for blanking before
+it can blank anything — v1 answers "does a blanked die's continuous text
+switch off" with yes, and Phase 8 task 3 asked for that answer
+explicitly. But if that check consulted continuous blanks in turn, D'Ken
+asking "am I blanked" would evaluate D'Ken.
+
+**Two mutually-blanking dice are a genuine paradox in Dice Masters, not
+an artifact of this implementation.** The engine resolves one level and
+stops, via `QueryEngine.AbilitiesActiveBase` — blanking from the *stored*
+suppressions only. So:
+
+- a die blanked by a **one-shot** effect grants no continuous blank;
+- a die blanked by another **continuous** blank still does.
+
+That is the same break `GetBaseTags` needed, for the same reason, and it
+is worth noting the shape recurred: the first time it was found as an
+actual `StackOverflow` in a test run, and this time it was anticipated
+because the earlier one had been written down.
+
+### `RememberCard` is keyed on the SOURCE card
+
+"Choose an opposing card, **replacing all previous choices**" — the
+memory is keyed `(player, source card, name)`, like `GameState.Counters`.
+Keying on the source card rather than the source die is what makes
+"replacing" automatic: a second Blob fielded by the same player
+overwrites the choice instead of stacking a second lockout, which is what
+the text says happens. Keyed by die, two Blobs would lock two cards.
+
+### `Lockout` reads it back, or names its card outright
+
+Blob and Drax choose when fielded and read the memory; Magneto AOU139's
+"Professor X can't be fielded" names the card in the template and needs
+no choice step at all. Both go through the same `CanPurchase`/`CanField`
+queries, which now fold the stored flags and the live registrations.
+
+A locked-out card is **not** a blanked one — the die keeps its text, it
+just cannot be bought or fielded again. Different flags on the same
+store, and the test says so explicitly, because "suppression" covering
+both invites conflating them.
+
+### Verification
+
+183 v2 tests (773 across the solution). Both new hazards mutation-checked:
+
+- removing the recursion break (a blanked source still blanking) → fails
+- a lockout hitting everyone instead of the source's opponent → fails
+
+### Spike A: what is built, and what is still tailed
+
+**Built**: the four derived queries; die-scoped and card-scoped
+suppression, one-shot and continuous; `BlankText`, `BlankCardText`,
+`AbilityBlank`, `Lockout`, `RememberCard`, `GrantAbility`;
+`PermanentAbilities`/`PermanentContinuous`; the `AbilitiesOf` choke point;
+the resolution-time re-check.
+
+**Tailed, by decision rather than omission**:
+
+- **Vulcan** (engagement scoping) — user's call at sign-off. `TargetFilter`
+  has no notion of "engaged with the source die" and v1 does not express
+  it through targeting either.
+- **The ability-class family** — Angela IG058 ("ignore your opponents'
+  'When fielded' abilities"), Ant-Man 10M2016, Dormammu DRS011. Under
+  Part 21's declared model these are trigger suppression, a different
+  question, and get no third mechanism.
+- **Prismatic Spray "Greater Spell"** (BFF096) — "treated as if they had
+  1A and 1D regardless of bonuses" is a stat override outranking
+  modifiers, not blanking.
+
+**Next**: migrating the cards that motivated all this — D'Ken, both
+Shrieks, Scarlet Witch, Prismatic Spray "Lesser Spell", Blob, Drax,
+Magneto AOU139, Mister Sinister — then resuming Phase 8 task 4's batches
+with 116 DPS cards to go.

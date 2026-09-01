@@ -45,6 +45,24 @@ public interface ITagAuraModifier
     IReadOnlyList<string> GetTags(GameState state, DieInstance die);
 }
 
+// A live, conditional blank (AbilityBlank) - D'Ken's "opposing character
+// dice with purchase cost 3 or lower", Adam Warlock's "of a lower level
+// than Adam Warlock". Separate from the stored one-shot suppressions
+// because the answer changes with the board, not with a clock.
+public interface IAbilityBlankModifier
+{
+    bool AppliesTo(GameState state, DieInstance die);
+}
+
+// A live named-card lockout (Lockout) - Blob and Drax's "may not purchase
+// or field that card's dice until [source] leaves the Field Zone", and
+// Magneto AOU139's "Professor X can't be fielded". Card-scoped and
+// per-player, so it takes ids rather than a die.
+public interface ILockoutModifier
+{
+    bool Applies(GameState state, string playerId, string cardId, SuppressionKind kind);
+}
+
 // CombatRule's registry shape (Phase 6) - nothing queries this yet
 // (Combat is Phase 7's own concern), same "register the closed
 // vocabulary's full shape now, wire its consumer when it exists" pattern
@@ -239,7 +257,27 @@ public static class QueryEngine
     /// only. Attributes, face stats and die kind are never affected, and
     /// neither are granted abilities or permanent text.
     /// </remarks>
-    public static bool AbilitiesActive(GameState state, DieInstance die)
+    public static bool AbilitiesActive(GameState state, DieInstance die) =>
+        AbilitiesActiveBase(state, die)
+        && !state.AbilityBlanks.Any(b => b.AppliesTo(state, die));
+
+    /// <summary>
+    /// Blanking from STORED suppression only - the one-shot die-scoped and
+    /// card-scoped stores, ignoring live continuous blanks.
+    /// </summary>
+    /// <remarks>
+    /// The recursion break, and the same one <see cref="GetBaseTags"/>
+    /// needed for the same reason. A continuous blank's own source die has
+    /// to be checked for blanking before it can blank anything - and if
+    /// that check consulted continuous blanks in turn, D'Ken asking "am I
+    /// blanked" would evaluate D'Ken. Two mutually-blanking dice are a
+    /// genuine paradox in the rules, not just in the code; the engine
+    /// resolves one level and stops, which every real card is inside.
+    ///
+    /// So: a die blanked by a ONE-SHOT effect grants no continuous blank.
+    /// A die blanked by another continuous blank still does.
+    /// </remarks>
+    public static bool AbilitiesActiveBase(GameState state, DieInstance die)
     {
         if (die.Suppressions.Count > 0) return false;
         return die.CardId is not { } cardId || CardTextActive(state, die.ControllerId, cardId);
@@ -256,11 +294,16 @@ public static class QueryEngine
 
     /// <summary>Blob and Drax: "your opponent may not purchase that card's dice".</summary>
     public static bool CanPurchase(GameState state, string playerId, string cardId) =>
-        !IsSuppressed(state, playerId, cardId, SuppressionKind.CantPurchase);
+        !IsSuppressed(state, playerId, cardId, SuppressionKind.CantPurchase)
+        && !IsLockedOut(state, playerId, cardId, SuppressionKind.CantPurchase);
 
     /// <summary>Blob, Drax, and Magneto AOU139's "Professor X can't be fielded".</summary>
     public static bool CanField(GameState state, string playerId, string cardId) =>
-        !IsSuppressed(state, playerId, cardId, SuppressionKind.CantField);
+        !IsSuppressed(state, playerId, cardId, SuppressionKind.CantField)
+        && !IsLockedOut(state, playerId, cardId, SuppressionKind.CantField);
+
+    private static bool IsLockedOut(GameState state, string playerId, string cardId, SuppressionKind kind) =>
+        state.Lockouts.Any(l => l.Applies(state, playerId, cardId, kind));
 
     private static bool IsSuppressed(GameState state, string playerId, string cardId, SuppressionKind kind) =>
         state.CardSuppressions.Any(s => s.PlayerId == playerId && s.CardId == cardId && s.Kind == kind);

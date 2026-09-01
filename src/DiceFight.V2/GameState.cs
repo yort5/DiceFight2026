@@ -88,6 +88,11 @@ public sealed class GameState
     // four of these cards explicitly say they do.
     public List<CardSuppression> CardSuppressions { get; } = [];
 
+    // "Choose an opposing card, replacing all previous choices" - the
+    // memory RememberCard writes and Lockout/AbilityBlank read back.
+    // Keyed like Counters, which is what makes "replacing" automatic.
+    public Dictionary<(string PlayerId, string CardId, string MemoryName), string> Memories { get; } = [];
+
     // The continuous-modifier registries QueryEngine reads (V2_PLAN.md
     // Phase 3 task 1) - empty until Phase 6's continuous templates start
     // registering into them. Per-game-instance (not static) so concurrent
@@ -111,6 +116,8 @@ public sealed class GameState
     // Phase 4 already used for DieKOd/DieDamaged. Populated once by
     // ContinuousRegistry.RegisterAll (GameSetup.NewGame's own call).
     public List<ITagAuraModifier> TagAuras { get; } = [];
+    public List<IAbilityBlankModifier> AbilityBlanks { get; } = [];
+    public List<ILockoutModifier> Lockouts { get; } = [];
     public List<IDieStatModifier> ActionDieUseCostModifiers { get; } = [];
     public List<ICombatRuleModifier> CombatRules { get; } = [];
     public List<IDamageInterceptor> DamageInterceptors { get; } = [];

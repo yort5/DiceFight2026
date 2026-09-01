@@ -217,4 +217,141 @@ public class BlankingTests
         if (selfId is not null) ctx.Bind("self", selfId);
         return ctx;
     }
+
+    // --- Continuous blanking (D'Ken's shape) ---
+
+    // D'Ken "Shi'ar Civil War": while active, opposing character dice
+    // with Purchase Cost 3 or lower have no text. Conditional, so it is
+    // recomputed on read rather than stored - the whole reason
+    // AbilitiesActive is a query and not a flag.
+    [Fact]
+    public void A_Continuous_Blank_Applies_While_Its_Source_Is_Active()
+    {
+        var dken = BuildCard("DKEN", continuous:
+            [new AbilityBlank(new TargetFilter(
+                Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Opposing, Count: 99,
+                Stat: new StatThreshold(StatKind.PurchaseCost, Max: 3)))]);
+        var cheap = BuildCard("CHEAP", keywords: ["Overcrush"]);
+        var state = BuildState(dken, cheap);
+        ContinuousRegistry.RegisterAll(state);
+
+        var victim = AddDie(state, cheap, "p2", "victim");
+        Assert.True(QueryEngine.AbilitiesActive(state, victim)); // no source on the board yet
+
+        var source = AddDie(state, dken, "p1", "dken");
+        Assert.False(QueryEngine.AbilitiesActive(state, victim));
+        Assert.DoesNotContain("Overcrush", QueryEngine.GetTags(state, victim));
+
+        // Leaves play and the blank simply stops being true - nothing to
+        // sweep, which is the point of deriving it rather than storing it.
+        source.Zone = Zone.UsedPile;
+        Assert.True(QueryEngine.AbilitiesActive(state, victim));
+    }
+
+    // The recursion break (QueryEngine.AbilitiesActiveBase). A blanked
+    // D'Ken blanks nothing - v1 answered this the same way through its
+    // GetCard choke point, and V2_PLAN.md Phase 8 task 3 asked for the
+    // answer explicitly.
+    [Fact]
+    public void A_Blanked_Source_Grants_No_Continuous_Blank()
+    {
+        var dken = BuildCard("DKEN", continuous:
+            [new AbilityBlank(new TargetFilter(
+                Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Opposing, Count: 99))]);
+        var cheap = BuildCard("CHEAP", keywords: ["Overcrush"]);
+        var state = BuildState(dken, cheap);
+        ContinuousRegistry.RegisterAll(state);
+
+        var source = AddDie(state, dken, "p1", "dken");
+        var victim = AddDie(state, cheap, "p2", "victim");
+        Assert.False(QueryEngine.AbilitiesActive(state, victim));
+
+        source.Suppressions.Add(new DieSuppression(Duration.EndOfTurn));
+
+        Assert.True(QueryEngine.AbilitiesActive(state, victim));
+    }
+
+    // --- Lockout (Blob / Drax) ---
+
+    [Fact]
+    public void A_Chosen_Card_Cannot_Be_Purchased_Or_Fielded_By_The_Opponent()
+    {
+        var blob = BuildCard("BLOB", continuous:
+        [
+            new Lockout(SuppressionKind.CantPurchase, MemoryName: "chosen"),
+            new Lockout(SuppressionKind.CantField, MemoryName: "chosen"),
+        ]);
+        var prey = BuildCard("PREY");
+        var state = BuildState(blob, prey);
+        ContinuousRegistry.RegisterAll(state);
+
+        var source = AddDie(state, blob, "p1", "blob");
+        var target = AddDie(state, prey, "p2", "prey");
+
+        Assert.True(QueryEngine.CanPurchase(state, "p2", prey.Id));
+
+        EffectInterpreter.Execute(
+            new RememberCard(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Opposing), "chosen"),
+            BuildContext(state, "p1", source.Id));
+
+        Assert.False(QueryEngine.CanPurchase(state, "p2", prey.Id));
+        Assert.False(QueryEngine.CanField(state, "p2", prey.Id));
+        // The SOURCE's opponent is locked out, not everyone.
+        Assert.True(QueryEngine.CanPurchase(state, "p1", prey.Id));
+        // And a locked-out card is not an ignored one - the die keeps its
+        // text, it just cannot be bought again.
+        Assert.True(QueryEngine.AbilitiesActive(state, target));
+
+        source.Zone = Zone.UsedPile; // "until Blob leaves the Field Zone"
+        Assert.True(QueryEngine.CanPurchase(state, "p2", prey.Id));
+    }
+
+    // Magneto AOU139's "Professor X can't be fielded" - named outright,
+    // so it needs no choice step and no memory.
+    [Fact]
+    public void A_Lockout_Can_Name_Its_Card_Outright()
+    {
+        var magneto = BuildCard("MAG", continuous: [new Lockout(SuppressionKind.CantField, CardId: "PROFX")]);
+        var profX = BuildCard("PROFX");
+        var state = BuildState(magneto, profX);
+        ContinuousRegistry.RegisterAll(state);
+        AddDie(state, magneto, "p1", "mag");
+
+        Assert.False(QueryEngine.CanField(state, "p2", "PROFX"));
+        Assert.True(QueryEngine.CanField(state, "p2", "MAG"));
+    }
+
+    // "Replacing all previous choices" - a second choice overwrites the
+    // first rather than stacking a second lockout. The memory is keyed on
+    // the SOURCE card, which is what makes that automatic.
+    [Fact]
+    public void A_Second_Choice_Replaces_The_First()
+    {
+        var blob = BuildCard("BLOB", continuous: [new Lockout(SuppressionKind.CantPurchase, MemoryName: "chosen")]);
+        var first = BuildCard("FIRST");
+        var second = BuildCard("SECOND");
+        var state = BuildState(blob, first, second);
+        ContinuousRegistry.RegisterAll(state);
+
+        var source = AddDie(state, blob, "p1", "blob");
+        AddDie(state, first, "p2", "first");
+        AddDie(state, second, "p2", "second");
+
+        // Card names are tags, so each picks out exactly one opposing die.
+        void Choose(CardDef card) => EffectInterpreter.Execute(
+            new RememberCard(
+                new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Opposing,
+                    Tags: new TagQuery(AnyOf: [card.Name])),
+                "chosen"),
+            BuildContext(state, "p1", source.Id));
+
+        Choose(first);
+        Assert.False(QueryEngine.CanPurchase(state, "p2", first.Id));
+        Assert.True(QueryEngine.CanPurchase(state, "p2", second.Id));
+
+        Choose(second);
+
+        Assert.True(QueryEngine.CanPurchase(state, "p2", first.Id));
+        Assert.False(QueryEngine.CanPurchase(state, "p2", second.Id));
+    }
 }

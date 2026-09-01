@@ -146,6 +146,7 @@ public static class EffectInterpreter
             case GrantAbility n: ExecuteGrantAbility(n, ctx, onComplete); break;
             case BlankText n: ExecuteBlankText(n, ctx, onComplete); break;
             case BlankCardText n: ExecuteBlankCardText(n, ctx, onComplete); break;
+            case RememberCard n: ExecuteRememberCard(n, ctx, onComplete); break;
             case LifeChange n: ExecuteLifeChange(n, ctx, onComplete); break;
             case PurchaseModifier n: ExecutePurchaseModifier(n, ctx, onComplete); break;
             case CombatFlag n: ExecuteCombatFlag(n, ctx, onComplete); break;
@@ -671,6 +672,29 @@ public static class EffectInterpreter
             {
                 var die = FindDie(ctx.State, id);
                 if (die.CardId is { } cardId) Suppress(die.ControllerId, cardId);
+            }
+            onComplete();
+        });
+    }
+
+    private static void ExecuteRememberCard(RememberCard n, EffectContext ctx, Action onComplete)
+    {
+        ResolveTarget(ctx, n.Target, ProtectionFor(ctx.Trigger), ids =>
+        {
+            foreach (var id in ids)
+            {
+                if (ctx.State.IsPlayerId(id)) continue;
+                var die = FindDie(ctx.State, id);
+                if (die.CardId is not { } chosenCardId) continue;
+
+                // Keyed on the SOURCE card - Blob - not the source die, and
+                // not the chosen card. "Replacing all previous choices"
+                // then falls out of the dictionary: a second Blob fielded
+                // by the same player overwrites the choice rather than
+                // stacking a second lockout, which is what the text says.
+                if (!ctx.Bindings.TryGetValue("self", out var selfId)) continue;
+                if (FindDie(ctx.State, selfId).CardId is not { } sourceCardId) continue;
+                ctx.State.Memories[(ctx.ControllerId, sourceCardId, n.MemoryName)] = chosenCardId;
             }
             onComplete();
         });

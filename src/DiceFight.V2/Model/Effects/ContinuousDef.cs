@@ -55,3 +55,26 @@ public sealed record DamageModifier(
 public enum ProtectionFrom { Global, Action, Both }
 public sealed record TargetingProtection(TargetFilter Target, ProtectionFrom From, Condition? ActiveWhen = null)
     : ContinuousDef(ActiveWhen);
+
+// Conditional ability-blanking, live rather than stored (V2_VOCABULARY.md
+// Parts 19-21). D'Ken "Shi'ar Civil War" - opposing character dice with
+// Purchase Cost 3 or lower - and Magneto AOU139's identical first clause;
+// Adam Warlock's "of a lower level than Adam Warlock"; Shriek "Sonic
+// Beam"'s "while Shriek is active, ignore that card's text".
+//
+// `Target` is evaluated from BASE state like every other continuous
+// template's, and the blank check on the SOURCE die is the base one too -
+// see QueryEngine.AbilitiesActiveBase for why that has to be so.
+public sealed record AbilityBlank(TargetFilter Target, Condition? ActiveWhen = null) : ContinuousDef;
+
+// A named card the source's opponent may not purchase and/or field, for
+// as long as the source is active. Blob (XFC087) and Drax (IG107) choose
+// theirs when fielded and read it back from the memory RememberCard
+// wrote; Magneto AOU139 names Professor X outright and needs no memory.
+//
+// Card-scoped and per-player: it is the opponent who cannot buy it.
+public sealed record Lockout(
+    SuppressionKind Kind,
+    string? CardId = null,
+    string? MemoryName = null,
+    Condition? ActiveWhen = null) : ContinuousDef;
