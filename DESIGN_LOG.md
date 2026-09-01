@@ -10589,3 +10589,26 @@ generally, with a regression test.
 
 `dotnet build`/`dotnet test` clean: v2 258/258 (11 new), v1 580/580
 untouched. 80/145 DPS cards migrated (81 counting Domino).
+
+## v2 Phase 8 task 4: DPS batch 7 (2026-09-01)
+
+17 more DPS cards, 7 full, 3 partial, 7 tailed - 97/145 total. Kitty
+Pryde "Right of Passage" and Toad "Secondary Mutation" are the first
+two real Awaken cards in the catalog, riding on today's earlier
+`RequireSelf` fix.
+
+Found a real gap in the migration helper itself building Gambit "Ace in
+the Hole": `MigrationDice.Character` had no way to give a character
+face a burst value - only Action dice ever got one - so his own "on a
+single-burst face" condition could never be true. Fixed with a new
+overload rather than guessing an approximation.
+
+A fourth recurring vocabulary-adjacent gap, after affiliation-granting
+(batch 5) and the two from batch 6: several cards read the TEAM ROSTER,
+which v2 doesn't model as queryable state at all yet. Hit three times
+independently (Wolverine "Pure of Heart," Mystique "Relentless," Dark
+Phoenix "Malevolent"). Filed, not proposed - this one's bigger than a
+targeting-shape fix.
+
+`dotnet build`/`dotnet test` clean: v2 271/271 (13 new), v1 580/580
+untouched. 97/145 DPS cards migrated (98 counting Domino).

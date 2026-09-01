@@ -43,15 +43,31 @@ internal static class MigrationDice
 
     internal static DieDefinition Character(
         string dieId, string energySymbolId, params (int FieldingCost, int Attack, int Defense)[] levels) =>
-        Character(dieId, [energySymbolId], levels);
+        Character(dieId, [energySymbolId], [], levels);
 
     internal static DieDefinition Character(
         string dieId, IReadOnlyList<string> energySymbolIds,
+        params (int FieldingCost, int Attack, int Defense)[] levels) =>
+        Character(dieId, energySymbolIds, [], levels);
+
+    // Burst-carrying overload - a character die's own face can print a
+    // burst mark too (Gambit "Ace in the Hole" checks his OWN current
+    // face's burst level), not just an action die's. The plain overloads
+    // above default every level to Burst: 0, which is why nothing needed
+    // this until a card's OWN character face burst actually mattered.
+    // `bursts[i]` pairs with `levels[i]` by index; a short/omitted list
+    // defaults the rest to 0.
+    internal static DieDefinition Character(
+        string dieId, string energySymbolId, IReadOnlyList<int> bursts, params (int FieldingCost, int Attack, int Defense)[] levels) =>
+        Character(dieId, [energySymbolId], bursts, levels);
+
+    internal static DieDefinition Character(
+        string dieId, IReadOnlyList<string> energySymbolIds, IReadOnlyList<int> bursts,
         params (int FieldingCost, int Attack, int Defense)[] levels)
     {
         var faces = new List<Face>(EnergyFaces(energySymbolIds));
         faces.AddRange(levels.Select((l, i) =>
-            new Face([], new CharacterFaceData(i + 1, l.FieldingCost, l.Attack, l.Defense), Kind: FaceKind.CharacterFace)));
+            new Face([], new CharacterFaceData(i + 1, l.FieldingCost, l.Attack, l.Defense), Burst: i < bursts.Count ? bursts[i] : 0, Kind: FaceKind.CharacterFace)));
         return new DieDefinition(dieId, faces);
     }
 

@@ -21,16 +21,20 @@ PROGRESS.**
   the `AbilitiesOf`/`ContinuousOf` choke point, `AbilityBlank`, and
   `Lockout` are all live. Affiliation-as-first-class (Parts 17-18, 22)
   landed the same day.
-- **Task 4** (DPS catalog batches) - IN PROGRESS. Six batches landed:
+- **Task 4** (DPS catalog batches) - IN PROGRESS. Seven batches landed:
   batches 1-2 on 2026-08-24, batch 3 (10 migrated, 3 partial, 1 tailed -
   D'Ken/Mister Sinister, the two cards Spike A was built for), batch 4
   (all 15 Energize cards, 13 full + 2 partial), batch 5 (12 cards: 4
-  full, 4 partial, 4 tailed - a new gap, affiliation-granting), and
-  batch 6 (14 cards: 8 full, 6 tailed - two more new gaps, TargetFilter
-  can't exclude the source die from its own pool, and a continuous
-  template can't grant a benefit to its own source before that source is
-  active) all on 2026-09-01. See `V2_TAIL_POLICY.md` for all of them.
-  **80 of v1's 145 curated DPS cards migrated, 65 to go.**
+  full, 4 partial, 4 tailed - a new gap, affiliation-granting), batch 6
+  (14 cards: 8 full, 6 tailed - two more new gaps, TargetFilter can't
+  exclude the source die from its own pool, and a continuous template
+  can't grant a benefit to its own source before that source is active),
+  and batch 7 (17 cards: 7 full, 3 partial, 7 tailed - the catalog's
+  first two real Awaken cards, a fourth new gap (no team-roster concept
+  at all), and a real migration-helper limitation fixed along the way -
+  character dice had no way to print a burst face) all on 2026-09-01.
+  See `V2_TAIL_POLICY.md` for all of them.
+  **97 of v1's 145 curated DPS cards migrated, 48 to go.**
   (A 67th card, Domino "Not Really A Party Girl" (XFO010), was also
   migrated the same day, but sits outside this count entirely - `BonusCards.cs`,
   a one-off from the bulk catalog, not v1's curated 145.)
@@ -1169,4 +1173,33 @@ targets.
 Verified: `dotnet build DiceFight.slnx` clean; v2 tests 258/258 (11
 new); v1's full suite re-run untouched, 580/580. Status header above
 updated; batches 1-6 total 80/145 DPS cards (81 incl. Domino, tracked
+separately).
+
+**Phase 8 progress note (2026-09-01, task 4 batch 7)**: 17 cards, 7 full,
+3 partial, 7 tailed. Kitty Pryde "Right of Passage" and Toad "Secondary
+Mutation" are the catalog's first two real Awaken cards - built cleanly
+on the same day's `RequireSelf` fix, without which either would have
+cross-fired on an unrelated die's own spin-up.
+
+Found and fixed a real migration-helper gap building Gambit "Ace in the
+Hole": `MigrationDice.Character` had no way to give a character face a
+burst value at all (only Action/Basic Action dice ever got one), so
+Gambit's own "on a single-burst face, do X instead" condition could
+never be true - not a vocabulary gap, `OnBurstFace` already existed and
+works once the die can show what it's asking about. Added a burst-
+carrying overload; the plain ones now delegate to it.
+
+A fourth recurring gap, distinct from batch 5's and 6's own two: several
+cards read the TEAM ROSTER ("on your team"), not live board state, and
+v2 has no roster concept at all yet - `Player.TeamCardIds` exists but
+nothing queries it for card text. Hit independently by Wolverine "Pure
+of Heart," Mystique "Relentless"'s Global, and Dark Phoenix
+"Malevolent"'s purchase discount. Bigger than a `TargetFilter` field
+this time - the roster would need to become queryable game state first,
+which is arguably Phase 9's concern, not a vocabulary sign-off. Filed,
+not proposed.
+
+Verified: `dotnet build DiceFight.slnx` clean; v2 tests 271/271 (13
+new); v1's full suite re-run untouched, 580/580. Status header above
+updated; batches 1-7 total 97/145 DPS cards (98 incl. Domino, tracked
 separately).

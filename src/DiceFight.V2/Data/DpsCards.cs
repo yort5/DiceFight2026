@@ -568,6 +568,12 @@ public static class DpsCards
         MadelynePryorSisterhood, MagnetoIdealist, JeanGreyXaviersDream, JeanGreyMarvelGirl,
         AngelJeanGreysSchool, CableHighStakes, Explosion, ForgeReverseEngineer,
         MadelynePryorAspiring, IcemanXaviersDream,
+        // Batch 7.
+        KittyPrydeRightOfPassage, DKenEmperor, IcemanIcyInterference, ToadSecondaryMutation,
+        VulcanRulerOfTheImperium, PsylockeAdventurer, GambitAceInTheHole, MisterSinisterGeneticist,
+        GladiatorPsiResistance, MystiqueRelentless, DarkPhoenixMalevolent, DeadpoolDraftPick,
+        WolverinePureOfHeart, ForgeMoreThanFirepower, SupremeIntelligence, LilandraPolitician,
+        MoiraItsNotADream,
     ];
 
     // --- Batch 3 (2026-09-01) ---
@@ -1508,5 +1514,265 @@ public static class DpsCards
         Die: MigrationDice.Character("DPS142Die", "Bolt", (1, 2, 4), (1, 3, 6), (1, 4, 6)),
         DieLimit: 3, Affiliations: ["X-Men"], Keywords: ["Founder"],
         RawText: "Founder While you have a Sidekick die active, Iceman's A is equal to his D.",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    // --- Batch 7 (2026-09-01) ---
+    //
+    // Kitty Pryde and Toad below are the first two real Awaken cards in
+    // the catalog - built on today's RequireSelf fix (Part 30), without
+    // which an unrelated die's own Awaken would have cross-fired.
+    //
+    // A third recurring gap this batch, distinct from both of batch 6's:
+    // "if you have no Villains ON YOUR TEAM" / "shares a Team Affiliation
+    // with a card on your team" reads the TEAM ROSTER (the cards a player
+    // BUILT their team from), not live board state - v2 has no roster
+    // concept at all yet (Phase 9's own concern). Wolverine "Pure of
+    // Heart", Mystique "Relentless"'s Global, and Dark Phoenix
+    // "Malevolent"'s purchase discount all hit this independently.
+
+    public static readonly CardDef KittyPrydeRightOfPassage = new(
+        Id: "DPS037", Name: "Kitty Pryde", Subtitle: "Right of Passage", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 3, EnergySymbolIds: ["Mask"],
+        Die: MigrationDice.Character("DPS037Die", "Mask", (0, 2, 2), (0, 3, 2), (1, 3, 3)),
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: ["Awaken"],
+        RawText: "Awaken - Prep a die from your bag.",
+        Abilities: [new TriggeredAbility(TriggerKind.DieFaceChanged, new DrawToZone(1, Zone.PrepArea, Zone.Bag),
+            Filter: new EventFilter(LevelIncreased: true, RequireSelf: true))],
+        Continuous: []);
+
+    public static readonly CardDef DKenEmperor = new(
+        Id: "DPS026", Name: "D'Ken", Subtitle: "Emperor", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 4, EnergySymbolIds: ["Shield"],
+        Die: MigrationDice.Character("DPS026Die", "Shield", (0, 4, 4), (1, 5, 5), (2, 6, 6)),
+        DieLimit: 4, Affiliations: ["Villains", "Shi'ar"], Keywords: [],
+        RawText: "When D'Ken attacks, Prep a die from your Used Pile.",
+        Abilities: [new TriggeredAbility(TriggerKind.DieAttacks,
+            new MoveDie(new TargetFilter(Kind: TargetKind.AnyDie, Ownership: TargetOwnership.Own, Zones: [Zone.UsedPile]), Zone.PrepArea))],
+        Continuous: []);
+
+    public static readonly CardDef IcemanIcyInterference = new(
+        Id: "DPS034", Name: "Iceman", Subtitle: "Icy Interference", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 4, EnergySymbolIds: ["Bolt"],
+        Die: MigrationDice.Character("DPS034Die", "Bolt", (1, 2, 4), (1, 3, 6), (1, 4, 6)),
+        DieLimit: 3, Affiliations: ["X-Men"], Keywords: [],
+        RawText: "When Iceman attacks, spin target opposing level 1 character die to an energy face.",
+        Abilities: [new TriggeredAbility(TriggerKind.DieAttacks,
+            new SpinToEnergy(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Opposing, Stat: new StatThreshold(StatKind.Level, Min: 1, Max: 1))))],
+        Continuous: []);
+
+    public static readonly CardDef ToadSecondaryMutation = new(
+        Id: "DPS054", Name: "Toad", Subtitle: "Secondary Mutation", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 3, EnergySymbolIds: ["Fist"],
+        Die: MigrationDice.Character("DPS054Die", "Fist", (1, 2, 1), (2, 3, 2), (2, 4, 4)),
+        DieLimit: 4, Affiliations: ["Brotherhood of Mutants"], Keywords: ["Awaken", "Teamwatch"],
+        RawText: "Awaken: Deal 2 damage to target character die. Teamwatch - Spin Toad up 1 level.",
+        Abilities:
+        [
+            new TriggeredAbility(TriggerKind.DieFaceChanged, new DealDamage(new Fixed(2), new TargetFilter(Kind: TargetKind.CharacterDie)),
+                Filter: new EventFilter(LevelIncreased: true, RequireSelf: true)),
+            new TriggeredAbility(TriggerKind.DieFielded, new Spin(new TargetFilter(Self: true), LevelDelta: 1),
+                Filter: new EventFilter(Ownership: TargetOwnership.Own, ExcludeSelf: true, SharesAffiliationWithListener: true)),
+        ],
+        Continuous: []);
+
+    public static readonly CardDef VulcanRulerOfTheImperium = new(
+        Id: "DPS055", Name: "Vulcan", Subtitle: "Ruler of The Imperium", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 4, EnergySymbolIds: ["Fist"],
+        Die: MigrationDice.Character("DPS055Die", "Fist", (0, 3, 2), (1, 4, 4), (1, 6, 5)),
+        DieLimit: 4, Affiliations: [], Keywords: [],
+        RawText: "Global: Pay Fist. Target character die must attack this turn.",
+        Abilities: [new TriggeredAbility(TriggerKind.Global,
+            new CombatFlag(new TargetFilter(Kind: TargetKind.CharacterDie), CombatFlagKind.MustAttack),
+            EnergyCost: new EnergyCost(1, "Fist"))],
+        Continuous: []);
+
+    public static readonly CardDef PsylockeAdventurer = new(
+        Id: "DPS048", Name: "Psylocke", Subtitle: "Adventurer", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 2, EnergySymbolIds: ["Mask"],
+        Die: MigrationDice.Character("DPS048Die", "Mask", (0, 1, 2), (0, 2, 2), (1, 3, 3)),
+        DieLimit: 3, Affiliations: ["X-Men"], Keywords: [],
+        RawText: "While Wolverine is active, Psylocke gains Deadly. When fielded, spin target character die " +
+                 "up 1 level.",
+        Abilities: [new TriggeredAbility(TriggerKind.DieFielded, new Spin(new TargetFilter(Kind: TargetKind.CharacterDie), LevelDelta: 1))],
+        // "While Wolverine is active" names no owner and no affiliation -
+        // any Wolverine, either side - so this is a plain Tags match, not
+        // Ownership:Own.
+        Continuous: [new TagAura(new TargetFilter(Self: true), ["Deadly"],
+            ActiveWhen: new CountAtLeast(new TargetFilter(Kind: TargetKind.AnyDie, Tags: new TagQuery(AnyOf: ["Wolverine"])), 1))]);
+
+    // "You may draw and roll a die. Instead [on a single-burst face],
+    // draw 2, roll one, return the other" - ground rule 8 wraps the whole
+    // choice in MayPay, not just the ordinary branch. DrawAndChooseOne's
+    // own first real user.
+    public static readonly CardDef GambitAceInTheHole = new(
+        Id: "DPS032", Name: "Gambit", Subtitle: "Ace in the Hole", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 3, EnergySymbolIds: ["Mask"],
+        // Levels 1-2 carry a single burst mark (v1's own BurstStars: 1 on
+        // both), level 3 none - MigrationDice.Character's burst-carrying
+        // overload, its first real user.
+        Die: MigrationDice.Character("DPS032Die", "Mask", [1, 1, 0], (1, 1, 1), (1, 2, 2), (2, 4, 4)),
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: [],
+        RawText: "When fielded, you may draw and roll a die. * Instead, draw 2 dice, Roll one and return " +
+                 "the other to your bag.",
+        Abilities: [new TriggeredAbility(TriggerKind.DieFielded,
+            new MayPay(Cost: null, Then: new Conditional(
+                new OnBurstFace(BurstLevel.Single),
+                Then: new DrawAndChooseOne(2, TargetOwnership.Own, Zone.ReservePool, Zone.Bag),
+                Else: new DrawToZone(1, Zone.ReservePool, Zone.Bag))))],
+        Continuous: []);
+
+    // The Sidekick-KO half fits; "when Mister Sinister KOs an opposing
+    // character, you may pay 1 life..." needs KO-SOURCE attribution -
+    // DieKOd's payload has none, same family as Blob "Immovable"'s own
+    // gap (batch 3).
+    public static readonly CardDef MisterSinisterGeneticist = new(
+        Id: "DPS043", Name: "Mister Sinister", Subtitle: "Geneticist", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 5, EnergySymbolIds: ["Bolt"],
+        Die: MigrationDice.Character("DPS043Die", "Bolt", (1, 4, 1), (2, 5, 2), (2, 6, 3)),
+        DieLimit: 4, Affiliations: ["Villains"], Keywords: ["Deadly"],
+        RawText: "When fielded, KO up to 2 target Sidekick dice. When Mister Sinister KOs an opposing " +
+                 "character, you may pay 1 life. If you do, your opponent loses 1 life. Global: Pay Bolt " +
+                 "Bolt. Target non-Sidekick character die gains Deadly.",
+        Abilities:
+        [
+            new TriggeredAbility(TriggerKind.DieFielded,
+                new Ko(new TargetFilter(Kind: TargetKind.CharacterDie, Tags: new TagQuery(AnyOf: ["sidekick"]), Count: 2, Optional: true))),
+            new TriggeredAbility(TriggerKind.Global,
+                new GrantTag(new TargetFilter(Kind: TargetKind.CharacterDie, Tags: new TagQuery(NoneOf: ["sidekick"])), ["Deadly"]),
+                EnergyCost: new EnergyCost(2, "Bolt")),
+        ],
+        Continuous: [],
+        IsImplemented: false);
+
+    // The Global (a temporary but STILL fundamentally continuous grant -
+    // "your character dice can't be targeted... until end of turn") has
+    // no one-shot template that grants a continuous-shaped protection;
+    // GrantAbility grants a triggered ability, not immunity. Intimidate
+    // itself has no Zone (V2_PLAN.md Phase 2's own note: deferred, and
+    // still not built). Both clauses tailed.
+    public static readonly CardDef GladiatorPsiResistance = new(
+        Id: "DPS033", Name: "Gladiator", Subtitle: "Psi Resistance", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 5, EnergySymbolIds: ["Fist"],
+        Die: MigrationDice.Character("DPS033Die", "Fist", (0, 5, 5), (1, 6, 6), (0, 7, 7)),
+        DieLimit: 4, Affiliations: ["Shi'ar"], Keywords: ["Intimidate"],
+        RawText: "Intimidate (When fielded, remove target opposing character die from the Field Zone until " +
+                 "end of turn - place it next to your character cards.) Global: Pay Fist. Your character " +
+                 "dice can't be the target of Action Dice or Global Abilities (until end of turn).",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    // The Continuous half ("+2A while Wolverine active") fits; the
+    // Global ("shares a Team Affiliation with a card on YOUR TEAM") is
+    // this batch's team-roster gap.
+    public static readonly CardDef MystiqueRelentless = new(
+        Id: "DPS045", Name: "Mystique", Subtitle: "Relentless", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 2, EnergySymbolIds: ["Mask"],
+        Die: MigrationDice.Character("DPS045Die", "Mask", (1, 1, 1), (0, 1, 1), (2, 1, 1)),
+        DieLimit: 3, Affiliations: ["X-Men"], Keywords: [],
+        RawText: "When Wolverine is active, Mystique gets +2A. Global: Pay Mask Mask. Target character die " +
+                 "can't block this turn if it shares a Team Affiliation with a character card on your team.",
+        Abilities: [],
+        Continuous: [new StatAura(new TargetFilter(Self: true), AtkDelta: new Fixed(2),
+            ActiveWhen: new CountAtLeast(new TargetFilter(Kind: TargetKind.AnyDie, Tags: new TagQuery(AnyOf: ["Wolverine"])), 1))],
+        IsImplemented: false);
+
+    // The WhenFielded (Ko, then bonus damage if the KO'd die was X-Men -
+    // Bound + Affiliations, made real by today's TargetResolver.Self/
+    // Bound fix) and Global (Ko one of your own, next purchase -2) both
+    // fit. The purchase discount ("if your opponent has an X-Men
+    // character ON THEIR TEAM") is this batch's team-roster gap.
+    public static readonly CardDef DarkPhoenixMalevolent = new(
+        Id: "DPS027", Name: "Dark Phoenix", Subtitle: "Malevolent", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 7, EnergySymbolIds: ["Bolt"],
+        Die: MigrationDice.Character("DPS027Die", "Bolt", (1, 5, 5), (2, 7, 7), (3, 8, 8)),
+        DieLimit: 4, Affiliations: ["Villains"], Keywords: [],
+        RawText: "Dark Phoenix costs 1 less to purchase if your opponent has an X-Men character on their " +
+                 "team. When fielded, KO target character die. If it's an X-Men character die, deal your " +
+                 "opponent 1 damage. Global: Pay Bolt and KO one of your character dice. The next die you " +
+                 "purchase this turn costs 2 less (to a minimum of 1).",
+        Abilities:
+        [
+            new TriggeredAbility(TriggerKind.DieFielded, new Sequence(
+            [
+                new Ko(new TargetFilter(Kind: TargetKind.CharacterDie, BindAs: "victim")),
+                new Conditional(
+                    new CountAtLeast(new TargetFilter(Bound: "victim", Affiliations: new TagQuery(AnyOf: ["X-Men"])), 1),
+                    Then: new DealDamage(new Fixed(1), new TargetFilter(Kind: TargetKind.Player, Ownership: TargetOwnership.Opposing))),
+            ])),
+            new TriggeredAbility(TriggerKind.Global, new Sequence(
+            [
+                new Ko(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own)),
+                new PurchaseModifier(Delta: -2),
+            ]), EnergyCost: new EnergyCost(1, "Bolt")),
+        ],
+        Continuous: [],
+        IsImplemented: false);
+
+    // "If this game is in the draft format" - no game-format concept
+    // exists anywhere in the engine.
+    public static readonly CardDef DeadpoolDraftPick = new(
+        Id: "DPS028", Name: "Deadpool", Subtitle: "#1 Draft Pick", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 4, EnergySymbolIds: ["Fist"],
+        Die: MigrationDice.Character("DPS028Die", "Fist", (0, 2, 4), (0, 2, 5), (1, 3, 7)),
+        DieLimit: 4, Affiliations: ["X-Men", "Deadpool Affiliation"], Keywords: [],
+        RawText: "If this game is in the draft format, at the start of the game pick a card on your team. " +
+                 "That card costs 1 less to purchase this game (to a minimum of 1).",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    // "If you have no Villains character dice ON YOUR TEAM" is this
+    // batch's team-roster gap, AND (independently) a card granting
+    // itself free-fielding before it's active - batch 6's Jean Grey
+    // "Marvel Girl" gap. Two reasons, either one sufficient.
+    public static readonly CardDef WolverinePureOfHeart = new(
+        Id: "DPS056", Name: "Wolverine", Subtitle: "Pure of Heart", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 4, EnergySymbolIds: ["Fist"],
+        Die: MigrationDice.Character("DPS056Die", "Fist", (1, 5, 2), (2, 6, 3), (3, 8, 4)),
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: [],
+        RawText: "If you have no Villains character dice on your team, Wolverine is free to field.",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    // The payment-source visibility gap (V2_PLAN.md's Appendix A
+    // addendum: "2 Bishop, Forge, Professor X") - this is "Forge."
+    public static readonly CardDef ForgeMoreThanFirepower = new(
+        Id: "DPS031", Name: "Forge", Subtitle: "More Than Firepower", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 3, EnergySymbolIds: ["Bolt"],
+        Die: MigrationDice.Character("DPS031Die", "Bolt", (1, 2, 2), (1, 4, 2), (2, 4, 4)),
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: [],
+        RawText: "When fielded, if you spent Bolt energy to field Forge, Prep a die from your bag.",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    // "A card with Kree IN ITS NAME" is a substring match; Tags carry the
+    // exact printed card name only, no substring predicate exists.
+    public static readonly CardDef SupremeIntelligence = new(
+        Id: "DPS053", Name: "Supreme Intelligence", Subtitle: "Kree Science Council", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 6, EnergySymbolIds: ["Mask"],
+        Die: MigrationDice.Character("DPS053Die", "Mask", (1, 4, 4), (2, 5, 6), (2, 7, 6)),
+        DieLimit: 4, Affiliations: [], Keywords: [],
+        RawText: "When a card with Kree in its name is KO'd, put a Loyalty Counter on Supreme Intelligence's " +
+                 "card. (Loyaly Counters give a character die +1A and +1D).",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    // "If you have purchased a CHARACTER die this turn" - TurnFact's own
+    // PurchasedThisTurn has no character-only variant; approximating with
+    // the general one would also fire off a Basic Action purchase, a real
+    // behavior change (house rule: never guess wrong silently).
+    public static readonly CardDef LilandraPolitician = new(
+        Id: "DPS038", Name: "Lilandra", Subtitle: "Politician", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 3, EnergySymbolIds: ["Shield"],
+        Die: MigrationDice.Character("DPS038Die", "Shield", (1, 3, 3), (1, 3, 5), (1, 5, 6)),
+        DieLimit: 4, Affiliations: ["Shi'ar"], Keywords: [],
+        RawText: "Global: Pay Shield. Once per turn, if you have purchased a character die this turn, you " +
+                 "may draw a die from your bag and add it to your Prep Area.",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    // The Continuous Action die mechanic (rule 1.2.3/2.6.4.2) is still
+    // not modeled (V2_PLAN.md Phase 8 batch-1 note) - "reroll it [an
+    // opponent's fielded Continuous Action die]" needs it to exist first.
+    public static readonly CardDef MoiraItsNotADream = new(
+        Id: "DPS044", Name: "Moira", Subtitle: "It's Not a Dream", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 2, EnergySymbolIds: ["Shield"],
+        Die: MigrationDice.Character("DPS044Die", "Shield", (0, 0, 1), (0, 1, 2), (1, 2, 2)),
+        DieLimit: 3, Affiliations: ["X-Men"], Keywords: [],
+        RawText: "While Moira is active, when an opponent fields a Continuous Action die, reroll it. If it " +
+                 "lands on an action face, they may field it normally. Otherwise, send it to the Used Pile.",
         Abilities: [], Continuous: [], IsImplemented: false);
 }

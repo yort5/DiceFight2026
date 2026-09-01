@@ -542,3 +542,53 @@ generally (`ShowsFace` now includes `ReservePool` alongside Field/Attack
 Zone in the face-preservation check); `EffectInterpreterTests.cs` has the
 regression test. No sign-off needed - an engine bug, not a vocabulary
 gap.
+
+## DPS catalog batch 7 (V2_PLAN.md Phase 8 task 4, 2026-09-01)
+
+17 cards: 7 full, 3 partial, 7 tailed. Kitty Pryde "Right of Passage" and
+Toad "Secondary Mutation" are the catalog's first two real Awaken cards -
+built on the same day's `RequireSelf` fix (without it, an unrelated die's
+own Awaken would have cross-fired on either one).
+
+### RESOLVED (found building Gambit "Ace in the Hole"): character dice had no way to print a burst face at all
+
+`MigrationDice.Character`'s only overloads built every character face
+with `Burst: 0` - fine for every card so far, since none of them checked
+their OWN current face's burst level (only Action/Basic Action dice, via
+the separate `bursts:` param on those helpers, ever got one). Gambit's
+own "you may draw and roll a die. *Instead* [on a single-burst face],
+draw 2..." needed exactly that, and the condition could never be true
+under the old helper - the card would have silently always taken the
+ordinary branch. Fixed with a new burst-carrying `Character` overload
+(`bursts[i]` pairs with `levels[i]` by index, default 0); the two plain
+overloads now just delegate to it with an empty list. Not a vocabulary
+gap - `Condition.OnBurstFace` already existed and works fine once the
+die itself can show what it's asking about.
+
+### NEW GAP: "on your TEAM" reads the roster, not the board
+
+Three cards hit this independently: Wolverine "Pure of Heart" ("if you
+have no Villains character dice on your team"), Mystique "Relentless"'s
+Global ("shares a Team Affiliation with a character card on your
+team"), and Dark Phoenix "Malevolent"'s purchase discount ("if your
+opponent has an X-Men character on their team"). v2 has no team-roster
+concept at all yet - `Player.TeamCardIds` exists but nothing queries it
+for card text; the roster is a Phase 9 (API/web) concern architecturally,
+not something `GameState` tracks as game-relevant data today. All three
+tailed; no shape proposed (this is a bigger question than a TargetFilter
+field - it needs the roster to exist as queryable state first).
+
+### PARTIAL / TAILED table
+
+| CardId | Name | What's missing | Policy |
+|---|---|---|---|
+| DPS043 | Mister Sinister (Geneticist) | "When Mister Sinister KOs an opposing character" needs KO-SOURCE attribution - `DieKOd`'s payload has none, same family as Blob "Immovable" (batch 3). The Sidekick-KO and Global (Deadly grant) clauses are migrated | Ask |
+| DPS033 | Gladiator (Psi Resistance) | Intimidate has no Zone (still not built, `V2_PLAN.md` Phase 2's own deferral). The Global also has no home: it's a ONE-SHOT activation that grants a TEMPORARY but still fundamentally continuous effect ("can't be targeted... until end of turn") - no one-shot template grants continuous-shaped protection; `GrantAbility` grants a triggered ability, not immunity. Both clauses tailed | Ask |
+| DPS045 | Mystique (Relentless) | Global is the team-roster gap above. The Continuous "+2A while Wolverine active" is migrated | Ask |
+| DPS027 | Dark Phoenix (Malevolent) | Purchase discount is the team-roster gap above. WhenFielded (Ko + Bound-affiliation-gated bonus damage, made real by today's `TargetResolver.Self`/`Bound` fix) and Global (self-Ko + `PurchaseModifier`) are migrated | Ask |
+| DPS028 | Deadpool (#1 Draft Pick) | "If this game is in the draft format" - no game-format concept exists | Ask |
+| DPS056 | Wolverine (Pure of Heart) | Team-roster gap, AND (independently) batch 6's "grant myself a benefit before I'm active" gap - either alone would tail it | Ask |
+| DPS031 | Forge (More Than Firepower) | Payment-source visibility - the "Forge" in the F13 group (`V2_PLAN.md`'s Appendix A addendum: "2 Bishop, Forge, Professor X") | Ask |
+| DPS053 | Supreme Intelligence | "A card with Kree IN ITS NAME" is a substring match; Tags carry the exact printed name only | Ask |
+| DPS038 | Lilandra (Politician) | "If you have purchased a CHARACTER die this turn" - `TurnFact.PurchasedThisTurn` has no character-only variant; approximating would also fire off a Basic Action purchase | Ask |
+| DPS044 | Moira (It's Not a Dream) | Continuous Action die mechanic, still not modeled | Ask |

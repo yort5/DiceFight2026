@@ -776,9 +776,18 @@ public static class EffectInterpreter
     private static void MoveDrawnDie(EffectContext ctx, DieInstance die, Zone zone)
     {
         die.Zone = zone;
-        // ReservePool destination = rolled (DrawToZone's own convention).
+        // ReservePool destination = rolled (DrawToZone's own convention) -
+        // and, like DrawToZone's own site (Part 30), must fire
+        // DieFaceChanged (Cause.Effect, not Roll) so an Energize die drawn
+        // this way (Gambit "Ace in the Hole") checks immediately rather
+        // than silently never firing. Same gap, different site - found
+        // while building Gambit, not anticipated.
         if (zone == Zone.ReservePool)
+        {
             die.CurrentFaceIndex = ctx.Roller.Roll(ctx.State.GetDieDefinition(die));
+            var payload = new DieFaceChangedPayload(null, ctx.State.GetCurrentFace(die)!, FaceChangeCause.Effect);
+            EventBus.Fire(ctx.State, ctx.Queue, new GameEvent(TriggerKind.DieFaceChanged, die, die.ControllerId, ctx.State.CurrentStepId, payload));
+        }
     }
 
     // Finding 13 - counters live on the resolved target's own CARD (all
