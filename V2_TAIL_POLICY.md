@@ -277,38 +277,44 @@ behavior still unbuilt" above). Roughly a quarter of what remains is
 waiting on it. Worth costing before batch 4, since the alternative is
 picking around it for several more batches.
 
-### GAP: v2 has no `CardType.Action` (found 2026-09-01)
+### RESOLVED: Action vs Basic Action dice (2026-09-01)
 
-v1's `CardType` is Character / **Action** / BasicAction /
-**EpicBasicAction** / Token. v2's is Character / BasicAction / Token.
-Nothing is wrong today - v1's curated set contains **zero** Action cards,
-so every card migrated so far that uses `MigrationDice.Action` is
-genuinely a Basic Action - but the full catalog has **188 Action cards
-and 4 Epic Basic Actions**, and the first one migrated will hit three
-things at once:
+Recorded as a gap and then closed the same day, once the user supplied
+the taxonomy - which was not three sibling types but a NESTING:
 
-1. **Faces.** An Action die is not a Basic Action die. A Basic Action's
-   three energy faces are all generic doubles (rule 2.6.1.5); an Action
-   die carries the card's OWN printed energy, exactly like a character
-   die - the user's reference card, Cosmic Treadmill "Antique Shop
-   Discovery" (GAF009), is a fist/mask Crossover showing one generic
-   single, two fist/mask doubles, then three action faces. Batarang is
-   the single-type version: "one bolt and two double-bolt faces".
-   So the fix is `MigrationDice`'s existing `EnergyFaces(card's symbols)`
-   plus action faces - the two helpers already exist, they just need
-   splitting apart from the Basic Action all-generic case.
+> "Action Die is the broader category - dice that don't have fielding
+> costs, attack or defense. Basic Action is a subset of that, the Action
+> Dice available to both players. Epic Basic Action is a subset of Basic
+> Action, with restrictions on when they can be purchased."
 
-2. **`TargetKind.ActionDie`** keys off `CardType == BasicAction`
-   (TargetResolver.cs:74), so it would silently not match a real Action
-   die. Rogue "Surveillance Immunity" (DPS089) targets action dice and is
-   already migrated, so this is a live filter that would quietly under-
-   match the day an Action card arrives.
+So "action die" in card text (Attune) is satisfied by any of them, while
+"Basic Action die" (Boom Boom) is not. `CardTypes.IsActionDie()` and
+`IsCommunity()` state the two levels; three of the four places that
+compared against `CardType.BasicAction` meant the broad category and were
+wrong:
 
-3. **Team slots.** An Action card takes a character slot and is NOT
-   community property, unlike a Basic Action (rule 2.1.2). `Purchase`'s
-   `isCommunity = CardType == BasicAction` check happens to be right for
-   both cases already, so this one is fine - noted so nobody "fixes" it.
+| Site | Was | Now |
+|---|---|---|
+| `TurnEngine.UseAction` | Basic Actions only | any action die |
+| `TurnEngine.CleanUp`'s unused sweep | Basic Actions only | any action die |
+| `TargetResolver`, `TargetKind.ActionDie` | Basic Actions only | any action die |
+| `TurnEngine.Purchase`'s community check | Basic Actions only | unchanged - correct |
 
-Not built now: adding an enum value nothing exercises would be untested
-code. Build it with the first Action card, and the note above is the
-whole design.
+`TargetKind.BasicActionDie` is the narrow filter for text that really
+does mean the shared subset.
+
+**Faces differ too.** A Basic Action die's three energy faces are generic
+doubles (rules 1.3.10, 2.6.1.5); a non-basic Action die carries the
+CARD'S OWN printed energy, exactly as a character die does.
+`MigrationDice.BasicAction` and `MigrationDice.Action` are now separate,
+the latter reusing the same `EnergyFaces` a character uses.
+
+Tested with a synthetic Cosmic Treadmill "Antique Shop Discovery"
+(GAF009), the user's own reference card - a fist/mask Crossover Action
+card, so its die shows a generic single, two fist/mask doubles and three
+action faces. Both directions mutation-checked: narrowing `IsActionDie`
+back to Basic-only fails four tests, widening `IsCommunity` fails three.
+
+**Epic Basic Action is deliberately not modelled** (user's call). When it
+is, it is a subset of Basic Action and must therefore answer true to BOTH
+`IsActionDie` and `IsCommunity`.

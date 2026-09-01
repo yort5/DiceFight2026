@@ -165,7 +165,7 @@ public static class TurnEngine
         var card = state.CardCatalog[die.CardId!];
 
         // Rule 2.6.2.1/2.1.2 - Basic Action cards are community property.
-        var isCommunity = card.CardType == CardType.BasicAction;
+        var isCommunity = card.CardType.IsCommunity();
         if (!isCommunity && die.OwnerId != state.ActivePlayerId)
             throw new InvalidOperationException($"Die '{dieId}' belongs to your opponent's team and isn't a Basic Action.");
 
@@ -329,8 +329,8 @@ public static class TurnEngine
 
         var cardId = die.CardId ?? throw new InvalidOperationException($"Die '{dieId}' has no card - only card dice can be used as Action dice.");
         var card = state.CardCatalog[cardId];
-        if (card.CardType != CardType.BasicAction)
-            throw new InvalidOperationException($"Card '{cardId}' is not a Basic Action card.");
+        if (!card.CardType.IsActionDie())
+            throw new InvalidOperationException($"Card '{cardId}' is not an Action card.");
 
         die.Zone = Zone.OutOfPlay;
         EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieUsed, die, die.ControllerId, state.CurrentStepId));
@@ -414,7 +414,7 @@ public static class TurnEngine
         foreach (var player in new[] { state.PlayerOne, state.PlayerTwo })
         {
             var unusedActionDice = state.DiceIn(player.Id, Zone.ReservePool)
-                .Where(d => d.CardId is { } cardId && state.CardCatalog[cardId].CardType == CardType.BasicAction);
+                .Where(d => d.CardId is { } cardId && state.CardCatalog[cardId].CardType.IsActionDie());
             foreach (var die in unusedActionDice.Concat(state.DiceIn(player.Id, Zone.OutOfPlay)).ToList())
             {
                 die.Zone = Zone.UsedPile;

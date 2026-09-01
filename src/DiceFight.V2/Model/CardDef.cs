@@ -2,11 +2,47 @@ using DiceFight.V2.Model.Effects;
 
 namespace DiceFight.V2.Model;
 
+// The card types, and note that two of them NEST rather than sit beside
+// each other (user ruling, 2026-09-01):
+//
+//   Action die - the broad category: any die with no fielding cost,
+//                attack or defense. An Action card takes a team slot and
+//                belongs to its owner.
+//     Basic Action - a SUBSET of Action: the ones both players share
+//                    (rule 2.1.2, community property).
+//       Epic Basic Action - a subset of Basic Action, with restrictions
+//                           on when it may be purchased. Deliberately not
+//                           modelled yet (user's call); when it is, it
+//                           must satisfy BOTH IsActionDie and the
+//                           community check, being a subset of both.
+//
+// So an ability that says "action die" (Attune) is satisfied by any of
+// them, while one that says "Basic Action die" (Boom Boom) is not.
+// That is why callers ask CardTypes.IsActionDie rather than comparing to
+// BasicAction, which three of the four sites used to do wrongly.
 public enum CardType
 {
     Character,
+    Action,
     BasicAction,
     Token,
+}
+
+public static class CardTypes
+{
+    /// <summary>
+    /// True for every die in the broad "Action die" category - no
+    /// fielding cost, no attack, no defense. Basic Actions are a subset,
+    /// so they answer true here too.
+    /// </summary>
+    public static bool IsActionDie(this CardType type) =>
+        type is CardType.Action or CardType.BasicAction;
+
+    /// <summary>
+    /// True only for the shared subset (rule 2.1.2). An Action card takes
+    /// a team slot and is its owner's alone.
+    /// </summary>
+    public static bool IsCommunity(this CardType type) => type is CardType.BasicAction;
 }
 
 // Appendix B. Affiliations/Keywords contribute to the die's tag set

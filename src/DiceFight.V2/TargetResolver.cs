@@ -71,7 +71,9 @@ public static class TargetResolver
         if (filter.Kind == TargetKind.CharacterDie)
             dice = dice.Where(d => FaceOf(d)?.Character is not null);
         else if (filter.Kind == TargetKind.ActionDie)
-            dice = dice.Where(d => d.CardId is { } cid && state.CardCatalog[cid].CardType == CardType.BasicAction);
+            dice = dice.Where(d => d.CardId is { } cid && state.CardCatalog[cid].CardType.IsActionDie());
+        else if (filter.Kind == TargetKind.BasicActionDie)
+            dice = dice.Where(d => d.CardId is { } cid && state.CardCatalog[cid].CardType.IsCommunity());
 
         if (protection is { } p)
             dice = dice.Where(d => QueryEngine.CanBeTargeted(state, d, requestingControllerId, p));

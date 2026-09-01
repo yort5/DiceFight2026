@@ -21,7 +21,7 @@ public static class CardCatalog
     private static DieDefinition BuildCharacterDie(string dieId, string energySymbolId, params (int FieldingCost, int Attack, int Defense)[] levels) =>
         MigrationDice.Character(dieId, energySymbolId, levels);
 
-    private static DieDefinition BuildActionDie(string dieId) => MigrationDice.Action(dieId);
+    private static DieDefinition BuildActionDie(string dieId) => MigrationDice.BasicAction(dieId);
 
     // ---- Team A: 8 characters + 2 Basic Actions ----
 

@@ -13,7 +13,10 @@ public enum TargetKind
 {
     AnyDie,
     CharacterDie,
+    /// <summary>Any action die - Basic Actions included (see CardTypes).</summary>
     ActionDie,
+    /// <summary>Only the shared subset - Boom Boom's "Basic Action die".</summary>
+    BasicActionDie,
     Player,
     DieOrPlayer,
 }

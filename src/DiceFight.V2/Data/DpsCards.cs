@@ -25,7 +25,7 @@ public static class DpsCards
     public static readonly CardDef PowerBolt = new(
         Id: "DPS011", Name: "Power Bolt", Subtitle: "Basic Action", Set: "DPS", CardType: CardType.BasicAction,
         PurchaseCost: 3, EnergySymbolIds: [],
-        Die: MigrationDice.Action("DPS011Die"),
+        Die: MigrationDice.BasicAction("DPS011Die"),
         DieLimit: 3, Affiliations: [], Keywords: [],
         RawText: "Deal 2 damage to target character die or player.",
         Abilities: [new TriggeredAbility(TriggerKind.DieUsed,
@@ -40,7 +40,7 @@ public static class DpsCards
     public static readonly CardDef Rally = new(
         Id: "DPS013", Name: "Rally", Subtitle: "Basic Action", Set: "DPS", CardType: CardType.BasicAction,
         PurchaseCost: 3, EnergySymbolIds: [],
-        Die: MigrationDice.Action("DPS013Die", 0, 1, 2),
+        Die: MigrationDice.BasicAction("DPS013Die", 0, 1, 2),
         DieLimit: 3, Affiliations: [], Keywords: [],
         RawText: "Move up to 2 Sidekick dice from your Used Pile to your Field Zone. ** Instead, move up to 3 Sidekicks instead.",
         Abilities: [new TriggeredAbility(TriggerKind.DieUsed,
@@ -291,7 +291,7 @@ public static class DpsCards
     public static readonly CardDef Archnemesis = new(
         Id: "DPS001", Name: "Archnemesis", Subtitle: "Basic Action", Set: "DPS", CardType: CardType.BasicAction,
         PurchaseCost: 4, EnergySymbolIds: [],
-        Die: MigrationDice.Action("DPS001Die"),
+        Die: MigrationDice.BasicAction("DPS001Die"),
         DieLimit: 3, Affiliations: [], Keywords: [],
         RawText: "Target character die you control and target opposing character die deal damage to each other equal to their A. Global: Pay Shield. Target character die has D equal to it's A (until end of turn).",
         Abilities: [new TriggeredAbility(TriggerKind.Global,
@@ -319,7 +319,7 @@ public static class DpsCards
     public static readonly CardDef Mutation = new(
         Id: "DPS009", Name: "Mutation", Subtitle: "Basic Action", Set: "DPS", CardType: CardType.BasicAction,
         PurchaseCost: 3, EnergySymbolIds: [],
-        Die: MigrationDice.Action("DPS009Die"),
+        Die: MigrationDice.BasicAction("DPS009Die"),
         DieLimit: 3, Affiliations: [], Keywords: [],
         RawText: "Swap target character die in the Field Zone with target non-sidekick character dice in that player's Used Pile. Spin that character die to level 1. (This does not trigger \"when fielded\" effects.) Global: Pay Mask. Spin one of your character die down a level to spin another target character die up a level.",
         Abilities: [
@@ -498,7 +498,7 @@ public static class DpsCards
     public static readonly CardDef MakingTheTeam = new(
         Id: "DPS007", Name: "Making the Team", Subtitle: "Basic Action", Set: "DPS", CardType: CardType.BasicAction,
         PurchaseCost: 3, EnergySymbolIds: [],
-        Die: MigrationDice.Action("DPS007Die"),
+        Die: MigrationDice.BasicAction("DPS007Die"),
         DieLimit: 3, Affiliations: [], Keywords: [],
         RawText: "Roll a character die from your Used Pile. If it rolls a character face, field it for free. Otherwise, Prep it.",
         Abilities: [new TriggeredAbility(TriggerKind.DieUsed, new Sequence([

@@ -97,18 +97,33 @@ internal static class MigrationDice
     // v1 records burst per ROLLED die, never per face, so a card needing
     // a double-burst branch gets one double-burst face rather than a
     // sourced distribution.
-    internal static DieDefinition Action(string dieId, params int[] bursts)
+    /// <summary>
+    /// A BASIC Action die - the shared subset. Rule 1.3.10: its energy
+    /// faces provide generic energy, and 2.6.1.5 makes all three doubles,
+    /// which is why such a die has no single face to spin down to.
+    /// </summary>
+    internal static DieDefinition BasicAction(string dieId, params int[] bursts) =>
+        ActionDie(dieId, [
+            new Face([new SymbolAmount(GenericSymbolId, 2)]),
+            new Face([new SymbolAmount(GenericSymbolId, 2)]),
+            new Face([new SymbolAmount(GenericSymbolId, 2)]),
+        ], bursts);
+
+    /// <summary>
+    /// A non-basic Action die - one that takes a team slot. Unlike a Basic
+    /// Action, it carries the CARD'S OWN printed energy, exactly as a
+    /// character die does: Batarang shows one bolt and two double-bolts,
+    /// and Cosmic Treadmill "Antique Shop Discovery" (GAF009), a fist/mask
+    /// Crossover, shows one generic single and two fist/mask doubles.
+    /// Same EnergyFaces used by Character, for that reason.
+    /// </summary>
+    internal static DieDefinition Action(string dieId, IReadOnlyList<string> energySymbolIds, params int[] bursts) =>
+        ActionDie(dieId, EnergyFaces(energySymbolIds), bursts);
+
+    private static DieDefinition ActionDie(string dieId, IEnumerable<Face> energyFaces, int[] bursts)
     {
         var pattern = bursts.Length > 0 ? bursts : [0, 0, 0];
-        // Rule 1.3.10 - a Basic Action die's energy faces provide generic
-        // energy, and 2.6.1.5 makes them all doubles. Symbol-less because
-        // generic is not a declared symbol type.
-        var faces = new List<Face>
-        {
-            new([new SymbolAmount(GenericSymbolId, 2)]),
-            new([new SymbolAmount(GenericSymbolId, 2)]),
-            new([new SymbolAmount(GenericSymbolId, 2)]),
-        };
+        var faces = new List<Face>(energyFaces);
         faces.AddRange(pattern.Select(b => new Face([], Burst: b, Kind: FaceKind.ActionFace)));
         return new DieDefinition(dieId, faces);
     }
