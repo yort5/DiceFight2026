@@ -1913,6 +1913,14 @@ it leaves tailed.
 
 ### Spike A — Ability-blanking + named-card lockout
 
+> **SUPERSEDED by Part 19 (2026-09-01). Do not sign off on this
+> version.** Parts 15, 16 and 17 each amended it after it was written -
+> most importantly Part 16's ruling that blanking removes only a card's
+> OWN printed text - and Part 16 surfaced a whole gap (granted abilities
+> have nowhere to live) that this write-up does not mention. Part 19 is
+> the current proposal; what follows is kept for the reasoning that
+> still holds.
+
 **Cards**: D'Ken "Shi'ar Civil War" (DPS141), Mister Sinister "Mutant
 Supremacist" (DPS083), Vulcan "Power Suppression" (DPS095), Shriek
 (SMC016); plus the named-card lockout family folded in at the Part 11
@@ -2673,3 +2681,189 @@ list does not hold. Keep `CardDef.Affiliations` structured (it already
 is), keep the collision validation, and treat an `Affiliations`
 predicate on `TargetFilter` as an available additive move if a future
 card genuinely needs attribute-level addressing.
+
+---
+
+## Part 19 — Spike A, consolidated for sign-off (2026-09-01)
+
+**Supersedes Part 12's Spike A.** That write-up was amended three times
+after it was written — Part 15 (blanking loses keywords, keeps printed
+attributes), Part 16 (the user's correction: blanking removes only a
+card's OWN text, plus the granted-abilities gap it exposed), and Part 17
+(the affiliation fork, which changes how much surgery the tag path
+needs). A proposal spread across four Parts, where the first says things
+the later three overrule, is not something anyone should be asked to
+sign. This is one current statement of what would be built.
+
+Everything below was re-checked against the code as it stands today, not
+against the notes. Where a note and the code disagreed, the code won.
+
+### What it is for
+
+**Ability-blanking**: D'Ken "Shi'ar Civil War" (DPS141), Mister Sinister
+"Mutant Supremacist" (DPS083), Vulcan "Power Suppression" (DPS095),
+Shriek (SMC016).
+
+**Named-card lockout**, folded in at the Part 11 freeze because it shares
+the same "choose an opposing card when fielded, remember the choice"
+memory: Blob (XFC087), Drax (IG107), Magneto (AOU139).
+
+### What blanking actually removes
+
+Three rules define the scope, and they draw a finer line than "the die
+does nothing":
+
+- 3.4.8.1 — abilities may blank a specified **attribute, ability, or
+  component** (three different things).
+- 3.4.7.2 — blanking the text box also blanks **keyword** abilities.
+- 3.4.8.2 — when the text box is ignored, all abilities that pertain to
+  the card's dice are lost **"because dice refer to their card to
+  initiate or trigger their abilities"**.
+
+That last clause is the load-bearing one, and it is what the user's
+Part 16 correction turns on: a **granted** ability does not come from
+the blanked card, so nothing severs it. Psylocke grants a die Overcrush;
+Shriek blanks that die; **it keeps Overcrush**. Lantern Ring is the same
+case and the reason it matters.
+
+So a blanked die loses: its card's keywords, its card's triggered
+abilities, its card's Globals, and its card's continuous templates.
+
+It keeps: every printed **attribute** (name, subtitle, purchase cost,
+energy type, affiliation, alignment — the closed list at rules 1.2), its
+face stats, its die kind, and **anything another live ability granted
+it**. A blanked Wolverine is still named Wolverine, still X-Men, still
+4A, still has whatever Psylocke gave him. He just has no text of his own.
+
+### The build, site by site
+
+**1. Implement the reserved 8th query.** `QueryEngine.AbilitiesActive(
+state, die) -> bool`. The name is reserved and the file carries an
+explicit note not to build it early; this is what it was reserved for.
+
+**2. Consulted at four sites.** Three are from the original write-up and
+still stand; the fourth is Part 16's correction, and it is the fiddly one.
+
+| Site | Change | Effect |
+|---|---|---|
+| `EventBus.Fire` (its `card.Abilities` scan, EventBus.cs:41) | skip when blanked | a blanked die's triggers never enqueue |
+| `TurnEngine.UseGlobal` / `UseAction` | reject when blanked | a blanked die's Global can't be activated |
+| `ContinuousRegistry.ActiveSourceDice` | exclude when blanked | a blanked die's auras switch off |
+| `QueryEngine.GetBaseTags` | drop **only** the `card.Keywords` loop | a blanked die loses keywords, keeps everything else |
+
+That fourth row is the whole of Part 16 in one line, and it is worth
+being precise because `GetBaseTags` currently merges five sources into
+one flat set:
+
+```
+sidekick kind  +  card.Affiliations  +  card.Keywords  +  card.Name
+               +  card.EnergySymbolIds  +  die.GrantedTags
+```
+
+Blanking removes the **third** of those and nothing else. `GetTags`'
+`TagAura` union on top also survives untouched — a continuously-granted
+tag is granted, not printed. The provenance is fully recoverable inside
+`QueryEngine`, so this stays a no-vocabulary-change fix; it is just a
+more careful one than "blank the tags".
+
+**3. Deliberately NOT consulted** by `GetAttack` / `GetDefense` /
+`GetFieldingCost`, nor by `TargetResolver`'s identity filters. This
+mirrors v1's own scope decision (`DieStats.GetCard`'s choke point) and
+rules 1.2's attribute list. "Is a die named X active" asked by *someone
+else's* condition must still see a blanked die.
+
+**4. The already-queued case.** If ability X blanks a die whose ability Y
+is already in the queue, Y still fires and resolves with no text to do
+anything. `EffectInterpreter.ResolveQueued` re-checks `AbilitiesActive`
+on the source die at **resolution** time and no-ops if it has since been
+blanked. This falls out of the rule-3.2.5 per-ability snapshot decision
+already made — no new mechanism — but it must be written down or it will
+be missed.
+
+### The gap Spike A exposes: granted abilities have nowhere to live
+
+This is the significant change from Part 12, and it is not optional.
+
+`GrantTag` grants tags. **Nothing in the closed vocabulary grants a whole
+triggered ability to a die**, and `EventBus.Fire` scans only
+`state.CardCatalog[cardId].Abilities` — so there is no place a granted
+ability could be stored, let alone survive blanking. Lantern Ring needs
+exactly that.
+
+Spike A does not cause this gap; it makes it visible, because "which
+abilities does this die have" stops being answerable from the card alone.
+
+Candidate shape, mirroring `GrantedTags` (which already exists on
+`DieInstance` with `Duration` handling):
+
+- a per-die granted-ability store on `DieInstance`
+- a `GrantAbility` effect template
+- `EventBus.Fire` unioning that store with the card's own list
+
+**The store is needed either way.** The user noted the
+granted-survives-blanking ruling could be simplified away if it bought
+enough. It would not: even if granted text were blanked alongside
+printed text, v2 would still need somewhere for granted abilities to
+live in order to have Lantern Ring at all. The ruling only decides
+whether the blanking filter skips that store — one boolean, not the
+mechanism.
+
+### Vocabulary cost
+
+| Addition | Kind | Covers |
+|---|---|---|
+| `AbilityBlank(Target, ActiveWhen?)` | continuous template (7th) | D'Ken (Target: opposing character dice, `Stat: PurchaseCost Max 3`) |
+| `BlankText(Target, Duration)` | effect template | Mister Sinister's Global (single die, end of turn) |
+| `RememberCard(Target, MemoryName)` | effect template | the "choose an opposing card when fielded" memory both families share |
+| `Lockout(MemoryName)` continuous **or** `PurchaseLock`/`FieldLock` modes on `CostModifier` | continuous | Blob / Drax / Magneto AOU139 |
+| `GrantAbility(Target, Ability, Duration)` | effect template | the gap above; Lantern Ring |
+
+Plus one non-vocabulary addition: the per-die granted-ability store.
+
+### What it still does NOT close
+
+- **Mister Sinister's side-wide half.** "Ignore all text on opposing
+  character *cards*" is **card**-scoped, covering copies not yet in play.
+  `AbilityBlank`'s `TargetFilter` resolves to *dice*. Closing it needs a
+  store keyed by `(player, cardId)` — the same shape `GameState.Counters`
+  already established, so there is precedent, but it is a second
+  mechanism rather than a free rider.
+- **Vulcan's engagement scoping.** "Blocking or blocked by Vulcan" is a
+  combat-*engagement* relationship. `TargetFilter` has no notion of
+  "engaged with the source die", and v1 does not express it through
+  targeting either — it populates the blank set from inside
+  `CombatEngine.DeclareBlockers`. Vulcan likely stays tailed even after
+  this spike.
+
+### Interaction with the affiliation fork (Parts 17-18)
+
+These should be decided together, because one simplifies the other. If
+affiliation becomes first-class — leaving `Tags` for genuinely tag-ish
+things — then `GetBaseTags` stops merging attributes with abilities at
+all, and Spike A's fourth site becomes close to trivial instead of a
+provenance-filtering exercise inside a five-source union. Part 17 already
+recommends deciding the fork before adding the bound-die predicate; the
+same argument applies here, more strongly.
+
+### What sign-off needs to decide
+
+1. **The core** — `AbilitiesActive` plus the four sites plus the
+   resolution-time re-check. Approve as written?
+2. **The granted-ability store and `GrantAbility`.** Approve? And confirm
+   the Part 16 ruling holds: granted abilities survive blanking.
+3. **Mister Sinister's card-scoped half** — build the `(player, cardId)`
+   store now, or tail the side-wide clause and migrate only his
+   die-scoped Global?
+4. **Vulcan** — accept that he stays tailed, or is engagement-as-a-
+   `TargetFilter`-notion worth opening as its own spike later?
+5. **The lockout shape** — `Lockout(MemoryName)` as its own continuous,
+   or modes on the existing `CostModifier`?
+6. **The affiliation fork** (Parts 17-18) — worth settling in the same
+   pass, per the interaction above.
+
+**Assessment, unchanged from Part 12 and now better founded**: this is
+the larger spike. Four or five vocabulary additions plus a per-die store,
+and it still leaves two of its motivating cards partly open. It is worth
+doing for the lockout family, D'Ken, and — the part Part 12 could not see
+— because the granted-ability store it forces is a real gap that blocks
+Lantern Ring independently of any blanking card.

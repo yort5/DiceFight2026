@@ -8,11 +8,11 @@ at the 2026-08-22 gate review (`V2_VOCABULARY.md` Part 11); Phase 8
 - **Task 3** - became THREE spikes, not two. **Spike B** (live-value
   Amounts) and **Spike C** (the timing model) were signed off and
   implemented on 2026-08-24; see `V2_VOCABULARY.md` Parts 13-14.
-  **Spike A** (ability-blanking + named-card lockout) is written up in
-  Part 12 but is **still awaiting sign-off**, and Parts 15-17 have
-  amended its design since it was written - so the proposal a reader
-  needs is now spread across four Parts and wants consolidating before
-  anyone signs anything.
+  **Spike A** (ability-blanking + named-card lockout) is **still
+  awaiting sign-off**. Part 12's version was amended three times by
+  Parts 15-17; **`V2_VOCABULARY.md` Part 19 (2026-09-01) is the current
+  consolidated proposal** and Part 12's is marked superseded. Part 19
+  ends with the six questions sign-off has to answer.
 - **Task 4** (DPS catalog batches) - IN PROGRESS. Two batches landed
   2026-08-24: **29 of v1's 145 curated DPS cards migrated, 116 to go.**
 - **Task 5** (catalog-wide invariant tests) - not started.
