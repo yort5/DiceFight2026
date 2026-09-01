@@ -276,3 +276,39 @@ than anything Spike A closed, and it is a known one (see "Keyword
 behavior still unbuilt" above). Roughly a quarter of what remains is
 waiting on it. Worth costing before batch 4, since the alternative is
 picking around it for several more batches.
+
+### GAP: v2 has no `CardType.Action` (found 2026-09-01)
+
+v1's `CardType` is Character / **Action** / BasicAction /
+**EpicBasicAction** / Token. v2's is Character / BasicAction / Token.
+Nothing is wrong today - v1's curated set contains **zero** Action cards,
+so every card migrated so far that uses `MigrationDice.Action` is
+genuinely a Basic Action - but the full catalog has **188 Action cards
+and 4 Epic Basic Actions**, and the first one migrated will hit three
+things at once:
+
+1. **Faces.** An Action die is not a Basic Action die. A Basic Action's
+   three energy faces are all generic doubles (rule 2.6.1.5); an Action
+   die carries the card's OWN printed energy, exactly like a character
+   die - the user's reference card, Cosmic Treadmill "Antique Shop
+   Discovery" (GAF009), is a fist/mask Crossover showing one generic
+   single, two fist/mask doubles, then three action faces. Batarang is
+   the single-type version: "one bolt and two double-bolt faces".
+   So the fix is `MigrationDice`'s existing `EnergyFaces(card's symbols)`
+   plus action faces - the two helpers already exist, they just need
+   splitting apart from the Basic Action all-generic case.
+
+2. **`TargetKind.ActionDie`** keys off `CardType == BasicAction`
+   (TargetResolver.cs:74), so it would silently not match a real Action
+   die. Rogue "Surveillance Immunity" (DPS089) targets action dice and is
+   already migrated, so this is a live filter that would quietly under-
+   match the day an Action card arrives.
+
+3. **Team slots.** An Action card takes a character slot and is NOT
+   community property, unlike a Basic Action (rule 2.1.2). `Purchase`'s
+   `isCommunity = CardType == BasicAction` check happens to be right for
+   both cases already, so this one is fine - noted so nobody "fixes" it.
+
+Not built now: adding an enum value nothing exercises would be untested
+code. Build it with the first Action card, and the note above is the
+whole design.

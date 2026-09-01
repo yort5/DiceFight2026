@@ -530,11 +530,18 @@ public static class TurnEngine
 
             foreach (var symbol in face.Symbols)
             {
-                // Belt and braces: no card prints Generic as one of its
-                // energy types, so this skip changes nothing today. It
-                // states rule 1.4.3 at the point of decision rather than
-                // leaving generic to fall through the else and be
-                // removed from a set it was never in.
+                // Generic never satisfies a type requirement (rule 1.4.3).
+                //
+                // To be precise about what this is and is not saying:
+                // requiredSymbolIds is the card's PURCHASE COST - the
+                // symbols in its top-left corner - and no card prints
+                // generic there. Plenty of cards print generic on a
+                // FACE: every Crossover's single energy face is generic
+                // (Cosmic Treadmill GAF009 shows one), and every Basic
+                // Action die's three energy faces are. Those arrive here
+                // as symbols on the offered dice, which is exactly what
+                // this line has to ignore for the type check while
+                // `total` above still counts them.
                 if (genericIds.Contains(symbol.SymbolId)) continue;
                 if (wildIds.Contains(symbol.SymbolId)) wildPips += symbol.Count;
                 else unmatched.Remove(symbol.SymbolId);
