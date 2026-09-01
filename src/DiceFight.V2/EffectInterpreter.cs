@@ -381,11 +381,17 @@ public static class EffectInterpreter
             if (n.ToZone == Zone.ReservePool)
             {
                 // Landing in the Reserve Pool means rolled (DrawToZone's
-                // own convention, mirrored from TurnEngine.Roll). A
-                // freshly-drawn die has no prior face to report a change
-                // FROM, so - same reasoning as Roll's own first-ever-roll
-                // case - this doesn't fire DieFaceChanged.
+                // own convention, mirrored from TurnEngine.Roll).
+                // FaceChangeCause.Effect, not Roll - this is an ability
+                // rolling a die (Mutant Research Program, Groot), not the
+                // turn's own Roll and Reroll Step, and Energize's own
+                // ExcludeCause: Roll carve-out depends on that distinction
+                // (Part 30) - an Energize die drawn-and-rolled this way
+                // must check immediately, not wait for a step boundary
+                // that already passed.
                 die.CurrentFaceIndex = ctx.Roller.Roll(ctx.State.GetDieDefinition(die));
+                var payload = new DieFaceChangedPayload(null, ctx.State.GetCurrentFace(die)!, FaceChangeCause.Effect);
+                EventBus.Fire(ctx.State, ctx.Queue, new GameEvent(TriggerKind.DieFaceChanged, die, die.ControllerId, ctx.State.CurrentStepId, payload));
             }
         }
         onComplete();
@@ -448,10 +454,10 @@ public static class EffectInterpreter
     }
 
     // --- Reroll / Spin / SpinToEnergy - the face-mutation templates.
-    // Every one of these fires DieFaceChanged when the die had a prior
-    // face (Part 1's own "every face-mutation site" mandate; skipped for
-    // a die's first-ever face same as Roll/DrawToZone, since there's
-    // nothing for a filter to compare a null PriorFace against). ---
+    // Every one of these fires DieFaceChanged unconditionally, prior face
+    // or not (Part 1's own "every face-mutation site" mandate; Part 30
+    // removed the old "skip when no prior face" carve-out - see
+    // DieFaceChangedPayload's own remarks for why it was wrong). ---
 
     private static void ExecuteReroll(Reroll n, EffectContext ctx, Action onComplete)
     {
@@ -466,11 +472,8 @@ public static class EffectInterpreter
                 die.CurrentFaceIndex = newIndex;
                 var newFace = definition.Faces[newIndex];
 
-                if (priorFace is not null)
-                {
-                    var payload = new DieFaceChangedPayload(priorFace, newFace, FaceChangeCause.Reroll);
-                    EventBus.Fire(ctx.State, ctx.Queue, new GameEvent(TriggerKind.DieFaceChanged, die, die.ControllerId, ctx.State.CurrentStepId, payload));
-                }
+                var payload = new DieFaceChangedPayload(priorFace, newFace, FaceChangeCause.Reroll);
+                EventBus.Fire(ctx.State, ctx.Queue, new GameEvent(TriggerKind.DieFaceChanged, die, die.ControllerId, ctx.State.CurrentStepId, payload));
 
                 // Finding 8 - the per-die multi-target Reroll pattern
                 // (5 v1 users) folded into the node itself.
@@ -506,11 +509,8 @@ public static class EffectInterpreter
                 var faceIndex = definition.Faces.Select((f, i) => (f, i)).First(x => x.f.Character?.Level == targetLevel).i;
                 die.CurrentFaceIndex = faceIndex;
 
-                if (priorFace is not null)
-                {
-                    var payload = new DieFaceChangedPayload(priorFace, definition.Faces[faceIndex], FaceChangeCause.Spin);
-                    EventBus.Fire(ctx.State, ctx.Queue, new GameEvent(TriggerKind.DieFaceChanged, die, die.ControllerId, ctx.State.CurrentStepId, payload));
-                }
+                var payload = new DieFaceChangedPayload(priorFace, definition.Faces[faceIndex], FaceChangeCause.Spin);
+                EventBus.Fire(ctx.State, ctx.Queue, new GameEvent(TriggerKind.DieFaceChanged, die, die.ControllerId, ctx.State.CurrentStepId, payload));
             }
             onComplete();
         });
@@ -549,11 +549,8 @@ public static class EffectInterpreter
                 var priorFace = ctx.State.GetCurrentFace(die);
                 die.CurrentFaceIndex = index;
 
-                if (priorFace is not null)
-                {
-                    var payload = new DieFaceChangedPayload(priorFace, face, FaceChangeCause.Spin);
-                    EventBus.Fire(ctx.State, ctx.Queue, new GameEvent(TriggerKind.DieFaceChanged, die, die.ControllerId, ctx.State.CurrentStepId, payload));
-                }
+                var payload = new DieFaceChangedPayload(priorFace, face, FaceChangeCause.Spin);
+                EventBus.Fire(ctx.State, ctx.Queue, new GameEvent(TriggerKind.DieFaceChanged, die, die.ControllerId, ctx.State.CurrentStepId, payload));
             }
             onComplete();
         });

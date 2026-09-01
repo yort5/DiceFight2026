@@ -36,7 +36,20 @@ public abstract record EventPayload;
 // carries full Face payloads, not just kinds, since Energize needs to
 // check symbol count (>= 2) on the new face, not just "is it an energy
 // face." Emitted from EVERY face-mutation site - see the class remarks.
-public sealed record DieFaceChangedPayload(Face PriorFace, Face NewFace, FaceChangeCause Cause) : EventPayload;
+//
+// PriorFace is nullable (2026-09-01, Energize correction, Part 30): a
+// die's first-ever face assignment (drawn from the Bag, rolled for the
+// first time) has none to report a change FROM, which is fine for
+// LevelIncreased (Awaken genuinely cannot fire without a prior level to
+// have risen from - EventBus's own check already null-checks it) but
+// was WRONG for Energize's Stat-threshold check, which only cares about
+// NewFace and needs nothing to compare against. The old design skipped
+// emission entirely on a null prior face (v1's Awaken/Energize gate bug
+// precedent, ported forward) - which silently meant a card drawn-and-
+// rolled by an ability (Mutant Research Program, Groot) could never
+// Energize even landing on double energy, since no event fired at all.
+// Now every face-mutation site fires unconditionally, prior face or not.
+public sealed record DieFaceChangedPayload(Face? PriorFace, Face NewFace, FaceChangeCause Cause) : EventPayload;
 
 // DieDamaged's own payload - the amount just dealt. Nothing fires
 // DieDamaged yet (no damage-dealing mechanic exists before Phase 5's
@@ -80,7 +93,29 @@ public sealed record EventFilter(
     bool SharesAffiliationWithListener = false,
     int? MinPurchaseCost = null,
     StatThreshold? Stat = null,
-    string? Step = null);
+    string? Step = null,
+    // 2026-09-01, Energize correction (Part 30) - a filter with OTHER
+    // predicates set (LevelIncreased, ExcludeCause, ...) is no longer
+    // automatically self-only the way a null Filter is (Matches' own
+    // shortcut only applies when Filter is null at all). Awaken's own
+    // LevelIncreased flag had exactly this gap - proven by a direct test,
+    // not theorized: an unrelated die also carrying an Awaken-shaped
+    // ability would incorrectly react to a DIFFERENT die's spin-up,
+    // since LevelIncreased only inspects the payload, never the
+    // listener's own identity. RequireSelf is the general fix - true
+    // wherever a filtered reaction is conceptually "about ME," same as
+    // ExcludeSelf is the general fix for "about someone ELSE."
+    bool RequireSelf = false,
+    // Energize's own carve-out: "During the Roll and Reroll Step, only
+    // check at the end of the Step" (deferred - TurnStepEntered(Main) -
+    // see DpsCards.Energize) is scoped to that ONE step's own roll, not
+    // to every face change. Excluding Cause.Roll is how "not that step's
+    // own initial roll" is expressed - nothing in the engine can cause a
+    // Reroll/Spin/Effect face change WHILE mid-Roll-and-Reroll today (no
+    // interactive reroll is wired up, no ability resolves mid-step), so
+    // excluding Cause.Roll and excluding "during Roll and Reroll" are the
+    // same set for now. Revisit if interactive rerolling changes that.
+    FaceChangeCause? ExcludeCause = null);
 
 // Rule 2.6.5.4 - a Global ability's energy price. RequiredSymbolId null
 // means any energy (including generic) satisfies it.

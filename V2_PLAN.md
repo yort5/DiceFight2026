@@ -2,14 +2,15 @@
 
 **Vocabulary**: `V2_VOCABULARY.md` states what the vocabulary IS (now
 including the Energize shape), derived from the code. `V2_VOCABULARY_HISTORY.md`
-keeps how it got there (29 parts, 2026-08-22 to 2026-09-01). Cite the
+keeps how it got there (30 parts, 2026-08-22 to 2026-09-01). Cite the
 history for reasoning; code against the spec.
 
 **Status (refreshed 2026-09-01): Phases 0-7 complete; vocabulary FROZEN
-at the 2026-08-22 gate review (`V2_VOCABULARY.md` Part 11), amended once
+at the 2026-08-22 gate review (`V2_VOCABULARY.md` Part 11), amended twice
 since under the same sign-off discipline (`StatKind.SymbolCount`, Part
-29 - Energize); Phase 8 (Dice Masters as a game definition / card
-migration) IN PROGRESS.**
+29; `EventFilter.RequireSelf`/`ExcludeCause`, Part 30 - both Energize);
+Phase 8 (Dice Masters as a game definition / card migration) IN
+PROGRESS.**
 
 - **Task 1-2** (config + curated teams) - done 2026-08-23.
 - **Task 3** - became THREE spikes, not two, and **all three are now
@@ -1102,3 +1103,33 @@ Verified: `dotnet build DiceFight.slnx` clean; v2 tests 243/243 (10 new:
 2 Domino, 8 batch 5); v1's full suite re-run untouched, 580/580. Status
 header above updated; batches 1-5 total 66/145 DPS cards (67 incl.
 Domino, tracked separately).
+
+**Phase 8 progress note (2026-09-01, Energize correction, Part 30)**:
+same day, a user question about a real physical-game interaction
+(Domino rerolled by Storm "Queen" mid-Attack-Step) exposed that the
+Energize design from Part 29 only covered the Roll and Reroll Step's own
+roll - the rule's "only check at the end of the Step" deferral is scoped
+to that one step, not every face change. Fixed with a second ability per
+Energize card (`DieFaceChanged` + two new signed-off `EventFilter`
+fields, `RequireSelf`/`ExcludeCause`) and two real bugs found while
+building it: `EventFilter.LevelIncreased` (Awaken) had no self-scoping
+at all (proven with a test - an unrelated die's own Awaken reacted to a
+DIFFERENT die's spin-up; no migrated card uses it yet, so nothing
+shipped broken), and `DrawToZone` never fired `DieFaceChanged` when
+rolling a die into the Reserve Pool at all, which would have silently
+broken Energize for exactly the "die drawn-and-rolled by a Basic Action"
+case the user asked about (Mutant Research Program). Full account:
+`V2_VOCABULARY_HISTORY.md` Part 30.
+
+A real infinite loop was caught before shipping, not an engine bug: two
+already-migrated self-rerolling Energize cards' own tests used a
+`FixedRoller` fixed to a double-energy index, which now correctly
+re-triggers Energize on every reroll forever (a real random roller turns
+the same case into a merely-unlikely chain). Both tests fixed to reroll
+onto the single-energy face instead.
+
+Verified: `dotnet build DiceFight.slnx` clean; v2 tests 247/247 (4 new,
+covering the immediate-check path, the off-double-energy non-fire, the
+drawn-and-rolled case, and the `RequireSelf` cross-fire guard); v1's
+full suite re-run untouched, 580/580. No DPS card count change - this
+was a correctness fix to already-migrated cards, not new migration.

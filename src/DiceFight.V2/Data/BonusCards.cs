@@ -24,7 +24,7 @@ public static class BonusCards
         Die: MigrationDice.Character("XFO010Die", "Shield", (0, 2, 2), (1, 3, 2), (1, 5, 2)),
         DieLimit: 4, Affiliations: ["X-Men"], Keywords: ["Energize"],
         RawText: "Energize - Deal 1 damage to target opponent and reroll this die.",
-        Abilities: [DpsCards.Energize(new Sequence(
+        Abilities: [..DpsCards.Energize(new Sequence(
         [
             new DealDamage(new Fixed(1), new TargetFilter(Kind: TargetKind.Player, Ownership: TargetOwnership.Opposing)),
             new Reroll(new TargetFilter(Self: true)),

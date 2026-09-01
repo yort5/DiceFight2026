@@ -766,15 +766,33 @@ public static class DpsCards
     // die regardless of face. StatKind.SymbolCount is the one real
     // vocabulary addition this needed (user-signed-off).
     //
+    // Second ability added 2026-09-01 (Part 30, user-signed-off): the
+    // deferred TurnStepEntered(Main) check only covers the Roll and
+    // Reroll Step's OWN roll - the rule's deferral is scoped to that one
+    // step, not to every face change. A reroll thrown by an opposing
+    // ability (Storm "Queen") or a die drawn-and-rolled by a Basic Action
+    // (Mutant Research Program) happens OUTSIDE that step and must check
+    // IMMEDIATELY per the rule's own default. DieFaceChanged + RequireSelf
+    // (this reaction is about MY OWN face change, not any die's) +
+    // ExcludeCause: Roll (the one cause that's always that step's own
+    // roll, already covered by the first ability) is that immediate
+    // check. Sharing one Conditional (`checkAndRun`) keeps both abilities
+    // gating on the exact same face-state question.
+    //
     // internal, not private - BonusCards.cs (Domino "Not Really A Party
     // Girl", an out-of-scope one-off) reuses this same canonical shape
     // rather than re-deriving it.
-    internal static TriggeredAbility Energize(EffectNode effect) => new(
-        TriggerKind.TurnStepEntered,
-        new Conditional(
+    internal static IReadOnlyList<TriggeredAbility> Energize(EffectNode effect)
+    {
+        var checkAndRun = new Conditional(
             new CountAtLeast(new TargetFilter(Self: true, Stat: new StatThreshold(StatKind.SymbolCount, Min: 2)), 1),
-            Then: effect),
-        Filter: new EventFilter(Step: StepIds.Main));
+            Then: effect);
+        return
+        [
+            new TriggeredAbility(TriggerKind.TurnStepEntered, checkAndRun, Filter: new EventFilter(Step: StepIds.Main)),
+            new TriggeredAbility(TriggerKind.DieFaceChanged, checkAndRun, Filter: new EventFilter(RequireSelf: true, ExcludeCause: FaceChangeCause.Roll)),
+        ];
+    }
 
     public static readonly CardDef PhoenixFirepower = new(
         Id: "DPS046", Name: "Phoenix", Subtitle: "Firepower", Set: "DPS", CardType: CardType.Character,
@@ -789,7 +807,7 @@ public static class DpsCards
                 new DealDamage(new Fixed(3), new TargetFilter(Kind: TargetKind.CharacterDie))),
             // "Character die or player" - PowerBolt's own identical phrase
             // already established DieOrPlayer for this text.
-            Energize(new DealDamage(new Fixed(2), new TargetFilter(Kind: TargetKind.DieOrPlayer))),
+            ..Energize(new DealDamage(new Fixed(2), new TargetFilter(Kind: TargetKind.DieOrPlayer))),
         ],
         Continuous: []);
 
@@ -811,7 +829,7 @@ public static class DpsCards
                 new Reroll(
                     new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Opposing, Count: 2, Optional: true),
                     NonCharacterMoveTo: Zone.UsedPile, DamagePerMoved: 2)),
-            Energize(new Reroll(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Opposing))),
+            ..Energize(new Reroll(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Opposing))),
         ],
         Continuous: []);
 
@@ -829,7 +847,7 @@ public static class DpsCards
             // AnyDie, not CharacterDie - a Used Pile die is always
             // unrolled (rule 1.6.8), same gap this card's own text (and
             // ProfessorXDreamer's identical Energize clause below) shares.
-            Energize(new MoveDie(
+            ..Energize(new MoveDie(
                 new TargetFilter(Kind: TargetKind.AnyDie, Ownership: TargetOwnership.Own, Zones: [Zone.UsedPile], Affiliations: new TagQuery(AnyOf: ["X-Men"])),
                 Zone.PrepArea)),
         ],
@@ -841,7 +859,7 @@ public static class DpsCards
         Die: MigrationDice.Character("DPS065Die", "Bolt", (1, 4, 2), (1, 5, 3), (1, 6, 4)),
         DieLimit: 4, Affiliations: ["X-Men"], Keywords: ["Energize"],
         RawText: "Energize - Deal 1 damage to target character die and reroll this die.",
-        Abilities: [Energize(new Sequence(
+        Abilities: [..Energize(new Sequence(
         [
             new DealDamage(new Fixed(1), new TargetFilter(Kind: TargetKind.CharacterDie)),
             new Reroll(new TargetFilter(Self: true)),
@@ -856,7 +874,7 @@ public static class DpsCards
         RawText: "Energize - Target character die has 0A this turn.",
         // SetAttack (Finding 5's absolute-snapshot mode), not a delta -
         // "has 0A" is a snapshot to an exact value.
-        Abilities: [Energize(new ModifyStat(new TargetFilter(Kind: TargetKind.CharacterDie), SetAttack: new Fixed(0)))],
+        Abilities: [..Energize(new ModifyStat(new TargetFilter(Kind: TargetKind.CharacterDie), SetAttack: new Fixed(0)))],
         Continuous: []);
 
     public static readonly CardDef PsylockeHeiress = new(
@@ -866,7 +884,7 @@ public static class DpsCards
         DieLimit: 4, Affiliations: ["X-Men"], Keywords: ["Energize"],
         RawText: "Psylocke gets +2A for each of your X-Men dice in the Prep Area. Energize - Spin target " +
                  "character die up 1 level.",
-        Abilities: [Energize(new Spin(new TargetFilter(Kind: TargetKind.CharacterDie), LevelDelta: 1))],
+        Abilities: [..Energize(new Spin(new TargetFilter(Kind: TargetKind.CharacterDie), LevelDelta: 1))],
         Continuous:
         [
             // Target: Self - "Psylocke gets" is self-only, unlike a normal
@@ -886,7 +904,7 @@ public static class DpsCards
         RawText: "Energize - If you have less life than your opponent, you may immediately field this die for " +
                  "free at level 2.",
         // Ground rule 8 - "you may" gets MayPay even with Cost: null.
-        Abilities: [Energize(new Conditional(
+        Abilities: [..Energize(new Conditional(
             new LifeComparison(),
             Then: new MayPay(Cost: null, Then: new FieldDie(new TargetFilter(Self: true), Free: true, Level: 2))))],
         Continuous: []);
@@ -902,7 +920,7 @@ public static class DpsCards
         // Own instead of Opposing (v1's GrantsFreeFielding only ever
         // scanned the ACTIVE player's own granters - see TurnEngine.
         // CanFieldFree's remarks).
-        Abilities: [Energize(new MayPay(Cost: null, Then: new FieldDie(
+        Abilities: [..Energize(new MayPay(Cost: null, Then: new FieldDie(
             new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own, Zones: [Zone.ReservePool], Affiliations: new TagQuery(AnyOf: ["Brotherhood of Mutants"])),
             Free: true)))],
         Continuous:
@@ -922,7 +940,7 @@ public static class DpsCards
         // v1's own reading: the ability always carries the Energize
         // trigger; the affiliation count gates the EFFECT, not whether
         // the card has the ability at all.
-        Abilities: [Energize(new Conditional(
+        Abilities: [..Energize(new Conditional(
             new CountAtLeast(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own, Affiliations: new TagQuery(AnyOf: ["X-Men"])), 3),
             Then: new Spin(new TargetFilter(Self: true), SetLevel: 1)))],
         Continuous: []);
@@ -962,7 +980,7 @@ public static class DpsCards
         DieLimit: 4, Affiliations: ["X-Men"], Keywords: ["Energize"],
         RawText: "If you spend an X-Men die to field Professor X, Prep a die from your bag. Energize - Move an " +
                  "X-Men die from your Used Pile to your Prep Area.",
-        Abilities: [Energize(new MoveDie(
+        Abilities: [..Energize(new MoveDie(
             new TargetFilter(Kind: TargetKind.AnyDie, Ownership: TargetOwnership.Own, Zones: [Zone.UsedPile], Affiliations: new TagQuery(AnyOf: ["X-Men"])),
             Zone.PrepArea))],
         Continuous: [],
@@ -974,7 +992,7 @@ public static class DpsCards
         Die: MigrationDice.Character("DPS017Die", "Shield", (0, 2, 2), (1, 3, 3), (1, 3, 4)),
         DieLimit: 5, Affiliations: ["X-Men"], Keywords: ["Energize"],
         RawText: "Energize - Target Sidekick gets +2A this turn.",
-        Abilities: [Energize(new ModifyStat(new TargetFilter(Kind: TargetKind.CharacterDie, Tags: new TagQuery(AnyOf: ["sidekick"])), AtkDelta: 2))],
+        Abilities: [..Energize(new ModifyStat(new TargetFilter(Kind: TargetKind.CharacterDie, Tags: new TagQuery(AnyOf: ["sidekick"])), AtkDelta: 2))],
         Continuous: []);
 
     public static readonly CardDef CableIllDoThisAllDay = new(
@@ -983,7 +1001,7 @@ public static class DpsCards
         Die: MigrationDice.Character("DPS022Die", "Bolt", (1, 3, 2), (2, 3, 3), (2, 5, 5)),
         DieLimit: 4, Affiliations: ["X-Men"], Keywords: ["Energize"],
         RawText: "Energize - Reroll one of your character dice.",
-        Abilities: [Energize(new Reroll(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own)))],
+        Abilities: [..Energize(new Reroll(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own)))],
         Continuous: []);
 
     public static readonly CardDef ColossusSkilledPainter = new(
@@ -997,7 +1015,7 @@ public static class DpsCards
         // comment), so Spin(SetLevel:3) on the SAME bound die reaches
         // level 3 exactly - no need to port v1's own two-target caching
         // trick, BindAs/Bound already IS that trick.
-        Abilities: [Energize(new Sequence(
+        Abilities: [..Energize(new Sequence(
         [
             new FieldDie(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own, Zones: [Zone.ReservePool], BindAs: "colossus"), Free: true),
             new Spin(new TargetFilter(Bound: "colossus"), SetLevel: 3),
@@ -1017,7 +1035,7 @@ public static class DpsCards
         // exactly regardless of which level the die rolled, so this uses
         // that instead of porting v1's approximation. Ground rule 8 -
         // "you may" gets MayPay.
-        Abilities: [Energize(new MayPay(Cost: null, Then: new Spin(
+        Abilities: [..Energize(new MayPay(Cost: null, Then: new Spin(
             new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own, Zones: [Zone.ReservePool]), SetLevel: 1)))],
         Continuous: []);
 

@@ -99,13 +99,26 @@ public static class EventBus
 
         if (filter.ExcludeSelf && evt.SubjectDie?.Id == listener.Id) return false;
 
+        // Part 30 - the general "this reaction is about ME" gate a filter
+        // with other predicates set doesn't get for free (unlike a null
+        // Filter's own shortcut in Matches, above).
+        if (filter.RequireSelf && evt.SubjectDie?.Id != listener.Id) return false;
+
+        if (filter.ExcludeCause is { } excludeCause)
+        {
+            if (evt.Payload is DieFaceChangedPayload excludeFaceChange && excludeFaceChange.Cause == excludeCause) return false;
+        }
+
         if (filter.LevelIncreased)
         {
             if (evt.Payload is not DieFaceChangedPayload faceChange) return false;
             // Both sides must be character faces: spinning from an energy
             // face has no "level before" to have gone up from, and rule
-            // 1.6.6's spin-up is defined between levels.
-            if (faceChange.PriorFace.Character is not { } before) return false;
+            // 1.6.6's spin-up is defined between levels. PriorFace is
+            // nullable (Part 30) - a die's first-ever face has none, and
+            // null-conditional here naturally refuses to fire, exactly
+            // Awaken's own intent (no prior level to have risen from).
+            if (faceChange.PriorFace?.Character is not { } before) return false;
             if (faceChange.NewFace.Character is not { } after) return false;
             if (after.Level <= before.Level) return false;
         }

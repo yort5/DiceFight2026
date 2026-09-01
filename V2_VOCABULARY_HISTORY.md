@@ -3599,3 +3599,84 @@ addendum, "2 Bishop, Forge, Professor X").
 Verified: `dotnet build DiceFight.slnx` clean; v2 tests up from 214 to
 233 (19 new: 5 generic Energize plumbing, 14 per-card); v1's full suite
 re-run untouched (580/580).
+
+## Part 30 — Energize's scope was wrong, and a real Awaken bug alongside it (2026-09-01)
+
+Same day, a few hours later. The user asked about a real physical-game
+interaction - Domino rerolled by Storm "Queen" (or Green Devil Mask)
+mid-Attack-Step, landing on double energy - which exposed that Part 29's
+design only covers HALF the rule. The full text again: "whenever you
+roll this die on one of its double energy faces, you must use its
+Energize ability... **during the Roll and Reroll Step**, only check at
+the end of the Step." The deferral is scoped to that one step. Outside
+it - a reroll from another card's ability, a die drawn-and-rolled by a
+Basic Action (Mutant Research Program, Groot) - the rule's own default
+applies: check immediately. Part 29's `TurnStepEntered(Main)`-only
+design would have missed both cases entirely - a reroll during the
+Attack Step wouldn't be seen until the NEXT `Main`, which could be a
+full turn later or never.
+
+**Signed off**: a second ability per Energize card, `DieFaceChanged` +
+`RequireSelf` + `ExcludeCause: Roll`, sharing the same `Conditional`
+gate as the first. `RequireSelf` and `ExcludeCause` are both new
+`EventFilter` fields.
+
+**Building it found two more real bugs**, neither hypothetical:
+
+1. **`EventFilter.LevelIncreased` (Awaken) had no self-scoping at all.**
+   A filter with predicates set skips `Matches`'s own null-Filter self-
+   shortcut entirely - proven with a direct test, not reasoned: an
+   unrelated die also carrying an Awaken-shaped ability reacted to a
+   DIFFERENT die's spin-up, since `LevelIncreased` only inspects the
+   event payload, never the listener's identity. No migrated card uses
+   `LevelIncreased` yet, so nothing shipped broken, but the new Energize
+   ability needed the exact same self-scoping, so building it properly
+   once (`RequireSelf`) fixed both rather than copying the bug forward.
+   `EventBus`'s own `LevelIncreased` check already null-conditionals
+   correctly once `PriorFace` went nullable (next item), so no other
+   change was needed there.
+
+2. **`DrawToZone` never fired `DieFaceChanged` at all when rolling a die
+   into the Reserve Pool** - "a freshly-drawn die has no prior face to
+   report a change FROM" (true for `LevelIncreased`, which genuinely
+   needs a comparison) was wrongly generalized to mean "skip the event
+   entirely," which broke Energize's Stat-threshold check (it only cares
+   about `NewFace`, needs no comparison at all). The exact scenario the
+   user asked about (Mutant Research Program rolling a die) would have
+   silently never Energized. Fixed generally: `DieFaceChangedPayload.
+   PriorFace` is now `Face?`, and every face-mutation site (`Roll`,
+   `Reroll`, `Spin`, `SpinToEnergy`, and now `DrawToZone`) fires
+   unconditionally, prior face or not - one uniform rule instead of five
+   separate "skip if null" special cases, which is what Part 1's own
+   "every face-mutation site" mandate asked for from the start.
+   `DrawToZone`'s own roll uses `FaceChangeCause.Effect`, not `Roll` -
+   it's an ability rolling a die, not the turn's own Roll and Reroll
+   Step, and Energize's `ExcludeCause: Roll` carve-out depends on that
+   distinction holding.
+
+**A real infinite loop, caught before it shipped**: the two already-
+migrated self-rerolling Energize cards (Cyclops "Defending the Phoenix,"
+Domino) have their own tests drive `EffectInterpreter.DrainQueue` with a
+`FixedRoller` fixed to a double-energy index. Once the immediate check
+landed, a self-Reroll that lands back on double energy correctly re-
+triggers Energize again - which a REAL random roller turns into an
+increasingly-unlikely chain (fine, and arguably a real, if rare,
+in-game combo), but a `FixedRoller` that always returns the same index
+turns into a true infinite loop. Both tests fixed to reroll onto the
+single-energy face instead; not an engine bug, a reminder that
+deterministic test rollers need a terminating value for any self-
+rerolling effect.
+
+`ExcludeCause: Roll` (not "exclude when `CurrentStep == RollAndReroll`")
+is a documented simplification: nothing in the engine today can cause a
+`Reroll`/`Spin`/`Effect` face change WHILE mid-Roll-and-Reroll (no
+interactive reroll is wired up, no ability resolves mid-step), so
+excluding one `Cause` value and excluding "during that step" are the
+same set for now. Flagged for revisit if interactive rerolling ever
+changes that.
+
+Verified: `dotnet build DiceFight.slnx` clean; v2 tests 247/247 (10 new:
+4 generic in `EnergizeTests.cs` covering the immediate-check path, the
+off-double-energy non-fire, the drawn-and-rolled case, and the
+`RequireSelf` cross-fire guard); v1's full suite re-run untouched
+(580/580).

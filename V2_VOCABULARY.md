@@ -45,19 +45,36 @@ trigger plus a filter: "when ANOTHER die is fielded/KO'd/attacks" is
 `TurnStepEntered` + `Step`; Awaken is `DieFaceChanged` + `LevelIncreased`;
 Teamwatch is `DieFielded` + `SharesAffiliationWithListener`.
 
-Energize is **not** an `EventFilter` predicate like the others - the rule
-text is "only check at the end of the [Roll and Reroll] Step," so a die
-already on a double-energy face that nobody rerolls has no face change
-for `DieFaceChanged` to filter on. It is `TurnStepEntered` + `Step:
-StepIds.Main`, with a `Conditional(CountAtLeast(TargetFilter(Self: true,
-Stat: SymbolCount>=2), 1), Then: ...)` wrapping the card's real effect -
-the trigger fires for every candidate die regardless of face, and the
-Conditional is what actually gates on it.
+Energize is **two abilities**, not one `EventFilter` predicate like the
+others - the rule's deferral ("only check at the end of the Roll and
+Reroll Step") is scoped to that ONE step, not to every face change. Both
+share one `Conditional(CountAtLeast(TargetFilter(Self: true, Stat:
+SymbolCount>=2), 1), Then: ...)` gate:
+- `TurnStepEntered` + `Step: StepIds.Main` - that step's own boundary; a
+  die already on a double-energy face that nobody rerolls has no face
+  change for `DieFaceChanged` to filter on, so this one checks CURRENT
+  state regardless of how it got there.
+- `DieFaceChanged` + `RequireSelf` + `ExcludeCause: Roll` - every OTHER
+  face change (an opposing ability's `Reroll`, a `Spin`, a die drawn-and-
+  rolled by a Basic Action) checks immediately, per the rule's own
+  default. `Roll` is excluded because that cause is always the first
+  ability's own step - never both at once.
 
 ### EventFilter
 
 `Ownership` · `Tags` · `Affiliations` · `ExcludeSelf` · `LevelIncreased`
 · `SharesAffiliationWithListener` · `MinPurchaseCost` · `Stat` · `Step`
+· `RequireSelf` · `ExcludeCause`
+
+`RequireSelf` is the general "this reaction is about ME" gate a filter
+with other predicates set doesn't get for free (a null `Filter` shortcuts
+to it in `EventBus.Matches`, but a non-null one - `LevelIncreased`,
+`ExcludeCause`, ... - doesn't unless asked). Card authors should default
+to setting it whenever a filtered `DieFaceChanged`/similar reaction is
+conceptually self-only; Awaken's `LevelIncreased` predates this field and
+a test proved the gap it left (an unrelated die's own Awaken ability
+reacted to a DIFFERENT die's spin-up) - no migrated card uses it yet, but
+whichever one does should pair it with `RequireSelf: true`.
 
 ## Effect templates (21)
 

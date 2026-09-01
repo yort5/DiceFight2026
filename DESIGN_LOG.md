@@ -10530,3 +10530,40 @@ Full account: `V2_PLAN.md`'s Phase 8 progress notes, `V2_TAIL_POLICY.md`'s
 batch-5 entries. `dotnet build`/`dotnet test` clean: v2 243/243 (10 new),
 v1 580/580 untouched. 66/145 DPS cards migrated (67 counting Domino,
 tracked separately).
+
+## v2: Energize's scope was wrong, plus a real Awaken bug (2026-09-01)
+
+Same session, a few hours after the batch above. The user asked a sharp
+question about a real physical-game interaction - Domino rerolled by
+Storm "Queen" mid-Attack-Step - which exposed that the Energize design
+built earlier today only covers HALF the rule: the "only check at the
+end of the [Roll and Reroll] Step" deferral is scoped to that one step,
+not every face change. A reroll from another card's ability, or a die
+drawn-and-rolled by a Basic Action (Mutant Research Program), needed to
+check immediately and didn't.
+
+Fixed with a second ability per Energize card, sharing the same
+Conditional gate, plus two new `EventFilter` fields (`RequireSelf`,
+`ExcludeCause`) - both signed off before touching code. Building it
+surfaced two more real bugs, not hypothetical: `EventFilter.
+LevelIncreased` (Awaken) had zero self-scoping - a direct test proved an
+unrelated die's own Awaken ability reacts to a DIFFERENT die's spin-up,
+since the predicate only inspects the event payload, never listener
+identity. And `DrawToZone` never fired `DieFaceChanged` at all when
+rolling a die into the Reserve Pool, which would have silently broken
+Energize for exactly the Mutant Research Program case the user was
+asking about. Fixed generally: `DieFaceChangedPayload.PriorFace` is now
+nullable and every face-mutation site fires unconditionally, replacing
+five separate "skip if no prior face" special cases with one rule.
+
+Caught a real infinite loop before it shipped, not an engine bug: two
+already-migrated self-rerolling Energize cards' own tests drove a
+`FixedRoller` fixed to a double-energy index, which now correctly
+re-triggers Energize on every reroll - forever, with a roller that never
+varies (a real random roller just turns this into an increasingly
+unlikely chain). Fixed both tests to reroll onto the single-energy face.
+
+Full account: `V2_VOCABULARY_HISTORY.md` Part 30, `V2_PLAN.md`'s same-day
+progress note. `dotnet build`/`dotnet test` clean: v2 247/247 (4 new),
+v1 580/580 untouched. No DPS count change - a correctness fix, not new
+migration.

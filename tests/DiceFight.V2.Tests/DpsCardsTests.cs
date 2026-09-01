@@ -830,11 +830,16 @@ public class DpsCardsTests
         var queue = new AbilityQueue();
 
         FireEnergize(state, queue);
-        Drain(state, queue);
+        // rollIndex: 2 (the single-energy face), not the default 0 - a
+        // reroll landing BACK on double energy would now correctly
+        // re-trigger Energize immediately (Part 30's own fix), which
+        // with a real random roller is just an increasingly-unlikely
+        // chain, but with this FixedRoller would loop forever.
+        Drain(state, queue, rollIndex: 2);
         Answer(state, "target");
 
         Assert.Equal(1, target.Damage);
-        Assert.Equal(0, cyclops.CurrentFaceIndex); // rerolled itself, Drain's FixedRoller(0)
+        Assert.Equal(2, cyclops.CurrentFaceIndex); // rerolled itself, off double energy
     }
 
     [Fact]

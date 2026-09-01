@@ -48,9 +48,14 @@ public class BonusCardsTests
         var queue = new AbilityQueue();
 
         FireEnergize(state, queue);
-        EffectInterpreter.DrainQueue(state, queue, new FixedRoller(1), new Random(1));
+        // Roll to index 2 (single energy), not another double - a reroll
+        // landing back on double energy now correctly re-triggers
+        // Energize immediately (Part 30), which a real random roller
+        // just makes an increasingly-unlikely chain but this FixedRoller
+        // would loop forever.
+        EffectInterpreter.DrainQueue(state, queue, new FixedRoller(2), new Random(1));
 
         Assert.Equal(19, state.PlayerTwo.Life); // no target choice - "opponent" is the only candidate
-        Assert.Equal(1, domino.CurrentFaceIndex); // rerolled, FixedRoller(1)
+        Assert.Equal(2, domino.CurrentFaceIndex); // rerolled, off double energy
     }
 }

@@ -122,18 +122,15 @@ public static class TurnEngine
             die.CurrentFaceIndex = newIndex;
             var newFace = definition.Faces[newIndex];
 
-            if (priorFace is not null)
-            {
-                var payload = new DieFaceChangedPayload(priorFace, newFace, FaceChangeCause.Roll);
-                EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieFaceChanged, die, die.ControllerId, state.CurrentStepId, payload));
-            }
-            // A die rolling for the first time ever (priorFace null - e.g.
-            // fresh off a card) has no meaningful "changed from" state to
-            // report; Energize/Awaken both key off symbol count/level
-            // INCREASE, which a null prior face can't express anyway, so
-            // skipping emission here isn't the silently-never-fires bug
-            // the class remarks warn about - there's nothing a filter
-            // could legitimately match against a null PriorFace.
+            // Always fires, prior face or not (Part 30) - a die rolling
+            // for the first time (priorFace null, e.g. fresh off a card)
+            // has nothing for Awaken's LevelIncreased to compare, which
+            // EventBus's own null-conditional check already handles
+            // correctly, but Energize's Stat-threshold check only cares
+            // about NewFace and needs no comparison at all - skipping
+            // emission here silently broke Energize for exactly that case.
+            var payload = new DieFaceChangedPayload(priorFace, newFace, FaceChangeCause.Roll);
+            EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieFaceChanged, die, die.ControllerId, state.CurrentStepId, payload));
         }
     }
 
