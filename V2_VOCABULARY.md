@@ -2867,3 +2867,182 @@ and it still leaves two of its motivating cards partly open. It is worth
 doing for the lockout family, D'Ken, and — the part Part 12 could not see
 — because the granted-ability store it forces is a real gap that blocks
 Lantern Ring independently of any blanking card.
+
+---
+
+## Part 20 — Spike A: sign-off answers, and what the catalog said (2026-09-01)
+
+User decisions on Part 19's six questions, plus two findings from
+checking the catalog rather than the notes. **The scope grew and the
+design got simpler**, because three things I had proposed separately
+turn out to be one mechanism.
+
+### Decisions
+
+| # | Question | Decision |
+|---|---|---|
+| 1 | The core (`AbilitiesActive` + sites + re-check) | **Approved**, with the storage refinement below |
+| 2 | Granted-ability store + `GrantAbility` | **Approved.** Part 16's ruling stands: granted abilities survive blanking |
+| 3 | Mister Sinister's card-scoped half | **Build it** — the user's instinct that it is not one card is correct; see below |
+| 4 | Vulcan | **Tailed** for now |
+| 5 | Lockout shape | Reshaped — see "one store, three flags" |
+| 6 | Affiliation first-class (Parts 17-18) | **Adopted.** The user's note: "I can always ignore it when we come to v3" |
+
+### Finding 1 — blanking is 22 cards, not 4
+
+Part 12 named four. A scan of the whole catalog for text that ignores or
+blanks text/abilities finds **22**, and the user was right on both of
+their specific recollections: there is a second Shriek (SMC017 "Dark
+Empathy") and Prismatic Spray (BFF064 "Lesser Spell", *"All of your
+opponent's characters lose all their card text until the end of the
+turn"*).
+
+They split by **scope**, and the split is the design:
+
+- **Card-scoped** (~9): Scarlet Witch MSW125, Shriek SMC017, Shriek
+  SMC016, Prismatic Spray BFF064, Typhoid Mary IG135, Kryptonite WF054,
+  Wolverine MSW136 (*"for all copies of that die"*), Scarlet Spider
+  ASM102/ASM131. Mister Sinister is a member of this family, not an
+  exception to it.
+- **Die-scoped** (~7): Adam Warlock GOTG081, Loki IG037, the three Web
+  Shooters, Wonder Woman SKC152, D'Ken.
+- **Ability-class-scoped** (~4): Angela IG058 (*"ignore your opponents
+  'When fielded' abilities"*) blanks a **trigger kind** across the
+  board; Ant-Man 10M2016 and Dormammu DRS011 ignore a single ability
+  *instance*. This is a third shape neither Part 12 nor Part 19 saw.
+  **Recommend tailing it** — it is not what the store below is for.
+
+They also split by **duration**, and this is what answers the user's
+boolean question: **14 are one-shot with a duration** ("until end of
+turn"), only **8 are continuous** ("while X is active").
+
+### Finding 2 — 34 cards say their text cannot be ignored
+
+Nothing in Parts 12-19 recorded this. Thirty-four cards carry an
+explicit immunity, and it is **clause-level, not card-level**:
+
+> King Black Bolt GOTG123 — "You may not use ? energy to purchase this
+> die, **this text may not be ignored**."
+> Ziraj ZHN022 — "This effect **can't be ignored or swapped**."
+> Strahd 1WKO16D — "Strahd doesn't count as an Adventurer, **this text
+> cannot be ignored**."
+
+In each case one *clause* is immune while the rest of the card is not.
+So immunity is a flag on the **ability / continuous definition**, not on
+`CardDef`. It is one bool, but it has to be designed in — discovering it
+during migration would mean revisiting every blanking site.
+
+(The four-energy White Lantern family and several D&D sets are in this
+list, so it is not an exotic corner.)
+
+### The user's question: why not just a boolean?
+
+> *"Would it simplify things to simply add a boolean to the card that
+> indicates whether or not the text is blanked? ... Or is that already
+> kind of what you're doing with `EffectInterpreter.ResolveQueued`
+> checking `AbilitiesActive`?"*
+
+**Yes to the second half — that is exactly what `AbilitiesActive` is.**
+One choke point, consulted everywhere, so managing blanking becomes
+managing one thing. The re-check at resolution is not a separate
+mechanism, just one of the places that single query gets asked.
+
+**On the first half: right for 14 of the cards, wrong for the other 8.**
+
+- A **one-shot with a duration** ("ignore that card's text until end of
+  turn") is a fact with an expiry. Nothing to recompute. A stored entry
+  is exactly right, and v2 already has this pattern — `DieInstance.
+  GrantedTags` carries `Duration` and is swept the same way.
+- A **continuous** blank is conditional, and a stored boolean would have
+  to be *maintained*. D'Ken blanks "opposing character dice with
+  purchase cost 3 or lower"; Adam Warlock blanks dice "of a lower level
+  than Adam Warlock". Every field, KO, spin, level change or cost
+  modifier could flip the answer for any die. Storing it means finding
+  and re-flipping every affected boolean on every such event — which is
+  the bookkeeping the continuous registry exists to avoid. It is the
+  same reason no die stores its current attack.
+
+So `AbilitiesActive` **folds both**: stored one-shot suppressions plus a
+live registry query. The user gets the single thing to manage; that
+thing is a query rather than a field, and the cheap stored half happens
+to cover most of the cards.
+
+### One store, three flags — which also answers the lockout question
+
+> *"Maybe they also need Booleans like 'IsFieldable' or 'IsPurchasable'
+> that can be flipped to false by an ability?"*
+
+Same answer, same shape — and following it through collapses what Part
+19 treated as two separate mechanisms into one.
+
+The lockout family is **card-scoped and per-player**, exactly like
+Sinister's half:
+
+> Blob XFC087 — "choose an opposing card... **your opponent may not
+> purchase or field that card's dice** until Blob leaves the Field Zone."
+> Drax IG107 — same shape.
+> Magneto AOU139 — "**Professor X can't be fielded**" (a *named* card;
+> no choice step needed) — and separately, "opposing characters with
+> Purchase Cost 3 or lower lose their abilities", which is D'Ken's
+> die-scoped continuous shape. Magneto needs both halves.
+
+So there is one **card-scoped suppression store**, keyed `(player,
+cardId)` — the shape `GameState.Counters` already established — carrying
+three independent flags:
+
+| Flag | Set by | Asked by |
+|---|---|---|
+| `TextIgnored` | Sinister, Scarlet Witch, both Shrieks, Prismatic Spray, Typhoid Mary, Kryptonite, Wolverine, Scarlet Spider ×2 | the card-scoped arm of `AbilitiesActive` |
+| `CantPurchase` | Blob, Drax | `TurnEngine.Purchase` |
+| `CantField` | Blob, Drax, Magneto AOU139 | `TurnEngine.Field` |
+
+and each entry is either a stored one-shot with a `Duration` or a live
+continuous registration, resolved by the same fold as above.
+
+**This is why decision 3 flipped to "build it".** The `(player, cardId)`
+store is not a mechanism for one awkward card; it serves nine
+card-scoped blankers and the whole lockout family. Part 12 called it "a
+second mechanism, not a free rider" — correct, but it earns its keep
+many times over, which Part 12 could not see with four cards in view.
+
+### The shape to build
+
+Four derived queries, all folding *(stored one-shots with Duration)* +
+*(live continuous registrations)*, all honouring the clause-level
+immunity flag:
+
+```
+AbilitiesActive(state, die)              -> bool   // die-scoped ∪ card-scoped
+CardTextActive(state, player, cardId)    -> bool
+CanPurchase(state, player, cardId)       -> bool
+CanField(state, player, cardId)          -> bool
+```
+
+Plus, unchanged from Part 19: the four consultation sites
+(`EventBus.Fire`, `TurnEngine.UseGlobal`/`UseAction`,
+`ContinuousRegistry.ActiveSourceDice`, and `GetBaseTags` dropping *only*
+its `card.Keywords` loop), the resolution-time re-check in
+`ResolveQueued`, and the granted-ability store with `GrantAbility`.
+
+### Revised vocabulary cost
+
+| Addition | Kind | Note |
+|---|---|---|
+| `AbilityBlank(Target, ActiveWhen?)` | continuous | die-scoped; D'Ken, Magneto's first half, Adam Warlock |
+| `BlankText(Target, Duration)` | effect | die-scoped one-shot; Web Shooters, Loki |
+| `BlankCardText(Target, Duration)` | effect | card-scoped one-shot; Scarlet Witch, Shriek SMC017, Prismatic Spray |
+| `RememberCard(Target, MemoryName)` | effect | the shared "choose an opposing card" memory |
+| `Lockout(MemoryName \| CardId, Purchase\|Field)` | continuous | Blob, Drax, Magneto's Professor X clause |
+| `GrantAbility(Target, Ability, Duration)` | effect | approved; Lantern Ring |
+| `CannotBeIgnored: bool` | **field on ability/continuous defs** | Finding 2; 34 cards |
+
+### Still tailed after this
+
+- **Vulcan** (engagement scoping) — user's call, unchanged.
+- **The ability-class-scoped family** (Angela, Ant-Man, Dormammu,
+  Captain Cold's Cold Gun) — blanking a *trigger kind* or a single
+  ability *instance* is a third shape; recommend tailing until one of
+  them is actually wanted.
+- **Prismatic Spray "Greater Spell"** (BFF096) — "treated as if they had
+  1A and 1D regardless of bonuses" is a stat override that outranks
+  modifiers, not blanking. Different mechanism, separate question.

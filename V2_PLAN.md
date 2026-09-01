@@ -8,19 +8,25 @@ at the 2026-08-22 gate review (`V2_VOCABULARY.md` Part 11); Phase 8
 - **Task 3** - became THREE spikes, not two. **Spike B** (live-value
   Amounts) and **Spike C** (the timing model) were signed off and
   implemented on 2026-08-24; see `V2_VOCABULARY.md` Parts 13-14.
-  **Spike A** (ability-blanking + named-card lockout) is **still
-  awaiting sign-off**. Part 12's version was amended three times by
-  Parts 15-17; **`V2_VOCABULARY.md` Part 19 (2026-09-01) is the current
-  consolidated proposal** and Part 12's is marked superseded. Part 19
-  ends with the six questions sign-off has to answer.
+  **Spike A** (ability-blanking + named-card lockout) is **SIGNED OFF
+  (2026-09-01), not yet implemented**. Read `V2_VOCABULARY.md` Part 19
+  (the consolidated proposal; Part 12's version is superseded) then
+  **Part 20**, which carries the user's decisions and two catalog
+  findings that reshaped it: blanking is 22 cards across three scopes,
+  34 cards carry a clause-level "cannot be ignored" immunity, and the
+  card-scoped store now serves the lockout family too. Part 20's "The
+  shape to build" is the implementation brief.
+  **Affiliation-as-first-class (Parts 17-18) was adopted in the same
+  pass** and should land with or before Spike A - it makes Spike A's
+  `GetBaseTags` work nearly trivial.
 - **Task 4** (DPS catalog batches) - IN PROGRESS. Two batches landed
   2026-08-24: **29 of v1's 145 curated DPS cards migrated, 116 to go.**
 - **Task 5** (catalog-wide invariant tests) - not started.
 
-**Also open, and blocking nothing yet**: Part 18's "affiliation as a
-tag" question is analysed but undecided (the user was leaning yes), and
-Part 17 records a third question about the bound-die predicate that is
-still open.
+**Also settled 2026-09-01**: affiliation becomes first-class (Part 18's
+question, adopted), which also answers Part 17's open fork - the
+bound-die predicate gets an `Affiliations` predicate alongside `Tags`,
+and `TargetFilter` gains the same.
 
 The previous version of this header said tasks 4-5 had not started and
 that both spikes needed sign-off. That was written before the 2026-08-24
