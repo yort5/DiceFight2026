@@ -737,7 +737,11 @@ public class DpsCardsTests
         Assert.Equal(2, doubles.SymbolCount);
         Assert.Equal(["Bolt", "Fist"], doubles.Symbols.Select(x => x.SymbolId));
         Assert.All(doubles.Symbols, x => Assert.Equal(1, x.Count));
-        Assert.Empty(die.Faces[2].Symbols);   // the single: Generic, no symbol
+        // The single is Generic - one energy that pays toward the amount
+        // but satisfies neither of the Crossover's two type requirements.
+        var single = Assert.Single(die.Faces[2].Symbols);
+        Assert.Equal("Generic", single.SymbolId);
+        Assert.Equal(1, single.Count);
     }
 
     private static EffectContext BuildCtx(GameState state, string controllerId, string selfId)

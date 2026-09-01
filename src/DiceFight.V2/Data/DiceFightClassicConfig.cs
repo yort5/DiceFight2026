@@ -57,6 +57,11 @@ public static class DiceFightClassicConfig
         [
             new SymbolDef("Fist"), new SymbolDef("Bolt"), new SymbolDef("Mask"), new SymbolDef("Shield"),
             new SymbolDef("Wild", IsWild: true),
+            // Rule 1.3.10 / 1.4.3 - Basic Action dice provide generic
+            // energy, and a Crossover's single face is generic too. It
+            // was previously unrepresented, which meant a Basic Action
+            // die on an energy face provided NOTHING.
+            new SymbolDef("Generic", IsGeneric: true),
         ],
         Keywords: Keywords,
         Rules: new RulesConfig(

@@ -3669,3 +3669,62 @@ and indistinguishable from "no energy" by pip count. Nothing depends on
 that today — 2.6.1.5 means those dice never spin down to a single, and no
 Basic Action card has Energize — but it is worth knowing before anything
 tries to count generic energy. Recorded, not fixed.
+
+---
+
+## Part 28 — Basic Action dice, and two energy bugs (2026-09-01)
+
+Part 27 recorded "generic energy has no symbol" as a gap that nothing
+depended on. Looking properly, something did: **`SpendEnergy` sums
+`face.Symbols`, so a Basic Action die on an energy face paid nothing at
+all.** Every game has two Basic Action cards and six of their dice; they
+are a real part of the energy economy, and they were contributing zero.
+
+Fixing that turned up a second bug beside it.
+
+### Bug 1 — generic energy was unrepresented
+
+`GameConfig.EnergySymbols` declared the four types plus Wild. Rule 1.4.3
+names a third: generic, "which can be spent on purchasing/fielding/
+abilities but is not considered to be any type of energy". Rule 1.3.10
+gives it to Basic Action dice; the Crossover glossary gives it to a
+Crossover's single face.
+
+`SymbolDef` gains `IsGeneric` beside `IsWild` - the two are opposites,
+and both are properties OF a symbol rather than special-cased ids, so a
+variant game can declare its own. Basic Action energy faces now carry
+`Generic 2` (rule 2.6.1.5 - all three are doubles, which is why such a
+die has no single to spin down to), a Crossover's single carries
+`Generic 1`, and a four-type card's single carries `Wild 1`.
+
+### Bug 2 — one wildcard satisfied every type requirement at once
+
+`SpendEnergy` did `unmatched.Clear()` on seeing a wild. Rule 1.4.3 says a
+wildcard is one energy that "may represent **any of** the four energy
+types" - one energy, one type, not a skeleton key.
+
+The effect was concrete: rule 2.6.2.3's own example (2) is a 3-cost
+bolt-fist Crossover needing "2 of those energy types [to] be a bolt and a
+fist". One Sidekick's wild plus two generic bought it outright.
+
+Now each wild PIP covers one outstanding type, and wilds are applied
+AFTER the printed symbols so a wild is never spent covering a type a real
+symbol already covered - otherwise bolt + wild would fail a bolt-fist
+card, which is the obvious way to get this wrong in the other direction.
+A double wild covers two.
+
+### Tests are the rulebook's worked examples
+
+`EnergyPaymentTests` uses 2.6.2.3's own examples where it has them,
+because both bugs are the kind a plausible implementation passes.
+Mutation-checked: reverting either fix fails a test.
+
+One honest note recorded in the code: the explicit "skip generic when
+matching types" line is belt-and-braces. No card prints Generic among
+its energy types, so generic would fall through the else and be removed
+from a set it was never in. The line states rule 1.4.3 where the
+decision is made rather than relying on that; it is not load-bearing,
+and its comment says so.
+
+**Energize is next**, and now has both things it needs: a double-energy
+face to fire on, and dice whose energy actually pays.

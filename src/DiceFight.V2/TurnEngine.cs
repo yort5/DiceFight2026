@@ -511,23 +511,45 @@ public static class TurnEngine
     {
         var total = 0;
         var wildIds = new HashSet<string>(state.Config.EnergySymbols.Where(s => s.IsWild).Select(s => s.Id));
+        var genericIds = new HashSet<string>(state.Config.EnergySymbols.Where(s => s.IsGeneric).Select(s => s.Id));
 
         // amountNeeded == 0 bypasses the type requirement too - a free
         // purchase/field has nothing for the type check to apply to.
         // Caught while designing the Phase 2 test, but a real latent bug
         // regardless (a discount can legitimately bring a cost to 0).
         var unmatched = amountNeeded == 0 ? [] : new HashSet<string>(requiredSymbolIds);
+        var wildPips = 0;
 
         foreach (var die in energyDice)
         {
             var face = state.GetCurrentFace(die) ?? throw new InvalidOperationException($"Die '{die.Id}' is not showing a face.");
+            // Generic counts here and ONLY here - rule 1.4.3: it "can be
+            // spent on purchasing/fielding/abilities but is not considered
+            // to be any type of energy".
             total += face.Symbols.Sum(s => s.Count);
 
             foreach (var symbol in face.Symbols)
             {
-                if (wildIds.Contains(symbol.SymbolId)) unmatched.Clear(); // wild satisfies every outstanding requirement
+                // Belt and braces: no card prints Generic as one of its
+                // energy types, so this skip changes nothing today. It
+                // states rule 1.4.3 at the point of decision rather than
+                // leaving generic to fall through the else and be
+                // removed from a set it was never in.
+                if (genericIds.Contains(symbol.SymbolId)) continue;
+                if (wildIds.Contains(symbol.SymbolId)) wildPips += symbol.Count;
                 else unmatched.Remove(symbol.SymbolId);
             }
+        }
+
+        // Each wild PIP stands in for one outstanding type, not all of
+        // them: rule 1.4.3 says a wildcard represents "any of the four
+        // energy types" - one energy, one type. Applied after the real
+        // symbols so a wild is never spent covering a type that a printed
+        // symbol already covered.
+        while (wildPips > 0 && unmatched.Count > 0)
+        {
+            unmatched.Remove(unmatched.First());
+            wildPips--;
         }
 
         if (total < amountNeeded)

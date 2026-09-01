@@ -33,6 +33,12 @@ internal static class MigrationDice
     /// <summary>Index of a character die's level-N face.</summary>
     internal const int EnergyFaceCount = 3;
 
+    // Rule 1.4.3's generic energy. Named here rather than inlined so the
+    // two places that produce it - a Basic Action die's faces and a
+    // Crossover's single - are visibly the same thing.
+    internal const string GenericSymbolId = "Generic";
+    internal const string WildSymbolId = "Wild";
+
     internal static int LevelFace(int level) => EnergyFaceCount + level - 1;
 
     internal static DieDefinition Character(
@@ -58,12 +64,15 @@ internal static class MigrationDice
     {
         if (symbolIds.Count <= 1)
         {
+            // A card with no printed energy type (a few Action cards) still
+            // has energy faces; they are generic, the same as a Basic
+            // Action die's.
             var single = symbolIds.Count == 1
                 ? (IReadOnlyList<SymbolAmount>)[new SymbolAmount(symbolIds[0], 1)]
-                : [];
+                : [new SymbolAmount(GenericSymbolId, 1)];
             var doubled = symbolIds.Count == 1
                 ? (IReadOnlyList<SymbolAmount>)[new SymbolAmount(symbolIds[0], 2)]
-                : [];
+                : [new SymbolAmount(GenericSymbolId, 2)];
             yield return new Face(doubled);
             yield return new Face(doubled);
             yield return new Face(single);
@@ -74,7 +83,12 @@ internal static class MigrationDice
             [new SymbolAmount(symbolIds[0], 1), new SymbolAmount(symbolIds[1], 1)];
         yield return new Face(crossover);
         yield return new Face(crossover);
-        yield return new Face([]);
+        // The Crossover glossary: "spin the die down to its single energy
+        // face (depicting either [generic] or a ?)". Generic here; a
+        // four-type card's is Wild, which v1's DieFaces.cs also records
+        // and which needs the card's type count, not just its ids.
+        yield return new Face([new SymbolAmount(
+            symbolIds.Count >= 4 ? WildSymbolId : GenericSymbolId, 1)]);
     }
 
     // bursts: per-face burst values, for the handful of cards whose own
@@ -89,7 +103,12 @@ internal static class MigrationDice
         // Rule 1.3.10 - a Basic Action die's energy faces provide generic
         // energy, and 2.6.1.5 makes them all doubles. Symbol-less because
         // generic is not a declared symbol type.
-        var faces = new List<Face> { new([], Burst: 0), new([], Burst: 0), new([], Burst: 0) };
+        var faces = new List<Face>
+        {
+            new([new SymbolAmount(GenericSymbolId, 2)]),
+            new([new SymbolAmount(GenericSymbolId, 2)]),
+            new([new SymbolAmount(GenericSymbolId, 2)]),
+        };
         faces.AddRange(pattern.Select(b => new Face([], Burst: b, Kind: FaceKind.ActionFace)));
         return new DieDefinition(dieId, faces);
     }

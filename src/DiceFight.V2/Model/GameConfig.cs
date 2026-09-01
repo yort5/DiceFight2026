@@ -21,10 +21,19 @@ public sealed record GameConfig(
     public IReadOnlyList<TurnStepDef> Steps { get; init; } = TurnStepDefs.Standard;
 }
 
-// An energy symbol - "no enum anywhere" (Appendix B). Wild (Sidekick-style
-// energy faces) satisfies any specific-type requirement; IsWild is a
-// property of the symbol, not a special-cased type.
-public sealed record SymbolDef(string Id, bool IsWild = false);
+// An energy symbol - "no enum anywhere" (Appendix B). Both flags are
+// properties OF the symbol rather than special-cased types, so a variant
+// game can declare its own.
+//
+// Rule 1.4.3 defines the two non-type symbols, and they are opposites:
+//
+//   IsWild    - "you may consider this to represent any of the four
+//               energy types". Satisfies ONE type requirement, chosen
+//               when spent. A wildcard is one energy, not a skeleton key.
+//   IsGeneric - "can be spent on purchasing/fielding/abilities but is NOT
+//               considered to be any type of energy". Pays toward the
+//               amount and never toward a type requirement.
+public sealed record SymbolDef(string Id, bool IsWild = false, bool IsGeneric = false);
 
 // A declared keyword. The engine knows a keyword's BEHAVIOR by its Id
 // (Phase 7 - "keyword behavior is engine code keyed to keyword ids
