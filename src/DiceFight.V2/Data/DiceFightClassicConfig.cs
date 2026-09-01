@@ -45,9 +45,9 @@ public static class DiceFightClassicConfig
     [
         new("Ally"), new("Amplify"), new("Attune"), new("Awaken"), new("Call Out"),
         new("Continuous"), new("Corrupt"), new("Deadly"), new("Energize"), new("Energy Drain"),
-        new("Fast"), new("Founder"), new("Infiltrate"), new("Intimidate"), new("Obscure"),
-        new("Overcrush"), new("Range"), new("Regenerate"), new("Retaliation"), new("Sacrifice"),
-        new("Strike"), new("Swarm"), new("Tag Out"), new("Teamwatch"),
+        new("Fast"), new("Founder"), new("Infiltrate"), new("Intimidate"), new("Loyalty"),
+        new("Obscure"), new("Overcrush"), new("Range"), new("Regenerate"), new("Retaliation"),
+        new("Sacrifice"), new("Strike"), new("Swarm"), new("Tag Out"), new("Teamwatch"),
     ];
 
     public static readonly GameConfig Config = new(

@@ -69,6 +69,18 @@ public static class GameConfigValidation
                     errors.Add($"Card \"{card.Id}\": energy symbol \"{symbolId}\" is not declared in GameConfig.EnergySymbols.");
             }
 
+            // "A game config can only use declared keywords" (Phase 7 note,
+            // DiceFightClassicConfig.Keywords' own comment) was never
+            // actually enforced - a card's Keywords list was free to name
+            // anything. Caught for real by the Task 5 catalog audit: Jean
+            // Grey "Peaceful Coexistence" (DPS035) prints "Loyalty" and
+            // nothing declared it.
+            foreach (var keyword in card.Keywords)
+            {
+                if (!keywordIds.Contains(keyword))
+                    errors.Add($"Card \"{card.Id}\": keyword \"{keyword}\" is not declared in GameConfig.Keywords.");
+            }
+
             // Affiliations are checked for a DIFFERENT hazard now. They
             // no longer share the tag namespace, so colliding with a CARD
             // NAME is fine - and that is the collision the real catalog is

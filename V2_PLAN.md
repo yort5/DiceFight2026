@@ -9,9 +9,9 @@ history for reasoning; code against the spec.
 at the 2026-08-22 gate review (`V2_VOCABULARY.md` Part 11), amended twice
 since under the same sign-off discipline (`StatKind.SymbolCount`, Part
 29; `EventFilter.RequireSelf`/`ExcludeCause`, Part 30 - both Energize);
-Phase 8 (Dice Masters as a game definition / card migration): Task 4 (the
-145-card DPS migration) is now COMPLETE; a post-completion audit pass for
-more "declared but unwired" vocabulary shapes is IN PROGRESS.**
+**Phase 8 is now COMPLETE** - all five tasks done, most recently Task 5
+(catalog-wide invariant tests) and the post-Task-4 vocabulary audit, both
+2026-09-01. Phase 9 (API + web integration) has not started.**
 
 - **Task 1-2** (config + curated teams) - done 2026-08-23.
 - **Task 3** - became THREE spikes, not two, and **all three are now
@@ -54,7 +54,20 @@ more "declared but unwired" vocabulary shapes is IN PROGRESS.**
   (A 67th card outside the 145 count, Domino "Not Really A Party Girl"
   (XFO010), was migrated on 2026-09-01 too - `BonusCards.cs`, a one-off
   from the bulk catalog, not v1's curated 145.)
-- **Task 5** (catalog-wide invariant tests) - not started.
+- **Task 5** (catalog-wide invariant tests) - **DONE, 2026-09-01.** No v1
+  test suite actually existed to "port" (the plan's own phrasing was
+  aspirational) - checked, then built `CatalogInvariantTests.cs` against
+  the union of every card source (curated teams + DPS + BonusCards):
+  no reused `Id` across sources, `ValidateCatalog` clean on the merged
+  set, every card's `Set` a known migration source. Doing this for real
+  caught a live bug on the first pass: Jean Grey "Peaceful Coexistence"
+  (DPS035) prints the keyword "Loyalty", which `DiceFightClassicConfig.
+  Keywords` never declared - and `GameConfigValidation.ValidateCatalog`
+  had no check for a card's `Keywords` against the declared list at all
+  (only `EnergySymbolIds` was ever checked), despite the config's own
+  comment already claiming "a game config can only use declared
+  keywords." Fixed both: declared "Loyalty," and added the missing
+  keyword-membership check (mirrors the existing energy-symbol one).
 - **Audit pass** (2026-09-01, requested after Task 4 closed) -
   **COMPLETE.** Checked every declared enum value/field in
   `V2_VOCABULARY.md` for a real engine-code consumer (not just a

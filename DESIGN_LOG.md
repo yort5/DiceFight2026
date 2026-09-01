@@ -10697,3 +10697,30 @@ Action mechanic still isn't modeled at all), so the clause was never
 reached. Filed in `V2_TAIL_POLICY.md`, not fixed, same call as
 `CantFieldMore`. Everything else checked out already wired - no other
 findings.
+
+## v2 Phase 8 task 5: catalog-wide invariant tests - Phase 8 COMPLETE (2026-09-01)
+
+No v1 test suite actually existed under a name like "keyword/ability
+mismatch scan" to port - the plan's own phrasing (Phase 8 task 5) was
+predictive, written before anyone had looked. Checked, then built the
+real thing: `CatalogInvariantTests.cs`, run over the UNION of every card
+source (`CardCatalog` + `DpsCards` + `BonusCards`) rather than each
+source in isolation, since each already validates itself alone and
+nothing had checked them together. Three checks: no `Id` reused across
+sources, `ValidateCatalog` clean on the merged set, every card's `Set`
+a known migration source.
+
+Doing this for real found a live bug on the first pass, exactly the
+kind this task exists to catch: Jean Grey "Peaceful Coexistence"
+(DPS035) prints the keyword "Loyalty" - but `DiceFightClassicConfig.
+Keywords` never declared it, and `GameConfigValidation.ValidateCatalog`
+had no check for a card's `Keywords` against the declared list at all
+(only `EnergySymbolIds` ever was), despite the config's own comment
+already asserting "a game config can only use declared keywords."
+Fixed both: declared "Loyalty," and added the missing keyword-
+membership check, mirroring the existing energy-symbol one.
+
+`dotnet build`/`dotnet test` clean: v2 303/303 (3 new), v1 Engine
+580/580, API 10/10 - all untouched otherwise. **Phase 8 (Dice Masters
+as a game definition / card migration) is now fully COMPLETE** - all
+five tasks done. Phase 9 (API + web integration) is next, not started.
