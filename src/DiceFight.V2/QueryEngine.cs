@@ -389,6 +389,7 @@ public static class QueryEngine
         StatKind.Counter => stat.CounterName is { } name && die.CardId is { } counterCardId
             ? state.Counters.GetValueOrDefault((die.ControllerId, counterCardId, name))
             : 0,
+        StatKind.SymbolCount => state.GetCurrentFace(die)?.SymbolCount ?? 0,
         _ => 0,
     };
 
@@ -406,6 +407,9 @@ public static class QueryEngine
         StatKind.Counter => stat.CounterName is { } name && die.CardId is { } counterCardId
             ? state.Counters.GetValueOrDefault((die.ControllerId, counterCardId, name))
             : 0,
+        // A face's symbol count has no continuous-vs-base split - nothing
+        // grants extra pips on a currently-showing face.
+        StatKind.SymbolCount => state.GetCurrentFace(die)?.SymbolCount ?? 0,
         _ => 0,
     };
 }

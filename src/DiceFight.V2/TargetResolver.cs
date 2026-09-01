@@ -44,16 +44,55 @@ public static class TargetResolver
         Face? FaceOf(DieInstance d) => snapshot is not null && snapshot.TryGetValue(d.Id, out var s)
             ? (s.FaceIndex is { } i ? state.GetDieDefinition(d).Faces[i] : null)
             : state.GetCurrentFace(d);
+        // Self/Bound resolve to ONE already-known id rather than scanning
+        // the board - that's the whole point (Finding 9). But "already
+        // known" only fixes WHICH die; an author-attached Tags/
+        // Affiliations/Stat filter is still a real question about that
+        // die's CURRENT state (Energize: "is the die I already am showing
+        // a double-energy face right now" - CountAtLeast(Self, Stat:
+        // SymbolCount>=2), which needs Self to be able to fail, not just
+        // echo back unconditionally). Zones/Kind/Ownership stay bypassed -
+        // meaningless for a die whose identity is already fixed.
+        string? fixedId = null;
         if (filter.Self)
         {
-            return bindings.TryGetValue("self", out var selfId)
-                ? [selfId]
+            fixedId = bindings.TryGetValue("self", out var selfId)
+                ? selfId
                 : throw new InvalidOperationException("TargetFilter.Self has no 'self' binding in this context.");
         }
-
-        if (filter.Bound is { } boundName)
+        else if (filter.Bound is { } boundName)
         {
-            return bindings.TryGetValue(boundName, out var boundId) ? [boundId] : [];
+            if (!bindings.TryGetValue(boundName, out var fixedBoundId)) return [];
+            fixedId = fixedBoundId;
+        }
+
+        if (fixedId is not null)
+        {
+            if (state.IsPlayerId(fixedId)) return [fixedId]; // Tags/Affiliations/Stat are die-only questions
+            var fixedDie = state.Dice.First(d => d.Id == fixedId);
+
+            if (filter.Affiliations is { } fixedAffiliations)
+            {
+                var dieAffiliations = QueryEngine.GetAffiliations(state, fixedDie);
+                if (fixedAffiliations.AnyOf is { Count: > 0 } anyOfAff && !anyOfAff.Any(dieAffiliations.Contains)) return [];
+                if (fixedAffiliations.NoneOf is { Count: > 0 } noneOfAff && noneOfAff.Any(dieAffiliations.Contains)) return [];
+            }
+
+            if (filter.Tags is { } fixedTags)
+            {
+                var dieTags = includeContinuous ? QueryEngine.GetTags(state, fixedDie) : QueryEngine.GetBaseTags(state, fixedDie);
+                if (fixedTags.AnyOf is { Count: > 0 } anyOf && !anyOf.Any(dieTags.Contains)) return [];
+                if (fixedTags.NoneOf is { Count: > 0 } noneOf && noneOf.Any(dieTags.Contains)) return [];
+            }
+
+            if (filter.Stat is { } fixedStat)
+            {
+                var value = includeContinuous ? QueryEngine.GetStatValue(state, fixedDie, fixedStat) : QueryEngine.GetBaseStatValue(state, fixedDie, fixedStat);
+                if (fixedStat.Min is { } min && value < min) return [];
+                if (fixedStat.Max is { } max && value > max) return [];
+            }
+
+            return [fixedId];
         }
 
         var zones = filter.Zones ?? TargetFilter.DefaultZones;

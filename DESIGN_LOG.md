@@ -10470,3 +10470,35 @@ re-run of every stage 2 and 3 check (roster tiles, over-cap marking,
 reload persistence, the drag range, print hiding rail and results).
 
 That completes the redesign: stages 1-5 plus the print sheet.
+
+## v2 Phase 8 task 4, batch 4: the Energize unlock (2026-09-01)
+
+Picked up where the previous v2 session left off: `V2_TAIL_POLICY.md`
+had Energize's design sketched but flagged "not yet signed off," and the
+user opened this session by correcting the sketch's own framing before
+any code was touched - "doesn't fire when rolled, but at a stage
+boundary" reads as disconnected from the roll, which the Comprehensive
+Rules text isn't ("only check at the end of the [Roll and Reroll] Step" -
+tied to the roll, resolved late). Confirmed against the rulebook PDF
+directly, then got explicit sign-off on the concrete shape
+(`TurnStepEntered(Main)` + `Conditional(CountAtLeast(Self, Stat:
+SymbolCount>=2))`, one new `StatKind` member) before writing anything.
+
+Building it surfaced three real gaps, all fixed and documented at their
+own sites: `TurnEngine.FinishRoll` never actually fired
+`TurnStepEntered(Main)`; `EventBus.Fire`'s candidate scan couldn't see a
+Reserve Pool die (where a just-rolled die sits); and - the one caught by
+a failing test rather than by reading the code -
+`TargetResolver.Query`'s `Self`/`Bound` branches ignored a filter's own
+Tags/Affiliations/Stat fields, which made the signed-off Energize
+condition always true regardless of face. That last one is the exact
+composition a 2026-08-24 tail-policy note had already investigated and
+left undone pending a cleaner alternative; today's fix is that
+composition, scoped narrowly and checked against every existing call
+site first.
+
+All 15 DPS cards printing Energize are migrated (13 full, 2 partial).
+Full account: `V2_VOCABULARY_HISTORY.md` Part 29, `V2_TAIL_POLICY.md`'s
+own Energize/batch-4 entries, `V2_PLAN.md`'s status header and Phase 8
+progress note. `dotnet build`/`dotnet test` clean: v2 233/233 (19 new),
+v1 580/580 untouched.

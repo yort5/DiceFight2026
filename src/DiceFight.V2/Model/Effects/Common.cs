@@ -21,10 +21,15 @@ public enum TargetKind
     DieOrPlayer,
 }
 
-// The five stat kinds a TargetFilter/EventFilter can threshold on, plus
+// The stat kinds a TargetFilter/EventFilter can threshold on, plus
 // Counter for reading a named per-card counter back (Finding 13 -
 // V2_VOCABULARY_HISTORY.md Part 1/10). Counter entries must also set
-// StatThreshold.CounterName; the other five ignore it.
+// StatThreshold.CounterName; the others ignore it.
+//
+// SymbolCount (2026-09-01, user-signed-off, V2_TAIL_POLICY.md's Energize
+// entry) reads Face.SymbolCount on the checked die's CURRENT face - the
+// one real vocabulary addition Energize needed, reusing StatThreshold
+// rather than adding a new shape per the tail note's own recommendation.
 public enum StatKind
 {
     Attack,
@@ -33,6 +38,7 @@ public enum StatKind
     PurchaseCost,
     FieldingCost,
     Counter,
+    SymbolCount,
 }
 
 // ONE threshold (V2_VOCABULARY_HISTORY.md Part 1 - "ONE threshold" is a closed-

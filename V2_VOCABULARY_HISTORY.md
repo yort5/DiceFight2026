@@ -3536,3 +3536,66 @@ and its comment says so.
 
 **Energize is next**, and now has both things it needs: a double-energy
 face to fire on, and dice whose energy actually pays.
+
+## Part 29 — Energize: implemented, plus a Self/Bound gap it exposed (2026-09-01)
+
+Part 28 left Energize unblocked; V2_TAIL_POLICY.md's own entry (written
+the same day, after the F14-era plan text was corrected) already had the
+right shape sketched: `TurnStepEntered(Main)` + a condition reading
+`Face.SymbolCount`, NOT a `DieFaceChanged` filter (the decisive case - a
+die already on double energy that nobody rerolls - has no face change to
+filter on). Confirmed against the Comprehensive Rules text directly this
+session: "whenever you roll this die on one of its double energy
+faces... during the Roll and Reroll Step, only check at the end of the
+Step" and "does not need to be active to trigger." The user supplied the
+correction that sent this session looking: the previous "doesn't fire
+when rolled, but at a stage boundary" framing was right about the
+mechanism but risked being read as "not tied to the roll at all," which
+the rule text contradicts.
+
+**Signed off**: one vocabulary addition, `StatKind.SymbolCount`
+(threaded through `GetStatValue`/`GetBaseStatValue`, reading
+`Face.SymbolCount` on the checked die's current face) - reusing
+`StatThreshold` exactly as the tail note itself recommended, no new
+shape. Two engine-level fixes needed no sign-off (mechanism, not
+vocabulary): `TurnEngine.FinishRoll` never fired `TurnStepEntered(Main)`
+at all - a real gap, not a design question - and `EventBus.Fire`'s
+candidate scan (Field/Attack Zone only) can't see a die sitting in the
+Reserve Pool, which is exactly where a just-rolled die is by the time
+`FinishRoll` runs. Both fixed, the second narrowly scoped to
+`TurnStepEntered(Main)` specifically (not a general widening) so Colossus
+"Piotr"-style CleanUp abilities keep their "while active" zone gate.
+
+**The real find**: building the generic plumbing test
+(`EnergizeTests.cs`) caught that `CountAtLeast(TargetFilter(Self: true,
+Stat: SymbolCount>=2), 1)` always returned true regardless of the die's
+actual face. `TargetResolver.Query`'s `Self`/`Bound` branches returned
+their fixed id immediately, bypassing every other field on the filter -
+correct for Zones/Kind/Ownership (meaningless once identity is already
+fixed) but wrong for Tags/Affiliations/Stat, which are live questions
+about that specific die's CURRENT state, not ways of finding it. Fixed by
+having both branches run the same Tags/Affiliations/Stat checks the pool
+path already used, returning `[]` on a failed check instead of echoing
+the id back unconditionally. Checked against every existing `Self: true`
+call site first (none combine it with Stat/Tags/Affiliations), so this
+closes a real gap rather than changing behavior anything relied on.
+
+**Migrated**: all 15 DPS cards printing Energize (Phoenix "Firepower",
+Storm "Queen", Professor X "Uncanny Leadership" and "Dreamer", Cyclops
+"Defending the Phoenix", Rogue "Strength Absorption", Psylocke
+"Heiress", Jubilee "Rebellious Nature", Mystique "Taught by Magneto",
+Wolverine "Hardened by Madripoor", Iceman "Mr Ice Guy", Angel "Wings
+Over the World", Cable "I'll Do This All Day", Colossus "Skilled
+Painter", Toad "Looking for Comradery"). Two clauses tailed, both
+`IsImplemented: false` rather than fully vanilla since the rest of each
+card works: Iceman's own Energize ("double target die's printed A") has
+no live-doubling shape in the vocabulary (`ModifyStat`'s deltas are
+plain `int`, and `SetAttack`'s `StatOf` would only echo the same value
+back, not double it - a single-card gap, not worth a second live-value
+spike); Professor X "Dreamer"'s WhenFielded clause is the payment-source
+visibility gap the user already declined to build (V2_PLAN.md's F13
+addendum, "2 Bishop, Forge, Professor X").
+
+Verified: `dotnet build DiceFight.slnx` clean; v2 tests up from 214 to
+233 (19 new: 5 generic Energize plumbing, 14 per-card); v1's full suite
+re-run untouched (580/580).

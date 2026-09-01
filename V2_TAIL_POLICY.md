@@ -181,7 +181,26 @@ The old default (`int Level = 1`) silently snapped a die that rolled
 its level-3 face down to level 1 on being fielded. Regression test
 covers exactly that.
 
-### Investigated: why `Bound` cannot simply compose with the filter (2026-08-24)
+### RESOLVED (narrowly): `Self`/`Bound` now honor Tags/Affiliations/Stat (2026-09-01)
+
+Energize's design (see this file's own entry below, now resolved) needed
+exactly the composition this section originally rejected -
+`CountAtLeast(TargetFilter(Self: true, Stat: SymbolCount>=2), 1)` to ask
+"is the die I already am showing a double-energy face" - and the
+build-out proved the rejection below was about the WRONG half of the
+split it itself identifies two paragraphs down. `TargetResolver.Query`
+implemented exactly that split, not the composing-with-everything version
+that broke Making the Team: `Self`/`Bound` still skip Kind/Zones/
+Ownership unconditionally (Making the Team's own Else branch, still
+green), but now DO check Tags/Affiliations/Stat when the author set them,
+returning no match instead of echoing the id back unconditionally when
+they fail. Covered by the same sign-off as Energize's design (the
+approved tree only works if this composes) rather than a fresh ask - no
+card yet needs `Bound` + `Tags` specifically, but nothing new is required
+if one does; the recommended `HasTag` condition below is superseded, not
+needed.
+
+### Investigated: why `Bound` cannot simply compose with the filter (2026-08-24, superseded above)
 
 The batch-2 write-up floated making a `Bound` filter fall through to
 the rest of the filter chain, so `CountAtLeast(TargetFilter{Bound:"t",
@@ -319,7 +338,7 @@ back to Basic-only fails four tests, widening `IsCommunity` fails three.
 is, it is a subset of Basic Action and must therefore answer true to BOTH
 `IsActionDie` and `IsCommunity`.
 
-### NEXT UP: Energize is a step boundary, not a face change (2026-09-01)
+### RESOLVED: Energize is a step boundary, not a face change (2026-09-01)
 
 15 remaining DPS cards need Energize, and it is now unblocked — the
 migrated dice have real double-energy faces to fire on, and their energy
@@ -370,3 +389,33 @@ same shape as "at the end of your turn" cards.
 The MSW020 Black Panther row above is the same gap, filed earlier from
 the other direction ("`EventFilter`/`Condition` have no symbol-count
 check"). Both close together.
+
+**Built 2026-09-01, user-signed-off** (full account: `V2_VOCABULARY_HISTORY.md`
+Part 29). Confirmed against the Comprehensive Rules text directly (not
+just v1's own comment): "only check at the end of the Step," "does not
+need to be active to trigger." The "likely shape" above landed almost
+exactly as sketched, with the `StatKind` route chosen (`StatKind.
+SymbolCount`, not a `MinSymbolCount` param on `OnFaceKind`). The zone
+question resolved to v1's own precedent: `EventBus.Fire` now adds
+`Zone.ReservePool` as extra listener candidates specifically for
+`TurnStepEntered(Main)` (where `TurnEngine.FinishRoll` - previously
+silent - now fires it), matching `CheckEnergize`'s own `Zone.ReservePool`
+scan and keeping every other `TurnStepEntered` step (CleanUp, etc.)
+Field/Attack-Zone-only. All 15 DPS cards printing Energize are migrated;
+see `DpsCards.cs`'s own Batch 4 for two single-card tail items this
+uncovered (Iceman "Mr Ice Guy"'s live-doubling gap; Professor X
+"Dreamer"'s WhenFielded clause, which is the payment-source visibility
+group `V2_PLAN.md`'s Appendix A addendum already named - "2 Bishop,
+Forge, Professor X" - one of that four is Professor X "Dreamer").
+
+## DPS catalog batch 4 (V2_PLAN.md Phase 8 task 4, 2026-09-01)
+
+All 15 DPS cards printing the Energize keyword, unlocked by the entry
+above. 13 fully migrated, 2 partial (both `IsImplemented: false`).
+
+### PARTIAL: clauses migrated minus one
+
+| CardId | Name | What it needs | Policy |
+|---|---|---|---|
+| DPS114 | Iceman (Mr Ice Guy) | The Energize clause ("double target character die's printed A until end of turn") needs a delta equal to a LIVE bound die's own stat - `ModifyStat`'s `AtkDelta`/`DefDelta` are plain `int`, and `SetAttack`'s `StatOf` would only echo the same value back (a no-op), not double it. The continuous half ("your Sidekick dice get +1A while active") is migrated | Ask |
+| DPS047 | Professor X (Dreamer) | The WhenFielded clause ("if you spend an X-Men die to field Professor X, Prep a die from your bag") needs payment-source visibility - same family as the group `V2_PLAN.md`'s Appendix A addendum already designated alter-or-skip (Bishop x2, Forge, this card). The Energize clause is migrated (same shape as Professor X "Uncanny Leadership"'s identical text) | Ask |

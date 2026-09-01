@@ -137,8 +137,14 @@ public static class TurnEngine
         }
     }
 
-    // Second half - commits every rolled Prep Area die to the Reserve Pool.
-    public static void FinishRoll(GameState state)
+    // Second half - commits every rolled Prep Area die to the Reserve Pool,
+    // then fires TurnStepEntered(Main) - a real gap until 2026-09-01: this
+    // is "the end of the Roll and Reroll Step" the Energize keyword's own
+    // rule text names ("only check at the end of the Step"), and nothing
+    // emitted it. EventBus.Fire's own Energize carve-out (see its remarks)
+    // is what lets a listener sitting in the Reserve Pool - exactly where
+    // this loop just placed every rolled die - actually hear it.
+    public static void FinishRoll(GameState state, AbilityQueue queue)
     {
         RequireStep(state, TurnStep.RollAndReroll);
 
@@ -148,6 +154,7 @@ public static class TurnEngine
         }
 
         state.MoveToStep(StepIds.Main);
+        EventBus.Fire(state, queue, new GameEvent(TriggerKind.TurnStepEntered, null, state.ActivePlayerId, StepIds.Main));
     }
 
     // Rule 2.6.2 - Purchase Dice. Energy must type-match the card's own

@@ -30,6 +30,20 @@ public static class EventBus
         foreach (var controllerId in new[] { state.ActivePlayerId, state.OpponentOf(state.ActivePlayerId) })
         {
             var candidates = ActiveDice(state, controllerId).ToList();
+
+            // Energize carve-out (2026-09-01): the rule text itself says
+            // the ability "does not need to be active to trigger" - the
+            // same "regardless of zone" shape the SubjectDie exception
+            // above already established for self-only reactions. Scoped
+            // narrowly to TurnStepEntered(Main), the one moment this
+            // matters (v1's CheckEnergize precedent scans exactly
+            // Zone.ReservePool, where a just-rolled die now sits after
+            // FinishRoll) - NOT a general widening, so Colossus "Piotr"-
+            // style "while active" TurnStepEntered abilities (CleanUp,
+            // etc.) keep seeing only Field/Attack Zone dice.
+            if (evt.Kind == TriggerKind.TurnStepEntered && evt.Step == StepIds.Main)
+                candidates.AddRange(state.DiceIn(controllerId, Zone.ReservePool));
+
             if (evt.SubjectDie is { } subject && subject.ControllerId == controllerId && !candidates.Contains(subject))
                 candidates.Add(subject);
 

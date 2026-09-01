@@ -67,6 +67,23 @@ public class DpsCardsTests
     private static void Drain(GameState state, AbilityQueue queue, int rollIndex = 0) =>
         EffectInterpreter.DrainQueue(state, queue, new FixedRoller(rollIndex), new Random(1));
 
+    // A die parked in the Reserve Pool on one of its double-energy faces
+    // (index 0 - MigrationDice's "doubles first" order) - exactly where
+    // TurnEngine.FinishRoll leaves a die that will Energize.
+    private static Model.DieInstance Energized(GameState state, Model.CardDef card, string controllerId, string? id = null)
+    {
+        var die = new Model.DieInstance { Id = id ?? $"{controllerId}-{card.Id}-energized", CardId = card.Id, OwnerId = controllerId, ControllerId = controllerId, Zone = Zone.ReservePool, CurrentFaceIndex = 0 };
+        state.Dice.Add(die);
+        return die;
+    }
+
+    // TurnEngine.FinishRoll fires exactly this event once the Roll and
+    // Reroll Step ends (V2_TAIL_POLICY.md's Energize entry) - firing it
+    // directly here is equivalent to the real action without needing a
+    // full ClearAndDraw/Roll/FinishRoll dance for every card below.
+    private static void FireEnergize(GameState state, AbilityQueue queue) =>
+        EventBus.Fire(state, queue, new GameEvent(TriggerKind.TurnStepEntered, null, state.ActivePlayerId, StepIds.Main));
+
     private static void Answer(GameState state, string preferredId)
     {
         if (state.PendingChoice is not { } pending) return;
@@ -753,5 +770,295 @@ public class DpsCardsTests
         };
         ctx.Bind("self", selfId);
         return ctx;
+    }
+
+    // --- Batch 4 (2026-09-01) - the Energize unlock ---
+
+    [Fact]
+    public void PhoenixFirepower_Energize_Deals_2_To_A_Chosen_Player()
+    {
+        var state = NewGame();
+        Energized(state, DpsCards.PhoenixFirepower, "p1");
+        var queue = new AbilityQueue();
+
+        FireEnergize(state, queue);
+        Drain(state, queue);
+        Answer(state, "p2"); // DieOrPlayer - PowerBolt's own precedent
+
+        Assert.Equal(18, state.PlayerTwo.Life);
+    }
+
+    [Fact]
+    public void StormQueen_Energize_Rerolls_An_Opposing_Character_Die()
+    {
+        var state = NewGame();
+        Energized(state, DpsCards.StormQueen, "p1");
+        var target = Active(state, DpsCards.PsylockeTelepath, "p2", level: 2, id: "target");
+        var queue = new AbilityQueue();
+
+        FireEnergize(state, queue);
+        Drain(state, queue);
+        Answer(state, "target");
+
+        Assert.Equal(0, target.CurrentFaceIndex); // Drain's FixedRoller(0)
+    }
+
+    [Fact]
+    public void ProfessorXUncannyLeadership_Energize_Moves_An_XMen_Die_From_Used_Pile_To_Prep_Area()
+    {
+        var state = NewGame();
+        Energized(state, DpsCards.ProfessorXUncannyLeadership, "p1");
+        // A Used Pile die is always unrolled (rule 1.6.8) - AnyDie, not
+        // CharacterDie, is what this card's own Energize clause has to use.
+        var dormant = new Model.DieInstance { Id = "dormant", CardId = DpsCards.PsylockeTelepath.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.UsedPile, CurrentFaceIndex = null };
+        state.Dice.Add(dormant);
+        var queue = new AbilityQueue();
+
+        FireEnergize(state, queue);
+        Drain(state, queue);
+        Answer(state, "dormant");
+
+        Assert.Equal(Zone.PrepArea, dormant.Zone);
+    }
+
+    [Fact]
+    public void CyclopsDefendingThePhoenix_Energize_Damages_A_Target_And_Rerolls_Itself()
+    {
+        var state = NewGame();
+        var cyclops = Energized(state, DpsCards.CyclopsDefendingThePhoenix, "p1");
+        var target = Active(state, DpsCards.PsylockeTelepath, "p2", level: 3, id: "target");
+        var queue = new AbilityQueue();
+
+        FireEnergize(state, queue);
+        Drain(state, queue);
+        Answer(state, "target");
+
+        Assert.Equal(1, target.Damage);
+        Assert.Equal(0, cyclops.CurrentFaceIndex); // rerolled itself, Drain's FixedRoller(0)
+    }
+
+    [Fact]
+    public void RogueStrengthAbsorption_Energize_Sets_A_Targets_Attack_To_0()
+    {
+        var state = NewGame();
+        Energized(state, DpsCards.RogueStrengthAbsorption, "p1");
+        var target = Active(state, DpsCards.RonanTheAccuserTreason, "p2", level: 1, id: "target");
+        var queue = new AbilityQueue();
+
+        FireEnergize(state, queue);
+        Drain(state, queue);
+        Answer(state, "target");
+
+        Assert.Equal(0, QueryEngine.GetAttack(state, target));
+    }
+
+    [Fact]
+    public void PsylockeHeiress_Gets_2_Attack_Per_XMen_Die_In_Her_Own_Prep_Area()
+    {
+        var state = NewGame();
+        var psylocke = Active(state, DpsCards.PsylockeHeiress, "p1", level: 1);
+        var baseline = QueryEngine.GetAttack(state, psylocke);
+        Sidekick(state, "p1", Zone.PrepArea, null, "sk"); // not X-Men - shouldn't count
+        Active(state, DpsCards.PsylockeTelepath, "p1", id: "xmen1"); // wrong zone (Field) - shouldn't count either
+        var counted = new Model.DieInstance { Id = "xmen-prep", CardId = DpsCards.PsylockeTelepath.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.PrepArea, CurrentFaceIndex = FirstLevelFace };
+        state.Dice.Add(counted);
+
+        Assert.Equal(baseline + 2, QueryEngine.GetAttack(state, psylocke));
+    }
+
+    [Fact]
+    public void PsylockeHeiress_Energize_Spins_A_Target_Up_1_Level()
+    {
+        var state = NewGame();
+        Energized(state, DpsCards.PsylockeHeiress, "p1");
+        var target = Active(state, DpsCards.RonanTheAccuserTreason, "p2", level: 1, id: "target");
+        var queue = new AbilityQueue();
+
+        FireEnergize(state, queue);
+        Drain(state, queue);
+        Answer(state, "target");
+
+        Assert.Equal(2, state.GetCurrentFace(target)!.Character!.Level);
+    }
+
+    [Fact]
+    public void JubileeRebelliousNature_Energize_Fields_Free_At_Level_2_When_Behind_On_Life()
+    {
+        var state = NewGame();
+        var jubilee = Energized(state, DpsCards.JubileeRebelliousNature, "p1");
+        state.PlayerOne.Life = 10; // behind p2's 20
+        var queue = new AbilityQueue();
+
+        FireEnergize(state, queue);
+        Drain(state, queue);
+        Answer(state, jubilee.Id); // MayPay accept - the stand-in is the source die
+
+        Assert.Equal(Zone.FieldZone, jubilee.Zone);
+        Assert.Equal(2, state.GetCurrentFace(jubilee)!.Character!.Level);
+    }
+
+    [Fact]
+    public void JubileeRebelliousNature_Energize_Does_Nothing_When_Not_Behind_On_Life()
+    {
+        var state = NewGame();
+        var jubilee = Energized(state, DpsCards.JubileeRebelliousNature, "p1");
+        var queue = new AbilityQueue(); // both players start at 20 - condition false
+
+        FireEnergize(state, queue);
+        Drain(state, queue);
+
+        Assert.Null(state.PendingChoice); // Conditional's own Else (none) - no offer at all
+        Assert.Equal(Zone.ReservePool, jubilee.Zone);
+    }
+
+    [Fact]
+    public void MystiqueTaughtByMagneto_Makes_Brotherhood_Dice_Free_To_Field_While_Active()
+    {
+        var state = NewGame();
+        Active(state, DpsCards.MystiqueTaughtByMagneto, "p1");
+        // Whose's default Zones (Field/Attack) is what D'Ken's/Deadpool's
+        // own free-fielding tests already query against - same convention.
+        var brotherhoodDie = Active(state, DpsCards.MagnetoFounderOfTheBrotherhood, "p1", level: 1, id: "cheap");
+
+        Assert.Equal(0, QueryEngine.GetFieldingCost(state, brotherhoodDie));
+    }
+
+    [Fact]
+    public void MystiqueTaughtByMagneto_Energize_May_Field_A_Brotherhood_Die_Free()
+    {
+        var state = NewGame();
+        var mystique = Energized(state, DpsCards.MystiqueTaughtByMagneto, "p1");
+        var brotherhoodDie = Ready(state, DpsCards.MagnetoFounderOfTheBrotherhood, "p1", 1, id: "target");
+        var queue = new AbilityQueue();
+
+        FireEnergize(state, queue);
+        Drain(state, queue);
+        Answer(state, mystique.Id); // MayPay accept
+        Answer(state, "target");
+
+        Assert.Equal(Zone.FieldZone, brotherhoodDie.Zone);
+    }
+
+    [Fact]
+    public void WolverineHardenedByMadripoor_Energize_Spins_To_Level_1_With_3_Active_XMen()
+    {
+        var state = NewGame();
+        var wolverine = Energized(state, DpsCards.WolverineHardenedByMadripoor, "p1");
+        Active(state, DpsCards.PsylockeTelepath, "p1", id: "x1");
+        Active(state, DpsCards.CyclopsFirstClass, "p1", id: "x2");
+        Active(state, DpsCards.JubileeXMenFieldLeader, "p1", id: "x3");
+        var queue = new AbilityQueue();
+
+        // Wolverine himself sits in the Reserve Pool (Energized), so this
+        // is 3 X-Men without counting him - the count still clears.
+        FireEnergize(state, queue);
+        Drain(state, queue);
+
+        Assert.Equal(1, state.GetCurrentFace(wolverine)!.Character!.Level);
+    }
+
+    [Fact]
+    public void WolverineHardenedByMadripoor_Energize_Does_Nothing_Under_3_Active_XMen()
+    {
+        var state = NewGame();
+        var wolverine = Energized(state, DpsCards.WolverineHardenedByMadripoor, "p1");
+        Active(state, DpsCards.PsylockeTelepath, "p1", id: "x1");
+        var queue = new AbilityQueue();
+
+        FireEnergize(state, queue);
+        Drain(state, queue);
+
+        Assert.Equal(Zone.ReservePool, wolverine.Zone); // never fielded, never spun
+    }
+
+    [Fact]
+    public void IcemanMrIceGuy_Gives_Sidekicks_Plus_1_Attack_While_Active()
+    {
+        var state = NewGame();
+        var sidekick = Sidekick(state, "p1", Zone.FieldZone, 0, "sk");
+        var baseline = QueryEngine.GetAttack(state, sidekick);
+
+        Active(state, DpsCards.IcemanMrIceGuy, "p1");
+
+        Assert.Equal(baseline + 1, QueryEngine.GetAttack(state, sidekick));
+    }
+
+    [Fact]
+    public void ProfessorXDreamer_Energize_Moves_An_XMen_Die_From_Used_Pile_To_Prep_Area()
+    {
+        var state = NewGame();
+        Energized(state, DpsCards.ProfessorXDreamer, "p1");
+        var dormant = new Model.DieInstance { Id = "dormant", CardId = DpsCards.PsylockeTelepath.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.UsedPile, CurrentFaceIndex = null };
+        state.Dice.Add(dormant);
+        var queue = new AbilityQueue();
+
+        FireEnergize(state, queue);
+        Drain(state, queue);
+        Answer(state, "dormant");
+
+        Assert.Equal(Zone.PrepArea, dormant.Zone);
+    }
+
+    [Fact]
+    public void AngelWingsOverTheWorld_Energize_Gives_A_Sidekick_Plus_2_Attack()
+    {
+        var state = NewGame();
+        Energized(state, DpsCards.AngelWingsOverTheWorld, "p1");
+        var sidekick = Sidekick(state, "p1", Zone.FieldZone, 0, "sk");
+        var baseline = QueryEngine.GetAttack(state, sidekick);
+        var queue = new AbilityQueue();
+
+        FireEnergize(state, queue);
+        Drain(state, queue);
+        Answer(state, "sk");
+
+        Assert.Equal(baseline + 2, QueryEngine.GetAttack(state, sidekick));
+    }
+
+    [Fact]
+    public void CableIllDoThisAllDay_Energize_Rerolls_One_Of_Its_Controllers_Own_Character_Dice()
+    {
+        var state = NewGame();
+        Energized(state, DpsCards.CableIllDoThisAllDay, "p1");
+        var target = Active(state, DpsCards.PsylockeTelepath, "p1", level: 2, id: "target");
+        var queue = new AbilityQueue();
+
+        FireEnergize(state, queue);
+        Drain(state, queue);
+        Answer(state, "target");
+
+        Assert.Equal(0, target.CurrentFaceIndex);
+    }
+
+    [Fact]
+    public void ColossusSkilledPainter_Energize_Fields_A_Reserve_Die_Free_At_Level_3()
+    {
+        var state = NewGame();
+        Energized(state, DpsCards.ColossusSkilledPainter, "p1");
+        var target = Ready(state, DpsCards.PsylockeTelepath, "p1", 1, id: "target");
+        var queue = new AbilityQueue();
+
+        FireEnergize(state, queue);
+        Drain(state, queue);
+        Answer(state, "target");
+
+        Assert.Equal(Zone.FieldZone, target.Zone);
+        Assert.Equal(3, state.GetCurrentFace(target)!.Character!.Level);
+    }
+
+    [Fact]
+    public void ToadLookingForComradery_Energize_May_Spin_A_Reserve_Character_Die_To_Level_1()
+    {
+        var state = NewGame();
+        var toad = Energized(state, DpsCards.ToadLookingForComradery, "p1");
+        var target = Ready(state, DpsCards.PsylockeTelepath, "p1", 3, id: "target"); // starts at level 3
+        var queue = new AbilityQueue();
+
+        FireEnergize(state, queue);
+        Drain(state, queue);
+        Answer(state, toad.Id); // MayPay accept
+        Answer(state, "target");
+
+        Assert.Equal(1, state.GetCurrentFace(target)!.Character!.Level);
     }
 }

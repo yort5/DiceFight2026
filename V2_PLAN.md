@@ -1,46 +1,35 @@
 # DiceFight v2 Core — Implementation Plan
 
-**Vocabulary**: `V2_VOCABULARY.md` states what the vocabulary IS (179
-lines, derived from the code). `V2_VOCABULARY_HISTORY.md` keeps how it
-got there (the 28 parts written 2026-08-22 to 2026-09-01). Cite the
+**Vocabulary**: `V2_VOCABULARY.md` states what the vocabulary IS (now
+including the Energize shape), derived from the code. `V2_VOCABULARY_HISTORY.md`
+keeps how it got there (29 parts, 2026-08-22 to 2026-09-01). Cite the
 history for reasoning; code against the spec.
 
-**Status (refreshed 2026-08-31): Phases 0-7 complete; vocabulary FROZEN
-at the 2026-08-22 gate review (`V2_VOCABULARY.md` Part 11); Phase 8
-(Dice Masters as a game definition / card migration) IN PROGRESS.**
+**Status (refreshed 2026-09-01): Phases 0-7 complete; vocabulary FROZEN
+at the 2026-08-22 gate review (`V2_VOCABULARY.md` Part 11), amended once
+since under the same sign-off discipline (`StatKind.SymbolCount`, Part
+29 - Energize); Phase 8 (Dice Masters as a game definition / card
+migration) IN PROGRESS.**
 
 - **Task 1-2** (config + curated teams) - done 2026-08-23.
-- **Task 3** - became THREE spikes, not two. **Spike B** (live-value
-  Amounts) and **Spike C** (the timing model) were signed off and
-  implemented on 2026-08-24; see `V2_VOCABULARY.md` Parts 13-14.
-  **Spike A** (ability-blanking + named-card lockout) is **SIGNED OFF
-  (2026-09-01), not yet implemented**. Read `V2_VOCABULARY.md` Part 19
-  (the consolidated proposal; Part 12's version is superseded) then
-  **Part 20**, which carries the user's decisions and two catalog
-  findings that reshaped it: blanking is 22 cards across three scopes,
-  34 cards carry a clause-level "cannot be ignored" immunity, and the
-  card-scoped store now serves the lockout family too. Then **Part 21**,
-  which grants the engine authority to DECLARE how blanking works
-  (superseding card wording, normalize-or-tail) and replaces the
-  immunity flag with `PermanentAbilities`/`PermanentContinuous` plus a
-  single `QueryEngine.AbilitiesOf` choke point. Part 20's "The shape to
-  build" plus Part 21's "Net effect" is the implementation brief.
-  **Affiliation-as-first-class (Parts 17-18) was adopted in the same
-  pass** and should land with or before Spike A - it makes Spike A's
-  `GetBaseTags` work nearly trivial.
-- **Task 4** (DPS catalog batches) - IN PROGRESS. Two batches landed
-  2026-08-24: **29 of v1's 145 curated DPS cards migrated, 116 to go.**
+- **Task 3** - became THREE spikes, not two, and **all three are now
+  signed off AND implemented**: Spike B (live-value Amounts) and Spike C
+  (the timing model) on 2026-08-24 (`V2_VOCABULARY.md` Parts 13-14);
+  Spike A (ability-blanking + named-card lockout) across three
+  increments on 2026-09-01 (`V2_VOCABULARY_HISTORY.md` Parts 23-25) -
+  the `AbilitiesOf`/`ContinuousOf` choke point, `AbilityBlank`, and
+  `Lockout` are all live. Affiliation-as-first-class (Parts 17-18, 22)
+  landed the same day.
+- **Task 4** (DPS catalog batches) - IN PROGRESS. Four batches landed:
+  batches 1-2 on 2026-08-24, batch 3 (10 migrated, 3 partial, 1 tailed -
+  D'Ken/Mister Sinister, the two cards Spike A was built for) and batch 4
+  (all 15 Energize cards, 13 full + 2 partial) both on 2026-09-01.
+  **54 of v1's 145 curated DPS cards migrated, 91 to go.**
 - **Task 5** (catalog-wide invariant tests) - not started.
 
-**Also settled 2026-09-01**: affiliation becomes first-class (Part 18's
-question, adopted), which also answers Part 17's open fork - the
-bound-die predicate gets an `Affiliations` predicate alongside `Tags`,
-and `TargetFilter` gains the same.
-
-The previous version of this header said tasks 4-5 had not started and
-that both spikes needed sign-off. That was written before the 2026-08-24
-work and had been wrong ever since; it is the sort of thing that sends a
-fresh session off to redo something. Update the checkboxes in the Phase Overview as
+The previous version of this header (refreshed 2026-08-31) said Spike A
+was signed off but not implemented, and put the DPS count at 29/145; both
+were stale within the day. Update the checkboxes in the Phase Overview as
 phases complete, and add a one-line note after any phase where reality
 diverged from this plan.
 
@@ -1034,3 +1023,40 @@ amounts deliberately stay live. Casket of Ancient Winters is
 un-tailed and fully implemented; see DESIGN_LOG's same-day entry for
 the implementation shape and the real-firing-path bug the new test
 caught (ResolveQueued bypassing the snapshot-capturing entry point).
+
+**Phase 8 progress note (2026-09-01, task 4 batch 4 - the Energize
+unlock)**: this session opened by correcting a live misconception - the
+prior session's "doesn't fire when rolled, but at a stage boundary" note
+in `V2_TAIL_POLICY.md` was directionally right but risked reading as
+"unrelated to the roll," which the Comprehensive Rules text ("only check
+at the end of the [Roll and Reroll] Step") contradicts. Confirmed
+against the rulebook directly, then signed off with the user before
+touching code (ground rule 2): one vocabulary addition,
+`StatKind.SymbolCount` (`V2_VOCABULARY_HISTORY.md` Part 29 has the full
+account).
+
+Three engine fixes came out of building it, none requiring sign-off
+(mechanism, not vocabulary): `TurnEngine.FinishRoll` never fired
+`TurnStepEntered(Main)` at all (now does, and takes an `AbilityQueue`
+parameter it previously didn't need); `EventBus.Fire`'s candidate scan
+couldn't see a Reserve Pool die for that one step (now can, scoped
+narrowly to `TurnStepEntered(Main)` so other steps' "while active"
+semantics are untouched); and `TargetResolver.Query`'s `Self`/`Bound`
+branches ignored a filter's own Tags/Affiliations/Stat fields
+unconditionally, which made the signed-off Energize condition
+(`CountAtLeast(Self, Stat: SymbolCount>=2)`) always true regardless of
+face - caught by the new plumbing tests, not by inspection. Fixed
+narrowly (Kind/Zones/Ownership still skip; Tags/Affiliations/Stat now
+apply) - `V2_TAIL_POLICY.md`'s own "Investigated: why Bound cannot
+compose" note from 2026-08-24 had flagged this exact split as the
+correct one and left it undone pending a cleaner alternative; today's
+fix is that composition, verified against every existing `Self`/`Bound`
+call site first.
+
+All 15 DPS cards printing Energize are migrated (13 full, 2 partial -
+Iceman "Mr Ice Guy"'s live-doubling gap and Professor X "Dreamer"'s
+payment-source clause, both new one-line tail entries, not new spikes).
+Verified: `dotnet build DiceFight.slnx` clean; v2 tests 233/233 (19 new:
+5 generic Energize plumbing in `EnergizeTests.cs`, 14 per-card in
+`DpsCardsTests.cs`); v1's full suite re-run untouched, 580/580. Status
+header above updated; batches 1-4 total 54/145 DPS cards.

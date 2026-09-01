@@ -90,7 +90,7 @@ public class TurnCycleTests
         // --- Roll (one lands on the Fist energy face, one on a character face) ---
         var roller = new ScriptedRoller(1, 2);
         DiceFight.V2.TurnEngine.Roll(state, queue, roller);
-        DiceFight.V2.TurnEngine.FinishRoll(state);
+        DiceFight.V2.TurnEngine.FinishRoll(state, queue);
 
         Assert.Equal(TurnStep.Main, state.CurrentStep);
         var reserveDice = state.DiceIn("p1", Zone.ReservePool).ToList();
@@ -194,7 +194,7 @@ public class TurnCycleTests
 
         DiceFight.V2.TurnEngine.ClearAndDraw(state, queue, new Random(1)); // p2's turn opens
         Assert.Equal(Zone.ReservePool, p1Energy.Zone); // and the opponent's Clear and Draw
-        DiceFight.V2.TurnEngine.FinishRoll(state);
+        DiceFight.V2.TurnEngine.FinishRoll(state, queue);
         DiceFight.V2.TurnEngine.EnterAttackStep(state, queue);
         DiceFight.V2.TurnEngine.CleanUp(state, queue);
 

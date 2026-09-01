@@ -45,6 +45,15 @@ trigger plus a filter: "when ANOTHER die is fielded/KO'd/attacks" is
 `TurnStepEntered` + `Step`; Awaken is `DieFaceChanged` + `LevelIncreased`;
 Teamwatch is `DieFielded` + `SharesAffiliationWithListener`.
 
+Energize is **not** an `EventFilter` predicate like the others - the rule
+text is "only check at the end of the [Roll and Reroll] Step," so a die
+already on a double-energy face that nobody rerolls has no face change
+for `DieFaceChanged` to filter on. It is `TurnStepEntered` + `Step:
+StepIds.Main`, with a `Conditional(CountAtLeast(TargetFilter(Self: true,
+Stat: SymbolCount>=2), 1), Then: ...)` wrapping the card's real effect -
+the trigger fires for every candidate die regardless of face, and the
+Conditional is what actually gates on it.
+
 ### EventFilter
 
 `Ownership` · `Tags` · `Affiliations` · `ExcludeSelf` · `LevelIncreased`
