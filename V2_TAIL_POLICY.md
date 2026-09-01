@@ -216,3 +216,63 @@ and it generalises to every other "if that die is an [affiliation] die"
 card in the catalog rather than closing one.
 
 Needs sign-off (ground rule 2). Not implemented.
+
+## DPS catalog batch 3 (V2_PLAN.md Phase 8 task 4, 2026-09-01)
+
+10 migrated, 3 partials, 1 tailed outright. Led by the two cards Spike A
+was built for - migrating them is the check that the vocabulary signed
+off in Parts 19-21 actually expresses them, and it does.
+
+**D'Ken "Shi'ar Civil War" (DPS141)** — `AbilityBlank` with a
+`PurchaseCost Max 3` threshold, plus a fielding `CostModifier` of -99 for
+the "free to field" half (`GetFieldingCost` already floors at 0, so no
+set-to-zero mode was invented for one card). Fully migrated.
+
+**Mister Sinister "Mutant Supremacist" (DPS083)** — fully migrated, and
+worth noting because Part 19 listed its side-wide half under *"what this
+spike does NOT close"*. `BlankCardText`'s `AllOpposing` mode closes it.
+The card uses BOTH scopes: its when-fielded half is card-scoped (copies
+not in play, Globals included) and its Global is die-scoped ("target
+attacking character die"). That is the clearest single piece of evidence
+in the catalog that the two scopes are genuinely different things, and
+it is a card, not an argument.
+
+### PARTIAL: clauses migrated minus one
+
+- **Sabretooth "Am I Interrupting?" (DPS051)** — the "target Wolverine
+  character die" half is migrated (a card name is a tag). The other half,
+  *"or any character die with a 'While Wolverine is active' ability"*,
+  addresses another card's ability TEXT. No filter in the frozen
+  vocabulary can see that, and it is not clear one should: it is a
+  predicate over rules text, not over game state.
+- **Beast "Combat Ready" (DPS098)** — the attack trigger is migrated. The
+  surcharge (*"the first Beast die you purchase each game costs 1
+  extra"*) is not: no `Duration` or `Condition` expresses "the first one
+  this GAME". Everything in the vocabulary is turn-scoped or permanent.
+  A once-per-game counter would do it (`GameState.Counters` is already
+  the right shape) but that is a vocabulary addition, so it waits.
+- **Rogue "Surveillance Immunity" (DPS089)** — the action-die removal is
+  migrated. *"Fielding Rogue doesn't trigger opposing effects"* is
+  trigger suppression, which Part 25 tailed as its own family. v1 did not
+  model it either.
+
+### TAILED: not attempted
+
+- **Supreme Intelligence "Psionic Collective" (DPS093)** — Intimidate's
+  destination is v1's `Zone.Intimidated`, which has no equivalent in
+  v2's 10-zone list. Already recorded at `CardCatalog.cs:209` for the
+  curated Beast; the same gap, a second card.
+
+### Selection note, worth keeping for the next batch
+
+Batch 3's candidates were picked by filtering the 116 remaining DPS cards
+for those whose v1 TRIGGERS and EFFECTS both already have v2 equivalents.
+That is 18 cards. Filtering on effects alone gives 42 - the gap is almost
+entirely **keyword triggers**: `Energize` (15 remaining cards), `Awaken`,
+`Teamwatch`. v2 has no `TriggerKind` for any of them.
+
+**That is the single biggest blocker left in the DPS migration**, bigger
+than anything Spike A closed, and it is a known one (see "Keyword
+behavior still unbuilt" above). Roughly a quarter of what remains is
+waiting on it. Worth costing before batch 4, since the alternative is
+picking around it for several more batches.

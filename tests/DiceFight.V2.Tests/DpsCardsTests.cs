@@ -597,4 +597,77 @@ public class DpsCardsTests
 
         Assert.Equal(20 - 4, state.PlayerTwo.Life); // 2 qualifying dice x 2 damage
     }
+
+    // --- Batch 3: the two cards Spike A was built for ---
+
+    // D'Ken "Shi'ar Civil War" - the AbilityBlank template's first real
+    // card. Both clauses, and the cost threshold that separates who is
+    // affected from who is not.
+    [Fact]
+    public void DKen_Blanks_Cheap_Opposing_Dice_And_Makes_Them_Free_To_Field()
+    {
+        var state = NewGame();
+        ContinuousRegistry.RegisterAll(state);
+
+        // Storm costs 2 (under D'Ken's threshold); Ronan "No Mercy" costs 6.
+        // Her LEVEL 3 face, because levels 1-2 already field for free and
+        // "free to field" would then prove nothing.
+        var cheap = Active(state, DpsCards.StormExtremeWeather, "p2", level: 3);
+        var dear = Active(state, DpsCards.RonanTheAccuserNoMercy, "p2");
+
+        Assert.True(QueryEngine.AbilitiesActive(state, cheap));
+        var fieldingCostBefore = QueryEngine.GetFieldingCost(state, cheap);
+        Assert.True(fieldingCostBefore > 0);
+
+        Active(state, DpsCards.DKenShiarCivilWar, "p1");
+
+        Assert.False(QueryEngine.AbilitiesActive(state, cheap));
+        Assert.Equal(0, QueryEngine.GetFieldingCost(state, cheap));   // "free to field"
+        Assert.True(QueryEngine.AbilitiesActive(state, dear));        // 6 cost - over the threshold
+    }
+
+    // D'Ken's own side is untouched: "OPPOSING character dice".
+    [Fact]
+    public void DKen_Does_Not_Blank_His_Own_Side()
+    {
+        var state = NewGame();
+        ContinuousRegistry.RegisterAll(state);
+        var ally = Active(state, DpsCards.StormExtremeWeather, "p1");
+        Active(state, DpsCards.DKenShiarCivilWar, "p1");
+
+        Assert.True(QueryEngine.AbilitiesActive(state, ally));
+    }
+
+    // Mister Sinister "Mutant Supremacist" - the card Part 19 listed
+    // under "what this spike does NOT close". Its side-wide half is
+    // card-scoped, so it reaches a copy still in the bag AND the card's
+    // Global, neither of which a die-scoped blank can touch.
+    [Fact]
+    public void MisterSinister_Ignores_All_Text_On_Opposing_Cards_Including_A_Global()
+    {
+        var state = NewGame();
+        ContinuousRegistry.RegisterAll(state);
+
+        // Psylocke has a Global; give p2 one die in play and one unbought.
+        var inPlay = Active(state, DpsCards.PsylockeTelepath, "p2");
+        var unbought = new Model.DieInstance
+        {
+            Id = "p2-spare", CardId = DpsCards.PsylockeTelepath.Id,
+            OwnerId = "p2", ControllerId = "p2", Zone = Zone.Unpurchased,
+        };
+        state.Dice.Add(unbought);
+
+        Assert.True(QueryEngine.CardTextActive(state, "p2", DpsCards.PsylockeTelepath.Id));
+
+        var sinister = Ready(state, DpsCards.MisterSinisterMutantSupremacist, "p1", 1);
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, sinister.Id, Energy(state, "p1", 1));
+        Drain(state, queue);
+
+        Assert.False(QueryEngine.AbilitiesActive(state, inPlay));
+        Assert.False(QueryEngine.AbilitiesActive(state, unbought));  // still in the bag
+        Assert.False(QueryEngine.CardTextActive(state, "p2", DpsCards.PsylockeTelepath.Id));
+        // p1's own copy of the same card would be unaffected - per player.
+        Assert.True(QueryEngine.CardTextActive(state, "p1", DpsCards.PsylockeTelepath.Id));
+    }
 }

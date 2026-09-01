@@ -549,5 +549,195 @@ public static class DpsCards
         JeanGreyPeacefulCoexistence, DeadpoolCollectThis, AngelXaviersDream,
         MagnetoVisionary, BlobImmovable, MakingTheTeam, PhoenixPsionicMaelstrom, ColossusOrganicSteel,
         PhoenixEternalFlame,
+        // Batch 3 - led by the two cards Spike A was built for.
+        DKenShiarCivilWar, MisterSinisterMutantSupremacist,
+        StormExtremeWeather, MasterMoldInexplicableDurability, SabretoothAmIInterrupting,
+        DeadpoolMoreThanAChumpBlocker, RogueSurveillanceImmunity, RonanTheAccuserNoMercy,
+        BeastCombatReady, MagikSorceressOfLimbo,
     ];
+
+    // --- Batch 3 (2026-09-01) ---
+    //
+    // Led by the two cards Spike A was built for. D'Ken and Mister
+    // Sinister were both named in V2_VOCABULARY.md Part 12 as motivating
+    // the spike, and Part 19 listed Sinister's side-wide half under "what
+    // it does NOT close" - BlankCardText's AllOpposing mode closes it.
+
+    // The AbilityBlank template's first real card, and the shape the
+    // whole continuous half was designed around: a conditional blank,
+    // recomputed on read, that switches off when D'Ken leaves.
+    //
+    // "Free to field" is the second clause and needs no new template - a
+    // fielding-cost CostModifier large enough to floor at zero, which
+    // GetFieldingCost already does (Math.Max(0, ...)). -99 rather than a
+    // set-to-zero mode because no set mode exists and one card does not
+    // justify inventing one.
+    public static readonly CardDef DKenShiarCivilWar = new(
+        Id: "DPS141", Name: "D'Ken", Subtitle: "Shi'ar Civil War", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 6, EnergySymbolIds: ["Shield"],
+        Die: MigrationDice.Character("DPS141Die", "Shield", (0, 4, 4), (1, 5, 5), (2, 6, 6)),
+        DieLimit: 1, Affiliations: ["Villains", "Shi'ar"], Keywords: [],
+        RawText: "While D'Ken is active, opposing character dice with Purchase Cost of 3 or less lose their " +
+                 "abilities and are free to field.",
+        Abilities: [],
+        Continuous:
+        [
+            new AbilityBlank(new TargetFilter(
+                Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Opposing, Count: 99,
+                Stat: new StatThreshold(StatKind.PurchaseCost, Max: 3))),
+            new CostModifier(CostKind.Fielding, new TargetFilter(
+                Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Opposing, Count: 99,
+                Stat: new StatThreshold(StatKind.PurchaseCost, Max: 3)), Delta: -99),
+        ]);
+
+    // Both halves, and the second one is why card scope had to exist:
+    // "ignore all text on opposing character CARDS (including Global
+    // Abilities)" covers copies not yet in play and Globals that need no
+    // die, neither of which a die-scoped blank can reach.
+    //
+    // The Global itself is die-scoped - "target attacking character die's
+    // text" - so this one card uses both scopes, which is the clearest
+    // evidence in the catalog that they are genuinely different things.
+    public static readonly CardDef MisterSinisterMutantSupremacist = new(
+        Id: "DPS083", Name: "Mister Sinister", Subtitle: "Mutant Supremacist", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 5, EnergySymbolIds: ["Bolt"],
+        Die: MigrationDice.Character("DPS083Die", "Bolt", (1, 4, 1), (2, 5, 2), (2, 6, 3)),
+        DieLimit: 4, Affiliations: ["Villains"], Keywords: [],
+        RawText: "When fielded, ignore all text on opposing character cards (including Global Abilities) (until " +
+                 "end of turn). Global: Pay 3. Ignore target attacking character die's text until end of turn.",
+        Abilities:
+        [
+            new TriggeredAbility(TriggerKind.DieFielded, new BlankCardText(AllOpposing: true)),
+            new TriggeredAbility(TriggerKind.Global,
+                new BlankText(new TargetFilter(
+                    Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Opposing, Zones: [Zone.AttackZone])),
+                EnergyCost: new EnergyCost(3)),
+        ],
+        Continuous: []);
+
+    // --- The rest of batch 3: cards whose triggers and effects v2
+    // already had, migrated to keep the catalog moving. ---
+
+    public static readonly CardDef StormExtremeWeather = new(
+        Id: "DPS052", Name: "Storm", Subtitle: "Extreme Weather", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 2, EnergySymbolIds: ["Bolt"],
+        Die: MigrationDice.Character("DPS052Die", "Bolt", (0, 2, 1), (0, 3, 1), (1, 3, 3)),
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: [],
+        RawText: "When fielded, deal 1 damage to target character die.",
+        Abilities: [new TriggeredAbility(TriggerKind.DieFielded,
+            new DealDamage(new Fixed(1), new TargetFilter(Kind: TargetKind.CharacterDie)))],
+        Continuous: []);
+
+    // "all X-Men AND Brotherhood of Mutants dice" is a UNION of two
+    // affiliations, not an intersection - no die is both. v1 spelled it
+    // matchAll: true against a requiredAffiliations list, which reads as
+    // an intersection and is wrong for the same reason; the printed text
+    // means "every die of either team".
+    public static readonly CardDef MasterMoldInexplicableDurability = new(
+        Id: "DPS042", Name: "Master Mold", Subtitle: "Inexplicable Durability", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 5, EnergySymbolIds: ["Shield"],
+        Die: MigrationDice.Character("DPS042Die", "Shield", (1, 5, 5), (2, 6, 6), (3, 8, 8)),
+        DieLimit: 4, Affiliations: ["Villains"], Keywords: [],
+        RawText: "When fielded, deal 2 damage to all X-Men and Brotherhood of Mutants character dice.",
+        Abilities: [new TriggeredAbility(TriggerKind.DieFielded,
+            new DealDamage(new Fixed(2), new TargetFilter(
+                Kind: TargetKind.CharacterDie, Count: 99,
+                Affiliations: new TagQuery(AnyOf: ["X-Men", "Brotherhood of Mutants"]))))],
+        Continuous: []);
+
+    // "Target Wolverine character die" - the card NAME is a tag, so this
+    // needs no name-matching machinery of its own. v1 used a substring
+    // match; a tag is the exact printed name, which is the same set here
+    // because every Wolverine printing is named "Wolverine".
+    //
+    // The "or any character die with a 'While Wolverine is active'
+    // ability" half is NOT migrated: it addresses another card's ability
+    // TEXT, which no filter in the frozen vocabulary can see. Tailed.
+    public static readonly CardDef SabretoothAmIInterrupting = new(
+        Id: "DPS051", Name: "Sabretooth", Subtitle: "Am I Interrupting?", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 4, EnergySymbolIds: ["Fist"],
+        Die: MigrationDice.Character("DPS051Die", "Fist", (1, 3, 3), (1, 4, 4), (2, 5, 4)),
+        DieLimit: 4, Affiliations: ["Brotherhood of Mutants"], Keywords: [],
+        RawText: "When fielded, KO target Wolverine characer die, or any character die with a \"While Wolverine is " +
+                 "active\" ability.",
+        Abilities: [new TriggeredAbility(TriggerKind.DieFielded,
+            new Ko(new TargetFilter(Kind: TargetKind.CharacterDie, Tags: new TagQuery(AnyOf: ["Wolverine"]))))],
+        Continuous: []);
+
+    public static readonly CardDef DeadpoolMoreThanAChumpBlocker = new(
+        Id: "DPS068", Name: "Deadpool", Subtitle: "More than a Chump Blocker", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 4, EnergySymbolIds: ["Fist"],
+        Die: MigrationDice.Character("DPS068Die", "Fist", (0, 2, 4), (0, 2, 5), (1, 3, 7)),
+        DieLimit: 4, Affiliations: ["Deadpool Affiliation"], Keywords: [],
+        RawText: "When Deadpool attacks, he deals your opponent 1 damage.",
+        Abilities: [new TriggeredAbility(TriggerKind.DieAttacks,
+            new DealDamage(new Fixed(1), new TargetFilter(Kind: TargetKind.Player, Ownership: TargetOwnership.Opposing)))],
+        Continuous: []);
+
+    // Second clause ("fielding Rogue doesn't trigger opposing effects")
+    // is not migrated - v1 did not model it either, and suppressing
+    // another card's trigger is the ability-class shape Part 25 tailed.
+    public static readonly CardDef RogueSurveillanceImmunity = new(
+        Id: "DPS089", Name: "Rogue", Subtitle: "Surveillance Immunity", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 3, EnergySymbolIds: ["Mask"],
+        Die: MigrationDice.Character("DPS089Die", "Mask", (1, 2, 3), (2, 4, 5), (2, 5, 6)),
+        DieLimit: 5, Affiliations: ["X-Men"], Keywords: [],
+        RawText: "When fielded, send target action die from the Field Zone to your opponent's Used Pile. Fielding " +
+                 "Rogue doesn't trigger opposing effects.",
+        Abilities: [new TriggeredAbility(TriggerKind.DieFielded,
+            new MoveDie(new TargetFilter(
+                Kind: TargetKind.ActionDie, Ownership: TargetOwnership.Opposing, Zones: [Zone.FieldZone]),
+                Zone.UsedPile))],
+        Continuous: []);
+
+    // "EACH player KOs a character die they control" - two KOs, and the
+    // second is answered by the opponent. AnsweredBy is exactly this
+    // (Part 1's cross-player-answered targets), so v1's dedicated
+    // OpponentKOsOwnCharacterDie effect needs no counterpart.
+    public static readonly CardDef RonanTheAccuserNoMercy = new(
+        Id: "DPS090", Name: "Ronan the Accuser", Subtitle: "No Mercy", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 6, EnergySymbolIds: ["Bolt"],
+        Die: MigrationDice.Character("DPS090Die", "Bolt", (1, 5, 5), (1, 6, 7), (2, 8, 8)),
+        DieLimit: 4, Affiliations: [], Keywords: [],
+        RawText: "When fielded, each player KOs a character die they control.",
+        Abilities: [new TriggeredAbility(TriggerKind.DieFielded, new Sequence(
+        [
+            new Ko(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own)),
+            new Ko(new TargetFilter(
+                Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Opposing,
+                AnsweredBy: TargetOwnership.Opposing)),
+        ]))],
+        Continuous: []);
+
+    // The surcharge clause ("the first Beast die you purchase each game
+    // costs 1 extra") is NOT migrated: it is a once-per-GAME cost
+    // modifier, and no Duration or condition in the frozen vocabulary
+    // expresses "the first one this game". Tailed; the attack trigger is
+    // migrated.
+    public static readonly CardDef BeastCombatReady = new(
+        Id: "DPS098", Name: "Beast", Subtitle: "Combat Ready", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 2, EnergySymbolIds: ["Fist"],
+        Die: MigrationDice.Character("DPS098Die", "Fist", (0, 2, 1), (1, 2, 2), (1, 3, 2)),
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: ["Founder"],
+        RawText: "Founder When Beast attacks, Prep a die from your bag. The first Beast die you purchase each " +
+                 "game costs 1 extra.",
+        Abilities: [new TriggeredAbility(TriggerKind.DieAttacks,
+            new DrawToZone(1, Zone.PrepArea, Zone.Bag))],
+        Continuous: []);
+
+    public static readonly CardDef MagikSorceressOfLimbo = new(
+        Id: "DPS120", Name: "Magik", Subtitle: "Sorceress of Limbo", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 4, EnergySymbolIds: ["Mask"],
+        Die: MigrationDice.Character("DPS120Die", "Mask", (0, 1, 4), (0, 1, 6), (1, 2, 7)),
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: [],
+        RawText: "When fielded, target character die gains Overcrush and +2A.",
+        // One target, bound once and reused - not two independent "target
+        // character die" resolutions, which would let the keyword and the
+        // bonus land on different dice.
+        Abilities: [new TriggeredAbility(TriggerKind.DieFielded, new Sequence(
+        [
+            new GrantTag(new TargetFilter(Kind: TargetKind.CharacterDie, BindAs: "boosted"), ["Overcrush"]),
+            new ModifyStat(new TargetFilter(Bound: "boosted"), AtkDelta: 2),
+        ]))],
+        Continuous: []);
 }
