@@ -524,7 +524,11 @@ public static class EffectInterpreter
             {
                 var die = FindDie(ctx.State, id);
                 var definition = ctx.State.GetDieDefinition(die);
-                var energyFaces = definition.Faces.Select((f, i) => (f, i)).Where(x => x.f.Character is null).ToList();
+                // Kind, not "Character is null" - a Basic Action die's
+                // action faces have no character data either, and used to
+                // qualify here as energy faces.
+                var energyFaces = definition.Faces.Select((f, i) => (f, i))
+                    .Where(x => x.f.Kind == FaceKind.EnergyFace).ToList();
                 if (energyFaces.Count == 0)
                     throw new InvalidOperationException($"Die '{die.Id}' has no energy face to spin to.");
 
@@ -532,8 +536,15 @@ public static class EffectInterpreter
                 // effect is describing); fall back to the die's first
                 // energy face if no face shows exactly that many symbols
                 // - most basic dice only have one energy amount anyway.
-                var chosen = energyFaces.FirstOrDefault(x => x.f.Symbols.Sum(s => s.Count) == n.Amount);
-                var (face, index) = chosen.f is not null ? chosen : energyFaces[0];
+                // Exact pip count first - that is the physical face the
+                // card is describing. The fallback is the FEWEST-pip face
+                // rather than "the first one", which is rule 2.6.1.4's own
+                // logic (a spin-down lands on the single) stated as a rule
+                // instead of left to face order.
+                var chosen = energyFaces.FirstOrDefault(x => x.f.SymbolCount == n.Amount);
+                var (face, index) = chosen.f is not null
+                    ? chosen
+                    : energyFaces.OrderBy(x => x.f.SymbolCount).First();
 
                 var priorFace = ctx.State.GetCurrentFace(die);
                 die.CurrentFaceIndex = index;

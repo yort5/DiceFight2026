@@ -25,8 +25,8 @@ public class TurnCycleTests
         [
             new Face([new SymbolAmount("Wild", 1)]),                                          // 0
             new Face([new SymbolAmount("Fist", 1)]),                                           // 1
-            new Face([], Character: new CharacterFaceData(Level: 1, FieldingCost: 0, Attack: 1, Defense: 1)), // 2
-            new Face([], Character: new CharacterFaceData(Level: 1, FieldingCost: 0, Attack: 1, Defense: 1)), // 3
+            new Face([], new CharacterFaceData(Level: 1, FieldingCost: 0, Attack: 1, Defense: 1), Kind: FaceKind.CharacterFace), // 2
+            new Face([], new CharacterFaceData(Level: 1, FieldingCost: 0, Attack: 1, Defense: 1), Kind: FaceKind.CharacterFace), // 3
         ]);
 
         return new GameConfig(
@@ -50,7 +50,7 @@ public class TurnCycleTests
         Die: new DieDefinition("T001Die",
         [
             new Face([new SymbolAmount("Fist", 1)]),
-            new Face([], Character: new CharacterFaceData(Level: 1, FieldingCost: 1, Attack: 2, Defense: 2)),
+            new Face([], new CharacterFaceData(Level: 1, FieldingCost: 1, Attack: 2, Defense: 2), Kind: FaceKind.CharacterFace),
         ]),
         DieLimit: 1,
         Affiliations: [],

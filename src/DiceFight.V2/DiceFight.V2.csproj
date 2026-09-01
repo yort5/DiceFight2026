@@ -6,4 +6,11 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- MigrationDice is internal on purpose - it is a migration detail,
+         not part of v2's surface - but its face-layout contract is worth
+         testing directly rather than only through the cards built on it. -->
+    <InternalsVisibleTo Include="DiceFight.V2.Tests" />
+  </ItemGroup>
+
 </Project>

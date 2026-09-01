@@ -30,7 +30,7 @@ public class EventBusTests
         EnergySymbolIds: ["Fist"],
         Die: new DieDefinition(id + "Die",
         [
-            new Face([], Character: new CharacterFaceData(Level: 1, FieldingCost: 0, Attack: 1, Defense: 1)),
+            new Face([], new CharacterFaceData(Level: 1, FieldingCost: 0, Attack: 1, Defense: 1), Kind: FaceKind.CharacterFace),
         ]),
         DieLimit: 1,
         Affiliations: affiliations ?? [],
@@ -284,9 +284,9 @@ public class EventBusTests
         Die: new DieDefinition(id + "Die",
         [
             new Face([new SymbolAmount("Fist", 1)]),
-            new Face([], Character: new CharacterFaceData(1, 0, 1, 1)),
-            new Face([], Character: new CharacterFaceData(2, 0, 2, 2)),
-            new Face([], Character: new CharacterFaceData(3, 0, 3, 3)),
+            new Face([], new CharacterFaceData(1, 0, 1, 1), Kind: FaceKind.CharacterFace),
+            new Face([], new CharacterFaceData(2, 0, 2, 2), Kind: FaceKind.CharacterFace),
+            new Face([], new CharacterFaceData(3, 0, 3, 3), Kind: FaceKind.CharacterFace),
         ]),
         DieLimit: 1, Affiliations: [], Keywords: [], RawText: "",
         Abilities: abilities, Continuous: []);

@@ -29,5 +29,4 @@ public sealed record TurnFact(TurnFactKind Fact) : Condition;
 
 // Finding 8 - branch on whether the checked die is currently on a
 // character face or an energy face (Making the Team-style cards).
-public enum FaceKind { CharacterFace, EnergyFace }
 public sealed record OnFaceKind(FaceKind Kind, string CheckBinding = "self") : Condition;

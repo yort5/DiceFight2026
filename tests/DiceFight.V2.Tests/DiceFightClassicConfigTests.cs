@@ -38,7 +38,7 @@ public class DiceFightClassicConfigTests
         var card = new Model.CardDef(
             Id: "smoke-test-card", Name: "Smoke Test Card", Subtitle: null, Set: "TEST",
             CardType: CardType.Character, PurchaseCost: 1, EnergySymbolIds: ["Fist"],
-            Die: new DieDefinition("SmokeDie", [new Face([new SymbolAmount("Fist", 1)]), new Face([], new CharacterFaceData(1, 0, 1, 1))]),
+            Die: new DieDefinition("SmokeDie", [new Face([new SymbolAmount("Fist", 1)]), new Face([], new CharacterFaceData(1, 0, 1, 1), Kind: FaceKind.CharacterFace)]),
             DieLimit: 1, Affiliations: [], Keywords: [], RawText: "", Abilities: [], Continuous: []);
 
         var playerOne = new Player { Id = "p1", Name = "One" };
@@ -66,11 +66,11 @@ public class DiceFightClassicConfigTests
     public void A_Variant_Config_With_A_Different_Draw_Count_And_Split_Sidekick_Pools_Just_Works()
     {
         var swiftPool = new DieDefinition("Swift", [
-            new Face([], new CharacterFaceData(1, 0, 1, 1)),
+            new Face([], new CharacterFaceData(1, 0, 1, 1), Kind: FaceKind.CharacterFace),
             new Face([new SymbolAmount("Wild", 1)]),
         ]);
         var stoutPool = new DieDefinition("Stout", [
-            new Face([], new CharacterFaceData(1, 0, 1, 2)),
+            new Face([], new CharacterFaceData(1, 0, 1, 2), Kind: FaceKind.CharacterFace),
             new Face([new SymbolAmount("Wild", 1)]),
         ]);
 

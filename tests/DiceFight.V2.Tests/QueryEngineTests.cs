@@ -34,7 +34,7 @@ public class QueryEngineTests
         EnergySymbolIds: ["Fist"],
         Die: new DieDefinition("T001Die",
         [
-            new Face([], Character: new CharacterFaceData(Level: 1, FieldingCost: 2, Attack: 3, Defense: 4)),
+            new Face([], new CharacterFaceData(Level: 1, FieldingCost: 2, Attack: 3, Defense: 4), Kind: FaceKind.CharacterFace),
         ]),
         DieLimit: 1,
         Affiliations: [],
@@ -299,7 +299,7 @@ public class QueryEngineTests
     private static CardDef AffiliatedCard(string id, IReadOnlyList<string> affiliations, IReadOnlyList<string> keywords) => new(
         Id: id, Name: $"Card {id}", Subtitle: null, Set: "TEST", CardType: CardType.Character,
         PurchaseCost: 3, EnergySymbolIds: ["Fist"],
-        Die: new DieDefinition($"{id}Die", [new Face([], Character: new CharacterFaceData(1, 2, 3, 4))]),
+        Die: new DieDefinition($"{id}Die", [new Face([], new CharacterFaceData(1, 2, 3, 4), Kind: FaceKind.CharacterFace)]),
         DieLimit: 1, Affiliations: affiliations, Keywords: keywords,
         RawText: "", Abilities: [], Continuous: []);
 

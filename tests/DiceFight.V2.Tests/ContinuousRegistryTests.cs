@@ -10,8 +10,8 @@ namespace DiceFight.V2.Tests;
 // Bucket C) running as real card definitions.
 public class ContinuousRegistryTests
 {
-    private static readonly Face Level1Char = new([], new CharacterFaceData(Level: 1, FieldingCost: 2, Attack: 2, Defense: 2));
-    private static readonly Face SidekickChar = new([], new CharacterFaceData(Level: 1, FieldingCost: 0, Attack: 1, Defense: 1));
+    private static readonly Face Level1Char = new([], new CharacterFaceData(Level: 1, FieldingCost: 2, Attack: 2, Defense: 2), Kind: FaceKind.CharacterFace);
+    private static readonly Face SidekickChar = new([], new CharacterFaceData(Level: 1, FieldingCost: 0, Attack: 1, Defense: 1), Kind: FaceKind.CharacterFace);
 
     private static GameConfig BuildConfig() => new(
         Id: "test", Name: "Test",

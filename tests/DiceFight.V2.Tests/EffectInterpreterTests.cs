@@ -13,8 +13,8 @@ public class EffectInterpreterTests
         public int Roll(DieDefinition die) => index;
     }
 
-    private static readonly Face Level1Char = new([], new CharacterFaceData(Level: 1, FieldingCost: 0, Attack: 2, Defense: 2));
-    private static readonly Face Level2Char = new([], new CharacterFaceData(Level: 2, FieldingCost: 1, Attack: 3, Defense: 3));
+    private static readonly Face Level1Char = new([], new CharacterFaceData(Level: 1, FieldingCost: 0, Attack: 2, Defense: 2), Kind: FaceKind.CharacterFace);
+    private static readonly Face Level2Char = new([], new CharacterFaceData(Level: 2, FieldingCost: 1, Attack: 3, Defense: 3), Kind: FaceKind.CharacterFace);
     private static readonly Face FistEnergy1 = new([new SymbolAmount("Fist", 1)]);
     private static readonly Face FistEnergy2 = new([new SymbolAmount("Fist", 2)]);
     private static readonly Face BurstSingle = new([], new CharacterFaceData(1, 0, 2, 2), Burst: 1);
@@ -435,7 +435,7 @@ public class EffectInterpreterTests
     {
         var loisLane = BuildCard("LoisLane", [Level1Char], continuous:
             [new StatAura(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own, Affiliations: new TagQuery(AnyOf: ["SuperFriends"])), AtkDelta: new Fixed(1))]);
-        var superFriend = BuildCard("SuperFriend", [new Face([], new CharacterFaceData(1, 0, 4, 4))], affiliations: ["SuperFriends"]);
+        var superFriend = BuildCard("SuperFriend", [new Face([], new CharacterFaceData(1, 0, 4, 4), Kind: FaceKind.CharacterFace)], affiliations: ["SuperFriends"]);
         var state = BuildState(loisLane, superFriend);
         AddDie(state, loisLane, "p1", Zone.FieldZone, 0, "lois");
         var hero = AddDie(state, superFriend, "p1", Zone.FieldZone, 0, "hero");
@@ -459,7 +459,7 @@ public class EffectInterpreterTests
     [Fact]
     public void StatOf_Can_Set_One_Stat_From_Another_On_The_Same_Die()
     {
-        var card = BuildCard("T", [new Face([], new CharacterFaceData(1, 0, 6, 2))]); // 6A/2D
+        var card = BuildCard("T", [new Face([], new CharacterFaceData(1, 0, 6, 2), Kind: FaceKind.CharacterFace)]); // 6A/2D
         var state = BuildState(card);
         var die = AddDie(state, card, "p1", Zone.FieldZone, 0);
         var ctx = BuildContext(state, "p1");
@@ -478,8 +478,8 @@ public class EffectInterpreterTests
     [Fact]
     public void StatOf_Captures_At_Bind_Time_So_A_Two_Way_Swap_Is_Really_A_Swap()
     {
-        var mine = BuildCard("Mine", [new Face([], new CharacterFaceData(1, 0, 2, 3))]); // 2A
-        var theirs = BuildCard("Theirs", [new Face([], new CharacterFaceData(1, 0, 5, 4))]); // 5A
+        var mine = BuildCard("Mine", [new Face([], new CharacterFaceData(1, 0, 2, 3), Kind: FaceKind.CharacterFace)]); // 2A
+        var theirs = BuildCard("Theirs", [new Face([], new CharacterFaceData(1, 0, 5, 4), Kind: FaceKind.CharacterFace)]); // 5A
         var state = BuildState(mine, theirs);
         var self = AddDie(state, mine, "p1", Zone.FieldZone, 0, "self");
         var other = AddDie(state, theirs, "p2", Zone.FieldZone, 0, "other");
@@ -515,7 +515,7 @@ public class EffectInterpreterTests
     [Fact]
     public void EventValue_Reads_The_Triggering_Events_Own_Damage_Amount()
     {
-        var retaliator = BuildCard("Retaliator", [new Face([], new CharacterFaceData(1, 0, 1, 99))]) with
+        var retaliator = BuildCard("Retaliator", [new Face([], new CharacterFaceData(1, 0, 1, 99), Kind: FaceKind.CharacterFace)]) with
         {
             // DealDamage at a player, not LifeChange - LifeChange's Amount
             // is signed and a positive value GAINS life, so "deal that much

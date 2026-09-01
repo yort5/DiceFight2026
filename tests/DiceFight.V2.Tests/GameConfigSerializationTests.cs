@@ -42,7 +42,7 @@ public class GameConfigSerializationTests
                 Die: new DieDefinition("Sidekick",
                 [
                     new Face([new SymbolAmount("Wild", 1)]),
-                    new Face([], Character: new CharacterFaceData(Level: 1, FieldingCost: 0, Attack: 1, Defense: 1)),
+                    new Face([], new CharacterFaceData(Level: 1, FieldingCost: 0, Attack: 1, Defense: 1), Kind: FaceKind.CharacterFace),
                 ]),
                 Count: 8),
         ],

@@ -64,7 +64,7 @@ public static class ConditionEvaluator
         OnFaceKind c => bindings.TryGetValue(c.CheckBinding, out var faceId) &&
             state.Dice.FirstOrDefault(d => d.Id == faceId) is { } faceDie &&
             state.GetCurrentFace(faceDie) is { } face &&
-            (c.Kind == FaceKind.CharacterFace ? face.Character is not null : face.Character is null),
+            face.Kind == c.Kind,
 
         _ => false,
     };

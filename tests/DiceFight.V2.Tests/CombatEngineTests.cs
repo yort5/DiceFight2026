@@ -9,7 +9,7 @@ namespace DiceFight.V2.Tests;
 // aura-affects-combat-stats tests.
 public class CombatEngineTests
 {
-    private static readonly Face Level1Char = new([], new CharacterFaceData(Level: 1, FieldingCost: 1, Attack: 3, Defense: 2));
+    private static readonly Face Level1Char = new([], new CharacterFaceData(Level: 1, FieldingCost: 1, Attack: 3, Defense: 2), Kind: FaceKind.CharacterFace);
 
     private static GameConfig BuildConfig() => new(
         Id: "test", Name: "Test",
@@ -78,7 +78,7 @@ public class CombatEngineTests
     public void BlockedAttacker_SurvivesIfBlockerDamageBelowDefense()
     {
         var bruiser = BuildCard("Bruiser", [Level1Char]); // 3A/2D
-        var weakling = BuildCard("Weakling", [new Face([], new CharacterFaceData(1, 1, 1, 5))]); // 1A/5D
+        var weakling = BuildCard("Weakling", [new Face([], new CharacterFaceData(1, 1, 1, 5), Kind: FaceKind.CharacterFace)]); // 1A/5D
         var state = BuildState(bruiser, weakling);
         var attacker = AddDie(state, bruiser, "p1");
         var blocker = AddDie(state, weakling, "p2");
@@ -153,8 +153,8 @@ public class CombatEngineTests
     [Fact]
     public void Overcrush_KillingAllBlockers_DealsLeftoverDamageToOpponent()
     {
-        var bruiser = BuildCard("Bruiser", [new Face([], new CharacterFaceData(1, 1, 5, 2))], keywords: ["Overcrush"]); // 5A
-        var sidekickCard = BuildCard("Sidekick", [new Face([], new CharacterFaceData(1, 0, 1, 1))]); // 1D
+        var bruiser = BuildCard("Bruiser", [new Face([], new CharacterFaceData(1, 1, 5, 2), Kind: FaceKind.CharacterFace)], keywords: ["Overcrush"]); // 5A
+        var sidekickCard = BuildCard("Sidekick", [new Face([], new CharacterFaceData(1, 0, 1, 1), Kind: FaceKind.CharacterFace)]); // 1D
         var state = BuildState(bruiser, sidekickCard);
         var attacker = AddDie(state, bruiser, "p1");
         var blocker = AddDie(state, sidekickCard, "p2");
@@ -175,8 +175,8 @@ public class CombatEngineTests
     [Fact]
     public void Overcrush_BlockerSurvives_DealsNoLeftoverDamage()
     {
-        var bruiser = BuildCard("Bruiser", [new Face([], new CharacterFaceData(1, 1, 5, 2))], keywords: ["Overcrush"]);
-        var tank = BuildCard("Tank", [new Face([], new CharacterFaceData(1, 1, 1, 10))]); // survives the full 5A
+        var bruiser = BuildCard("Bruiser", [new Face([], new CharacterFaceData(1, 1, 5, 2), Kind: FaceKind.CharacterFace)], keywords: ["Overcrush"]);
+        var tank = BuildCard("Tank", [new Face([], new CharacterFaceData(1, 1, 1, 10), Kind: FaceKind.CharacterFace)]); // survives the full 5A
         var state = BuildState(bruiser, tank);
         var attacker = AddDie(state, bruiser, "p1");
         var blocker = AddDie(state, tank, "p2");
@@ -196,8 +196,8 @@ public class CombatEngineTests
     [Fact]
     public void Overcrush_BlockerRemovedBeforeDamageResolves_DealsFullAttackToOpponent()
     {
-        var bruiser = BuildCard("Bruiser", [new Face([], new CharacterFaceData(1, 1, 5, 2))], keywords: ["Overcrush"]);
-        var sidekickCard = BuildCard("Sidekick", [new Face([], new CharacterFaceData(1, 0, 1, 1))]);
+        var bruiser = BuildCard("Bruiser", [new Face([], new CharacterFaceData(1, 1, 5, 2), Kind: FaceKind.CharacterFace)], keywords: ["Overcrush"]);
+        var sidekickCard = BuildCard("Sidekick", [new Face([], new CharacterFaceData(1, 0, 1, 1), Kind: FaceKind.CharacterFace)]);
         var state = BuildState(bruiser, sidekickCard);
         var attacker = AddDie(state, bruiser, "p1");
         var blocker = AddDie(state, sidekickCard, "p2");
@@ -222,8 +222,8 @@ public class CombatEngineTests
     private static (GameState state, DieInstance attacker, DieInstance blocker) CreateFastCombatState(
         int attackerAttack, int attackerDefense, bool attackerFast, int blockerAttack, int blockerDefense, bool blockerFast)
     {
-        var attackerCard = BuildCard("Attacker", [new Face([], new CharacterFaceData(1, 1, attackerAttack, attackerDefense))], keywords: attackerFast ? ["Fast"] : []);
-        var blockerCard = BuildCard("Blocker", [new Face([], new CharacterFaceData(1, 1, blockerAttack, blockerDefense))], keywords: blockerFast ? ["Fast"] : []);
+        var attackerCard = BuildCard("Attacker", [new Face([], new CharacterFaceData(1, 1, attackerAttack, attackerDefense), Kind: FaceKind.CharacterFace)], keywords: attackerFast ? ["Fast"] : []);
+        var blockerCard = BuildCard("Blocker", [new Face([], new CharacterFaceData(1, 1, blockerAttack, blockerDefense), Kind: FaceKind.CharacterFace)], keywords: blockerFast ? ["Fast"] : []);
         var state = BuildState(attackerCard, blockerCard);
         var attacker = AddDie(state, attackerCard, "p1");
         var blocker = AddDie(state, blockerCard, "p2");
@@ -296,7 +296,7 @@ public class CombatEngineTests
     {
         var watcherAbility = new TriggeredAbility(TriggerKind.DieKOd, new LifeChange(new Fixed(0)));
         var bruiser = BuildCard("Bruiser", [Level1Char]); // 3A/2D
-        var victim = BuildCard("Victim", [new Face([], new CharacterFaceData(1, 1, 1, 1))], abilities: [watcherAbility]); // self-only "when KO'd"
+        var victim = BuildCard("Victim", [new Face([], new CharacterFaceData(1, 1, 1, 1), Kind: FaceKind.CharacterFace)], abilities: [watcherAbility]); // self-only "when KO'd"
         var state = BuildState(bruiser, victim);
         var attacker = AddDie(state, bruiser, "p1");
         var blocker = AddDie(state, victim, "p2");
@@ -318,7 +318,7 @@ public class CombatEngineTests
     {
         var buffer = BuildCard("Buffer", [Level1Char], continuous:
             [new StatAura(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own), AtkDelta: new Fixed(2))]);
-        var tank = BuildCard("Tank", [new Face([], new CharacterFaceData(1, 1, 1, 10))]);
+        var tank = BuildCard("Tank", [new Face([], new CharacterFaceData(1, 1, 1, 10), Kind: FaceKind.CharacterFace)]);
         var state = BuildState(buffer, tank);
         var attacker = AddDie(state, buffer, "p1"); // 3A printed, +2 from its own aura = 5A
         var blocker = AddDie(state, tank, "p2");
@@ -346,7 +346,7 @@ public class CombatEngineTests
     {
         var buffer = BuildCard("Buffer", [Level1Char], continuous:
             [new StatAura(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own), AtkDelta: new Fixed(2))]);
-        var tank = BuildCard("Tank", [new Face([], new CharacterFaceData(1, 1, 1, 10))]);
+        var tank = BuildCard("Tank", [new Face([], new CharacterFaceData(1, 1, 1, 10), Kind: FaceKind.CharacterFace)]);
         var state = BuildState(buffer, tank);
         var attacker = AddDie(state, buffer, "p1"); // 3A printed, +2 from its own aura = 5A
         var blocker = AddDie(state, tank, "p2");
@@ -366,7 +366,7 @@ public class CombatEngineTests
     [Fact]
     public void CombatRule_BlocksN_Lets_One_Blocker_Take_Multiple_Attackers()
     {
-        var tankGrant = BuildCard("Tank", [new Face([], new CharacterFaceData(1, 1, 1, 20))], continuous:
+        var tankGrant = BuildCard("Tank", [new Face([], new CharacterFaceData(1, 1, 1, 20), Kind: FaceKind.CharacterFace)], continuous:
             [new CombatRule(CombatRuleKind.BlocksN, new TargetFilter(Self: true), N: 2)]);
         var attackerCard = BuildCard("Attacker", [Level1Char]);
         var state = BuildState(tankGrant, attackerCard);
@@ -387,7 +387,7 @@ public class CombatEngineTests
     [Fact]
     public void CombatRule_BlocksN_Default_Rejects_A_Second_Attacker()
     {
-        var plainBlockerCard = BuildCard("PlainBlocker", [new Face([], new CharacterFaceData(1, 1, 1, 20))]);
+        var plainBlockerCard = BuildCard("PlainBlocker", [new Face([], new CharacterFaceData(1, 1, 1, 20), Kind: FaceKind.CharacterFace)]);
         var attackerCard = BuildCard("Attacker", [Level1Char]);
         var state = BuildState(plainBlockerCard, attackerCard);
         var blocker = AddDie(state, plainBlockerCard, "p2");
@@ -408,7 +408,7 @@ public class CombatEngineTests
     {
         var magnetoLike = BuildCard("MagnetoLike", [Level1Char], continuous:
             [new CombatRule(CombatRuleKind.MinBlockers, new TargetFilter(Self: true), N: 2)]);
-        var blockerCard = BuildCard("Blocker", [new Face([], new CharacterFaceData(1, 1, 1, 20))]);
+        var blockerCard = BuildCard("Blocker", [new Face([], new CharacterFaceData(1, 1, 1, 20), Kind: FaceKind.CharacterFace)]);
         var state = BuildState(magnetoLike, blockerCard);
         var attacker = AddDie(state, magnetoLike, "p1");
         var blocker = AddDie(state, blockerCard, "p2");
@@ -428,7 +428,7 @@ public class CombatEngineTests
     public void The_Attack_Step_Walks_Its_Six_Rulebook_Entries_In_Order()
     {
         var bruiser = BuildCard("Bruiser", [Level1Char]);
-        var blockerCard = BuildCard("Blocker", [new Face([], new CharacterFaceData(1, 1, 1, 9))]);
+        var blockerCard = BuildCard("Blocker", [new Face([], new CharacterFaceData(1, 1, 1, 9), Kind: FaceKind.CharacterFace)]);
         var state = BuildState(bruiser, blockerCard);
         var attacker = AddDie(state, bruiser, "p1");
         var blocker = AddDie(state, blockerCard, "p2");

@@ -3594,3 +3594,78 @@ Roughly 40 call sites across the v2 tests, all mechanical, plus
 in, so that if an index is fumbled the failure is obviously an index and
 not a card. It is also the last thing standing between the migration and
 the biggest single keyword group left.
+
+---
+
+## Part 27 — Face kind is declared, and the dice are real (2026-09-01)
+
+The user asked whether die faces should have categories, each with a
+default. Half yes, and the question found a live bug.
+
+### The bug: face kind was inferred, and could not be
+
+`Face` had no kind. `OnFaceKind` and `SpinToEnergy` both asked
+`Character is null` and called the answer "energy face". A Basic Action
+die's faces carry neither symbols nor character data, so **every action
+face read as an energy face** — `OnFaceKind(EnergyFace)` returned true
+for a die sitting on its action face.
+
+Inference cannot be rescued by picking a better predicate, either:
+`Symbols.Any()` fails the other way, because a CHARACTER face may
+legitimately print energy symbols — the model's own comment said so.
+Nothing in the data classifies a face; only the card does. So `Face.Kind`
+is now declared, with three values the engine has real behaviour for.
+
+### The default-per-category half: no, and here is why
+
+The cases that looked like they needed a stored default turn out to be
+rules:
+
+- **Spin-down of a half-spent double** is rule 2.6.1.4 — it lands on the
+  SINGLE energy face, chosen by pip count. And a Basic Action die has no
+  single at all (2.6.1.5, its energy faces are all doubles), which is why
+  v1's `SingleEnergyFace` returns null. A stored "default energy face"
+  would have answered that confidently and wrongly.
+- **`SpinToEnergy`** already names the pip count it wants; only its
+  fallback was arbitrary, and that is now the FEWEST-pip energy face —
+  2.6.1.4's own logic stated as a rule rather than left to face order.
+- **Fielding level** was already settled: `FieldDie` fields at the level
+  the die rolled.
+
+So the tie-break is a rule in one place, not data on 3,884 dice. If a
+card ever needs a genuine per-die override, the declared category makes
+that additive.
+
+**On the v3 argument, honestly**: a category *label* alone buys little
+extensibility. A new face kind needs engine behaviour, and the engine can
+do nothing with a name it does not understand. What the category buys is
+correctness now, and a place to put the distinction instead of null
+checks spread across three files. That is enough on its own.
+
+### The dice are now the real six
+
+Done in the same change, because both rewrite `MigrationDice` and touch
+the same call sites — separately would have paid the churn twice.
+
+`MigrationDice`'s stated approximation (one single-pip energy face plus
+the levels) is gone. A character die is now **two doubles, one single,
+then one face per level**, mirroring `DieFaces.cs` in v1: a Crossover's
+doubles carry one pip of EACH type (rule 2.6.2.3) and its single is
+symbol-less, and a Basic Action die is three generic-energy faces plus
+three action faces (rules 1.3.10, 2.6.1.5).
+
+**This is what makes Energize expressible** — it fires on a double-energy
+face, and until now no migrated die had one.
+
+Face order is energy first, so level N is at index N + 2. Test helpers
+now take a LEVEL and do that arithmetic in one place each; ~30 call sites
+went from naming an index to naming a level, which is what they meant.
+
+### Gap found on the way: generic energy has no symbol
+
+`GameConfig.EnergySymbols` declares the four types plus Wild. There is no
+Generic, so a Basic Action die's "double generic" faces are symbol-less
+and indistinguishable from "no energy" by pip count. Nothing depends on
+that today — 2.6.1.5 means those dice never spin down to a single, and no
+Basic Action card has Energize — but it is worth knowing before anything
+tries to count generic energy. Recorded, not fixed.

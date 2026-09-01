@@ -9,6 +9,10 @@ namespace DiceFight.V2.Tests;
 // EffectInterpreter.DrainQueue, not direct EffectContext invocation.
 public class CardCatalogTests
 {
+    // Migrated dice are the real six: three energy faces (0-2), then one
+    // face per level. Tests name a level; only this knows the index.
+    private static int LevelFace(int level) => 3 + level - 1;
+
     private static readonly IReadOnlyDictionary<string, Model.CardDef> Catalog = CardCatalog.BuildCatalog();
 
     private sealed class FixedRoller(int index) : IDiceRoller
@@ -43,9 +47,10 @@ public class CardCatalogTests
         return GameSetup.NewGame(DiceFightClassicConfig.Config, Catalog, playerOne, playerTwo);
     }
 
-    private static Model.DieInstance FieldFreshCopy(GameState state, string cardId, string controllerId, int levelFaceIndex = 1)
+    // `level` is a LEVEL, not a face index - see LevelFace above.
+    private static Model.DieInstance FieldFreshCopy(GameState state, string cardId, string controllerId, int level = 1)
     {
-        var die = new Model.DieInstance { Id = $"{controllerId}-{cardId}-test", CardId = cardId, OwnerId = controllerId, ControllerId = controllerId, Zone = Zone.FieldZone, CurrentFaceIndex = levelFaceIndex };
+        var die = new Model.DieInstance { Id = $"{controllerId}-{cardId}-test", CardId = cardId, OwnerId = controllerId, ControllerId = controllerId, Zone = Zone.FieldZone, CurrentFaceIndex = LevelFace(level) };
         state.Dice.Add(die);
         return die;
     }
@@ -81,8 +86,8 @@ public class CardCatalogTests
         // Level 3 (7 Defense) so the 4 damage marks rather than KOing (KO
         // would reset Damage back to 0 as part of leaving the Field Zone -
         // a separate, already-covered behavior, not what this test is for).
-        var target = FieldFreshCopy(state, CardCatalog.BigE.Id, "p2", levelFaceIndex: 3);
-        var dazzlerDie = new Model.DieInstance { Id = "dazzler-die", CardId = CardCatalog.Dazzler.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.ReservePool, CurrentFaceIndex = 1 }; // face 0 is the energy face; 1 is level 1
+        var target = FieldFreshCopy(state, CardCatalog.BigE.Id, "p2", level: 3);
+        var dazzlerDie = new Model.DieInstance { Id = "dazzler-die", CardId = CardCatalog.Dazzler.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.ReservePool, CurrentFaceIndex = LevelFace(1) };
         state.Dice.Add(dazzlerDie);
         var queue = new AbilityQueue();
 
@@ -102,8 +107,8 @@ public class CardCatalogTests
         // a KO'd die leaves the Field Zone (Damage resets, and Reroll
         // would then find no live target at all), which isn't what this
         // test is checking.
-        var target = FieldFreshCopy(state, CardCatalog.HarleyQuinn.Id, "p2", levelFaceIndex: 3);
-        var godDie = new Model.DieInstance { Id = "god-die", CardId = CardCatalog.GodEmperorDoom.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.ReservePool, CurrentFaceIndex = 1 };
+        var target = FieldFreshCopy(state, CardCatalog.HarleyQuinn.Id, "p2", level: 3);
+        var godDie = new Model.DieInstance { Id = "god-die", CardId = CardCatalog.GodEmperorDoom.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.ReservePool, CurrentFaceIndex = LevelFace(1) };
         state.Dice.Add(godDie);
         var queue = new AbilityQueue();
 
@@ -132,7 +137,7 @@ public class CardCatalogTests
     {
         var state = NewTestGame(out _, out _);
         state.CurrentStep = TurnStep.Main;
-        var grootDie = new Model.DieInstance { Id = "groot-die", CardId = CardCatalog.Groot.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.ReservePool, CurrentFaceIndex = 1 };
+        var grootDie = new Model.DieInstance { Id = "groot-die", CardId = CardCatalog.Groot.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.ReservePool, CurrentFaceIndex = LevelFace(1) };
         state.Dice.Add(grootDie);
         var queue = new AbilityQueue();
         var bagCountBefore = state.DiceIn("p1", Zone.Bag).Count();
@@ -176,7 +181,7 @@ public class CardCatalogTests
         var state = NewTestGame(out _, out _);
         state.CurrentStep = TurnStep.Main;
         for (var i = 0; i < 3; i++) state.Dice.Add(new Model.DieInstance { Id = $"p2-field-{i}", PoolDieId = DiceFightClassicConfig.SidekickDie.Id, OwnerId = "p2", ControllerId = "p2", Zone = Zone.FieldZone, CurrentFaceIndex = 0 });
-        for (var i = 0; i < 3; i++) state.Dice.Add(new Model.DieInstance { Id = $"p2-reserve-{i}", PoolDieId = DiceFightClassicConfig.SidekickDie.Id, OwnerId = "p2", ControllerId = "p2", Zone = Zone.ReservePool, CurrentFaceIndex = 1 });
+        for (var i = 0; i < 3; i++) state.Dice.Add(new Model.DieInstance { Id = $"p2-reserve-{i}", PoolDieId = DiceFightClassicConfig.SidekickDie.Id, OwnerId = "p2", ControllerId = "p2", Zone = Zone.ReservePool, CurrentFaceIndex = LevelFace(1) });
         for (var i = 0; i < 3; i++) state.Dice.Add(new Model.DieInstance { Id = $"p2-prep-{i}", PoolDieId = DiceFightClassicConfig.SidekickDie.Id, OwnerId = "p2", ControllerId = "p2", Zone = Zone.PrepArea, CurrentFaceIndex = null });
 
         var casket = new Model.DieInstance { Id = "casket-die", CardId = CardCatalog.CasketOfAncientWinters.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.ReservePool, CurrentFaceIndex = 0 };

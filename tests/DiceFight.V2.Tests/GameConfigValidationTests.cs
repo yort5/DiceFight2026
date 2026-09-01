@@ -23,7 +23,7 @@ public class GameConfigValidationTests
     private static CardDef NamedCard(string id, string name, IReadOnlyList<string>? affiliations = null) => new(
         Id: id, Name: name, Subtitle: null, Set: "TEST", CardType: CardType.Character,
         PurchaseCost: 1, EnergySymbolIds: ["Fist"],
-        Die: new DieDefinition(id + "Die", [new Face([], new CharacterFaceData(1, 0, 1, 1))]),
+        Die: new DieDefinition(id + "Die", [new Face([], new CharacterFaceData(1, 0, 1, 1), Kind: FaceKind.CharacterFace)]),
         DieLimit: 1, Affiliations: affiliations ?? [], Keywords: [], RawText: "",
         Abilities: [], Continuous: []);
 
@@ -90,7 +90,7 @@ public class GameConfigValidationTests
             CardType: CardType.Character,
             PurchaseCost: 3,
             EnergySymbolIds: ["Fist"],
-            Die: new DieDefinition("C001Die", [new Face([], Character: new CharacterFaceData(1, 1, 2, 2))]),
+            Die: new DieDefinition("C001Die", [new Face([], new CharacterFaceData(1, 1, 2, 2), Kind: FaceKind.CharacterFace)]),
             DieLimit: 4,
             Affiliations: ["Fist"], // collides with the energy symbol id
             Keywords: [],

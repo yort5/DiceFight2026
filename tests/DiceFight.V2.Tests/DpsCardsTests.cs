@@ -26,18 +26,26 @@ public class DpsCardsTests
         return state;
     }
 
-    // A card die already in play, on the given level's face (face 0 is
-    // always the energy face - MigrationDice's convention).
+    // A card die already in play, on the given LEVEL's face. Migrated dice
+    // are the real six: three energy faces (indices 0-2) then one face per
+    // level, so level N sits at index N + 2. Tests say "level 1", never an
+    // index, so this is the only place that has to know.
+    private const int FirstLevelFace = 3;
+
     private static Model.DieInstance Active(GameState state, Model.CardDef card, string controllerId, int level = 1, string? id = null)
     {
-        var die = new Model.DieInstance { Id = id ?? $"{controllerId}-{card.Id}-{level}", CardId = card.Id, OwnerId = controllerId, ControllerId = controllerId, Zone = Zone.FieldZone, CurrentFaceIndex = level };
+        var die = new Model.DieInstance { Id = id ?? $"{controllerId}-{card.Id}-{level}", CardId = card.Id, OwnerId = controllerId, ControllerId = controllerId, Zone = Zone.FieldZone, CurrentFaceIndex = FirstLevelFace + level - 1 };
         state.Dice.Add(die);
         return die;
     }
 
     // A rolled die sitting in the Reserve Pool, ready for Field/UseAction.
-    private static Model.DieInstance Ready(GameState state, Model.CardDef card, string controllerId, int faceIndex, string? id = null)
+    // `face` is a LEVEL for a character die (1-based) and which action
+    // face for an action die (0-based) - both sit after the three energy
+    // faces, so neither call site has to know the real index.
+    private static Model.DieInstance Ready(GameState state, Model.CardDef card, string controllerId, int face, string? id = null)
     {
+        var faceIndex = card.CardType == Model.CardType.Character ? FirstLevelFace + face - 1 : FirstLevelFace + face;
         var die = new Model.DieInstance { Id = id ?? $"{controllerId}-{card.Id}-ready", CardId = card.Id, OwnerId = controllerId, ControllerId = controllerId, Zone = Zone.ReservePool, CurrentFaceIndex = faceIndex };
         state.Dice.Add(die);
         return die;
@@ -499,14 +507,14 @@ public class DpsCardsTests
     public void MakingTheTeam_Fields_A_Rolled_Character_Die_At_The_Level_It_Rolled()
     {
         var state = NewGame();
-        // Ronan's die: face 0 energy, faces 1..3 are levels 1..3.
+        // Ronan's die is the real six: faces 0-2 energy, 3-5 levels 1-3.
         var dormant = new Model.DieInstance { Id = "dormant", CardId = DpsCards.RonanTheAccuserTreason.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.UsedPile, CurrentFaceIndex = null };
         state.Dice.Add(dormant);
         var making = Ready(state, DpsCards.MakingTheTeam, "p1", 0);
         var queue = new AbilityQueue();
 
         TurnEngine.UseAction(state, queue, making.Id);
-        Drain(state, queue, rollIndex: 3); // rolls its level-3 face
+        Drain(state, queue, rollIndex: FirstLevelFace + 2); // rolls its level-3 face
 
         Assert.Equal(Zone.FieldZone, dormant.Zone);
         Assert.Equal(3, state.GetCurrentFace(dormant)!.Character!.Level); // NOT snapped to 1
@@ -669,5 +677,77 @@ public class DpsCardsTests
         Assert.False(QueryEngine.CardTextActive(state, "p2", DpsCards.PsylockeTelepath.Id));
         // p1's own copy of the same card would be unaffected - per player.
         Assert.True(QueryEngine.CardTextActive(state, "p1", DpsCards.PsylockeTelepath.Id));
+    }
+
+    // --- Real die faces, and the bug that inferring face kind caused ---
+
+    // A Basic Action die's action faces carry neither symbols nor
+    // character data, so the old "Character is null means energy face"
+    // test called every one of them an energy face. Asked directly, it
+    // said an action die sitting on its ACTION face was on an energy one.
+    [Fact]
+    public void An_Action_Face_Is_Not_Reported_As_An_Energy_Face()
+    {
+        var state = NewGame();
+        var bolt = Ready(state, DpsCards.PowerBolt, "p1", 0);
+        var bindings = new Dictionary<string, string> { ["self"] = bolt.Id };
+
+        Assert.Equal(FaceKind.ActionFace, state.GetCurrentFace(bolt)!.Kind);
+        Assert.False(ConditionEvaluator.Evaluate(state, "p1", new OnFaceKind(FaceKind.EnergyFace, "self"), bindings));
+        Assert.False(ConditionEvaluator.Evaluate(state, "p1", new OnFaceKind(FaceKind.CharacterFace, "self"), bindings));
+    }
+
+    // ...and SpinToEnergy now has three real energy faces to choose from
+    // rather than six candidates of which half were action faces.
+    [Fact]
+    public void SpinToEnergy_Lands_An_Action_Die_On_One_Of_Its_Energy_Faces()
+    {
+        var state = NewGame();
+        var bolt = Ready(state, DpsCards.PowerBolt, "p1", 0);
+
+        EffectInterpreter.Execute(new SpinToEnergy(new TargetFilter(Kind: TargetKind.AnyDie, Self: true), Amount: 2),
+            BuildCtx(state, "p1", bolt.Id));
+
+        Assert.Equal(FaceKind.EnergyFace, state.GetCurrentFace(bolt)!.Kind);
+    }
+
+    // The real layout, which is what makes Energize expressible at all:
+    // a character die has two double-energy faces and one single, then
+    // its levels (see MigrationDice's own remarks).
+    [Fact]
+    public void A_Migrated_Character_Die_Has_The_Real_Six_Faces()
+    {
+        var faces = DpsCards.StormExtremeWeather.Die.Faces;
+
+        Assert.Equal(6, faces.Count);
+        Assert.Equal([2, 2, 1], faces.Take(3).Select(f => f.SymbolCount));
+        Assert.All(faces.Take(3), f => Assert.Equal(FaceKind.EnergyFace, f.Kind));
+        Assert.Equal([1, 2, 3], faces.Skip(3).Select(f => f.Character!.Level));
+        Assert.All(faces.Skip(3), f => Assert.Equal(FaceKind.CharacterFace, f.Kind));
+    }
+
+    // A Crossover's doubles carry one pip of EACH type, not two of one
+    // (rule 2.6.2.3), and its single is symbol-less.
+    [Fact]
+    public void A_Crossover_Dies_Doubles_Carry_One_Pip_Of_Each_Type()
+    {
+        var die = MigrationDice.Character("X", ["Bolt", "Fist"], (0, 1, 1), (1, 2, 2), (1, 3, 3));
+
+        var doubles = die.Faces[0];
+        Assert.Equal(2, doubles.SymbolCount);
+        Assert.Equal(["Bolt", "Fist"], doubles.Symbols.Select(x => x.SymbolId));
+        Assert.All(doubles.Symbols, x => Assert.Equal(1, x.Count));
+        Assert.Empty(die.Faces[2].Symbols);   // the single: Generic, no symbol
+    }
+
+    private static EffectContext BuildCtx(GameState state, string controllerId, string selfId)
+    {
+        var ctx = new EffectContext
+        {
+            State = state, Queue = new AbilityQueue(), ControllerId = controllerId,
+            Trigger = TriggerKind.Global, Roller = new FixedRoller(0), Random = new Random(0),
+        };
+        ctx.Bind("self", selfId);
+        return ctx;
     }
 }
