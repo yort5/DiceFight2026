@@ -275,4 +275,131 @@ public class EventBusTests
         var pending = Assert.Single(queue.Pending);
         Assert.Equal("sk", pending.SourceDieId);
     }
+
+    // The shared BuildCard above makes a ONE-face die, which has no
+    // levels to rise between - these tests need a real three-level one.
+    private static CardDef LeveledCard(string id, IReadOnlyList<TriggeredAbility> abilities) => new(
+        Id: id, Name: id, Subtitle: null, Set: "TEST", CardType: CardType.Character,
+        PurchaseCost: 1, EnergySymbolIds: ["Fist"],
+        Die: new DieDefinition(id + "Die",
+        [
+            new Face([new SymbolAmount("Fist", 1)]),
+            new Face([], Character: new CharacterFaceData(1, 0, 1, 1)),
+            new Face([], Character: new CharacterFaceData(2, 0, 2, 2)),
+            new Face([], Character: new CharacterFaceData(3, 0, 3, 3)),
+        ]),
+        DieLimit: 1, Affiliations: [], Keywords: [], RawText: "",
+        Abilities: abilities, Continuous: []);
+
+    // --- Keyword triggers as PREDICATES, not trigger kinds ---
+    //
+    // Awaken and Teamwatch are v1 TriggerType values; in v2 they are an
+    // existing event plus a filter. That is the closed-vocabulary bet
+    // paying off - five v1 enum values collapse to two booleans.
+
+    // Awaken: "every time this die spins up one or more levels".
+    [Fact]
+    public void LevelIncreased_Fires_On_A_Spin_Up_And_Not_A_Spin_Down()
+    {
+        var awakener = LeveledCard("Awakener",
+            [new TriggeredAbility(TriggerKind.DieFaceChanged, StubEffect, Filter: new EventFilter(LevelIncreased: true))]);
+        var config = BuildTinyConfig();
+        var state = BuildState(config, awakener);
+        var die = ActiveDie(state, awakener, "p1");
+        var faces = state.GetDieDefinition(die).Faces;
+
+        var queue = new AbilityQueue();
+        EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieFaceChanged, die, "p1", state.CurrentStepId,
+            new DieFaceChangedPayload(faces[1], faces[2], FaceChangeCause.Spin)));
+        Assert.Single(queue.Pending);
+
+        var down = new AbilityQueue();
+        EventBus.Fire(state, down, new GameEvent(TriggerKind.DieFaceChanged, die, "p1", state.CurrentStepId,
+            new DieFaceChangedPayload(faces[2], faces[1], FaceChangeCause.Spin)));
+        Assert.Empty(down.Pending);
+    }
+
+    // The cause is deliberately not checked - v1's own note is "regardless
+    // of what caused the spin".
+    [Fact]
+    public void LevelIncreased_Does_Not_Care_What_Caused_The_Change()
+    {
+        var awakener = LeveledCard("Awakener",
+            [new TriggeredAbility(TriggerKind.DieFaceChanged, StubEffect, Filter: new EventFilter(LevelIncreased: true))]);
+        var state = BuildState(BuildTinyConfig(), awakener);
+        var die = ActiveDie(state, awakener, "p1");
+        var faces = state.GetDieDefinition(die).Faces;
+
+        foreach (var cause in new[] { FaceChangeCause.Roll, FaceChangeCause.Reroll, FaceChangeCause.Spin, FaceChangeCause.Effect })
+        {
+            var queue = new AbilityQueue();
+            EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieFaceChanged, die, "p1", state.CurrentStepId,
+                new DieFaceChangedPayload(faces[1], faces[2], cause)));
+            Assert.Single(queue.Pending);
+        }
+    }
+
+    // A spin from an ENERGY face has no level to have risen from.
+    [Fact]
+    public void LevelIncreased_Ignores_A_Change_From_An_Energy_Face()
+    {
+        var awakener = LeveledCard("Awakener",
+            [new TriggeredAbility(TriggerKind.DieFaceChanged, StubEffect, Filter: new EventFilter(LevelIncreased: true))]);
+        var state = BuildState(BuildTinyConfig(), awakener);
+        var die = ActiveDie(state, awakener, "p1");
+        var faces = state.GetDieDefinition(die).Faces;
+
+        var queue = new AbilityQueue();
+        EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieFaceChanged, die, "p1", state.CurrentStepId,
+            new DieFaceChangedPayload(faces[0], faces[1], FaceChangeCause.Spin)));
+
+        Assert.Empty(queue.Pending);
+    }
+
+    // Teamwatch: fielding a DIFFERENT die that shares the listener's
+    // affiliation. The affiliation is whatever the listener has, which is
+    // why it cannot be a fixed TagQuery.
+    [Fact]
+    public void SharesAffiliationWithListener_Fires_Only_For_A_Teammate()
+    {
+        var watcher = BuildCard("Watcher", "Watcher",
+            [new TriggeredAbility(TriggerKind.DieFielded, StubEffect,
+                Filter: new EventFilter(Ownership: TargetOwnership.Own, ExcludeSelf: true, SharesAffiliationWithListener: true))],
+            affiliations: ["Avengers"]);
+        var teammate = BuildCard("Teammate", "Teammate", [], affiliations: ["Avengers"]);
+        var stranger = BuildCard("Stranger", "Stranger", [], affiliations: ["X-Men"]);
+
+        foreach (var (card, expected) in new[] { (teammate, 1), (stranger, 0) })
+        {
+            var state = BuildState(BuildTinyConfig(), watcher, teammate, stranger);
+            ActiveDie(state, watcher, "p1");
+            var queue = new AbilityQueue();
+            var toField = new DieInstance { Id = "f", CardId = card.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.ReservePool, CurrentFaceIndex = 0 };
+            state.Dice.Add(toField);
+
+            TurnEngine.Field(state, queue, toField.Id, []);
+
+            Assert.Equal(expected, queue.Pending.Count);
+        }
+    }
+
+    // A Teamwatch die does not watch itself - "a DIFFERENT character die"
+    // is the other half of the same sentence, and without ExcludeSelf a
+    // die shares every affiliation with itself.
+    [Fact]
+    public void SharesAffiliationWithListener_Does_Not_Fire_For_The_Listener_Itself()
+    {
+        var watcher = BuildCard("Watcher", "Watcher",
+            [new TriggeredAbility(TriggerKind.DieFielded, StubEffect,
+                Filter: new EventFilter(Ownership: TargetOwnership.Own, ExcludeSelf: true, SharesAffiliationWithListener: true))],
+            affiliations: ["Avengers"]);
+        var state = BuildState(BuildTinyConfig(), watcher);
+        var queue = new AbilityQueue();
+        var toField = new DieInstance { Id = "self", CardId = watcher.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.ReservePool, CurrentFaceIndex = 0 };
+        state.Dice.Add(toField);
+
+        TurnEngine.Field(state, queue, toField.Id, []);
+
+        Assert.Empty(queue.Pending);
+    }
 }

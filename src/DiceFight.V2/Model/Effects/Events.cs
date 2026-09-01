@@ -62,6 +62,22 @@ public sealed record EventFilter(
     // Same split as TargetFilter's - see its own remarks.
     TagQuery? Affiliations = null,
     bool ExcludeSelf = false,
+    // Keyword Awaken: "every time this die spins UP one or more levels,
+    // regardless of what caused the spin". A DieFaceChanged whose payload
+    // shows a higher character level than before - which is why this is a
+    // predicate on the existing event rather than a trigger kind of its
+    // own. Cause is deliberately not checked: an Amplify, an ability's
+    // Spin and a reroll that lands higher all count.
+    bool LevelIncreased = false,
+    // Keyword Teamwatch: "when a character with Teamwatch is active and
+    // you field a DIFFERENT character die with the SAME AFFILIATION, use
+    // their Teamwatch ability". The affiliation is not a fixed value - it
+    // is whatever the LISTENING die has - so it cannot be written as an
+    // Affiliations TagQuery, which is why this is its own flag.
+    //
+    // Pair it with ExcludeSelf; "a different character die" is the other
+    // half of the same sentence.
+    bool SharesAffiliationWithListener = false,
     int? MinPurchaseCost = null,
     StatThreshold? Stat = null,
     string? Step = null);

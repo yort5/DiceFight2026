@@ -85,6 +85,25 @@ public static class EventBus
 
         if (filter.ExcludeSelf && evt.SubjectDie?.Id == listener.Id) return false;
 
+        if (filter.LevelIncreased)
+        {
+            if (evt.Payload is not DieFaceChangedPayload faceChange) return false;
+            // Both sides must be character faces: spinning from an energy
+            // face has no "level before" to have gone up from, and rule
+            // 1.6.6's spin-up is defined between levels.
+            if (faceChange.PriorFace.Character is not { } before) return false;
+            if (faceChange.NewFace.Character is not { } after) return false;
+            if (after.Level <= before.Level) return false;
+        }
+
+        if (filter.SharesAffiliationWithListener)
+        {
+            if (evt.SubjectDie is not { } subjectForAffiliation) return false;
+            var listenerAffiliations = QueryEngine.GetAffiliations(state, listener);
+            var subjectAffiliations = QueryEngine.GetAffiliations(state, subjectForAffiliation);
+            if (!listenerAffiliations.Any(subjectAffiliations.Contains)) return false;
+        }
+
         if (filter.Affiliations is { } affiliations)
         {
             if (evt.SubjectDie is not { } subjectForAff) return false;

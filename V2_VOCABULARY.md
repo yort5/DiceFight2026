@@ -3519,3 +3519,78 @@ the resolution-time re-check.
 Shrieks, Scarlet Witch, Prismatic Spray "Lesser Spell", Blob, Drax,
 Magneto AOU139, Mister Sinister — then resuming Phase 8 task 4's batches
 with 116 DPS cards to go.
+
+---
+
+## Part 26 — Keyword triggers: mostly not triggers (2026-09-01)
+
+Batch 3's closing note said keyword triggers were the biggest remaining
+blocker in the DPS migration. **That was measured wrong** - it counted
+v1 `TriggerType` enum names that v2 lacks, not shapes v2 cannot express.
+Re-measured against what v2 can actually say, the 32 "blocked" cards
+break down very differently.
+
+### Already expressible - 8 cards, no work needed
+
+| v1 trigger | cards | v2 |
+|---|---|---|
+| `WhenAnotherDieKOd` | 4 | `DieKOd` + `ExcludeSelf` |
+| `WhenAnotherDieAttacks` | 1 | `DieAttacks` + `ExcludeSelf` |
+| `WhenAnotherDieFielded` | 1 | `DieFielded` + `ExcludeSelf` |
+| `StartOfOpponentsAttackStep` | 2 | `TurnStepEntered` + `Step` |
+
+v1 spelled each as its own enum value; v2 composes them from an event
+plus a filter it already had. These were never blocked - they were
+counted by their v1 name.
+
+### Built here as PREDICATES - 10 cards
+
+Two `EventFilter` flags, no new `TriggerKind`:
+
+- **`LevelIncreased`** — keyword **Awaken** (4 cards). "Every time this
+  die spins up one or more levels, regardless of what caused the spin."
+  A `DieFaceChanged` whose payload shows a higher character level than
+  before. Cause is deliberately unchecked, per v1's own note; a change
+  from an energy face does not count, because there is no level to have
+  risen from.
+- **`SharesAffiliationWithListener`** — keyword **Teamwatch** (6 cards).
+  "When a character with Teamwatch is active and you field a DIFFERENT
+  character die with the SAME affiliation, use their Teamwatch ability."
+  The affiliation is whatever the LISTENER has, so it cannot be written
+  as a fixed `Affiliations` TagQuery - hence a flag rather than a value.
+  Pairs with `ExcludeSelf`, which is the other half of the same sentence.
+
+That is five v1 enum values (`Energize`, `Awaken`, `Attune`,
+`WhenInfiltrates`, `Teamwatch`, plus the four "another die" spellings)
+collapsing to two booleans. The closed-vocabulary bet holding up.
+
+### The real blocker is Energize, and it is not a trigger - 15 cards
+
+**Energize fires on a DOUBLE-ENERGY face**, once the reroll window
+closes. v2's migrated dice do not have one.
+
+`MigrationDice` builds a character die as *one* energy face carrying a
+single pip, plus one face per level - a documented approximation, flagged
+in its own remarks as such, because v1's data model never stored face
+layouts. The real die is **two double-energy faces, one single, and three
+character faces**. So Energize has nothing to fire on, and no trigger
+work fixes that.
+
+**v1 now has the real layouts**: `src/DiceFight.Engine/DieFaces.cs` was
+built during the match-table redesign and states the composition exactly
+("One energy type: two doubles and a single, all of that type"; Crossover
+doubles split across both types with a Generic single; four-energy cards
+get a Wild single). Porting that convention into `MigrationDice` would
+close Energize, remove the approximation, and make every migrated die
+physically real.
+
+**The cost is index churn, and it is not small.** Face index 0 is
+currently always energy and 1..n are the levels; every v2 test that
+places a die uses that. Under the real layout levels start at index 3.
+Roughly 40 call sites across the v2 tests, all mechanical, plus
+`MigrationDice`'s own contract.
+
+**Recommendation**: do it, as its own change with no card migration mixed
+in, so that if an index is fumbled the failure is obviously an index and
+not a card. It is also the last thing standing between the migration and
+the biggest single keyword group left.
