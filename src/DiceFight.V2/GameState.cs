@@ -1,4 +1,5 @@
 using DiceFight.V2.Model;
+using DiceFight.V2.Model.Effects;
 
 namespace DiceFight.V2;
 
@@ -69,6 +70,23 @@ public sealed class GameState
     // LoyaltyCounters/ExperienceTokens precedent, generalized to a name
     // instead of one dictionary per counter kind).
     public Dictionary<(string PlayerId, string CardId, string CounterName), int> Counters { get; } = [];
+
+    // CARD-SCOPED suppression (V2_VOCABULARY.md Parts 20-21), keyed the
+    // same way Counters is. Three independent things one card can have
+    // turned off for one player:
+    //
+    //   TextIgnored  - Mister Sinister, Scarlet Witch, both Shrieks,
+    //                  Prismatic Spray, Typhoid Mary, Kryptonite,
+    //                  Wolverine "No More Distractions", Scarlet Spider x2
+    //   CantPurchase - Blob, Drax
+    //   CantField    - Blob, Drax, Magneto AOU139's Professor X clause
+    //
+    // Card-scoped rather than die-scoped for two reasons the text itself
+    // gives: it has to cover copies NOT YET IN PLAY ("ignore all text on
+    // opposing character cards"), and Globals are card-scoped (rule
+    // 2.6.5.2) so a die-scoped blank could never turn one off - which
+    // four of these cards explicitly say they do.
+    public List<CardSuppression> CardSuppressions { get; } = [];
 
     // The continuous-modifier registries QueryEngine reads (V2_PLAN.md
     // Phase 3 task 1) - empty until Phase 6's continuous templates start
@@ -177,3 +195,21 @@ public sealed class GameState
 }
 
 public sealed record PendingPurchaseModifier(string PlayerId, int Delta, CardType? CardKind, Zone? GoesToZone);
+
+/// <summary>
+/// One card's text/purchase/field turned off for one player, until
+/// <paramref name="Duration"/> expires. The continuous half of blanking
+/// does not live here - a conditional blank is recomputed on read (see
+/// QueryEngine.CardTextActive), because storing it would mean re-flipping
+/// a flag on every field, KO, spin or cost change.
+/// </summary>
+public sealed record CardSuppression(
+    string PlayerId, string CardId, SuppressionKind Kind, Duration Duration, string? GrantedDuringPlayerId = null);
+
+public enum SuppressionKind
+{
+    /// <summary>The card's text box is ignored, Globals included.</summary>
+    TextIgnored,
+    CantPurchase,
+    CantField,
+}

@@ -169,6 +169,11 @@ public static class TurnEngine
         if (!isCommunity && die.OwnerId != state.ActivePlayerId)
             throw new InvalidOperationException($"Die '{dieId}' belongs to your opponent's team and isn't a Basic Action.");
 
+        // Blob / Drax (V2_VOCABULARY.md Part 20). Card-scoped and
+        // per-player: the same card stays purchasable by its other owner.
+        if (!QueryEngine.CanPurchase(state, state.ActivePlayerId, card.Id))
+            throw new InvalidOperationException($"'{card.Name}' cannot be purchased right now.");
+
         var energyDice = ResolveOwnReservePoolEnergy(state, energyDieIdsToSpend);
 
         // Phase 5's PurchaseModifier effect (Appendix A: GrantNextPurchase
@@ -205,6 +210,11 @@ public static class TurnEngine
         var face = state.GetCurrentFace(die);
         if (face?.Character is null)
             throw new InvalidOperationException($"Die '{dieId}' is not on a character face.");
+
+        // Blob / Drax / Magneto AOU139's "Professor X can't be fielded".
+        // Sidekicks have no card and so can never be locked out.
+        if (die.CardId is { } fieldCardId && !QueryEngine.CanField(state, die.ControllerId, fieldCardId))
+            throw new InvalidOperationException($"'{state.CardCatalog[fieldCardId].Name}' cannot be fielded right now.");
 
         var energyDice = ResolveOwnReservePoolEnergy(state, energyDieIdsToSpend);
         var cost = QueryEngine.GetFieldingCost(state, die);
@@ -262,6 +272,13 @@ public static class TurnEngine
         // belongs here, not in AbilitiesOf.
         if (abilityIndex < 0 || abilityIndex >= card.Abilities.Count || card.Abilities[abilityIndex].Trigger != TriggerKind.Global)
             throw new InvalidOperationException($"Card '{cardId}' has no Global ability at index {abilityIndex}.");
+
+        // Four of the blanking cards say "including Global Abilities"
+        // explicitly, and this is the check that honours them. It is
+        // card-scoped because a Global is: no die is involved, so
+        // AbilitiesActive could never have covered this.
+        if (!QueryEngine.CardTextActive(state, playerId, cardId))
+            throw new InvalidOperationException($"'{card.Name}''s text is being ignored, so its Global cannot be used.");
 
         var ability = card.Abilities[abilityIndex];
 
@@ -409,6 +426,7 @@ public static class TurnEngine
                 die.Damage = 0;
                 die.GrantedTags.Clear();
                 die.GrantedAbilities.Clear();
+                die.Suppressions.Clear();
                 die.CombatFlags.Clear();
             }
         }
@@ -445,8 +463,19 @@ public static class TurnEngine
             die.GrantedAbilities.RemoveAll(a =>
                 a.Duration == Duration.EndOfTurn ||
                 (a.Duration == Duration.UntilYourNextTurn && a.GrantedDuringPlayerId != endingPlayerId));
+            die.Suppressions.RemoveAll(s =>
+                s.Duration == Duration.EndOfTurn ||
+                (s.Duration == Duration.UntilYourNextTurn && s.GrantedDuringPlayerId != endingPlayerId));
             die.CombatFlags.Clear();
         }
+
+        // Card-scoped suppression expires on the same rules. It lives on
+        // GameState rather than a die, so it is swept once here rather
+        // than per die - and unlike the die-scoped kind it survives its
+        // target leaving play, because the card is still on the team.
+        state.CardSuppressions.RemoveAll(s =>
+            s.Duration == Duration.EndOfTurn ||
+            (s.Duration == Duration.UntilYourNextTurn && s.GrantedDuringPlayerId != endingPlayerId));
 
         // Turn-scoped TRACKERS are deliberately NOT reset here - they are
         // reset at the start of the next turn instead (ClearAndDraw).

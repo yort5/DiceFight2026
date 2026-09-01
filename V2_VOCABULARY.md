@@ -3356,3 +3356,84 @@ The two suppression stores (die-scoped, and card-scoped keyed
 `(player, cardId)` with `TextIgnored`/`CantPurchase`/`CantField`), the
 four derived queries over them, and the guard on `AbilitiesOf`'s middle
 line. Then the vocabulary templates that write to those stores.
+
+---
+
+## Part 24 — Spike A, increment 2: blanking works (2026-09-01)
+
+The stores, the four derived queries, the consultation sites, and the
+two one-shot templates. What is left after this is the *continuous* half
+(`AbilityBlank`, `Lockout`) and the chosen-card memory - increment 3.
+
+### The two stores
+
+| Store | Lives on | For |
+|---|---|---|
+| `DieInstance.Suppressions` | the die | die-scoped blanking - Web Shooters, Loki, Adam Warlock |
+| `GameState.CardSuppressions` | the game, keyed `(player, card, kind)` | card-scoped - Scarlet Witch, both Shrieks, Prismatic Spray, Sinister; and the lockout flags |
+
+Both hold **one-shot** suppression only, each with a `Duration`, swept by
+the same rules as `GrantedTags`/`GrantedAbilities`. The continuous half
+is recomputed on read, per the user's boolean question and the answer in
+Part 20: a stored flag would have to be re-flipped on every field, KO,
+spin and cost change.
+
+### The four queries
+
+```
+AbilitiesActive(state, die)            // die-scoped ∪ its card's card-scoped
+CardTextActive(state, player, cardId)
+CanPurchase(state, player, cardId)
+CanField(state, player, cardId)
+```
+
+Consulted at: `AbilitiesOf`'s middle line, `GetBaseTags`' keyword loop,
+`TurnEngine.UseGlobal`, `TurnEngine.Purchase`, `TurnEngine.Field`,
+`ContinuousRegistry.ActiveSourceDice`, and `EffectInterpreter.
+ResolveQueued`.
+
+That last one is the already-queued case: an ability blanked between
+enqueue and resolution still fires and does nothing. It falls out of rule
+3.2.5's per-ability snapshots, so it needed no mechanism - but it needed
+writing down, and it carries the Part 16 exemption, because a *granted*
+ability in the queue is not the blanked card's and still resolves.
+
+### The declared model, as tests
+
+Five tests state what blanking is, and all three ways of getting the
+scope wrong are caught by mutation:
+
+- blanking a die ALSO taking its granted abilities → fails
+- blanking a die ALSO taking its affiliations → fails
+- a die-scoped blank leaking to every copy of the card → fails
+
+A blanked die loses its keywords, triggered abilities, Globals and auras.
+It keeps its affiliations, name, energy type, face stats, granted tags,
+granted abilities and permanent text. `Card_Scoped_Blanking_Reaches_
+Every_Copy_Including_Unpurchased_Ones` is the one that proves the two
+scopes both have to exist: it blanks a die still in the bag, which a
+die-scoped blank cannot reach, and leaves the same card untouched for
+the other player.
+
+### `BlankCardText` has two modes, and the second is not a wide filter
+
+`Target` resolves to dice and suppresses each one's card, which is what
+"ignore the text on target character die's character *card*"
+(Kryptonite) means. `AllOpposing` resolves nothing and suppresses every
+card the opponent owns - Scarlet Witch, Shriek "Dark Empathy", Prismatic
+Spray "Lesser Spell".
+
+The second is a separate mode rather than a very permissive
+`TargetFilter` because a filter only ever reaches cards with a die
+already in play, and these cards exist precisely to cover the ones that
+are not. Writing it as a filter would have looked right and silently
+missed the point of the card.
+
+### Not done yet
+
+- **Continuous blanking** (`AbilityBlank`) - D'Ken, Magneto AOU139's
+  first clause, Adam Warlock, Shriek "Sonic Beam" while active.
+- **`Lockout`** - the store and `CanPurchase`/`CanField` are built and
+  enforced, but nothing writes `CantPurchase`/`CantField` yet.
+- **`RememberCard`** - the "choose an opposing card, replacing all
+  previous choices" memory both families share.

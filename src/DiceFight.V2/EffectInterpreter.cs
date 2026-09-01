@@ -69,6 +69,23 @@ public static class EffectInterpreter
 
     private static void ResolveQueued(QueuedAbility ability, GameState state, AbilityQueue queue, IDiceRoller roller, Random random)
     {
+        // Blanked between enqueue and resolution: the ability still fires,
+        // it just has no text to do anything with (the Dwarf Wizard /
+        // Shriek behaviour). This falls out of rule 3.2.5's per-ability
+        // snapshots dissolving between queue entries, so it needs no
+        // mechanism of its own - but it needs saying, or the check is the
+        // one that gets missed (V2_VOCABULARY.md Part 19).
+        //
+        // A granted ability is exempt: it did not come from the blanked
+        // card, so nothing severs it (Part 16).
+        if (ability.SourceDieId is { } blankCheckId
+            && state.Dice.FirstOrDefault(d => d.Id == blankCheckId) is { } source
+            && !QueryEngine.AbilitiesActive(state, source)
+            && !source.GrantedAbilities.Any(g => g.Ability.Effect == ability.Effect))
+        {
+            return;
+        }
+
         var ctx = new EffectContext
         {
             State = state,
@@ -127,6 +144,8 @@ public static class EffectInterpreter
             case ModifyStat n: ExecuteModifyStat(n, ctx, onComplete); break;
             case GrantTag n: ExecuteGrantTag(n, ctx, onComplete); break;
             case GrantAbility n: ExecuteGrantAbility(n, ctx, onComplete); break;
+            case BlankText n: ExecuteBlankText(n, ctx, onComplete); break;
+            case BlankCardText n: ExecuteBlankCardText(n, ctx, onComplete); break;
             case LifeChange n: ExecuteLifeChange(n, ctx, onComplete); break;
             case PurchaseModifier n: ExecutePurchaseModifier(n, ctx, onComplete); break;
             case CombatFlag n: ExecuteCombatFlag(n, ctx, onComplete); break;
@@ -598,6 +617,65 @@ public static class EffectInterpreter
         });
     }
 
+    private static void ExecuteBlankText(BlankText n, EffectContext ctx, Action onComplete)
+    {
+        ResolveTarget(ctx, n.Target, ProtectionFor(ctx.Trigger), ids =>
+        {
+            var grantedDuring = n.Duration == Duration.UntilYourNextTurn ? ctx.State.ActivePlayerId : null;
+            foreach (var id in ids)
+                FindDie(ctx.State, id).Suppressions.Add(new DieSuppression(n.Duration, grantedDuring));
+            onComplete();
+        });
+    }
+
+    private static void ExecuteBlankCardText(BlankCardText n, EffectContext ctx, Action onComplete)
+    {
+        var grantedDuring = n.Duration == Duration.UntilYourNextTurn ? ctx.State.ActivePlayerId : null;
+
+        void Suppress(string playerId, string cardId)
+        {
+            // Suppressing twice is not stronger than once, and would leave
+            // a second entry behind when the first expired.
+            if (ctx.State.CardSuppressions.Any(s =>
+                    s.PlayerId == playerId && s.CardId == cardId && s.Kind == SuppressionKind.TextIgnored))
+            {
+                return;
+            }
+            ctx.State.CardSuppressions.Add(
+                new CardSuppression(playerId, cardId, SuppressionKind.TextIgnored, n.Duration, grantedDuring));
+        }
+
+        if (n.AllOpposing)
+        {
+            // Every card the opponent could play, not merely the ones with
+            // a die on the board - which is the whole reason this effect
+            // is card-scoped. Their own dice tell us which cards are
+            // theirs; a card with no die of theirs anywhere was never
+            // going to matter.
+            var opponentId = ctx.State.OpponentOf(ctx.ControllerId);
+            foreach (var cardId in ctx.State.Dice
+                         .Where(d => d.OwnerId == opponentId && d.CardId is not null)
+                         .Select(d => d.CardId!)
+                         .Distinct()
+                         .ToList())
+            {
+                Suppress(opponentId, cardId);
+            }
+            onComplete();
+            return;
+        }
+
+        ResolveTarget(ctx, n.Target ?? new TargetFilter(), ProtectionFor(ctx.Trigger), ids =>
+        {
+            foreach (var id in ids)
+            {
+                var die = FindDie(ctx.State, id);
+                if (die.CardId is { } cardId) Suppress(die.ControllerId, cardId);
+            }
+            onComplete();
+        });
+    }
+
     private static void ExecuteLifeChange(LifeChange n, EffectContext ctx, Action onComplete)
     {
         var amount = ResolveAmount(ctx, n.Amount); // signed - positive gains, negative loses (n.Amount's own convention)
@@ -792,6 +870,7 @@ public static class EffectInterpreter
             die.AppliedModifiers.Clear();
             die.GrantedTags.Clear();
             die.GrantedAbilities.Clear();
+            die.Suppressions.Clear();
             die.CombatFlags.Clear();
         }
         else if (enteringActive && die.CurrentFaceIndex is null)

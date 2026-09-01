@@ -206,8 +206,12 @@ public static class QueryEngine
         {
             // Affiliations are NOT here - they have their own query below
             // (Parts 17-20). Keywords stay, because a keyword IS an
-            // ability and blanking has to be able to take it away.
-            foreach (var keyword in card.Keywords) tags.Add(keyword);
+            // ability and blanking has to be able to take it away - which
+            // is what this guard does, and it is the ONLY one of the five
+            // sources merged here that blanking touches (rule 3.4.7.2;
+            // V2_VOCABULARY.md Part 16's correction).
+            if (AbilitiesActive(state, die))
+                foreach (var keyword in card.Keywords) tags.Add(keyword);
             tags.Add(card.Name);
             foreach (var symbolId in card.EnergySymbolIds) tags.Add(symbolId);
         }
@@ -215,6 +219,51 @@ public static class QueryEngine
         foreach (var granted in die.GrantedTags) tags.Add(granted.Tag);
         return tags;
     }
+
+    /// <summary>
+    /// Whether this die's CARD text is doing anything - false if the die
+    /// or its card has been blanked. The reserved 8th query (V2_PLAN.md
+    /// Phase 3), built for exactly this.
+    /// </summary>
+    /// <remarks>
+    /// Derived, not stored. One-shot blanks ARE stored (they are facts
+    /// with an expiry), but a conditional blank - "opposing dice with
+    /// purchase cost 3 or lower", "dice of a lower level than Adam
+    /// Warlock" - would have to be re-flipped on every field, KO, spin
+    /// and cost change if it were. That is the bookkeeping the continuous
+    /// registry exists to avoid, and the same reason no die stores its
+    /// current attack. So this folds both halves on read, and callers get
+    /// one thing to ask rather than one thing to maintain.
+    ///
+    /// Scope is deliberately narrow (Part 21's declared model): abilities
+    /// only. Attributes, face stats and die kind are never affected, and
+    /// neither are granted abilities or permanent text.
+    /// </remarks>
+    public static bool AbilitiesActive(GameState state, DieInstance die)
+    {
+        if (die.Suppressions.Count > 0) return false;
+        return die.CardId is not { } cardId || CardTextActive(state, die.ControllerId, cardId);
+    }
+
+    /// <summary>
+    /// Whether <paramref name="cardId"/>'s text is doing anything for
+    /// <paramref name="playerId"/>. Card-scoped, so it covers copies not
+    /// yet in play and the card's Globals (rule 2.6.5.2), which a
+    /// die-scoped blank could never reach.
+    /// </summary>
+    public static bool CardTextActive(GameState state, string playerId, string cardId) =>
+        !IsSuppressed(state, playerId, cardId, SuppressionKind.TextIgnored);
+
+    /// <summary>Blob and Drax: "your opponent may not purchase that card's dice".</summary>
+    public static bool CanPurchase(GameState state, string playerId, string cardId) =>
+        !IsSuppressed(state, playerId, cardId, SuppressionKind.CantPurchase);
+
+    /// <summary>Blob, Drax, and Magneto AOU139's "Professor X can't be fielded".</summary>
+    public static bool CanField(GameState state, string playerId, string cardId) =>
+        !IsSuppressed(state, playerId, cardId, SuppressionKind.CantField);
+
+    private static bool IsSuppressed(GameState state, string playerId, string cardId, SuppressionKind kind) =>
+        state.CardSuppressions.Any(s => s.PlayerId == playerId && s.CardId == cardId && s.Kind == kind);
 
     /// <summary>
     /// Every triggered ability this die actually has: its card's
@@ -239,7 +288,10 @@ public static class QueryEngine
         if (die.CardId is { } cardId && state.CardCatalog.TryGetValue(cardId, out var card))
         {
             foreach (var ability in card.PermanentAbilities ?? []) yield return ability;
-            foreach (var ability in card.Abilities) yield return ability;
+            // THE line. Permanent and granted are unconditional by
+            // construction; this is the only one blanking touches.
+            if (AbilitiesActive(state, die))
+                foreach (var ability in card.Abilities) yield return ability;
         }
 
         foreach (var granted in die.GrantedAbilities) yield return granted.Ability;

@@ -72,6 +72,17 @@ public sealed class DieInstance
     // from the blanked card (V2_VOCABULARY.md Part 16, user ruling).
     public List<GrantedAbility> GrantedAbilities { get; } = [];
 
+    // DIE-SCOPED blanking - this die's own text ignored, leaving other
+    // copies of the same card alone. The default scope: Web Shooters,
+    // Loki "Powerful Magic", Adam Warlock. Wolverine "No More
+    // Distractions" prints "for all copies of that die" precisely because
+    // that is NOT the default, which is the evidence the two scopes are
+    // intended rather than wording drift (V2_VOCABULARY.md Part 21).
+    //
+    // Only one-shot blanks live here. A conditional blank is recomputed
+    // on read - see QueryEngine.AbilitiesActive.
+    public List<DieSuppression> Suppressions { get; } = [];
+
     // This-turn-only combat restrictions (CombatFlag effect template) -
     // no Duration param on the record itself (V2_VOCABULARY.md Part 1),
     // since every real CombatFlag use in Dice Masters card text is
@@ -86,3 +97,5 @@ public sealed class DieInstance
 public sealed record GrantedTag(string Tag, Duration Duration, string? GrantedDuringPlayerId = null);
 
 public sealed record GrantedAbility(TriggeredAbility Ability, Duration Duration, string? GrantedDuringPlayerId = null);
+
+public sealed record DieSuppression(Duration Duration, string? GrantedDuringPlayerId = null);

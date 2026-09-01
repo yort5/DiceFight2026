@@ -83,6 +83,32 @@ public sealed record GrantTag(TargetFilter Target, IReadOnlyList<string> Tags, D
 // The granted ability survives blanking - see GrantedAbility's remarks.
 public sealed record GrantAbility(TargetFilter Target, TriggeredAbility Ability, Duration Duration = Duration.EndOfTurn) : EffectNode;
 
+// Ignore a DIE's text (V2_VOCABULARY.md Parts 19-21). The default scope -
+// Web Shooters, Loki "Powerful Magic". Other copies of the same card are
+// untouched, which is why Wolverine "No More Distractions" has to print
+// "for all copies of that die" to get the other one.
+public sealed record BlankText(TargetFilter Target, Duration Duration = Duration.EndOfTurn) : EffectNode;
+
+// Ignore a CARD's text for one player - every die of it, in play or not,
+// and its Globals with them (rule 2.6.5.2). Scarlet Witch, both Shrieks,
+// Prismatic Spray "Lesser Spell", Mister Sinister's side-wide half.
+//
+// `Target` resolves to DICE as every TargetFilter does; each resolved
+// die's card is what gets suppressed, for that die's controller. That is
+// what "ignore the text on target character die's character card" (
+// Kryptonite) means, and it is also how a "choose an opposing card"
+// effect lands once RememberCard has picked one.
+//
+// AllOpposing is the side-wide form: no target is resolved, and every
+// card the opponent could have is suppressed. It is a separate mode
+// rather than a very wide TargetFilter because the filter would only
+// ever reach cards with a die already in play, and these cards
+// explicitly cover the ones that are not.
+public sealed record BlankCardText(
+    TargetFilter? Target = null,
+    bool AllOpposing = false,
+    Duration Duration = Duration.EndOfTurn) : EffectNode;
+
 // Amount is signed - positive Fixed values gain life, negative ones lose
 // it (v1's separate GainLife/LoseLife collapsed into one shape).
 public sealed record LifeChange(Amount Amount, TargetOwnership Whose = TargetOwnership.Own) : EffectNode;

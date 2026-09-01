@@ -64,8 +64,13 @@ public static class ContinuousRegistry
         }
     }
 
+    // A blanked die grants nothing. V1 answered this the same way, via
+    // its DieStats.GetCard choke point, and V2_PLAN.md Phase 8 task 3
+    // asked the question explicitly - match it (V2_VOCABULARY.md Part 19).
     private static IEnumerable<DieInstance> ActiveSourceDice(GameState state, CardDef card) =>
-        state.Dice.Where(d => d.CardId == card.Id && d.Zone is Zone.FieldZone or Zone.AttackZone);
+        state.Dice.Where(d => d.CardId == card.Id
+            && d.Zone is Zone.FieldZone or Zone.AttackZone
+            && QueryEngine.AbilitiesActive(state, d));
 
     private static IReadOnlyDictionary<string, string> Bindings(DieInstance source) =>
         new Dictionary<string, string> { ["self"] = source.Id };
