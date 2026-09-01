@@ -10630,3 +10630,48 @@ these are the only three.
 
 `dotnet build`/`dotnet test` clean: v2 280/280 (9 new), v1 580/580
 untouched. 113/145 DPS cards migrated (114 counting Domino).
+
+## v2 Phase 8 task 4: DPS batch 9 - final batch, 145/145 (2026-09-01)
+
+Last 32 DPS cards: 14 full, 5 partial, 13 tailed. Closes out Phase 8
+Task 4. No new missing predicates beyond two: no token mechanic exists
+(Master Mold "Endless Sentinels" would place a Sentinel die from
+neither player's own bag/deck), and no Condition counts KOs-this-turn
+as a number rather than a boolean (Corsair "Back from Outer Space"
+needs "if 4 or more... were KO'd this turn," and `NoKOsThisTurn` only
+reads "zero"). Every other tail entry matches a gap already on file:
+Continuous Basic Action (4 Basic Action cards), the TargetFilter
+self-exclusion gap, payment-source visibility (2 more cards), the
+unwired `CostKind.ActionDieUse`, the reroll/spin-protection axis,
+`DieTargeted` (deferred at the Phase 0 gate), and Dark Phoenix
+"Destructive Force"'s own long-standing damage-source entry.
+
+Two real card-definition bugs found while writing this batch's tests,
+both existing-template misuse rather than vocabulary gaps: Mister
+Sinister "Dark Experimentation" targeted Used Pile Sidekicks with
+`TargetKind.CharacterDie`, which a dormant die never matches (fixed to
+`AnyDie`, matching the Professor X "Uncanny Leadership" precedent); and
+Mystique "Freedom Force"'s `DamageModifier` was scoped to `Self: true`
+only, when the printed text protects her whole side, matching v1's own
+field name for it (`grantsOwnDamageReductionFromOpponentAbilities`) -
+fixed to target all owned character dice. Also fixed two test-authoring
+bugs unrelated to the cards themselves: a purchase-cost test assumed
+cost scaled with die level (it doesn't - `PurchaseCost` is fixed per
+card), and two aura tests captured their "baseline" stat after the
+buffing die was already active, silently baking the buff into the
+baseline.
+
+One more test bug worth a note: `MisterSinisterDarkExperimentation`'s
+Global test resolved two independent `PendingChoice`s by always taking
+`CandidateIds[0]`, which picked the SAME die twice - both choices'
+candidate pools are the same per-ability snapshot (rule 3.2.5), so nothing
+about the first pick's resolution shrinks the second's pool. Not an
+engine bug; the deliberately-designed snapshot behavior is the same one
+already proven correct for Casket of Ancient Winters. Fixed by having
+the test choose two explicit, distinct dice.
+
+`dotnet build`/`dotnet test` clean: v2 300/300 (20 new), v1 Engine
+580/580, API 10/10 - all untouched otherwise. **145/145 DPS cards
+migrated - Phase 8 Task 4 is complete.** Next up, per the user: an
+audit pass over already-migrated cards for more "declared but unwired"
+vocabulary shapes, the pattern batch 8 first surfaced.

@@ -9,8 +9,9 @@ history for reasoning; code against the spec.
 at the 2026-08-22 gate review (`V2_VOCABULARY.md` Part 11), amended twice
 since under the same sign-off discipline (`StatKind.SymbolCount`, Part
 29; `EventFilter.RequireSelf`/`ExcludeCause`, Part 30 - both Energize);
-Phase 8 (Dice Masters as a game definition / card migration) IN
-PROGRESS.**
+Phase 8 (Dice Masters as a game definition / card migration): Task 4 (the
+145-card DPS migration) is now COMPLETE; a post-completion audit pass for
+more "declared but unwired" vocabulary shapes is IN PROGRESS.**
 
 - **Task 1-2** (config + curated teams) - done 2026-08-23.
 - **Task 3** - became THREE spikes, not two, and **all three are now
@@ -21,29 +22,45 @@ PROGRESS.**
   the `AbilitiesOf`/`ContinuousOf` choke point, `AbilityBlank`, and
   `Lockout` are all live. Affiliation-as-first-class (Parts 17-18, 22)
   landed the same day.
-- **Task 4** (DPS catalog batches) - IN PROGRESS. Seven batches landed:
-  batches 1-2 on 2026-08-24, batch 3 (10 migrated, 3 partial, 1 tailed -
-  D'Ken/Mister Sinister, the two cards Spike A was built for), batch 4
-  (all 15 Energize cards, 13 full + 2 partial), batch 5 (12 cards: 4
-  full, 4 partial, 4 tailed - a new gap, affiliation-granting), batch 6
-  (14 cards: 8 full, 6 tailed - two more new gaps, TargetFilter can't
-  exclude the source die from its own pool, and a continuous template
-  can't grant a benefit to its own source before that source is active),
-  batch 7 (17 cards: 7 full, 3 partial, 7 tailed - the catalog's first
-  two real Awaken cards, a fourth new gap (no team-roster concept at
-  all), and a real migration-helper limitation fixed along the way -
-  character dice had no way to print a burst face), and batch 8 (16
-  cards: 5 full, 3 partial, 8 tailed - not a new missing predicate this
-  time, but THREE cases of a signed-off vocabulary shape never actually
-  wired to a real action: `CombatRuleKind.CantFieldMore`, `EventFilter.
-  Stat` on `DieKOd`, and `CostKind.ActionDieUse` all exist in the model
-  but nothing in the engine consumes them) all on 2026-09-01.
+- **Task 4** (DPS catalog batches) - **COMPLETE, 2026-09-01. 145/145.**
+  Nine batches landed: batches 1-2 on 2026-08-24, batch 3 (10 migrated,
+  3 partial, 1 tailed - D'Ken/Mister Sinister, the two cards Spike A was
+  built for), batch 4 (all 15 Energize cards, 13 full + 2 partial),
+  batch 5 (12 cards: 4 full, 4 partial, 4 tailed - a new gap,
+  affiliation-granting), batch 6 (14 cards: 8 full, 6 tailed - two more
+  new gaps, TargetFilter can't exclude the source die from its own pool,
+  and a continuous template can't grant a benefit to its own source
+  before that source is active), batch 7 (17 cards: 7 full, 3 partial,
+  7 tailed - the catalog's first two real Awaken cards, a fourth new gap
+  (no team-roster concept at all), and a real migration-helper
+  limitation fixed along the way - character dice had no way to print a
+  burst face), batch 8 (16 cards: 5 full, 3 partial, 8 tailed - not a
+  new missing predicate this time, but THREE cases of a signed-off
+  vocabulary shape never actually wired to a real action:
+  `CombatRuleKind.CantFieldMore`, `EventFilter.Stat` on `DieKOd`, and
+  `CostKind.ActionDieUse` all exist in the model but nothing in the
+  engine consumes them), and batch 9, the last one (32 cards: 14 full,
+  5 partial, 13 tailed - closes out the sweep at 145/145; every tail
+  entry matches a gap already on file except two new ones: no token
+  mechanic exists for Master Mold's Sentinel, and no Condition counts
+  KOs-this-turn as a number, only `NoKOsThisTurn`'s boolean, for
+  Corsair's "if 4 or more") - all on 2026-09-01. Along the way, fixing
+  batch 9's own bugs also fixed two engine-level issues: `TargetFilter`
+  targeting `TargetKind.CharacterDie` against dormant Used Pile dice
+  (which never match - should be `AnyDie`, per the established
+  Professor X "Uncanny Leadership" precedent), and a self-only
+  `DamageModifier` that should have protected the whole team.
   See `V2_TAIL_POLICY.md` for all of them.
-  **113 of v1's 145 curated DPS cards migrated, 32 to go.**
-  (A 67th card, Domino "Not Really A Party Girl" (XFO010), was also
-  migrated the same day, but sits outside this count entirely - `BonusCards.cs`,
-  a one-off from the bulk catalog, not v1's curated 145.)
+  (A 67th card outside the 145 count, Domino "Not Really A Party Girl"
+  (XFO010), was migrated on 2026-09-01 too - `BonusCards.cs`, a one-off
+  from the bulk catalog, not v1's curated 145.)
 - **Task 5** (catalog-wide invariant tests) - not started.
+- **Audit pass** (2026-09-01, requested after Task 4 closed) - a
+  deliberate sweep over already-migrated full/partial cards looking for
+  more "declared but unwired" vocabulary shapes, the pattern batch 8
+  first surfaced (`CombatRuleKind.CantFieldMore`, `EventFilter.Stat` on
+  `DieKOd`, `CostKind.ActionDieUse`) - each was only caught because one
+  specific card happened to exercise it. IN PROGRESS.
 
 The previous version of this header (refreshed 2026-08-31) said Spike A
 was signed off but not implemented, and put the DPS count at 29/145; both

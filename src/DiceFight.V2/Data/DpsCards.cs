@@ -579,6 +579,15 @@ public static class DpsCards
         IcemanFrozenFistsOfFury, LilandraFreedomFighter, KittyPrydeHeadmistress, GladiatorTheEmpireMustStand,
         BlobMGHDependent, CorsairLeadingTheStarjammers, VulcanPowerSuppression, DKenObsessed,
         BlinkExilesTeamLeader, GambitILikeSolitaire, SupremeIntelligencePsionicCollective, DeathbirdUsurper,
+        // Batch 9 (final DPS batch - 145/145).
+        DeathbirdWarOfKings, RonanTheAccuserNoExceptions, SabretoothYouReadyToParty, MoiraStrengthOfForesight,
+        RogueUnitySquad, MystiqueFreedomForce, MisterSinisterDarkExperimentation, WolverineTrainer,
+        MystiqueSheWalksAmongUs, MagnetoMasterOfMagnetism, KittyPrydeExperiencedLeader, ToadJourneyIntoMisery,
+        VulcanAggression, BeastXaviersDream, DKenMKraanCrystal, DarkPhoenixDestructiveForce,
+        MisterSinisterBiologist, LilandraMajestrix, WolverineToughForTheKids,
+        DampeningCollar, LabTest, LivingTheDream, OrganicSteelPreventDamage, TheFrontLine, AngelAirSupport,
+        BishopTimeTraveller, BlinkWarpPortals, JubileeFireworks, GladiatorMajestorKallark,
+        LilandraGrandAdmiralOfTheGuard, MasterMoldEndlessSentinels, CorsairBackFromOuterSpace,
     ];
 
     // --- Batch 3 (2026-09-01) ---
@@ -2021,5 +2030,486 @@ public static class DpsCards
         DieLimit: 3, Affiliations: ["Villains", "Shi'ar"], Keywords: [],
         RawText: "While Deathbird is active, when you KO an opposing character die with 3D or greater, deal " +
                  "3 damage to your opponent.",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    // --- Batch 9 (2026-09-01) - the last DPS batch. 32 cards: 14 full,
+    // 5 partial, 13 tailed. Closes out Phase 8 task 4's DPS sweep at
+    // 145/145. No new gaps this batch - every tail entry below matches
+    // one already on file (Continuous Basic Action, the self-exclusion
+    // gap, payment-source visibility, ActionDieUse's unwired cost, the
+    // reroll/spin-protection axis, DieTargeted, Dark Phoenix "Destructive
+    // Force"'s own long-standing damage-source entry) except two: no
+    // token mechanic exists (Master Mold's Sentinel), and no Condition
+    // counts KOs-this-turn as a number, only NoKOsThisTurn's boolean
+    // (Corsair's own "if 4 or more"). ---
+
+    public static readonly CardDef DeathbirdWarOfKings = new(
+        Id: "DPS109", Name: "Deathbird", Subtitle: "War of Kings", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 3, EnergySymbolIds: ["Shield"],
+        Die: MigrationDice.Character("DPS109Die", "Shield", (0, 1, 1), (0, 1, 2), (1, 3, 4)),
+        DieLimit: 3, Affiliations: ["Villains", "Shi'ar"], Keywords: [],
+        RawText: "When fielded, target character die cannot block this turn.",
+        Abilities: [new TriggeredAbility(TriggerKind.DieFielded,
+            new CombatFlag(new TargetFilter(Kind: TargetKind.CharacterDie), CombatFlagKind.CantBlock))],
+        Continuous: []);
+
+    public static readonly CardDef RonanTheAccuserNoExceptions = new(
+        Id: "DPS130", Name: "Ronan the Accuser", Subtitle: "No Exceptions", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 6, EnergySymbolIds: ["Bolt"],
+        Die: MigrationDice.Character("DPS130Die", "Bolt", (1, 5, 5), (1, 6, 7), (2, 8, 8)),
+        DieLimit: 4, Affiliations: [], Keywords: [],
+        RawText: "When fielded, each player loses 3 life.",
+        Abilities: [new TriggeredAbility(TriggerKind.DieFielded, new Sequence(
+        [
+            new LifeChange(new Fixed(-3)),
+            new LifeChange(new Fixed(-3), TargetOwnership.Opposing),
+        ]))],
+        Continuous: []);
+
+    public static readonly CardDef SabretoothYouReadyToParty = new(
+        Id: "DPS131", Name: "Sabretooth", Subtitle: "You Ready to Party?", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 5, EnergySymbolIds: ["Fist"],
+        Die: MigrationDice.Character("DPS131Die", "Fist", (1, 3, 3), (1, 4, 4), (2, 5, 4)),
+        DieLimit: 4, Affiliations: ["Brotherhood of Mutants"], Keywords: ["Teamwatch"],
+        RawText: "When Sabretooth attacks, your Brotherhood of Mutants character dice get +2A. Teamwatch - " +
+                 "Target character die can't block this turn",
+        Abilities:
+        [
+            new TriggeredAbility(TriggerKind.DieAttacks,
+                new ModifyStat(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own, Affiliations: new TagQuery(AnyOf: ["Brotherhood of Mutants"]), Count: 0), AtkDelta: 2)),
+            new TriggeredAbility(TriggerKind.DieFielded,
+                new CombatFlag(new TargetFilter(Kind: TargetKind.CharacterDie), CombatFlagKind.CantBlock),
+                Filter: new EventFilter(Ownership: TargetOwnership.Own, ExcludeSelf: true, SharesAffiliationWithListener: true)),
+        ],
+        Continuous: []);
+
+    public static readonly CardDef MoiraStrengthOfForesight = new(
+        Id: "DPS124", Name: "Moira", Subtitle: "Strength of Foresight", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 3, EnergySymbolIds: ["Shield"],
+        Die: MigrationDice.Character("DPS124Die", "Shield", (1, 2, 2), (1, 3, 3), (2, 4, 4)),
+        DieLimit: 3, Affiliations: ["X-Men"], Keywords: ["Founder"],
+        RawText: "Founder While Moira is active, when you field an X-Men character die with purchase cost " +
+                 "of 3 or more put a Loyalty Counter on Moira. When fielded, you may send target action die " +
+                 "from your opponent's Field Zone in their Used Pile.",
+        Abilities:
+        [
+            new TriggeredAbility(TriggerKind.DieFielded,
+                new GrantCounter(new TargetFilter(Self: true), "Loyalty", 1),
+                Filter: new EventFilter(Ownership: TargetOwnership.Own, ExcludeSelf: true, Affiliations: new TagQuery(AnyOf: ["X-Men"]), MinPurchaseCost: 3)),
+            new TriggeredAbility(TriggerKind.DieFielded,
+                new MayPay(Cost: null, Then: new MoveDie(new TargetFilter(Kind: TargetKind.ActionDie, Ownership: TargetOwnership.Opposing, Zones: [Zone.FieldZone]), Zone.UsedPile))),
+        ],
+        Continuous: []);
+
+    public static readonly CardDef RogueUnitySquad = new(
+        Id: "DPS129", Name: "Rogue", Subtitle: "Unity Squad", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 4, EnergySymbolIds: ["Mask"],
+        Die: MigrationDice.Character("DPS129Die", "Mask", (1, 2, 3), (2, 4, 5), (2, 5, 6)),
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: ["Teamwatch"],
+        RawText: "While Rogue is active, your X-Men character dice cost 1 less to field. Teamwatch - Rogue " +
+                 "gets +2A.",
+        Abilities: [new TriggeredAbility(TriggerKind.DieFielded, new ModifyStat(new TargetFilter(Self: true), AtkDelta: 2),
+            Filter: new EventFilter(Ownership: TargetOwnership.Own, ExcludeSelf: true, SharesAffiliationWithListener: true))],
+        Continuous: [new CostModifier(CostKind.Fielding,
+            new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own, Affiliations: new TagQuery(AnyOf: ["X-Men"])), Delta: -1)]);
+
+    // Target is Own CharacterDice broadly, not Self - v1's own field name
+    // (grantsOwnDamageReductionFromOpponentAbilities) protects her whole
+    // side, matching the printed text's own lack of a "to Mystique"
+    // qualifier. "Reduce damage from opposing CHARACTER abilities" reads
+    // slightly broader as built - DamageSource only distinguishes
+    // Ability vs Combat (the engine's own two-way split), not which KIND
+    // of die's ability dealt it, so this also reduces Action/Global-
+    // sourced ability damage. The closest the vocabulary reaches, not a
+    // wrong guess - there is no narrower "Source" value to ask for.
+    public static readonly CardDef MystiqueFreedomForce = new(
+        Id: "DPS085", Name: "Mystique", Subtitle: "Freedom Force", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 2, EnergySymbolIds: ["Mask"],
+        Die: MigrationDice.Character("DPS085Die", "Mask", (1, 1, 1), (0, 1, 1), (2, 1, 1)),
+        DieLimit: 4, Affiliations: ["Brotherhood of Mutants"], Keywords: [],
+        RawText: "When Mystique is active, reduce damage from opposing character abilities by 1. When " +
+                 "Mystique is KO'd, you may move a Brotherhood of Mutants die with purchase cost 4 or more " +
+                 "from your Used Pile to your Prep Area.",
+        Abilities: [new TriggeredAbility(TriggerKind.DieKOd,
+            new MayPay(Cost: null, Then: new MoveDie(
+                new TargetFilter(Kind: TargetKind.AnyDie, Ownership: TargetOwnership.Own, Zones: [Zone.UsedPile], Affiliations: new TagQuery(AnyOf: ["Brotherhood of Mutants"]), Stat: new StatThreshold(StatKind.PurchaseCost, Min: 4)),
+                Zone.PrepArea)))],
+        Continuous: [new DamageModifier(DamageModifierMode.Reduce,
+            new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own), Amount: 1, Source: DamageSource.Ability)]);
+
+    // "After blockers are declared" reads as timing color, not a
+    // distinct sub-step trigger - Gladiator "The Empire Must Stand"'s
+    // own "Pay Fist when you attack" got the same reading. Two
+    // INDEPENDENT (non-bound) Sidekick targets for the Global, unlike
+    // v1's own same-instance-caching workaround - v2's TargetFilters
+    // resolve live and independently unless explicitly Bound, so no
+    // trick is needed to keep "field one, prep another" as two choices.
+    public static readonly CardDef MisterSinisterDarkExperimentation = new(
+        Id: "DPS123", Name: "Mister Sinister", Subtitle: "Dark Experimentation", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 5, EnergySymbolIds: ["Bolt"],
+        Die: MigrationDice.Character("DPS123Die", "Bolt", (1, 4, 1), (2, 5, 2), (2, 6, 3)),
+        DieLimit: 4, Affiliations: ["Villains"], Keywords: [],
+        RawText: "When Mister Sinister attacks, after blockers are declared, you may pay 2 life and have " +
+                 "him gain +3A Global: Pay 2. Field a Sidekick from your Used Pile, Prep a Sidekick from " +
+                 "your Used Pile.",
+        Abilities:
+        [
+            new TriggeredAbility(TriggerKind.DieAttacks,
+                new MayPay(Cost: new LifeChange(new Fixed(-2)), Then: new ModifyStat(new TargetFilter(Self: true), AtkDelta: 3))),
+            // AnyDie, not CharacterDie - a Used Pile die is always
+            // unrolled (rule 1.6.8), same gap Professor X "Uncanny
+            // Leadership"'s own identical shape already established.
+            new TriggeredAbility(TriggerKind.Global, new Sequence(
+            [
+                new FieldDie(new TargetFilter(Kind: TargetKind.AnyDie, Ownership: TargetOwnership.Own, Zones: [Zone.UsedPile], Tags: new TagQuery(AnyOf: ["sidekick"])), Free: true),
+                new MoveDie(new TargetFilter(Kind: TargetKind.AnyDie, Ownership: TargetOwnership.Own, Zones: [Zone.UsedPile], Tags: new TagQuery(AnyOf: ["sidekick"])), Zone.PrepArea),
+            ]), EnergyCost: new EnergyCost(2)),
+        ],
+        Continuous: []);
+
+    // Teamwatch's own Spin-based precedent (Toad "Secondary Mutation")
+    // gets a second user; "spin Wolverine up ALSO" reuses the identical
+    // LevelIncreased + Ownership:Own + ExcludeSelf shape, just watching
+    // for ANOTHER die's spin-up instead of reacting to its own.
+    public static readonly CardDef WolverineTrainer = new(
+        Id: "DPS136", Name: "Wolverine", Subtitle: "Trainer", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 4, EnergySymbolIds: ["Fist"],
+        Die: MigrationDice.Character("DPS136Die", "Fist", (1, 5, 2), (2, 6, 3), (3, 8, 4)),
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: ["Deadly", "Awaken"],
+        RawText: "Awaken: Target sidekick character die gains Deadly.*When you spin up another character " +
+                 "die, spin Wolverine up also. Global: Pay Fist. Once per turn, on your turn, Prep a die " +
+                 "from your bag",
+        Abilities:
+        [
+            new TriggeredAbility(TriggerKind.DieFaceChanged,
+                new GrantTag(new TargetFilter(Kind: TargetKind.CharacterDie, Tags: new TagQuery(AnyOf: ["sidekick"])), ["Deadly"]),
+                Filter: new EventFilter(LevelIncreased: true, RequireSelf: true)),
+            new TriggeredAbility(TriggerKind.DieFaceChanged, new Spin(new TargetFilter(Self: true), LevelDelta: 1),
+                Filter: new EventFilter(Ownership: TargetOwnership.Own, ExcludeSelf: true, LevelIncreased: true)),
+            new TriggeredAbility(TriggerKind.Global, new DrawToZone(1, Zone.PrepArea, Zone.Bag),
+                EnergyCost: new EnergyCost(1, "Fist"), OncePerTurn: true),
+        ],
+        Continuous: []);
+
+    public static readonly CardDef MystiqueSheWalksAmongUs = new(
+        Id: "DPS149", Name: "Mystique", Subtitle: "She Walks Among Us", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 3, EnergySymbolIds: ["Mask"],
+        Die: MigrationDice.Character("DPS149Die", "Mask", (1, 1, 1), (0, 1, 1), (2, 1, 1)),
+        DieLimit: 4, Affiliations: ["Brotherhood of Mutants", "Villains"], Keywords: ["Teamwatch"],
+        RawText: "Teamwatch - Spin target opposing character die to an energy face of your opponent's choice.",
+        // Simplified to always the double-energy face - Magneto "Master
+        // of Magnetism"'s own identical text already carries this exact
+        // user-approved approximation (v1's own comment: a rational
+        // opponent would take the higher-value double face anyway).
+        Abilities: [new TriggeredAbility(TriggerKind.DieFielded,
+            new SpinToEnergy(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Opposing), Amount: 2),
+            Filter: new EventFilter(Ownership: TargetOwnership.Own, ExcludeSelf: true, SharesAffiliationWithListener: true))],
+        Continuous: []);
+
+    public static readonly CardDef MagnetoMasterOfMagnetism = new(
+        Id: "DPS121", Name: "Magneto", Subtitle: "Master of Magnetism", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 5, EnergySymbolIds: ["Mask"],
+        Die: MigrationDice.Character("DPS121Die", "Mask", (1, 4, 4), (2, 5, 7), (3, 6, 8)),
+        DieLimit: 4, Affiliations: ["Brotherhood of Mutants"], Keywords: ["Teamwatch"],
+        RawText: "Teamwatch - Spin target opposing character die to an energy face of your opponent's " +
+                 "choice. Global: Pay Mask. Once per turn, during your turn, if you have no dice in your " +
+                 "Prep Area, you may draw a die and place it in your Prep Area.",
+        // Same simplification as Mystique "She Walks Among Us" above.
+        Abilities:
+        [
+            new TriggeredAbility(TriggerKind.DieFielded,
+                new SpinToEnergy(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Opposing), Amount: 2),
+                Filter: new EventFilter(Ownership: TargetOwnership.Own, ExcludeSelf: true, SharesAffiliationWithListener: true)),
+            new TriggeredAbility(TriggerKind.Global,
+                new Conditional(new TurnFact(TurnFactKind.PrepAreaEmpty), Then: new MayPay(Cost: null, Then: new DrawToZone(1, Zone.PrepArea, Zone.Bag))),
+                EnergyCost: new EnergyCost(1, "Mask"), OncePerTurn: true),
+        ],
+        Continuous: []);
+
+    public static readonly CardDef KittyPrydeExperiencedLeader = new(
+        Id: "DPS144", Name: "Kitty Pryde", Subtitle: "Experienced Leader", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 4, EnergySymbolIds: ["Mask"],
+        Die: MigrationDice.Character("DPS144Die", "Mask", (0, 2, 2), (0, 3, 2), (1, 3, 3)),
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: [],
+        RawText: "While Kitty Pryde is active, each of your X-Men character dice get +1A and +1D.",
+        Abilities: [],
+        Continuous: [new StatAura(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own, Affiliations: new TagQuery(AnyOf: ["X-Men"])), AtkDelta: new Fixed(1), DefDelta: new Fixed(1))]);
+
+    public static readonly CardDef ToadJourneyIntoMisery = new(
+        Id: "DPS134", Name: "Toad", Subtitle: "Journey Into Misery", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 3, EnergySymbolIds: ["Fist"],
+        Die: MigrationDice.Character("DPS134Die", "Fist", (1, 2, 1), (2, 3, 2), (2, 4, 4)),
+        DieLimit: 4, Affiliations: ["Brotherhood of Mutants"], Keywords: ["Teamwatch"],
+        RawText: "Teamwatch - Move a die from your opponents Prep Area to their bag.",
+        Abilities: [new TriggeredAbility(TriggerKind.DieFielded,
+            new MoveDie(new TargetFilter(Kind: TargetKind.AnyDie, Ownership: TargetOwnership.Opposing, Zones: [Zone.PrepArea]), Zone.Bag),
+            Filter: new EventFilter(Ownership: TargetOwnership.Own, ExcludeSelf: true, SharesAffiliationWithListener: true))],
+        Continuous: []);
+
+    public static readonly CardDef VulcanAggression = new(
+        Id: "DPS135", Name: "Vulcan", Subtitle: "Aggression", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 6, EnergySymbolIds: ["Fist"],
+        Die: MigrationDice.Character("DPS135Die", "Fist", (0, 3, 2), (1, 4, 4), (1, 6, 5)),
+        DieLimit: 4, Affiliations: [], Keywords: [],
+        RawText: "While Vulcan is active, your opponent's non-fist characters get -2D. Global: Pay Fist. " +
+                 "Target character die must attack this turn.",
+        Abilities: [new TriggeredAbility(TriggerKind.Global,
+            new CombatFlag(new TargetFilter(Kind: TargetKind.CharacterDie), CombatFlagKind.MustAttack),
+            EnergyCost: new EnergyCost(1, "Fist"))],
+        Continuous: [new StatAura(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Opposing, Tags: new TagQuery(NoneOf: ["Fist"])), DefDelta: new Fixed(-2))]);
+
+    public static readonly CardDef BeastXaviersDream = new(
+        Id: "DPS138", Name: "Beast", Subtitle: "Xavier's Dream", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 3, EnergySymbolIds: ["Fist"],
+        Die: MigrationDice.Character("DPS138Die", "Fist", (0, 2, 1), (1, 2, 2), (1, 3, 2)),
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: ["Overcrush"],
+        RawText: "While you have an active Sidekick die, Beast gets +1A. Overcrush",
+        Abilities: [],
+        Continuous: [new StatAura(new TargetFilter(Self: true), AtkDelta: new Fixed(1),
+            ActiveWhen: new CountAtLeast(new TargetFilter(Kind: TargetKind.AnyDie, Ownership: TargetOwnership.Own, Tags: new TagQuery(AnyOf: ["sidekick"])), 1))]);
+
+    // The WhenAttacks half fits (D'Ken "Emperor"'s own identical shape).
+    // The player-facing damage CAP ("you take no more than 7 damage...")
+    // is a real damage-to-a-PLAYER ceiling, distinct from every existing
+    // die-scoped damage mechanism - v1 itself never built it either.
+    public static readonly CardDef DKenMKraanCrystal = new(
+        Id: "DPS106", Name: "D'Ken", Subtitle: "M'Kraan Crystal", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 5, EnergySymbolIds: ["Shield"],
+        Die: MigrationDice.Character("DPS106Die", "Shield", (0, 4, 4), (1, 5, 5), (2, 6, 6)),
+        DieLimit: 4, Affiliations: ["Villains", "Shi'ar"], Keywords: [],
+        RawText: "When D'Ken attacks, Prep a die from your Used Pile. While a D'Ken die is in your Used " +
+                 "Pile, you take no more than 7 damage during an opponent's turn (further damage dealt to " +
+                 "you is reduced to 0).",
+        Abilities: [new TriggeredAbility(TriggerKind.DieAttacks,
+            new MoveDie(new TargetFilter(Kind: TargetKind.AnyDie, Ownership: TargetOwnership.Own, Zones: [Zone.UsedPile]), Zone.PrepArea))],
+        Continuous: [],
+        IsImplemented: false);
+
+    // The Global fits (Dark Phoenix "Malevolent"'s own identical shape).
+    // The retaliation clause is the pre-existing damage-SOURCE-visibility
+    // entry for this exact card - "when an opposing CHARACTER die
+    // damages Dark Phoenix" needs to know who dealt the damage, which
+    // DamageDealtPayload doesn't carry.
+    public static readonly CardDef DarkPhoenixDestructiveForce = new(
+        Id: "DPS107", Name: "Dark Phoenix", Subtitle: "Destructive Force", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 5, EnergySymbolIds: ["Bolt"],
+        Die: MigrationDice.Character("DPS107Die", "Bolt", (1, 5, 5), (2, 7, 7), (3, 8, 8)),
+        DieLimit: 3, Affiliations: ["Villains"], Keywords: [],
+        RawText: "When an opposing character die damages Dark Phoenix, she deals that much damage to each " +
+                 "opponent. Global: Pay Bolt and KO one of your character dice. The next die you purchase " +
+                 "this turn costs 2 less (to a minimum of 1).",
+        Abilities: [new TriggeredAbility(TriggerKind.Global, new Sequence(
+        [
+            new Ko(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own)),
+            new PurchaseModifier(Delta: -2),
+        ]), EnergyCost: new EnergyCost(1, "Bolt"))],
+        Continuous: [],
+        IsImplemented: false);
+
+    // The Overcrush-grant Global fits. "Prevent non-combat damage to
+    // your OTHER character dice" is the TargetFilter self-exclusion gap
+    // (batch 6) - Sinister shares a zone with the "other" dice he'd
+    // protect at the same moment.
+    public static readonly CardDef MisterSinisterBiologist = new(
+        Id: "DPS148", Name: "Mister Sinister", Subtitle: "Biologist", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 6, EnergySymbolIds: ["Bolt"],
+        Die: MigrationDice.Character("DPS148Die", "Bolt", (1, 4, 1), (2, 5, 2), (2, 6, 3)),
+        DieLimit: 4, Affiliations: ["Villains"], Keywords: ["Overcrush"],
+        RawText: "While Mister Sinister is active, prevent non-combat damage dealt to your other character " +
+                 "dice. Global: Pay 3. Target character die gains Overcrush.",
+        Abilities: [new TriggeredAbility(TriggerKind.Global,
+            new GrantTag(new TargetFilter(Kind: TargetKind.CharacterDie), ["Overcrush"]),
+            EnergyCost: new EnergyCost(3))],
+        Continuous: [],
+        IsImplemented: false);
+
+    // The Global-energy life-surcharge half fits (CostModifier's own
+    // Currency: Life mode). The Action-Die-use half is batch 8's own
+    // CostKind.ActionDieUse finding - registered, read by nothing,
+    // TurnEngine.UseAction has no cost-charging step at all yet.
+    public static readonly CardDef LilandraMajestrix = new(
+        Id: "DPS145", Name: "Lilandra", Subtitle: "Majestrix", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 5, EnergySymbolIds: ["Shield"],
+        Die: MigrationDice.Character("DPS145Die", "Shield", (1, 3, 4), (2, 4, 5), (3, 5, 6)),
+        DieLimit: 4, Affiliations: ["Shi'ar"], Keywords: [],
+        RawText: "While Lilandra is active, your opponent must pay 2 life to use an Action Die or Global " +
+                 "Ability.",
+        Abilities: [],
+        Continuous: [new CostModifier(CostKind.GlobalEnergy, new TargetFilter(Kind: TargetKind.Player, Ownership: TargetOwnership.Opposing), Delta: 2, Currency: Currency.Life)],
+        IsImplemented: false);
+
+    // The Global (Prep a die, once per turn) fits. Regenerate is not
+    // built; the reroll/spin-protection axis is the same gap Bishop
+    // "Tortured Timeline" already hit - "can't be spun to an energy face
+    // or rerolled by your opponent" protects specific EFFECT TYPES, not
+    // targeting-by-source, which is all TargetingProtection reaches.
+    public static readonly CardDef WolverineToughForTheKids = new(
+        Id: "DPS152", Name: "Wolverine", Subtitle: "Tough for the Kids", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 5, EnergySymbolIds: ["Fist"],
+        Die: MigrationDice.Character("DPS152Die", "Fist", (1, 5, 2), (2, 6, 3), (3, 8, 4)),
+        DieLimit: 3, Affiliations: ["X-Men"], Keywords: ["Regenerate"],
+        RawText: "Regenerate *If you have at least 3 different active X-Men, Wolverine can't be spun to an " +
+                 "energy face or rerolled by your opponent. Global: Pay Fist. Once per turn, on your turn, " +
+                 "Prep a die from your bag.",
+        Abilities: [new TriggeredAbility(TriggerKind.Global, new DrawToZone(1, Zone.PrepArea, Zone.Bag),
+            EnergyCost: new EnergyCost(1, "Fist"), OncePerTurn: true)],
+        Continuous: [],
+        IsImplemented: false);
+
+    // --- Tailed outright (13 cards, no buildable clause) ---
+
+    // The Continuous Basic Action mechanic (rule 1.2.3/2.6.4.2) is still
+    // not modeled - see V2_PLAN.md Phase 8 batch-1 note. Lab Test,
+    // Living the Dream, Organic Steel, and Dampening Collar all need it;
+    // Dampening Collar's "opponent may return an affiliate to remove
+    // this die" and Living the Dream's own team-wide Loyalty-Counter
+    // aggregation ("among ALL character CARDS on your team," not just
+    // ones with a die in play - the team-roster gap, batch 7) each add
+    // a second, independent gap on top.
+    public static readonly CardDef DampeningCollar = new(
+        Id: "DPS002", Name: "Dampening Collar", Subtitle: "Basic Action", Set: "DPS", CardType: CardType.BasicAction,
+        PurchaseCost: 4, EnergySymbolIds: [],
+        Die: MigrationDice.BasicAction("DPS002Die"),
+        DieLimit: 3, Affiliations: [], Keywords: ["Continuous"],
+        RawText: "Continuous: Opposing character dice can't spin up. Your opponent may return an X-Men " +
+                 "character die they control to its card to move this die from the Field Zone to its card.",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    public static readonly CardDef LabTest = new(
+        Id: "DPS005", Name: "Lab Test", Subtitle: "Basic Action", Set: "DPS", CardType: CardType.BasicAction,
+        PurchaseCost: 2, EnergySymbolIds: [],
+        Die: MigrationDice.BasicAction("DPS005Die"),
+        DieLimit: 3, Affiliations: [], Keywords: ["Continuous"],
+        RawText: "Continuous: You may send this die to your Used Pile to reroll one of the character dice " +
+                 "in your Reserve Pool.",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    public static readonly CardDef LivingTheDream = new(
+        Id: "DPS006", Name: "Living the Dream", Subtitle: "Basic Action", Set: "DPS", CardType: CardType.BasicAction,
+        PurchaseCost: 4, EnergySymbolIds: [],
+        Die: MigrationDice.BasicAction("DPS006Die"),
+        DieLimit: 3, Affiliations: [], Keywords: ["Continuous"],
+        RawText: "Continuous: If among all character cards on your team you have at least 3 Loyalty " +
+                 "Counters, your character dice get +1A and Overcrush (until the end of turn).",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    public static readonly CardDef OrganicSteelPreventDamage = new(
+        Id: "DPS010", Name: "Organic Steel", Subtitle: "Basic Action", Set: "DPS", CardType: CardType.BasicAction,
+        PurchaseCost: 3, EnergySymbolIds: [],
+        Die: MigrationDice.BasicAction("DPS010Die"),
+        DieLimit: 3, Affiliations: [], Keywords: ["Continuous"],
+        RawText: "Continuous: Prevent up to 2 damage to target character die and move this die to your " +
+                 "Used Pile. If you have an active X-Men character, also gain 1 life.",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    // "Unblocked attacking character dice" needs a live combat-state
+    // predicate ("is currently an unblocked attacker") TargetFilter has
+    // no field for. The Global's "can't block unless OPPONENT pays 1
+    // life" is an opponent-payable escape from a debuff - the opposite
+    // shape from MayPay (the ability's OWN controller paying for a
+    // benefit), which no template reaches either.
+    public static readonly CardDef TheFrontLine = new(
+        Id: "DPS015", Name: "The Front Line", Subtitle: "Basic Action", Set: "DPS", CardType: CardType.BasicAction,
+        PurchaseCost: 5, EnergySymbolIds: [],
+        Die: MigrationDice.BasicAction("DPS015Die"),
+        DieLimit: 3, Affiliations: [], Keywords: [],
+        RawText: "Unblocked attacking character dice gain +3A until end of turn. Global: Pay Fist. Target " +
+                 "opposing character die can't block this turn unless opponent pays 1 life.",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    // "When an opponent TARGETS one of your dice" needs a DieTargeted
+    // event - deliberately deferred at the Phase 0 gate review
+    // (V2_PLAN.md Appendix A: "DieTargeted (deferred, rejection-leaning)").
+    public static readonly CardDef AngelAirSupport = new(
+        Id: "DPS097", Name: "Angel", Subtitle: "Air Support", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 4, EnergySymbolIds: ["Shield"],
+        Die: MigrationDice.Character("DPS097Die", "Shield", (0, 2, 2), (1, 3, 3), (1, 3, 4)),
+        DieLimit: 3, Affiliations: ["X-Men"], Keywords: ["Founder"],
+        RawText: "Founder While Angel is active, when an opponent targets one of your character dice, gain " +
+                 "1 life.",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    // Payment-source visibility - which specific dice funded a purchase
+    // is invisible, same family as the F13 group (Bishop x2, Forge,
+    // Professor X), just a new example beyond those four.
+    public static readonly CardDef BishopTimeTraveller = new(
+        Id: "DPS099", Name: "Bishop", Subtitle: "Time Traveller", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 3, EnergySymbolIds: ["Shield"],
+        Die: MigrationDice.Character("DPS099Die", "Shield", (1, 2, 5), (1, 3, 6), (2, 5, 6)),
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: [],
+        RawText: "If you only use energy from Bishop dice to purchase a character die, Prep that die " +
+                 "instead of adding it to your Used Pile",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    // v1's own call (isImplemented: false) - "cancel a Global Ability"
+    // needs a real interrupt/cancellation primitive nothing here has.
+    public static readonly CardDef BlinkWarpPortals = new(
+        Id: "DPS100", Name: "Blink", Subtitle: "Warp Portals", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 4, EnergySymbolIds: ["Mask"],
+        Die: MigrationDice.Character("DPS100Die", "Mask", (0, 1, 3), (1, 2, 3), (1, 3, 5)),
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: [],
+        RawText: "While Blink is active, once per turn when your opponent uses a Global Ability you may " +
+                 "pay Mask and 1 life to cancel that Global Ability.",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    // Payment-source visibility again - "when you spend energy FROM an
+    // X-Men die" needs to know which specific dice funded the payment.
+    public static readonly CardDef JubileeFireworks = new(
+        Id: "DPS116", Name: "Jubilee", Subtitle: "Fireworks", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 3, EnergySymbolIds: ["Bolt"],
+        Die: MigrationDice.Character("DPS116Die", "Bolt", (0, 2, 1), (1, 3, 3), (2, 4, 3)),
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: [],
+        RawText: "While Jubilee is active, when you spend energy from an [X-Men] die to use a Global " +
+                 "Ability or field a character, deal 1 damage to target opponent or character die.",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    // The same "one-shot activation granting temporary continuous-shaped
+    // protection" gap Gladiator's own "Psi Resistance"/"The Empire Must
+    // Stand" printings already hit.
+    public static readonly CardDef GladiatorMajestorKallark = new(
+        Id: "DPS113", Name: "Gladiator", Subtitle: "Majestor Kallark", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 4, EnergySymbolIds: ["Fist"],
+        Die: MigrationDice.Character("DPS113Die", "Fist", (0, 5, 5), (1, 6, 6), (0, 7, 7)),
+        DieLimit: 4, Affiliations: ["Shi'ar"], Keywords: [],
+        RawText: "Global: Pay Fist. Your character dice can't be the target of Action Dice or Global " +
+                 "Abilities (until end of turn).",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    // Needs a specific combat-timing hook (reroll AFTER damage resolves,
+    // conditioned on being an unblocked attacker) nothing here reaches -
+    // the same class of gap as The Front Line's own unblocked-attacker
+    // predicate, from the combat-engine side instead of TargetFilter's.
+    public static readonly CardDef LilandraGrandAdmiralOfTheGuard = new(
+        Id: "DPS118", Name: "Lilandra", Subtitle: "Grand Admiral of the Guard", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 6, EnergySymbolIds: ["Shield"],
+        Die: MigrationDice.Character("DPS118Die", "Shield", (1, 3, 3), (1, 3, 5), (1, 5, 6)),
+        DieLimit: 4, Affiliations: ["Shi'ar"], Keywords: [],
+        RawText: "While Lilandra is active, if one of your character dice attacks and is unblocked, " +
+                 "reroll them after damage is dealt. If they land on a character face, put them in your " +
+                 "Prep Area instead of your Used Pile.",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    // Tokens (the Sentinel die this card would place into the Field
+    // Zone, from neither player's own bag/deck) are not modeled anywhere
+    // in v2 - no PlaceToken-equivalent template exists.
+    public static readonly CardDef MasterMoldEndlessSentinels = new(
+        Id: "DPS147", Name: "Master Mold", Subtitle: "Endless Sentinels", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 6, EnergySymbolIds: ["Shield"],
+        Die: MigrationDice.Character("DPS147Die", "Shield", (1, 5, 5), (2, 6, 6), (3, 8, 8)),
+        DieLimit: 4, Affiliations: ["Villains"], Keywords: [],
+        RawText: "When fielded, when Master Mold attacks, or when Master Mold is KO'd, place a Sentinel " +
+                 "token with 5A and 5D into the Field Zone.",
+        Abilities: [], Continuous: [], IsImplemented: false);
+
+    // "If 4 or more of your character dice were KO'd this turn" needs a
+    // KO COUNT for the turn - NoKOsThisTurn only expresses the boolean
+    // "zero", not a threshold. No Condition kind reads a number here.
+    public static readonly CardDef CorsairBackFromOuterSpace = new(
+        Id: "DPS139", Name: "Corsair", Subtitle: "Back from Outer Space", Set: "DPS", CardType: CardType.Character,
+        PurchaseCost: 5, EnergySymbolIds: ["Fist"],
+        Die: MigrationDice.Character("DPS139Die", "Fist", (0, 3, 4), (1, 3, 5), (1, 4, 5)),
+        DieLimit: 4, Affiliations: [], Keywords: ["Deadly"],
+        RawText: "If 4 or more of your character dice were KO'd this turn, you may Prep a Corsair die from " +
+                 "this card. Deadly",
         Abilities: [], Continuous: [], IsImplemented: false);
 }

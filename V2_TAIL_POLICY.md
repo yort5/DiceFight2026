@@ -651,3 +651,67 @@ five-card-deep precedent).
 | DPS093 | Supreme Intelligence (Psionic Collective) | Intimidate still has no Zone. Keywords (`Intimidate`, `Overcrush`) are still recorded - Overcrush is engine-native and works regardless | Ask |
 | DPS069 | Deathbird (Usurper) | `DieKOd`/`EventFilter.Stat` timing gap above | Ask |
 | DPS078 | Lilandra (Freedom Fighter) | `CostKind.ActionDieUse` gap above | Ask |
+
+## DPS catalog batch 9 (V2_PLAN.md Phase 8 task 4, 2026-09-01) - final batch, closes 145/145
+
+32 cards: 14 full, 5 partial, 13 tailed. No new missing predicates this
+batch - every tail entry below matches a gap already on file, except
+two genuinely new ones:
+
+- **No token mechanic.** Master Mold "Endless Sentinels" would place a
+  Sentinel die into the Field Zone from neither player's own bag/deck -
+  no `PlaceToken`-equivalent template exists anywhere in the vocabulary.
+- **No KO-count-this-turn number.** Corsair "Back from Outer Space"
+  needs "if 4 or more of your character dice were KO'd this turn" -
+  `Condition.NoKOsThisTurn` only expresses the boolean "zero," nothing
+  reads a running count.
+
+Two real card-definition bugs were also found and fixed while writing
+this batch's tests (not vocabulary gaps - existing templates misused):
+Mister Sinister "Dark Experimentation" targeted Used Pile Sidekicks
+with `TargetKind.CharacterDie`, which a dormant die never matches
+(fixed to `AnyDie`, per the Professor X "Uncanny Leadership"
+precedent); Mystique "Freedom Force"'s `DamageModifier` targeted
+`Self: true` only, when the printed text (and v1's own field name,
+`grantsOwnDamageReductionFromOpponentAbilities`) protects her whole
+side (fixed to `TargetFilter(Kind: CharacterDie, Ownership: Own)`).
+
+### FULL
+
+Deathbird "War of Kings", Ronan the Accuser "No Exceptions", Sabretooth
+"You Ready to Party?", Moira "Strength of Foresight", Rogue "Unity
+Squad", Mystique "Freedom Force" (bug fixed above), Mister Sinister
+"Dark Experimentation" (bug fixed above - also the batch's first card
+to need two independent, non-Bound Sidekick targets from one Global,
+which v2's live-resolving `TargetFilter`s handle for free, unlike v1's
+own same-instance-caching workaround), Wolverine "Trainer" (second user
+of Toad "Secondary Mutation"'s Spin-based Teamwatch precedent, this
+time watching for ANOTHER die's spin-up), Mystique "She Walks Among
+Us", Magneto "Master of Magnetism", Kitty Pryde "Experienced Leader",
+Toad "Journey Into Misery", Vulcan "Aggression", Beast "Xavier's
+Dream".
+
+### PARTIAL / TAILED table
+
+| CardId | Name | What's missing | Policy |
+|---|---|---|---|
+| DPS106 | D'Ken (M'Kraan Crystal) | WhenAttacks half fits (same shape as D'Ken "Emperor"). "You take no more than 7 damage this turn" is a damage-to-a-PLAYER ceiling - no existing mechanism is player-scoped rather than die-scoped; v1 never built it either | Ask |
+| DPS107 | Dark Phoenix (Destructive Force) | Global fits (same shape as Dark Phoenix "Malevolent"). Retaliation clause needs damage-SOURCE visibility on `DamageDealtPayload` - the long-standing pre-existing gap already on file for this exact card | Ask |
+| DPS148 | Mister Sinister (Biologist) | Overcrush-grant Global fits. "Prevent non-combat damage to your OTHER character dice" is the TargetFilter self-exclusion gap (batch 6) - he shares a zone with the dice he'd protect | Ask |
+| DPS145 | Lilandra (Majestrix) | Energy life-surcharge half fits (`CostModifier`'s `Currency: Life`). Action-Die-use surcharge half is batch 8's `CostKind.ActionDieUse` gap - registered, read by nothing | Ask |
+| DPS152 | Wolverine (Tough for the Kids) | Global (Prep a die, once per turn) fits. Regenerate isn't built; the reroll/spin-protection axis is the same gap as Bishop "Tortured Timeline" - protects effect TYPES, not targeting-by-source | Ask |
+| DPS002 | Dampening Collar | Continuous Basic Action mechanic (rule 1.2.3/2.6.4.2), still not modeled. Also independently needs an opponent-payable removal clause | Ask |
+| DPS005 | Lab Test | Continuous Basic Action mechanic, still not modeled | Ask |
+| DPS006 | Living the Dream | Continuous Basic Action mechanic, AND independently the team-roster gap (batch 7) for its team-wide Loyalty-Counter aggregation | Ask |
+| DPS010 | Organic Steel | Continuous Basic Action mechanic, still not modeled | Ask |
+| DPS015 | The Front Line | "Unblocked attacking character dice" needs a live combat-state predicate TargetFilter has no field for. The Global's opponent-payable escape from a debuff is the opposite shape from `MayPay` (controller pays, not opponent) - no template reaches it | Ask |
+| DPS097 | Angel (Air Support) | "When an opponent targets one of your dice" needs `DieTargeted`, deliberately deferred at the Phase 0 gate review (`V2_PLAN.md` Appendix A) | Ask |
+| DPS099 | Bishop (Time Traveller) | Payment-source visibility - a new example in the F13 group (2 Bishop, Forge, Professor X) | Ask |
+| DPS100 | Blink (Warp Portals) | v1's own call (`isImplemented: false`) - "cancel a Global Ability" needs a real interrupt/cancellation primitive nothing here has | Ask |
+| DPS116 | Jubilee (Fireworks) | Payment-source visibility again - "when you spend energy from an X-Men die" | Ask |
+| DPS113 | Gladiator (Majestor Kallark) | Same one-shot-activation-granting-temporary-continuous-protection gap as Gladiator's "Psi Resistance"/"The Empire Must Stand" printings | Ask |
+| DPS118 | Lilandra (Grand Admiral of the Guard) | Needs a reroll-after-damage-resolves hook conditioned on being an unblocked attacker - same class of gap as The Front Line's unblocked-attacker predicate, from the combat-engine side | Ask |
+| DPS147 | Master Mold (Endless Sentinels) | Token gap above - no `PlaceToken`-equivalent template | Ask |
+| DPS139 | Corsair (Back from Outer Space) | KO-count-this-turn gap above - `NoKOsThisTurn` is boolean only | Ask |
+
+**Phase 8 Task 4 is now COMPLETE: 145/145 DPS cards migrated.**

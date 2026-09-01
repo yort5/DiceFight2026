@@ -1731,4 +1731,371 @@ public class DpsCardsTests
 
         Assert.Equal(19, state.PlayerOne.Life);
     }
+
+    // --- Batch 9 (2026-09-01) - the last DPS batch ---
+
+    [Fact]
+    public void DeathbirdWarOfKings_Prevents_A_Target_From_Blocking_When_Fielded()
+    {
+        var state = NewGame();
+        var deathbird = Ready(state, DpsCards.DeathbirdWarOfKings, "p1", 1);
+        var target = Active(state, DpsCards.PsylockeTelepath, "p2", id: "target");
+        var queue = new AbilityQueue();
+
+        TurnEngine.Field(state, queue, deathbird.Id, []); // level 1 fielding cost 0
+        Drain(state, queue);
+        Answer(state, "target");
+
+        Assert.Contains(CombatFlagKind.CantBlock, target.CombatFlags);
+    }
+
+    [Fact]
+    public void RonanTheAccuserNoExceptions_Costs_Both_Players_3_Life_When_Fielded()
+    {
+        var state = NewGame();
+        var ronan = Ready(state, DpsCards.RonanTheAccuserNoExceptions, "p1", 1);
+        Sidekick(state, "p1", Zone.ReservePool, 1, "e1");
+        var queue = new AbilityQueue();
+
+        TurnEngine.Field(state, queue, ronan.Id, Energy(state, "p1", 1));
+        Drain(state, queue);
+
+        Assert.Equal(17, state.PlayerOne.Life);
+        Assert.Equal(17, state.PlayerTwo.Life);
+    }
+
+    [Fact]
+    public void SabretoothYouReadyToParty_Buffs_Brotherhood_On_Attack_And_Watches_His_Own_Team_Field()
+    {
+        var state = NewGame();
+        var sabretooth = Active(state, DpsCards.SabretoothYouReadyToParty, "p1");
+        var ally = Active(state, DpsCards.MagnetoFounderOfTheBrotherhood, "p1", id: "ally");
+        var allyBaseline = QueryEngine.GetAttack(state, ally);
+        var target = Active(state, DpsCards.PsylockeTelepath, "p2", id: "target");
+        var queue = new AbilityQueue();
+
+        EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieAttacks, sabretooth, "p1", state.CurrentStepId));
+        Drain(state, queue);
+        Assert.Equal(allyBaseline + 2, QueryEngine.GetAttack(state, ally));
+
+        var newAlly = new Model.DieInstance { Id = "newAlly", CardId = DpsCards.MagnetoFounderOfTheBrotherhood.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.ReservePool, CurrentFaceIndex = FirstLevelFace };
+        state.Dice.Add(newAlly);
+        TurnEngine.Field(state, queue, newAlly.Id, Energy(state, "p1", 1));
+        Drain(state, queue);
+        Answer(state, "target");
+
+        Assert.Contains(CombatFlagKind.CantBlock, target.CombatFlags);
+    }
+
+    [Fact]
+    public void MoiraStrengthOfForesight_Gains_A_Counter_When_A_Costly_XMen_Die_Is_Fielded()
+    {
+        var state = NewGame();
+        Active(state, DpsCards.MoiraStrengthOfForesight, "p1");
+        var queue = new AbilityQueue();
+
+        // CyclopsFirstClass: X-Men, PurchaseCost 5 (>= 3) - PsylockeTelepath
+        // (cost 2) wouldn't qualify regardless of which face it rolled to,
+        // since purchase cost is a fixed CARD property, not per-level.
+        var ally = new Model.DieInstance { Id = "ally", CardId = DpsCards.CyclopsFirstClass.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.ReservePool, CurrentFaceIndex = FirstLevelFace };
+        state.Dice.Add(ally);
+        TurnEngine.Field(state, queue, ally.Id, Energy(state, "p1", 1));
+        Drain(state, queue);
+
+        Assert.Equal(1, state.Counters[("p1", DpsCards.MoiraStrengthOfForesight.Id, "Loyalty")]);
+    }
+
+    [Fact]
+    public void MoiraStrengthOfForesight_May_Send_An_Opposing_Field_Zone_Action_Die_To_Their_Used_Pile()
+    {
+        var state = NewGame();
+        var moira = Ready(state, DpsCards.MoiraStrengthOfForesight, "p1", 1);
+        var opposingAction = new Model.DieInstance { Id = "action", CardId = DpsCards.PowerBolt.Id, OwnerId = "p2", ControllerId = "p2", Zone = Zone.FieldZone, CurrentFaceIndex = 0 };
+        state.Dice.Add(opposingAction);
+        var queue = new AbilityQueue();
+
+        TurnEngine.Field(state, queue, moira.Id, Energy(state, "p1", 1));
+        Drain(state, queue);
+        Answer(state, moira.Id); // MayPay accept
+        Answer(state, "action");
+
+        Assert.Equal(Zone.UsedPile, opposingAction.Zone);
+    }
+
+    [Fact]
+    public void RogueUnitySquad_Reduces_XMen_Fielding_Cost_And_Watches_Her_Own_Team_Field()
+    {
+        var state = NewGame();
+        var rogue = Active(state, DpsCards.RogueUnitySquad, "p1");
+        var xmenDie = Ready(state, DpsCards.PsylockeTelepath, "p1", 2);
+
+        Assert.Equal(0, QueryEngine.GetFieldingCost(state, xmenDie)); // 1 - 1
+
+        var rogueBaseline = QueryEngine.GetAttack(state, rogue);
+        var newAlly = new Model.DieInstance { Id = "newAlly", CardId = DpsCards.PsylockeTelepath.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.ReservePool, CurrentFaceIndex = FirstLevelFace };
+        state.Dice.Add(newAlly);
+        var queue = new AbilityQueue();
+        TurnEngine.Field(state, queue, newAlly.Id, []);
+        Drain(state, queue);
+
+        Assert.Equal(rogueBaseline + 2, QueryEngine.GetAttack(state, rogue));
+    }
+
+    [Fact]
+    public void MystiqueFreedomForce_Reduces_Ability_Damage_By_1_And_May_Return_A_Costly_Die_On_Her_Own_KO()
+    {
+        var state = NewGame();
+        Active(state, DpsCards.MystiqueFreedomForce, "p1", id: "mystique");
+        // Protects her whole side, not just herself (v1's own field name,
+        // "grantsOwnDamageReductionFromOpponentAbilities") - a beefier
+        // ally, not Mystique's own 1D-at-every-level self, so 2 damage
+        // (3 - 1) doesn't KO the die the test is checking.
+        var ally = Active(state, DpsCards.MagnetoFounderOfTheBrotherhood, "p1", level: 3, id: "ally"); // 8D
+        var queue = new AbilityQueue();
+
+        EffectInterpreter.ApplyDamage(state, queue, DamageSource.Ability, ally.Id, 3);
+        Assert.Equal(2, ally.Damage); // 3 - 1
+
+        var mystique = state.Dice.Single(d => d.Id == "mystique");
+        var dormant = new Model.DieInstance { Id = "dormant", CardId = DpsCards.MagnetoFounderOfTheBrotherhood.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.UsedPile };
+        state.Dice.Add(dormant); // PurchaseCost 6 >= 4
+        EffectInterpreter.KoDie(state, queue, mystique, triggersKOAbilities: true);
+        Drain(state, queue);
+        Answer(state, "dormant");
+
+        Assert.Equal(Zone.PrepArea, dormant.Zone);
+    }
+
+    [Fact]
+    public void MisterSinisterDarkExperimentation_May_Pay_Life_For_Plus_3_Attack_And_Globally_Cycles_Two_Sidekicks()
+    {
+        var state = NewGame();
+        var sinister = Active(state, DpsCards.MisterSinisterDarkExperimentation, "p1");
+        var baseline = QueryEngine.GetAttack(state, sinister);
+        var queue = new AbilityQueue();
+
+        EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieAttacks, sinister, "p1", state.CurrentStepId));
+        Drain(state, queue);
+        Answer(state, sinister.Id); // MayPay accept
+        Assert.Equal(baseline + 3, QueryEngine.GetAttack(state, sinister));
+        Assert.Equal(18, state.PlayerOne.Life);
+
+        var sk1 = Sidekick(state, "p1", Zone.UsedPile, null, "sk1");
+        var sk2 = Sidekick(state, "p1", Zone.UsedPile, null, "sk2");
+        Sidekick(state, "p1", Zone.ReservePool, 1, "energy1");
+        Sidekick(state, "p1", Zone.ReservePool, 1, "energy2");
+        TurnEngine.UseGlobal(state, queue, DpsCards.MisterSinisterDarkExperimentation.Id, "p1", abilityIndex: 1, ["energy1", "energy2"]);
+        Drain(state, queue);
+        // Both clauses' candidate pools resolve against the SAME per-
+        // ability snapshot (rule 3.2.5) - each independently still offers
+        // [sk1, sk2], regardless of what the earlier clause already did -
+        // so picking deliberately distinct dice is what proves "two
+        // independent choices," not just grabbing candidate[0] twice.
+        Answer(state, "sk1");
+        Answer(state, "sk2");
+
+        Assert.Equal(Zone.FieldZone, sk1.Zone);
+        Assert.Equal(Zone.PrepArea, sk2.Zone);
+    }
+
+    [Fact]
+    public void WolverineTrainer_Awakens_To_Grant_Deadly_And_Spins_Up_In_Sympathy_With_Another_Die()
+    {
+        var state = NewGame();
+        var wolverine = Active(state, DpsCards.WolverineTrainer, "p1", level: 1);
+        var sidekick = Sidekick(state, "p1", Zone.FieldZone, 0, "sk");
+        var queue = new AbilityQueue();
+        var faces = state.GetDieDefinition(wolverine).Faces;
+
+        EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieFaceChanged, wolverine, "p1", state.CurrentStepId,
+            new DieFaceChangedPayload(faces[FirstLevelFace], faces[FirstLevelFace + 1], FaceChangeCause.Spin)));
+        Drain(state, queue);
+        Answer(state, "sk");
+        Assert.Contains("Deadly", QueryEngine.GetKeywords(state, sidekick));
+
+        var ally = Active(state, DpsCards.PsylockeTelepath, "p1", level: 1, id: "ally");
+        EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieFaceChanged, ally, "p1", state.CurrentStepId,
+            new DieFaceChangedPayload(state.GetDieDefinition(ally).Faces[FirstLevelFace], state.GetDieDefinition(ally).Faces[FirstLevelFace + 1], FaceChangeCause.Spin)));
+        Drain(state, queue);
+
+        Assert.Equal(2, state.GetCurrentFace(wolverine)!.Character!.Level); // spun up in sympathy
+    }
+
+    [Fact]
+    public void MystiqueSheWalksAmongUs_Teamwatches_To_Spin_An_Opposing_Die_To_Double_Energy()
+    {
+        var state = NewGame();
+        Active(state, DpsCards.MystiqueSheWalksAmongUs, "p1");
+        var target = Active(state, DpsCards.PsylockeTelepath, "p2", id: "target");
+        var queue = new AbilityQueue();
+        var newAlly = new Model.DieInstance { Id = "newAlly", CardId = DpsCards.MagnetoFounderOfTheBrotherhood.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.ReservePool, CurrentFaceIndex = FirstLevelFace };
+        state.Dice.Add(newAlly);
+
+        TurnEngine.Field(state, queue, newAlly.Id, Energy(state, "p1", 1));
+        Drain(state, queue);
+        Answer(state, "target");
+
+        Assert.Equal(FaceKind.EnergyFace, state.GetCurrentFace(target)!.Kind);
+        Assert.Equal(2, state.GetCurrentFace(target)!.SymbolCount);
+    }
+
+    [Fact]
+    public void MagnetoMasterOfMagnetism_Global_May_Draw_When_Prep_Area_Is_Empty()
+    {
+        var state = NewGame();
+        var magneto = Active(state, DpsCards.MagnetoMasterOfMagnetism, "p1");
+        Sidekick(state, "p1", Zone.ReservePool, 1, "mask-energy");
+        var queue = new AbilityQueue();
+        var before = state.DiceIn("p1", Zone.PrepArea).Count();
+
+        TurnEngine.UseGlobal(state, queue, DpsCards.MagnetoMasterOfMagnetism.Id, "p1", abilityIndex: 1, ["mask-energy"]);
+        Drain(state, queue);
+        Answer(state, magneto.Id); // MayPay accept
+
+        Assert.Equal(before + 1, state.DiceIn("p1", Zone.PrepArea).Count());
+    }
+
+    [Fact]
+    public void KittyPrydeExperiencedLeader_Buffs_Every_Own_XMen_Die_Including_Herself()
+    {
+        var state = NewGame();
+        // Baselines captured BEFORE Kitty joins - she buffs herself too
+        // (no "other" in the text), so a baseline read after she's placed
+        // would already include her own bonus.
+        var kittyBaseline = QueryEngine.GetAttack(state, new Model.DieInstance { Id = "probe", CardId = DpsCards.KittyPrydeExperiencedLeader.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.FieldZone, CurrentFaceIndex = FirstLevelFace });
+        var notXMen = Active(state, DpsCards.MagnetoFounderOfTheBrotherhood, "p1", id: "notXMen");
+        var notXMenBaseline = QueryEngine.GetAttack(state, notXMen);
+
+        var kitty = Active(state, DpsCards.KittyPrydeExperiencedLeader, "p1");
+
+        Assert.Equal(kittyBaseline + 1, QueryEngine.GetAttack(state, kitty));
+        Assert.Equal(notXMenBaseline, QueryEngine.GetAttack(state, notXMen));
+    }
+
+    [Fact]
+    public void ToadJourneyIntoMisery_Teamwatches_To_Move_An_Opposing_Prepped_Die_To_Their_Bag()
+    {
+        var state = NewGame();
+        Active(state, DpsCards.ToadJourneyIntoMisery, "p1");
+        var target = new Model.DieInstance { Id = "target", CardId = DpsCards.PsylockeTelepath.Id, OwnerId = "p2", ControllerId = "p2", Zone = Zone.PrepArea, CurrentFaceIndex = FirstLevelFace };
+        state.Dice.Add(target);
+        var queue = new AbilityQueue();
+        var newAlly = new Model.DieInstance { Id = "newAlly", CardId = DpsCards.MagnetoFounderOfTheBrotherhood.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.ReservePool, CurrentFaceIndex = FirstLevelFace };
+        state.Dice.Add(newAlly);
+
+        TurnEngine.Field(state, queue, newAlly.Id, Energy(state, "p1", 1));
+        Drain(state, queue);
+        Answer(state, "target");
+
+        Assert.Equal(Zone.Bag, target.Zone);
+    }
+
+    [Fact]
+    public void VulcanAggression_Debuffs_Opposing_Non_Fist_Dice_And_Globally_Forces_An_Attack()
+    {
+        var state = NewGame();
+        var nonFist = Active(state, DpsCards.PsylockeTelepath, "p2", id: "nonFist"); // Mask
+        var fist = Active(state, DpsCards.CorsairRecruitingACrew, "p2", id: "fist"); // Fist
+        var nonFistBaseline = QueryEngine.GetDefense(state, nonFist);
+        var fistBaseline = QueryEngine.GetDefense(state, fist);
+
+        Active(state, DpsCards.VulcanAggression, "p1"); // baselines captured BEFORE Vulcan joins
+
+        Assert.Equal(nonFistBaseline - 2, QueryEngine.GetDefense(state, nonFist));
+        Assert.Equal(fistBaseline, QueryEngine.GetDefense(state, fist));
+
+        var queue = new AbilityQueue();
+        Sidekick(state, "p1", Zone.ReservePool, 1, "fist-energy");
+        TurnEngine.UseGlobal(state, queue, DpsCards.VulcanAggression.Id, "p1", abilityIndex: 0, ["fist-energy"]);
+        Drain(state, queue);
+        Answer(state, "nonFist");
+
+        Assert.Contains(CombatFlagKind.MustAttack, nonFist.CombatFlags);
+    }
+
+    [Fact]
+    public void BeastXaviersDream_Gets_Plus_1_Attack_Only_While_A_Sidekick_Is_Active()
+    {
+        var state = NewGame();
+        var beast = Active(state, DpsCards.BeastXaviersDream, "p1");
+        var baseline = QueryEngine.GetAttack(state, beast);
+
+        Sidekick(state, "p1", Zone.FieldZone, 0, "sk");
+
+        Assert.Equal(baseline + 1, QueryEngine.GetAttack(state, beast));
+    }
+
+    [Fact]
+    public void DKenMKraanCrystal_Preps_A_Die_From_The_Used_Pile_When_He_Attacks()
+    {
+        var state = NewGame();
+        var dken = Active(state, DpsCards.DKenMKraanCrystal, "p1");
+        var dormant = new Model.DieInstance { Id = "dormant", CardId = DpsCards.PsylockeTelepath.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.UsedPile };
+        state.Dice.Add(dormant);
+        var queue = new AbilityQueue();
+
+        EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieAttacks, dken, "p1", state.CurrentStepId));
+        Drain(state, queue);
+        Answer(state, "dormant");
+
+        Assert.Equal(Zone.PrepArea, dormant.Zone);
+    }
+
+    [Fact]
+    public void DarkPhoenixDestructiveForce_Global_KOs_Her_Own_Die_And_Discounts_The_Next_Purchase()
+    {
+        var state = NewGame();
+        Active(state, DpsCards.DarkPhoenixDestructiveForce, "p1", id: "dp");
+        var ownDie = Active(state, DpsCards.RonanTheAccuserTreason, "p1", id: "own");
+        Sidekick(state, "p1", Zone.ReservePool, 1, "bolt-energy");
+        var toBuy = new Model.DieInstance { Id = "toBuy", CardId = DpsCards.PowerBolt.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.Unpurchased };
+        state.Dice.Add(toBuy);
+        var queue = new AbilityQueue();
+
+        TurnEngine.UseGlobal(state, queue, DpsCards.DarkPhoenixDestructiveForce.Id, "p1", abilityIndex: 0, ["bolt-energy"]);
+        Drain(state, queue);
+        Answer(state, "own");
+
+        TurnEngine.Purchase(state, queue, toBuy.Id, Energy(state, "p1", 1)); // 3 - 2 = 1
+        Assert.Equal(Zone.UsedPile, toBuy.Zone);
+    }
+
+    [Fact]
+    public void MisterSinisterBiologist_Global_Grants_Overcrush()
+    {
+        var state = NewGame();
+        var target = Active(state, DpsCards.RonanTheAccuserTreason, "p1", id: "target");
+        for (var i = 0; i < 3; i++) Sidekick(state, "p1", Zone.ReservePool, 1, $"e{i}");
+        var queue = new AbilityQueue();
+
+        TurnEngine.UseGlobal(state, queue, DpsCards.MisterSinisterBiologist.Id, "p1", abilityIndex: 0, ["e0", "e1", "e2"]);
+        Drain(state, queue);
+        Answer(state, "target");
+
+        Assert.Contains("Overcrush", QueryEngine.GetKeywords(state, target));
+    }
+
+    [Fact]
+    public void LilandraMajestrix_Surcharges_Opponent_Global_Use_With_Life()
+    {
+        var state = NewGame();
+        Active(state, DpsCards.LilandraMajestrix, "p1");
+        var ability = DpsCards.MagnetoFounderOfTheBrotherhood.Abilities.Single(a => a.Trigger == TriggerKind.Global);
+
+        Assert.True(QueryEngine.GetGlobalEnergyCost(state, DpsCards.MagnetoFounderOfTheBrotherhood, ability, "p2") > 0);
+    }
+
+    [Fact]
+    public void WolverineToughForTheKids_Global_Preps_A_Die_Once_Per_Turn()
+    {
+        var state = NewGame();
+        Sidekick(state, "p1", Zone.ReservePool, 1, "fist-energy");
+        var queue = new AbilityQueue();
+        var before = state.DiceIn("p1", Zone.PrepArea).Count();
+
+        TurnEngine.UseGlobal(state, queue, DpsCards.WolverineToughForTheKids.Id, "p1", abilityIndex: 0, ["fist-energy"]);
+        Drain(state, queue);
+
+        Assert.Equal(before + 1, state.DiceIn("p1", Zone.PrepArea).Count());
+    }
 }
