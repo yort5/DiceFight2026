@@ -134,4 +134,7 @@ early instead of only stockpiling.
 
 See `PARKED_IDEAS.md` for a separate list of unvetted brainstorm items —
 mechanics ideas offered in passing, not yet weighed against any of the
-above.
+above. See `CARD_INSPIRATION.md` for a sourcing pass through the DPS
+catalog: ~50 buildable cards sorted into the four energy types, each
+reskinned to an animal with a symbol idea, plus an Affiliation naming/tag
+menu.
