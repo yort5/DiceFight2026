@@ -192,14 +192,23 @@ all picked distinct from each other and from the 45 `CARD_INSPIRATION.md`
 picks, so nothing in the roster reads as a placeholder for something
 already designed.
 
-**Still not verified in a live browser** — no Chrome tooling connected
-either session, so both passes were careful manual code traces, not real
-playthroughs. The first pass's trace caught two real bugs (a payment-
-selection priority bug, a stale block-selection reference across a second
-combat); this pass added a third fix (a die with zero energy on its face
-was selectable as "payment," silently wasting it for nothing). Worth an
-actual playthrough before trusting any of it fully — please do the honors
-whenever you get to it.
+**Now actually verified**, not just traced: no `claude-in-chrome` in this
+environment, but headless Chromium via Playwright works once its shared
+libraries are supplied manually (`~/.cache/ms-playwright` and the .NET SDK
+persist across sessions; the extracted `.deb` libraries don't — redo the
+`apt-get download` + `dpkg-deb -x` step each session, recipe kept in the
+`dicefight2026-dev-environment` memory). Ran a full click-through against
+the actual deployed file (`web/public/alpha/index.html`, not just the
+artifact copy) with screenshots at every step: champion picker, free
+Tardigrade fielding (instant, no prompt), paid Character fielding (correct
+cost, correct dice consumed), a purchase attempt with insufficient energy
+(correctly detected and backed out instead of getting stuck), combat
+resolution (correct damage math), and turn handoff (board state persists
+correctly). Zero console errors. Earlier passes were manual code traces
+only and caught two real bugs that way (payment-selection priority, a
+stale block-selection reference) plus a third fix this pass (a
+zero-energy die was selectable as "payment," silently wasting it) — this
+verification ran *after* all three fixes, on the corrected code.
 
 See `PARKED_IDEAS.md` for a separate list of unvetted brainstorm items —
 mechanics ideas offered in passing, not yet weighed against any of the
