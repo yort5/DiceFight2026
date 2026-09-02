@@ -132,6 +132,44 @@ early instead of only stockpiling.
   (a "lord" style buff to its own Tardigrades) vs. staying fully
   self-contained — raised, not resolved.
 
+## Playable prototype (2026-09-02)
+
+**https://claude.ai/code/artifact/bb400774-5a15-4dcd-a586-c4ba64cf04bf**
+("Instinct Clash") — a self-contained, pass-and-play two-player artifact
+implementing the core loop end to end: draw/roll/reroll, field vs. purchase
+(spending energy dice), attack/block combat, KO, deck-out and life-total
+loss. Deliberately **zero card abilities** — every creature is pure stats —
+so playtesting stays on the system (does each energy identity feel
+distinct, does the uneven Tardigrade die create real decisions, does
+fielding-vs-purchasing feel like a meaningful trade-off) rather than any
+one card's power level, matching the explicit "prototype for mechanics/
+theme reaction, not balance" brief.
+
+Built independent of the real `DiceFight.V2` engine (plain client-side JS,
+not a `GameConfig`) — the fastest path to something a family member can
+open on a phone with zero setup, at the cost of not being the "real"
+implementation. If v3 solidifies, porting this into an actual `GameConfig`
+on the v2 spine is the natural next step; this stays the throwaway paper-
+prototype layer until then.
+
+**Numbers invented to make it playable, none locked:** draw 4/turn, 20
+life, Tardigrade fielding cost 1, Champion fielding cost 2 (Wing 1, as its
+only differentiator without abilities), Champion purchase cost 4 (matching
+type or Wild only), Champion die-limit 4 (1 starting + 3 purchasable).
+Four flagship Champions were picked — Lion (Claw), Armadillo (Shell),
+Golden Eagle (Wing), Great Horned Owl (Eye) — deliberately distinct from
+all 45 `CARD_INSPIRATION.md` animals so nothing in the prototype reads as
+a placeholder for an already-designed card.
+
+**Not verified in a live browser** — this sandbox has no connected Chrome
+tooling this session, so testing was a careful manual code trace rather
+than an actual playthrough (caught and fixed two real bugs that way: a
+payment-selection priority bug that would have made it near-impossible to
+pay a fielding/purchase cost once more than one reserve die showed a
+creature face, and a stale block-selection reference across a second
+combat in the same match). Worth an actual playthrough before trusting it
+fully.
+
 See `PARKED_IDEAS.md` for a separate list of unvetted brainstorm items —
 mechanics ideas offered in passing, not yet weighed against any of the
 above. See `CARD_INSPIRATION.md` for a sourcing pass through the DPS
