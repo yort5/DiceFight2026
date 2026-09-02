@@ -276,3 +276,56 @@ futures agree on.
 - Decide the tail policy explicitly: approximate, redesign, or drop —
   per card, recorded in the catalog the same way `IsImplemented`
   already is.
+
+---
+
+## Addendum — after v2 shipped (2026-09-02)
+
+Direction B got built for real: `DiceFight.V2`, Phase 8 now fully
+complete (all 145 DPS cards + the curated teams migrated, a post-hoc
+vocabulary audit, catalog-wide invariant tests — see `V2_PLAN.md`'s
+status header and `DESIGN_LOG.md` for the blow-by-blow). This section
+records what the prediction above got right, what it missed, and what
+that means for picking this back up as a v3/Direction-C conversation.
+
+**Confirmed.** The ~85% reuse-rate bet held across the full set, not
+just the sample. The trigger surface stayed at 11 kinds for the whole
+run — every keyword-shaped trigger (Energize, Awaken, Teamwatch) came
+out of composing a fixed trigger with `EventFilter` predicates, never
+a new `TriggerType`. The sign-off discipline held too: the frozen
+vocabulary only grew twice after the Part 11 freeze, each addition
+small and tied to one real card, which is exactly what kept it from
+re-growing v1's 49-node, 39-flag sprawl.
+
+**Missed.** The review's risk model was "is the vocabulary expressive
+enough" (Part 0's reuse audit answers that). It didn't anticipate a
+second, independent bug class: a shape can be signed off, present in
+the type system, even *named* in a comment as the canonical example
+for a specific card — and still have zero consumer anywhere in the
+engine. Found three separate times late in the migration
+(`CombatRuleKind.CantFieldMore`/`CantSpinUp`, `EventFilter.Stat` on
+`DieKOd`, `CostKind.ActionDieUse`), each only by building the one real
+card that exercised it, or by a deliberate end-of-phase audit sweep
+(`V2_TAIL_POLICY.md`'s "Post-Task-4 audit" section). Type safety and
+sign-off don't guarantee a live path from card data to engine effect —
+worth designing against directly in a v3 core (e.g. no vocabulary
+addition merges without its consumer *and* one real firing test in the
+same change), not re-discovered by a manual sweep at the end again.
+
+**Refines the "first concrete steps" above.** A fresh 20-card
+re-expression exercise doesn't need to start from zero anymore — the
+real fit-rate and tail data already exist in `V2_TAIL_POLICY.md`. Most
+of that tail is one-off physical-card oddities Direction C sidesteps
+by construction (you're not obligated to invent a card that needs an
+interrupt primitive just because Blink "Warp Portals" did). But a
+handful of gaps recurred independently across 4-6 different cards each
+— team-roster as queryable state, "who dealt this damage/KO/payment"
+attribution, a token mechanic, one-shot-granting-temporary-continuous-
+protection — which is a good signal they're generically useful
+primitives, not Dice-Masters-specific baggage. Since Direction C
+mostly subsumes B (same engine spine, new data on top per Part 3
+above), validating a v3 core should mean picking a handful of tailed
+cards that each exercise ONE of those recurring patterns and sizing
+what it costs to add that primitive to the existing query/event spine
+— not clearing the tail wholesale, and not a from-scratch 20-card
+sample either.
