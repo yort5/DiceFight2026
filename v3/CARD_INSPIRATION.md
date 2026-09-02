@@ -33,7 +33,10 @@ section since they don't get an animal.
 
 Stats are written `ATK/DEF` per level, e.g. `1/4 → 1/5 → 1/6`.
 
-**On avatars:** the first pass at this list made every symbol a variant of
+**On avatars:** visual sketches of all 45 below are at
+https://claude.ai/code/artifact/a359a5f0-ceef-448f-9e6a-f364f154e1ec —
+drawn as neutral parchment "seals" so the icon itself never reads as an
+energy pip. The first pass at this list made every symbol a variant of
 its own energy pip (every Eye creature got some kind of eye, every Claw
 creature got some kind of claw-mark) — exactly the collapse we were trying
 to avoid by keeping Energy and Affiliation orthogonal. Corrected below:
