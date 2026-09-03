@@ -1,0 +1,288 @@
+/* Instinct Clash - layered on the site's existing --text/--bg/--border/
+   --sans tokens (index.css) for consistency; adds only what's new here:
+   the four energy accent hues (Claw/Shell/Wing/Eye) with light+dark
+   variants, since the site's own --accent is a single purple. */
+.instinct {
+  --claw: #c1502c;
+  --shell: #3e6b58;
+  --wing: #3e6e96;
+  --eye: #6b4c82;
+  --wild: #8a8478;
+  --panel-bg: var(--code-bg);
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px 16px 60px;
+}
+@media (prefers-color-scheme: dark) {
+  .instinct {
+    --claw: #dc6d42;
+    --shell: #57917a;
+    --wing: #6699c4;
+    --eye: #9575ae;
+    --wild: #a79c89;
+  }
+}
+
+.instinct h1 {
+  font: 600 26px/1.15 var(--heading);
+  color: var(--text-h);
+  margin: 0 0 4px;
+}
+.instinct .dek {
+  color: var(--text);
+  opacity: 0.85;
+  font-size: 14px;
+  max-width: 60ch;
+  margin: 0 0 20px;
+}
+
+.instinct .champ-pick {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.instinct .champ-opt {
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 10px;
+  text-align: center;
+  cursor: pointer;
+  background: var(--panel-bg);
+  color: inherit;
+  font: inherit;
+}
+.instinct .champ-opt.selected {
+  border-color: var(--sel, var(--text-h));
+}
+.instinct .champ-opt svg {
+  width: 30px;
+  height: 30px;
+}
+.instinct .champ-opt .cname {
+  font-weight: 600;
+  font-size: 13px;
+  margin-top: 6px;
+}
+.instinct .champ-opt .cpassive {
+  font-size: 10.5px;
+  opacity: 0.75;
+}
+
+.instinct button.btn {
+  font: 600 13.5px var(--sans);
+  background: var(--text-h);
+  color: var(--bg);
+  border: none;
+  border-radius: 9px;
+  padding: 10px 18px;
+  cursor: pointer;
+}
+.instinct button.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.instinct button.btn.ghost {
+  background: transparent;
+  color: var(--text);
+  border: 1.5px solid var(--border);
+}
+
+.instinct .topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.instinct .lifebox {
+  background: var(--panel-bg);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 7px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.instinct .lifebox svg {
+  width: 20px;
+  height: 20px;
+}
+.instinct .lifebox .lnum {
+  font: 700 17px/1 var(--heading);
+  font-variant-numeric: tabular-nums;
+}
+.instinct .phasepill {
+  font: 600 11.5px var(--sans);
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.instinct .champbanner {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 7px 12px;
+  margin-bottom: 12px;
+}
+.instinct .champbanner svg {
+  width: 22px;
+  height: 22px;
+  flex: none;
+}
+.instinct .champbanner .cbname {
+  font: 600 13px var(--heading);
+}
+.instinct .champbanner .cbpassive {
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+.instinct .zone {
+  margin-bottom: 16px;
+}
+.instinct .zone h4 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.7;
+  margin: 0 0 6px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.instinct .zone h4 .count {
+  font: 500 10.5px var(--mono);
+  opacity: 0.7;
+}
+.instinct .dierow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  min-height: 6px;
+}
+
+.instinct .dietile {
+  width: 72px;
+  border: 1.5px solid var(--border);
+  border-radius: 9px;
+  background: var(--panel-bg);
+  padding: 5px;
+  text-align: center;
+  color: inherit;
+  font: inherit;
+  cursor: default;
+}
+.instinct .dietile.clickable {
+  cursor: pointer;
+}
+.instinct .dietile.clickable:hover {
+  border-color: var(--text-h);
+}
+.instinct .dietile.picked {
+  border-color: var(--text-h);
+  background: var(--border);
+}
+.instinct .dietile .dav {
+  width: 22px;
+  height: 22px;
+  margin: 0 auto 2px;
+}
+.instinct .dietile .stat {
+  font: 700 12.5px/1 var(--heading);
+  font-variant-numeric: tabular-nums;
+}
+.instinct .dietile .lbl {
+  font-size: 8.5px;
+  opacity: 0.65;
+  text-transform: uppercase;
+}
+.instinct .dietile .free {
+  font-size: 8.5px;
+  color: var(--shell);
+  font-weight: 600;
+}
+.instinct .pip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font: 600 10px var(--mono);
+  padding: 1px 6px;
+  border-radius: 999px;
+  margin-top: 2px;
+  color: #fff8ec;
+}
+
+.instinct .panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin: 10px 0;
+}
+.instinct .panel p {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+.instinct .chiprow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 10px;
+}
+.instinct .chip {
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  background: var(--bg);
+  color: inherit;
+  font-family: inherit;
+}
+.instinct .chip.on {
+  border-color: var(--text-h);
+  background: var(--border);
+}
+.instinct .actionrow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.instinct details.how {
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  font-size: 13px;
+}
+.instinct details.how summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.instinct details.how ul {
+  margin: 6px 0;
+  padding-left: 20px;
+}
+
+.instinct .invite {
+  font-size: 12px;
+  opacity: 0.75;
+  margin-top: 6px;
+  word-break: break-all;
+}
+.instinct .error {
+  color: var(--claw);
+  font-size: 13px;
+  margin-bottom: 12px;
+}
