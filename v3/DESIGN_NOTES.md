@@ -157,12 +157,29 @@ uses exactly one per side to keep scope small.
 
 ## Playable prototype (2026-09-02, corrected same day)
 
-**Public, on the deployed site: `/alpha`** (pushed to `main`, builds via
-the existing Cloud Build trigger — check a few minutes after the push for
-the live revision). Also mirrored as a Claude artifact for a private
-shareable link: https://claude.ai/code/artifact/bb400774-5a15-4dcd-a586-c4ba64cf04bf
+**Public, on the deployed site: `/alpha`.** Also mirrored as a Claude
+artifact for a private shareable link:
+https://claude.ai/code/artifact/bb400774-5a15-4dcd-a586-c4ba64cf04bf
 ("Instinct Clash"). Same content, two hosts — the artifact is easiest for
 this-session sharing, `/alpha` is easiest for "send anyone the link."
+
+**`/alpha` reported broken 2026-09-03** — it was serving the React app
+instead. Real bug, not a deploy fluke: `Program.cs` called
+`UseDefaultFiles()`/`UseStaticFiles()` *after* `MapControllers()`, and
+without an explicit `UseRouting()`, ASP.NET Core auto-inserts routing at
+the very start of the pipeline the instant any `Map*()` call exists
+anywhere — so `MapFallbackToFile`'s endpoint matched every extension-less
+path (`/alpha`, `/alpha/`) before static files ever got a turn, and static
+file middleware deliberately defers to an already-matched endpoint. Only
+extension-less nested paths broke; `/alpha/index.html` worked the whole
+time, and the site root only ever looked fine by coincidence (root's
+fallback and root's real default file are the same `index.html`). Fixed
+by adding an explicit `UseRouting()` after `UseStaticFiles()` — confirmed
+against a minimal repro before touching the real file, then against the
+actual built `wwwroot` (root, `/alpha`, `/alpha/`, an API route, a missing
+path, the exception-handling middleware) and the full test suite (580
+Engine + 10 Api tests, unchanged). Pushed; give the Cloud Build trigger a
+few minutes to roll out before checking `/alpha` again.
 
 Self-contained pass-and-play two-player game implementing the core loop
 end to end: draw/roll/reroll, field/purchase (spending energy dice),
