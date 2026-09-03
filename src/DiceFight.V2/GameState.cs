@@ -198,6 +198,17 @@ public sealed class GameState
             {
                 if (entry.Die.Id == poolDieId) return entry.Die;
             }
+            // A per-Champion TardigradePool entry (SeedBasicDicePool's own
+            // preference over the shared Config.BasicDicePool) isn't in
+            // that shared list - check every declared Champion's pool too.
+            // Never hit by the classic config, which declares no Champions.
+            foreach (var champion in Config.Champions)
+            {
+                foreach (var entry in champion.TardigradePool)
+                {
+                    if (entry.Die.Id == poolDieId) return entry.Die;
+                }
+            }
             throw new InvalidOperationException($"Die '{die.Id}' references unknown pool die '{poolDieId}'.");
         }
 
