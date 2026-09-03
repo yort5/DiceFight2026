@@ -29,8 +29,12 @@ public class V2GamesControllerTests
         var state = session.State;
 
         Assert.Equal("Lion", state.PlayerOne.ChampionId);
-        Assert.Equal(8, state.DiceIn("teamA", DiceFight.V2.Model.Zone.Unpurchased).Count()); // 2 Claw Characters x DieLimit 4
-        Assert.Equal(4, state.DiceIn("teamA", DiceFight.V2.Model.Zone.Bag).Count()); // Claw Tardigrades
+        // v3/DESIGN_NOTES.md: "Character die-limit 4 (1 starting + 3
+        // purchasable)" - one copy of each of the player's two Characters
+        // starts already owned (moved to Bag by Create), the rest sit
+        // Unpurchased: 2 Claw Characters x (4 - 1) = 6.
+        Assert.Equal(6, state.DiceIn("teamA", DiceFight.V2.Model.Zone.Unpurchased).Count());
+        Assert.Equal(6, state.DiceIn("teamA", DiceFight.V2.Model.Zone.Bag).Count()); // 4 Claw Tardigrades + 2 starting Characters
         Assert.All(state.DiceIn("teamA", DiceFight.V2.Model.Zone.Unpurchased),
             d => Assert.StartsWith("IC-CLAW-", d.CardId));
 
@@ -63,9 +67,14 @@ public class V2GamesControllerTests
 
         // Every Tardigrade character face is free to field regardless of
         // which one was rolled - grab whichever one this run happened to
-        // land on rather than scripting a specific face.
+        // land on rather than scripting a specific face. Must be a
+        // Tardigrade specifically (CardId null) rather than any character
+        // face: since the player's starting Character die now lives in
+        // the shuffled Bag too (v3/DESIGN_NOTES.md's "1 starting" copy),
+        // it could be what got drawn/rolled here, and unlike a Tardigrade
+        // it isn't free to field.
         var fieldable = session.State.DiceIn("teamA", DiceFight.V2.Model.Zone.ReservePool)
-            .First(d => session.State.GetCurrentFace(d)?.Character is not null);
+            .First(d => d.CardId is null && session.State.GetCurrentFace(d)?.Character is not null);
         var afterField = V2SeatedController.Dto(teamA.Field(session.Id, new V2FieldRequest(fieldable.Id, [])));
         var fielded = afterField.Dice.Single(d => d.Id == fieldable.Id);
         Assert.Equal("FieldZone", fielded.Zone);

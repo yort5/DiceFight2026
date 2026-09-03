@@ -31,6 +31,45 @@ function rolled(d: Die): boolean {
   return d.effectiveAttack !== null || d.energySymbolId !== null;
 }
 
+// The only zones where a die is actually showing a rolled face (rule
+// 1.5, mirrors ../PlayerBoard.tsx's own ROLLED_ZONES) - everywhere else
+// a die is unrolled, spent, or sitting on its card, so it's shown as
+// plain and collapsible even if the DTO still carries a stale face from
+// before it left a rolled zone. Gating this by zone rather than trusting
+// effectiveAttack directly is what fixes a spent/KO'd die still showing
+// its last rolled stats in the Used Pile.
+const ROLLED_ZONES = new Set(["ReservePool", "PrepArea", "FieldZone", "AttackZone"]);
+
+interface DieGroup {
+  key: string;
+  sample: Die;
+  count: number;
+  ids: string[];
+}
+
+// Collapses dice that are truly interchangeable right now into one card
+// with a count badge - mirrors ../dieHelpers.ts's groupDice. Applied to
+// the piles (Bag/Used Pile/Out of Play) where a small pool means several
+// identical Tardigrades are common; never to a rolled zone, where each
+// die's own face is the point.
+function groupDice(dice: Die[], zone: string): DieGroup[] {
+  if (ROLLED_ZONES.has(zone)) {
+    return dice.map((d) => ({ key: d.id, sample: d, count: 1, ids: [d.id] }));
+  }
+  const groups = new Map<string, DieGroup>();
+  for (const d of dice) {
+    const key = [d.cardId ?? "tardigrade", d.level, d.effectiveAttack, d.effectiveDefense, d.energySymbolId, d.energyAmount].join("|");
+    const existing = groups.get(key);
+    if (existing) {
+      existing.count += 1;
+      existing.ids.push(d.id);
+    } else {
+      groups.set(key, { key, sample: d, count: 1, ids: [d.id] });
+    }
+  }
+  return [...groups.values()];
+}
+
 function PipBadge({ type, amount }: { type: string; amount: number }) {
   const cssVar = type === "Wild" ? "var(--wild)" : `var(--${type.toLowerCase()})`;
   return (
@@ -42,6 +81,8 @@ function PipBadge({ type, amount }: { type: string; amount: number }) {
 
 function DieTile({
   die,
+  zone,
+  count,
   cardsById,
   onClick,
   clickable,
@@ -50,6 +91,11 @@ function DieTile({
   label: labelOverride,
 }: {
   die: Die;
+  /** Which zone this tile represents - gates whether a rolled face shows
+   *  at all (see ROLLED_ZONES) rather than trusting the die's raw data. */
+  zone: string;
+  /** >1 draws a "×N" badge - see groupDice. */
+  count?: number;
   cardsById: Map<string, { name: string }>;
   onClick?: () => void;
   clickable?: boolean;
@@ -58,13 +104,14 @@ function DieTile({
   /** Overrides the bottom label - used for "already rerolled"/"selected" state during Roll & Reroll. */
   label?: string;
 }) {
-  const isRolled = rolled(die);
+  const isRolled = ROLLED_ZONES.has(zone) && rolled(die);
   const Avatar = die.cardId ? CHARACTER_ICONS[die.cardId] : null;
   const name = die.cardId ? (cardsById.get(die.cardId)?.name ?? die.cardId) : "Tardigrade";
   const cls = ["dietile", clickable ? "clickable" : "", picked ? "picked" : ""].filter(Boolean).join(" ");
   const style = accent ? ({ textAlign: "center", ["--cc" as string]: accent, color: accent } as const) : { textAlign: "center" as const };
   return (
     <button type="button" className={cls} onClick={onClick} disabled={!clickable} style={style}>
+      {count && count > 1 && <span className="chip-count">×{count}</span>}
       {!isRolled ? (
         <>
           <div className="lbl">{name}</div>
@@ -353,6 +400,7 @@ export function DiceKingdomPage() {
                 <DieTile
                   key={d.id}
                   die={d}
+                  zone="FieldZone"
                   cardsById={cardsById}
                   accent={accent}
                   clickable={clickable}
@@ -370,7 +418,7 @@ export function DiceKingdomPage() {
             </h4>
             <div className="dierow">
               {attacking.map((d) => (
-                <DieTile key={d.id} die={d} cardsById={cardsById} accent={accent} />
+                <DieTile key={d.id} die={d} zone="AttackZone" cardsById={cardsById} accent={accent} />
               ))}
             </div>
           </div>
@@ -387,6 +435,7 @@ export function DiceKingdomPage() {
                 <DieTile
                   key={d.id}
                   die={d}
+                  zone="ReservePool"
                   cardsById={cardsById}
                   accent={accent}
                   clickable={reservePoolClickable(d)}
@@ -398,18 +447,23 @@ export function DiceKingdomPage() {
             })}
           </div>
         </div>
-        <div className="zone">
-          <h4>
-            Used Pile <span className="count">{used.length}</span> · Out of Play <span className="count">{outOfPlay.length}</span> · Bag{" "}
-            <span className="count">{bag.length}</span>
-          </h4>
-          <div className="dierow">
-            {[...used, ...outOfPlay, ...bag].map((d) => (
-              <DieTile key={d.id} die={d} cardsById={cardsById} accent={accent} />
-            ))}
-            {used.length + outOfPlay.length + bag.length === 0 && <span style={{ opacity: 0.5, fontSize: 12 }}>empty</span>}
+        {([
+          ["Used Pile", "UsedPile", used],
+          ["Out of Play", "OutOfPlay", outOfPlay],
+          ["Bag", "Bag", bag],
+        ] as const).map(([title, zoneName, dice]) => (
+          <div className="zone" key={zoneName}>
+            <h4>
+              {title} <span className="count">{dice.length}</span>
+            </h4>
+            <div className="dierow">
+              {dice.length === 0 && <span style={{ opacity: 0.5, fontSize: 12 }}>empty</span>}
+              {groupDice(dice, zoneName).map((g) => (
+                <DieTile key={g.key} die={g.sample} zone={zoneName} count={g.count} cardsById={cardsById} accent={accent} />
+              ))}
+            </div>
           </div>
-        </div>
+        ))}
         {isYourTurn && playerId === you && step === "main" && unpurchasedByCard.size > 0 && (
           <div className="zone">
             <h4>Available to purchase</h4>

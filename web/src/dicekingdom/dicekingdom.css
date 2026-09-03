@@ -197,6 +197,7 @@
 }
 
 .dicekingdom .dietile {
+  position: relative;
   width: 94px;
   border: 1.5px solid var(--border);
   border-top: 4px solid var(--cc, var(--border));
@@ -209,6 +210,18 @@
   cursor: default;
   box-shadow: var(--shadow);
   transition: transform 0.1s ease;
+}
+.dicekingdom .dietile .chip-count {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: var(--text-h);
+  color: var(--bg);
+  font: 700 10.5px var(--sans);
+  border-radius: 999px;
+  padding: 2px 6px;
+  line-height: 1;
+  box-shadow: var(--shadow);
 }
 .dicekingdom .dietile.clickable {
   cursor: pointer;

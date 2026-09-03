@@ -285,6 +285,34 @@ doubt about whether v1 already solved something this page is
 reinventing, check what v1 actually accounts for before shipping a
 smaller version and finding the gap live.
 
+**Third correction, same day** - this time the fix, not just the excuse,
+came from actually porting v1's logic. Two more real bugs: (1) a
+KO'd/spent Tardigrade still showed its last rolled face ("1/4 L3 FREE")
+sitting in the Used Pile - `DieTile` was gating "show a face" on the
+die's raw `effectiveAttack` field rather than on which zone it's
+currently in, so a stale face value never got hidden. Ported v1's actual
+`ROLLED_ZONES` set (`ReservePool`/`PrepArea`/`FieldZone`/`AttackZone`
+only) from `PlayerBoard.tsx` - a tile now only shows a face at all when
+its zone is one of those, regardless of what the DTO still carries. (2)
+Used Pile/Out of Play/Bag were one merged row with no way to tell which
+die was in which - split back into three real `.zone` sections. Also
+ported `../dieHelpers.ts`'s `groupDice` (adapted for v2's Die shape,
+same collapse-when-not-a-rolled-zone rule) so four identical unrolled
+Tardigrades read as one "Tardigrade ×4" tile instead of four separate
+identical-looking ones - v1 already had this, Dice Kingdom never did.
+
+Separately, this pass also fixed a real numbers bug the zone work made
+visible: `GameSetup.SeedTeamDice` (shared v2-engine code, correctly
+mirroring v1's actual "every card's dice sit Unpurchased until bought")
+put ALL 4 copies of both of a player's Characters in Unpurchased - zero
+starting owned, contradicting this file's own locked-ish spec ("Character
+die-limit 4 (1 starting + 3 purchasable)"). Fixed in
+`V2GamesController.Create` (not the shared engine method, since that
+"buy everything" behavior is correct for classic Dice Masters): one copy
+per Character now starts moved into Bag. A starting Character die is
+shuffled into the same Bag as the Tardigrades, not held in a separate
+starting hand - can be drawn turn one same as anything else.
+
 ## Prior prototype notes (superseded by the above for anything that conflicts)
 
 ### Playable prototype (2026-09-02, corrected same day)
