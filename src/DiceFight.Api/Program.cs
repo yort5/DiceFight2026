@@ -29,6 +29,34 @@ builder.Services.AddHostedService<DiscordBotService>();
 
 var app = builder.Build();
 
+// Serves the React build (copied into wwwroot by the Dockerfile), plus any
+// other static subtree in wwwroot (e.g. /alpha for the v3 prototype), and
+// falls back to index.html for any route that isn't an API call or a real
+// static file, so client-side routing works on a hard refresh/deep link.
+// No CORS policy needed: the API and web client are served from the same
+// origin in both this combined deployment and local dev (the Vite dev
+// server proxies /api to this process instead of calling it cross-origin).
+//
+// The explicit UseRouting() below is load-bearing, not decorative. Without
+// it, ASP.NET Core auto-inserts routing at the very START of the pipeline
+// the moment ANY Map*() call exists anywhere in this file - regardless of
+// where that Map*() call is textually written, so moving UseStaticFiles
+// above MapControllers()/MapFallbackToFile() (tried first, didn't help)
+// changes nothing. That auto-inserted routing matches MapFallbackToFile's
+// endpoint against every extension-less path (by design - a real static
+// file WITH an extension, e.g. /alpha/index.html, was never affected,
+// which is why only extension-less nested paths broke). Once an endpoint
+// is matched, StaticFileMiddleware/DefaultFilesMiddleware deliberately
+// defer to it and skip serving even when the real file exists - so /alpha
+// and /alpha/ silently fell through to the SPA's own root index.html.
+// Calling UseRouting() explicitly HERE, after static files, makes routing
+// run only for requests static files didn't already short-circuit -
+// confirmed against a minimal repro before touching this file for real.
+// Found 2026-09-03 verifying the v3 prototype's /alpha deploy.
+app.UseDefaultFiles();
+app.UseStaticFiles();
+app.UseRouting();
+
 // Converts the engine's validation exceptions into HTTP responses instead
 // of raw 500s - TurnEngine/CombatEngine throw InvalidOperationException
 // liberally for illegal actions (wrong step, insufficient energy, etc.).
@@ -65,15 +93,6 @@ app.Use(async (context, next) =>
 });
 
 app.MapControllers();
-
-// Serves the React build (copied into wwwroot by the Dockerfile) and
-// falls back to index.html for any route that isn't an API call or a real
-// static file, so client-side routing works on a hard refresh/deep link.
-// No CORS policy needed: the API and web client are served from the same
-// origin in both this combined deployment and local dev (the Vite dev
-// server proxies /api to this process instead of calling it cross-origin).
-app.UseDefaultFiles();
-app.UseStaticFiles();
 app.MapFallbackToFile("index.html");
 
 app.Run();
