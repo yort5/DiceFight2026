@@ -31,29 +31,11 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase
         var playerTwo = BuildPlayer("teamB", request.PlayerTwoChampionId);
 
         var state = GameSetup.NewGame(config, catalog, playerOne, playerTwo);
-        StartWithOneOwnedCopyPerCharacter(state, playerOne);
-        StartWithOneOwnedCopyPerCharacter(state, playerTwo);
         var session = store.Create(state);
 
         return Ok(new V2CreatedGameDto(
             V2GameStateDto.From(session.Id, state, state.PlayerOne.Id),
             session.Seats.Select(seat => new SeatDto(seat.PlayerId, seat.Token)).ToList()));
-    }
-
-    // v3's locked-ish design spec (v3/DESIGN_NOTES.md: "Character die-limit
-    // 4 (1 starting + 3 purchasable)") - GameSetup.SeedTeamDice is shared
-    // v2-engine code that puts every card's dice in Unpurchased (matching
-    // v1's TeamSetup, correct for classic Dice Masters' team-of-8-plus-
-    // Sidekicks model), so this v3-specific "you already own one" rule is
-    // applied here instead of touching the generic engine seeding.
-    private static void StartWithOneOwnedCopyPerCharacter(GameState state, Player player)
-    {
-        foreach (var cardId in player.TeamCardIds)
-        {
-            var firstUnpurchased = state.Dice.FirstOrDefault(d =>
-                d.OwnerId == player.Id && d.CardId == cardId && d.Zone == Zone.Unpurchased);
-            if (firstUnpurchased is not null) firstUnpurchased.Zone = Zone.Bag;
-        }
     }
 
     private static Player BuildPlayer(string id, string championId)
