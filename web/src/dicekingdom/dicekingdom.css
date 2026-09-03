@@ -287,6 +287,22 @@
   flex-wrap: wrap;
 }
 
+/* The shared strip between the two boards - where combat/payment/reroll
+   panels live, so they never appear far from the board a click came from
+   (see DiceKingdomPage.tsx's comment above .controlcenter). Dashed rules
+   above and below read as "neither player's zone," matching how the
+   combat lane sits between the two mats on /game. */
+.dicekingdom .controlcenter {
+  border-top: 1px dashed var(--border);
+  border-bottom: 1px dashed var(--border);
+  padding: 14px 0;
+  margin: 18px 0;
+  min-height: 20px;
+}
+.dicekingdom .controlcenter:empty {
+  display: none;
+}
+
 .dicekingdom details.how {
   background: var(--panel-bg);
   border: 1px solid var(--border);

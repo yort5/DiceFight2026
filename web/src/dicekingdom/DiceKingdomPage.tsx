@@ -262,8 +262,12 @@ export function DiceKingdomPage() {
     const ChampIcon = player.champion ? CHAMPION_ICONS[player.champion.id] : null;
     const accent = player.champion ? `var(--${player.champion.energySymbolId.toLowerCase()})` : undefined;
     const field = diceFor(playerId, "FieldZone");
-    const reserve = diceFor(playerId, "ReservePool");
-    const prep = diceFor(playerId, "PrepArea");
+    // PrepArea is v2's internal staging zone for dice mid-roll, before
+    // FinishRoll moves them into ReservePool - showing it as a separate
+    // section read as "why is rolling happening somewhere other than the
+    // Reserve Pool?" (real user feedback). Same tray to the player the
+    // whole time, so it's shown as one.
+    const reserve = [...diceFor(playerId, "ReservePool"), ...diceFor(playerId, "PrepArea")];
     const unpurchased = diceFor(playerId, "Unpurchased");
     const unpurchasedByCard = new Map<string, Die[]>();
     for (const d of unpurchased) {
@@ -342,18 +346,6 @@ export function DiceKingdomPage() {
             })}
           </div>
         </div>
-        {prep.length > 0 && (
-          <div className="zone">
-            <h4>
-              Prep Area <span className="count">{prep.length}</span>
-            </h4>
-            <div className="dierow">
-              {prep.map((d) => (
-                <DieTile key={d.id} die={d} cardsById={cardsById} accent={accent} />
-              ))}
-            </div>
-          </div>
-        )}
         {isYourTurn && playerId === you && game!.currentStepId === "main" && !pending && unpurchasedByCard.size > 0 && (
           <div className="zone">
             <h4>Available to purchase</h4>
@@ -438,167 +430,201 @@ export function DiceKingdomPage() {
         </div>
       </div>
 
-      {game.pendingChoice && you === game.pendingChoice.controllerId ? (
-        <div className="panel">
-          <p>
-            <b>{game.pendingChoice.description}</b>
-          </p>
-          <PendingChoiceChips
-            candidateIds={game.pendingChoice.candidateIds}
-            max={game.pendingChoice.maxCount}
-            dice={game.dice}
-            cardsById={cardsById}
-            onSubmit={(ids) => run(() => api.resolvePendingChoice(game.gameId, ids))}
+      {renderBoard(opponentId, "Opponent")}
+
+      {/* The control center sits between the two boards, not above both of
+          them - it belongs to whichever side is acting, and that's not
+          always "you" (Assign Blockers is the other seat's decision). A
+          fixed spot here instead of jumping to the top of the page also
+          means it never appears far from the board you just clicked on
+          (real feedback: a payment/reroll confirmation popping up above
+          the opponent's board read as disconnected from the die you'd
+          just clicked on your own board below). */}
+      <div className="controlcenter">
+        {game.pendingChoice && you === game.pendingChoice.controllerId ? (
+          <div className="panel">
+            <p>
+              <b>{game.pendingChoice.description}</b>
+            </p>
+            <PendingChoiceChips
+              candidateIds={game.pendingChoice.candidateIds}
+              max={game.pendingChoice.maxCount}
+              dice={game.dice}
+              cardsById={cardsById}
+              onSubmit={(ids) => run(() => api.resolvePendingChoice(game.gameId, ids))}
+            />
+          </div>
+        ) : game.pendingChoice ? (
+          <p className="dek">Waiting on the other player's choice…</p>
+        ) : !isYourTurn && game.currentStepId !== "assign-blockers" ? (
+          <p className="dek">Waiting on the other player…</p>
+        ) : isYourTurn && game.currentStepId === "assign-blockers" ? (
+          <p className="dek">Waiting on the other player to assign blockers…</p>
+        ) : !isYourTurn ? null : (
+          <div className="actionrow" style={{ margin: "10px 0" }}>
+            {game.currentStepId === "start-of-turn" && (
+              <button className="btn" disabled={busy} onClick={() => run(() => api.clearAndDraw(game.gameId))}>
+                Draw
+              </button>
+            )}
+            {game.currentStepId === "roll-and-reroll" && (
+              <RollControls game={game} you={you} run={run} />
+            )}
+            {game.currentStepId === "main" && !pending && (
+              <button className="btn" disabled={busy} onClick={() => run(() => api.enterAttackStep(game.gameId))}>
+                Proceed to Attack
+              </button>
+            )}
+            {game.currentStepId === "select-attackers" && (
+              <button
+                className="btn"
+                disabled={busy}
+                onClick={async () => {
+                  await run(() => api.declareAttackers(game.gameId, attackers));
+                  setAttackers([]);
+                }}
+              >
+                Confirm Attackers ({attackers.length})
+              </button>
+            )}
+            {game.currentStepId === "return-to-field" && (
+              <button className="btn" disabled={busy} onClick={() => run(() => api.cleanUp(game.gameId))}>
+                End Turn
+              </button>
+            )}
+          </div>
+        )}
+
+        {game.currentStepId === "assign-blockers" && !game.pendingChoice && !isYourTurn && (
+          <BlockPanel
+            game={game}
+            you={you}
+            blocks={blocks}
+            setBlocks={setBlocks}
+            blockPick={blockPick}
+            setBlockPick={setBlockPick}
+            run={run}
+            onResolved={() => {
+              setBlocks({});
+              setBlockPick(null);
+            }}
           />
-        </div>
-      ) : game.pendingChoice ? (
-        <p className="dek">Waiting on the other player's choice…</p>
-      ) : !isYourTurn && game.currentStepId !== "assign-blockers" ? (
-        <p className="dek">Waiting on the other player…</p>
-      ) : !isYourTurn ? null : (
-        <div className="actionrow" style={{ margin: "10px 0" }}>
-          {game.currentStepId === "start-of-turn" && (
-            <button className="btn" disabled={busy} onClick={() => run(() => api.clearAndDraw(game.gameId))}>
-              Draw
-            </button>
-          )}
-          {game.currentStepId === "roll-and-reroll" && (
-            <RollControls game={game} you={you} run={run} />
-          )}
-          {game.currentStepId === "main" && !pending && (
-            <button className="btn" disabled={busy} onClick={() => run(() => api.enterAttackStep(game.gameId))}>
-              Proceed to Attack
-            </button>
-          )}
-          {game.currentStepId === "select-attackers" && (
+        )}
+        {game.currentStepId === "action-global-window" && !game.pendingChoice && isYourTurn && (
+          <div className="panel">
             <button
               className="btn"
               disabled={busy}
-              onClick={async () => {
-                await run(() => api.declareAttackers(game.gameId, attackers));
-                setAttackers([]);
-              }}
-            >
-              Confirm Attackers ({attackers.length})
-            </button>
-          )}
-          {game.currentStepId === "return-to-field" && (
-            <button className="btn" disabled={busy} onClick={() => run(() => api.cleanUp(game.gameId))}>
-              End Turn
-            </button>
-          )}
-        </div>
-      )}
-
-      {game.currentStepId === "assign-blockers" && !game.pendingChoice && !isYourTurn && (
-        <BlockPanel
-          game={game}
-          you={you}
-          blocks={blocks}
-          setBlocks={setBlocks}
-          blockPick={blockPick}
-          setBlockPick={setBlockPick}
-          run={run}
-          onResolved={() => {
-            setBlocks({});
-            setBlockPick(null);
-          }}
-        />
-      )}
-      {game.currentStepId === "action-global-window" && !game.pendingChoice && isYourTurn && (
-        <div className="panel">
-          <button
-            className="btn"
-            disabled={busy}
-            onClick={() =>
-              run(() =>
-                api.assignCombatDamage(
-                  game.gameId,
-                  Object.entries(blocks)
-                    .filter(([, b]) => b)
-                    .map(([attackerDieId, blockerDieId]) => ({ attackerDieId, blockerDieId: blockerDieId! })),
-                ),
-              )
-            }
-          >
-            Resolve Combat
-          </button>
-        </div>
-      )}
-
-      {pending && (
-        <div className="panel">
-          <p>
-            <b>
-              {pending.type === "field"
-                ? `Field ${cardsById.get(game.dice.find((d) => d.id === pending.dieId)?.cardId ?? "")?.name ?? "Tardigrade"}`
-                : `Purchase ${cardsById.get(pending.cardId!)?.name}`}
-            </b>{" "}
-            — cost {cost.amount}. {pending.type === "field" ? "Any energy type counts." : `Only ${cost.matchType} or Wild energy counts.`}{" "}
-            Selected:{" "}
-            {pending.selected.reduce((sum, id) => sum + (game.dice.find((d) => d.id === id)?.energyAmount ?? 0), 0)} / {cost.amount}
-          </p>
-          <div className="actionrow">
-            <button
-              className="btn"
-              disabled={
-                busy ||
-                pending.selected.reduce((sum, id) => sum + (game.dice.find((d) => d.id === id)?.energyAmount ?? 0), 0) < cost.amount
+              onClick={() =>
+                run(() =>
+                  api.assignCombatDamage(
+                    game.gameId,
+                    Object.entries(blocks)
+                      .filter(([, b]) => b)
+                      .map(([attackerDieId, blockerDieId]) => ({ attackerDieId, blockerDieId: blockerDieId! })),
+                  ),
+                )
               }
-              onClick={confirmPayment}
             >
-              Confirm
-            </button>
-            <button className="btn ghost" onClick={() => setPending(null)}>
-              Cancel
+              Resolve Combat
             </button>
           </div>
-        </div>
-      )}
+        )}
 
-      {renderBoard(opponentId, "Opponent")}
-      <hr style={{ border: "none", borderTop: "1px dashed var(--border)", margin: "18px 0" }} />
+        {pending && (
+          <div className="panel">
+            <p>
+              <b>
+                {pending.type === "field"
+                  ? `Field ${cardsById.get(game.dice.find((d) => d.id === pending.dieId)?.cardId ?? "")?.name ?? "Tardigrade"}`
+                  : `Purchase ${cardsById.get(pending.cardId!)?.name}`}
+              </b>{" "}
+              — cost {cost.amount}. {pending.type === "field" ? "Any energy type counts." : `Only ${cost.matchType} or Wild energy counts.`}{" "}
+              Selected:{" "}
+              {pending.selected.reduce((sum, id) => sum + (game.dice.find((d) => d.id === id)?.energyAmount ?? 0), 0)} / {cost.amount}
+            </p>
+            <div className="actionrow">
+              <button
+                className="btn"
+                disabled={
+                  busy ||
+                  pending.selected.reduce((sum, id) => sum + (game.dice.find((d) => d.id === id)?.energyAmount ?? 0), 0) < cost.amount
+                }
+                onClick={confirmPayment}
+              >
+                Confirm
+              </button>
+              <button className="btn ghost" onClick={() => setPending(null)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
       {renderBoard(you, "You")}
     </div>
   );
 }
 
 function RollControls({ game, you, run }: { game: GameState; you: string; run: (fn: () => Promise<GameState>) => Promise<GameState> }) {
-  const [rerolled, setRerolled] = useState<string[]>([]);
-  const prep = game.dice.filter((d) => d.controllerId === you && d.zone === "PrepArea");
-  const anyRolled = prep.some(rolled);
+  // Selected dice reroll together in one action (the physical rule: you
+  // pick up whichever of your own dice you want and shake them all at
+  // once) - not one API call per die. rerolledIds tracks which dice have
+  // already used their one reroll this step, since the server doesn't
+  // say - see TurnEngine.RerolledThisStep.
+  const [selected, setSelected] = useState<string[]>([]);
+  const [rerolledIds, setRerolledIds] = useState<string[]>([]);
+  const pool = game.dice.filter(
+    (d) => d.controllerId === you && (d.zone === "PrepArea" || d.zone === "ReservePool"),
+  );
+  const anyRolled = pool.some(rolled);
   if (!anyRolled) {
     return (
       <button className="btn" onClick={() => run(() => api.roll(game.gameId))}>
-        Roll Reserve
+        Roll
       </button>
     );
   }
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       <div className="dierow">
-        {prep.map((d) => (
-          <button
-            key={d.id}
-            type="button"
-            className={`dietile${rerolled.includes(d.id) ? "" : " clickable"}`}
-            disabled={rerolled.includes(d.id)}
-            onClick={async () => {
-              await run(() => api.reroll(game.gameId, [d.id]));
-              setRerolled((r) => [...r, d.id]);
-            }}
-          >
-            <div className="stat">
-              {d.effectiveAttack ?? "—"}
-              {d.effectiveDefense !== null ? `/${d.effectiveDefense}` : ""}
-            </div>
-            <div className="lbl">{rerolled.includes(d.id) ? "kept" : "tap to reroll"}</div>
-          </button>
-        ))}
+        {pool.map((d) => {
+          const already = rerolledIds.includes(d.id);
+          const picked = selected.includes(d.id);
+          return (
+            <button
+              key={d.id}
+              type="button"
+              className={`dietile${already ? "" : " clickable"}${picked ? " picked" : ""}`}
+              disabled={already}
+              onClick={() => setSelected((s) => (s.includes(d.id) ? s.filter((x) => x !== d.id) : [...s, d.id]))}
+            >
+              <div className="stat">
+                {d.effectiveAttack ?? "—"}
+                {d.effectiveDefense !== null ? `/${d.effectiveDefense}` : ""}
+              </div>
+              <div className="lbl">{already ? "rerolled" : picked ? "selected" : "tap to select"}</div>
+            </button>
+          );
+        })}
       </div>
-      <button className="btn" onClick={() => run(() => api.finishRoll(game.gameId))}>
-        Continue to Main Phase
-      </button>
+      <div className="actionrow">
+        <button
+          className="btn"
+          disabled={selected.length === 0}
+          onClick={async () => {
+            await run(() => api.reroll(game.gameId, selected));
+            setRerolledIds((r) => [...r, ...selected]);
+            setSelected([]);
+          }}
+        >
+          Reroll Selected ({selected.length})
+        </button>
+        <button className="btn ghost" onClick={() => run(() => api.finishRoll(game.gameId))}>
+          Continue to Main Phase
+        </button>
+      </div>
     </div>
   );
 }

@@ -223,6 +223,27 @@ page rather than trusting the build:
   mobile card games, where you sit at the bottom of your own view. Now
   the opponent's board renders first (top), yours last (bottom).
 
+## Three more real bugs, found by actually playing it (2026-09-03)
+
+After the rename/board-order fix went live, playing it surfaced three
+more: dice were rolling in a section labelled "Prep Area" rather than
+"Reserve Pool" (confusing - it's the same tray to the player the whole
+turn, `PrepArea` is just v2's internal pre-`FinishRoll` staging zone, so
+merged the two into one display), reroll only let you pick up and reroll
+one die at a time instead of a batch (the physical rule: you shake
+whichever of your own dice you want together; fixed to a select-then-
+"Reroll Selected (N)" flow, one `api.reroll` call for the whole batch),
+and the field/purchase/reroll/blockers panels all rendered at the very
+top of the page, above the opponent's board - disconnected from the die
+you'd just clicked on your own board at the bottom. Fixed by moving all
+of them into one `.controlcenter` strip between the two boards, modeled
+on where `/game`'s CombatLane sits between its two mats - a fixed,
+predictable spot near whichever board is acting, rather than jumping to
+the top. `/game`'s actual components (`PlayerBoard.tsx`, `ActionTray.tsx`)
+were read directly for this - not reused (their `Selection`/`onGroupClick`
+model is a bigger unification than these fixes needed), but the same
+layout lesson was worth copying.
+
 ## Prior prototype notes (superseded by the above for anything that conflicts)
 
 ### Playable prototype (2026-09-02, corrected same day)
