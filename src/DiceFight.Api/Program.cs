@@ -18,6 +18,7 @@ builder.Services.AddControllers().AddJsonOptions(options =>
     options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
 });
 builder.Services.AddSingleton<GameStore>();
+builder.Services.AddSingleton<V2GameStore>();
 
 // No-ops (logs a warning, doesn't start a gateway connection) unless
 // DiscordBot:Token is configured - see DiscordBotService's own remarks.

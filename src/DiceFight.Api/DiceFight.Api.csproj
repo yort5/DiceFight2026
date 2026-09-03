@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DiceFight.Engine\DiceFight.Engine.csproj" />
+    <ProjectReference Include="..\DiceFight.V2\DiceFight.V2.csproj" />
     <ProjectReference Include="..\DiceFight.DiscordBot\DiceFight.DiscordBot.csproj" />
   </ItemGroup>
 
