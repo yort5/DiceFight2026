@@ -32,19 +32,22 @@ function DieTile({
   onClick,
   clickable,
   picked,
+  accent,
 }: {
   die: Die;
   cardsById: Map<string, { name: string }>;
   onClick?: () => void;
   clickable?: boolean;
   picked?: boolean;
+  accent?: string;
 }) {
   const isRolled = rolled(die);
   const Avatar = die.cardId ? CHARACTER_ICONS[die.cardId] : null;
   const label = die.cardId ? (cardsById.get(die.cardId)?.name ?? die.cardId) : "Tardigrade";
   const cls = ["dietile", clickable ? "clickable" : "", picked ? "picked" : ""].filter(Boolean).join(" ");
+  const style = accent ? ({ textAlign: "center", ["--cc" as string]: accent, color: accent } as const) : { textAlign: "center" as const };
   return (
-    <button type="button" className={cls} onClick={onClick} disabled={!clickable} style={{ textAlign: "center" }}>
+    <button type="button" className={cls} onClick={onClick} disabled={!clickable} style={style}>
       {!isRolled ? (
         <>
           <div className="lbl">{label}</div>
@@ -60,7 +63,7 @@ function DieTile({
         </>
       ) : (
         <>
-          {Avatar && <Avatar size={22} />}
+          {Avatar && <Avatar size={34} />}
           <div className="stat">
             {die.effectiveAttack}/{die.effectiveDefense}
           </div>
@@ -257,6 +260,7 @@ export function InstinctClashPage() {
   function renderBoard(playerId: string, label: string) {
     const player = playerId === game!.playerOne.id ? game!.playerOne : game!.playerTwo;
     const ChampIcon = player.champion ? CHAMPION_ICONS[player.champion.id] : null;
+    const accent = player.champion ? `var(--${player.champion.energySymbolId.toLowerCase()})` : undefined;
     const field = diceFor(playerId, "FieldZone");
     const reserve = diceFor(playerId, "ReservePool");
     const prep = diceFor(playerId, "PrepArea");
@@ -271,7 +275,7 @@ export function InstinctClashPage() {
     return (
       <div key={playerId}>
         {player.champion && ChampIcon && (
-          <div className="champbanner" style={{ color: `var(--${player.champion.energySymbolId.toLowerCase()})` }}>
+          <div className="champbanner" style={{ color: accent, ["--cc" as string]: accent }}>
             <ChampIcon />
             <div>
               <div className="cbname" style={{ color: "var(--text-h)" }}>
@@ -291,6 +295,7 @@ export function InstinctClashPage() {
                 key={d.id}
                 die={d}
                 cardsById={cardsById}
+                accent={accent}
                 clickable={active && isYourTurn && game!.currentStepId === "select-attackers" && playerId === you}
                 picked={attackers.includes(d.id)}
                 onClick={() =>
@@ -320,6 +325,7 @@ export function InstinctClashPage() {
                   key={d.id}
                   die={d}
                   cardsById={cardsById}
+                  accent={accent}
                   clickable={!!(eligibleField || eligibleSpend)}
                   picked={pending?.selected.includes(d.id)}
                   onClick={() => {
@@ -343,7 +349,7 @@ export function InstinctClashPage() {
             </h4>
             <div className="dierow">
               {prep.map((d) => (
-                <DieTile key={d.id} die={d} cardsById={cardsById} />
+                <DieTile key={d.id} die={d} cardsById={cardsById} accent={accent} />
               ))}
             </div>
           </div>
@@ -360,9 +366,10 @@ export function InstinctClashPage() {
                     key={cardId}
                     type="button"
                     className="dietile clickable"
+                    style={accent ? ({ ["--cc" as string]: accent, color: accent } as const) : undefined}
                     onClick={() => beginPayment("purchase", undefined, cardId)}
                   >
-                    {Avatar && <Avatar size={22} />}
+                    {Avatar && <Avatar size={34} />}
                     <div className="lbl">Buy {card?.name ?? cardId}</div>
                     <div className="stat">
                       {card?.purchaseCost} {card?.energyTypes[0]}

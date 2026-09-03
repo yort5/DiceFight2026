@@ -1,72 +1,93 @@
-/* Instinct Clash - layered on the site's existing --text/--bg/--border/
-   --sans tokens (index.css) for consistency; adds only what's new here:
-   the four energy accent hues (Claw/Shell/Wing/Eye) with light+dark
-   variants, since the site's own --accent is a single purple. */
+/* Instinct Clash - a distinct visual identity from the rest of the site
+   on purpose (see v3/DESIGN_NOTES.md: v1's board is deliberately plain/
+   utilitarian, v3 wants to look like an actual card game). Display type
+   is Anton (bold, condensed, graphic - reads "clash" rather than
+   "spreadsheet") over Work Sans body text; both loaded in index.html.
+   Layered on the site's --border/--code-bg tokens for light/dark parity,
+   with the four energy hues as the real accent system instead of a
+   single generic brand color. */
 .instinct {
-  --claw: #c1502c;
-  --shell: #3e6b58;
-  --wing: #3e6e96;
-  --eye: #6b4c82;
-  --wild: #8a8478;
+  --claw: #b8451f;
+  --shell: #2f6b52;
+  --wing: #2f6690;
+  --eye: #6a4189;
+  --wild: #7d7565;
   --panel-bg: var(--code-bg);
-  max-width: 900px;
+  --tile-bg: var(--bg);
+  --shadow: 0 1px 2px rgba(20, 15, 8, 0.06), 0 6px 16px -8px rgba(20, 15, 8, 0.18);
+  --display: "Anton", "Arial Narrow", var(--heading);
+  max-width: 940px;
   margin: 0 auto;
-  padding: 20px 16px 60px;
+  padding: 24px 16px 64px;
 }
 @media (prefers-color-scheme: dark) {
   .instinct {
-    --claw: #dc6d42;
-    --shell: #57917a;
-    --wing: #6699c4;
-    --eye: #9575ae;
+    --claw: #e07a4a;
+    --shell: #5fa085;
+    --wing: #6fabd9;
+    --eye: #b085d1;
     --wild: #a79c89;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 20px -10px rgba(0, 0, 0, 0.55);
   }
 }
 
+.instinct .eyebrow {
+  font: 700 11px/1 var(--sans);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--wild);
+  margin: 0 0 6px;
+}
 .instinct h1 {
-  font: 600 26px/1.15 var(--heading);
+  font: 400 44px/0.95 var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
   color: var(--text-h);
-  margin: 0 0 4px;
+  margin: 0 0 10px;
 }
 .instinct .dek {
   color: var(--text);
   opacity: 0.85;
   font-size: 14px;
-  max-width: 60ch;
+  line-height: 1.55;
+  max-width: 62ch;
   margin: 0 0 20px;
 }
 
 .instinct .champ-pick {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 10px;
-  margin-bottom: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
 }
 .instinct .champ-opt {
   border: 2px solid var(--border);
-  border-radius: 12px;
-  padding: 12px 10px;
+  border-radius: 14px;
+  padding: 16px 12px;
   text-align: center;
   cursor: pointer;
   background: var(--panel-bg);
   color: inherit;
   font: inherit;
+  box-shadow: var(--shadow);
+  transition: transform 0.12s ease, border-color 0.12s ease;
+}
+.instinct .champ-opt:hover {
+  transform: translateY(-2px);
 }
 .instinct .champ-opt.selected {
   border-color: var(--sel, var(--text-h));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sel, var(--text-h)) 25%, transparent), var(--shadow);
 }
 .instinct .champ-opt svg {
-  width: 30px;
-  height: 30px;
+  width: 42px;
+  height: 42px;
 }
 .instinct .champ-opt .cname {
-  font-weight: 600;
-  font-size: 13px;
-  margin-top: 6px;
-}
-.instinct .champ-opt .cpassive {
-  font-size: 10.5px;
-  opacity: 0.75;
+  font: 400 15px var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin-top: 8px;
 }
 
 .instinct button.btn {
@@ -74,9 +95,10 @@
   background: var(--text-h);
   color: var(--bg);
   border: none;
-  border-radius: 9px;
-  padding: 10px 18px;
+  border-radius: 10px;
+  padding: 11px 20px;
   cursor: pointer;
+  letter-spacing: 0.01em;
 }
 .instinct button.btn:disabled {
   opacity: 0.4;
@@ -94,67 +116,71 @@
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 .instinct .lifebox {
   background: var(--panel-bg);
-  border: 1.5px solid var(--border);
-  border-radius: 12px;
-  padding: 7px 12px;
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  padding: 8px 16px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  box-shadow: var(--shadow);
 }
 .instinct .lifebox svg {
-  width: 20px;
-  height: 20px;
+  width: 26px;
+  height: 26px;
 }
 .instinct .lifebox .lnum {
-  font: 700 17px/1 var(--heading);
+  font: 400 26px/1 var(--display);
   font-variant-numeric: tabular-nums;
 }
 .instinct .phasepill {
-  font: 600 11.5px var(--sans);
-  padding: 5px 12px;
+  font: 700 11px var(--sans);
+  padding: 7px 16px;
   border-radius: 999px;
   background: var(--panel-bg);
   border: 1px solid var(--border);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
 }
 
 .instinct .champbanner {
   display: flex;
   align-items: center;
-  gap: 9px;
-  background: var(--panel-bg);
+  gap: 12px;
+  background: linear-gradient(120deg, color-mix(in srgb, var(--cc, var(--border)) 16%, var(--panel-bg)), var(--panel-bg));
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 7px 12px;
-  margin-bottom: 12px;
+  border-left: 5px solid var(--cc, var(--border));
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
 }
 .instinct .champbanner svg {
-  width: 22px;
-  height: 22px;
+  width: 32px;
+  height: 32px;
   flex: none;
 }
 .instinct .champbanner .cbname {
-  font: 600 13px var(--heading);
+  font: 400 17px var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
 }
 .instinct .champbanner .cbpassive {
-  font-size: 11px;
-  opacity: 0.75;
+  font-size: 11.5px;
+  opacity: 0.8;
 }
 
 .instinct .zone {
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 .instinct .zone h4 {
-  font-size: 11px;
+  font: 700 11px var(--sans);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  opacity: 0.7;
-  margin: 0 0 6px;
+  letter-spacing: 0.08em;
+  opacity: 0.65;
+  margin: 0 0 8px;
   display: flex;
   gap: 6px;
   align-items: center;
@@ -166,83 +192,86 @@
 .instinct .dierow {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
+  gap: 9px;
   min-height: 6px;
 }
 
 .instinct .dietile {
-  width: 72px;
+  width: 94px;
   border: 1.5px solid var(--border);
-  border-radius: 9px;
-  background: var(--panel-bg);
-  padding: 5px;
+  border-top: 4px solid var(--cc, var(--border));
+  border-radius: 12px;
+  background: var(--tile-bg);
+  padding: 8px 6px 7px;
   text-align: center;
   color: inherit;
   font: inherit;
   cursor: default;
+  box-shadow: var(--shadow);
+  transition: transform 0.1s ease;
 }
 .instinct .dietile.clickable {
   cursor: pointer;
 }
 .instinct .dietile.clickable:hover {
+  transform: translateY(-2px);
   border-color: var(--text-h);
 }
 .instinct .dietile.picked {
   border-color: var(--text-h);
-  background: var(--border);
+  background: var(--panel-bg);
+  transform: translateY(-2px);
 }
-.instinct .dietile .dav {
-  width: 22px;
-  height: 22px;
-  margin: 0 auto 2px;
+.instinct .dietile svg {
+  width: 34px;
+  height: 34px;
+  margin: 0 auto 3px;
 }
 .instinct .dietile .stat {
-  font: 700 12.5px/1 var(--heading);
+  font: 400 22px/1 var(--display);
   font-variant-numeric: tabular-nums;
 }
 .instinct .dietile .lbl {
-  font-size: 8.5px;
+  font-size: 9px;
   opacity: 0.65;
   text-transform: uppercase;
-}
-.instinct .dietile .free {
-  font-size: 8.5px;
-  color: var(--shell);
-  font-weight: 600;
+  letter-spacing: 0.03em;
+  margin-top: 1px;
 }
 .instinct .pip {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  font: 600 10px var(--mono);
-  padding: 1px 6px;
+  font: 700 10px var(--mono);
+  padding: 2px 7px;
   border-radius: 999px;
-  margin-top: 2px;
+  margin-top: 4px;
   color: #fff8ec;
 }
 
 .instinct .panel {
   background: var(--panel-bg);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 14px 16px;
-  margin: 10px 0;
+  border-radius: 14px;
+  padding: 16px 18px;
+  margin: 12px 0;
+  box-shadow: var(--shadow);
 }
 .instinct .panel p {
-  margin: 0 0 8px;
+  margin: 0 0 10px;
   font-size: 13px;
 }
 .instinct .chiprow {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
-  margin-bottom: 10px;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 .instinct .chip {
   border: 1.5px solid var(--border);
-  border-radius: 8px;
-  padding: 5px 10px;
-  font-size: 12px;
+  border-radius: 9px;
+  padding: 6px 12px;
+  font-size: 12.5px;
   cursor: pointer;
   background: var(--bg);
   color: inherit;
@@ -254,17 +283,18 @@
 }
 .instinct .actionrow {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
 .instinct details.how {
   background: var(--panel-bg);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 12px 16px;
-  margin-bottom: 20px;
+  border-radius: 14px;
+  padding: 14px 18px;
+  margin-bottom: 22px;
   font-size: 13px;
+  box-shadow: var(--shadow);
 }
 .instinct details.how summary {
   cursor: pointer;
