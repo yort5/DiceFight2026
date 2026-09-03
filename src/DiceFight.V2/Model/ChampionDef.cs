@@ -32,4 +32,17 @@ public sealed record ChampionDef(
     string Name,
     string EnergySymbolId,
     ChampionPassiveKind PassiveKind,
-    int Amount);
+    int Amount)
+{
+    // A second, genuinely new thing GameConfig.BasicDicePool couldn't
+    // express: that list is ONE shared pool seeded identically for BOTH
+    // players (GameSetup.SeedBasicDicePool's own loop), which is exactly
+    // right for classic Dice Masters' uniform Sidekick dice but wrong for
+    // v3, where each player's basic dice (Tardigrades) must match THEIR
+    // OWN Champion's energy type, not a pool shared across both sides.
+    // Empty by default (same opt-in pattern as GameConfig.Steps/Champions)
+    // so a config that declares Champions without per-Champion pools, or a
+    // player with no ChampionId at all, falls back to
+    // GameConfig.BasicDicePool unchanged - see GameSetup.SeedBasicDicePool.
+    public IReadOnlyList<BasicDicePoolEntry> TardigradePool { get; init; } = [];
+}

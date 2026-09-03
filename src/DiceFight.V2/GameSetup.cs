@@ -48,9 +48,22 @@ public static class GameSetup
     // This is where Direction C's "8 identical Sidekick dice -> two 4-die
     // sets" becomes pure data (ARCHITECTURE_REVIEW.md Part 3) - the loop
     // just walks however many BasicDicePoolEntry rows the config declares.
+    //
+    // A player whose chosen Champion declares its own TardigradePool gets
+    // THAT instead of the shared Config.BasicDicePool - v3's basic dice
+    // vary by which Champion (energy type) a player picked, unlike classic
+    // Dice Masters' one uniform Sidekick pool for both sides. A player
+    // with no ChampionId, or whose Champion declares no pool of its own,
+    // falls back to Config.BasicDicePool exactly as before - zero change
+    // for the classic config.
     private static void SeedBasicDicePool(GameState state, Player player)
     {
-        foreach (var entry in state.Config.BasicDicePool)
+        var champion = player.ChampionId is { } championId
+            ? state.Config.Champions.FirstOrDefault(c => c.Id == championId)
+            : null;
+        var pool = champion is { TardigradePool.Count: > 0 } ? champion.TardigradePool : state.Config.BasicDicePool;
+
+        foreach (var entry in pool)
         {
             for (var i = 0; i < entry.Count; i++)
             {
