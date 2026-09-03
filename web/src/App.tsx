@@ -474,17 +474,17 @@ function App() {
               <StepRibbon game={game} />
             </div>
 
-            {/* Step and life live in the rail now (see TurnRail); this
-                keeps only what is about the table itself. */}
-            <section className="status-bar">
-              <div>
-                <strong>Active:</strong> {game.activePlayerId}
-              </div>
-              {game.isFirstTurn && <div className="badge">First turn</div>}
-              {canDeclareAttackers && (
-                <span className="hint">Select attacker(s) on the board, then use the panel below.</span>
-              )}
-            </section>
+            {/* Step, life, and whose turn it is all live in the rail now
+                (see TurnRail); this keeps only what is about the table
+                itself. */}
+            {(game.isFirstTurn || canDeclareAttackers) && (
+              <section className="status-bar">
+                {game.isFirstTurn && <div className="badge">First turn</div>}
+                {canDeclareAttackers && (
+                  <span className="hint">Select attacker(s) on the board, then use the panel below.</span>
+                )}
+              </section>
+            )}
 
             {/* The old "Manual step actions (advanced)" panel is gone: every
                 button on it is now in the rail's Now panel, which shows only

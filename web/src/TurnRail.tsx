@@ -76,12 +76,22 @@ export function TurnRail(props: {
 
   return (
     <div className="turn-rail">
+      {/* "Active" (moved from the table's status bar - "whose turn"
+          belongs with the rest of the turn state, not the table) and the
+          invite link share one line - both are a single quiet fact, not
+          worth a whole row each. */}
+      <div className="active-line">
+        <span>
+          <strong>Active:</strong> {game.activePlayerId}
+        </span>
+        {props.inviteLink && <InvitePanel link={props.inviteLink} />}
+      </div>
       <div className="life-panels">
-        <div className="life-panel theirs">
+        <div className={`life-panel theirs${game.activePlayerId === them.id ? " active" : ""}`}>
           <span className="life-label">{them.name}</span>
           <span className="life-value">{them.life}</span>
         </div>
-        <div className="life-panel yours">
+        <div className={`life-panel yours${game.activePlayerId === you.id ? " active" : ""}`}>
           <span className="life-label">{you.name}</span>
           <span className="life-value">{you.life}</span>
         </div>
@@ -91,8 +101,6 @@ export function TurnRail(props: {
           title bar - see its own comment for why. This rail keeps only
           what the design's Column 3 still has: life, the Now panel, the
           invite. */}
-
-      {props.inviteLink && <InvitePanel link={props.inviteLink} />}
 
       <div className="rail-panel now-panel">
         <span className="now-eyebrow">Now</span>

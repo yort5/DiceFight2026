@@ -60,76 +60,59 @@ export function PlayerBoard(props: {
     (d) => !isCommunityCard(d.cardId ? cardsById.get(d.cardId) : undefined),
   );
 
-  // Basic Actions are community property and are drawn in the centre of
-  // the table instead (rule 2.1.2, CommunityCards), so a roster is only
-  // this player's own cards.
-  const rosterEl = (
-    <details className="roster">
-      <summary>Unpurchased roster ({roster.length})</summary>
-      <ZoneSection zone="Unpurchased" bare dice={roster} {...zoneProps} />
-    </details>
-  );
-
-  const matEl = (
-    <div className={`mat${props.mirrored ? " mirrored" : ""}`}>
-      <div className="mat-slot mat-field">
-        <ZoneSection zone="FieldZone" prominent dice={dicein("FieldZone")} {...zoneProps} />
-      </div>
-      <div className="mat-slot mat-used">
-        <ZoneSection zone="UsedPile" dice={dicein("UsedPile")} {...zoneProps} />
-      </div>
-      {/* The Reserve Pool is the dice tray, so it is the one zone that
-          reacts to a roll - it shakes as the dice launch. */}
-      <div className={`mat-slot mat-reserve${props.rolling ? " rolling" : ""}`}>
-        <ZoneSection zone="ReservePool" prominent dice={dicein("ReservePool")} {...zoneProps} />
-      </div>
-      <div className="mat-slot mat-prep">
-        <ZoneSection zone="PrepArea" dice={dicein("PrepArea")} {...zoneProps} />
-      </div>
-      <div className="mat-slot mat-outofplay">
-        <ZoneSection zone="OutOfPlay" dice={dicein("OutOfPlay")} {...zoneProps} />
-      </div>
-      <div className="mat-slot mat-intimidated">
-        <ZoneSection zone="Intimidated" dice={dicein("Intimidated")} {...zoneProps} />
-      </div>
-      <div className="mat-slot mat-bag">
-        <ZoneSection zone="Bag" dice={dicein("Bag")} {...zoneProps} />
-      </div>
-      <div className="mat-slot mat-drawn">
-        <ZoneSection zone="DiceFromBag" dice={dicein("DiceFromBag")} {...zoneProps} />
-      </div>
-      <div className="mat-slot mat-carried">
-        <ZoneSection zone="DiceFromPrep" dice={dicein("DiceFromPrep")} {...zoneProps} />
-      </div>
-    </div>
-  );
-
   return (
     <div className={`board${props.isActive ? " active" : ""}${props.mirrored ? " mirrored" : ""}`}>
       {/* Life lives in the rail now (TurnRail's life panels), so the mat
-          is labelled with the player and nothing else. */}
+          is labelled with the player and nothing else.
+          Visual order (opponent: header, roster, mat; near player: mat,
+          header, roster) is CSS `order` on `.board` (flex column), not
+          DOM order - App.css's `.board .roster`/`.board-header` rules -
+          so this stays a fixed header/mat/roster sequence in markup;
+          reordering it here would have no visual effect and was tried
+          and reverted for exactly that reason. */}
       <div className="board-header">
         <h2>{props.title}</h2>
       </div>
 
-      {/* Design order (README's Column 2): the opponent's roster sits
-          ABOVE their (mirrored) mat, away from the combat lane - "name
-          rule, roster strip, mat". The near player's roster stays below
-          their mat, same as always. Same two elements either way, just
-          swapped - rendering them in a fixed order regardless of
-          `mirrored` put the opponent's roster between their Field Zone
-          and the lane, reading as part of neither. */}
-      {props.mirrored ? (
-        <>
-          {rosterEl}
-          {matEl}
-        </>
-      ) : (
-        <>
-          {matEl}
-          {rosterEl}
-        </>
-      )}
+      <div className={`mat${props.mirrored ? " mirrored" : ""}`}>
+        <div className="mat-slot mat-field">
+          <ZoneSection zone="FieldZone" prominent dice={dicein("FieldZone")} {...zoneProps} />
+        </div>
+        <div className="mat-slot mat-used">
+          <ZoneSection zone="UsedPile" dice={dicein("UsedPile")} {...zoneProps} />
+        </div>
+        {/* The Reserve Pool is the dice tray, so it is the one zone that
+            reacts to a roll - it shakes as the dice launch. */}
+        <div className={`mat-slot mat-reserve${props.rolling ? " rolling" : ""}`}>
+          <ZoneSection zone="ReservePool" prominent dice={dicein("ReservePool")} {...zoneProps} />
+        </div>
+        <div className="mat-slot mat-prep">
+          <ZoneSection zone="PrepArea" dice={dicein("PrepArea")} {...zoneProps} />
+        </div>
+        <div className="mat-slot mat-outofplay">
+          <ZoneSection zone="OutOfPlay" dice={dicein("OutOfPlay")} {...zoneProps} />
+        </div>
+        <div className="mat-slot mat-intimidated">
+          <ZoneSection zone="Intimidated" dice={dicein("Intimidated")} {...zoneProps} />
+        </div>
+        <div className="mat-slot mat-bag">
+          <ZoneSection zone="Bag" dice={dicein("Bag")} {...zoneProps} />
+        </div>
+        <div className="mat-slot mat-drawn">
+          <ZoneSection zone="DiceFromBag" dice={dicein("DiceFromBag")} {...zoneProps} />
+        </div>
+        <div className="mat-slot mat-carried">
+          <ZoneSection zone="DiceFromPrep" dice={dicein("DiceFromPrep")} {...zoneProps} />
+        </div>
+      </div>
+
+      {/* Basic Actions are community property and are drawn in the
+          centre of the table instead (rule 2.1.2, CommunityCards), so a
+          roster is only this player's own cards. */}
+      <details className="roster">
+        <summary>Unpurchased roster ({roster.length})</summary>
+        <ZoneSection zone="Unpurchased" bare dice={roster} {...zoneProps} />
+      </details>
     </div>
   );
 }

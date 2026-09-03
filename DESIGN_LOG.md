@@ -10842,3 +10842,49 @@ Declare Attackers to Declare Blockers with zero console errors. Roster
 order, invite row size, and ribbon placement all confirmed via DOM
 queries, not just a screenshot glance. 908 tests pass - backend
 untouched again.
+
+## Match-table redesign, round 3: two things round 2's own fixes got wrong (2026-09-03)
+
+- **The ribbon was still visibly big after being pulled out of
+  `.status-bar`.** Measured it directly rather than eyeballing another
+  screenshot: `font-size: 11px` and `padding: 5px 10px` were both
+  already exactly right, but `line-height` computed to **26.1px** -
+  `index.css`'s `body { font: 18px/145% }` is a *percentage*
+  line-height, which resolves to a fixed length (145% x 18px) at the
+  point it's declared and inherits as that absolute px value, not
+  recomputed against a smaller descendant's own font-size. An
+  11px-font chip inheriting a 26px line-height came out ~38px tall
+  no matter how tight the padding was. Fixed with an explicit
+  `line-height: 1.2` on `.ribbon-chip` - now ~25px tall.
+- **Team B's roster was still between Field Zone and the combat lane**
+  after round 2's fix, because that fix was aimed at the wrong
+  mechanism: `PlayerBoard.tsx` was reordered so `roster` came before
+  `mat` in the JSX for `mirrored` boards, but `.board`'s actual layout
+  is a flex column driven entirely by CSS `order` (`.board .roster {
+  order: 1 }` etc.) - `order` wins regardless of source order, so the
+  DOM swap changed nothing visible. The real bug: `.mat` had no
+  `order` rule for the mirrored case, tying it with `.board-header` at
+  the default `order: 0` and putting it right after the header
+  (source-order tiebreak) - ahead of the roster (`order: 1`) instead
+  of behind it. Reverted the pointless DOM swap, fixed the actual
+  rule: `.board.mirrored .mat { order: 2 }`.
+
+Both are the same lesson twice in one session: when a fix doesn't
+visibly change anything, the assumption about which property controls
+the layout was wrong, not the fix's intent - verify by measuring the
+element that's supposedly fixed, not by re-describing the intent.
+
+Two more from the same round, real feedback rather than a bug hunt:
+
+- **"Active: teamX" moved from the table's status bar into the rail**
+  (`TurnRail.tsx`), next to the life panels it's redundant with,
+  itself now indicated by a `.life-panel.active` highlight on
+  whichever side is active. Then combined onto one line with the
+  invite row right after, since both are a single quiet fact.
+- Kept as-is, deliberately: the "First turn" badge and the "select
+  attacker(s) on the board" hint stay in the table's status bar, since
+  both are actually about what's happening on the table, not the turn
+  state the rail owns.
+
+908 tests pass throughout - all four changes CSS/component-position
+only, no backend touched.
