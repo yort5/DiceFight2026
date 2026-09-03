@@ -186,6 +186,43 @@ a tautologically-false render guard that hid the Assign Blockers panel
 entirely). Not yet done: deploy (Phase 5) - this is pushed to `main` but
 not yet confirmed live.
 
+## Renamed to "Dice Kingdom" (2026-09-03)
+
+"Instinct Clash" is retired as the product name - not sold on it, and it
+didn't lead with "dice" the way the reference points (Dice Masters, Dice
+Throne, Dicero) all do. New name: **Dice Kingdom**. Renamed everywhere
+user-facing: the route (`/instinct-clash` → `/dice-kingdom`), the page
+component and its directory (`web/src/instinct/` →
+`web/src/dicekingdom/`, `InstinctClashPage.tsx` → `DiceKingdomPage.tsx`),
+the CSS (`instinct.css` → `dicekingdom.css`, `.instinct` → `.dicekingdom`),
+the seat-storage key and invite-link path, and all on-page text. Left
+alone, deliberately: the C# engine's internal naming
+(`Data/InstinctClashConfig.cs`, the `InstinctClashConfig` class, card IDs
+like `IC-CLAW-01`, the `Set: "Instinct Clash"` field on each card) - none
+of that is user-visible (the API's `CardDef` DTO doesn't even expose
+`Set`), and renaming it is pure mechanical churn across ~30 call sites for
+zero visible benefit. Same pattern as "DiceFight2026" itself being an
+internal project name distinct from any game it hosts.
+
+Other names considered and kept on hand to show other people later:
+**Primal Dice**, **Dice Pack**, **Dice Reign** (also floated: Wild Dice,
+Feral Dice, Alpha Dice, Dice Horde, Fang Dice, Dice Instinct).
+
+Also fixed in this pass, both found by actually looking at the deployed
+page rather than trusting the build:
+- **The board was reading as "off"** because `instinct.css` had ported
+  the `/alpha` prototype's own CSS almost verbatim (same class shapes,
+  same tiny flat tiles) - so the "real engine" version looked like the
+  throwaway prototype reskinned, which was the whole thing this build was
+  supposed to fix. Redone with real hierarchy: Anton (bold condensed
+  display face) for headings/names/stat numbers, larger card-shaped tiles
+  with shadow and a per-player energy-color accent (each player's whole
+  pool is one energy family, tied to their Champion), bigger icons.
+- **Board order was backwards**: the active/"your" board was rendering
+  on top, opponent below - opposite of every physical CCG and most
+  mobile card games, where you sit at the bottom of your own view. Now
+  the opponent's board renders first (top), yours last (bottom).
+
 ## Prior prototype notes (superseded by the above for anything that conflicts)
 
 ### Playable prototype (2026-09-02, corrected same day)

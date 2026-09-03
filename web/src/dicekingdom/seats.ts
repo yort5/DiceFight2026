@@ -1,6 +1,6 @@
 // v2 counterpart to ../seats.ts - same bearer-token-in-sessionStorage
 // model, kept as a separate module (not a shared one with a path param)
-// specifically so a v1 /game session and a v3 /instinct-clash session open
+// specifically so a v1 /game session and a v3 /dice-kingdom session open
 // in the same browser tab don't collide over one sessionStorage key.
 
 export interface Seat {
@@ -14,7 +14,7 @@ interface StoredSeats {
   activePlayerId: string;
 }
 
-const KEY = "instinctclash:seats";
+const KEY = "dicekingdom:seats";
 
 let cached: StoredSeats | null = null;
 
@@ -74,7 +74,7 @@ export function inviteLink(gameId: string): string | null {
   const other = stored.seats.find((s) => s.playerId !== stored.activePlayerId);
   if (!other) return null;
   const url = new URL(window.location.href);
-  url.pathname = "/instinct-clash";
+  url.pathname = "/dice-kingdom";
   url.search = `?g=${encodeURIComponent(gameId)}&s=${encodeURIComponent(other.token)}`;
   url.hash = "";
   return url.toString();

@@ -1,10 +1,10 @@
 import type { ReactElement, ReactNode } from "react";
 
-// Hand-drawn icon set for Instinct Clash - the same SVG concepts already
+// Hand-drawn icon set for Dice Kingdom - the same SVG concepts already
 // designed and reviewed as Claude artifacts this session (the energy-pip
 // icon sheet and the 45-animal avatar sheet), ported into the real app.
 // Every icon is a single <path>-based glyph using currentColor, so a
-// wrapping element's `color` sets the badge's hue - see instinct.css's
+// wrapping element's `color` sets the badge's hue - see dicekingdom.css's
 // `.pip`/`.avatar` classes for the accent tokens.
 
 type IconProps = { size?: number };

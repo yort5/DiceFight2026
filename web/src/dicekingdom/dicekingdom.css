@@ -1,12 +1,12 @@
-/* Instinct Clash - a distinct visual identity from the rest of the site
-   on purpose (see v3/DESIGN_NOTES.md: v1's board is deliberately plain/
+/* Dice Kingdom - a distinct visual identity from the rest of the site on
+   purpose (see v3/DESIGN_NOTES.md: v1's board is deliberately plain/
    utilitarian, v3 wants to look like an actual card game). Display type
    is Anton (bold, condensed, graphic - reads "clash" rather than
    "spreadsheet") over Work Sans body text; both loaded in index.html.
    Layered on the site's --border/--code-bg tokens for light/dark parity,
    with the four energy hues as the real accent system instead of a
    single generic brand color. */
-.instinct {
+.dicekingdom {
   --claw: #b8451f;
   --shell: #2f6b52;
   --wing: #2f6690;
@@ -21,7 +21,7 @@
   padding: 24px 16px 64px;
 }
 @media (prefers-color-scheme: dark) {
-  .instinct {
+  .dicekingdom {
     --claw: #e07a4a;
     --shell: #5fa085;
     --wing: #6fabd9;
@@ -31,21 +31,21 @@
   }
 }
 
-.instinct .eyebrow {
+.dicekingdom .eyebrow {
   font: 700 11px/1 var(--sans);
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--wild);
   margin: 0 0 6px;
 }
-.instinct h1 {
+.dicekingdom h1 {
   font: 400 44px/0.95 var(--display);
   text-transform: uppercase;
   letter-spacing: 0.01em;
   color: var(--text-h);
   margin: 0 0 10px;
 }
-.instinct .dek {
+.dicekingdom .dek {
   color: var(--text);
   opacity: 0.85;
   font-size: 14px;
@@ -54,13 +54,13 @@
   margin: 0 0 20px;
 }
 
-.instinct .champ-pick {
+.dicekingdom .champ-pick {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 12px;
   margin-bottom: 20px;
 }
-.instinct .champ-opt {
+.dicekingdom .champ-opt {
   border: 2px solid var(--border);
   border-radius: 14px;
   padding: 16px 12px;
@@ -72,25 +72,25 @@
   box-shadow: var(--shadow);
   transition: transform 0.12s ease, border-color 0.12s ease;
 }
-.instinct .champ-opt:hover {
+.dicekingdom .champ-opt:hover {
   transform: translateY(-2px);
 }
-.instinct .champ-opt.selected {
+.dicekingdom .champ-opt.selected {
   border-color: var(--sel, var(--text-h));
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--sel, var(--text-h)) 25%, transparent), var(--shadow);
 }
-.instinct .champ-opt svg {
+.dicekingdom .champ-opt svg {
   width: 42px;
   height: 42px;
 }
-.instinct .champ-opt .cname {
+.dicekingdom .champ-opt .cname {
   font: 400 15px var(--display);
   text-transform: uppercase;
   letter-spacing: 0.02em;
   margin-top: 8px;
 }
 
-.instinct button.btn {
+.dicekingdom button.btn {
   font: 600 13.5px var(--sans);
   background: var(--text-h);
   color: var(--bg);
@@ -100,17 +100,17 @@
   cursor: pointer;
   letter-spacing: 0.01em;
 }
-.instinct button.btn:disabled {
+.dicekingdom button.btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
-.instinct button.btn.ghost {
+.dicekingdom button.btn.ghost {
   background: transparent;
   color: var(--text);
   border: 1.5px solid var(--border);
 }
 
-.instinct .topbar {
+.dicekingdom .topbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -118,7 +118,7 @@
   flex-wrap: wrap;
   margin-bottom: 16px;
 }
-.instinct .lifebox {
+.dicekingdom .lifebox {
   background: var(--panel-bg);
   border: 2px solid var(--border);
   border-radius: 14px;
@@ -128,15 +128,15 @@
   gap: 10px;
   box-shadow: var(--shadow);
 }
-.instinct .lifebox svg {
+.dicekingdom .lifebox svg {
   width: 26px;
   height: 26px;
 }
-.instinct .lifebox .lnum {
+.dicekingdom .lifebox .lnum {
   font: 400 26px/1 var(--display);
   font-variant-numeric: tabular-nums;
 }
-.instinct .phasepill {
+.dicekingdom .phasepill {
   font: 700 11px var(--sans);
   padding: 7px 16px;
   border-radius: 999px;
@@ -146,7 +146,7 @@
   letter-spacing: 0.06em;
 }
 
-.instinct .champbanner {
+.dicekingdom .champbanner {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -157,25 +157,25 @@
   padding: 10px 14px;
   margin-bottom: 14px;
 }
-.instinct .champbanner svg {
+.dicekingdom .champbanner svg {
   width: 32px;
   height: 32px;
   flex: none;
 }
-.instinct .champbanner .cbname {
+.dicekingdom .champbanner .cbname {
   font: 400 17px var(--display);
   text-transform: uppercase;
   letter-spacing: 0.01em;
 }
-.instinct .champbanner .cbpassive {
+.dicekingdom .champbanner .cbpassive {
   font-size: 11.5px;
   opacity: 0.8;
 }
 
-.instinct .zone {
+.dicekingdom .zone {
   margin-bottom: 18px;
 }
-.instinct .zone h4 {
+.dicekingdom .zone h4 {
   font: 700 11px var(--sans);
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -185,18 +185,18 @@
   gap: 6px;
   align-items: center;
 }
-.instinct .zone h4 .count {
+.dicekingdom .zone h4 .count {
   font: 500 10.5px var(--mono);
   opacity: 0.7;
 }
-.instinct .dierow {
+.dicekingdom .dierow {
   display: flex;
   flex-wrap: wrap;
   gap: 9px;
   min-height: 6px;
 }
 
-.instinct .dietile {
+.dicekingdom .dietile {
   width: 94px;
   border: 1.5px solid var(--border);
   border-top: 4px solid var(--cc, var(--border));
@@ -210,35 +210,35 @@
   box-shadow: var(--shadow);
   transition: transform 0.1s ease;
 }
-.instinct .dietile.clickable {
+.dicekingdom .dietile.clickable {
   cursor: pointer;
 }
-.instinct .dietile.clickable:hover {
+.dicekingdom .dietile.clickable:hover {
   transform: translateY(-2px);
   border-color: var(--text-h);
 }
-.instinct .dietile.picked {
+.dicekingdom .dietile.picked {
   border-color: var(--text-h);
   background: var(--panel-bg);
   transform: translateY(-2px);
 }
-.instinct .dietile svg {
+.dicekingdom .dietile svg {
   width: 34px;
   height: 34px;
   margin: 0 auto 3px;
 }
-.instinct .dietile .stat {
+.dicekingdom .dietile .stat {
   font: 400 22px/1 var(--display);
   font-variant-numeric: tabular-nums;
 }
-.instinct .dietile .lbl {
+.dicekingdom .dietile .lbl {
   font-size: 9px;
   opacity: 0.65;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   margin-top: 1px;
 }
-.instinct .pip {
+.dicekingdom .pip {
   display: inline-flex;
   align-items: center;
   gap: 2px;
@@ -249,7 +249,7 @@
   color: #fff8ec;
 }
 
-.instinct .panel {
+.dicekingdom .panel {
   background: var(--panel-bg);
   border: 1px solid var(--border);
   border-radius: 14px;
@@ -257,17 +257,17 @@
   margin: 12px 0;
   box-shadow: var(--shadow);
 }
-.instinct .panel p {
+.dicekingdom .panel p {
   margin: 0 0 10px;
   font-size: 13px;
 }
-.instinct .chiprow {
+.dicekingdom .chiprow {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 12px;
 }
-.instinct .chip {
+.dicekingdom .chip {
   border: 1.5px solid var(--border);
   border-radius: 9px;
   padding: 6px 12px;
@@ -277,17 +277,17 @@
   color: inherit;
   font-family: inherit;
 }
-.instinct .chip.on {
+.dicekingdom .chip.on {
   border-color: var(--text-h);
   background: var(--border);
 }
-.instinct .actionrow {
+.dicekingdom .actionrow {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
 }
 
-.instinct details.how {
+.dicekingdom details.how {
   background: var(--panel-bg);
   border: 1px solid var(--border);
   border-radius: 14px;
@@ -296,22 +296,22 @@
   font-size: 13px;
   box-shadow: var(--shadow);
 }
-.instinct details.how summary {
+.dicekingdom details.how summary {
   cursor: pointer;
   font-weight: 600;
 }
-.instinct details.how ul {
+.dicekingdom details.how ul {
   margin: 6px 0;
   padding-left: 20px;
 }
 
-.instinct .invite {
+.dicekingdom .invite {
   font-size: 12px;
   opacity: 0.75;
   margin-top: 6px;
   word-break: break-all;
 }
-.instinct .error {
+.dicekingdom .error {
   color: var(--claw);
   font-size: 13px;
   margin-bottom: 12px;

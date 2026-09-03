@@ -432,7 +432,7 @@ function App() {
         </button>
         <button onClick={() => setShowHowToPlay(true)}>How to Play</button>
         <button onClick={() => navigate("/teambuilder")}>Team Builder</button>
-        <button onClick={() => navigate("/instinct-clash")}>Instinct Clash (v3)</button>
+        <button onClick={() => navigate("/dice-kingdom")}>Dice Kingdom (v3)</button>
         {error && <div className="error">{error}</div>}
       </header>
 

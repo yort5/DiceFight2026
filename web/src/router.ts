@@ -6,13 +6,13 @@ import { useSyncExternalStore } from "react";
 // refresh on /teambuilder works server-side), and Vite's dev server does
 // the same by default - this only needs to read the current path and react
 // to browser back/forward.
-export type Route = "/game" | "/teambuilder" | "/instinct-clash";
+export type Route = "/game" | "/teambuilder" | "/dice-kingdom";
 
 function normalize(pathname: string): Route {
   // "/" and anything unrecognized fall back to /game - preserves today's
   // existing behavior/bookmarks (the site was just "/" before this).
   if (pathname === "/teambuilder") return "/teambuilder";
-  if (pathname === "/instinct-clash") return "/instinct-clash";
+  if (pathname === "/dice-kingdom") return "/dice-kingdom";
   return "/game";
 }
 

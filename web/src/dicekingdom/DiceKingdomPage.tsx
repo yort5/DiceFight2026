@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import "./instinct.css";
+import "./dicekingdom.css";
 import { api } from "./api";
 import { CHAMPION_ICONS, CHARACTER_ICONS } from "./icons";
 import { claimSeatFromUrl, inviteLink, nameClaimedSeat, rememberSeats } from "./seats";
@@ -80,7 +80,7 @@ function DieTile({
   );
 }
 
-export function InstinctClashPage() {
+export function DiceKingdomPage() {
   const [game, setGame] = useState<GameState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -163,11 +163,11 @@ export function InstinctClashPage() {
 
   if (!game) {
     return (
-      <div className="instinct">
+      <div className="dicekingdom">
         <p className="eyebrow" style={{ opacity: 0.6, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.1em" }}>
           DiceFight v3
         </p>
-        <h1>Instinct Clash</h1>
+        <h1>Dice Kingdom</h1>
         <p className="dek">
           Pass-and-play, or send the other seat an invite link once the match starts. Runs on the real rules
           engine - a small pool, simple abilities, mostly for reacting to how the system feels.
@@ -389,11 +389,11 @@ export function InstinctClashPage() {
   const link = inviteLink(game.gameId);
 
   return (
-    <div className="instinct">
+    <div className="dicekingdom">
       <p className="eyebrow" style={{ opacity: 0.6, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.1em" }}>
         DiceFight v3
       </p>
-      <h1>Instinct Clash</h1>
+      <h1>Dice Kingdom</h1>
       {error && <p className="error">{error}</p>}
       {link && (
         <p className="invite">
@@ -556,9 +556,9 @@ export function InstinctClashPage() {
         </div>
       )}
 
-      {renderBoard(you, "You")}
-      <hr style={{ border: "none", borderTop: "1px dashed var(--border)", margin: "18px 0" }} />
       {renderBoard(opponentId, "Opponent")}
+      <hr style={{ border: "none", borderTop: "1px dashed var(--border)", margin: "18px 0" }} />
+      {renderBoard(you, "You")}
     </div>
   );
 }
