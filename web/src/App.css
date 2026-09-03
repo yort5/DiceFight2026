@@ -36,6 +36,13 @@
   align-items: start;
 }
 
+/* Design handoff's 3-column match table (design_handoff_match_table/
+   README.md): a left sideboard for what belongs to neither roster
+   (Basic Actions, Global Abilities), the table itself, and the rail. */
+.app-layout.game-layout {
+  grid-template-columns: 224px minmax(0, 1fr) 300px;
+}
+
 /* The Team Builder's sidebar carries each card's full printed text, so
    it needs materially more room than the game board's does. Scoped to
    this page rather than widening .app-layout, which the game shares. */
@@ -45,7 +52,8 @@
 
 @media (max-width: 1100px) {
   .app-layout,
-  .app-layout.team-builder-layout {
+  .app-layout.team-builder-layout,
+  .app-layout.game-layout {
     grid-template-columns: 1fr;
   }
 }
@@ -363,6 +371,93 @@
   flex-direction: column;
   gap: 12px;
   min-width: 0;
+}
+
+/* The design handoff's Column 1 - Basic Actions and Global Abilities
+   belong to neither roster, so they sit here rather than in the centre
+   or the rail (see Sideboard.tsx). `.community-cards` already carries
+   its own dark violet styling (it was always meant to float as a dark
+   card, same pattern as `.game-table` - not touched here), and
+   `.global-sidebar`'s neutral rgba() overlays already work on either
+   theme, so this container is only layout, no new colors. */
+.sideboard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.sideboard .community-cards {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.sideboard .community-list {
+  flex-direction: column;
+}
+
+/* The actual flex item .community-list's column layout stretches is the
+   bare <li>, not .community-card - CommunityCards.tsx renders
+   <ul class="community-list"><li><button class="community-card">, so
+   width rules on .community-card alone were resolving against the <li>'s
+   own box, not the 224px column. The <li>'s automatic min-width is its
+   content's min-content size (that card's header row doesn't wrap), and
+   that automatic minimum silently overrode every width/flex rule tried
+   on .community-card itself - min-width: 0 here is what actually fixes
+   it, on the element that's really the flex item. */
+.sideboard .community-list > li {
+  min-width: 0;
+  width: 100%;
+}
+
+.sideboard .community-card {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.sideboard .community-head {
+  flex-wrap: wrap;
+}
+
+/* The design's chosen step UI - horizontal chips in the table's title
+   bar - see StepRibbon.tsx. flex-basis: 100% wraps it onto its own row
+   within .status-bar's flex-wrap rather than squeezing inline with the
+   active-player text beside it. */
+.step-ribbon {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  flex-basis: 100%;
+}
+
+.ribbon-chip {
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid oklch(0.6 0.02 250 / 0.4);
+  background: oklch(0.9 0.01 250 / 0.5);
+  color: oklch(0.4 0.02 250);
+}
+
+.ribbon-chip.current {
+  background: oklch(0.72 0.12 70);
+  color: oklch(0.22 0.03 70);
+  border-color: oklch(0.78 0.12 70);
+}
+
+.ribbon-chip.past {
+  opacity: 0.55;
+}
+
+@media (prefers-color-scheme: dark) {
+  .ribbon-chip {
+    background: oklch(0.3 0.02 250 / 0.5);
+    color: oklch(0.78 0.012 110);
+    border-color: oklch(0.46 0.02 250 / 0.5);
+  }
 }
 
 .turn-rail {
@@ -1461,6 +1556,13 @@
   font-size: 13px;
   position: sticky;
   top: 24px;
+  /* Every card in the catalog with a scripted Global renders here - a
+     few hundred at full catalog size - so without a cap this blew the
+     whole page out to several thousand px tall. The header/flow stay
+     put; only the list itself scrolls. */
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 48px);
 }
 
 .global-sidebar h3 {
@@ -1469,15 +1571,19 @@
   letter-spacing: 0.05em;
   opacity: 0.65;
   margin: 0 0 10px;
+  flex: none;
 }
 
 .global-list {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 0 4px 0 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 80px;
 }
 
 .global-list-item {

@@ -10724,3 +10724,68 @@ membership check, mirroring the existing energy-symbol one.
 580/580, API 10/10 - all untouched otherwise. **Phase 8 (Dice Masters
 as a game definition / card migration) is now fully COMPLETE** - all
 five tasks done. Phase 9 (API + web integration) is next, not started.
+
+## Match-table redesign, finishing the handoff: the real sideboard and the ribbon (2026-09-03)
+
+The user surfaced the original Claude Design handoff file itself
+(`Match Table.dc.html` + README, the source for stages 1-5 above) while
+working on v3's Dice Kingdom board and asked directly why its own board
+kept reinventing pieces v1 might already have solved. Checking against
+it found stage 5's own closing note was accurate but easy to misread:
+*"that completes the handoff apart from the two variants it offered and
+we did not take (the carved ivory dice, the rail step UI)"* - meaning
+**ribbon**, not rail, was the chosen step UI, and the handoff's Column 1
+("a shared left sideboard for Basic Actions and Global Abilities") was
+never built as such. What shipped instead: Basic Actions in
+`CommunityCards.tsx` between the two mats, Global Abilities in the right
+`.side-column` next to the rail, and a vertical rail (`TurnRail.tsx`) for
+the step sequence - the opposite variant from the one actually chosen.
+
+**Fixed for real this time**, not documented as a known gap: new
+`Sideboard.tsx` (a thin wrapper - reuses `CommunityCards`/
+`GlobalAbilitiesPanel` unmodified, just repositioned and rewired) as the
+`.app-layout.game-layout` grid's new first column (`224px minmax(0,1fr)
+300px`), and new `StepRibbon.tsx` - horizontal, read-only step chips
+(rule 2.2.4 still forbids going back) - in the table's title bar,
+replacing `TurnRail`'s old vertical `<ol className="turn-steps">`
+entirely.
+
+**Two real bugs the move surfaced**, neither visible in the old
+positions:
+
+- `.global-sidebar` had no height cap and no scrolling `.global-list` -
+  every card in the catalog with a scripted Global renders there (a few
+  hundred at full catalog size), which blew the whole page out to
+  ~5500px tall. Capped the panel at `calc(100vh - 48px)` and made only
+  `.global-list` itself scroll, so the header and any in-progress
+  Global-use flow stay anchored.
+- `.community-card` ignored every width/flex rule tried on it and kept
+  rendering ~330px wide in a 224px column, overlapping the table next to
+  it. Root cause, found by walking the actual DOM rather than guessing
+  again: `CommunityCards.tsx` renders `<ul class="community-list"><li>
+  <button class="community-card">` - the real flex item stretched by
+  `.community-list`'s `flex-direction: column` is the bare, unstyled
+  `<li>`, not `.community-card`. The `<li>`'s automatic `min-width` is
+  its content's min-content size (that card's header row doesn't wrap),
+  and that automatic minimum silently overrides any width rule put on
+  the child inside it. Fixed on the actual flex item
+  (`.sideboard .community-list > li { min-width: 0; width: 100%; }`),
+  not the button - every earlier attempt aimed at `.community-card`
+  itself (explicit `width`, `flex: none`, `min-width: 0`) had no effect
+  at all, which was the tell that the wrong element was being styled.
+
+Verified with headless Chromium against a real running server (not just
+`npm run build`): sideboard/ribbon present and correctly positioned,
+old rail/CommunityCards/GlobalAbilitiesPanel confirmed gone from their
+old spots, a `Clear & Draw` → `Roll` click-through with no console
+errors, and direct `getBoundingClientRect()`/computed-style checks on
+the specific elements that were fighting the CSS - screenshots alone
+had already been double-checked once and still missed the real width
+bug until the DOM was inspected directly. 908 tests pass (backend
+untouched - this was CSS/component-position only).
+
+Not done, and left for a later pass since neither was asked for
+directly this round: the `carved` ivory dice theme (an alternate to
+`signal`, which is what's live and was always the reviewed choice per
+the same README), and portrait roster cards (still the old collapsed
+`<details>`).

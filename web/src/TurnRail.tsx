@@ -87,23 +87,10 @@ export function TurnRail(props: {
         </div>
       </div>
 
-      <div className="rail-panel">
-        <h3>Turn sequence</h3>
-        <ol className="turn-steps">
-          {STEPS.map((step, i) => {
-            const state = i < currentIndex ? "past" : i === currentIndex ? "current" : "future";
-            return (
-              <li key={step.key} className={`turn-step ${state}`} aria-current={state === "current" || undefined}>
-                <span className="turn-step-dot" aria-hidden="true" />
-                <span className="turn-step-body">
-                  <span className="turn-step-label">{step.label}</span>
-                  <span className="turn-step-hint">{step.hint}</span>
-                </span>
-              </li>
-            );
-          })}
-        </ol>
-      </div>
+      {/* The turn sequence itself is the StepRibbon now, in the table's
+          title bar - see its own comment for why. This rail keeps only
+          what the design's Column 3 still has: life, the Now panel, the
+          invite. */}
 
       {props.inviteLink && <InvitePanel link={props.inviteLink} />}
 

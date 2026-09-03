@@ -4,15 +4,16 @@ import { ActionTray } from "./ActionTray";
 import { InfiltrateWindowPanel, RangeWindowPanel, TagOutWindowPanel } from "./AttackWindowPanels";
 import { DamageSplitPanel, DeclareBlockersPanel } from "./CombatPanel";
 import { CombatLane } from "./CombatLane";
-import { CommunityCards } from "./CommunityCards";
 import { DeclareAttackersPanel } from "./DeclareAttackersPanel";
 import { dieLabel } from "./dieHelpers";
 import { readPendingGame } from "./gameHandoff";
-import { GlobalAbilitiesPanel, type GlobalAbilityFlow } from "./GlobalAbilitiesPanel";
+import type { GlobalAbilityFlow } from "./GlobalAbilitiesPanel";
 import { HowToPlay } from "./HowToPlay";
 import { PendingChoicePanel } from "./PendingChoicePanel";
 import { MatchLog } from "./MatchLog";
 import { PlayerBoard, type Selection } from "./PlayerBoard";
+import { Sideboard } from "./Sideboard";
+import { StepRibbon } from "./StepRibbon";
 import { TurnRail } from "./TurnRail";
 import { navigate } from "./router";
 import { claimSeatFromUrl, inviteLink, nameClaimedSeat } from "./seats";
@@ -440,10 +441,35 @@ function App() {
 
       {game && gameId && (
         <div className="app-layout game-layout">
+          <Sideboard
+            game={game}
+            dice={game.dice}
+            cardsById={cardsById}
+            cards={cards ?? []}
+            nearPlayerId={you}
+            selection={selection}
+            onGroupClick={handleGroupClick}
+            busy={busy}
+            globalFlow={globalFlow}
+            onStartGlobal={startGlobalAbility}
+            onChooseGlobalPlayer={chooseGlobalAbilityPlayer}
+            onConfirmGlobalEnergy={confirmGlobalAbilityEnergy}
+            onConfirmGlobalTargets={() =>
+              globalFlow &&
+              submitGlobalAbility(
+                globalFlow.energyIds,
+                selection.primary ? [selection.primary, ...selection.secondary] : [],
+              )
+            }
+            onSkipGlobalTargets={() => globalFlow && submitGlobalAbility(globalFlow.energyIds, [])}
+            onCancelGlobal={cancelGlobalAbility}
+          />
+
           <div className="main-column">
             {/* Step and life live in the rail now (see TurnRail); this
                 keeps only what is about the table itself. */}
             <section className="status-bar">
+              <StepRibbon game={game} />
               <div>
                 <strong>Active:</strong> {game.activePlayerId}
               </div>
@@ -605,15 +631,6 @@ function App() {
                 rolling={rolling}
               />
 
-              {/* Between the two mats, because it belongs to neither. */}
-              <CommunityCards
-                dice={game.dice}
-                cardsById={cardsById}
-                nearPlayerId={you}
-                selection={selection}
-                onGroupClick={handleGroupClick}
-              />
-
               <CombatLane
                 dice={game.dice}
                 cardsById={cardsById}
@@ -656,28 +673,6 @@ function App() {
             />
 
             <MatchLog entries={game.log} nearPlayerId={you} />
-
-            <GlobalAbilitiesPanel
-            game={game}
-            dice={game.dice}
-            cardsById={cardsById}
-            cards={cards ?? []}
-            busy={busy}
-            flow={globalFlow}
-            selection={selection}
-            onStart={startGlobalAbility}
-            onChoosePlayer={chooseGlobalAbilityPlayer}
-            onConfirmEnergy={confirmGlobalAbilityEnergy}
-            onConfirmTargets={() =>
-              globalFlow &&
-              submitGlobalAbility(
-                globalFlow.energyIds,
-                selection.primary ? [selection.primary, ...selection.secondary] : [],
-              )
-            }
-            onSkipTargets={() => globalFlow && submitGlobalAbility(globalFlow.energyIds, [])}
-            onCancel={cancelGlobalAbility}
-            />
           </div>
         </div>
       )}
