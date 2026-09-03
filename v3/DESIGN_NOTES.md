@@ -155,7 +155,32 @@ uses exactly one per side to keep scope small.
 - How many Characters a team actually carries, and whether Champion +
   Character energy types must match (the prototype assumes yes).
 
-## Playable prototype (2026-09-02, corrected same day)
+## Real-engine build (2026-09-03)
+
+Instinct Clash's throwaway `/alpha` prototype did its job (proved the
+mechanics, surfaced the Champion-model mixup below) but doesn't run on
+the real rules engine and doesn't look like a card game - both real
+complaints. Plan: `~/.claude/plans/mellow-sparking-comet.md`. Status:
+**Phases 1-3 done** - `TurnEngine.RerollOwn` (player-voluntary reroll,
+a real gap: `Reroll` previously only existed as a card-triggered effect),
+`ChampionDef`/`ChampionRegistry` (a Champion has no die at all -
+`CardDef.Die` is non-nullable - so it's registered directly into
+`GameState`'s existing modifier lists rather than through
+`ContinuousRegistry`'s per-die gating), `Data/InstinctClashConfig.cs`
+(the whole game as one real `GameConfig`: 4 energy types, the locked
+Tardigrade die spec, 4 Champions, 8 simple-ability Characters), and a
+parallel `api/v2/games` controller mirroring `GamesController.cs`'s shape.
+Verified with a real HTTP smoke test end to end (not just unit tests) and
+908 passing tests. Deliberately skipped for this pass: win condition/
+deck-out (user call - casual playtesting won't reach it).
+
+**Not yet done: the web client (Phase 4) and deploy (Phase 5).** The API
+only exists as an HTTP surface right now - nothing to click through until
+the React board gets built and wired to it.
+
+## Prior prototype notes (superseded by the above for anything that conflicts)
+
+### Playable prototype (2026-09-02, corrected same day)
 
 **Public, on the deployed site: `/alpha`.** Also mirrored as a Claude
 artifact for a private shareable link:
