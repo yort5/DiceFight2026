@@ -10789,3 +10789,56 @@ directly this round: the `carved` ivory dice theme (an alternate to
 `signal`, which is what's live and was always the reviewed choice per
 the same README), and portrait roster cards (still the old collapsed
 `<details>`).
+
+## Match-table redesign, round 2: five more real gaps from actually playing it (2026-09-03)
+
+Playing the sideboard/ribbon fix above (not just screenshotting it)
+surfaced five more, all fixed the same day:
+
+- **The ribbon read as a lot bigger than intended.** It was the first
+  child of `.status-bar`, sharing that section's bordered/padded box
+  with the "Active: teamX / First turn" line - `flex-basis: 100%` forced
+  it onto its own row, but still inside the same heavy box. Pulled it
+  into its own unboxed `.table-titlebar` row above `.status-bar`, so the
+  chips are the only thing there - matching the README's plain title-bar
+  treatment rather than gaining a container's visual weight.
+- **Team B's (mirrored) unpurchased roster rendered between their Field
+  Zone and the combat lane.** `PlayerBoard.tsx` always rendered
+  `<mat><roster>` in that fixed order regardless of `mirrored`, but the
+  README's own Column 2 order is opponent-roster-BEFORE-mat,
+  near-player-roster-AFTER-mat - two different orders for the two
+  boards, not one. Fixed by swapping the order when `mirrored`.
+- **The invite panel was a full rail-panel** - heading, explanation
+  paragraph, full-width button, full-width URL text box - the same
+  visual weight as the Now panel, for a one-time convenience most of a
+  game doesn't need once the second seat has joined. Collapsed to one
+  quiet row (a label, a small "Copy link" button, the URL in the title
+  tooltip instead of a visible box).
+- **The contextual selection panels (ActionTray and its siblings -
+  PendingChoicePanel, the field-target flow, Range/DeclareAttackers/
+  DeclareBlockers/Infiltrate/TagOut) lived in the main column, above the
+  table.** Direct feedback: "I actually like the turn controls on the
+  side... that should also be where the reroll selected and such should
+  go" - exactly the README's own "Selected die" rail panel, which nothing
+  had built yet (the Now panel covers step-level actions; this is the
+  separate one for whatever's actually selected). Moved the whole block
+  into the side column, right after the Now panel and before the Log -
+  same components, unmodified, just relocated.
+- **A real stuck state, not cosmetic**: with zero legal attackers,
+  `DeclareAttackersPanel`'s only button (`Declare Attackers`) stayed
+  permanently disabled - `canDeclare` required a `primaryDie`, and
+  nothing forces a selection to exist. There was no way to submit "0
+  attackers" and move on, even though the server has always accepted an
+  empty attacker list. Added a `No Attackers ▶` button shown whenever
+  nothing is selected, calling `onSubmit([], [])` directly.
+
+Verified with headless Chromium against a real running server, driving
+one full turn by exact button text rather than the fragile `hasText:
+/^Roll/`-style regex the first attempt used (it matched more than one
+button and made the earlier run's "stuck" report a false read for the
+first few steps of its own): Clear & Draw -> Roll & Reroll -> Roll ->
+Main -> Attack -> **No Attackers ▶** actually advancing the game from
+Declare Attackers to Declare Blockers with zero console errors. Roster
+order, invite row size, and ribbon placement all confirmed via DOM
+queries, not just a screenshot glance. 908 tests pass - backend
+untouched again.

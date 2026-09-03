@@ -110,12 +110,26 @@ export function DeclareAttackersPanel(props: {
         </button>
       </div>
       <div className="tray-actions">
-        <div className="tray-action">
-          <button disabled={busy || !canDeclare} onClick={declare}>
-            Declare Attackers
-          </button>
-          <span className="hint">Primary + secondary selections = every die attacking this turn</span>
-        </div>
+        {primaryDie ? (
+          <div className="tray-action">
+            <button disabled={busy || !canDeclare} onClick={declare}>
+              Declare Attackers
+            </button>
+            <span className="hint">Primary + secondary selections = every die attacking this turn</span>
+          </div>
+        ) : (
+          // No selection is a legal answer, not just an unfinished one -
+          // nothing forces a player to attack, and with no legal attacker
+          // on the board (or a deliberate choice to hold back) there was
+          // previously no way out of this panel at all: "Declare
+          // Attackers" stayed disabled forever with nothing selectable.
+          <div className="tray-action">
+            <button disabled={busy} onClick={() => props.onSubmit([], [])}>
+              No Attackers ▶
+            </button>
+            <span className="hint">Select field dice above to attack with them, or continue with none</span>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -466,10 +466,17 @@ function App() {
           />
 
           <div className="main-column">
+            {/* A slim, unboxed row - not part of .status-bar's bordered
+                panel below. Real feedback: boxing the ribbon in with the
+                Active/First-turn line made it read as a lot bigger and
+                heavier than the design's plain title-bar chips. */}
+            <div className="table-titlebar">
+              <StepRibbon game={game} />
+            </div>
+
             {/* Step and life live in the rail now (see TurnRail); this
                 keeps only what is about the table itself. */}
             <section className="status-bar">
-              <StepRibbon game={game} />
               <div>
                 <strong>Active:</strong> {game.activePlayerId}
               </div>
@@ -482,8 +489,78 @@ function App() {
             {/* The old "Manual step actions (advanced)" panel is gone: every
                 button on it is now in the rail's Now panel, which shows only
                 what is actually legal. Declare Blockers was already routed
-                through DeclareBlockersPanel rather than a quick action. */}
+                through DeclareBlockersPanel rather than a quick action.
+                The contextual selection panels themselves (ActionTray and
+                its siblings) moved into the rail - see the design's own
+                "Selected die" panel, and real feedback that these read as
+                part of the turn controls, not the table. */}
 
+            {/* The table: the two mats face each other across the combat
+                lane, so both Field Zones sit against it and an attacker
+                stands opposite whatever is blocking it. Player two is on
+                the far side, mirrored. */}
+            <section className="game-table">
+              <PlayerBoard
+                title={`${them!.name} (${them!.id})`}
+                isActive={game.activePlayerId === them!.id}
+                mine={false}
+                mirrored
+                dice={game.dice.filter((d) => d.ownerId === them!.id)}
+                cardsById={cardsById}
+                selection={selection}
+                onGroupClick={handleGroupClick}
+                selectableEnergyIds={globalEnergySelectableIds}
+                spins={spins}
+                turnOffsets={offsets}
+                rolling={rolling}
+              />
+
+              <CombatLane
+                dice={game.dice}
+                cardsById={cardsById}
+                assignments={combatAssignments}
+                nearPlayerId={you}
+                selection={selection}
+                onGroupClick={handleGroupClick}
+                spins={spins}
+                turnOffsets={offsets}
+              />
+
+              <PlayerBoard
+                title={`${near!.name} (${near!.id})`}
+                isActive={game.activePlayerId === near!.id}
+                mine
+                dice={game.dice.filter((d) => d.ownerId === near!.id)}
+                cardsById={cardsById}
+                selection={selection}
+                onGroupClick={handleGroupClick}
+                selectableEnergyIds={globalEnergySelectableIds}
+                spins={spins}
+                turnOffsets={offsets}
+                rolling={rolling}
+              />
+            </section>
+          </div>
+
+          <div className="side-column">
+            <TurnRail
+              game={game}
+              nearPlayerId={you}
+              inviteLink={inviteLink(game.gameId)}
+              note={canDeclareAttackers ? "Select your attackers on the board first." : undefined}
+              actions={advanceOptions.map((opt) => ({
+                key: opt.key,
+                label: opt.label,
+                disabled: busy || !!game.pendingChoice,
+                onClick: () => run(opt.run, opt.rolledDieIds),
+              }))}
+            />
+
+            {/* The design's "Selected die" panel - contextual actions for
+                whatever's picked on the board (Reroll Selected, Field,
+                Purchase, Declare Attackers/Blockers, ...), next to the
+                Now panel's step-level actions rather than above the table.
+                Same components as before, just relocated. */}
             {game.pendingChoice ? (
               <PendingChoicePanel
                 pendingChoice={game.pendingChoice}
@@ -610,67 +687,6 @@ function App() {
                 onConfirm={confirmDamageSplits}
               />
             )}
-
-            {/* The table: the two mats face each other across the combat
-                lane, so both Field Zones sit against it and an attacker
-                stands opposite whatever is blocking it. Player two is on
-                the far side, mirrored. */}
-            <section className="game-table">
-              <PlayerBoard
-                title={`${them!.name} (${them!.id})`}
-                isActive={game.activePlayerId === them!.id}
-                mine={false}
-                mirrored
-                dice={game.dice.filter((d) => d.ownerId === them!.id)}
-                cardsById={cardsById}
-                selection={selection}
-                onGroupClick={handleGroupClick}
-                selectableEnergyIds={globalEnergySelectableIds}
-                spins={spins}
-                turnOffsets={offsets}
-                rolling={rolling}
-              />
-
-              <CombatLane
-                dice={game.dice}
-                cardsById={cardsById}
-                assignments={combatAssignments}
-                nearPlayerId={you}
-                selection={selection}
-                onGroupClick={handleGroupClick}
-                spins={spins}
-                turnOffsets={offsets}
-              />
-
-              <PlayerBoard
-                title={`${near!.name} (${near!.id})`}
-                isActive={game.activePlayerId === near!.id}
-                mine
-                dice={game.dice.filter((d) => d.ownerId === near!.id)}
-                cardsById={cardsById}
-                selection={selection}
-                onGroupClick={handleGroupClick}
-                selectableEnergyIds={globalEnergySelectableIds}
-                spins={spins}
-                turnOffsets={offsets}
-                rolling={rolling}
-              />
-            </section>
-          </div>
-
-          <div className="side-column">
-            <TurnRail
-              game={game}
-              nearPlayerId={you}
-              inviteLink={inviteLink(game.gameId)}
-              note={canDeclareAttackers ? "Select your attackers on the board first." : undefined}
-              actions={advanceOptions.map((opt) => ({
-                key: opt.key,
-                label: opt.label,
-                disabled: busy || !!game.pendingChoice,
-                onClick: () => run(opt.run, opt.rolledDieIds),
-              }))}
-            />
 
             <MatchLog entries={game.log} nearPlayerId={you} />
           </div>

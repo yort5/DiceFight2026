@@ -127,19 +127,18 @@ export function TurnRail(props: {
 }
 
 // The invite is the only way a second person gets into the game, so it
-// sits in the rail until someone takes it - not behind a menu.
+// sits in the rail until someone takes it - not behind a menu. Real
+// feedback: this used to be a full rail-panel (heading, explanation
+// paragraph, a full-width button, a full-width URL box) - the same
+// visual weight as the Now panel, for something that's a one-time
+// convenience most of a game doesn't need. One compact row instead.
 function InvitePanel({ link }: { link: string }) {
   const [copied, setCopied] = useState(false);
   return (
-    <div className="rail-panel invite-panel">
-      <h3>Invite an opponent</h3>
-      <p className="now-note">
-        Send this link. Whoever opens it takes the other side - so send it to one person.
-      </p>
-      {/* Deliberately NOT .now-button: that class means "a move you can
-          make in this step", and copying a link is not one. */}
+    <div className="invite-row" title={link}>
+      <span className="invite-row-label">Invite</span>
       <button
-        className="rail-button"
+        className="invite-row-button"
         onClick={async () => {
           try {
             await navigator.clipboard.writeText(link);
@@ -147,13 +146,12 @@ function InvitePanel({ link }: { link: string }) {
             window.setTimeout(() => setCopied(false), 2000);
           } catch {
             // Clipboard blocked (insecure origin, denied permission) -
-            // the link is selectable below either way.
+            // the link is still in the title tooltip either way.
           }
         }}
       >
-        {copied ? "Copied!" : "Copy invite link"}
+        {copied ? "Copied!" : "Copy link"}
       </button>
-      <input className="invite-link" readOnly value={link} onFocus={(e) => e.currentTarget.select()} />
     </div>
   );
 }
