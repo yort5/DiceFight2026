@@ -244,6 +244,29 @@ were read directly for this - not reused (their `Selection`/`onGroupClick`
 model is a bigger unification than these fixes needed), but the same
 layout lesson was worth copying.
 
+**Correction, same day**: that "bigger unification than needed" call was
+wrong - playing it immediately surfaced the predictable result. The
+reroll fix above kept its own separate clickable die list instead of
+making the Reserve Pool tiles themselves the click targets, so the same
+three dice rendered twice (once to look at, once to select) - exactly
+the kind of bug a real shared selection model prevents by construction.
+Rebuilt `DiceKingdomPage.tsx` on `/game`'s actual `Selection {primary,
+secondary}` + `onGroupClick`-equivalent pattern for real this time: one
+`toggleDie` feeding one `selection` state, board dice ARE the click
+targets (Reserve Pool for reroll/field/purchase energy, Field Zone for
+attackers), and one `selectionAction()` function computing the right
+contextual button the way `ActionTray.tsx`'s `actions` array does,
+instead of a separate ad-hoc widget per feature. `BlockPanel` was
+adapted to read its attacker-pick off the same `selection` too. Kept
+`/game`'s components themselves un-reused (still not type-compatible
+without an adapter layer not worth building for v2's smaller shape), but
+this time actually mirrored the architecture, not just the visual
+layout. The "click through every sub-stage" feeling reported alongside
+this wasn't literal auto-advance (checked - `/game` doesn't have that
+either, every step is still its own explicit button); it was this same
+duplication/instability making each step look unfamiliar. Watch whether
+it still feels that way once the real fix is live.
+
 ## Prior prototype notes (superseded by the above for anything that conflicts)
 
 ### Playable prototype (2026-09-02, corrected same day)
