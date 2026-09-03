@@ -174,9 +174,17 @@ Verified with a real HTTP smoke test end to end (not just unit tests) and
 908 passing tests. Deliberately skipped for this pass: win condition/
 deck-out (user call - casual playtesting won't reach it).
 
-**Not yet done: the web client (Phase 4) and deploy (Phase 5).** The API
-only exists as an HTTP surface right now - nothing to click through until
-the React board gets built and wired to it.
+**Phase 4 done (2026-09-03): the web client.** New `/instinct-clash`
+route, `web/src/instinct/` - dedicated components rather than reusing
+`App.tsx`'s (those are typed against v1's exact `GameState`/`Die`
+shapes), same architectural patterns: seat-token invite links, 2s
+polling, pending-choice resolution. Verified against a real
+locally-running server via headless Chromium with two browser tabs each
+holding one seat, clicking a full turn through to combat damage - caught
+two real bugs (a hardcoded-instead-of-real Character fielding cost, and
+a tautologically-false render guard that hid the Assign Blockers panel
+entirely). Not yet done: deploy (Phase 5) - this is pushed to `main` but
+not yet confirmed live.
 
 ## Prior prototype notes (superseded by the above for anything that conflicts)
 
