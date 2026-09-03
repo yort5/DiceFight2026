@@ -267,6 +267,24 @@ either, every step is still its own explicit button); it was this same
 duplication/instability making each step look unfamiliar. Watch whether
 it still feels that way once the real fix is live.
 
+**Second correction, same day**: still not far enough. Direct question
+asked back: "is there a reason not to just start [from v1] and then
+change things?" No - checked `Zone.cs` and there isn't one. v2 uses
+essentially v1's exact zone set (`Bag`, `PrepArea`, `ReservePool`,
+`FieldZone`, `AttackZone`, `UsedPile`, `OutOfPlay`, `Unpurchased` - by
+the file's own comment, "same as v1"), and this page was only ever
+rendering 3 of those 8. Spent energy and KO'd/unblocked-attacker dice go
+to `UsedPile` same as always - the page just never showed that zone, so
+they looked deleted. Added Attack Zone, Used Pile, Out of Play, and Bag
+to the board (Bag in particular closes the loop on "will Prep Area
+reappear" - no, it stays merged into Reserve Pool display since v2
+doesn't route anything through the interrupt-window split v1 needed it
+for, but Bag/UsedPile/OutOfPlay are real, always-shown zones now, so
+nothing a die does is ever invisible). Pattern for next time: when in
+doubt about whether v1 already solved something this page is
+reinventing, check what v1 actually accounts for before shipping a
+smaller version and finding the gap live.
+
 ## Prior prototype notes (superseded by the above for anything that conflicts)
 
 ### Playable prototype (2026-09-02, corrected same day)

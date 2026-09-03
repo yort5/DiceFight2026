@@ -303,14 +303,24 @@ export function DiceKingdomPage() {
     const ChampIcon = player.champion ? CHAMPION_ICONS[player.champion.id] : null;
     const accent = player.champion ? `var(--${player.champion.energySymbolId.toLowerCase()})` : undefined;
     const field = diceFor(playerId, "FieldZone");
+    const attacking = diceFor(playerId, "AttackZone");
     // PrepArea is v2's internal staging zone for dice mid-roll, before
     // FinishRoll moves them into ReservePool - showing it as a separate
     // section read as "why is rolling happening somewhere other than the
     // Reserve Pool?" (real user feedback). Same tray to the player the
     // whole time, so it's shown as one - and during Roll & Reroll these
     // ARE the tiles you click to build a reroll selection (no separate
-    // widget duplicating them).
+    // widget duplicating them). DiceFromBag/DiceFromPrep, v2's other two
+    // staging zones, are skipped entirely - the engine declares them but
+    // (per Zone.cs's own remarks) doesn't route any dice through them yet.
     const reserve = [...diceFor(playerId, "ReservePool"), ...diceFor(playerId, "PrepArea")];
+    // Every zone a die can actually end up in gets shown, even at 0 -
+    // spent energy and KO'd/unblocked-attacker dice go to UsedPile, so
+    // leaving it off the board (an earlier version of this page did)
+    // makes dice look like they vanish when spent.
+    const used = diceFor(playerId, "UsedPile");
+    const outOfPlay = diceFor(playerId, "OutOfPlay");
+    const bag = diceFor(playerId, "Bag");
     const unpurchased = diceFor(playerId, "Unpurchased");
     const unpurchasedByCard = new Map<string, Die[]>();
     for (const d of unpurchased) {
@@ -353,6 +363,18 @@ export function DiceKingdomPage() {
             })}
           </div>
         </div>
+        {attacking.length > 0 && (
+          <div className="zone">
+            <h4>
+              Attack Zone <span className="count">{attacking.length}</span>
+            </h4>
+            <div className="dierow">
+              {attacking.map((d) => (
+                <DieTile key={d.id} die={d} cardsById={cardsById} accent={accent} />
+              ))}
+            </div>
+          </div>
+        )}
         <div className="zone">
           <h4>
             Reserve Pool <span className="count">{reserve.length}</span>
@@ -374,6 +396,18 @@ export function DiceKingdomPage() {
                 />
               );
             })}
+          </div>
+        </div>
+        <div className="zone">
+          <h4>
+            Used Pile <span className="count">{used.length}</span> · Out of Play <span className="count">{outOfPlay.length}</span> · Bag{" "}
+            <span className="count">{bag.length}</span>
+          </h4>
+          <div className="dierow">
+            {[...used, ...outOfPlay, ...bag].map((d) => (
+              <DieTile key={d.id} die={d} cardsById={cardsById} accent={accent} />
+            ))}
+            {used.length + outOfPlay.length + bag.length === 0 && <span style={{ opacity: 0.5, fontSize: 12 }}>empty</span>}
           </div>
         </div>
         {isYourTurn && playerId === you && step === "main" && unpurchasedByCard.size > 0 && (
