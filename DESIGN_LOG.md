@@ -10888,3 +10888,54 @@ Two more from the same round, real feedback rather than a bug hunt:
 
 908 tests pass throughout - all four changes CSS/component-position
 only, no backend touched.
+
+## Auto-skip a no-op combat: "still had to click through blockers/damage with nothing to block or resolve" (2026-09-03)
+
+Direct question: with zero attackers declared, why still click "Confirm
+Blockers" and then "Assign Combat Damage" for a combat that never
+happened - and does it make sense to fix this now so v3's Dice Kingdom
+doesn't repeat it, or would the two diverge enough that it wouldn't
+matter? Checked the actual engine before answering either question:
+`CombatEngine.DeclareAttackers` (line 75) unconditionally advances
+`AttackSubStep` to `DeclareBlockers` regardless of attacker count - not
+an oversight, `ActionAndGlobalWindow` right after it is a real window
+for Global abilities/action dice independent of whether anyone attacked.
+Skipping either sub-step **server-side** would quietly remove a legal
+window - a real rules regression, not just a UX shortcut. v2's turn loop
+has the identical shape (same DeclareAttackers -> assign-blockers ->
+action-global-window sequencing), so this was worth fixing once, the
+right way, rather than separately per game.
+
+**Fixed client-side instead**: a new effect in `App.tsx` watches for
+"nothing left to decide" - `DeclareBlockers` with zero declared
+attackers, or `ActionAndGlobalWindow` with zero block assignments - and
+auto-submits the empty answer via a quiet variant of `run()`
+(`runQuiet`) that swallows errors instead of surfacing them. That last
+part matters: `canDeclareBlockers` is true on BOTH seats' browsers
+identically (same as the existing `DeclareBlockersPanel`, which has
+never been gated by whose turn it actually is - see the multiplayer
+stage 1 log entry), but only the browser holding the actually-required
+seat token can legally submit; the other gets a genuine 403, which
+`runQuiet` treats as expected and silent rather than routing it through
+`run()`'s `setError`.
+
+**Verified this needed two real browser contexts, not one** - a single
+tab holding both seats (the shape every other verification this session
+used) can only ever submit as whichever seat `tokenFor()` defaults to,
+so it can never legally reach `DeclareBlockers` (which requires the
+*inactive* player specifically) and the auto-submit attempt 403s exactly
+as intended, leaving the game looking stuck - which is what happened on
+the first verification pass, and was the test's limitation, not the
+fix's. Redone with two real `Page`s sharing one invite-linked game: P1
+declares zero attackers, P2's own 2-second poll picks up
+`DeclareBlockers` and auto-fires it, P1's next poll picks up
+`ActionAndGlobalWindow` and auto-fires damage assignment, and the game
+lands cleanly on **Clean Up** with zero manual clicks past "No
+Attackers ▶" and zero console errors on either side. 908 tests pass -
+backend untouched, this is entirely a client-side automation of an
+answer that was never going to be anything but empty.
+
+**For Dice Kingdom**: same shape needed there (`assign-blockers` /
+`action-global-window` with nothing declared) - not done yet, flagged
+for the next v3 pass rather than tackled in the same session already
+running long.

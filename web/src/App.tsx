@@ -154,6 +154,27 @@ function App() {
     }
   }
 
+  // Same shape as run(), for an action THIS browser only maybe should be
+  // taking - see the auto-skip effect below, which both seats' browsers
+  // evaluate identically, but only the browser actually holding the
+  // right seat's token can legally submit. The other gets a real 403
+  // from the server; swallowing it here (rather than routing through
+  // run()'s setError) is what keeps that expected, never-taken attempt
+  // from surfacing as a spurious error banner on the wrong screen.
+  async function runQuiet(action: () => Promise<GameState>) {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    try {
+      const next = await action();
+      setGame(next);
+    } catch {
+      // Expected on whichever browser doesn't hold the seat this
+      // particular auto-skip needed - not a real failure.
+    } finally {
+      busyRef.current = false;
+    }
+  }
+
   // Every server call comes through run(), so comparing the state before
   // and after is enough to catch a roll wherever it came from - the Roll
   // button, a reroll, or a card effect that rerolls dice on its own. What
@@ -364,6 +385,33 @@ function App() {
   const canResolveRange = game?.currentStep === "Attack" && game.attackSubStep === "RangeWindow";
   const canAssignDamage = game?.currentStep === "Attack" && game.attackSubStep === "ActionAndGlobalWindow";
   const canCleanUp = game?.currentStep === "CleanUp";
+
+  // TurnEngine/CombatEngine formally walk through Declare Blockers and
+  // the Action/Global window even when zero attackers were declared -
+  // on purpose, since the Global/action-die window exists independent of
+  // whether anyone attacked (see CombatEngine.DeclareAttackers, line 75:
+  // the sub-step always advances to DeclareBlockers, attacker count or
+  // not). Real feedback: with nothing to block or split, still having to
+  // click "Confirm Blockers" and then "Assign Combat Damage" for a
+  // combat that never happened reads as a broken/stuck game, not a
+  // deliberate window. Rather than skip either step server-side (which
+  // WOULD quietly remove that legal window), auto-submit the empty
+  // answer client-side the instant there's nothing left TO decide -
+  // every rule still formally fires, it just doesn't wait on a click for
+  // an answer that was never going to be anything but "nothing." Runs on
+  // both seats' browsers identically; runQuiet's swallowed-403 is what
+  // keeps the one that doesn't hold the right seat silent.
+  const declareBlockersAttackerCount = game
+    ? game.dice.filter((d) => d.zone === "AttackZone" && d.controllerId === game.activePlayerId).length
+    : 0;
+  useEffect(() => {
+    if (!gameId || !game) return;
+    if (canDeclareBlockers && declareBlockersAttackerCount === 0) {
+      runQuiet(() => api.declareBlockers(gameId, []));
+    } else if (canAssignDamage && combatAssignments.length === 0) {
+      runQuiet(() => api.assignCombatDamage(gameId, [], []));
+    }
+  }, [gameId, game?.version, canDeclareBlockers, canAssignDamage, declareBlockersAttackerCount, combatAssignments.length]);
 
   // The one or two buttons worth putting front and center: whatever
   // actually moves the turn forward from exactly where it is right now.
