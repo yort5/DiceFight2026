@@ -524,13 +524,13 @@ function App() {
 
             {/* Step, life, and whose turn it is all live in the rail now
                 (see TurnRail); this keeps only what is about the table
-                itself. */}
-            {(game.isFirstTurn || canDeclareAttackers) && (
+                itself. "First turn" isn't here at all - TurnRail's Now
+                panel already says it in the guidance text ("First turn -
+                you draw 3..."), so a second badge up here was pure
+                duplication, not something worth relocating. */}
+            {canDeclareAttackers && (
               <section className="status-bar">
-                {game.isFirstTurn && <div className="badge">First turn</div>}
-                {canDeclareAttackers && (
-                  <span className="hint">Select attacker(s) on the board, then use the panel below.</span>
-                )}
+                <span className="hint">Select attacker(s) on the board, then use the panel below.</span>
               </section>
             )}
 

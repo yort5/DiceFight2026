@@ -10939,3 +10939,20 @@ answer that was never going to be anything but empty.
 `action-global-window` with nothing declared) - not done yet, flagged
 for the next v3 pass rather than tackled in the same session already
 running long.
+
+## Two more small ones: the "First turn" badge, roster default state (2026-09-03)
+
+- The "First turn" badge was left behind in the table's status bar when
+  "Active" moved to the rail, and (real feedback) was eating a chunk of
+  vertical space for no reason - turns out TurnRail's Now panel already
+  says the same thing in its guidance text ("First turn - you draw 3,
+  and a 4th die goes Out of Play"). Not a relocation, just a deletion -
+  the status bar now renders only the Declare Attackers hint, and not at
+  all when neither applies.
+- The Unpurchased roster `<details>` now opens by default (`open`
+  attribute) instead of collapsed. Real feedback: "what's left to buy"
+  is checked often enough during a real game that starting collapsed
+  cost a click nearly every time - still collapsible for anyone who
+  wants the room back.
+
+908 tests pass - both changes are markup-only.

@@ -108,8 +108,11 @@ export function PlayerBoard(props: {
 
       {/* Basic Actions are community property and are drawn in the
           centre of the table instead (rule 2.1.2, CommunityCards), so a
-          roster is only this player's own cards. */}
-      <details className="roster">
+          roster is only this player's own cards. Open by default - real
+          feedback: this is checked often enough during a game ("what's
+          left to buy") that starting collapsed just added a click every
+          time; still collapsible for anyone who wants the room back. */}
+      <details className="roster" open>
         <summary>Unpurchased roster ({roster.length})</summary>
         <ZoneSection zone="Unpurchased" bare dice={roster} {...zoneProps} />
       </details>
