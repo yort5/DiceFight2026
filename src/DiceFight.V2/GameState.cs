@@ -158,6 +158,14 @@ public sealed class GameState
     public HashSet<string> FieldedCharacterThisTurn { get; } = [];
     public HashSet<string> CharacterDiceKOdThisTurn { get; } = [];
 
+    // Rule 2.6.1 - each die may be voluntarily rerolled at most once
+    // during its own Roll and Reroll Step. Keyed by die id, not player,
+    // since TurnEngine.RerollOwn checks a specific die; cleared at the
+    // top of TurnEngine.Roll (once per turn, before that turn's window
+    // opens) rather than at ClearAndDraw/CleanUp - unlike the other
+    // trackers above, nothing needs to read this after the step ends.
+    public HashSet<string> RerolledThisStep { get; } = [];
+
     public bool IsPlayerId(string id) => id == PlayerOne.Id || id == PlayerTwo.Id;
 
     public Player GetPlayer(string playerId) =>

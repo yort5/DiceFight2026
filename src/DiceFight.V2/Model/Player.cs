@@ -11,4 +11,10 @@ public sealed class Player
     public required string Name { get; init; }
     public int Life { get; set; }
     public List<string> TeamCardIds { get; } = [];
+
+    // v3 "Instinct Clash" addition (2026-09-03) - which GameConfig.Champions
+    // entry this player picked at team setup, if the config declares any
+    // (null for the classic config, which declares none). Set alongside
+    // TeamCardIds, before GameSetup.NewGame runs ChampionRegistry.
+    public string? ChampionId { get; set; }
 }

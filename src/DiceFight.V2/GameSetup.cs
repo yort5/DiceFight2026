@@ -40,6 +40,7 @@ public static class GameSetup
         // are what re-evaluate "is the source active" live on every query
         // (ContinuousRegistry's own remarks).
         ContinuousRegistry.RegisterAll(state);
+        ChampionRegistry.RegisterAll(state);
 
         return state;
     }

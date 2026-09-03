@@ -114,6 +114,8 @@ public static class TurnEngine
     {
         RequireStep(state, TurnStep.RollAndReroll);
 
+        state.RerolledThisStep.Clear();
+
         foreach (var die in state.DiceIn(state.ActivePlayerId, Zone.PrepArea).ToList())
         {
             var definition = state.GetDieDefinition(die);
@@ -130,6 +132,35 @@ public static class TurnEngine
             // about NewFace and needs no comparison at all - skipping
             // emission here silently broke Energize for exactly that case.
             var payload = new DieFaceChangedPayload(priorFace, newFace, FaceChangeCause.Roll);
+            EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieFaceChanged, die, die.ControllerId, state.CurrentStepId, payload));
+        }
+    }
+
+    // Rule 2.6.1 - between Roll and FinishRoll, the active player may
+    // reroll any of their own Prep Area dice, once each, now that they can
+    // see the results Roll produced (the reason Roll/FinishRoll are split
+    // at all - see Roll's own remarks). Mirrors ExecuteReroll's face-
+    // reassignment shape (EffectInterpreter.cs) exactly, as a genuine
+    // player action rather than something only a card can trigger.
+    public static void RerollOwn(GameState state, AbilityQueue queue, IDiceRoller roller, IReadOnlyList<string> dieIds)
+    {
+        RequireStep(state, TurnStep.RollAndReroll);
+
+        foreach (var dieId in dieIds)
+        {
+            var die = FindDie(state, dieId);
+            if (die.ControllerId != state.ActivePlayerId || die.Zone != Zone.PrepArea)
+                throw new InvalidOperationException($"Die '{dieId}' is not one of your own Prep Area dice.");
+            if (!state.RerolledThisStep.Add(dieId))
+                throw new InvalidOperationException($"Die '{dieId}' has already been rerolled this step.");
+
+            var definition = state.GetDieDefinition(die);
+            var priorFace = state.GetCurrentFace(die);
+            var newIndex = roller.Roll(definition);
+            die.CurrentFaceIndex = newIndex;
+            var newFace = definition.Faces[newIndex];
+
+            var payload = new DieFaceChangedPayload(priorFace, newFace, FaceChangeCause.Reroll);
             EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieFaceChanged, die, die.ControllerId, state.CurrentStepId, payload));
         }
     }

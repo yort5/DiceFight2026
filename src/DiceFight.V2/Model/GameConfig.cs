@@ -19,6 +19,14 @@ public sealed record GameConfig(
     // inserts steps with zero engine change. Defaults to the standard
     // rulebook order; a config only needs to set this if it differs.
     public IReadOnlyList<TurnStepDef> Steps { get; init; } = TurnStepDefs.Standard;
+
+    // v3 "Instinct Clash" addition (2026-09-03) - a Champion is a single
+    // passive, always-on, no-die, no-cost team effect a player picks at
+    // team setup (physical Dice Masters has no such concept, hence empty
+    // default here). ChampionRegistry reads this directly, not
+    // ContinuousRegistry, since a Champion has no source die to gate an
+    // ActiveSourceDice scan on - see ChampionDef's own remarks.
+    public IReadOnlyList<ChampionDef> Champions { get; init; } = [];
 }
 
 // An energy symbol - "no enum anywhere" (Appendix B). Both flags are
