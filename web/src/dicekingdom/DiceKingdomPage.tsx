@@ -3,7 +3,7 @@ import "./dicekingdom.css";
 import { api } from "./api";
 import { CHAMPION_ICONS, CHARACTER_ICONS } from "./icons";
 import { claimSeatFromUrl, inviteLink, nameClaimedSeat, rememberSeats } from "./seats";
-import type { CardDef, Die, GameState } from "./types";
+import type { CardDef, Die, GameState, PlayerState } from "./types";
 
 const POLL_INTERVAL_MS = 2000;
 const CHAMPIONS = [
@@ -68,6 +68,27 @@ function groupDice(dice: Die[], zone: string): DieGroup[] {
     }
   }
   return [...groups.values()];
+}
+
+// Green = active AND it's you; amber-grey = active and it's not you
+// (waiting); no highlight otherwise. Same cue as /game's identical
+// green/amber-grey pattern (DESIGN_LOG.md, 2026-09-03) - and a real bug
+// fix along the way: the old inline version only ever highlighted
+// playerOne's box, never playerTwo's.
+function LifeBox({ player, you, activePlayerId }: { player: PlayerState; you: string; activePlayerId: string }) {
+  const isActive = activePlayerId === player.id;
+  const cls = isActive ? (player.id === you ? " turn-mine" : " turn-waiting") : "";
+  const Icon = player.champion ? CHAMPION_ICONS[player.champion.id] : null;
+  return (
+    <div className={`lifebox${cls}`}>
+      {player.champion && Icon && (
+        <span style={{ color: `var(--${player.champion.energySymbolId.toLowerCase()})` }}>
+          <Icon />
+        </span>
+      )}
+      <span className="lnum">{player.life}</span>
+    </div>
+  );
 }
 
 function PipBadge({ type, amount }: { type: string; amount: number }) {
@@ -422,8 +443,15 @@ export function DiceKingdomPage() {
       unpurchasedByCard.set(d.cardId, [...(unpurchasedByCard.get(d.cardId) ?? []), d]);
     }
 
+    // Green = this player's move right now AND it's you; amber-grey =
+    // this player's move and it's not you (you're waiting). Never red -
+    // that reads as "something's wrong," not "waiting your turn". Same
+    // two hues as /game's identical cue (DESIGN_LOG.md, 2026-09-03).
+    const isActivePlayer = playerId === game!.activePlayerId;
+    const turnClass = isActivePlayer ? (playerId === you ? " turn-mine" : " turn-waiting") : "";
+
     return (
-      <div key={playerId}>
+      <div key={playerId} className={`playerboard${turnClass}`}>
         {player.champion && ChampIcon && (
           <div className="champbanner" style={{ color: accent, ["--cc" as string]: accent }}>
             <ChampIcon />
@@ -603,31 +631,11 @@ export function DiceKingdomPage() {
       </details>
 
       <div className="topbar">
-        <div className="lifebox" style={{ borderColor: game.activePlayerId === game.playerOne.id ? `var(--${game.playerOne.champion?.energySymbolId.toLowerCase()})` : undefined }}>
-          {game.playerOne.champion && CHAMPION_ICONS[game.playerOne.champion.id] && (
-            <span style={{ color: `var(--${game.playerOne.champion.energySymbolId.toLowerCase()})` }}>
-              {(() => {
-                const I = CHAMPION_ICONS[game.playerOne.champion.id];
-                return <I />;
-              })()}
-            </span>
-          )}
-          <span className="lnum">{game.playerOne.life}</span>
+        <LifeBox player={game.playerOne} you={you} activePlayerId={game.activePlayerId} />
+        <div className={isYourTurn ? "phasepill turn-mine" : "phasepill turn-waiting"}>
+          {isYourTurn ? "Your" : "Opponent's"} turn · {step}
         </div>
-        <div className="phasepill">
-          {game.activePlayerId === you ? "Your" : "Opponent's"} turn · {step}
-        </div>
-        <div className="lifebox">
-          {game.playerTwo.champion && CHAMPION_ICONS[game.playerTwo.champion.id] && (
-            <span style={{ color: `var(--${game.playerTwo.champion.energySymbolId.toLowerCase()})` }}>
-              {(() => {
-                const I = CHAMPION_ICONS[game.playerTwo.champion.id];
-                return <I />;
-              })()}
-            </span>
-          )}
-          <span className="lnum">{game.playerTwo.life}</span>
-        </div>
+        <LifeBox player={game.playerTwo} you={you} activePlayerId={game.activePlayerId} />
       </div>
 
       {renderBoard(opponentId, "Opponent")}

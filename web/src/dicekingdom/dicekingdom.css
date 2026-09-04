@@ -146,6 +146,33 @@
   letter-spacing: 0.06em;
 }
 
+/* Green = your move, right now; amber-grey (never red - that reads as
+   "something's wrong," not "waiting your turn") = theirs. Same two hues
+   as /game's identical cue (DESIGN_LOG.md, 2026-09-03), applied to the
+   lifebox, the phasepill, and the acting player's whole board below. */
+.dicekingdom .turn-mine {
+  border-color: oklch(0.62 0.15 145 / 0.85) !important;
+  box-shadow: 0 0 0 2px oklch(0.62 0.15 145 / 0.35), var(--shadow);
+}
+.dicekingdom .phasepill.turn-mine {
+  color: oklch(0.4 0.13 145);
+}
+
+.dicekingdom .turn-waiting {
+  border-color: oklch(0.62 0.06 75 / 0.85) !important;
+  box-shadow: 0 0 0 2px oklch(0.62 0.06 75 / 0.3), var(--shadow);
+}
+.dicekingdom .phasepill.turn-waiting {
+  color: oklch(0.5 0.05 75);
+}
+
+.dicekingdom .playerboard.turn-mine .champbanner {
+  box-shadow: 0 0 0 2px oklch(0.62 0.15 145 / 0.4);
+}
+.dicekingdom .playerboard.turn-waiting .champbanner {
+  box-shadow: 0 0 0 2px oklch(0.62 0.06 75 / 0.35);
+}
+
 .dicekingdom .champbanner {
   display: flex;
   align-items: center;

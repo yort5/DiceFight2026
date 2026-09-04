@@ -425,3 +425,21 @@ session layer, not client state, so the second party's request is what
 actually carries it forward. Flagged for the user rather than fixed in
 this pass - it touches both engines' API layers and deserves its own
 session, not a bolt-on to an already-long one.
+
+## Ported from /game: the whose-turn color cue, plus a real bug it exposed (2026-09-04)
+
+Same green (your move)/amber-grey (waiting, never red) cue as `/game`'s
+(DESIGN_LOG.md, 2026-09-03), applied to the lifebox, the phasepill, and
+the acting player's whole board (a bonus of the CSS shape - `.turn-mine`/
+`.turn-waiting` as bare classes style whatever carries them, not just
+the lifebox they were written for, so the outer board wrapper picks up
+the same outline for free).
+
+**Found while wiring it up**: the old inline lifebox highlight only ever
+checked `game.activePlayerId === game.playerOne.id` - playerTwo's box
+had no active-state styling at all, in either color. New `LifeBox`
+component takes `activePlayerId` generically and is used for both, so
+this can't recur by construction (one component, not two copies of the
+same inline JSX to keep in sync).
+
+908 tests pass - CSS/component changes only.
