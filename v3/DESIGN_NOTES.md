@@ -476,3 +476,45 @@ width, leaving visible blank space to the right of each zone at 1100px.
 Same category of gap as the sideboard/ribbon rounds on `/game` - the
 structural piece (rail exists, holds the right things) is real and
 verified; using the reclaimed width well is a separate pass.
+
+## Mirrored mats + a real shared Attack Zone (2026-09-04)
+
+Direct, blunt feedback after the rail move: "the rest still looks
+nothing like Dice Fight. For one, the play areas are not mirrored...
+They need to face each other. There is no attack zone. Used Pile and
+Out of Play are taking up vertical spaces, when they should be on
+either side of the Reserve Pool. Just. Make it. Like. Dice Fight." Every
+one of those is a real gap this session's earlier rounds never actually
+closed - the "mat" restructuring for /game (the round that fixed its own
+`.mat`/`.mat.mirrored` grid) never got ported to Dice Kingdom at all;
+`renderBoard` was still one linear stack of `<div className="zone">`s in
+source order, `mirrored` wasn't even a parameter.
+
+Ported /game's real `.mat`/`.mat.mirrored` CSS grid verbatim (App.css
+lines ~932-994), sized down to Dice Kingdom's smaller zone set (no
+Prep/Intimidated/staging columns): `grid-template-areas: "field field
+field" / "used reserve outofplay" / "bag bag bag"`, with `.mat.mirrored`
+reversing the row order so Field sits at whichever edge is closest to
+the opposing mat. `renderBoard(playerId, mirrored)` now wraps its five
+zones in `<div className="mat-slot mat-X">` cells instead of one flat
+list. Pulled the old per-player "Attack Zone" block out entirely -
+Dice Fight's Attack Zone was never a per-player thing, it's the shared
+lane both players' attackers land in - and added a new
+`renderAttackZone()` (reads `game.dice.filter(d => d.zone ===
+"AttackZone")` across BOTH players, returns null when empty) rendered
+once, between the two `renderBoard()` calls in `.dk-main`
+(`renderBoard(opponentId, true)`, `renderAttackZone()`,
+`renderBoard(you, false)`) - a real shared combat lane between the two
+mats, not a slot glued to whichever board rendered it.
+
+Verified with headless Chromium (two browser contexts): measured actual
+`getBoundingClientRect()` positions, not just eyeballed a screenshot -
+opponent's Field Zone sits directly above "your" Field Zone (adjacent,
+facing each other, confirmed by comparing `.mat-field`'s top offset on
+both mats), Used Pile/Out of Play sit left/right of Reserve Pool on both
+mats (confirmed by `.mat-used`/`.mat-outofplay` left-offsets flanking
+`.mat-reserve`'s), and `.attackzone` is absent on an empty turn 1
+(correct - nothing to show yet) but renders with the attacker's tile
+once a die is actually pushed into AttackZone via a real Draw -> Roll ->
+Field -> Proceed to Attack -> Confirm Attackers sequence. 908 tests
+pass - CSS/component-structure only, no engine or API changes.

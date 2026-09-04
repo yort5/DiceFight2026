@@ -232,6 +232,75 @@
 .dicekingdom .zone {
   margin-bottom: 18px;
 }
+
+/* The mat grid - same shape as /game's PlayerBoard.tsx .mat, sized down
+   to Dice Kingdom's smaller zone set (no Prep/Intimidated/staging zones
+   to give columns of their own). Used Pile and Out of Play flank the
+   Reserve Pool instead of stacking above/below it, and Field Zone sits
+   at whichever edge is closest to the shared Attack Zone between the
+   two mats - the bottom for the near player, the top for the mirrored
+   (opponent) one, so both Field Zones actually face each other. */
+.dicekingdom .mat {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr);
+  grid-template-areas:
+    "field field field"
+    "used reserve outofplay"
+    "bag bag bag";
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.dicekingdom .mat.mirrored {
+  grid-template-areas:
+    "bag bag bag"
+    "used reserve outofplay"
+    "field field field";
+}
+@media (max-width: 640px) {
+  .dicekingdom .mat,
+  .dicekingdom .mat.mirrored {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "field"
+      "reserve"
+      "used"
+      "outofplay"
+      "bag";
+  }
+}
+.dicekingdom .mat-field {
+  grid-area: field;
+}
+.dicekingdom .mat-used {
+  grid-area: used;
+}
+.dicekingdom .mat-reserve {
+  grid-area: reserve;
+}
+.dicekingdom .mat-outofplay {
+  grid-area: outofplay;
+}
+.dicekingdom .mat-bag {
+  grid-area: bag;
+}
+.dicekingdom .mat-slot .zone {
+  height: 100%;
+  margin-bottom: 0;
+}
+
+/* The shared combat lane between the two mats - both players' attackers
+   land here at once, so it reads as the table's actual center of action
+   rather than a per-player subsection. */
+.dicekingdom .attackzone {
+  background: var(--panel-bg);
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin: 4px 0 18px;
+}
+.dicekingdom .attackzone h4 {
+  opacity: 0.8;
+}
 .dicekingdom .zone h4 {
   font: 700 11px var(--sans);
   text-transform: uppercase;

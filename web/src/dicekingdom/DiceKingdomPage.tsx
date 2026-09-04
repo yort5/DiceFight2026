@@ -438,11 +438,10 @@ export function DiceKingdomPage() {
     return false;
   }
 
-  function renderBoard(playerId: string) {
+  function renderBoard(playerId: string, mirrored: boolean) {
     const player = playerId === game!.playerOne.id ? game!.playerOne : game!.playerTwo;
     const accent = player.champion ? `var(--${player.champion.energySymbolId.toLowerCase()})` : undefined;
     const field = diceFor(playerId, "FieldZone");
-    const attacking = diceFor(playerId, "AttackZone");
     // PrepArea is v2's internal staging zone for dice mid-roll, before
     // FinishRoll moves them into ReservePool - showing it as a separate
     // section read as "why is rolling happening somewhere other than the
@@ -474,84 +473,84 @@ export function DiceKingdomPage() {
     const isActivePlayer = playerId === game!.activePlayerId;
     const turnClass = isActivePlayer ? (playerId === you ? " turn-mine" : " turn-waiting") : "";
 
+    // A single die-count zone, matching v1's PlayerBoard.tsx's mat-slot
+    // shape - used for the three grid cells that just show a group of
+    // dice (Used Pile, Out of Play, Bag), so the grid markup below reads
+    // as "which zone goes where" rather than repeating this each time.
+    function pileZone(title: string, zoneName: string, dice: Die[]) {
+      return (
+        <div className="zone">
+          <h4>
+            {title} <span className="count">{dice.length}</span>
+          </h4>
+          <div className="dierow">
+            {dice.length === 0 && <span style={{ opacity: 0.5, fontSize: 12 }}>empty</span>}
+            {groupDice(dice, zoneName).map((g) => (
+              <DieTile key={g.key} die={g.sample} zone={zoneName} count={g.count} cardsById={cardsById} accent={accent} />
+            ))}
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div key={playerId} className={`playerboard${turnClass}`}>
-        <div className="zone">
-          <h4>
-            Field <span className="count">{field.length}</span>
-          </h4>
-          <div className="dierow">
-            {field.map((d) => {
-              const clickable = d.controllerId === you && isYourTurn && step === "select-attackers";
-              const picked = d.id === selection.primary || selection.secondary.includes(d.id);
-              return (
-                <DieTile
-                  key={d.id}
-                  die={d}
-                  zone="FieldZone"
-                  cardsById={cardsById}
-                  accent={accent}
-                  clickable={clickable}
-                  picked={picked}
-                  onClick={() => toggleDie(d.id)}
-                />
-              );
-            })}
-          </div>
-        </div>
-        {attacking.length > 0 && (
-          <div className="zone">
-            <h4>
-              Attack Zone <span className="count">{attacking.length}</span>
-            </h4>
-            <div className="dierow">
-              {attacking.map((d) => (
-                <DieTile key={d.id} die={d} zone="AttackZone" cardsById={cardsById} accent={accent} />
-              ))}
+        <div className={`mat${mirrored ? " mirrored" : ""}`}>
+          <div className="mat-slot mat-field">
+            <div className="zone">
+              <h4>
+                Field <span className="count">{field.length}</span>
+              </h4>
+              <div className="dierow">
+                {field.map((d) => {
+                  const clickable = d.controllerId === you && isYourTurn && step === "select-attackers";
+                  const picked = d.id === selection.primary || selection.secondary.includes(d.id);
+                  return (
+                    <DieTile
+                      key={d.id}
+                      die={d}
+                      zone="FieldZone"
+                      cardsById={cardsById}
+                      accent={accent}
+                      clickable={clickable}
+                      picked={picked}
+                      onClick={() => toggleDie(d.id)}
+                    />
+                  );
+                })}
+              </div>
             </div>
           </div>
-        )}
-        <div className="zone">
-          <h4>
-            Reserve Pool <span className="count">{reserve.length}</span>
-          </h4>
-          <div className="dierow">
-            {reserve.map((d) => {
-              const picked = d.id === selection.primary || selection.secondary.includes(d.id);
-              const already = step === "roll-and-reroll" && rerolledIds.includes(d.id);
-              return (
-                <DieTile
-                  key={d.id}
-                  die={d}
-                  zone="ReservePool"
-                  cardsById={cardsById}
-                  accent={accent}
-                  clickable={reservePoolClickable(d)}
-                  picked={picked}
-                  label={already ? "rerolled" : step === "roll-and-reroll" && rolled(d) ? (picked ? "selected" : undefined) : undefined}
-                  onClick={() => toggleDie(d.id)}
-                />
-              );
-            })}
-          </div>
-        </div>
-        {([
-          ["Used Pile", "UsedPile", used],
-          ["Out of Play", "OutOfPlay", outOfPlay],
-          ["Bag", "Bag", bag],
-        ] as const).map(([title, zoneName, dice]) => (
-          <div className="zone" key={zoneName}>
-            <h4>
-              {title} <span className="count">{dice.length}</span>
-            </h4>
-            <div className="dierow">
-              {dice.length === 0 && <span style={{ opacity: 0.5, fontSize: 12 }}>empty</span>}
-              {groupDice(dice, zoneName).map((g) => (
-                <DieTile key={g.key} die={g.sample} zone={zoneName} count={g.count} cardsById={cardsById} accent={accent} />
-              ))}
+          <div className="mat-slot mat-used">{pileZone("Used Pile", "UsedPile", used)}</div>
+          <div className="mat-slot mat-reserve">
+            <div className="zone">
+              <h4>
+                Reserve Pool <span className="count">{reserve.length}</span>
+              </h4>
+              <div className="dierow">
+                {reserve.map((d) => {
+                  const picked = d.id === selection.primary || selection.secondary.includes(d.id);
+                  const already = step === "roll-and-reroll" && rerolledIds.includes(d.id);
+                  return (
+                    <DieTile
+                      key={d.id}
+                      die={d}
+                      zone="ReservePool"
+                      cardsById={cardsById}
+                      accent={accent}
+                      clickable={reservePoolClickable(d)}
+                      picked={picked}
+                      label={already ? "rerolled" : step === "roll-and-reroll" && rolled(d) ? (picked ? "selected" : undefined) : undefined}
+                      onClick={() => toggleDie(d.id)}
+                    />
+                  );
+                })}
+              </div>
             </div>
           </div>
-        ))}
+          <div className="mat-slot mat-outofplay">{pileZone("Out of Play", "OutOfPlay", outOfPlay)}</div>
+          <div className="mat-slot mat-bag">{pileZone("Bag", "Bag", bag)}</div>
+        </div>
         {isYourTurn && playerId === you && step === "main" && unpurchasedByCard.size > 0 && (
           <div className="zone">
             <h4>Available to purchase</h4>
@@ -583,6 +582,29 @@ export function DiceKingdomPage() {
             </div>
           </div>
         )}
+      </div>
+    );
+  }
+
+  // A single shared lane between the two mats, matching v1's real Attack
+  // Zone: attackers from BOTH players sit here at once (that's the whole
+  // point of it facing across the table), not duplicated per playerboard
+  // the way the old per-player section had it.
+  function renderAttackZone() {
+    const attackers = game!.dice.filter((d) => d.zone === "AttackZone");
+    if (attackers.length === 0) return null;
+    return (
+      <div className="zone attackzone">
+        <h4>
+          Attack Zone <span className="count">{attackers.length}</span>
+        </h4>
+        <div className="dierow">
+          {attackers.map((d) => {
+            const owner = d.controllerId === game!.playerOne.id ? game!.playerOne : game!.playerTwo;
+            const accent = owner.champion ? `var(--${owner.champion.energySymbolId.toLowerCase()})` : undefined;
+            return <DieTile key={d.id} die={d} zone="AttackZone" cardsById={cardsById} accent={accent} />;
+          })}
+        </div>
       </div>
     );
   }
@@ -663,8 +685,9 @@ export function DiceKingdomPage() {
           belongs in the middle. */}
       <div className="dk-layout">
         <div className="dk-main">
-          {renderBoard(opponentId)}
-          {renderBoard(you)}
+          {renderBoard(opponentId, true)}
+          {renderAttackZone()}
+          {renderBoard(you, false)}
         </div>
 
         <div className="dk-rail">
