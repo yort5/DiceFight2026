@@ -288,18 +288,261 @@
   margin-bottom: 0;
 }
 
-/* The shared combat lane between the two mats - both players' attackers
-   land here at once, so it reads as the table's actual center of action
-   rather than a per-player subsection. */
-.dicekingdom .attackzone {
-  background: var(--panel-bg);
-  border: 1px dashed var(--border);
-  border-radius: 10px;
-  padding: 10px 14px;
-  margin: 4px 0 18px;
+/* Zone borders/tints - ported from ../App.css's .zone-field/.zone-reserve/
+   etc: each zone on the mat gets a real border and a faint background
+   tint of its own color, instead of every zone looking identical apart
+   from its label. Recolored onto Dice Kingdom's own palette (no red/blue
+   faction colors here) rather than reused verbatim. */
+.dicekingdom .mat-slot .zone {
+  border-radius: 9px;
+  padding: 7px 10px 9px;
+  border: 1px solid transparent;
 }
-.dicekingdom .attackzone h4 {
+.dicekingdom .zone-field {
+  background: oklch(0.55 0.09 145 / 0.1);
+  border-color: oklch(0.55 0.09 145 / 0.4);
+}
+.dicekingdom .zone-reserve {
+  background: oklch(0.4 0.02 75 / 0.12);
+  border-color: oklch(0.55 0.05 75 / 0.4);
+  box-shadow: inset 0 3px 10px oklch(0.2 0.02 75 / 0.12);
+}
+.dicekingdom .zone-used,
+.dicekingdom .zone-bag {
+  background: oklch(0.5 0.015 260 / 0.1);
+  border-color: oklch(0.55 0.02 260 / 0.4);
+}
+.dicekingdom .zone-outofplay {
+  background: oklch(0.5 0.03 300 / 0.1);
+  border-color: oklch(0.55 0.04 300 / 0.4);
+}
+
+/* ---- Combat lane - the shared strip where the two mats meet, ported
+   from ../CombatLane.tsx/App.css's .combat-lane/.lane-* verbatim. The
+   divider seam is blue on the far half, orange on the near half - same
+   two hues the design always used, not something reinvented here. ---- */
+
+.dicekingdom .combat-lane {
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid oklch(0.5 0.07 25 / 0.35);
+  background: linear-gradient(
+    180deg,
+    oklch(0.3 0.055 250 / 0.16) 0%,
+    oklch(0.28 0.05 250 / 0.08) 47%,
+    oklch(0.3 0.06 60 / 0.08) 53%,
+    oklch(0.32 0.07 60 / 0.16) 100%
+  );
+  margin: 4px 0 18px;
+  overflow-x: auto;
+}
+.dicekingdom .lane-grid {
+  display: grid;
+  grid-template-rows: minmax(84px, auto) 34px minmax(84px, auto);
+  gap: 4px 8px;
+  min-width: 100%;
+}
+.dicekingdom .lane-seam {
+  grid-row: 2;
+  grid-column: 1 / -1;
+  align-self: center;
+  z-index: 0;
+  height: 6px;
+  margin: 0 -12px;
+  background: linear-gradient(180deg, oklch(0.56 0.12 250) 0%, oklch(0.68 0.17 25) 50%, oklch(0.82 0.14 70) 100%);
+  box-shadow: 0 0 18px oklch(0.62 0.14 25 / 0.4);
+}
+.dicekingdom .lane-label-far,
+.dicekingdom .lane-label-mid,
+.dicekingdom .lane-label-near {
+  grid-column: 1;
+  align-self: center;
+  font: 700 9.5px var(--sans);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  line-height: 1.3;
+}
+.dicekingdom .lane-label-far {
+  grid-row: 1;
+  align-self: start;
+  color: oklch(0.5 0.09 25);
+}
+.dicekingdom .lane-label-mid {
+  grid-row: 2;
+  align-self: end;
+  opacity: 0.6;
+}
+.dicekingdom .lane-label-near {
+  grid-row: 3;
+  align-self: end;
+  text-align: right;
+  color: oklch(0.5 0.1 70);
+}
+.dicekingdom .lane-slot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 4px;
+  border-radius: 9px;
+}
+.dicekingdom .lane-slot.filled {
+  background: oklch(0.5 0.05 250 / 0.1);
+  border: 1px solid oklch(0.5 0.06 250 / 0.35);
+}
+.dicekingdom .lane-slot.filled.attacker {
+  background: oklch(0.55 0.07 70 / 0.12);
+  border-color: oklch(0.56 0.08 70 / 0.4);
+}
+.dicekingdom .lane-slot.empty {
+  background: oklch(0.5 0.01 155 / 0.06);
+  border: 1px dashed var(--border);
+}
+.dicekingdom .lane-slot-hint {
+  font: 700 9px var(--sans);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.5;
+}
+.dicekingdom .lane-connector {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dicekingdom .lane-marker {
+  padding: 2px 7px;
+  border-radius: 999px;
+  font: 700 9.5px var(--sans);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  background: oklch(0.58 0.13 25);
+  color: oklch(0.16 0.02 25);
+}
+.dicekingdom .lane-marker.unblocked {
+  background: oklch(0.76 0.14 70);
+  animation: dk-pulse 1.6s ease-in-out infinite;
+}
+@keyframes dk-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dicekingdom .lane-marker.unblocked {
+    animation: none;
+  }
+}
+.dicekingdom .lane-die {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 2px 5px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.dicekingdom .lane-die.selected {
+  background: oklch(0.6 0.09 70 / 0.16);
+  border-color: oklch(0.55 0.11 70 / 0.6);
+}
+.dicekingdom .lane-die-name {
+  font-size: 9.5px;
+  line-height: 1.15;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dicekingdom .lane-die-stats {
+  font-size: 9px;
+  opacity: 0.7;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- The 3D die cube - ported from ../DieCube.tsx/App.css's .die-cube*
+   verbatim. Everything sizes off the inline `size` prop. ---- */
+
+.dicekingdom .die-cube-box {
+  position: relative;
+  display: inline-block;
+  margin: 0 auto 3px;
+  flex: none;
+}
+.dicekingdom .die-cube {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+}
+.dicekingdom .die-cube-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid;
+  backface-visibility: hidden;
+  font-variant-numeric: tabular-nums;
+  color: oklch(0.95 0.02 90);
+}
+.dicekingdom .die-cube-shadow {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.dicekingdom .die-cube-art {
+  position: absolute;
+  inset: 14%;
+  border-radius: 3px;
+  background: repeating-linear-gradient(45deg, currentColor 0 1px, transparent 1px 5px);
+  opacity: 0.16;
+}
+.dicekingdom .die-cube-cost,
+.dicekingdom .die-cube-attack,
+.dicekingdom .die-cube-defense,
+.dicekingdom .die-cube-damage {
+  position: absolute;
+  line-height: 1;
+}
+.dicekingdom .die-cube-cost {
+  left: 8%;
+  top: 5%;
+  font-size: 0.78em;
   opacity: 0.8;
+}
+.dicekingdom .die-cube-attack {
+  right: 8%;
+  top: 5%;
+  font-weight: 700;
+}
+.dicekingdom .die-cube-defense {
+  right: 8%;
+  bottom: 5%;
+  font-weight: 700;
+}
+.dicekingdom .die-cube-damage {
+  left: 8%;
+  bottom: 5%;
+  font-size: 0.7em;
+  font-weight: 700;
+  color: oklch(0.72 0.17 25);
+}
+.dicekingdom .die-cube-amount {
+  position: absolute;
+  right: 10%;
+  bottom: 6%;
+  font-size: 0.62em;
+  font-weight: 700;
+  opacity: 0.85;
 }
 .dicekingdom .zone h4 {
   font: 700 11px var(--sans);

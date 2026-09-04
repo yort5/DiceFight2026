@@ -67,11 +67,25 @@ export function EyeIcon(props: IconProps) {
   );
 }
 
+// Surge (the Tardigrade die's sixth face) provides Wild energy - any of
+// the four types. No printed animal for "any", so this is a plain glyph
+// rather than a fifth creature, same role as v1's WILD_ENERGY_ICON "?".
+export function WildIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <text x={32} y={44} fontSize={34} fontWeight={700} textAnchor="middle" fill="currentColor">
+        ?
+      </text>
+    </Svg>
+  );
+}
+
 export const ENERGY_ICONS: Record<string, (p: IconProps) => ReactElement> = {
   Claw: ClawIcon,
   Shell: ShellIcon,
   Wing: WingIcon,
   Eye: EyeIcon,
+  Wild: WildIcon,
 };
 
 // ---- Champion avatars (no energy tie-in - see v3/DESIGN_NOTES.md on why

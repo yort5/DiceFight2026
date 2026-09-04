@@ -518,3 +518,87 @@ mats (confirmed by `.mat-used`/`.mat-outofplay` left-offsets flanking
 once a die is actually pushed into AttackZone via a real Draw -> Roll ->
 Field -> Proceed to Attack -> Confirm Attackers sequence. 908 tests
 pass - CSS/component-structure only, no engine or API changes.
+
+## Real reuse of v1's combat lane and 3D die cube, not another re-derivation (2026-09-04)
+
+Direct feedback on the mirrored-mats round, and the sharpest version yet
+of a complaint that's recurred all session: "I didn't see a visual
+divider in the attack zone... In Dice Fight we had one that was blue on
+one side and orange on the other. And might as well use the same die
+visualization (and animation, since we have it) here as well... Can we
+also get some borders around the different zones? In fact, maybe just
+tear down this whole thing, COPY THE ENTIRE DANG UI from Dice Fight, and
+then make it work with the Dice Kingdom back end? Because we are still
+just incrementing every time." Right diagnosis: the flat attacker list
+`renderAttackZone()` shipped last round was a re-derivation of what
+../CombatLane.tsx already solved (attacker/blocker columns either side of
+a divider seam), and every rolled-zone die on the mat was a plain text
+badge, never the real 3D cube ../DieCube.tsx already draws with a working
+roll animation.
+
+Literal byte-for-byte reuse of v1's components turned out not to be
+possible without also changing the C# API - checked directly by diffing
+v1's `Die`/`CardDef` (types.ts) against `dicekingdom/types.ts`'s V2
+counterpart, and they're a real, deliberate difference (V2Dtos.cs's own
+remarks), not just drift: v1's `Die` needs a `status` field
+(Energy/Character/SidekickCharacter/Action) plus a per-level card lookup
+to know what it's showing; V2's `Die` already carries the true,
+modifier-inclusive `effectiveAttack`/`effectiveDefense` and
+`energySymbolId` directly, and `isTardigrade` instead of a status
+string. So the actual move, and the honest reading of "copy the whole
+UI": port v1's real rendering components into `dicekingdom/` and adapt
+their internals to V2's simpler shape, rather than either re-deriving a
+third version from scratch again or rewriting the engine's DTOs to force
+an exact match (out of scope, much bigger, not what was asked).
+
+New files, each a direct port of its `../` counterpart:
+- `dieFaces.ts` - the six-face table for the 3D cube. Genuinely simpler
+  to build than v1's copy since V2 already resolves the true stats
+  server-side; the one real content piece is Tardigrade's locked spec
+  from `InstinctClashConfig.cs`'s `TardigradeDie` (two L1 0A/1D, two L2
+  1A/1D, one L3 "Bulwark" 1A/3D, one "Surge" - a pure Wild-energy face,
+  no character stats at all), which isn't derived from a CardDef at all
+  since Tardigrade dice have no cardId.
+- `DieCube.tsx` - identical geometry/animation to v1's; the only real
+  change is `faceIcon()` resolving one of Dice Kingdom's own SVG
+  components (ClawIcon/ShellIcon/WingIcon/EyeIcon, plus a new WildIcon
+  in `icons.tsx` for Surge) instead of v1's `<img src>` GameIcon.
+- `dieHelpers.ts` - just `dieLabel`/`characterFaceInfo`, trimmed to what
+  `CombatLane.tsx` needs (no per-level lookup - straight from the die).
+- `CombatLane.tsx` - the real attacker/blocker lane with the blue-to-
+  orange divider seam, ported near-verbatim. The one simplification: v3
+  has no gang-blocking (`BlockPanel` assigns at most one blocker per
+  attacker), so `assignments` is always zero or one blocker per
+  engagement rather than v1's arbitrary-many.
+
+`renderAttackZone()` now renders `<CombatLane>` (fed the same
+`blockAssignments` state `BlockPanel` already builds) instead of a flat
+die list. `DieTile` now renders a real `<DieCube>` for anything in a
+rolled zone (Field/Reserve/Attack) instead of a flat stat badge -
+piles (Bag/Used Pile/Out of Play) stay flat chips, matching v1's own
+ROLLED_ZONES-gated distinction. Added zone-tint borders
+(`.zone-field`/`.zone-reserve`/`.zone-used`/`.zone-bag`/`.zone-outofplay`)
+recolored onto Dice Kingdom's own palette rather than reusing v1's
+red/blue faction hues verbatim, plus the full `.combat-lane`/`.lane-*`/
+`.die-cube*` CSS ported from App.css.
+
+Verified with headless Chromium, two real browser contexts holding
+opposite seats (not one tab pretending to be both - this session's
+standing lesson about `DeclareBlockers`-shaped actions): A fielded and
+attacked with a Tardigrade, B's browser showed `.combat-lane`/
+`.lane-seam` with a real `<DieCube>` for the attacker, B confirmed an
+empty block ("Confirm Blocks" with nothing assigned), and the unblocked
+1 damage landed on B's life total (20 -> 19) after both browsers' polls
+caught up - confirms the visualization isn't just decorative, it's
+reading the same real combat state the engine resolved. One test-script
+bug caught and fixed along the way, not an app bug: reloading a joined
+browser loses its already-consumed one-time invite URL (the app has no
+resume-from-sessionStorage-alone path), so the verification script polls
+instead of reloading. 908 tests pass - CSS/component changes only.
+
+**Deliberately left alone this round**: the rail's turn/action controls
+(`TurnRail`-equivalent inline logic), `BlockPanel`, the pending-choice
+chips - these already work and weren't part of the complaint. "Copy the
+entire UI" was scoped to what was actually broken (the divider, the die
+visualization, zone borders), not a wholesale rewrite of working,
+already-verified control flow.

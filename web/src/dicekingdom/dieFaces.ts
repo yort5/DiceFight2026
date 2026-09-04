@@ -1,0 +1,103 @@
+import type { CardDef, Die } from "./types";
+
+// The six faces of a physical die, for the 3D cube in DieCube.tsx.
+// Ported from ../dieFaces.ts, but genuinely simpler to build than v1's
+// copy: V2's Die already gives the true, modifier-inclusive
+// effectiveAttack/effectiveDefense directly (no per-level card lookup,
+// no energyKind/providedEnergyType/secondProvidedEnergyType to resolve),
+// so this only has to answer "which of the six faces is up" - the
+// numbers drawn on that face come straight from the die.
+//
+// MIRRORS src/DiceFight.V2/Data/InstinctClashConfig.cs's TardigradeDie/
+// CharacterDie, which are the authority. A Tardigrade die's six faces are
+// a fixed, locked spec (v3/DESIGN_NOTES.md): two L1 (0A/1D), two L2
+// (1A/1D), one L3 "Bulwark" (1A/3D), one "Surge" (a pure Wild-energy
+// face, no character stats at all). Every other die (a real Character)
+// has three levels, each printed twice - no energy faces at all, unlike
+// v1's Character dice.
+
+// Cube geometry - identical to v1's, since this is pure 3D placement math
+// with nothing Marvel- or animal-specific in it.
+export const FACE_TRANSFORMS = [
+  "",
+  "rotateY(180deg)",
+  "rotateY(90deg)",
+  "rotateY(-90deg)",
+  "rotateX(90deg)",
+  "rotateX(-90deg)",
+];
+
+export const FACE_ORIENTATIONS: readonly (readonly [number, number])[] = [
+  [0, 0], [0, -180], [0, -90], [0, 90], [-90, 0], [90, 0],
+];
+
+export type CubeFace =
+  | { kind: "character"; level: number; fieldingCost: number; attack: number; defense: number }
+  | { kind: "energy"; icon: string; amount: number };
+
+const FACE_COUNT = 6;
+
+// v3's locked Tardigrade spec, straight from TardigradeDie in
+// InstinctClashConfig.cs - not derived from a CardDef, since a Tardigrade
+// die has no cardId at all (isTardigrade instead).
+const TARDIGRADE_FACES: CubeFace[] = [
+  { kind: "character", level: 1, fieldingCost: 0, attack: 0, defense: 1 },
+  { kind: "character", level: 1, fieldingCost: 0, attack: 0, defense: 1 },
+  { kind: "character", level: 2, fieldingCost: 0, attack: 1, defense: 1 },
+  { kind: "character", level: 2, fieldingCost: 0, attack: 1, defense: 1 },
+  { kind: "character", level: 3, fieldingCost: 0, attack: 1, defense: 3 }, // Bulwark
+  { kind: "energy", icon: "Wild", amount: 2 }, // Surge
+];
+
+function defaultFaces(die: Die, card: CardDef | undefined): CubeFace[] {
+  if (die.isTardigrade || !die.cardId) return TARDIGRADE_FACES;
+  const levels = card?.levels ?? [];
+  const faces: CubeFace[] = [];
+  for (const [i, level] of levels.entries()) {
+    const face: CubeFace = { kind: "character", level: i + 1, fieldingCost: level.fieldingCost, attack: level.attack, defense: level.defense };
+    faces.push(face, face);
+  }
+  if (faces.length === 0) return TARDIGRADE_FACES;
+  while (faces.length < FACE_COUNT) faces.push(faces[faces.length - 1]);
+  return faces.slice(0, FACE_COUNT);
+}
+
+/** The face the server says this die is showing, or null if it shows none. */
+function currentFace(die: Die): CubeFace | null {
+  if (die.level !== null && die.effectiveAttack !== null && die.effectiveDefense !== null) {
+    return { kind: "character", level: die.level, fieldingCost: 0, attack: die.effectiveAttack, defense: die.effectiveDefense };
+  }
+  if (die.energySymbolId) {
+    return { kind: "energy", icon: die.energySymbolId, amount: Math.max(1, die.energyAmount) };
+  }
+  return null;
+}
+
+export interface DieFaces {
+  faces: CubeFace[];
+  /** Which face is pointing at the player. Always shows the real result. */
+  index: number;
+}
+
+export function facesFor(die: Die, cardsById: Map<string, CardDef>): DieFaces {
+  const card = die.cardId ? cardsById.get(die.cardId) : undefined;
+  const faces = defaultFaces(die, card).slice();
+  const showing = currentFace(die);
+  if (!showing) return { faces, index: 0 };
+
+  // Only match by level/kind, not the exact printed numbers - the static
+  // table holds base stats, but `showing` carries the die's true,
+  // modifier-inclusive value, and it should win on the face it lands on.
+  const found = faces.findIndex((face) =>
+    face.kind === showing.kind && (face.kind !== "character" || face.level === (showing as { level: number }).level),
+  );
+  const slot = found >= 0 ? found : faces.length - 1;
+  // Keep the static table's printed fielding cost (not a live/modified
+  // stat - the die itself doesn't carry one) while letting the true,
+  // modifier-inclusive attack/defense win.
+  const existing = faces[slot];
+  faces[slot] = showing.kind === "character" && existing.kind === "character"
+    ? { ...showing, fieldingCost: existing.fieldingCost }
+    : showing;
+  return { faces, index: slot };
+}

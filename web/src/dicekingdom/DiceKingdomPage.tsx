@@ -3,7 +3,10 @@ import "./dicekingdom.css";
 import { api } from "./api";
 import { CHAMPION_ICONS, CHARACTER_ICONS } from "./icons";
 import { claimSeatFromUrl, inviteLink, nameClaimedSeat, rememberSeats } from "./seats";
-import type { CardDef, Die, GameState, PlayerState } from "./types";
+import { CombatLane } from "./CombatLane";
+import { DieCube } from "./DieCube";
+import { facesFor } from "./dieFaces";
+import type { BlockAssignment, CardDef, Die, GameState, PlayerState } from "./types";
 
 const POLL_INTERVAL_MS = 2000;
 const CHAMPIONS = [
@@ -134,6 +137,7 @@ function DieTile({
   clickable,
   picked,
   accent,
+  mine,
   label: labelOverride,
 }: {
   die: Die;
@@ -142,11 +146,14 @@ function DieTile({
   zone: string;
   /** >1 draws a "×N" badge - see groupDice. */
   count?: number;
-  cardsById: Map<string, { name: string }>;
+  cardsById: Map<string, CardDef>;
   onClick?: () => void;
   clickable?: boolean;
   picked?: boolean;
   accent?: string;
+  /** Tints the die-cube's faces apart from the opponent's - see
+   *  ../DieCube.tsx. Only matters in a rolled zone, where the cube shows. */
+  mine?: boolean;
   /** Overrides the bottom label - used for "already rerolled"/"selected" state during Roll & Reroll. */
   label?: string;
 }) {
@@ -163,22 +170,15 @@ function DieTile({
           <div className="lbl">{name}</div>
           <div className="stat">—</div>
         </>
-      ) : die.effectiveAttack === null ? (
-        <>
-          <div className="lbl">{labelOverride ?? "Surge"}</div>
-          <div className="stat">—</div>
-          {die.energySymbolId && die.energyAmount > 0 && (
-            <PipBadge type={die.energySymbolId} amount={die.energyAmount} />
-          )}
-        </>
       ) : (
         <>
-          {Avatar && <Avatar size={34} />}
-          <div className="stat">
-            {die.effectiveAttack}/{die.effectiveDefense}
-          </div>
+          {/* The same 3D cube /game's board uses (../DieCube.tsx), not a
+              flat stat badge - a rolled die is a physical object showing
+              a real face, not text about one. */}
+          <DieCube {...facesFor(die, cardsById)} size={40} mine={mine ?? true} />
+          {die.effectiveAttack !== null && Avatar && <Avatar size={16} />}
           <div className="lbl">
-            {labelOverride ?? `L${die.level}${die.isTardigrade && !die.energySymbolId ? " · free" : ""}`}
+            {labelOverride ?? (die.effectiveAttack === null ? "Surge" : `L${die.level}${die.isTardigrade && !die.energySymbolId ? " · free" : ""}`)}
           </div>
           {die.energySymbolId && die.energyAmount > 0 && (
             <PipBadge type={die.energySymbolId} amount={die.energyAmount} />
@@ -477,9 +477,10 @@ export function DiceKingdomPage() {
     // shape - used for the three grid cells that just show a group of
     // dice (Used Pile, Out of Play, Bag), so the grid markup below reads
     // as "which zone goes where" rather than repeating this each time.
+    const ZONE_TINTS: Record<string, string> = { UsedPile: "used", OutOfPlay: "outofplay", Bag: "bag" };
     function pileZone(title: string, zoneName: string, dice: Die[]) {
       return (
-        <div className="zone">
+        <div className={`zone zone-${ZONE_TINTS[zoneName] ?? "plain"}`}>
           <h4>
             {title} <span className="count">{dice.length}</span>
           </h4>
@@ -497,7 +498,7 @@ export function DiceKingdomPage() {
       <div key={playerId} className={`playerboard${turnClass}`}>
         <div className={`mat${mirrored ? " mirrored" : ""}`}>
           <div className="mat-slot mat-field">
-            <div className="zone">
+            <div className="zone zone-field">
               <h4>
                 Field <span className="count">{field.length}</span>
               </h4>
@@ -512,6 +513,7 @@ export function DiceKingdomPage() {
                       zone="FieldZone"
                       cardsById={cardsById}
                       accent={accent}
+                      mine={playerId === you}
                       clickable={clickable}
                       picked={picked}
                       onClick={() => toggleDie(d.id)}
@@ -523,7 +525,7 @@ export function DiceKingdomPage() {
           </div>
           <div className="mat-slot mat-used">{pileZone("Used Pile", "UsedPile", used)}</div>
           <div className="mat-slot mat-reserve">
-            <div className="zone">
+            <div className="zone zone-reserve">
               <h4>
                 Reserve Pool <span className="count">{reserve.length}</span>
               </h4>
@@ -538,6 +540,7 @@ export function DiceKingdomPage() {
                       zone="ReservePool"
                       cardsById={cardsById}
                       accent={accent}
+                      mine={playerId === you}
                       clickable={reservePoolClickable(d)}
                       picked={picked}
                       label={already ? "rerolled" : step === "roll-and-reroll" && rolled(d) ? (picked ? "selected" : undefined) : undefined}
@@ -587,25 +590,24 @@ export function DiceKingdomPage() {
   }
 
   // A single shared lane between the two mats, matching v1's real Attack
-  // Zone: attackers from BOTH players sit here at once (that's the whole
-  // point of it facing across the table), not duplicated per playerboard
-  // the way the old per-player section had it.
+  // Zone/CombatLane.tsx: attackers from BOTH players sit here at once
+  // (that's the whole point of it facing across the table), each paired
+  // against whatever's blocking it, with the same blue-to-orange divider
+  // seam ../CombatLane.tsx draws between the two halves.
   function renderAttackZone() {
-    const attackers = game!.dice.filter((d) => d.zone === "AttackZone");
-    if (attackers.length === 0) return null;
+    if (!game || game.dice.filter((d) => d.zone === "AttackZone").length === 0) return null;
+    const assignments: BlockAssignment[] = Object.entries(blockAssignments)
+      .filter((entry): entry is [string, string] => !!entry[1])
+      .map(([attackerDieId, blockerDieId]) => ({ attackerDieId, blockerDieId }));
     return (
-      <div className="zone attackzone">
-        <h4>
-          Attack Zone <span className="count">{attackers.length}</span>
-        </h4>
-        <div className="dierow">
-          {attackers.map((d) => {
-            const owner = d.controllerId === game!.playerOne.id ? game!.playerOne : game!.playerTwo;
-            const accent = owner.champion ? `var(--${owner.champion.energySymbolId.toLowerCase()})` : undefined;
-            return <DieTile key={d.id} die={d} zone="AttackZone" cardsById={cardsById} accent={accent} />;
-          })}
-        </div>
-      </div>
+      <CombatLane
+        dice={game.dice}
+        cardsById={cardsById}
+        assignments={assignments}
+        nearPlayerId={you}
+        selection={selection}
+        onGroupClick={(ids) => toggleDie(ids[0])}
+      />
     );
   }
 
