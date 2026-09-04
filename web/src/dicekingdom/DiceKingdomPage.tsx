@@ -15,7 +15,7 @@ import type { BlockAssignment, CardDef, Die, GameState, PlayerState } from "./ty
 
 const POLL_INTERVAL_MS = 2000;
 const CHAMPIONS = [
-  { id: "Lion", energy: "Claw" },
+  { id: "Wolf", energy: "Claw" },
   { id: "Armadillo", energy: "Shell" },
   { id: "GoldenEagle", energy: "Wing" },
   { id: "GreatHornedOwl", energy: "Eye" },

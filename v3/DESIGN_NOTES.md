@@ -1229,3 +1229,44 @@ flat and color-coded with no gradient bleed, the active player's whole
 board carries a clear green/amber outline, "Active: teamA" reads as a
 solid pill. `tsc -b`/`vite build`/`oxlint` clean, full click-through
 zero console errors.
+
+## First real fan art: Lion renamed to Wolf (2026-09-06)
+
+The user's kid drew a pixel-art wolf; swapped in as the Claw Champion's
+avatar, and the Champion itself renamed from "Lion" to "Wolf" to match
+(`InstinctClashConfig.cs`'s `Champions` list - id and name both, plus
+every `"Lion"` reference across the frontend `CHAMPIONS` array and both
+test suites - `Player.Name` is set from `champion.Name`
+(`V2GamesController.BuildPlayer`), so this also fixed the match log
+reading "Lion draws 3 dice" etc. to say "Wolf" instead, free).
+
+`icons.tsx`'s `CHAMPION_ICONS` map takes any `(size) => ReactElement`,
+so the new `WolfIcon` is a real `<img>` (the JPEG, `web/src/
+dicekingdom/assets/wolf-champion.jpg`) rather than a `currentColor` SVG
+glyph like the other three Champions - same call signature, no special-
+casing needed at either call site (the pre-game picker or the in-game
+Champion box). More real art from the same source is expected to
+replace the placeholder SVGs over time.
+
+Verified live with headless Chromium: the art renders at both sizes
+(picker and Champion box), `tsc -b`/`vite build`/`oxlint` clean, full
+908-test solution suite passing.
+
+**Roster expansion started, paused mid-work per the user** ("hold off...
+finish it up later tonight") - 6 new Claw Characters (Grizzly Bear,
+Orca, Peregrine Falcon, Tiger, Stoat, Cape Buffalo) are drafted in
+`InstinctClashConfig.cs`, sourced from `CARD_INSPIRATION.md`'s
+remaining Claw picks (excluding "Wolf" itself, now the Champion's
+name) and simplified to the same plain templates the original 8
+Characters use. They are NOT yet wired into `Catalog` or
+`CharactersByEnergyType` - compiles clean as inert unused
+`CardDef`s, zero behavior change. Still needed to actually finish the
+"8 different animals per team" ask: 6 more each for Shell/Wing/Eye
+(picks scoped, not yet written - see this session's own notes for the
+per-type template mapping), wiring all 24 into `Catalog`/
+`CharactersByEnergyType`, `MaxTeamCards` 2→8 and `MaxTeamDice` 8→32 in
+`Config.Rules`, and updating `InstinctClashConfigTests`'
+`Every_Energy_Type_Has_Exactly_Two_Characters` (→ Eight) plus both
+`Unpurchased`-count assertions (8 → 32) in `InstinctClashConfigTests`/
+`V2GamesControllerTests`. No frontend changes expected to be needed -
+the roster strip already renders however many Unpurchased cards exist.

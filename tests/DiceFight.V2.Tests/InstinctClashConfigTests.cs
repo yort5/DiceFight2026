@@ -39,7 +39,7 @@ public class InstinctClashConfigTests
         var config = InstinctClashConfig.Config;
         var catalog = InstinctClashConfig.Catalog;
 
-        var playerOne = new Player { Id = "p1", Name = "Lion Player", ChampionId = "Lion" };
+        var playerOne = new Player { Id = "p1", Name = "Wolf Player", ChampionId = "Wolf" };
         playerOne.TeamCardIds.AddRange(InstinctClashConfig.CharactersByEnergyType["Claw"]);
         var playerTwo = new Player { Id = "p2", Name = "Armadillo Player", ChampionId = "Armadillo" };
         playerTwo.TeamCardIds.AddRange(InstinctClashConfig.CharactersByEnergyType["Shell"]);
@@ -76,7 +76,7 @@ public class InstinctClashConfigTests
         TurnEngine.Field(state, queue, toField.Id, []);
         Assert.Equal(Zone.FieldZone, toField.Zone);
 
-        // --- Lion's passive (+1 ATK to all your dice) is live: base 0 -> 1 ---
+        // --- Wolf's passive (+1 ATK to all your dice) is live: base 0 -> 1 ---
         Assert.Equal(0, state.GetCurrentFace(toField)!.Character!.Attack);
         Assert.Equal(1, QueryEngine.GetAttack(state, toField));
 

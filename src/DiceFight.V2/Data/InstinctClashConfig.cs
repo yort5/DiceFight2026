@@ -76,6 +76,70 @@ public static class InstinctClashConfig
             new DealDamage(new Fixed(1), new TargetFilter(Kind: TargetKind.Player, Ownership: TargetOwnership.Opposing)))],
         Continuous: []);
 
+    // 6 more Claw picks (2026-09-06, "build out a full roster... 8
+    // different animals") - same v3/CARD_INSPIRATION.md sourcing pass as
+    // the original two, picked for being directly buildable against the
+    // same plain templates already proven above rather than the fuller
+    // multi-clause/bonus-on-double-roll/Global text CARD_INSPIRATION.md
+    // records as those cards' actual printed text. "Wolf" itself was
+    // skipped as a pick - it's the Claw Champion's own name now.
+    public static readonly CardDef GrizzlyBear = new(
+        Id: "IC-CLAW-03", Name: "Grizzly Bear", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        PurchaseCost: 5, EnergySymbolIds: ["Claw"],
+        Die: CharacterDie("IC-CLAW-03Die", fieldingCost: 2, (1, 5), (2, 6), (3, 8)),
+        DieLimit: 4, Affiliations: [], Keywords: [],
+        RawText: "On field: KO a target creature.",
+        Abilities: [new TriggeredAbility(TriggerKind.DieFielded, new Ko(new TargetFilter(Kind: TargetKind.CharacterDie)))],
+        Continuous: []);
+
+    public static readonly CardDef Orca = new(
+        Id: "IC-CLAW-04", Name: "Orca", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        PurchaseCost: 5, EnergySymbolIds: ["Claw"],
+        Die: CharacterDie("IC-CLAW-04Die", fieldingCost: 2, (0, 3), (1, 3), (1, 4)),
+        DieLimit: 4, Affiliations: [], Keywords: [],
+        RawText: "On field: KO a target creature.",
+        Abilities: [new TriggeredAbility(TriggerKind.DieFielded, new Ko(new TargetFilter(Kind: TargetKind.CharacterDie)))],
+        Continuous: []);
+
+    public static readonly CardDef PeregrineFalcon = new(
+        Id: "IC-CLAW-05", Name: "Peregrine Falcon", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        PurchaseCost: 6, EnergySymbolIds: ["Claw"],
+        Die: CharacterDie("IC-CLAW-05Die", fieldingCost: 2, (1, 5), (2, 7), (3, 8)),
+        DieLimit: 4, Affiliations: [], Keywords: [],
+        RawText: "On field: deal 3 damage to a target creature.",
+        Abilities: [new TriggeredAbility(TriggerKind.DieFielded,
+            new DealDamage(new Fixed(3), new TargetFilter(Kind: TargetKind.CharacterDie)))],
+        Continuous: []);
+
+    public static readonly CardDef Tiger = new(
+        Id: "IC-CLAW-06", Name: "Tiger", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        PurchaseCost: 6, EnergySymbolIds: ["Claw"],
+        Die: CharacterDie("IC-CLAW-06Die", fieldingCost: 2, (1, 5), (2, 7), (3, 8)),
+        DieLimit: 4, Affiliations: [], Keywords: [],
+        RawText: "On attack: deal 2 damage to the opponent directly.",
+        Abilities: [new TriggeredAbility(TriggerKind.DieAttacks,
+            new DealDamage(new Fixed(2), new TargetFilter(Kind: TargetKind.Player, Ownership: TargetOwnership.Opposing)))],
+        Continuous: []);
+
+    public static readonly CardDef Stoat = new(
+        Id: "IC-CLAW-07", Name: "Stoat", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        PurchaseCost: 4, EnergySymbolIds: ["Claw"],
+        Die: CharacterDie("IC-CLAW-07Die", fieldingCost: 1, (0, 2), (1, 3), (2, 4)),
+        DieLimit: 4, Affiliations: [], Keywords: [],
+        RawText: "On field: deal 1 damage to the opponent directly.",
+        Abilities: [new TriggeredAbility(TriggerKind.DieFielded,
+            new DealDamage(new Fixed(1), new TargetFilter(Kind: TargetKind.Player, Ownership: TargetOwnership.Opposing)))],
+        Continuous: []);
+
+    public static readonly CardDef CapeBuffalo = new(
+        Id: "IC-CLAW-08", Name: "Cape Buffalo", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        PurchaseCost: 6, EnergySymbolIds: ["Claw"],
+        Die: CharacterDie("IC-CLAW-08Die", fieldingCost: 2, (1, 4), (1, 6), (2, 8)),
+        DieLimit: 4, Affiliations: [], Keywords: [],
+        RawText: "While active, your creatures get +1 ATK.",
+        Abilities: [],
+        Continuous: [new StatAura(OwnCreatures, AtkDelta: new Fixed(1))]);
+
     // Shell
 
     public static readonly CardDef Hippopotamus = new(
@@ -169,7 +233,10 @@ public static class InstinctClashConfig
     // that's already thin by turn two.
     public static readonly IReadOnlyList<ChampionDef> Champions =
     [
-        new("Lion", "Lion", "Claw", ChampionPassiveKind.AttackBuff, Amount: 1)
+        // Renamed from "Lion" (2026-09-06) - a real fan-art avatar exists
+        // for this one now (icons.tsx's WolfIcon), so the Claw Champion
+        // became the animal the art actually is.
+        new("Wolf", "Wolf", "Claw", ChampionPassiveKind.AttackBuff, Amount: 1)
         {
             TardigradePool = [new BasicDicePoolEntry(TardigradeDie("Claw"), Count: 8)],
         },

@@ -1,4 +1,5 @@
 import type { ReactElement, ReactNode } from "react";
+import wolfChampionArt from "./assets/wolf-champion.jpg";
 
 // Hand-drawn icon set for Dice Kingdom - the same SVG concepts already
 // designed and reviewed as Claude artifacts this session (the energy-pip
@@ -91,23 +92,21 @@ export const ENERGY_ICONS: Record<string, (p: IconProps) => ReactElement> = {
 // ---- Champion avatars (no energy tie-in - see v3/DESIGN_NOTES.md on why
 // avatars are deliberately orthogonal to energy color) ----
 
-export function LionIcon(props: IconProps) {
+// The first real piece of fan art in the set (2026-09-06, drawn by the
+// user's kid) - a raster image rather than a currentColor SVG glyph like
+// every other icon here, so it can't pick up an accent tint the way
+// those do. Same IconProps signature as the rest (just `size`) so it
+// drops into CHAMPION_ICONS/callers without any special-casing. More of
+// these are expected to replace the placeholder SVG glyphs over time.
+export function WolfIcon({ size = 24 }: IconProps) {
   return (
-    <Svg {...props}>
-      <circle cx={32} cy={32} r={10} fill="currentColor" />
-      <g fill="currentColor">
-        <polygon points="32,4 36,16 28,16" />
-        <polygon points="52,10 48,22 42,16" />
-        <polygon points="60,28 48,30 50,22" />
-        <polygon points="60,36 48,34 50,42" />
-        <polygon points="52,54 48,42 42,48" />
-        <polygon points="32,60 36,48 28,48" />
-        <polygon points="12,54 16,42 22,48" />
-        <polygon points="4,36 16,34 14,42" />
-        <polygon points="4,28 16,30 14,22" />
-        <polygon points="12,10 16,22 22,16" />
-      </g>
-    </Svg>
+    <img
+      src={wolfChampionArt}
+      alt="Wolf"
+      width={size}
+      height={size}
+      style={{ objectFit: "contain", borderRadius: "20%", background: "#fff" }}
+    />
   );
 }
 
@@ -144,7 +143,7 @@ export function GreatHornedOwlIcon(props: IconProps) {
 }
 
 export const CHAMPION_ICONS: Record<string, (p: IconProps) => ReactElement> = {
-  Lion: LionIcon,
+  Wolf: WolfIcon,
   Armadillo: ArmadilloIcon,
   GoldenEagle: GoldenEagleIcon,
   GreatHornedOwl: GreatHornedOwlIcon,

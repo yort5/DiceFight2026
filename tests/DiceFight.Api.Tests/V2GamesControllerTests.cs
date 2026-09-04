@@ -13,7 +13,7 @@ namespace DiceFight.Api.Tests;
 // pinning exact numbers combat math already covers at the engine layer.
 public class V2GamesControllerTests
 {
-    private static (V2GameStore Store, V2GameSession Session) CreateGame(string p1Champion = "Lion", string p2Champion = "Armadillo")
+    private static (V2GameStore Store, V2GameSession Session) CreateGame(string p1Champion = "Wolf", string p2Champion = "Armadillo")
     {
         var store = new V2GameStore();
         var anon = V2SeatedController.Anonymous(store);
@@ -25,10 +25,10 @@ public class V2GamesControllerTests
     [Fact]
     public void Create_Builds_Each_Team_From_Its_Champions_Energy_Type()
     {
-        var (_, session) = CreateGame("Lion", "GreatHornedOwl");
+        var (_, session) = CreateGame("Wolf", "GreatHornedOwl");
         var state = session.State;
 
-        Assert.Equal("Lion", state.PlayerOne.ChampionId);
+        Assert.Equal("Wolf", state.PlayerOne.ChampionId);
         // Deck-building basics: every Character copy sits Unpurchased
         // until bought (v1's TeamSetup shape, unchanged for v3) - no free
         // starting copies, only the Tardigrades start in Bag.
@@ -45,7 +45,7 @@ public class V2GamesControllerTests
     [Fact]
     public void Full_Turn_Cycle_Works_Through_The_Controller_With_Champion_Passive_Applied()
     {
-        var (store, session) = CreateGame("Lion", "Armadillo");
+        var (store, session) = CreateGame("Wolf", "Armadillo");
         var teamA = V2SeatedController.For(store, session, "teamA");
         var teamB = V2SeatedController.For(store, session, "teamB");
 
@@ -78,7 +78,7 @@ public class V2GamesControllerTests
         var afterField = V2SeatedController.Dto(teamA.Field(session.Id, new V2FieldRequest(fieldable.Id, [])));
         var fielded = afterField.Dice.Single(d => d.Id == fieldable.Id);
         Assert.Equal("FieldZone", fielded.Zone);
-        // Lion's passive is +1 ATK to all your dice, and every Tardigrade
+        // Wolf's passive is +1 ATK to all your dice, and every Tardigrade
         // face's base ATK is >= 0, so the buffed value is always >= 1 -
         // a die showing 0 here would mean the Champion passive never applied.
         Assert.True(fielded.EffectiveAttack >= 1);
