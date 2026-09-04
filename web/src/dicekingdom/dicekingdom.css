@@ -140,60 +140,147 @@
   border: 1.5px solid var(--border);
 }
 
-.dicekingdom .topbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 16px;
-}
-.dicekingdom .lifebox {
-  background: var(--panel-bg);
-  border: 2px solid var(--border);
-  border-radius: 14px;
-  padding: 8px 16px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  box-shadow: var(--shadow);
-}
-.dicekingdom .lifebox svg {
-  width: 26px;
-  height: 26px;
-}
-.dicekingdom .lifebox .lnum {
-  font: 400 26px/1 var(--display);
-  font-variant-numeric: tabular-nums;
-}
-.dicekingdom .phasepill {
-  font: 700 11px var(--sans);
-  padding: 7px 16px;
-  border-radius: 999px;
-  background: var(--panel-bg);
-  border: 1px solid var(--border);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
 /* Green = your move, right now; amber-grey (never red - that reads as
    "something's wrong," not "waiting your turn") = theirs. Same two hues
    as /game's identical cue (DESIGN_LOG.md, 2026-09-03), applied to the
-   lifebox, the phasepill, and the acting player's whole board below. */
+   life panels, the "Active" line, and the acting player's whole board. */
 .dicekingdom .turn-mine {
   border-color: oklch(0.62 0.15 145 / 0.85) !important;
   box-shadow: 0 0 0 2px oklch(0.62 0.15 145 / 0.35), var(--shadow);
 }
-.dicekingdom .phasepill.turn-mine {
-  color: oklch(0.4 0.13 145);
-}
-
 .dicekingdom .turn-waiting {
   border-color: oklch(0.62 0.06 75 / 0.85) !important;
   box-shadow: 0 0 0 2px oklch(0.62 0.06 75 / 0.3), var(--shadow);
 }
-.dicekingdom .phasepill.turn-waiting {
+
+/* ---- Title bar - ribbon + a compact How-to-play toggle, replacing the
+   old full-width title/description/topbar. Direct feedback: those took
+   up vertical space above the fold that /game's live board never
+   spends - once a game exists, /game shows almost no chrome at all. ---- */
+.dicekingdom .dk-titlebar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.dicekingdom .step-ribbon {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.dicekingdom .ribbon-chip {
+  padding: 5px 10px;
+  border-radius: 999px;
+  font: 600 11px var(--sans);
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid var(--border);
+  background: var(--panel-bg);
+  opacity: 0.65;
+}
+.dicekingdom .ribbon-chip.current {
+  opacity: 1;
+  background: var(--cc, var(--text-h));
+  color: var(--bg);
+  border-color: transparent;
+}
+.dicekingdom .ribbon-chip.past {
+  opacity: 0.4;
+}
+.dicekingdom details.how {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  margin: 0;
+  font-size: 12px;
+}
+.dicekingdom details.how summary {
+  cursor: pointer;
+  font-weight: 600;
+  opacity: 0.7;
+  list-style: none;
+}
+.dicekingdom details.how[open] {
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 12px;
+  box-shadow: var(--shadow);
+}
+.dicekingdom details.how ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+/* ---- Rail: Active/Invite line, then life totals side by side - ported
+   from ../TurnRail.tsx's shape, moved off the table entirely (real
+   feedback: life totals flanking a phase pill above the board were
+   still costing vertical space, just differently). ---- */
+.dicekingdom .active-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  opacity: 0.85;
+  margin-bottom: 8px;
+}
+.dicekingdom .whose-turn.mine {
+  color: oklch(0.5 0.13 145);
+  font-weight: 700;
+}
+.dicekingdom .whose-turn.waiting {
   color: oklch(0.5 0.05 75);
+}
+.dicekingdom .invite-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.dicekingdom .invite-row-label {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 10px;
+  opacity: 0.65;
+}
+.dicekingdom .invite-row-button {
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.dicekingdom .life-panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.dicekingdom .life-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px 6px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--panel-bg);
+}
+.dicekingdom .life-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.7;
+}
+.dicekingdom .life-value {
+  font: 400 30px/1 var(--display);
+  font-variant-numeric: tabular-nums;
 }
 
 .dicekingdom .playerboard.turn-mine .champbanner {
@@ -233,30 +320,33 @@
   margin-bottom: 18px;
 }
 
-/* The mat grid - same shape as /game's PlayerBoard.tsx .mat, sized down
-   to Dice Kingdom's smaller zone set (no Prep/Intimidated/staging zones
-   to give columns of their own). Used Pile and Out of Play flank the
-   Reserve Pool instead of stacking above/below it, and Field Zone sits
-   at whichever edge is closest to the shared Attack Zone between the
-   two mats - the bottom for the near player, the top for the mirrored
-   (opponent) one, so both Field Zones actually face each other. */
+/* The mat grid - the exact shape of /game's PlayerBoard.tsx .mat (App.css
+   lines ~932-994), not a scaled-down variant: left column is the die
+   cycle (Used Pile, Out of Play, Bag, stacked), right column is what's
+   coming back (Prep Area, Carried From Prep - no Intimidated, v3 has no
+   such rule, so that grid cell is just "." - explicitly empty), Reserve
+   Pool spans the two middle rows between them because it's the tray and
+   wants the height, Field Zone spans the full width against whichever
+   edge is closest to the shared Attack Zone between the two mats. */
 .dicekingdom .mat {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr);
+  grid-template-columns: 196px minmax(0, 1fr) 196px;
   grid-template-areas:
-    "field field field"
-    "used reserve outofplay"
-    "bag bag bag";
-  gap: 10px;
+    "field     field   field"
+    "used      reserve prep"
+    "outofplay reserve ."
+    "bag       drawn   carried";
+  gap: 8px;
   margin-bottom: 14px;
 }
 .dicekingdom .mat.mirrored {
   grid-template-areas:
-    "bag bag bag"
-    "used reserve outofplay"
-    "field field field";
+    "bag       drawn   carried"
+    "outofplay reserve ."
+    "used      reserve prep"
+    "field     field   field";
 }
-@media (max-width: 640px) {
+@media (max-width: 900px) {
   .dicekingdom .mat,
   .dicekingdom .mat.mirrored {
     grid-template-columns: 1fr;
@@ -264,8 +354,11 @@
       "field"
       "reserve"
       "used"
+      "prep"
       "outofplay"
-      "bag";
+      "bag"
+      "drawn"
+      "carried";
   }
 }
 .dicekingdom .mat-field {
@@ -277,11 +370,20 @@
 .dicekingdom .mat-reserve {
   grid-area: reserve;
 }
+.dicekingdom .mat-prep {
+  grid-area: prep;
+}
 .dicekingdom .mat-outofplay {
   grid-area: outofplay;
 }
 .dicekingdom .mat-bag {
   grid-area: bag;
+}
+.dicekingdom .mat-drawn {
+  grid-area: drawn;
+}
+.dicekingdom .mat-carried {
+  grid-area: carried;
 }
 .dicekingdom .mat-slot .zone {
   height: 100%;
@@ -315,6 +417,14 @@
 .dicekingdom .zone-outofplay {
   background: oklch(0.5 0.03 300 / 0.1);
   border-color: oklch(0.55 0.04 300 / 0.4);
+}
+.dicekingdom .zone-prep {
+  background: oklch(0.55 0.06 70 / 0.1);
+  border-color: oklch(0.55 0.07 70 / 0.4);
+}
+.dicekingdom .zone-staging {
+  background: oklch(0.5 0.04 300 / 0.08);
+  border-color: oklch(0.55 0.05 300 / 0.35);
 }
 
 /* ---- Combat lane - the shared strip where the two mats meet, ported

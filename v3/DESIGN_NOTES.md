@@ -602,3 +602,77 @@ chips - these already work and weren't part of the complaint. "Copy the
 entire UI" was scoped to what was actually broken (the divider, the die
 visualization, zone borders), not a wholesale rewrite of working,
 already-verified control flow.
+
+## Server-side fix: stat modifiers only apply in play, and a real screenshot-driven layout pass (2026-09-04)
+
+Two things landed together, both from the same message. First, a real
+correctness bug the user caught by reading a screenshot closely: a
+Reserve Pool die was showing `effectiveAttack`/`effectiveDefense` with
+Champion passives already baked in, before the die was ever fielded.
+"We probably don't want the computed attack stats to show up on the die
+when it's in the Reserve Pool... applied and static buffs are not a
+guarantee - the Champion's ability could get turned off, or another
+boost it may be getting from a character could disappear when that
+character is KO'd. I should be making the choice to field or not based
+on the die's _actual_ stats." Checked `V2Dtos.cs`'s `V2DieDto.From` and
+confirmed it: `QueryEngine.GetAttack`/`GetDefense` (continuous modifiers
+included) ran unconditionally for any die showing a character face,
+regardless of zone - a real bug, not a documented design choice; nothing
+in Phase 1's Champion plan called for modifiers to apply outside of
+play. Fixed by gating on zone: `FieldZone`/`AttackZone` (in play) get
+`QueryEngine.GetAttack`/`GetDefense` (modifiers included); every other
+zone gets `QueryEngine.GetBaseAttack`/`GetBaseDefense` (the printed
+face value plus only one-shot `AppliedModifiers`, no continuous team
+auras). Verified directly against the wire data (not the DOM): a rolled
+L2 Tardigrade sitting in the Reserve Pool now reports 1/1 (its true
+printed stat) under a Lion (+1 ATK) Champion, and reports 2/1 only once
+actually fielded into the Field Zone. 908 tests pass - this call site
+had no existing test coverage asserting the old (wrong) behavior.
+
+**Recorded, not built this round**: a hover/tap breakdown of WHERE a
+buff or debuff on an in-play die's stat is coming from ("nothing more
+frustrating than wondering why a die you thought had 8 attack suddenly
+has only 3"). Real, worth doing, but `IDieStatModifier`/`StatAura` etc.
+carry no source/label today (`AppliesTo`/`GetDelta` only) - needs a
+modifier-breakdown API shape, not a client-side guess. Next session.
+
+Second: the user pasted an actual screenshot of `/game` and said,
+bluntly, "make it look like this" - the sharpest, most concrete version
+yet of a complaint that ran through the whole session. Direct structural
+gaps checked against the screenshot and fixed:
+- No step ribbon at all -> ported `StepRibbon.tsx` (`dicekingdom/
+  StepRibbon.tsx`), step ids grouped since V2's `currentStepId` is
+  finer-grained than v1's `currentStep` (three real ids inside Attack).
+- Title/description/How-to-play/a full-width life+phase topbar sat above
+  the board, permanently - none of that exists once a v1 game is live
+  (title/nav lives in a slim header outside the game view entirely, How
+  to Play is a modal-opening button). Removed the title block from the
+  live view; `.how` is now a small collapsed toggle in a `.dk-titlebar`
+  row next to the ribbon, not a full-width panel.
+- Life totals moved off the table into the rail: `.active-line` (Active
+  + Invite, one line) then `.life-panels` (a real 2-column grid, ported
+  from `TurnRail.tsx`), both above the `ChampBanner`s (kept - v3-only,
+  v1 has no Champion concept so the screenshot has nothing to compare
+  against here).
+- The mat grid was still a scaled-down 5-zone version, not the real
+  thing: Out of Play was flanking Reserve Pool as its own column
+  (direct feedback: "Out of Play is on the Right side") when v1 actually
+  stacks it in the LEFT column with Used Pile/Bag; Prep Area didn't
+  exist as its own zone at all ("No Prep Area at all") because an
+  earlier round had merged it into Reserve Pool display for being
+  "confusing to show separately" - reverted per direct instruction, it's
+  its own zone now, matching v1's real 9-zone grid (`field`/`used`/
+  `reserve`/`prep`/`outofplay`/`bag`/`drawn`/`carried`, minus
+  `intimidated` - v3 has no such rule, so that grid cell is just `.`,
+  explicitly empty CSS grid syntax, not a fabricated zone).
+- The combat lane only rendered when an attacker existed ("Still no
+  Attack Zone" - it disappeared entirely most of the turn). Now always
+  renders, matching v1: `CombatLane` itself draws three "no blocker"/
+  "open slot" placeholder columns when nothing's declared.
+
+Verified with headless Chromium: `.mat-used`/`.mat-outofplay` share a
+left-edge x-offset (same column) rather than flanking `.mat-reserve`,
+`.mat-prep` sits right of Reserve Pool, `.combat-lane` is present on a
+fresh turn 1 with zero attackers, `.step-ribbon` and no `<h1>` in the
+live view. 908 tests pass - CSS/component-structure only besides the
+one C# fix above.

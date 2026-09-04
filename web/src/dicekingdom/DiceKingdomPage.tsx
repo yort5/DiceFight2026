@@ -6,6 +6,7 @@ import { claimSeatFromUrl, inviteLink, nameClaimedSeat, rememberSeats } from "./
 import { CombatLane } from "./CombatLane";
 import { DieCube } from "./DieCube";
 import { facesFor } from "./dieFaces";
+import { StepRibbon } from "./StepRibbon";
 import type { BlockAssignment, CardDef, Die, GameState, PlayerState } from "./types";
 
 const POLL_INTERVAL_MS = 2000;
@@ -80,16 +81,12 @@ function groupDice(dice: Die[], zone: string): DieGroup[] {
 // playerOne's box, never playerTwo's.
 function LifeBox({ player, you, activePlayerId }: { player: PlayerState; you: string; activePlayerId: string }) {
   const isActive = activePlayerId === player.id;
-  const cls = isActive ? (player.id === you ? " turn-mine" : " turn-waiting") : "";
-  const Icon = player.champion ? CHAMPION_ICONS[player.champion.id] : null;
+  const mine = player.id === you;
+  const cls = isActive ? (mine ? " turn-mine" : " turn-waiting") : "";
   return (
-    <div className={`lifebox${cls}`}>
-      {player.champion && Icon && (
-        <span style={{ color: `var(--${player.champion.energySymbolId.toLowerCase()})` }}>
-          <Icon />
-        </span>
-      )}
-      <span className="lnum">{player.life}</span>
+    <div className={`life-panel${cls}`}>
+      <span className="life-label">{mine ? "You" : "Opponent"}</span>
+      <span className="life-value">{player.life}</span>
     </div>
   );
 }
@@ -115,6 +112,33 @@ function ChampBanner({ player, isActivePlayer, you }: { player: PlayerState; isA
         </div>
         <div className="cbpassive">{player.champion.passiveText}</div>
       </div>
+    </div>
+  );
+}
+
+// Ported from ../TurnRail.tsx's InvitePanel - one compact row, not a
+// full panel, since this is a one-time convenience most of a game
+// doesn't need once the other seat has joined.
+function InviteRow({ link }: { link: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="invite-row" title={link}>
+      <span className="invite-row-label">Invite</span>
+      <button
+        type="button"
+        className="invite-row-button"
+        onClick={async () => {
+          try {
+            await navigator.clipboard.writeText(link);
+            setCopied(true);
+            window.setTimeout(() => setCopied(false), 2000);
+          } catch {
+            // Clipboard blocked - the link is still in the title tooltip.
+          }
+        }}
+      >
+        {copied ? "Copied!" : "Copy link"}
+      </button>
     </div>
   );
 }
@@ -442,23 +466,23 @@ export function DiceKingdomPage() {
     const player = playerId === game!.playerOne.id ? game!.playerOne : game!.playerTwo;
     const accent = player.champion ? `var(--${player.champion.energySymbolId.toLowerCase()})` : undefined;
     const field = diceFor(playerId, "FieldZone");
-    // PrepArea is v2's internal staging zone for dice mid-roll, before
-    // FinishRoll moves them into ReservePool - showing it as a separate
-    // section read as "why is rolling happening somewhere other than the
-    // Reserve Pool?" (real user feedback). Same tray to the player the
-    // whole time, so it's shown as one - and during Roll & Reroll these
-    // ARE the tiles you click to build a reroll selection (no separate
-    // widget duplicating them). DiceFromBag/DiceFromPrep, v2's other two
-    // staging zones, are skipped entirely - the engine declares them but
-    // (per Zone.cs's own remarks) doesn't route any dice through them yet.
-    const reserve = [...diceFor(playerId, "ReservePool"), ...diceFor(playerId, "PrepArea")];
-    // Every zone a die can actually end up in gets shown, even at 0 -
-    // spent energy and KO'd/unblocked-attacker dice go to UsedPile, so
-    // leaving it off the board (an earlier version of this page did)
-    // makes dice look like they vanish when spent.
+    // Every zone a die can actually end up in gets shown, even at 0,
+    // matching ../PlayerBoard.tsx's own full 9-zone mat exactly (minus
+    // Intimidated, which v3 has no equivalent rule for) rather than
+    // merging zones for a "simpler" board - direct feedback that doing so
+    // just reads as "fundamentally different from Dice Fight". PrepArea
+    // is v2's staging zone for dice mid-roll (during Roll & Reroll these
+    // ARE the tiles you click to build a reroll selection - see
+    // reservePoolClickable, which is zone-agnostic already);
+    // DiceFromBag/DiceFromPrep are what a card that moves dice through
+    // the Bag/Prep Area this turn would populate.
+    const reserve = diceFor(playerId, "ReservePool");
+    const prep = diceFor(playerId, "PrepArea");
     const used = diceFor(playerId, "UsedPile");
     const outOfPlay = diceFor(playerId, "OutOfPlay");
     const bag = diceFor(playerId, "Bag");
+    const drawn = diceFor(playerId, "DiceFromBag");
+    const carried = diceFor(playerId, "DiceFromPrep");
     const unpurchased = diceFor(playerId, "Unpurchased");
     const unpurchasedByCard = new Map<string, Die[]>();
     for (const d of unpurchased) {
@@ -477,7 +501,10 @@ export function DiceKingdomPage() {
     // shape - used for the three grid cells that just show a group of
     // dice (Used Pile, Out of Play, Bag), so the grid markup below reads
     // as "which zone goes where" rather than repeating this each time.
-    const ZONE_TINTS: Record<string, string> = { UsedPile: "used", OutOfPlay: "outofplay", Bag: "bag" };
+    const ZONE_TINTS: Record<string, string> = {
+      UsedPile: "used", OutOfPlay: "outofplay", Bag: "bag",
+      PrepArea: "prep", DiceFromBag: "staging", DiceFromPrep: "staging",
+    };
     function pileZone(title: string, zoneName: string, dice: Die[]) {
       return (
         <div className={`zone zone-${ZONE_TINTS[zoneName] ?? "plain"}`}>
@@ -489,6 +516,42 @@ export function DiceKingdomPage() {
             {groupDice(dice, zoneName).map((g) => (
               <DieTile key={g.key} die={g.sample} zone={zoneName} count={g.count} cardsById={cardsById} accent={accent} />
             ))}
+          </div>
+        </div>
+      );
+    }
+
+    // Reserve Pool and Prep Area behave identically during Roll & Reroll -
+    // reservePoolClickable is zone-agnostic (it only reads step/selection/
+    // rolled state), and these are the tiles a player clicks to build a
+    // reroll selection either way. Each die shown individually (not
+    // grouped) since a rolled zone is about each die's own face, not a
+    // count - see ROLLED_ZONES.
+    function rolledZone(title: string, zoneName: string, dice: Die[]) {
+      return (
+        <div className={`zone zone-${ZONE_TINTS[zoneName] ?? "reserve"}`}>
+          <h4>
+            {title} <span className="count">{dice.length}</span>
+          </h4>
+          <div className="dierow">
+            {dice.map((d) => {
+              const picked = d.id === selection.primary || selection.secondary.includes(d.id);
+              const already = step === "roll-and-reroll" && rerolledIds.includes(d.id);
+              return (
+                <DieTile
+                  key={d.id}
+                  die={d}
+                  zone={zoneName}
+                  cardsById={cardsById}
+                  accent={accent}
+                  mine={playerId === you}
+                  clickable={reservePoolClickable(d)}
+                  picked={picked}
+                  label={already ? "rerolled" : step === "roll-and-reroll" && rolled(d) ? (picked ? "selected" : undefined) : undefined}
+                  onClick={() => toggleDie(d.id)}
+                />
+              );
+            })}
           </div>
         </div>
       );
@@ -524,35 +587,12 @@ export function DiceKingdomPage() {
             </div>
           </div>
           <div className="mat-slot mat-used">{pileZone("Used Pile", "UsedPile", used)}</div>
-          <div className="mat-slot mat-reserve">
-            <div className="zone zone-reserve">
-              <h4>
-                Reserve Pool <span className="count">{reserve.length}</span>
-              </h4>
-              <div className="dierow">
-                {reserve.map((d) => {
-                  const picked = d.id === selection.primary || selection.secondary.includes(d.id);
-                  const already = step === "roll-and-reroll" && rerolledIds.includes(d.id);
-                  return (
-                    <DieTile
-                      key={d.id}
-                      die={d}
-                      zone="ReservePool"
-                      cardsById={cardsById}
-                      accent={accent}
-                      mine={playerId === you}
-                      clickable={reservePoolClickable(d)}
-                      picked={picked}
-                      label={already ? "rerolled" : step === "roll-and-reroll" && rolled(d) ? (picked ? "selected" : undefined) : undefined}
-                      onClick={() => toggleDie(d.id)}
-                    />
-                  );
-                })}
-              </div>
-            </div>
-          </div>
+          <div className="mat-slot mat-reserve">{rolledZone("Reserve Pool", "ReservePool", reserve)}</div>
+          <div className="mat-slot mat-prep">{rolledZone("Prep Area", "PrepArea", prep)}</div>
           <div className="mat-slot mat-outofplay">{pileZone("Out of Play", "OutOfPlay", outOfPlay)}</div>
           <div className="mat-slot mat-bag">{pileZone("Bag", "Bag", bag)}</div>
+          <div className="mat-slot mat-drawn">{pileZone("Drawn This Turn", "DiceFromBag", drawn)}</div>
+          <div className="mat-slot mat-carried">{pileZone("Carried From Prep", "DiceFromPrep", carried)}</div>
         </div>
         {isYourTurn && playerId === you && step === "main" && unpurchasedByCard.size > 0 && (
           <div className="zone">
@@ -593,15 +633,18 @@ export function DiceKingdomPage() {
   // Zone/CombatLane.tsx: attackers from BOTH players sit here at once
   // (that's the whole point of it facing across the table), each paired
   // against whatever's blocking it, with the same blue-to-orange divider
-  // seam ../CombatLane.tsx draws between the two halves.
+  // seam ../CombatLane.tsx draws between the two halves. Always rendered,
+  // even with nothing declared - CombatLane itself draws three empty
+  // "no blocker"/"open slot" placeholder columns in that case, so the
+  // lane reads as a permanent part of the table instead of appearing and
+  // disappearing as the turn moves through combat.
   function renderAttackZone() {
-    if (!game || game.dice.filter((d) => d.zone === "AttackZone").length === 0) return null;
     const assignments: BlockAssignment[] = Object.entries(blockAssignments)
       .filter((entry): entry is [string, string] => !!entry[1])
       .map(([attackerDieId, blockerDieId]) => ({ attackerDieId, blockerDieId }));
     return (
       <CombatLane
-        dice={game.dice}
+        dice={game!.dice}
         cardsById={cardsById}
         assignments={assignments}
         nearPlayerId={you}
@@ -647,32 +690,24 @@ export function DiceKingdomPage() {
 
   return (
     <div className="dicekingdom">
-      <p className="eyebrow" style={{ opacity: 0.6, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.1em" }}>
-        DiceFight v3
-      </p>
-      <h1>Dice Kingdom</h1>
       {error && <p className="error">{error}</p>}
-      {link && (
-        <p className="invite">
-          Invite link for the other seat: <a href={link}>{link}</a>
-        </p>
-      )}
 
-      <details className="how">
-        <summary>How to play</summary>
-        <ul>
-          <li>Draw, then Roll - each die may be rerolled once, together with any others you select, before Continue.</li>
-          <li>Field a rolled creature (Tardigrades are free; your Character costs energy, any type) or Purchase another copy of your Character (matching type or Wild only).</li>
-          <li>Proceed to Attack, pick attackers; the other seat assigns blockers, then Resolve Combat.</li>
-        </ul>
-      </details>
-
-      <div className="topbar">
-        <LifeBox player={game.playerOne} you={you} activePlayerId={game.activePlayerId} />
-        <div className={isYourTurn ? "phasepill turn-mine" : "phasepill turn-waiting"}>
-          {isYourTurn ? "Your" : "Opponent's"} turn · {step}
-        </div>
-        <LifeBox player={game.playerTwo} you={you} activePlayerId={game.activePlayerId} />
+      {/* Once a game is live, /game shows almost no chrome above the
+          table at all - title/description/How-to-Play live only on the
+          pre-game screen or behind a small toggle, never as a persistent
+          block. Direct feedback: the old title+description+How-to-play+
+          topbar stack here was costing real vertical space /game never
+          spends once a match starts. */}
+      <div className="dk-titlebar">
+        <StepRibbon game={game} />
+        <details className="how">
+          <summary>How to play</summary>
+          <ul>
+            <li>Draw, then Roll - each die may be rerolled once, together with any others you select, before Continue.</li>
+            <li>Field a rolled creature (Tardigrades are free; your Character costs energy, any type) or Purchase another copy of your Character (matching type or Wild only).</li>
+            <li>Proceed to Attack, pick attackers; the other seat assigns blockers, then Resolve Combat.</li>
+          </ul>
+        </details>
       </div>
 
       {/* Two columns, same shape as /game's main-column + side-column
@@ -693,6 +728,22 @@ export function DiceKingdomPage() {
         </div>
 
         <div className="dk-rail">
+          {/* Active + Invite on one line, then life totals side by side -
+              ../TurnRail.tsx's own shape, moved off the table into the
+              rail entirely (real feedback: life boxes flanking a phase
+              pill above the board were still costing vertical space,
+              just differently). */}
+          <div className="active-line">
+            <span className={isYourTurn ? "whose-turn mine" : "whose-turn waiting"}>
+              <strong>Active:</strong> {game.activePlayerId}
+            </span>
+            {link && <InviteRow link={link} />}
+          </div>
+          <div className="life-panels">
+            <LifeBox player={opponentId === game.playerOne.id ? game.playerOne : game.playerTwo} you={you} activePlayerId={game.activePlayerId} />
+            <LifeBox player={you === game.playerOne.id ? game.playerOne : game.playerTwo} you={you} activePlayerId={game.activePlayerId} />
+          </div>
+
           {/* Opponent first, then you - same order as the boards below,
               so the rail reads top-to-bottom the same way the table does. */}
           <ChampBanner

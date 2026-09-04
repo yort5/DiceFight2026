@@ -32,26 +32,37 @@ public sealed record V2CardDefDto(
 }
 
 // EffectiveAttack/EffectiveDefense run through QueryEngine (Champion
-// passives included) whenever the die shows a character face; null on an
-// energy-only face (Surge) or before the die has been rolled at all.
-// IsTardigrade mirrors v1's own DieInstance.IsSidekick precedent (CardId
-// null = the basic pool creature) - the one status distinction the web
-// client's board components actually branch on.
+// passives and any other stat modifier included) only for a die actually
+// IN PLAY (FieldZone/AttackZone) - everywhere else (Reserve Pool above
+// all) this is the PRINTED, unmodified face value. A modifier is not a
+// guarantee: a Champion passive could be disabled, or a StatAura's source
+// character could be KO'd, before a Reserve Pool die is ever fielded, so
+// showing a boosted number there would be promising a stat the die might
+// never actually have. The player's field-or-not decision belongs on the
+// die's real, base stats - not a preview of a buff that may not hold.
+// Null on an energy-only face (Surge) or before the die has been rolled
+// at all. IsTardigrade mirrors v1's own DieInstance.IsSidekick precedent
+// (CardId null = the basic pool creature) - the one status distinction
+// the web client's board components actually branch on.
 public sealed record V2DieDto(
     string Id, string? CardId, string OwnerId, string ControllerId, string Zone,
     bool IsTardigrade, int? Level, int? EffectiveAttack, int? EffectiveDefense,
     string? EnergySymbolId, int EnergyAmount)
 {
+    private static readonly HashSet<DiceFight.V2.Model.Zone> InPlayZones =
+        [DiceFight.V2.Model.Zone.FieldZone, DiceFight.V2.Model.Zone.AttackZone];
+
     public static V2DieDto From(GameState state, DieInstance die)
     {
         var face = state.GetCurrentFace(die);
         var symbol = face?.Symbols.FirstOrDefault();
+        var inPlay = InPlayZones.Contains(die.Zone);
         return new(
             die.Id, die.CardId, die.OwnerId, die.ControllerId, die.Zone.ToString(),
             die.CardId is null,
             face?.Character?.Level,
-            face?.Character is not null ? QueryEngine.GetAttack(state, die) : null,
-            face?.Character is not null ? QueryEngine.GetDefense(state, die) : null,
+            face?.Character is not null ? (inPlay ? QueryEngine.GetAttack(state, die) : QueryEngine.GetBaseAttack(state, die)) : null,
+            face?.Character is not null ? (inPlay ? QueryEngine.GetDefense(state, die) : QueryEngine.GetBaseDefense(state, die)) : null,
             symbol?.SymbolId, symbol?.Count ?? 0);
     }
 }
