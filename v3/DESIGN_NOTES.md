@@ -1019,3 +1019,34 @@ Screenshotted after the fix (dark, mid-roll): every section title on
 the board now reads at the same brightness as the sideboard's, matching
 the side-by-side the user sent. `tsc -b`/`vite build`/`oxlint` clean,
 full click-through zero console errors.
+
+## Match-table redesign, round 2: the actual "big blank space at top" (2026-09-05)
+
+Confirmed real bug, found by grepping for `details.how` in the CSS: two
+separate `.dicekingdom details.how { ... }` rule blocks existed (one
+correct, near the title bar's own rules, scoping panel styling to
+`[open]` only; a second, further down the file, unconditional -
+`padding: 14px 18px; margin-bottom: 22px; border; box-shadow` applied
+even while collapsed). Dead leftover from an earlier page structure
+(before "How to Play" moved into a compact title-bar toggle) that never
+got deleted when the rest of the block was rewritten - same-specificity
+cascade meant the later, wrong rule won regardless of the correct one
+still sitting earlier in the file. Deleted the stale block outright.
+Measured before/after: `.dk-titlebar` height 78px → 26px, the board's
+first row (`.dk-layout`) now starts at y=60 instead of y=112.
+
+Also asked about (not yet touched): "Drawn This Turn" always reads
+empty while newly-drawn dice show up under "Prep Area" instead - traced
+to `TurnEngine.ClearAndDraw` (`state.MoveToStep`, then `die.Zone =
+Zone.PrepArea` - comment at line 32 confirms this is deliberate, "same
+as v1"). `Zone.DiceFromBag` ("Drawn This Turn" in the UI) is a
+DIFFERENT, mostly-dormant zone only certain card abilities populate
+(`DrawToZone` effects - none of the current 8 Characters use one), not
+where an ordinary turn-start draw goes. So this isn't a routing bug -
+Prep Area is correctly where drawn-and-about-to-roll dice belong per
+the v1/v2 rules and per several cards' own ability text ("draw a die
+into your Prep Area") - but it's a real, understandable point of UI
+confusion given both zones sit on the board as separate boxes with the
+newer one staying empty all game. Needs a product decision (rename,
+merge back into one display the way an earlier round briefly did, or
+just explain it) before touching code - see the next conversation turn.
