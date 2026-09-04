@@ -51,14 +51,17 @@ public class V2GamesControllerTests
 
         var afterDraw = V2SeatedController.Dto(teamA.ClearAndDraw(session.Id));
         Assert.Equal("roll-and-reroll", afterDraw.CurrentStepId);
-        Assert.Equal(3, afterDraw.Dice.Count(d => d.ControllerId == "teamA" && d.Zone == "PrepArea"));
+        Assert.Equal(3, afterDraw.Dice.Count(d => d.ControllerId == "teamA" && d.Zone == "DiceFromBag"));
 
+        // Roll (rule 2.4.2) lands every rolled die straight in the
+        // Reserve Pool - there's no separate "rolled but not yet placed"
+        // holding zone (see TurnEngine.Roll's own remarks).
         var afterRoll = V2SeatedController.Dto(teamA.Roll(session.Id));
-        var prepDice = afterRoll.Dice.Where(d => d.ControllerId == "teamA" && d.Zone == "PrepArea").ToList();
-        Assert.Equal(3, prepDice.Count);
+        var rolledDice = afterRoll.Dice.Where(d => d.ControllerId == "teamA" && d.Zone == "ReservePool").ToList();
+        Assert.Equal(3, rolledDice.Count);
         // Every rolled face is either a character face (both stats known)
         // or the pure-energy Surge face (neither) - never a half-known mix.
-        Assert.All(prepDice, d => Assert.True(
+        Assert.All(rolledDice, d => Assert.True(
             (d.EffectiveAttack is not null && d.EffectiveDefense is not null) ||
             (d.EffectiveAttack is null && d.EffectiveDefense is null)));
 

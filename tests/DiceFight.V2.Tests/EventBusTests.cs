@@ -173,7 +173,7 @@ public class EventBusTests
         // to its own face change purely as the event's subject, the same
         // way Energize/Awaken work on a die still mid-roll (see EventBus.
         // Fire's own remarks on why this needed a fix).
-        var die = new DieInstance { Id = "watcher-die", CardId = watcher.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.PrepArea, CurrentFaceIndex = 0 };
+        var die = new DieInstance { Id = "watcher-die", CardId = watcher.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.DiceFromBag, CurrentFaceIndex = 0 };
         state.Dice.Add(die);
         var queue = new AbilityQueue();
 

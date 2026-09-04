@@ -29,10 +29,6 @@ namespace DiceFight.V2;
 //  - SpendEnergy doesn't implement partial-spend "spin down to the
 //    unused value" (v1 rule 2.6.1.5/2.6.1.6) - an overspent die is simply
 //    consumed whole.
-//  - ClearAndDraw draws straight into PrepArea - the DiceFromBag/
-//    DiceFromPrep staging zones stay declared (frozen Zone list) but
-//    unused; the interrupt window they exist for needs a real mid-
-//    resolution pause, which Phase 5's interpreter is what will produce.
 //  - No Bag-refill-from-Used-Pile-when-empty (rule ~2.3's reshuffle) yet.
 public static class TurnEngine
 {
@@ -82,6 +78,22 @@ public static class TurnEngine
             die.CurrentFaceIndex = null;
         }
 
+        // Rule 1.5.3.2/2.3 - carry over anything a KO (EffectInterpreter.
+        // KoDie) or a card's own Prep effect left sitting in the Prep Area
+        // since this player's last Roll & Reroll. Kept in its own zone
+        // (DiceFromPrep) rather than merged into the same PrepArea the
+        // fresh draw below uses, so that a die a card Preps *later in this
+        // same Clear and Draw step* (e.g. a WhenDrawn reaction to the
+        // DiceDrawn event fired below) is left alone: it lands in a now-
+        // empty PrepArea after this sweep already ran, so it won't be
+        // picked up until this same sweep runs again next turn. Ported
+        // from v1's TurnEngine.ClearAndDraw - v2 never wired this up (see
+        // the Zone enum's own remarks), which is what silently routed
+        // every ordinary turn's draw through Prep Area instead of Drawn
+        // This Turn/Carried From Prep (direct feedback, 2026-09-05).
+        foreach (var die in state.DiceIn(state.ActivePlayerId, Zone.PrepArea).ToList())
+            die.Zone = Zone.DiceFromPrep;
+
         var drawCount = state.Config.Rules.DrawCount - (state.IsFirstTurn ? 1 : 0);
         var bag = state.DiceIn(state.ActivePlayerId, Zone.Bag).ToList();
         Shuffle(bag, random);
@@ -89,7 +101,7 @@ public static class TurnEngine
         var drawn = bag.Take(Math.Max(0, drawCount)).ToList();
         foreach (var die in drawn)
         {
-            die.Zone = Zone.PrepArea;
+            die.Zone = Zone.DiceFromBag;
         }
 
         if (drawn.Count > 0)
@@ -102,22 +114,42 @@ public static class TurnEngine
         state.MoveToStep(StepIds.RollAndReroll);
     }
 
-    // First half of Roll & Reroll - assigns a face to every drawn die
-    // without moving it yet, so a (future) caller can see results before
-    // deciding what to reroll (v1's own reasoning for the Roll/FinishRoll
-    // split - see the class remarks on why interactive rerolling isn't
-    // wired up yet). Fires DieFaceChanged for every die rolled - this is
-    // the one face-mutation site that exists so far; Reroll/Spin/
-    // SpinToEnergy (Phase 5) and any future site MUST fire it too (Part
-    // 1's own warning: a skipped site is the silently-never-fires bug
-    // class v1's Awaken/Energize gate bug already taught this project).
+    // Rule 2.4.1/2.4.2 - rolls this turn's fresh draw (DiceFromBag) plus
+    // whatever Clear and Draw carried over from the Prep Area
+    // (DiceFromPrep), then lands every one of them straight in the
+    // Reserve Pool - same two-phase move v1's own Roll uses (roll all,
+    // then move all), and the same reason: rolling first keeps a die's
+    // PRIOR face available for Awaken's own comparison a moment before it
+    // would otherwise be overwritten. There is no separate "rolled but
+    // not yet placed" holding zone (rule 2.4.2 itself, and v1's TurnEngine.
+    // Roll remarks) - a die is either not yet rolled (DiceFromBag/
+    // DiceFromPrep) or it's a real Reserve Pool die a player can already
+    // choose to reroll (RerollOwn) or spend, immediately. v2 previously
+    // routed this whole step through Prep Area instead and needed a
+    // separate FinishRoll call to "commit" dice to the Reserve Pool -
+    // that never matched what the two staging zones were declared for
+    // (see the Zone enum's own remarks) and read as dice being "drawn
+    // into Prep Area" rather than Drawn This Turn/Carried From Prep
+    // (direct feedback, 2026-09-05). FinishRoll (below) still exists as
+    // its own call - the client's explicit "done deciding, advance to
+    // Main" action - it just no longer has any zone to move.
+    //
+    // Fires DieFaceChanged for every die rolled - this is the one face-
+    // mutation site that exists so far; Reroll/Spin/SpinToEnergy (Phase 5)
+    // and any future site MUST fire it too (Part 1's own warning: a
+    // skipped site is the silently-never-fires bug class v1's Awaken/
+    // Energize gate bug already taught this project).
     public static void Roll(GameState state, AbilityQueue queue, IDiceRoller roller)
     {
         RequireStep(state, TurnStep.RollAndReroll);
 
         state.RerolledThisStep.Clear();
 
-        foreach (var die in state.DiceIn(state.ActivePlayerId, Zone.PrepArea).ToList())
+        var dice = state.DiceIn(state.ActivePlayerId, Zone.DiceFromBag)
+            .Concat(state.DiceIn(state.ActivePlayerId, Zone.DiceFromPrep))
+            .ToList();
+
+        foreach (var die in dice)
         {
             var definition = state.GetDieDefinition(die);
             var priorFace = state.GetCurrentFace(die); // null pre-roll - a dormant die has no "prior" face
@@ -135,15 +167,18 @@ public static class TurnEngine
             var payload = new DieFaceChangedPayload(priorFace, newFace, FaceChangeCause.Roll);
             EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieFaceChanged, die, die.ControllerId, state.CurrentStepId, payload));
         }
+
+        foreach (var die in dice)
+            die.Zone = Zone.ReservePool;
+
         state.LogEvent(state.ActivePlayerId, $"{state.NameOf(state.ActivePlayerId)} rolls.");
     }
 
-    // Rule 2.6.1 - between Roll and FinishRoll, the active player may
-    // reroll any of their own Prep Area dice, once each, now that they can
-    // see the results Roll produced (the reason Roll/FinishRoll are split
-    // at all - see Roll's own remarks). Mirrors ExecuteReroll's face-
-    // reassignment shape (EffectInterpreter.cs) exactly, as a genuine
-    // player action rather than something only a card can trigger.
+    // Rule 2.6.1 - the active player may reroll any of their own Reserve
+    // Pool dice from this roll, once each, now that they can see the
+    // results Roll produced. Mirrors ExecuteReroll's face-reassignment
+    // shape (EffectInterpreter.cs) exactly, as a genuine player action
+    // rather than something only a card can trigger.
     public static void RerollOwn(GameState state, AbilityQueue queue, IDiceRoller roller, IReadOnlyList<string> dieIds)
     {
         RequireStep(state, TurnStep.RollAndReroll);
@@ -151,8 +186,8 @@ public static class TurnEngine
         foreach (var dieId in dieIds)
         {
             var die = FindDie(state, dieId);
-            if (die.ControllerId != state.ActivePlayerId || die.Zone != Zone.PrepArea)
-                throw new InvalidOperationException($"Die '{dieId}' is not one of your own Prep Area dice.");
+            if (die.ControllerId != state.ActivePlayerId || die.Zone != Zone.ReservePool)
+                throw new InvalidOperationException($"Die '{dieId}' is not one of your own Reserve Pool dice.");
             if (!state.RerolledThisStep.Add(dieId))
                 throw new InvalidOperationException($"Die '{dieId}' has already been rerolled this step.");
 
@@ -169,21 +204,18 @@ public static class TurnEngine
         else state.LogEvent(state.ActivePlayerId, $"{state.NameOf(state.ActivePlayerId)} takes no reroll.");
     }
 
-    // Second half - commits every rolled Prep Area die to the Reserve Pool,
-    // then fires TurnStepEntered(Main) - a real gap until 2026-09-01: this
-    // is "the end of the Roll and Reroll Step" the Energize keyword's own
+    // The active player's explicit "done deciding, advance to Main" -
+    // fires TurnStepEntered(Main), a real gap until 2026-09-01: this is
+    // "the end of the Roll and Reroll Step" the Energize keyword's own
     // rule text names ("only check at the end of the Step"), and nothing
     // emitted it. EventBus.Fire's own Energize carve-out (see its remarks)
-    // is what lets a listener sitting in the Reserve Pool - exactly where
-    // this loop just placed every rolled die - actually hear it.
+    // is what lets a listener sitting in the Reserve Pool - where Roll
+    // (above) already placed every rolled die - actually hear it. No
+    // zone to move here any more (Roll already did it) - see Roll's own
+    // remarks for why.
     public static void FinishRoll(GameState state, AbilityQueue queue)
     {
         RequireStep(state, TurnStep.RollAndReroll);
-
-        foreach (var die in state.DiceIn(state.ActivePlayerId, Zone.PrepArea).ToList())
-        {
-            die.Zone = Zone.ReservePool;
-        }
 
         state.MoveToStep(StepIds.Main);
         EventBus.Fire(state, queue, new GameEvent(TriggerKind.TurnStepEntered, null, state.ActivePlayerId, StepIds.Main));

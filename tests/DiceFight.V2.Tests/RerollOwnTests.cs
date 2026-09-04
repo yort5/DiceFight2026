@@ -44,20 +44,23 @@ public class RerollOwnTests
     }
 
     [Fact]
-    public void RerollOwn_Reassigns_The_Face_Before_FinishRoll_Commits_It()
+    public void RerollOwn_Reassigns_The_Face_Of_A_Die_Roll_Already_Placed_In_The_Reserve_Pool()
     {
         var (state, queue) = SetUp();
         var roller = new ScriptedRoller(0, 0); // both dice land on the Wild energy face first
         TurnEngine.Roll(state, queue, roller);
 
-        var die = state.DiceIn("p1", Zone.PrepArea).First();
+        // Rule 2.4.2 - Roll already placed it in the Reserve Pool; there's
+        // no separate "rolled but not yet committed" zone to reroll out of
+        // (see TurnEngine.Roll's own remarks).
+        var die = state.DiceIn("p1", Zone.ReservePool).First();
         Assert.Equal(0, die.CurrentFaceIndex);
 
         var reroller = new ScriptedRoller(1); // reroll lands on the Fist energy face
         TurnEngine.RerollOwn(state, queue, reroller, [die.Id]);
 
         Assert.Equal(1, die.CurrentFaceIndex);
-        Assert.Equal(Zone.PrepArea, die.Zone); // still pre-FinishRoll
+        Assert.Equal(Zone.ReservePool, die.Zone); // a reroll reassigns the face in place, never moves zones
     }
 
     [Fact]
@@ -65,7 +68,7 @@ public class RerollOwnTests
     {
         var (state, queue) = SetUp();
         TurnEngine.Roll(state, queue, new ScriptedRoller(0, 0));
-        var die = state.DiceIn("p1", Zone.PrepArea).First();
+        var die = state.DiceIn("p1", Zone.ReservePool).First();
 
         TurnEngine.RerollOwn(state, queue, new ScriptedRoller(1), [die.Id]);
 
@@ -74,13 +77,17 @@ public class RerollOwnTests
     }
 
     [Fact]
-    public void RerollOwn_Rejects_A_Die_Already_Moved_To_The_Reserve_Pool()
+    public void RerollOwn_Rejects_A_Die_Once_The_Step_Has_Moved_On_To_Main()
     {
         var (state, queue) = SetUp();
         TurnEngine.Roll(state, queue, new ScriptedRoller(0, 0));
-        var die = state.DiceIn("p1", Zone.PrepArea).First();
+        var die = state.DiceIn("p1", Zone.ReservePool).First();
         TurnEngine.FinishRoll(state, queue);
 
+        // Roll already put it in the Reserve Pool (unchanged by
+        // FinishRoll, which has no zone left to move - see its own
+        // remarks); what actually blocks the reroll now is RequireStep,
+        // once FinishRoll has advanced past Roll and Reroll.
         Assert.Equal(Zone.ReservePool, die.Zone);
         Assert.Throws<InvalidOperationException>(() =>
             TurnEngine.RerollOwn(state, queue, new ScriptedRoller(1), [die.Id]));
@@ -91,11 +98,14 @@ public class RerollOwnTests
     {
         var (state, queue) = SetUp();
         TurnEngine.Roll(state, queue, new ScriptedRoller(0, 0));
-        var die = state.DiceIn("p1", Zone.PrepArea).First();
+        var die = state.DiceIn("p1", Zone.ReservePool).First();
         TurnEngine.RerollOwn(state, queue, new ScriptedRoller(1), [die.Id]);
 
         // A fresh Roll() call (opening a new turn's Roll and Reroll Step
-        // in real play) clears the per-step reroll tracker.
+        // in real play) clears the per-step reroll tracker - asserted
+        // directly here rather than via a second roll's own result, since
+        // by now `die` already sits in the Reserve Pool and a real second
+        // Roll() has nothing left in DiceFromBag/DiceFromPrep to re-roll.
         TurnEngine.Roll(state, queue, new ScriptedRoller(0, 0));
         TurnEngine.RerollOwn(state, queue, new ScriptedRoller(1), [die.Id]); // does not throw
         Assert.Equal(1, die.CurrentFaceIndex);

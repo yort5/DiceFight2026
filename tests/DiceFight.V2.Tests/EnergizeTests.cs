@@ -90,7 +90,7 @@ public class EnergizeTests
     {
         var card = BuildCard("Energizer");
         var state = BuildState(card);
-        var die = new DieInstance { Id = "d", CardId = card.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.PrepArea, CurrentFaceIndex = 2 };
+        var die = new DieInstance { Id = "d", CardId = card.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.DiceFromBag, CurrentFaceIndex = 2 };
         state.Dice.Add(die);
         var queue = new AbilityQueue();
 
@@ -109,7 +109,7 @@ public class EnergizeTests
     {
         var card = BuildCard("Energizer");
         var state = BuildState(card);
-        var die = new DieInstance { Id = "d", CardId = card.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.PrepArea, CurrentFaceIndex = 2 };
+        var die = new DieInstance { Id = "d", CardId = card.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.DiceFromBag, CurrentFaceIndex = 2 };
         state.Dice.Add(die);
         var queue = new AbilityQueue();
 
@@ -125,7 +125,7 @@ public class EnergizeTests
     {
         var card = BuildCard("Energizer");
         var state = BuildState(card);
-        var die = new DieInstance { Id = "d", CardId = card.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.PrepArea, CurrentFaceIndex = 2 };
+        var die = new DieInstance { Id = "d", CardId = card.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.DiceFromBag, CurrentFaceIndex = 2 };
         state.Dice.Add(die);
         var queue = new AbilityQueue();
 

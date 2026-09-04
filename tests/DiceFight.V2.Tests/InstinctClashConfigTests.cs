@@ -54,7 +54,7 @@ public class InstinctClashConfigTests
 
         // --- Clear and Draw (first turn: DrawCount - 1 = 3, all Tardigrades - Characters start Unpurchased) ---
         TurnEngine.ClearAndDraw(state, queue, new Random(1));
-        Assert.Equal(3, state.DiceIn("p1", Zone.PrepArea).Count());
+        Assert.Equal(3, state.DiceIn("p1", Zone.DiceFromBag).Count());
 
         // --- Roll: every drawn die lands on the L1 face (index 0, 2 Claw energy) ---
         TurnEngine.Roll(state, queue, new ScriptedRoller(0, 0, 0));

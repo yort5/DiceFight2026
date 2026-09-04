@@ -1050,3 +1050,63 @@ confusion given both zones sit on the board as separate boxes with the
 newer one staying empty all game. Needs a product decision (rename,
 merge back into one display the way an earlier round briefly did, or
 just explain it) before touching code - see the next conversation turn.
+
+## Real engine fix: draw routes through DiceFromBag/DiceFromPrep, not PrepArea (2026-09-05)
+
+User's own call on the "Prep Area vs. Drawn This Turn" question above,
+stated precisely: since steps stay separated (no auto-advance), a
+Clear & Draw's fresh draw belongs in Drawn This Turn, anything already
+in Prep Area should move to Carried From Prep at that same moment, and
+Roll should land dice straight in the Reserve Pool, not Prep Area. That
+description turned out to be exactly v1's real rule (`TurnEngine.
+ClearAndDraw`/`Roll` in `DiceFight.Engine`, ported and confirmed line
+by line) - v2 never actually implemented it. The `Zone` enum's own
+comment already admitted this ("declared here per the frozen list but
+not yet routed through... a real gap to close"), and `ConditionEvaluator.
+TargetWasKOd`'s comment already asserted the correct behavior in prose
+("a plain draw lands rolled dice in the Reserve Pool, not this") while
+the actual `ClearAndDraw`/`Roll` code contradicted it. So this was a
+confirmed, real engine bug, not just a UI relabeling.
+
+Fixed in `src/DiceFight.V2/TurnEngine.cs`:
+- `ClearAndDraw` now sweeps anything sitting in `PrepArea` (a KO'd die,
+  or a card's own Prep effect) into `DiceFromPrep` *before* drawing,
+  matching v1's exact ordering rationale (a card that Preps a die
+  *later in the same step*, e.g. reacting to `DiceDrawn`, must land in
+  a freshly-emptied Prep Area, not get swept by this same sweep). Fresh
+  draws now land in `DiceFromBag` instead of `PrepArea`.
+- `Roll` now reads from `DiceFromBag` + `DiceFromPrep` (was `PrepArea`),
+  and - matching v1's Roll exactly - rolls all of them first, then
+  moves all of them to `ReservePool` immediately (no separate "rolled
+  but not yet placed" zone). `RerollOwn`'s own zone check moved from
+  `PrepArea` to `ReservePool` to match.
+- `FinishRoll` no longer moves any dice (Roll already did) - it's now
+  just the client's explicit "done deciding, advance to Main" call,
+  unchanged in every other respect (still fires `TurnStepEntered(Main)`,
+  still what the Energize carve-out in `EventBus.Fire` keys off).
+
+`PrepArea` itself keeps its real, narrower meaning: where a KO'd die
+lands (`EffectInterpreter.KoDie`, rule 1.5.3.2) and where a card's own
+Prep-style effect (`DrawToZone(..., Zone.PrepArea, ...)`) puts a die
+mid-turn - never where an ordinary turn's draw goes, now correctly.
+
+Verified: `TurnFactKind.PrepAreaEmpty` (used by Prep-conditional card
+abilities like Albatross's "if your Prep Area is empty, draw a die into
+it") is now MORE correct as a side effect - it no longer reads "not
+empty" just because the active player is mid-Roll like it would have
+before.
+
+Updated 10 tests across 5 files that asserted the old (wrong) zone
+routing directly: `TurnCycleTests`, `DiceFightClassicConfigTests`,
+`InstinctClashConfigTests`, `RerollOwnTests` (4, including one genuine
+behavior-shape rewrite - "rejects a reroll after FinishRoll" now throws
+via the `RequireStep` step-guard rather than a zone mismatch, since the
+die is already sitting in the Reserve Pool the whole step now),
+`EnergizeTests`/`EventBusTests` (manually-constructed test dice fixed
+from `Zone.PrepArea` to `Zone.DiceFromBag` so `Roll` actually touches
+them), and `V2GamesControllerTests` (the one integration test covering
+the whole HTTP flow). Full solution suite: 908/908 passing (315 V2 +
+580 Engine + 13 Api). Verified live end-to-end with headless Chromium
+against the real rebuilt API: "Drawn This Turn" now shows the fresh
+draw, Prep Area stays empty, and Roll moves everything straight into
+"Reserve Pool" with real 3D cube faces, zero console errors.

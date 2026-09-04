@@ -83,7 +83,7 @@ public class TurnCycleTests
         // --- Clear and Draw (first turn: DrawCount - 1 = 2) ---
         DiceFight.V2.TurnEngine.ClearAndDraw(state, queue, new Random(1));
 
-        Assert.Equal(2, state.DiceIn("p1", Zone.PrepArea).Count());
+        Assert.Equal(2, state.DiceIn("p1", Zone.DiceFromBag).Count());
         Assert.Equal(2, state.DiceIn("p1", Zone.Bag).Count());
         Assert.Equal(TurnStep.RollAndReroll, state.CurrentStep);
 

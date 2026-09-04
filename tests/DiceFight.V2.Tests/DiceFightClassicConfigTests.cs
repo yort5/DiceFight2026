@@ -52,7 +52,7 @@ public class DiceFightClassicConfigTests
         Assert.Equal(8, state.DiceIn("p1", Zone.Bag).Count());
 
         TurnEngine.ClearAndDraw(state, queue, new Random(1));
-        Assert.Equal(3, state.DiceIn("p1", Zone.PrepArea).Count()); // first turn: DrawCount(4) - 1
+        Assert.Equal(3, state.DiceIn("p1", Zone.DiceFromBag).Count()); // first turn: DrawCount(4) - 1
     }
 
     // Direction C - a variant ruleset expressed purely as a different
@@ -92,6 +92,6 @@ public class DiceFightClassicConfigTests
 
         var queue = new AbilityQueue();
         TurnEngine.ClearAndDraw(state, queue, new Random(1));
-        Assert.Equal(5, state.DiceIn("p1", Zone.PrepArea).Count()); // first turn: DrawCount(6) - 1
+        Assert.Equal(5, state.DiceIn("p1", Zone.DiceFromBag).Count()); // first turn: DrawCount(6) - 1
     }
 }
