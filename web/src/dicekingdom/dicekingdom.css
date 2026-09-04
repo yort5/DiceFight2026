@@ -19,35 +19,102 @@
   max-width: 1100px;
   margin: 0 auto;
   padding: 24px 16px 64px;
+  /* #root in index.css sets text-align: center for the un-styled Vite
+     template state; every other page resets it via .app's own
+     text-align: left, but this page renders standalone (no .app
+     wrapper - see Root.tsx), so it leaked through here and centered
+     things like .roster-head that were never meant to be. */
+  text-align: left;
 }
 
-/* Two columns, same shape as /game's main-column + side-column
-   (App.css's .app-layout.game-layout) - the boards are the main column,
-   Champion and the turn/selection controls are the rail. See the JSX
-   comment at the callsite for why those moved out of the middle. */
+/* The match-table's real 3-column shape (design_handoff_match_table/
+   README.md): a shared sideboard, the table itself, and a rail - ported
+   from ../App.css's .app-layout.game-layout grid, ../PlayerBoard.tsx's
+   mat/lane stack, and ../TurnRail.tsx's rail sections.
+   Three GRID ROWS shared by both the board column and the rail column
+   (opponent / lane / you) are the whole trick behind "your Champion box's
+   top edge lands on the combat divider" (README's Column 3 spec): a CSS
+   Grid row auto-sizes to the tallest content placed in it across every
+   column, so railtop/railmid/railbottom naturally line up with
+   opp/lane/you without measuring anything in JS - the row boundary IS
+   the divider position. Max width bumped from 1100 to fit the sideboard
+   and rail alongside a legible board (this doesn't share ../App.css's
+   1580px page-level allowance, so it needs its own). */
+.dicekingdom {
+  max-width: 1580px;
+}
 .dicekingdom .dk-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
-  gap: 18px;
+  grid-template-columns: 200px minmax(0, 1fr) 300px;
+  grid-template-areas:
+    "side opp  railtop"
+    "side lane railmid"
+    "side you  railbottom";
+  gap: 14px;
   align-items: start;
 }
-.dicekingdom .dk-main {
-  min-width: 0;
-}
-.dicekingdom .dk-rail {
+.dicekingdom .dk-sideboard {
+  grid-area: side;
   display: flex;
   flex-direction: column;
   gap: 10px;
   min-width: 0;
-  position: sticky;
-  top: 16px;
 }
-@media (max-width: 720px) {
+.dicekingdom .dk-row-opp {
+  grid-area: opp;
+  min-width: 0;
+}
+.dicekingdom .dk-row-lane {
+  grid-area: lane;
+  min-width: 0;
+}
+.dicekingdom .dk-row-you {
+  grid-area: you;
+  min-width: 0;
+}
+.dicekingdom .dk-rail-top,
+.dicekingdom .dk-rail-mid,
+.dicekingdom .dk-rail-bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.dicekingdom .dk-rail-top {
+  grid-area: railtop;
+}
+.dicekingdom .dk-rail-mid {
+  grid-area: railmid;
+}
+.dicekingdom .dk-rail-bottom {
+  grid-area: railbottom;
+  /* The log fills whatever's left of this row's height once the
+     Champion box takes what it needs - README's "flex: 1; min-height:
+     120px" for the rail log, same idea via a flex column here instead
+     of the page's own outer flow. */
+  height: 100%;
+}
+.dicekingdom .dk-rail-bottom .match-log {
+  flex: 1;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+}
+.dicekingdom .dk-rail-bottom .match-log-list {
+  flex: 1;
+  max-height: none;
+}
+@media (max-width: 1100px) {
   .dicekingdom .dk-layout {
     grid-template-columns: 1fr;
-  }
-  .dicekingdom .dk-rail {
-    position: static;
+    grid-template-areas:
+      "opp"
+      "lane"
+      "you"
+      "railtop"
+      "railmid"
+      "railbottom"
+      "side";
   }
 }
 @media (prefers-color-scheme: dark) {
@@ -305,37 +372,53 @@
   font-variant-numeric: tabular-nums;
 }
 
-.dicekingdom .playerboard.turn-mine .champbanner {
+/* Champion box - README's Column 3 spec: a role label, the champion's
+   name in the display face, and its passive as a note. Renamed from the
+   old horizontal "champbanner" (which lived inline above each board) to
+   a rail panel, matching the reference's placement under the life panels
+   (opponent) and just above the log (yours) - see .dk-rail-top/-bottom
+   in the JSX for placement, not this rule. */
+.dicekingdom .championbox.turn-mine {
   box-shadow: 0 0 0 2px oklch(0.62 0.15 145 / 0.4);
 }
-.dicekingdom .playerboard.turn-waiting .champbanner {
+.dicekingdom .championbox.turn-waiting {
   box-shadow: 0 0 0 2px oklch(0.62 0.06 75 / 0.35);
 }
-
-.dicekingdom .champbanner {
+.dicekingdom .championbox {
+  background: linear-gradient(120deg, color-mix(in srgb, var(--cc, var(--border)) 14%, var(--panel-bg)), var(--panel-bg));
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--cc, var(--border));
+  border-radius: 10px;
+  padding: 9px 12px 10px;
+}
+.dicekingdom .championbox-role {
+  font: 700 10px var(--sans);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.65;
+}
+.dicekingdom .championbox-body {
   display: flex;
   align-items: center;
-  gap: 12px;
-  background: linear-gradient(120deg, color-mix(in srgb, var(--cc, var(--border)) 16%, var(--panel-bg)), var(--panel-bg));
-  border: 1px solid var(--border);
-  border-left: 5px solid var(--cc, var(--border));
-  border-radius: 12px;
-  padding: 10px 14px;
-  margin-bottom: 14px;
+  gap: 10px;
+  margin-top: 4px;
 }
-.dicekingdom .champbanner svg {
-  width: 32px;
-  height: 32px;
+.dicekingdom .championbox-body svg {
+  width: 30px;
+  height: 30px;
   flex: none;
 }
-.dicekingdom .champbanner .cbname {
-  font: 400 17px var(--display);
+.dicekingdom .championbox-name {
+  font: 400 21px/1 var(--display);
   text-transform: uppercase;
   letter-spacing: 0.01em;
+  color: var(--cc, var(--text-h));
 }
-.dicekingdom .champbanner .cbpassive {
-  font-size: 11.5px;
-  opacity: 0.8;
+.dicekingdom .championbox-note {
+  font-size: 10.5px;
+  opacity: 0.75;
+  margin: 3px 0 0;
+  line-height: 1.35;
 }
 
 .dicekingdom .zone {
@@ -437,8 +520,16 @@
   border-color: oklch(0.55 0.02 260 / 0.4);
 }
 .dicekingdom .zone-outofplay {
-  background: oklch(0.5 0.03 300 / 0.1);
-  border-color: oklch(0.55 0.04 300 / 0.4);
+  background: oklch(0.5 0.03 300 / 0.06);
+  border: 1px dashed oklch(0.55 0.04 300 / 0.5);
+}
+.dicekingdom .zone-note {
+  display: block;
+  font-size: 8.5px;
+  text-transform: none;
+  letter-spacing: normal;
+  opacity: 0.55;
+  margin-top: -4px;
 }
 .dicekingdom .zone-prep {
   background: oklch(0.55 0.06 70 / 0.1);
@@ -696,51 +787,58 @@
   gap: 9px;
   min-height: 6px;
 }
+/* Roster strip - README's Column 2 "portrait" roster cards. Always
+   visible (direct feedback logged above the old rule: a player checks
+   "what's left to buy" constantly), no longer a collapsible <details> -
+   see the JSX, which dropped the <details>/<summary> wrapper entirely. */
 .dicekingdom .roster {
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
-.dicekingdom .roster summary {
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  opacity: 0.75;
-  margin: 4px 0 6px;
+.dicekingdom .roster-head {
+  font: 700 10px var(--sans);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.55;
+  margin: 0 0 6px;
 }
-
-/* Compact roster chips - a single row (avatar, name, cost, count left),
-   not a full card. There can be a lot of these and they're glanced at
-   constantly, not the focal point the way a rolled die on the mat is. */
 .dicekingdom .roster-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
 }
 .dicekingdom .roster-chip {
-  display: inline-flex;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 4px 10px 4px 6px;
-  border-radius: 999px;
+  gap: 3px;
+  width: 82px;
+  padding: 8px 6px 7px;
+  border-radius: 10px;
   border: 1.5px solid var(--border);
+  border-top: 3px solid var(--cc, var(--border));
   background: var(--panel-bg);
   color: inherit;
   font: inherit;
+  text-align: center;
   cursor: default;
+  box-shadow: var(--shadow);
+  transition: transform 0.1s ease;
 }
 .dicekingdom .roster-chip svg {
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   flex: none;
 }
 .dicekingdom .roster-chip .rc-name {
-  font: 600 11.5px var(--sans);
+  font: 700 10.5px var(--sans);
+  line-height: 1.2;
 }
 .dicekingdom .roster-chip .rc-cost {
-  font: 500 10.5px var(--mono);
-  opacity: 0.7;
+  font: 600 9.5px var(--mono);
+  opacity: 0.65;
 }
 .dicekingdom .roster-chip .rc-left {
-  font: 700 10.5px var(--mono);
+  font: 700 9.5px var(--mono);
   opacity: 0.55;
 }
 .dicekingdom .roster-chip.clickable {
@@ -748,11 +846,12 @@
   border-color: var(--cc, var(--border));
 }
 .dicekingdom .roster-chip.clickable:hover {
-  background: var(--code-bg);
+  transform: translateY(-2px);
 }
 .dicekingdom .roster-chip.picked {
   border-color: var(--text-h);
   background: var(--code-bg);
+  transform: translateY(-2px);
 }
 .dicekingdom .roster-chip:disabled {
   opacity: 0.55;
@@ -992,4 +1091,124 @@
   color: var(--claw);
   font-size: 13px;
   margin-bottom: 12px;
+}
+
+/* ---- Sideboard (Column 1) - Basic Actions and Global Abilities have no
+   Dice Kingdom content yet (v3/DESIGN_NOTES.md never designed either),
+   so these render as real, empty panels rather than being left out of
+   the grid entirely - the point is to hold the 3-column shape steady so
+   adding real cards later is a content change, not a layout one. ---- */
+.dicekingdom .sideboard-panel {
+  padding: 9px 10px 10px;
+  border-radius: 11px;
+  border: 1px solid var(--border);
+  background: var(--panel-bg);
+}
+.dicekingdom .sideboard-panel h4 {
+  font: 700 12px var(--sans);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin: 0 0 2px;
+  opacity: 0.85;
+}
+.dicekingdom .sideboard-sub {
+  display: block;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.5;
+  margin: 0 0 8px;
+}
+.dicekingdom .sideboard-empty {
+  font-size: 11px;
+  opacity: 0.5;
+  font-style: italic;
+  margin: 0;
+}
+.dicekingdom .sideboard-pool {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* ---- Bag inspector - README: "the box is a button that opens an
+   inspector popover... contents known, order is not." Both players' bags
+   are inspectable (public information), the local player's opens upward,
+   the opponent's downward, matching where each bag sits on the page. ---- */
+.dicekingdom .zone-bag {
+  position: relative;
+}
+.dicekingdom .bag-button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+}
+.dicekingdom .bag-hint {
+  display: block;
+  font-size: 8.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.45;
+  margin-top: 2px;
+}
+.dicekingdom .bag-popover {
+  position: absolute;
+  left: 0;
+  z-index: 5;
+  width: 220px;
+  padding: 10px 10px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--panel-bg);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+.dicekingdom .bag-popover.up {
+  bottom: calc(100% + 6px);
+}
+.dicekingdom .bag-popover.down {
+  top: calc(100% + 6px);
+}
+.dicekingdom .bag-popover h5 {
+  margin: 0 0 6px;
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.55;
+}
+.dicekingdom .bag-popover .dierow {
+  gap: 6px;
+}
+
+/* ---- Selected die (rail) - README: name, level/stats, contextual
+   action buttons. Reuses .panel/.now-* rather than new rules; only the
+   stat line is new. ---- */
+.dicekingdom .selected-die-stats {
+  font-size: 11px;
+  opacity: 0.7;
+  margin: 0 0 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Roll animation - the tray shake (df-shake in the design doc,
+   renamed dk-shake for this file's own prefix) plus the reserve pool's
+   "?" placeholder before a die has actually landed. ---- */
+@keyframes dk-shake {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(2px); }
+  30%, 50%, 70% { transform: translateX(-3px); }
+  40%, 60% { transform: translateX(3px); }
+}
+.dicekingdom .zone-reserve.rolling {
+  animation: dk-shake 420ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dicekingdom .zone-reserve.rolling {
+    animation: none;
+  }
 }

@@ -780,3 +780,94 @@ Verified with headless Chromium: `.roster`'s bottom edge sits above
 persists across a real `page.reload()` (the bug above would have shown
 green right up until this specific check). 908 tests pass - frontend/
 index.css only, no engine changes this round.
+
+## Match-table redesign, round 2 (2026-09-04)
+
+User didn't like the board's existing layout and handed over a Claude
+Design mockup (`design_handoff_match_table/`, a variant of `/game`'s own
+match-table redesign - same README/`.dc.html` shape, `signal`/`portrait`/
+`ribbon` variants) as the target look. Two new v3 rules confirmed at the
+same time, both already matched by the current engine/data
+(`InstinctClashConfig.cs`) with no code change needed: a Champion carries
+no die and is never fielded (already true), and a Tardigrade die's faces
+may mix a character stat with an energy symbol on the same face - not
+actually exercised by any current face (every real Tardigrade/Character
+face is purely one or the other), so `CubeFace` in `dieFaces.ts` was
+deliberately left as a `character | energy` union rather than building
+hybrid rendering nothing exists to show yet.
+
+Rebuilt `DiceKingdomPage.tsx`'s layout + `dicekingdom.css` to match the
+mockup, keeping all the real plumbing from the previous round (API calls,
+selection model, seat/invite, auto-skip, block assignment) untouched:
+
+- **Real 3-column grid** (`.dk-layout`, `grid-template-areas`): a
+  sideboard, the board column, and the rail share the SAME three grid
+  rows (opponent / combat lane / you) across all three columns. This is
+  what puts the opponent's Champion box directly under the life panels
+  and the local player's Champion box with its top edge on the combat
+  divider (README's exact spec) with zero JS measurement - a CSS Grid
+  row auto-sizes to the tallest content assigned to it in ANY column, so
+  the row boundary between "lane" and "you" IS the divider position by
+  construction. Arguably a cleaner solution than the mockup's own pixel-
+  offset hack, which its README explicitly flags as fragile.
+- **Sideboard** - Basic Actions/Global Abilities render as real, empty
+  panels (Dice Kingdom has designed neither yet - user's call, "leave
+  those sections blank for now") rather than being omitted from the
+  grid, so adding real content later is a content change, not a layout
+  one. A third panel, "Energy in your pool," shows the local player's
+  Reserve Pool energy chips (not in the original Dice Fight mockup's
+  sideboard, but present in the Dice Kingdom-specific screenshot the
+  user attached mid-session as the real target).
+- **Roster strip** - portrait cards (mockup's chosen variant) instead of
+  the old collapsible-`<details>` pill list; always visible (real
+  feedback logged in the previous round, kept). Short here by
+  construction - Dice Kingdom's roster is a Champion + 2 Characters, not
+  Dice Masters' 8.
+- **Bag inspector popover** - was a plain expanded pile; now a button
+  ("click to inspect") that reveals contents grouped by card, local
+  player's opens upward via `.bag-popover.up/.down`.
+- **Real roll animation** - the biggest functional gap. Ported
+  `useDiceRoll.ts` and `animateRolledDice` verbatim from `../App.tsx`/
+  `../useDiceRoll.ts` (flight + settle CSS transitions, no physics),
+  wired into `run()` so every server call that might have rolled dice
+  (Roll, Reroll, a future card effect) triggers it automatically by
+  diffing before/after state - same mechanism v1 uses. Verified via
+  screenshot mid-flight: dice genuinely tumble off the resting face
+  before settling, not just popping to the rolled result.
+- **Champion box** redesigned from a horizontal banner (`.champbanner`,
+  sat inline above each board) into a rail panel (`.championbox`) with
+  a role label, the champion's name, and its passive as a note.
+- **Selected die panel** added to the rail (name + `L{n} · {a}A/{d}D`),
+  layered on top of whichever contextual panel/action-row was already
+  driving the real buttons below it.
+- Dashed border on Out of Play, a short "yours/theirs · moves to Used at
+  end of turn" note under it, matching the mockup's low-prominence
+  treatment for a zone that's rules-important but low-traffic.
+
+**Real bug found and fixed along the way**: `index.css`'s `#root` sets
+`text-align: center` (an un-cleaned Vite template default); every other
+page resets it via `.app`'s own `text-align: left`, but Dice Kingdom
+renders standalone with no `.app` wrapper (`Root.tsx`), so the center
+alignment leaked through uncontested. Mostly invisible before this round
+because the existing components that cared (`.dietile`, `.roster-chip`,
+`.champ-opt`) all set their own explicit `text-align: center` - only
+became visible once `.roster-head` (this round's new left-aligned label)
+rendered dead-center over a left-aligned row beneath it. Fixed with an
+explicit `text-align: left` on `.dicekingdom` itself, same fix `.app`
+already has.
+
+Kept deliberately unbuilt this round: hybrid character+energy die faces
+(no data exercises them yet, see above), Global Abilities' "Pay & use"
+flow (no Globals exist yet), Spin up/down on a fielded die (v3 has no
+such action - a die's level comes only from rolling, unlike v1's manual
+spin, so the mockup's Spin buttons were dropped rather than faked
+against a nonexistent endpoint).
+
+Verified with headless Chromium against the real running API (not just
+`tsc`/`vite build`, both clean): a full click-through (champion pick →
+Draw → Roll → Bag popover → Continue to Main → select a rolled die) in
+dark mode, screenshotted at each step, zero console errors. Confirmed
+the roll animation actually tumbles mid-flight, the Bag popover opens
+with real grouped contents, the Selected Die panel and Energy-in-pool
+chips populate from real data, and the Champion-box/divider alignment
+holds without any measured offset.

@@ -4,11 +4,13 @@ import { api } from "./api";
 import { CHAMPION_ICONS, CHARACTER_ICONS } from "./icons";
 import { claimSeatFromUrl, inviteLink, nameClaimedSeat, rememberSeats } from "./seats";
 import { CombatLane } from "./CombatLane";
-import { DieCube } from "./DieCube";
+import { DieCube, type CubeSpin } from "./DieCube";
 import { facesFor } from "./dieFaces";
 import { StepRibbon } from "./StepRibbon";
 import { MatchLog } from "./MatchLog";
 import { ThemeToggle, useTheme } from "./ThemeToggle";
+import { useDiceRoll, type RollTarget } from "./useDiceRoll";
+import { characterFaceInfo, dieLabel } from "./dieHelpers";
 import type { BlockAssignment, CardDef, Die, GameState, PlayerState } from "./types";
 
 const POLL_INTERVAL_MS = 2000;
@@ -107,26 +109,28 @@ function LifeBox({ player, you, activePlayerId }: { player: PlayerState; you: st
   );
 }
 
-// Was the first thing rendered inside each board, ahead of Field Zone -
-// direct feedback: it can't sit between Field Zone and the Attack Zone
-// (those need to line up directly across from each other), and more
-// generally the middle of the page is where the actual game happens, so
-// anything that can move to the side should. Now lives in the rail.
-function ChampBanner({ player, isActivePlayer, you }: { player: PlayerState; isActivePlayer: boolean; you: string }) {
+// README's Column 3 "Champion boxes": a role label, the champion's name
+// in the display face, its passive as the note. Lives in the rail, one
+// per player - see .dk-rail-top/.dk-rail-bottom in the JSX below for
+// *where*: sharing the same grid rows as the opponent/lane/you board
+// rows is what puts the opponent's box under the life panels and yours
+// with its top edge on the combat divider, matching the reference,
+// without measuring anything in JS.
+function ChampionBox({ player, isActivePlayer, you }: { player: PlayerState; isActivePlayer: boolean; you: string }) {
   if (!player.champion) return null;
   const Icon = CHAMPION_ICONS[player.champion.id];
-  if (!Icon) return null;
   const mine = player.id === you;
   const accent = `var(--${player.champion.energySymbolId.toLowerCase()})`;
   const turnClass = isActivePlayer ? (mine ? " turn-mine" : " turn-waiting") : "";
   return (
-    <div className={`champbanner${turnClass}`} style={{ color: accent, ["--cc" as string]: accent }}>
-      <Icon />
-      <div>
-        <div className="cbname" style={{ color: "var(--text-h)" }}>
-          {mine ? "You" : "Opponent"} — {player.champion.name}
+    <div className={`championbox${turnClass}`} style={{ ["--cc" as string]: accent }}>
+      <div className="championbox-role">{mine ? "Your Champion" : "Opponent Champion"}</div>
+      <div className="championbox-body">
+        {Icon && <Icon />}
+        <div>
+          <div className="championbox-name">{player.champion.name}</div>
+          <div className="championbox-note">{player.champion.passiveText}</div>
         </div>
-        <div className="cbpassive">{player.champion.passiveText}</div>
       </div>
     </div>
   );
@@ -179,6 +183,8 @@ function DieTile({
   accent,
   mine,
   label: labelOverride,
+  spin,
+  turnOffset,
 }: {
   die: Die;
   /** Which zone this tile represents - gates whether a rolled face shows
@@ -196,6 +202,9 @@ function DieTile({
   mine?: boolean;
   /** Overrides the bottom label - used for "already rerolled"/"selected" state during Roll & Reroll. */
   label?: string;
+  /** Mid-roll transform and accumulated turn count - see useDiceRoll.ts. */
+  spin?: CubeSpin;
+  turnOffset?: number;
 }) {
   const isRolled = ROLLED_ZONES.has(zone) && rolled(die);
   const Avatar = die.cardId ? CHARACTER_ICONS[die.cardId] : null;
@@ -215,7 +224,7 @@ function DieTile({
           {/* The same 3D cube /game's board uses (../DieCube.tsx), not a
               flat stat badge - a rolled die is a physical object showing
               a real face, not text about one. */}
-          <DieCube {...facesFor(die, cardsById)} size={40} mine={mine ?? true} />
+          <DieCube {...facesFor(die, cardsById)} size={40} mine={mine ?? true} spin={spin} turnOffset={turnOffset} />
           {die.effectiveAttack !== null && Avatar && <Avatar size={16} />}
           <div className="lbl">
             {labelOverride ?? (die.effectiveAttack === null ? "Surge" : `L${die.level}${die.isTardigrade && !die.energySymbolId ? " · free" : ""}`)}
@@ -253,6 +262,12 @@ export function DiceKingdomPage() {
   // being replaced by each one.
   const [blockAssignments, setBlockAssignments] = useState<Record<string, string | null>>({});
   const [cardsById, setCardsById] = useState<Map<string, CardDef>>(new Map());
+  // The dice-cube roll animation - ported verbatim from ../useDiceRoll.ts.
+  // README calls this "the single most important piece to port
+  // faithfully" - see animateRolledDice below for how a roll is detected.
+  const { spins, offsets, rolling, launch: launchRoll } = useDiceRoll();
+  const [bagOpen, setBagOpen] = useState(false);
+  const [oppBagOpen, setOppBagOpen] = useState(false);
 
   useEffect(() => {
     api.getCards().then((cards) => setCardsById(new Map(cards.map((c) => [c.id, c]))));
@@ -332,13 +347,39 @@ export function DiceKingdomPage() {
     });
   }
 
-  async function run(fn: () => Promise<GameState>) {
+  // Every server call that might have rolled dice comes through run() -
+  // comparing state before/after is enough to catch it wherever it came
+  // from (Roll, a reroll, a future card effect), matching ../App.tsx's
+  // identical animateRolledDice. `rolledDieIds` names dice an action
+  // deliberately rolled (reroll knows its own ids up front); without it,
+  // a reroll landing the same face again wouldn't animate at all.
+  function animateRolledDice(previous: GameState, next: GameState, rolledDieIds?: string[]) {
+    const before = new Map(previous.dice.map((d) => [d.id, d]));
+    const explicit = new Set(rolledDieIds ?? []);
+    const targets: RollTarget[] = [];
+    for (const die of next.dice) {
+      const was = before.get(die.id);
+      if (!was) continue;
+      if (!rolled(die)) continue;
+      const changedFace =
+        was.level !== die.level || was.effectiveAttack !== die.effectiveAttack ||
+        was.energySymbolId !== die.energySymbolId || was.energyAmount !== die.energyAmount;
+      if (!explicit.has(die.id) && !changedFace) continue;
+      const { index } = facesFor(die, cardsById);
+      targets.push({ dieId: die.id, faceIndex: index });
+    }
+    launchRoll(targets);
+  }
+
+  async function run(fn: () => Promise<GameState>, rolledDieIds?: string[]) {
     setBusy(true);
     busyRef.current = true;
     setError(null);
     try {
+      const previous = game;
       const next = await fn();
       setGame(next);
+      if (previous) animateRolledDice(previous, next, rolledDieIds);
       clearSelection();
       if (next.currentStepId !== "roll-and-reroll") setRerolledIds([]);
       if (next.currentStepId !== "assign-blockers") setBlockAssignments({});
@@ -528,18 +569,51 @@ export function DiceKingdomPage() {
       UsedPile: "used", OutOfPlay: "outofplay", Bag: "bag",
       PrepArea: "prep", DiceFromBag: "staging", DiceFromPrep: "staging",
     };
-    function pileZone(title: string, zoneName: string, dice: Die[]) {
+    function pileZone(title: string, zoneName: string, dice: Die[], note?: string) {
       return (
         <div className={`zone zone-${ZONE_TINTS[zoneName] ?? "plain"}`}>
           <h4>
             {title} <span className="count">{dice.length}</span>
           </h4>
+          {note && <span className="zone-note">{note}</span>}
           <div className="dierow">
             {dice.length === 0 && <span style={{ opacity: 0.5, fontSize: 12 }}>empty</span>}
             {groupDice(dice, zoneName).map((g) => (
               <DieTile key={g.key} die={g.sample} zone={zoneName} count={g.count} cardsById={cardsById} accent={accent} />
             ))}
           </div>
+        </div>
+      );
+    }
+
+    // Bag - README: a count that's also a button opening an inspector
+    // popover ("contents known, order is not"). Bag contents are public
+    // information in this game (same rule the design doc cites), so both
+    // players' bags are inspectable; the local player's opens upward,
+    // the opponent's downward - see .bag-popover.up/.down.
+    function bagZone(dice: Die[]) {
+      const mine = playerId === you;
+      const open = mine ? bagOpen : oppBagOpen;
+      const setOpen = mine ? setBagOpen : setOppBagOpen;
+      return (
+        <div className="zone zone-bag">
+          <button type="button" className="bag-button" onClick={() => setOpen((o) => !o)}>
+            <h4>
+              Bag <span className="count">{dice.length}</span>
+            </h4>
+            <span className="bag-hint">{open ? "hide contents" : "click to inspect"}</span>
+          </button>
+          {open && (
+            <div className={`bag-popover ${mine ? "up" : "down"}`}>
+              <h5>Contents known, order is not</h5>
+              <div className="dierow">
+                {dice.length === 0 && <span style={{ opacity: 0.5, fontSize: 12 }}>empty</span>}
+                {groupDice(dice, "Bag").map((g) => (
+                  <DieTile key={g.key} die={g.sample} zone="Bag" count={g.count} cardsById={cardsById} accent={accent} />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       );
     }
@@ -551,8 +625,9 @@ export function DiceKingdomPage() {
     // grouped) since a rolled zone is about each die's own face, not a
     // count - see ROLLED_ZONES.
     function rolledZone(title: string, zoneName: string, dice: Die[]) {
+      const isRollingHere = rolling && dice.some((d) => spins[d.id]);
       return (
-        <div className={`zone zone-${ZONE_TINTS[zoneName] ?? "reserve"}`}>
+        <div className={`zone zone-${ZONE_TINTS[zoneName] ?? "reserve"}${isRollingHere ? " rolling" : ""}`}>
           <h4>
             {title} <span className="count">{dice.length}</span>
           </h4>
@@ -572,6 +647,8 @@ export function DiceKingdomPage() {
                   picked={picked}
                   label={already ? "rerolled" : step === "roll-and-reroll" && rolled(d) ? (picked ? "selected" : undefined) : undefined}
                   onClick={() => toggleDie(d.id)}
+                  spin={spins[d.id]}
+                  turnOffset={offsets[d.id]}
                 />
               );
             })}
@@ -611,26 +688,24 @@ export function DiceKingdomPage() {
         <div className="mat-slot mat-used">{pileZone("Used Pile", "UsedPile", used)}</div>
         <div className="mat-slot mat-reserve">{rolledZone("Reserve Pool", "ReservePool", reserve)}</div>
         <div className="mat-slot mat-prep">{rolledZone("Prep Area", "PrepArea", prep)}</div>
-        <div className="mat-slot mat-outofplay">{pileZone("Out of Play", "OutOfPlay", outOfPlay)}</div>
-        <div className="mat-slot mat-bag">{pileZone("Bag", "Bag", bag)}</div>
+        <div className="mat-slot mat-outofplay">
+          {pileZone("Out of Play", "OutOfPlay", outOfPlay, playerId === you ? "yours only · moves to Used at end of turn" : "theirs · moves to Used at end of turn")}
+        </div>
+        <div className="mat-slot mat-bag">{bagZone(bag)}</div>
         <div className="mat-slot mat-drawn">{pileZone("Drawn This Turn", "DiceFromBag", drawn)}</div>
         <div className="mat-slot mat-carried">{pileZone("Carried From Prep", "DiceFromPrep", carried)}</div>
       </div>
     );
 
-    // Always visible, matching ../PlayerBoard.tsx's own roster - a
-    // player checks "what's left to buy" constantly during a game, so
-    // it stays open by default rather than only appearing for the
-    // active player mid-Main. Purchasing only actually enables when
-    // it's legal - own board, your turn, Main step - everything else
-    // here still shows so both rosters stay checkable at a glance.
-    // Compact chips, not full dietile cards - direct feedback: these
-    // were the same big card size as an in-play die, when they're
-    // reference-only most of the game (../CommunityCards.tsx's own
-    // compact-row precedent for "a lot of these, glanced at often").
+    // Always visible (README's Column 2 roster strip - a player checks
+    // "what's left to buy" constantly, so this isn't hidden behind a
+    // <details> the way the compact-chip version had it). Portrait cards
+    // per README's chosen variant, one per Character (Dice Kingdom's
+    // roster is a Champion + 2 Characters, not Dice Masters' 8, so this
+    // reads as a short strip rather than the reference's full row).
     const roster = (
-      <details className="roster" open>
-        <summary>Unpurchased roster ({[...unpurchasedByCard.values()].reduce((n, d) => n + d.length, 0)})</summary>
+      <div className="roster">
+        <div className="roster-head">Roster</div>
         <div className="roster-row">
           {unpurchasedByCard.size === 0 && <span style={{ opacity: 0.5, fontSize: 12 }}>nothing left to buy</span>}
           {[...unpurchasedByCard.entries()].map(([cardId, dice]) => {
@@ -649,17 +724,17 @@ export function DiceKingdomPage() {
                 style={accent ? ({ ["--cc" as string]: accent } as const) : undefined}
                 onClick={() => toggleDie(dieId)}
               >
-                {Avatar && <Avatar size={20} />}
+                {Avatar && <Avatar size={22} />}
                 <span className="rc-name">{card?.name ?? cardId}</span>
                 <span className="rc-cost">
                   {card?.purchaseCost} {card?.energyTypes[0]}
                 </span>
-                <span className="rc-left">×{dice.length}</span>
+                <span className="rc-left">×{dice.length} left</span>
               </button>
             );
           })}
         </div>
-      </details>
+      </div>
     );
 
     // The roster sits on the OUTER edge of each board, away from the
@@ -707,6 +782,8 @@ export function DiceKingdomPage() {
         nearPlayerId={you}
         selection={selection}
         onGroupClick={(ids) => toggleDie(ids[0])}
+        spins={spins}
+        turnOffsets={offsets}
       />
     );
   }
@@ -717,13 +794,14 @@ export function DiceKingdomPage() {
   // computed once, the same way ../ActionTray.tsx builds its `actions`
   // list from the primary die's zone and the current step, instead of a
   // different bespoke panel per feature.
-  function selectionAction(): { label: string; run: () => Promise<GameState> } | null {
+  function selectionAction(): { label: string; run: () => Promise<GameState>; rolledIds?: string[] } | null {
     if (!primaryDie) return null;
     const secondaryIds = selection.secondary;
     if (step === "roll-and-reroll" && (primaryDie.zone === "PrepArea" || primaryDie.zone === "ReservePool")) {
       const ids = [primaryDie.id, ...secondaryIds];
       return {
         label: `Reroll Selected (${ids.length})`,
+        rolledIds: ids,
         run: async () => {
           const next = await api.reroll(game!.gameId, ids);
           setRerolledIds((r) => [...r, ...ids]);
@@ -770,29 +848,47 @@ export function DiceKingdomPage() {
         </div>
       </div>
 
-      {/* Two columns, same shape as /game's main-column + side-column
-          (App.css's .app-layout.game-layout): the boards (and the
-          Attack Zone each carries inline) are the main column, and
-          everything that isn't a die zone - Champion, whose-turn
-          controls, the contextual action for whatever's selected - is
-          the rail. Direct feedback: Champion used to sit between Field
-          Zone and the Attack Zone (they need to line up directly across
-          from each other), and the turn controls sat between the two
-          boards, right where the actual game is happening. Neither
-          belongs in the middle. */}
+      {/* README's real 3-column shape: a shared sideboard, the table
+          (opponent board / combat lane / your board, each its own grid
+          row), and a rail sharing those SAME three rows - see
+          .dk-layout's CSS comment for why sharing rows is what aligns
+          each Champion box with its board without any JS measuring. */}
       <div className="dk-layout">
-        <div className="dk-main">
-          {renderBoard(opponentId, true)}
-          {renderAttackZone()}
-          {renderBoard(you, false)}
+        <div className="dk-sideboard">
+          <div className="sideboard-panel">
+            <h4>Basic Actions</h4>
+            <span className="sideboard-sub">shared pool · both may buy</span>
+            <p className="sideboard-empty">Dice Kingdom has no Basic Actions yet.</p>
+          </div>
+          <div className="sideboard-panel">
+            <h4>Global Abilities</h4>
+            <span className="sideboard-sub">either player, any window</span>
+            <p className="sideboard-empty">No Globals designed yet.</p>
+          </div>
+          <div className="sideboard-panel">
+            <h4>Energy in your pool</h4>
+            {(() => {
+              const yourEnergy = diceFor(you, "ReservePool").filter((d) => d.energySymbolId);
+              return yourEnergy.length === 0 ? (
+                <p className="sideboard-empty">nothing to spend</p>
+              ) : (
+                <div className="sideboard-pool">
+                  {yourEnergy.map((d) => (
+                    <PipBadge key={d.id} type={d.energySymbolId!} amount={d.energyAmount} />
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
         </div>
 
-        <div className="dk-rail">
+        <div className="dk-row-opp">{renderBoard(opponentId, true)}</div>
+        <div className="dk-row-lane">{renderAttackZone()}</div>
+        <div className="dk-row-you">{renderBoard(you, false)}</div>
+
+        <div className="dk-rail-top">
           {/* Active + Invite on one line, then life totals side by side -
-              ../TurnRail.tsx's own shape, moved off the table into the
-              rail entirely (real feedback: life boxes flanking a phase
-              pill above the board were still costing vertical space,
-              just differently). */}
+              ../TurnRail.tsx's own shape. */}
           <div className="active-line">
             <span className={isYourTurn ? "whose-turn mine" : "whose-turn waiting"}>
               <strong>Active:</strong> {game.activePlayerId}
@@ -803,20 +899,14 @@ export function DiceKingdomPage() {
             <LifeBox player={opponentId === game.playerOne.id ? game.playerOne : game.playerTwo} you={you} activePlayerId={game.activePlayerId} />
             <LifeBox player={you === game.playerOne.id ? game.playerOne : game.playerTwo} you={you} activePlayerId={game.activePlayerId} />
           </div>
-
-          {/* Opponent first, then you - same order as the boards below,
-              so the rail reads top-to-bottom the same way the table does. */}
-          <ChampBanner
+          <ChampionBox
             player={opponentId === game.playerOne.id ? game.playerOne : game.playerTwo}
             isActivePlayer={game.activePlayerId === opponentId}
             you={you}
           />
-          <ChampBanner
-            player={you === game.playerOne.id ? game.playerOne : game.playerTwo}
-            isActivePlayer={game.activePlayerId === you}
-            you={you}
-          />
+        </div>
 
+        <div className="dk-rail-mid">
           <div className="controlcenter">
           {/* Ported from ../TurnRail.tsx's Now panel - a step title and
               one-line description, not just a bare button. Shown
@@ -829,6 +919,22 @@ export function DiceKingdomPage() {
               <span className="now-eyebrow">Now</span>
               <h3 className="now-title">{STEP_GUIDANCE[step].title}</h3>
               <p className="now-guidance">{STEP_GUIDANCE[step].text}</p>
+            </div>
+          )}
+          {/* README's rail "Selected die" panel - name, level/stats, and
+              whatever contextual action is legal. Shown whenever a die is
+              selected, on top of whichever panel/action-row renders
+              below (those still drive the actual buttons - this is just
+              "what am I looking at"). */}
+          {primaryDie && (
+            <div className="panel selected-die-panel">
+              <span className="now-eyebrow">Selected die</span>
+              <h3 className="now-title">{dieLabel(primaryDie, cardsById)}</h3>
+              {characterFaceInfo(primaryDie) && (
+                <p className="selected-die-stats">
+                  L{primaryDie.level} · {characterFaceInfo(primaryDie)!.attack}A/{characterFaceInfo(primaryDie)!.defense}D
+                </p>
+              )}
             </div>
           )}
           {game.pendingChoice && you === game.pendingChoice.controllerId ? (
@@ -895,7 +1001,7 @@ export function DiceKingdomPage() {
             {step === "roll-and-reroll" && diceFor(you).some((d) => (d.zone === "PrepArea" || d.zone === "ReservePool") && rolled(d)) && (
               <div className="actionrow">
                 {action && (
-                  <button className="btn" disabled={busy} onClick={() => run(action.run)}>
+                  <button className="btn" disabled={busy} onClick={() => run(action.run, action.rolledIds)}>
                     {action.label}
                   </button>
                 )}
@@ -913,7 +1019,7 @@ export function DiceKingdomPage() {
                   </span>
                 )}
                 {action && (
-                  <button className="btn" disabled={busy || (cost !== null && spent < cost.amount)} onClick={() => run(action.run)}>
+                  <button className="btn" disabled={busy || (cost !== null && spent < cost.amount)} onClick={() => run(action.run, action.rolledIds)}>
                     {action.label}
                   </button>
                 )}
@@ -950,7 +1056,14 @@ export function DiceKingdomPage() {
           </div>
         )}
           </div>
+        </div>
 
+        <div className="dk-rail-bottom">
+          <ChampionBox
+            player={you === game.playerOne.id ? game.playerOne : game.playerTwo}
+            isActivePlayer={game.activePlayerId === you}
+            you={you}
+          />
           <MatchLog entries={game.log} nearPlayerId={you} />
         </div>
       </div>
