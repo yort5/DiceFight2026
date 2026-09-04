@@ -674,6 +674,13 @@
   gap: 9px;
   min-height: 6px;
 }
+.dicekingdom .roster summary {
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  opacity: 0.75;
+  margin: 10px 0 6px;
+}
 
 .dicekingdom .dietile {
   position: relative;
@@ -793,6 +800,86 @@
 }
 .dicekingdom .controlcenter:empty {
   display: none;
+}
+.dicekingdom .now-header {
+  padding: 10px 12px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--panel-bg);
+  margin-bottom: 10px;
+}
+.dicekingdom .now-eyebrow {
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  opacity: 0.65;
+}
+.dicekingdom .now-title {
+  font: 700 15px var(--sans);
+  letter-spacing: 0.02em;
+  margin: 2px 0 6px;
+}
+.dicekingdom .now-guidance {
+  font-size: 12px;
+  opacity: 0.8;
+  line-height: 1.4;
+  margin: 0;
+}
+
+/* ---- Match log - ported from ../MatchLog.tsx/App.css's .match-log/
+   .log-* rules. Scrolls on its own rather than growing the rail. ---- */
+.dicekingdom .rail-panel {
+  padding: 10px 12px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  margin-top: 10px;
+}
+.dicekingdom .rail-panel h3 {
+  font: 700 11px var(--sans);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  opacity: 0.7;
+  margin: 0 0 8px;
+}
+.dicekingdom .match-log-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.dicekingdom .log-line {
+  display: flex;
+  gap: 7px;
+  font-size: 11.5px;
+  line-height: 1.35;
+}
+.dicekingdom .log-seq {
+  flex: none;
+  min-width: 16px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.4;
+}
+.dicekingdom .log-line.yours .log-text {
+  color: oklch(0.5 0.13 145);
+}
+.dicekingdom .log-line.theirs .log-text {
+  color: oklch(0.5 0.05 75);
+}
+.dicekingdom .log-line.neutral .log-text {
+  opacity: 0.65;
+}
+@media (prefers-color-scheme: dark) {
+  .dicekingdom .log-line.yours .log-text {
+    color: oklch(0.75 0.15 145);
+  }
+  .dicekingdom .log-line.theirs .log-text {
+    color: oklch(0.72 0.06 75);
+  }
 }
 
 .dicekingdom details.how {

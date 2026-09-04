@@ -101,11 +101,17 @@ public sealed record V2PendingChoiceDto(
         new(pending.ControllerId, pending.Description, pending.CandidateIds, pending.MinCount, pending.MaxCount);
 }
 
+public sealed record V2GameLogEntryDto(int Seq, string? PlayerId, string Text)
+{
+    public static V2GameLogEntryDto From(DiceFight.V2.Model.GameLogEntry entry) => new(entry.Seq, entry.PlayerId, entry.Text);
+}
+
 public sealed record V2CreatedGameDto(V2GameStateDto Game, IReadOnlyList<SeatDto> Seats);
 
 public sealed record V2GameStateDto(
     string GameId, string ActivePlayerId, string CurrentStep, string CurrentStepId,
     V2PlayerDto PlayerOne, V2PlayerDto PlayerTwo, IReadOnlyList<V2DieDto> Dice, V2PendingChoiceDto? PendingChoice,
+    IReadOnlyList<V2GameLogEntryDto> Log,
     string? YourPlayerId = null, int Version = 0)
 {
     public static V2GameStateDto From(string gameId, GameState state, string? yourPlayerId = null, int version = 0) => new(
@@ -113,6 +119,7 @@ public sealed record V2GameStateDto(
         V2PlayerDto.From(state, state.PlayerOne), V2PlayerDto.From(state, state.PlayerTwo),
         state.Dice.Select(d => V2DieDto.From(state, d)).ToList(),
         state.PendingChoice is { } pending ? V2PendingChoiceDto.From(pending) : null,
+        state.Log.Select(V2GameLogEntryDto.From).ToList(),
         yourPlayerId, version);
 }
 

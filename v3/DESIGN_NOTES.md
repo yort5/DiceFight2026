@@ -676,3 +676,50 @@ left-edge x-offset (same column) rather than flanking `.mat-reserve`,
 fresh turn 1 with zero attackers, `.step-ribbon` and no `<h1>` in the
 live view. 908 tests pass - CSS/component-structure only besides the
 one C# fix above.
+
+## Three real gaps in the previous round, fixed - plus a real V2 log (2026-09-04)
+
+Same message, three more concrete things checked against the screenshot,
+none of them excuses: "There's a big white space at the top... is that
+where the character roster should be? The right pane only has a button,
+not the full step description. There's no log."
+
+1. **The white space was exactly that** - the Unpurchased roster/
+   purchase panel only rendered `isYourTurn && playerId === you && step
+   === "main"`, so it was blank for the opponent's board always and for
+   your own board most of the turn. Ported v1's real behavior: `<details
+   className="roster" open>` always renders for both boards (matching
+   `../PlayerBoard.tsx`'s own roster exactly), showing every unpurchased
+   card regardless of whose turn it is; only the Buy button's
+   `clickable` state is still gated to "your board, your turn, Main
+   step" - the list itself is always there to check.
+2. **The bare button** - `controlcenter` went straight from the
+   pendingChoice/BlockPanel ternary into plain actionrow buttons with no
+   step context at all, unlike `../TurnRail.tsx`'s Now panel (title +
+   one-line guidance). Added a `STEP_GUIDANCE` map (mirrors
+   `TurnRail.tsx`'s own STEP_GUIDANCE/ATTACK_SUB_STEPS text, collapsed
+   to V2's coarser step set) and a `.now-header` block that renders
+   above whichever contextual panel is active, always, not tied to one
+   ternary branch.
+3. **No log** - a real, structural gap, not a display oversight: V2's
+   `GameState` had no `Log` field at all, `TurnEngine.cs`/
+   `CombatEngine.cs` never called anything like v1's `LogEvent`, and
+   `V2Dtos.cs` had nothing to expose. Added the whole path, mirroring
+   v1's shape exactly: `Model/GameLogEntry.cs` (V2's own copy - can't
+   reuse v1's record, different namespace/type even though identical
+   shape), `GameState.Log`/`LogEvent`/`NameOf` (same 200-entry cap), a
+   `V2GameLogEntryDto`, and `Log` on `V2GameStateDto`. Call sites added
+   at the real action boundaries - not v1's full per-die-roll
+   granularity, but every player-visible thing: draw count, roll,
+   reroll (or "takes no reroll"), purchase, field, declare attackers,
+   declare blockers, unblocked damage landing on the player directly,
+   KO, end turn. `dicekingdom/MatchLog.tsx` is a straight port of
+   `../MatchLog.tsx`, wired into the rail below `.controlcenter`.
+
+Verified end to end with headless Chromium, not just that each piece
+renders: fielded a Tardigrade and read back `.roster[open]` (both
+boards), `.now-title`/`.now-guidance` text, and the live log producing
+real lines ("Lion draws 3 dice.", "Lion rolls.", "Lion fields a
+Tardigrade.") - confirms the log is reading real engine events, not a
+static string. 908 tests pass - the new `LogEvent` call sites had no
+prior test coverage asserting their absence.

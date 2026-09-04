@@ -7,6 +7,7 @@ import { CombatLane } from "./CombatLane";
 import { DieCube } from "./DieCube";
 import { facesFor } from "./dieFaces";
 import { StepRibbon } from "./StepRibbon";
+import { MatchLog } from "./MatchLog";
 import type { BlockAssignment, CardDef, Die, GameState, PlayerState } from "./types";
 
 const POLL_INTERVAL_MS = 2000;
@@ -43,6 +44,20 @@ function rolled(d: Die): boolean {
 // effectiveAttack directly is what fixes a spent/KO'd die still showing
 // its last rolled stats in the Used Pile.
 const ROLLED_ZONES = new Set(["ReservePool", "PrepArea", "FieldZone", "AttackZone"]);
+
+// What the rail's "Now" header says for each step - ported from
+// ../TurnRail.tsx's STEP_GUIDANCE/ATTACK_SUB_STEPS. Real feedback: the
+// rail was showing a bare action button with no title or description at
+// all, unlike /game's Now panel.
+const STEP_GUIDANCE: Record<string, { title: string; text: string }> = {
+  "start-of-turn": { title: "Clear & Draw", text: "Spent dice go to the Used Pile, then draw back up to four." },
+  "roll-and-reroll": { title: "Roll & Reroll", text: "Roll everything drawn. You get one reroll decision, and taking it ends the step." },
+  main: { title: "Main", text: "Field a rolled creature, purchase a Character, or spend energy dice." },
+  "select-attackers": { title: "Attack · Declare Attackers", text: "Choose which of your fielded dice attack." },
+  "assign-blockers": { title: "Attack · Assign Blockers", text: "The defender assigns blockers - anything left unassigned is unblocked." },
+  "action-global-window": { title: "Attack · Resolve Combat", text: "Last window before combat damage lands." },
+  "return-to-field": { title: "Clean Up", text: "Damage clears and it becomes the other player's turn." },
+};
 
 interface DieGroup {
   key: string;
@@ -594,15 +609,25 @@ export function DiceKingdomPage() {
           <div className="mat-slot mat-drawn">{pileZone("Drawn This Turn", "DiceFromBag", drawn)}</div>
           <div className="mat-slot mat-carried">{pileZone("Carried From Prep", "DiceFromPrep", carried)}</div>
         </div>
-        {isYourTurn && playerId === you && step === "main" && unpurchasedByCard.size > 0 && (
-          <div className="zone">
-            <h4>Available to purchase</h4>
-            <div className="dierow">
-              {[...unpurchasedByCard.entries()].map(([cardId, dice]) => {
+        {/* Always visible, matching ../PlayerBoard.tsx's own roster - a
+            player checks "what's left to buy" constantly during a game,
+            so it stays open by default rather than only appearing for
+            the active player mid-Main (real feedback: hiding it most of
+            the turn just read as a blank gap on the board where content
+            was supposed to be). Purchasing only actually enables when
+            it's legal - own board, your turn, Main step - everything
+            else here still shows so both rosters stay checkable at a
+            glance. */}
+        <details className="roster" open>
+          <summary>Unpurchased roster ({[...unpurchasedByCard.values()].reduce((n, d) => n + d.length, 0)})</summary>
+          <div className="dierow">
+            {unpurchasedByCard.size === 0 && <span style={{ opacity: 0.5, fontSize: 12 }}>nothing left to buy</span>}
+            {[...unpurchasedByCard.entries()].map(([cardId, dice]) => {
                 const card = cardsById.get(cardId);
                 const Avatar = CHARACTER_ICONS[cardId];
                 const dieId = dice[0].id;
-                const clickable = selection.primary === null || selection.primary === dieId;
+                const canPurchaseNow = isYourTurn && playerId === you && step === "main";
+                const clickable = canPurchaseNow && (selection.primary === null || selection.primary === dieId);
                 const picked = selection.primary === dieId;
                 return (
                   <button
@@ -622,9 +647,8 @@ export function DiceKingdomPage() {
                   </button>
                 );
               })}
-            </div>
           </div>
-        )}
+        </details>
       </div>
     );
   }
@@ -758,6 +782,19 @@ export function DiceKingdomPage() {
           />
 
           <div className="controlcenter">
+          {/* Ported from ../TurnRail.tsx's Now panel - a step title and
+              one-line description, not just a bare button. Shown
+              regardless of which contextual panel renders below it
+              (pending choice, block assignment, or the plain action
+              buttons), same as v1's Now panel sitting above whichever
+              of ActionTray/DeclareBlockersPanel/etc. is active. */}
+          {STEP_GUIDANCE[step] && (
+            <div className="now-header">
+              <span className="now-eyebrow">Now</span>
+              <h3 className="now-title">{STEP_GUIDANCE[step].title}</h3>
+              <p className="now-guidance">{STEP_GUIDANCE[step].text}</p>
+            </div>
+          )}
           {game.pendingChoice && you === game.pendingChoice.controllerId ? (
           <div className="panel">
             <p>
@@ -877,6 +914,8 @@ export function DiceKingdomPage() {
           </div>
         )}
           </div>
+
+          <MatchLog entries={game.log} nearPlayerId={you} />
         </div>
       </div>
     </div>

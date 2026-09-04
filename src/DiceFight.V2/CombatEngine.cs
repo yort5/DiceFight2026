@@ -50,6 +50,9 @@ public static class CombatEngine
             // Rule 2.7.1.2 - "when attacks" fires for each attacking die.
             EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieAttacks, die, die.ControllerId, state.CurrentStepId));
         }
+        state.LogEvent(state.ActivePlayerId, attackerDieIds.Count == 0
+            ? $"{state.NameOf(state.ActivePlayerId)} declares no attackers."
+            : $"{state.NameOf(state.ActivePlayerId)} declares {attackerDieIds.Count} {(attackerDieIds.Count == 1 ? "attacker" : "attackers")}.");
 
         // "Select attackers. Resolve effects that occur due to attacking."
         EnterStep(state, queue, StepIds.AttackEffects);
@@ -83,6 +86,9 @@ public static class CombatEngine
             die.Zone = Zone.AttackZone;
             EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieBlocks, die, die.ControllerId, state.CurrentStepId));
         }
+        state.LogEvent(inactiveId, blockerDieIds.Count == 0
+            ? $"{state.NameOf(inactiveId)} leaves every attacker unblocked."
+            : $"{state.NameOf(inactiveId)} assigns {blockerDieIds.Count} {(blockerDieIds.Count == 1 ? "blocker" : "blockers")}.");
 
         // "Assign blockers. Resolve effects that occur due to blocking."
         EnterStep(state, queue, StepIds.BlockEffects);
@@ -186,6 +192,11 @@ public static class CombatEngine
                 // leaves the Attack Zone before anything else can resolve.
                 inactivePlayer.Life -= attack;
                 attacker.Zone = Zone.OutOfPlay;
+                if (attack > 0)
+                {
+                    var unblockedName = attacker.CardId is { } unblockedCardId ? state.CardCatalog[unblockedCardId].Name : "a Tardigrade";
+                    state.LogEvent(attacker.ControllerId, $"{unblockedName} hits {inactivePlayer.Name} directly for {attack}.");
+                }
                 continue;
             }
 
@@ -222,7 +233,16 @@ public static class CombatEngine
 
         // "Resolve effects that occur due to damage or KO." The DieDamaged
         // and DieKOd abilities are already queued by the waves above; this
-        // names the window they resolve in.
+        // names the window they resolve in. Logged by id since the KO'd
+        // die has already moved out of Zone.AttackZone/lost its card
+        // context by the time koIds comes back - the die instance itself
+        // is still findable via FindDie, though, so its name still is.
+        foreach (var koId in koIds)
+        {
+            var koDie = FindDie(state, koId);
+            var koName = koDie.CardId is { } koCardId ? state.CardCatalog[koCardId].Name : "A Tardigrade";
+            state.LogEvent(koDie.ControllerId, $"{koName} is knocked out.");
+        }
         EnterStep(state, queue, StepIds.DamageAndKoEffects);
 
         // Glossary/FAQ - Overcrush: "if this character die KO's or removes

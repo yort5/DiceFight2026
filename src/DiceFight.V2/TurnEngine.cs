@@ -96,6 +96,7 @@ public static class TurnEngine
         {
             EventBus.Fire(state, queue, new GameEvent(TriggerKind.DiceDrawn, null, state.ActivePlayerId, state.CurrentStepId));
         }
+        state.LogEvent(state.ActivePlayerId, $"{state.NameOf(state.ActivePlayerId)} draws {drawn.Count} {(drawn.Count == 1 ? "die" : "dice")}.");
 
         state.IsFirstTurn = false;
         state.MoveToStep(StepIds.RollAndReroll);
@@ -134,6 +135,7 @@ public static class TurnEngine
             var payload = new DieFaceChangedPayload(priorFace, newFace, FaceChangeCause.Roll);
             EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieFaceChanged, die, die.ControllerId, state.CurrentStepId, payload));
         }
+        state.LogEvent(state.ActivePlayerId, $"{state.NameOf(state.ActivePlayerId)} rolls.");
     }
 
     // Rule 2.6.1 - between Roll and FinishRoll, the active player may
@@ -163,6 +165,8 @@ public static class TurnEngine
             var payload = new DieFaceChangedPayload(priorFace, newFace, FaceChangeCause.Reroll);
             EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieFaceChanged, die, die.ControllerId, state.CurrentStepId, payload));
         }
+        if (dieIds.Count > 0) state.LogEvent(state.ActivePlayerId, $"{state.NameOf(state.ActivePlayerId)} rerolls {dieIds.Count} {(dieIds.Count == 1 ? "die" : "dice")}.");
+        else state.LogEvent(state.ActivePlayerId, $"{state.NameOf(state.ActivePlayerId)} takes no reroll.");
     }
 
     // Second half - commits every rolled Prep Area die to the Reserve Pool,
@@ -227,6 +231,7 @@ public static class TurnEngine
         if (pending is not null) state.PendingPurchaseModifiers.Remove(pending);
 
         state.PurchasedThisTurn.Add(state.ActivePlayerId);
+        state.LogEvent(state.ActivePlayerId, $"{state.NameOf(state.ActivePlayerId)} purchases {card.Name}.");
         EventBus.Fire(state, queue, new GameEvent(TriggerKind.PurchaseMade, die, state.ActivePlayerId, state.CurrentStepId));
     }
 
@@ -257,6 +262,8 @@ public static class TurnEngine
 
         die.Zone = Zone.FieldZone;
         state.FieldedCharacterThisTurn.Add(die.ControllerId);
+        var fieldedName = die.CardId is { } fieldedCardId ? state.CardCatalog[fieldedCardId].Name : "a Tardigrade";
+        state.LogEvent(die.ControllerId, $"{state.NameOf(die.ControllerId)} fields {fieldedName}.");
 
         // Rule 2.6.3.6 - "when fielded" fires immediately upon entering
         // the Field Zone, which is why this die is already eligible to
@@ -528,6 +535,7 @@ public static class TurnEngine
         // Cleanup Step is "end all effects", and a "this turn" grant must
         // not survive into the opponent's turn.
         state.PendingPurchaseModifiers.RemoveAll(m => m.PlayerId == endingPlayerId);
+        state.LogEvent(endingPlayerId, $"{state.NameOf(endingPlayerId)} ends their turn.");
         state.ActivePlayerId = state.OpponentOf(state.ActivePlayerId);
         state.MoveToStep(StepIds.StartOfTurn);
 

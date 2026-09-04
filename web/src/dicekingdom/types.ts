@@ -58,6 +58,13 @@ export interface PendingChoice {
   maxCount: number;
 }
 
+export interface GameLogEntry {
+  seq: number;
+  /** Who did it, or null for something the game itself did. */
+  playerId: string | null;
+  text: string;
+}
+
 export interface GameState {
   gameId: string;
   activePlayerId: string;
@@ -67,6 +74,7 @@ export interface GameState {
   playerTwo: PlayerState;
   dice: Die[];
   pendingChoice: PendingChoice | null;
+  log: GameLogEntry[];
   yourPlayerId: string | null;
   version: number;
 }

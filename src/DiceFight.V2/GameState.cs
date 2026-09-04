@@ -17,6 +17,28 @@ public sealed class GameState
 
     public string ActivePlayerId { get; set; } = string.Empty;
 
+    // A running account of what happened, oldest first, for the match
+    // log - mirrors v1's GameState.cs LogEvent exactly (same cap, same
+    // "the engine writes it, not the client" reasoning: an action that
+    // resolves several abilities is still one line, and both players see
+    // the same story).
+    private const int MaxLogEntries = 200;
+
+    public List<GameLogEntry> Log { get; } = [];
+
+    private int _logSeq;
+
+    /// <summary>Records one line. `playerId` null means the game itself did it.</summary>
+    public void LogEvent(string? playerId, string text)
+    {
+        Log.Add(new GameLogEntry(++_logSeq, playerId, text));
+        if (Log.Count > MaxLogEntries) Log.RemoveRange(0, Log.Count - MaxLogEntries);
+    }
+
+    /// <summary>The player's display name, for log text.</summary>
+    public string NameOf(string playerId) =>
+        playerId == PlayerOne.Id ? PlayerOne.Name : playerId == PlayerTwo.Id ? PlayerTwo.Name : playerId;
+
     // Spike C - the engine's position is a cursor into Config.Steps (one
     // flat ordered list), not a pair of enums. CurrentStep stays readable
     // and settable as a PHASE for the many callers that only care about
