@@ -393,3 +393,35 @@ above. See `CARD_INSPIRATION.md` for a sourcing pass through the DPS
 catalog: ~50 buildable cards sorted into the four energy types, each
 reskinned to an animal with a symbol idea, plus an Affiliation naming/tag
 menu.
+
+## Ported from /game: auto-skip a no-op combat (2026-09-04)
+
+Same fix as `/game`'s (DESIGN_LOG.md, 2026-09-03): `CombatEngine.
+DeclareAttackers`/`DeclareBlockers` unconditionally enter `AssignBlockers`/
+`ActionGlobalWindow` regardless of attacker/blocker count (lines 56/89) -
+on purpose, that window exists independent of whether anyone attacked -
+so a new effect in `DiceKingdomPage.tsx` auto-submits the empty answer
+client-side instead, via the same `runQuiet` pattern (swallows the
+expected 403 from whichever seat's browser doesn't hold the token this
+particular auto-skip needed).
+
+**A real bug found while wiring this up, not introduced by it, and NOT
+fixed here**: `AssignCombatDamage` requires the caller to resupply the
+exact block assignment (`assignment.BlockersOf(attacker.Id)` - see
+`CombatEngine.cs` line 180) because `CombatAssignment` is never stored
+server-side (`V2GameSession` only carries `PendingQueue`, no equivalent
+field - confirmed by reading the class, not guessed). The existing
+"Resolve Combat" button already read this from purely local React state
+(`blockAssignments`) populated only by the DEFENDER's own `BlockPanel`
+clicks - in a real two-browser game, the ATTACKER's browser is a
+separate React tree that never sees those clicks, so its own
+`blockAssignments` stays empty regardless of what was actually blocked.
+The auto-skip fix above only fires when that same local state is
+*already* empty, so it doesn't make this worse - but a real block, in a
+real two-browser game, would submit as if unblocked today, in both v1
+and v2. Same shape as the fix v1's own multiplayer stage 3 (the Range
+handshake) already solved once: hold the pending assignment in the API
+session layer, not client state, so the second party's request is what
+actually carries it forward. Flagged for the user rather than fixed in
+this pass - it touches both engines' API layers and deserves its own
+session, not a bolt-on to an already-long one.

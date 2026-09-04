@@ -202,6 +202,33 @@ export function DiceKingdomPage() {
     };
   }, [gameId, gameVersion]);
 
+  // v2's CombatEngine.DeclareAttackers unconditionally enters
+  // AssignBlockers regardless of attacker count, and DeclareBlockers
+  // unconditionally enters ActionGlobalWindow regardless of block count
+  // (CombatEngine.cs, lines 56/89 - same shape as /game's engine and the
+  // same reason: the Action/Global window is a real window independent
+  // of whether anyone attacked, not something to skip server-side).
+  // Real feedback from /game's identical gap: with nothing to block or
+  // split, still having to click through both steps for a combat that
+  // never happened reads as stuck, not deliberate. Auto-submits the
+  // empty answer instead - every rule still formally fires, it just
+  // doesn't wait on a click for an answer that was never going to be
+  // anything but "nothing."
+  const assignBlockersAttackerCount = game
+    ? game.dice.filter((d) => d.zone === "AttackZone" && d.controllerId === game.activePlayerId).length
+    : 0;
+  useEffect(() => {
+    if (!gameId || !game) return;
+    if (game.currentStepId === "assign-blockers" && assignBlockersAttackerCount === 0) {
+      runQuiet(() => api.declareBlockers(gameId, []));
+    } else if (
+      game.currentStepId === "action-global-window" &&
+      Object.values(blockAssignments).filter(Boolean).length === 0
+    ) {
+      runQuiet(() => api.assignCombatDamage(gameId, []));
+    }
+  }, [gameId, game?.version, game?.currentStepId, assignBlockersAttackerCount, blockAssignments]);
+
   function clearSelection() {
     setSelection(EMPTY_SELECTION);
   }
@@ -231,6 +258,26 @@ export function DiceKingdomPage() {
       throw e;
     } finally {
       setBusy(false);
+      busyRef.current = false;
+    }
+  }
+
+  // Same shape as run(), for an auto-fired action THIS browser may not
+  // actually hold the seat for - see the auto-skip effect below. Both
+  // seats' browsers evaluate the same "nothing to decide" condition, but
+  // only the one holding the required seat's token can legally submit;
+  // the other gets a real 403, which is expected and shouldn't show as
+  // an error banner (matching ../App.tsx's runQuiet).
+  async function runQuiet(fn: () => Promise<GameState>) {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    try {
+      const next = await fn();
+      setGame(next);
+    } catch {
+      // Expected on whichever browser doesn't hold the seat this
+      // particular auto-skip needed.
+    } finally {
       busyRef.current = false;
     }
   }
