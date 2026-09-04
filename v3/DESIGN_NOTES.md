@@ -443,3 +443,36 @@ this can't recur by construction (one component, not two copies of the
 same inline JSX to keep in sync).
 
 908 tests pass - CSS/component changes only.
+
+## Real structural layout fix: a rail, not just isolated CSS patches (2026-09-04)
+
+Direct pushback, and fair: the last several rounds ported /game's CSS
+fixes without ever adopting its actual STRUCTURE - Dice Kingdom stayed a
+single narrow column, "Draw" sitting in the `.controlcenter` strip
+between the two boards read as sitting in the middle of the board
+itself, and Champion sat inline ahead of each board's Field Zone, which
+(direct feedback) can't work anyway since Field Zone and the Attack Zone
+need to line up directly across from each other.
+
+Adopted /game's real two-column shape this time
+(`.app-layout.game-layout`'s main-column + side-column), not just its
+colors: new `.dk-layout` grid (`minmax(0,1fr) 280px`), `.dk-main`
+holding just the two boards' die zones, `.dk-rail` holding both
+`ChampBanner`s and everything that used to be `.controlcenter` -
+pendingChoice, BlockPanel, Resolve Combat, and the whole turn-control
+actionrow (Draw/Roll/Field/Purchase/Attack/End Turn). `ChampBanner`
+extracted as its own component (was inline JSX inside `renderBoard`,
+duplicated per board) and widened `.dicekingdom` to 1100px to give the
+rail room - was 940px, sized for a single narrow column.
+
+Verified with headless Chromium: `.dk-rail` holds both Champion banners
+and zero live inside either `.playerboard`, `Draw`/`Roll` render inside
+the rail rather than between the boards, zero console errors through
+Draw. 908 tests pass - CSS/component-position only.
+
+**Known follow-up, not done here**: the die zones themselves don't yet
+use the wider main column - `.dierow` still wraps at its old narrow
+width, leaving visible blank space to the right of each zone at 1100px.
+Same category of gap as the sideboard/ribbon rounds on `/game` - the
+structural piece (rail exists, holds the right things) is real and
+verified; using the reclaimed width well is a separate pass.

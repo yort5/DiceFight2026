@@ -91,6 +91,31 @@ function LifeBox({ player, you, activePlayerId }: { player: PlayerState; you: st
   );
 }
 
+// Was the first thing rendered inside each board, ahead of Field Zone -
+// direct feedback: it can't sit between Field Zone and the Attack Zone
+// (those need to line up directly across from each other), and more
+// generally the middle of the page is where the actual game happens, so
+// anything that can move to the side should. Now lives in the rail.
+function ChampBanner({ player, isActivePlayer, you }: { player: PlayerState; isActivePlayer: boolean; you: string }) {
+  if (!player.champion) return null;
+  const Icon = CHAMPION_ICONS[player.champion.id];
+  if (!Icon) return null;
+  const mine = player.id === you;
+  const accent = `var(--${player.champion.energySymbolId.toLowerCase()})`;
+  const turnClass = isActivePlayer ? (mine ? " turn-mine" : " turn-waiting") : "";
+  return (
+    <div className={`champbanner${turnClass}`} style={{ color: accent, ["--cc" as string]: accent }}>
+      <Icon />
+      <div>
+        <div className="cbname" style={{ color: "var(--text-h)" }}>
+          {mine ? "You" : "Opponent"} — {player.champion.name}
+        </div>
+        <div className="cbpassive">{player.champion.passiveText}</div>
+      </div>
+    </div>
+  );
+}
+
 function PipBadge({ type, amount }: { type: string; amount: number }) {
   const cssVar = type === "Wild" ? "var(--wild)" : `var(--${type.toLowerCase()})`;
   return (
@@ -413,9 +438,8 @@ export function DiceKingdomPage() {
     return false;
   }
 
-  function renderBoard(playerId: string, label: string) {
+  function renderBoard(playerId: string) {
     const player = playerId === game!.playerOne.id ? game!.playerOne : game!.playerTwo;
-    const ChampIcon = player.champion ? CHAMPION_ICONS[player.champion.id] : null;
     const accent = player.champion ? `var(--${player.champion.energySymbolId.toLowerCase()})` : undefined;
     const field = diceFor(playerId, "FieldZone");
     const attacking = diceFor(playerId, "AttackZone");
@@ -452,17 +476,6 @@ export function DiceKingdomPage() {
 
     return (
       <div key={playerId} className={`playerboard${turnClass}`}>
-        {player.champion && ChampIcon && (
-          <div className="champbanner" style={{ color: accent, ["--cc" as string]: accent }}>
-            <ChampIcon />
-            <div>
-              <div className="cbname" style={{ color: "var(--text-h)" }}>
-                {label} — {player.champion.name}
-              </div>
-              <div className="cbpassive">{player.champion.passiveText}</div>
-            </div>
-          </div>
-        )}
         <div className="zone">
           <h4>
             Field <span className="count">{field.length}</span>
@@ -638,15 +651,38 @@ export function DiceKingdomPage() {
         <LifeBox player={game.playerTwo} you={you} activePlayerId={game.activePlayerId} />
       </div>
 
-      {renderBoard(opponentId, "Opponent")}
+      {/* Two columns, same shape as /game's main-column + side-column
+          (App.css's .app-layout.game-layout): the boards (and the
+          Attack Zone each carries inline) are the main column, and
+          everything that isn't a die zone - Champion, whose-turn
+          controls, the contextual action for whatever's selected - is
+          the rail. Direct feedback: Champion used to sit between Field
+          Zone and the Attack Zone (they need to line up directly across
+          from each other), and the turn controls sat between the two
+          boards, right where the actual game is happening. Neither
+          belongs in the middle. */}
+      <div className="dk-layout">
+        <div className="dk-main">
+          {renderBoard(opponentId)}
+          {renderBoard(you)}
+        </div>
 
-      {/* The control center sits between the two boards, not above both of
-          them - it belongs to whichever side is acting, and that's not
-          always "you" (Assign Blockers is the other seat's decision). A
-          fixed spot here instead of jumping to the top of the page also
-          means it never appears far from the board you just clicked on. */}
-      <div className="controlcenter">
-        {game.pendingChoice && you === game.pendingChoice.controllerId ? (
+        <div className="dk-rail">
+          {/* Opponent first, then you - same order as the boards below,
+              so the rail reads top-to-bottom the same way the table does. */}
+          <ChampBanner
+            player={opponentId === game.playerOne.id ? game.playerOne : game.playerTwo}
+            isActivePlayer={game.activePlayerId === opponentId}
+            you={you}
+          />
+          <ChampBanner
+            player={you === game.playerOne.id ? game.playerOne : game.playerTwo}
+            isActivePlayer={game.activePlayerId === you}
+            you={you}
+          />
+
+          <div className="controlcenter">
+          {game.pendingChoice && you === game.pendingChoice.controllerId ? (
           <div className="panel">
             <p>
               <b>{game.pendingChoice.description}</b>
@@ -764,9 +800,9 @@ export function DiceKingdomPage() {
             )}
           </div>
         )}
+          </div>
+        </div>
       </div>
-
-      {renderBoard(you, "You")}
     </div>
   );
 }

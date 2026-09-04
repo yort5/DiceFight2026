@@ -16,9 +16,39 @@
   --tile-bg: var(--bg);
   --shadow: 0 1px 2px rgba(20, 15, 8, 0.06), 0 6px 16px -8px rgba(20, 15, 8, 0.18);
   --display: "Anton", "Arial Narrow", var(--heading);
-  max-width: 940px;
+  max-width: 1100px;
   margin: 0 auto;
   padding: 24px 16px 64px;
+}
+
+/* Two columns, same shape as /game's main-column + side-column
+   (App.css's .app-layout.game-layout) - the boards are the main column,
+   Champion and the turn/selection controls are the rail. See the JSX
+   comment at the callsite for why those moved out of the middle. */
+.dicekingdom .dk-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 18px;
+  align-items: start;
+}
+.dicekingdom .dk-main {
+  min-width: 0;
+}
+.dicekingdom .dk-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  position: sticky;
+  top: 16px;
+}
+@media (max-width: 720px) {
+  .dicekingdom .dk-layout {
+    grid-template-columns: 1fr;
+  }
+  .dicekingdom .dk-rail {
+    position: static;
+  }
 }
 @media (prefers-color-scheme: dark) {
   .dicekingdom {
@@ -332,11 +362,11 @@
    (see DiceKingdomPage.tsx's comment above .controlcenter). Dashed rules
    above and below read as "neither player's zone," matching how the
    combat lane sits between the two mats on /game. */
+/* Lives in the rail now, under the two Champion banners - no longer a
+   divider "between" two boards, so no more top/bottom dashed rule, just
+   breathing room from what's above it. */
 .dicekingdom .controlcenter {
-  border-top: 1px dashed var(--border);
-  border-bottom: 1px dashed var(--border);
-  padding: 14px 0;
-  margin: 18px 0;
+  margin-top: 12px;
   min-height: 20px;
 }
 .dicekingdom .controlcenter:empty {
