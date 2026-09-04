@@ -422,7 +422,7 @@
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: var(--text-dim);
+  color: var(--text-h);
 }
 .dicekingdom .life-value {
   font: 400 30px/1 var(--display);
@@ -452,7 +452,7 @@
   font: 700 10px var(--sans);
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: var(--text-dim);
+  color: var(--text-h);
 }
 .dicekingdom .championbox-body {
   display: flex;
@@ -668,7 +668,7 @@
 .dicekingdom .lane-label-mid {
   grid-row: 2;
   align-self: end;
-  color: var(--text-dim);
+  color: var(--text-h);
 }
 .dicekingdom .lane-label-near {
   grid-row: 3;
@@ -701,7 +701,7 @@
   font: 700 9px var(--sans);
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: var(--text-dim);
+  color: var(--text-h);
 }
 .dicekingdom .lane-connector {
   position: relative;
@@ -846,7 +846,7 @@
   font: 700 11px var(--sans);
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--text-dim);
+  color: var(--text-h);
   margin: 0 0 5px;
   display: flex;
   gap: 6px;
@@ -873,7 +873,7 @@
   font: 700 10px var(--sans);
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: var(--text-dim);
+  color: var(--text-h);
   margin: 0 0 6px;
 }
 .dicekingdom .roster-row {
@@ -982,7 +982,7 @@
 }
 .dicekingdom .dietile .lbl {
   font-size: 9px;
-  color: var(--text-dim);
+  color: var(--text);
   text-transform: uppercase;
   letter-spacing: 0.03em;
   margin-top: 1px;
@@ -1089,7 +1089,7 @@
   font: 700 11px var(--sans);
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  color: var(--text-dim);
+  color: var(--text-h);
   margin: 0 0 8px;
 }
 .dicekingdom .match-log-list {
@@ -1255,7 +1255,7 @@
   font-size: 9.5px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--text-dim);
+  color: var(--text-h);
 }
 .dicekingdom .bag-popover .dierow {
   gap: 6px;

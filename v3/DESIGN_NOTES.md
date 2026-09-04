@@ -996,3 +996,26 @@ Verified with headless Chromium (dark, 1700px viewport, mid-roll so
 real die faces are showing): zone headers and secondary labels now
 read as legible solid grey-blue rather than faded, `tsc -b`/`vite
 build`/`oxlint` all clean, full click-through zero console errors.
+
+**Same-day correction**: the `--text-dim` pass above overcorrected.
+User sent an actual side-by-side (reference vs. deployed) and named the
+exact tell: the sideboard's "Basic Actions"/"Global Abilities" headers
+(promoted to full `--text-h` in the very first token rework) read as
+bright and alive, while every OTHER section title - `.zone h4` (Field,
+Bag, Used Pile, ...), `.roster-head`, `.life-label`, `.championbox-
+role`, `.rail-panel h3` (Log), `.lane-label-mid`/`.lane-slot-hint` - had
+just been moved onto the new `--text-dim` tier and read as "inactive"
+by contrast. Checking the actual reference confirms it: zone/panel
+TITLES are uniformly bright in the source design, same weight as
+headers - only genuine fine print below a title (costs, counts, hints,
+stat lines) is dimmer. `--text-dim` was the right tool but had been
+applied to the wrong tier of text; promoted the 9 title-level cases
+back to `--text-h`, left the ~12 true fine-print cases (rc-cost/rc-
+left, zone h4's count, dietile counts, log-seq, bag-hint, selected-die-
+stats, lane-die-stats, sideboard-sub, now-eyebrow, zone-note) on
+`--text-dim`.
+
+Screenshotted after the fix (dark, mid-roll): every section title on
+the board now reads at the same brightness as the sideboard's, matching
+the side-by-side the user sent. `tsc -b`/`vite build`/`oxlint` clean,
+full click-through zero console errors.
