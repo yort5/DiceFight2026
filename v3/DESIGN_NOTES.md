@@ -965,3 +965,34 @@ the CSS inside the suspect component again - two straight rounds of
 real, verified color/spacing fixes couldn't have worked, because the
 box they were all happening inside was never the size the CSS assumed
 it was.
+
+## Match-table redesign, round 2: the "dull" label text (2026-09-05)
+
+With the width bug fixed, user confirmed "feels much more horizontal
+than vertical" but "still looks dull." Widened the search past the
+panel/border/background tokens (already bumped twice) to how secondary
+text was being dimmed: 37 separate `opacity: 0.4-0.85` declarations
+across the file, on every zone header, roster cost, life label,
+champion role tag, log line, etc. Opacity doesn't just lower contrast,
+it visually blends the text WITH the background behind it - on a dark,
+fairly monochrome panel that reads as a hazy, washed-out film over
+everything, on nearly every label on the board at once. That's
+probably what "dull" was actually pointing at more than any single
+color value.
+
+Added a third text tier, `--text-dim` (solid color, not translucent -
+`#9198b0` dark / `#6e7488` light, between `--text` and the panel
+background), and converted 21 of the 37 to use it instead of opacity:
+every zone box header (`.zone h4` - the single highest-traffic one,
+appears on every zone on both mats), roster cost/count, life/champion-
+role labels, the Now panel's eyebrow, rail panel headers, log line
+numbers, bag popover text, lane labels/hints, and the selected-die
+stat line. Left opacity alone where it's a genuine state fade rather
+than permanent secondary emphasis: disabled buttons, past/upcoming
+step-ribbon chips, the unblocked-attacker pulse animation, and the die
+face's card-art texture placeholder.
+
+Verified with headless Chromium (dark, 1700px viewport, mid-roll so
+real die faces are showing): zone headers and secondary labels now
+read as legible solid grey-blue rather than faded, `tsc -b`/`vite
+build`/`oxlint` all clean, full click-through zero console errors.
