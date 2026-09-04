@@ -32,7 +32,7 @@ public class V2GamesControllerTests
         // Deck-building basics: every Character copy sits Unpurchased
         // until bought (v1's TeamSetup shape, unchanged for v3) - no free
         // starting copies, only the Tardigrades start in Bag.
-        Assert.Equal(8, state.DiceIn("teamA", DiceFight.V2.Model.Zone.Unpurchased).Count()); // 2 Claw Characters x DieLimit 4
+        Assert.Equal(32, state.DiceIn("teamA", DiceFight.V2.Model.Zone.Unpurchased).Count()); // 8 Claw Characters x DieLimit 4
         Assert.Equal(8, state.DiceIn("teamA", DiceFight.V2.Model.Zone.Bag).Count()); // Claw Tardigrades
         Assert.All(state.DiceIn("teamA", DiceFight.V2.Model.Zone.Unpurchased),
             d => Assert.StartsWith("IC-CLAW-", d.CardId));

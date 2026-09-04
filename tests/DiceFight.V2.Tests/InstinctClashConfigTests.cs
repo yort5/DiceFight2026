@@ -27,10 +27,10 @@ public class InstinctClashConfigTests
     }
 
     [Fact]
-    public void Every_Energy_Type_Has_Exactly_Two_Characters()
+    public void Every_Energy_Type_Has_Exactly_Eight_Characters()
     {
         foreach (var (_, ids) in InstinctClashConfig.CharactersByEnergyType)
-            Assert.Equal(2, ids.Count);
+            Assert.Equal(8, ids.Count);
     }
 
     [Fact]
@@ -47,8 +47,8 @@ public class InstinctClashConfigTests
         var state = GameSetup.NewGame(config, catalog, playerOne, playerTwo);
         var queue = new AbilityQueue();
 
-        // --- Setup: 2 Characters x DieLimit 4 = 8 Unpurchased, 8 Tardigrades in the Bag ---
-        Assert.Equal(8, state.DiceIn("p1", Zone.Unpurchased).Count());
+        // --- Setup: 8 Characters x DieLimit 4 = 32 Unpurchased, 8 Tardigrades in the Bag ---
+        Assert.Equal(32, state.DiceIn("p1", Zone.Unpurchased).Count());
         Assert.Equal(8, state.DiceIn("p1", Zone.Bag).Count());
         Assert.Equal(20, playerOne.Life);
 

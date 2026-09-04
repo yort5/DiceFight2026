@@ -1297,3 +1297,36 @@ Verified with headless Chromium: portrait fills the box edge-to-edge,
 text sits in a clean left column, checked in both the Champion box and
 the pre-game picker. `tsc -b`/`vite build`/`oxlint` clean, full
 click-through zero console errors.
+
+## Roster expansion finished: 8 Characters per energy type (2026-09-07)
+
+Picked back up where the Claw-only pass paused. Wrote the remaining 18
+Characters (6 each for Shell/Wing/Eye - see this file's own two entries
+above for exactly which CARD_INSPIRATION.md picks and which template
+each maps to; Shell needed one original pick, Box Turtle, since the
+source list only had 5 usable non-Musk-Ox/Hippo entries), then wired
+all 24 new + the original 8 in:
+
+- `Catalog` - all 32 `CardDef`s.
+- `CharactersByEnergyType` - 8 ids per energy type (was 2).
+- `Config.Rules.MaxTeamCards` 2 → 8, `MaxTeamDice` 8 → 32 (8 Characters
+  x DieLimit 4) - both have to move together or `GameSetup`/
+  `V2GamesController.BuildPlayer` would silently seed more Unpurchased
+  dice than the rules configuration claims a team can hold.
+
+Test updates: `Every_Energy_Type_Has_Exactly_Two_Characters` →
+`_Eight_`, and the `Unpurchased`-count assertions in both
+`InstinctClashConfigTests` and `V2GamesControllerTests` (8 → 32, since
+8 Characters x DieLimit 4 replaces 2 x DieLimit 4). Full solution
+suite: 908/908 passing, including `Config_And_Catalog_Are_Structurally_
+Valid`, which schema-validates every new card's ability/target-filter
+wiring the same way it already covered the original 8.
+
+No frontend changes needed or made - confirmed live: `DiceKingdomPage.
+tsx`'s roster strip already renders however many Unpurchased cards
+exist (`unpurchasedByCard`, built from real zone data, never hardcoded
+to a count), so both rosters simply grew from 2 chips to 8 the moment
+the backend started seeding them. Verified with headless Chromium: 16
+`.roster-chip` elements on the board (8 per player) after Start Match,
+all names/costs/counts correct, chips wrap cleanly within the mat
+width, zero console errors, `tsc -b`/`vite build`/`oxlint` clean.
