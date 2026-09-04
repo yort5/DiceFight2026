@@ -263,9 +263,11 @@
   border-color: var(--sel, var(--text-h));
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--sel, var(--text-h)) 25%, transparent), var(--shadow);
 }
-.dicekingdom .champ-opt svg {
+.dicekingdom .champ-opt svg,
+.dicekingdom .champ-opt img {
   width: 42px;
   height: 42px;
+  border-radius: 8px;
 }
 .dicekingdom .champ-opt .cname {
   font: 400 15px var(--display);
@@ -513,16 +515,34 @@
   letter-spacing: 0.1em;
   color: var(--text-h);
 }
+/* Text on the left, a big portrait filling the rest of the box on the
+   right - direct feedback (2026-09-06): the old small icon-then-text
+   row left most of the box empty. Text no longer competes with the
+   icon for space (it gets its own column, vertically centered), and
+   the portrait scales to fill whatever's left rather than sitting at a
+   fixed small size - same treatment for every Champion (not just the
+   one with a real photo), so a plain SVG glyph just reads as a big
+   simple icon instead of a special case. */
 .dicekingdom .championbox-body {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 10px;
   margin-top: 4px;
+  min-height: 72px;
 }
-.dicekingdom .championbox-body svg {
-  width: 30px;
-  height: 30px;
+.dicekingdom .championbox-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.dicekingdom .championbox-body svg,
+.dicekingdom .championbox-body img {
+  width: 72px;
+  height: 72px;
   flex: none;
+  border-radius: 10px;
 }
 .dicekingdom .championbox-name {
   font: 400 21px/1 var(--display);

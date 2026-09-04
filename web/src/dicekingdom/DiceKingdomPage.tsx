@@ -126,11 +126,11 @@ function ChampionBox({ player, isActivePlayer, you }: { player: PlayerState; isA
     <div className={`championbox${turnClass}`} style={{ ["--cc" as string]: accent }}>
       <div className="championbox-role">{mine ? "Your Champion" : "Opponent Champion"}</div>
       <div className="championbox-body">
-        {Icon && <Icon />}
-        <div>
+        <div className="championbox-text">
           <div className="championbox-name">{player.champion.name}</div>
           <div className="championbox-note">{player.champion.passiveText}</div>
         </div>
+        {Icon && <Icon size={72} />}
       </div>
     </div>
   );

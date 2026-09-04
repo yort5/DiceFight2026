@@ -1270,3 +1270,30 @@ per-type template mapping), wiring all 24 into `Catalog`/
 `Unpurchased`-count assertions (8 → 32) in `InstinctClashConfigTests`/
 `V2GamesControllerTests`. No frontend changes expected to be needed -
 the roster strip already renders however many Unpurchased cards exist.
+
+## Champion box: bigger portrait, text moved left (2026-09-06)
+
+Direct follow-up on the wolf art: it rendered small (24px, `WolfIcon`'s
+own default) with a lot of dead space in the box next to it - two real
+sizing bugs, not just "make it bigger". `.championbox-body svg` sized
+every OTHER Champion's icon via CSS (30px), but that selector never
+matched `WolfIcon`'s `<img>` tag at all, so it silently fell back to
+its own unstyled default; same gap in `.champ-opt svg` on the pre-game
+picker. Fixed by adding `img` to both selectors and bumping both to a
+real portrait size (72px in the Champion box, 42px stays for the
+picker) - same fix, same treatment for every Champion (not a Wolf-only
+special case), so a plain SVG glyph now just reads as a bigger simple
+icon too.
+
+Restructured `.championbox-body` from icon-then-text to a text column
+(flex: 1, vertically centered) + the portrait (flex: none, fills the
+box's full height) - JSX reordered to match (text div first, `<Icon
+size={72} />` last) so the portrait naturally fills whatever space the
+(now-compact) text column doesn't need, matching the box's designed
+height instead of floating at a small fixed size inside a lot of empty
+padding.
+
+Verified with headless Chromium: portrait fills the box edge-to-edge,
+text sits in a clean left column, checked in both the Champion box and
+the pre-game picker. `tsc -b`/`vite build`/`oxlint` clean, full
+click-through zero console errors.
