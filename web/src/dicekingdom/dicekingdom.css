@@ -3,22 +3,44 @@
    utilitarian, v3 wants to look like an actual card game). Display type
    is Anton (bold, condensed, graphic - reads "clash" rather than
    "spreadsheet") over Work Sans body text; both loaded in index.html.
-   Layered on the site's --border/--code-bg tokens for light/dark parity,
-   with the four energy hues as the real accent system instead of a
-   single generic brand color. */
+   The four energy hues are the real accent system instead of a single
+   generic brand color.
+
+   Self-contained light/dark palette (2026-09-05, replacing the previous
+   "layered on the site's --border/--code-bg/--text tokens" approach) -
+   direct feedback on the deployed page: reusing those muted, docs-tuned
+   tokens read as "dull... like I have my brightness turned way down"
+   next to the reference mockup's crisp, high-contrast table. Panels now
+   sit meaningfully lighter than the page background instead of ~3%
+   off it, borders and text are both bumped well past the site's own
+   values, and the page gets its own background instead of showing
+   whatever the host page happened to have - all scoped under
+   .dicekingdom so the rest of the site is untouched. */
 .dicekingdom {
   --claw: #b8451f;
   --shell: #2f6b52;
   --wing: #2f6690;
   --eye: #6a4189;
   --wild: #7d7565;
-  --panel-bg: var(--code-bg);
-  --tile-bg: var(--bg);
+  --dk-page-a: #e9ecf2;
+  --dk-page-b: #d6dbe4;
+  --panel-bg: #ffffff;
+  --panel-bg-strong: #f5f7fb;
+  --tile-bg: #ffffff;
+  --border: #c3c8d4;
+  --text: #454b5c;
+  --text-h: #0f1117;
+  /* Text color for a solid, fully-opaque fill (buttons, the current step
+     chip) - light in dark mode's near-white fills need dark text and
+     vice versa, so this flips per theme rather than reusing the (now
+     removed) page-background token those fills used to borrow. */
+  --on-fill: #ffffff;
   --shadow: 0 1px 2px rgba(20, 15, 8, 0.06), 0 6px 16px -8px rgba(20, 15, 8, 0.18);
   --display: "Anton", "Arial Narrow", var(--heading);
   max-width: 1100px;
   margin: 0 auto;
   padding: 24px 16px 64px;
+  background: radial-gradient(120% 90% at 50% 0%, var(--dk-page-a) 0%, var(--dk-page-b) 100%);
   /* #root in index.css sets text-align: center for the un-styled Vite
      template state; every other page resets it via .app's own
      text-align: left, but this page renders standalone (no .app
@@ -119,21 +141,39 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .dicekingdom {
-    --claw: #e07a4a;
-    --shell: #5fa085;
-    --wing: #6fabd9;
-    --eye: #b085d1;
-    --wild: #a79c89;
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 20px -10px rgba(0, 0, 0, 0.55);
+    --claw: #e78a5a;
+    --shell: #6cb494;
+    --wing: #7cb8e6;
+    --eye: #c093dd;
+    --wild: #b3a892;
+    --dk-page-a: #2b3143;
+    --dk-page-b: #14151c;
+    --panel-bg: #2e3548;
+    --panel-bg-strong: #3a4258;
+    --tile-bg: #20232e;
+    --border: #5c6484;
+    --text: #c7cce0;
+    --text-h: #ffffff;
+    --on-fill: #14151c;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 10px 24px -10px rgba(0, 0, 0, 0.75);
   }
 }
 :root[data-theme="dark"] .dicekingdom {
-  --claw: #e07a4a;
-  --shell: #5fa085;
-  --wing: #6fabd9;
-  --eye: #b085d1;
-  --wild: #a79c89;
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 20px -10px rgba(0, 0, 0, 0.55);
+  --claw: #e78a5a;
+  --shell: #6cb494;
+  --wing: #7cb8e6;
+  --eye: #c093dd;
+  --wild: #b3a892;
+  --dk-page-a: #2b3143;
+  --dk-page-b: #14151c;
+  --panel-bg: #2e3548;
+  --panel-bg-strong: #3a4258;
+  --tile-bg: #20232e;
+  --border: #5c6484;
+  --text: #c7cce0;
+  --text-h: #ffffff;
+  --on-fill: #14151c;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 10px 24px -10px rgba(0, 0, 0, 0.75);
 }
 
 .dicekingdom .eyebrow {
@@ -198,7 +238,7 @@
 .dicekingdom button.btn {
   font: 600 13.5px var(--sans);
   background: var(--text-h);
-  color: var(--bg);
+  color: var(--on-fill);
   border: none;
   border-radius: 10px;
   padding: 11px 20px;
@@ -273,7 +313,7 @@
 .dicekingdom .ribbon-chip.current {
   opacity: 1;
   background: var(--cc, var(--text-h));
-  color: var(--bg);
+  color: var(--on-fill);
   border-color: transparent;
 }
 .dicekingdom .ribbon-chip.past {
@@ -433,21 +473,29 @@
    Pool spans the two middle rows between them because it's the tray and
    wants the height, Field Zone spans the full width against whichever
    edge is closest to the shared Attack Zone between the two mats. */
+/* Real bug, direct feedback (2026-09-05): the reference's own grid has a
+   "." (empty, v1's unused Intimidated slot) in the row below Prep Area,
+   which read as "a big empty space" and "Prep Area doesn't fill up the
+   whole area" - Prep sat only one row tall next to Reserve Pool's
+   two-row span, leaving a dead cell beneath it. v3 has no Intimidated
+   zone to put there, so Prep now spans the same two rows Reserve does
+   instead of leaving that cell empty - the two boxes read as one even
+   pair, and there's no orphan gap. */
 .dicekingdom .mat {
   display: grid;
   grid-template-columns: 196px minmax(0, 1fr) 196px;
   grid-template-areas:
     "field     field   field"
     "used      reserve prep"
-    "outofplay reserve ."
+    "outofplay reserve prep"
     "bag       drawn   carried";
-  gap: 8px;
-  margin-bottom: 14px;
+  gap: 6px;
+  margin-bottom: 10px;
 }
 .dicekingdom .mat.mirrored {
   grid-template-areas:
     "bag       drawn   carried"
-    "outofplay reserve ."
+    "outofplay reserve prep"
     "used      reserve prep"
     "field     field   field";
 }
@@ -502,42 +550,52 @@
    faction colors here) rather than reused verbatim. */
 .dicekingdom .mat-slot .zone {
   border-radius: 9px;
-  padding: 7px 10px 9px;
+  padding: 6px 9px 7px;
   border: 1px solid transparent;
 }
+/* Tint alphas bumped from the original 0.06-0.12 range to 0.14-0.22 -
+   direct feedback: at the old values these read as barely-there smudges
+   next to the reference's clearly color-coded zones, part of the same
+   "brightness turned way down" complaint the token rework above
+   addresses. */
 .dicekingdom .zone-field {
-  background: oklch(0.55 0.09 145 / 0.1);
-  border-color: oklch(0.55 0.09 145 / 0.4);
+  background: oklch(0.55 0.09 145 / 0.22);
+  border-color: oklch(0.6 0.1 145 / 0.55);
 }
 .dicekingdom .zone-reserve {
-  background: oklch(0.4 0.02 75 / 0.12);
-  border-color: oklch(0.55 0.05 75 / 0.4);
-  box-shadow: inset 0 3px 10px oklch(0.2 0.02 75 / 0.12);
+  background: oklch(0.4 0.02 75 / 0.26);
+  border-color: oklch(0.6 0.08 75 / 0.55);
+  box-shadow: inset 0 3px 10px oklch(0.2 0.02 75 / 0.2);
+  /* The dice tray - taller than its neighbors and the only zone that
+     shakes on a roll (see .rolling below). Was missing entirely before
+     this pass, which is part of why Prep Area (right beside it) read as
+     shorter than it should. */
+  min-height: 82px;
 }
 .dicekingdom .zone-used,
 .dicekingdom .zone-bag {
-  background: oklch(0.5 0.015 260 / 0.1);
-  border-color: oklch(0.55 0.02 260 / 0.4);
+  background: oklch(0.5 0.015 260 / 0.2);
+  border-color: oklch(0.6 0.02 260 / 0.5);
 }
 .dicekingdom .zone-outofplay {
-  background: oklch(0.5 0.03 300 / 0.06);
-  border: 1px dashed oklch(0.55 0.04 300 / 0.5);
+  background: oklch(0.5 0.03 300 / 0.15);
+  border: 1px dashed oklch(0.6 0.06 300 / 0.6);
 }
 .dicekingdom .zone-note {
   display: block;
   font-size: 8.5px;
   text-transform: none;
   letter-spacing: normal;
-  opacity: 0.55;
+  opacity: 0.65;
   margin-top: -4px;
 }
 .dicekingdom .zone-prep {
-  background: oklch(0.55 0.06 70 / 0.1);
-  border-color: oklch(0.55 0.07 70 / 0.4);
+  background: oklch(0.55 0.06 70 / 0.22);
+  border-color: oklch(0.6 0.09 70 / 0.55);
 }
 .dicekingdom .zone-staging {
-  background: oklch(0.5 0.04 300 / 0.08);
-  border-color: oklch(0.55 0.05 300 / 0.35);
+  background: oklch(0.5 0.04 300 / 0.2);
+  border-color: oklch(0.6 0.06 300 / 0.5);
 }
 
 /* ---- Combat lane - the shared strip where the two mats meet, ported
@@ -772,7 +830,7 @@
   text-transform: uppercase;
   letter-spacing: 0.08em;
   opacity: 0.65;
-  margin: 0 0 8px;
+  margin: 0 0 5px;
   display: flex;
   gap: 6px;
   align-items: center;
@@ -810,9 +868,9 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
-  width: 82px;
-  padding: 8px 6px 7px;
+  gap: 2px;
+  width: 72px;
+  padding: 6px 5px 6px;
   border-radius: 10px;
   border: 1.5px solid var(--border);
   border-top: 3px solid var(--cc, var(--border));
@@ -825,8 +883,8 @@
   transition: transform 0.1s ease;
 }
 .dicekingdom .roster-chip svg {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   flex: none;
 }
 .dicekingdom .roster-chip .rc-name {
@@ -850,7 +908,7 @@
 }
 .dicekingdom .roster-chip.picked {
   border-color: var(--text-h);
-  background: var(--code-bg);
+  background: var(--panel-bg-strong);
   transform: translateY(-2px);
 }
 .dicekingdom .roster-chip:disabled {
@@ -859,12 +917,12 @@
 
 .dicekingdom .dietile {
   position: relative;
-  width: 94px;
+  width: 78px;
   border: 1.5px solid var(--border);
   border-top: 4px solid var(--cc, var(--border));
-  border-radius: 12px;
+  border-radius: 10px;
   background: var(--tile-bg);
-  padding: 8px 6px 7px;
+  padding: 6px 5px 6px;
   text-align: center;
   color: inherit;
   font: inherit;
@@ -877,7 +935,7 @@
   top: -8px;
   right: -8px;
   background: var(--text-h);
-  color: var(--bg);
+  color: var(--on-fill);
   font: 700 10.5px var(--sans);
   border-radius: 999px;
   padding: 2px 6px;
@@ -897,12 +955,12 @@
   transform: translateY(-2px);
 }
 .dicekingdom .dietile svg {
-  width: 34px;
-  height: 34px;
-  margin: 0 auto 3px;
+  width: 26px;
+  height: 26px;
+  margin: 0 auto 2px;
 }
 .dicekingdom .dietile .stat {
-  font: 400 22px/1 var(--display);
+  font: 400 18px/1 var(--display);
   font-variant-numeric: tabular-nums;
 }
 .dicekingdom .dietile .lbl {
@@ -947,7 +1005,7 @@
   padding: 6px 12px;
   font-size: 12.5px;
   cursor: pointer;
-  background: var(--bg);
+  background: var(--tile-bg);
   color: inherit;
   font-family: inherit;
 }

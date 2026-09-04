@@ -871,3 +871,43 @@ the roll animation actually tumbles mid-flight, the Bag popover opens
 with real grouped contents, the Selected Die panel and Energy-in-pool
 chips populate from real data, and the Champion-box/divider alignment
 holds without any measured offset.
+
+## Match-table redesign, round 2 fixes (2026-09-05)
+
+Direct feedback on the deployed round-2 page, three issues:
+
+**"Prep Area doesn't fill up the whole area" / "a big empty space" -
+a real bug.** `.mat`'s grid-template-areas left a `.` (empty) cell below
+Prep Area - v1's leftover Intimidated slot, which v3 has no equivalent
+for - so Prep Area sat only one row tall next to Reserve Pool's two-row
+span, with a dead gap underneath it. Fixed by having `prep` span the
+same two rows `reserve` does; the two boxes now read as one even pair
+instead of Prep looking short with unexplained empty space below.
+
+**"Dull... like I have my brightness turned way down" - a real design
+gap, not a bug.** The previous round layered Dice Kingdom's panels on
+the site's shared `--bg`/`--code-bg`/`--border`/`--text` tokens (docs-
+tuned, low-contrast: panel background sat ~3% lighter than the page
+background in dark mode). Replaced with a fully self-contained palette
+scoped to `.dicekingdom` - panels now sit meaningfully lighter than the
+page (which gets its own radial-gradient background instead of showing
+whatever the host page had), borders and text both bumped well past the
+site's values, and zone tint alphas raised from the original 0.06-0.2
+range to 0.15-0.26 so each zone reads as a real color, not a smudge.
+Left four stray `var(--bg)`/`var(--code-bg)` references broken by the
+token removal (`.btn`, `.ribbon-chip.current`, `.roster-chip.picked`,
+`.dietile .chip-count`, `.chip`) - added a themed `--on-fill` token for
+the "text on a solid accent fill" cases and pointed the rest at
+`--panel-bg-strong`/`--tile-bg`.
+
+**"Everything stretched vertically... the box around the dice seems a
+bit too big"** - `.dietile` (94px) and its 40px `DieCube` were sized
+close to the reference's own dice but with more padding around them;
+trimmed to 78px/34px (roster chips 82px→72px, icons down to match), and
+tightened `.mat`'s gap (8px→6px) and zone header margins to read more
+like the reference's compact 1420px-wide table.
+
+Verified with headless Chromium in both dark and light (color-scheme
+emulated both ways, not just the toggle button): Prep Area's box now
+measures the same height as Reserve Pool's, zero console errors on a
+full click-through, `tsc -b`/`vite build` clean.

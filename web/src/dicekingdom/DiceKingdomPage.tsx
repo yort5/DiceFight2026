@@ -224,7 +224,7 @@ function DieTile({
           {/* The same 3D cube /game's board uses (../DieCube.tsx), not a
               flat stat badge - a rolled die is a physical object showing
               a real face, not text about one. */}
-          <DieCube {...facesFor(die, cardsById)} size={40} mine={mine ?? true} spin={spin} turnOffset={turnOffset} />
+          <DieCube {...facesFor(die, cardsById)} size={34} mine={mine ?? true} spin={spin} turnOffset={turnOffset} />
           {die.effectiveAttack !== null && Avatar && <Avatar size={16} />}
           <div className="lbl">
             {labelOverride ?? (die.effectiveAttack === null ? "Surge" : `L${die.level}${die.isTardigrade && !die.energySymbolId ? " · free" : ""}`)}
@@ -724,7 +724,7 @@ export function DiceKingdomPage() {
                 style={accent ? ({ ["--cc" as string]: accent } as const) : undefined}
                 onClick={() => toggleDie(dieId)}
               >
-                {Avatar && <Avatar size={22} />}
+                {Avatar && <Avatar size={18} />}
                 <span className="rc-name">{card?.name ?? cardId}</span>
                 <span className="rc-cost">
                   {card?.purchaseCost} {card?.energyTypes[0]}
