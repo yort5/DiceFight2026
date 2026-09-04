@@ -10956,3 +10956,27 @@ running long.
   wants the room back.
 
 908 tests pass - both changes are markup-only.
+
+## Whose-turn color cue: green vs amber-grey, never red (2026-09-03)
+
+Direct ask: make it visually obvious whose turn it is, beyond the text -
+green when it's your move, amber-grey when you're waiting (explicitly
+not red - that reads as "something's wrong," not "waiting your turn").
+Three places already existed to carry this and none of them
+distinguished mine-active from theirs-active: `.board.active` used one
+flat amber regardless of which side, `.life-panel.active` likewise, and
+the "Active: teamX" text (moved into the rail two entries back) had no
+color logic at all. All three now key off the same two hues
+(`oklch(0.62 0.15 145)` green / `oklch(0.62 0.06 75)` amber-grey):
+`.board.active:not(.mirrored)` vs `.board.active.mirrored` for the mat
+glow (mine is never mirrored and vice versa, so that's enough to tell
+them apart), `.life-panel.active.yours` vs `.life-panel.active.theirs`,
+and a new `.whose-turn.mine`/`.whose-turn.waiting` pair for the text -
+all driven by the same `waiting = activePlayerId !== nearPlayerId`
+`TurnRail.tsx` already computed for its "Waiting for X to move" copy.
+
+Verified with two real browser contexts on one game: P1 (active) shows
+green text + green life panel + green near-mat glow; P2 (waiting) shows
+the same three cues in amber-grey, including on the FAR (mirrored) mat -
+so "whose turn" reads the same way whichever side is looking. 908 tests
+pass - CSS/component-position only.

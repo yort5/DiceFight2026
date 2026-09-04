@@ -485,6 +485,19 @@
   opacity: 0.8;
 }
 
+/* Green = your move; amber-grey (never red - that reads as "something's
+   wrong", not "waiting your turn") = theirs. Same two hues drive this
+   text, the life panel highlight, and the mat glow below, so all three
+   agree at a glance. */
+.whose-turn.mine {
+  color: oklch(0.5 0.13 145);
+  font-weight: 600;
+}
+
+.whose-turn.waiting {
+  color: oklch(0.55 0.04 75);
+}
+
 .life-panels {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -500,8 +513,14 @@
   border: 1px solid;
 }
 
-.life-panel.active {
-  box-shadow: 0 0 0 2px oklch(0.7 0.11 70 / 0.5);
+.life-panel.active.yours {
+  box-shadow: 0 0 0 2px oklch(0.62 0.15 145 / 0.55);
+  border-color: oklch(0.62 0.15 145 / 0.7);
+}
+
+.life-panel.active.theirs {
+  box-shadow: 0 0 0 2px oklch(0.62 0.06 75 / 0.5);
+  border-color: oklch(0.62 0.06 75 / 0.7);
 }
 
 .life-panel.theirs {
@@ -816,11 +835,20 @@
   border: 1px solid oklch(0.4 0.025 155 / 0.5);
 }
 
-/* The active player's mat is lifted, not recoloured - the two team hues
-   (70 yours, 250 theirs) are already doing the "whose is this" job. */
-.board.active {
-  border-color: oklch(0.7 0.11 70 / 0.7);
-  box-shadow: 0 0 0 1px oklch(0.7 0.11 70 / 0.35);
+/* The active mat glows green (your move) or amber-grey (theirs, you're
+   waiting) - same two hues as .whose-turn/.life-panel.active, not the
+   team hues (70/250) used for "whose is this" elsewhere on the mats, so
+   "whose turn" reads as its own signal rather than blending into the
+   team-color system. `mine` is never mirrored and `mirrored` is never
+   mine, so :not(.mirrored) is enough to tell them apart. */
+.board.active:not(.mirrored) {
+  border-color: oklch(0.62 0.15 145 / 0.75);
+  box-shadow: 0 0 0 1px oklch(0.62 0.15 145 / 0.4);
+}
+
+.board.active.mirrored {
+  border-color: oklch(0.62 0.06 75 / 0.75);
+  box-shadow: 0 0 0 1px oklch(0.62 0.06 75 / 0.4);
 }
 
 .board-header {

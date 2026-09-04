@@ -81,7 +81,11 @@ export function TurnRail(props: {
           invite link share one line - both are a single quiet fact, not
           worth a whole row each. */}
       <div className="active-line">
-        <span>
+        {/* Green = your move, right now. Amber-grey (never red - red
+            reads as "something's wrong", not "waiting your turn") =
+            theirs, you're waiting. Same colors PlayerBoard.tsx uses for
+            the mat glow and the life panels, so all three cues agree. */}
+        <span className={waiting ? "whose-turn waiting" : "whose-turn mine"}>
           <strong>Active:</strong> {game.activePlayerId}
         </span>
         {props.inviteLink && <InvitePanel link={props.inviteLink} />}
