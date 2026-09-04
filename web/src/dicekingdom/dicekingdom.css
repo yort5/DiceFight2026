@@ -104,6 +104,21 @@
 .dicekingdom .dk-row-lane {
   grid-area: lane;
   min-width: 0;
+  /* Real bug, direct feedback (2026-09-05): .dk-layout's row 2 is
+     shared by this cell AND dk-rail-mid (the Now/Selected Die/action
+     panel), which is what keeps the divider aligned with dk-rail-
+     bottom below (see .dk-layout's own comment) - but rail-mid's
+     content is genuinely variable height (it grows once a die is
+     selected), and .dk-layout defaults every cell to align-items:
+     start, so a taller rail-mid just grew the shared row and left the
+     combat lane's own (fixed-height) box floating at the top of it -
+     an unexplained gap between it and Field Zone below. Stretching
+     this cell and letting .combat-lane fill + center its content
+     turns "extra row height" into "the lane box itself gets taller,
+     centered" instead of a disconnected void underneath it.
+     min-height keeps it from ever compressing below its own designed
+     height even in the row's normal (unselected) state. */
+  align-self: stretch;
 }
 .dicekingdom .dk-row-you {
   grid-area: you;
@@ -152,6 +167,13 @@
       "railmid"
       "railbottom"
       "side";
+  }
+  .dicekingdom .dk-titlebar {
+    grid-template-columns: 1fr;
+  }
+  .dicekingdom .step-ribbon,
+  .dicekingdom .dk-titlebar-right {
+    grid-column: 1;
   }
 }
 @media (prefers-color-scheme: dark) {
@@ -288,19 +310,27 @@
 /* ---- Title bar - ribbon + a compact How-to-play toggle, replacing the
    old full-width title/description/topbar. Direct feedback: those took
    up vertical space above the fold that /game's live board never
-   spends - once a game exists, /game shows almost no chrome at all. ---- */
+   spends - once a game exists, /game shows almost no chrome at all.
+
+   Shares .dk-layout's own 3-column template (sideboard/board/rail)
+   rather than spanning edge-to-edge - direct feedback: the ribbon sat
+   flush against the far-left edge, under the sideboard, when it's
+   really the board's own status line and should start where the board
+   column does. Column 1 is simply left empty in this row. ---- */
 .dicekingdom .dk-titlebar {
-  display: flex;
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr) 300px;
+  gap: 14px;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
   margin-bottom: 10px;
 }
 .dicekingdom .dk-titlebar-right {
+  grid-column: 3;
   display: flex;
   align-items: flex-start;
+  justify-content: flex-end;
   gap: 8px;
+  flex-wrap: wrap;
 }
 .dicekingdom .theme-toggle {
   padding: 5px 12px;
@@ -312,6 +342,7 @@
   cursor: pointer;
 }
 .dicekingdom .step-ribbon {
+  grid-column: 2;
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
@@ -621,6 +652,16 @@
    two hues the design always used, not something reinvented here. ---- */
 
 .dicekingdom .combat-lane {
+  /* Fills + vertically centers within .dk-row-lane's now-stretched grid
+     cell (see that rule's own comment) - when the rail's Now/Selected
+     Die panel pushes the shared row taller than the lane's own content
+     needs, the lane box grows to match instead of leaving a gap below
+     it. */
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-sizing: border-box;
   padding: 8px 12px;
   border-radius: 12px;
   border: 1px solid oklch(0.5 0.07 25 / 0.35);

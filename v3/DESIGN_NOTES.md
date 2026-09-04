@@ -1110,3 +1110,64 @@ the whole HTTP flow). Full solution suite: 908/908 passing (315 V2 +
 against the real rebuilt API: "Drawn This Turn" now shows the fresh
 draw, Prep Area stays empty, and Roll moves everything straight into
 "Reserve Pool" with real 3D cube faces, zero console errors.
+
+## Round 3: ribbon alignment, a real layout bug, one-shot reroll, starter bag (2026-09-05)
+
+Four items from one round of feedback:
+
+**Step ribbon now shares `.dk-layout`'s own 3-column template** (sideboard/
+board/rail) instead of spanning the full page width - it sat flush
+against the far-left edge, under the sideboard, when it's really the
+board's own status line. `.dk-titlebar` is now a grid with the same
+`200px minmax(0,1fr) 300px` columns as the layout below it; the ribbon
+sits in column 2, Dark mode/How to play in column 3, column 1 simply
+empty. Falls back to a plain single column under the existing 1100px
+breakpoint.
+
+**Real layout bug: selecting a die during Roll & Reroll opened a dead
+gap between the combat lane and Field Zone.** Root cause: `.dk-layout`'s
+row 2 is shared by the combat lane AND the rail's Now/Selected Die
+panel (the same row-sharing trick that aligns the Champion box with the
+divider - see the earlier round's note on why). Selecting a die grows
+the rail panel (adds the Selected Die block + Reroll/Continue buttons),
+which grows the whole shared row past the combat lane's own natural
+height - and since every cell defaults to `align-items: start`, the
+lane's fixed-height box just sat at the top of the now-taller row,
+leaving the extra space empty underneath it instead of anywhere
+visible as "reserved for the rail." Fixed by stretching `.dk-row-lane`
+to fill its grid cell and having `.combat-lane` itself fill + vertically
+center its content - extra height now grows the lane box (more
+breathing room around its contents) instead of leaving a floating void
+below it.
+
+**Reroll is a one-shot decision now, matching rule 2.4.3/2.4.4 - "one
+reroll decision... taking it ends the step."** `TurnEngine.RerollOwn`
+previously stayed in Roll and Reroll after rerolling, so a player could
+call it again with an entirely different selection - a second reroll
+wave the rule doesn't allow. `RerollOwn` now advances straight to Main
+itself (factored into a shared `AdvanceToMain` with `FinishRoll`),
+matching v1's own single `Reroll` call exactly. This makes a second
+`RerollOwn` (or even a second `Roll`) in the same step self-rejecting
+via the existing `RequireStep` guard - no separate bookkeeping needed.
+Frontend needed no changes: it already re-renders off `currentStepId`,
+so the "Roll & Reroll" panel (Reroll Selected / Continue to Main Phase
+buttons) simply disappears once the server's response comes back
+already on Main.
+
+**Starter bag doubled to 8 Tardigrades (was 4), per Champion** - "in
+keeping with traditional deck building," per the user - 8 covers a full
+two turns of drawing `DrawCount(4)` each without an early Used-Pile
+reshuffle. `InstinctClashConfig.Champions`' `TardigradePool` `Count`
+bumped from 4 to 8 for all four Champions.
+
+Updated tests: `RerollOwnTests` (replaced the now-impossible "call Roll
+twice in one step" test with one asserting RerollOwn's own advance-and-
+lock behavior, plus a new test for the same-die-listed-twice-in-one-
+call case the old "twice" test accidentally stopped covering precisely;
+removed a test that became a literal duplicate of the new one),
+`InstinctClashConfigTests`/`V2GamesControllerTests` (Bag count 4 → 8).
+Full solution suite: 908/908 passing. Verified live end-to-end with
+headless Chromium: ribbon aligns with the board column, selecting a die
+no longer opens a gap (the lane box grows instead), clicking "Reroll
+Selected" jumps straight to the Main tab with no second click, and both
+players' starting Bag reads 8.

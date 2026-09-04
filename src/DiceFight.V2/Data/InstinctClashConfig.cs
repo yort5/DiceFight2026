@@ -162,23 +162,28 @@ public static class InstinctClashConfig
     // reads ChampionDef.TardigradePool in preference to the shared
     // Config.BasicDicePool - see that change's own remarks). ---
 
+    // Starter-deck sizing (2026-09-05, was 4): 8 Tardigrades is enough
+    // Bag depth to cover a full two turns of drawing DrawCount(4) each
+    // without an early Used-Pile reshuffle, matching the "traditional
+    // deck-building starter hand" the user asked for rather than a bag
+    // that's already thin by turn two.
     public static readonly IReadOnlyList<ChampionDef> Champions =
     [
         new("Lion", "Lion", "Claw", ChampionPassiveKind.AttackBuff, Amount: 1)
         {
-            TardigradePool = [new BasicDicePoolEntry(TardigradeDie("Claw"), Count: 4)],
+            TardigradePool = [new BasicDicePoolEntry(TardigradeDie("Claw"), Count: 8)],
         },
         new("Armadillo", "Armadillo", "Shell", ChampionPassiveKind.DefenseBuff, Amount: 1)
         {
-            TardigradePool = [new BasicDicePoolEntry(TardigradeDie("Shell"), Count: 4)],
+            TardigradePool = [new BasicDicePoolEntry(TardigradeDie("Shell"), Count: 8)],
         },
         new("GoldenEagle", "Golden Eagle", "Wing", ChampionPassiveKind.FieldingCostDiscount, Amount: 1)
         {
-            TardigradePool = [new BasicDicePoolEntry(TardigradeDie("Wing"), Count: 4)],
+            TardigradePool = [new BasicDicePoolEntry(TardigradeDie("Wing"), Count: 8)],
         },
         new("GreatHornedOwl", "Great Horned Owl", "Eye", ChampionPassiveKind.PurchaseCostDiscount, Amount: 1)
         {
-            TardigradePool = [new BasicDicePoolEntry(TardigradeDie("Eye"), Count: 4)],
+            TardigradePool = [new BasicDicePoolEntry(TardigradeDie("Eye"), Count: 8)],
         },
     ];
 

@@ -47,9 +47,9 @@ public class InstinctClashConfigTests
         var state = GameSetup.NewGame(config, catalog, playerOne, playerTwo);
         var queue = new AbilityQueue();
 
-        // --- Setup: 2 Characters x DieLimit 4 = 8 Unpurchased, 4 Tardigrades in the Bag ---
+        // --- Setup: 2 Characters x DieLimit 4 = 8 Unpurchased, 8 Tardigrades in the Bag ---
         Assert.Equal(8, state.DiceIn("p1", Zone.Unpurchased).Count());
-        Assert.Equal(4, state.DiceIn("p1", Zone.Bag).Count());
+        Assert.Equal(8, state.DiceIn("p1", Zone.Bag).Count());
         Assert.Equal(20, playerOne.Life);
 
         // --- Clear and Draw (first turn: DrawCount - 1 = 3, all Tardigrades - Characters start Unpurchased) ---

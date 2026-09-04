@@ -202,21 +202,40 @@ public static class TurnEngine
         }
         if (dieIds.Count > 0) state.LogEvent(state.ActivePlayerId, $"{state.NameOf(state.ActivePlayerId)} rerolls {dieIds.Count} {(dieIds.Count == 1 ? "die" : "dice")}.");
         else state.LogEvent(state.ActivePlayerId, $"{state.NameOf(state.ActivePlayerId)} takes no reroll.");
+
+        // Rule 2.4.3/2.4.4 - the reroll decision (any/some/none of the
+        // rolled dice) is made ONCE; there is no second wave of picking
+        // more dice to reroll after this. Advancing straight to Main here
+        // - direct feedback, 2026-09-05, after RerollOwn stayed in Roll
+        // and Reroll and let a player call it again with a different
+        // selection - is what actually enforces that: RequireStep's guard
+        // at the top of this method rejects any further RerollOwn call
+        // once the step has moved on, the same way v1's own single Reroll
+        // call (which also always advances the step) does.
+        AdvanceToMain(state, queue);
     }
 
-    // The active player's explicit "done deciding, advance to Main" -
-    // fires TurnStepEntered(Main), a real gap until 2026-09-01: this is
-    // "the end of the Roll and Reroll Step" the Energize keyword's own
-    // rule text names ("only check at the end of the Step"), and nothing
-    // emitted it. EventBus.Fire's own Energize carve-out (see its remarks)
-    // is what lets a listener sitting in the Reserve Pool - where Roll
-    // (above) already placed every rolled die - actually hear it. No
-    // zone to move here any more (Roll already did it) - see Roll's own
-    // remarks for why.
+    // The active player's explicit "I'm not rerolling anything, advance
+    // to Main" - the zero-dice-selected path through rule 2.4.3/2.4.4,
+    // kept as its own call (rather than requiring RerollOwn(..., [])) to
+    // match the two distinct buttons the client shows.
     public static void FinishRoll(GameState state, AbilityQueue queue)
     {
         RequireStep(state, TurnStep.RollAndReroll);
+        state.LogEvent(state.ActivePlayerId, $"{state.NameOf(state.ActivePlayerId)} takes no reroll.");
+        AdvanceToMain(state, queue);
+    }
 
+    // Shared by RerollOwn and FinishRoll - fires TurnStepEntered(Main), a
+    // real gap until 2026-09-01: this is "the end of the Roll and Reroll
+    // Step" the Energize keyword's own rule text names ("only check at
+    // the end of the Step"), and nothing emitted it. EventBus.Fire's own
+    // Energize carve-out (see its remarks) is what lets a listener
+    // sitting in the Reserve Pool - where Roll already placed every
+    // rolled die - actually hear it. No zone to move here (Roll already
+    // did it - see Roll's own remarks for why).
+    private static void AdvanceToMain(GameState state, AbilityQueue queue)
+    {
         state.MoveToStep(StepIds.Main);
         EventBus.Fire(state, queue, new GameEvent(TriggerKind.TurnStepEntered, null, state.ActivePlayerId, StepIds.Main));
     }

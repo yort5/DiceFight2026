@@ -64,19 +64,6 @@ public class RerollOwnTests
     }
 
     [Fact]
-    public void RerollOwn_Rejects_The_Same_Die_Twice_In_One_Step()
-    {
-        var (state, queue) = SetUp();
-        TurnEngine.Roll(state, queue, new ScriptedRoller(0, 0));
-        var die = state.DiceIn("p1", Zone.ReservePool).First();
-
-        TurnEngine.RerollOwn(state, queue, new ScriptedRoller(1), [die.Id]);
-
-        Assert.Throws<InvalidOperationException>(() =>
-            TurnEngine.RerollOwn(state, queue, new ScriptedRoller(0), [die.Id]));
-    }
-
-    [Fact]
     public void RerollOwn_Rejects_A_Die_Once_The_Step_Has_Moved_On_To_Main()
     {
         var (state, queue) = SetUp();
@@ -94,20 +81,35 @@ public class RerollOwnTests
     }
 
     [Fact]
-    public void RerollOwn_Allowance_Resets_On_The_Next_Roll_Call()
+    public void RerollOwn_Advances_To_Main_So_A_Second_Call_In_The_Same_Step_Is_Impossible()
     {
+        // Direct feedback, 2026-09-05: RerollOwn used to stay in Roll and
+        // Reroll, letting a player call it again with a fresh selection -
+        // effectively a second reroll wave rule 2.4.3/2.4.4 doesn't allow
+        // ("one reroll decision... taking it ends the step"). RerollOwn
+        // now advances to Main itself (matching v1's own single Reroll
+        // call), so a second RerollOwn - or even a second Roll - in the
+        // same step is rejected by RequireStep before anything else runs.
         var (state, queue) = SetUp();
         TurnEngine.Roll(state, queue, new ScriptedRoller(0, 0));
         var die = state.DiceIn("p1", Zone.ReservePool).First();
         TurnEngine.RerollOwn(state, queue, new ScriptedRoller(1), [die.Id]);
 
-        // A fresh Roll() call (opening a new turn's Roll and Reroll Step
-        // in real play) clears the per-step reroll tracker - asserted
-        // directly here rather than via a second roll's own result, since
-        // by now `die` already sits in the Reserve Pool and a real second
-        // Roll() has nothing left in DiceFromBag/DiceFromPrep to re-roll.
+        Assert.Equal(TurnStep.Main, state.CurrentStep);
+        Assert.Throws<InvalidOperationException>(() =>
+            TurnEngine.RerollOwn(state, queue, new ScriptedRoller(0), [die.Id]));
+        Assert.Throws<InvalidOperationException>(() =>
+            TurnEngine.Roll(state, queue, new ScriptedRoller(0)));
+    }
+
+    [Fact]
+    public void RerollOwn_Rejects_The_Same_Die_Id_Listed_Twice_In_One_Call()
+    {
+        var (state, queue) = SetUp();
         TurnEngine.Roll(state, queue, new ScriptedRoller(0, 0));
-        TurnEngine.RerollOwn(state, queue, new ScriptedRoller(1), [die.Id]); // does not throw
-        Assert.Equal(1, die.CurrentFaceIndex);
+        var die = state.DiceIn("p1", Zone.ReservePool).First();
+
+        Assert.Throws<InvalidOperationException>(() =>
+            TurnEngine.RerollOwn(state, queue, new ScriptedRoller(1, 1), [die.Id, die.Id]));
     }
 }
