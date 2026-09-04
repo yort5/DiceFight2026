@@ -3,9 +3,18 @@
    horizontal scrollbar no matter how wide the browser was. The game
    board is designed around that width and keeps it; the Team Builder is
    a wide data table plus a sidebar and wants the room, so it opts out.
-   :has() degrades safely - browsers without it just keep the old width. */
+   :has() degrades safely - browsers without it just keep the old width.
+
+   Dice Kingdom (.dicekingdom, dicekingdom.css) missed this list entirely
+   - real bug, found via direct feedback ("stretched vertically... a big
+   empty space") that turned out to be its 3-column, 1580px-wide match-
+   table grid getting squeezed into #root's 1126px cap the whole time
+   (confirmed: .dicekingdom measured 1124px wide in a screenshot taken at
+   a 1600px viewport). Every "make it look like the reference" pass this
+   session was fighting that squeeze without knowing it was there. */
 #root:has(.team-builder-layout),
-#root:has(.game-layout) {
+#root:has(.game-layout),
+#root:has(.dicekingdom) {
   width: min(1800px, 100%);
 }
 

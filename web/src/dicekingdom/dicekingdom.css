@@ -38,6 +38,20 @@
   --shadow: 0 1px 2px rgba(20, 15, 8, 0.06), 0 6px 16px -8px rgba(20, 15, 8, 0.18);
   --display: "Anton", "Arial Narrow", var(--heading);
   max-width: 1100px;
+  /* Real bug (2026-09-05): #root (index.css) is `display: flex;
+     flex-direction: column`, and a flex item with an AUTO cross-axis
+     margin (this `margin: 0 auto`) opts OUT of the container's default
+     stretch - the browser shrink-wraps it to its content's width
+     instead of filling #root, no matter what max-width says. ../App.css
+     works around the identical setup for /game and /teambuilder with an
+     explicit `width: 100%` on `.app` once #root is widened (see the
+     #root:has() rule there, now covering .dicekingdom too) - same fix
+     here. Confirmed via computed style: without this, .dicekingdom
+     measured ~1096px wide even inside a 1800px #root, which is what
+     made the whole redesign read "squeezed"/"stretched vertically" no
+     matter how the CSS Grid inside it was tuned. */
+  width: 100%;
+  box-sizing: border-box;
   margin: 0 auto;
   padding: 24px 16px 64px;
   background: radial-gradient(120% 90% at 50% 0%, var(--dk-page-a) 0%, var(--dk-page-b) 100%);

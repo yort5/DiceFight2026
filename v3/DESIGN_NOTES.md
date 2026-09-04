@@ -911,3 +911,57 @@ Verified with headless Chromium in both dark and light (color-scheme
 emulated both ways, not just the toggle button): Prep Area's box now
 measures the same height as Reserve Pool's, zero console errors on a
 full click-through, `tsc -b`/`vite build` clean.
+
+## Match-table redesign, round 2: the actual root cause (2026-09-05)
+
+The round-2 fixes above (Prep Area grid, palette, tile sizing) all
+landed and were confirmed real, but the user reported it "still looks
+the same - dull and vertical" with "still a big whitespace at the top."
+Every screenshot taken to verify the previous rounds was quietly wrong
+in the same way, and it took checking `#root`'s own CSS to find it:
+
+**`index.css`'s `#root` is a hardcoded `width: 1126px`.** `/game` and
+`/teambuilder` opt out via `#root:has(.game-layout), #root:has(.team-
+builder-layout) { width: min(1800px, 100%) }` in `App.css` - Dice
+Kingdom was never added to that list, so its whole 1580px-wide 3-column
+grid was being squeezed into 1126px this entire session, on both the
+deployed page and every local screenshot taken to check it (confirmed:
+`.dicekingdom` measured 1124px wide even in a screenshot taken at a
+1600px viewport - the exact number was sitting in this file's own
+debug output from round 2 and wasn't connected to the cause until now).
+That's what "stretched vertically instead of horizontally" actually
+was: the reserve pool column and other flexible zones were being
+crushed sideways the whole time, no matter how the CSS Grid itself was
+tuned - a content-and-layout problem masquerading as a color problem.
+
+Fixed in two parts, both needed: (1) added `#root:has(.dicekingdom)` to
+`App.css`'s existing override list, and (2) a second, subtler bug this
+surfaced - `#root` is `display: flex; flex-direction: column`, and a
+flex item with an AUTO cross-axis margin (`.dicekingdom`'s own `margin:
+0 auto`, meant for ordinary block-level centering) opts OUT of the
+container's default `align-items: stretch` and shrink-wraps to its
+content's width instead, regardless of `max-width`. `.app` (used by
+`/game`/`/teambuilder`) already works around this with an explicit
+`width: 100%` once `#root` is widened; `.dicekingdom` got the same
+treatment. Fixing only (1) was verified insufficient on its own -
+`.dicekingdom` still measured ~1096px inside a genuinely-widened
+1800px `#root` until (2) landed too.
+
+Net effect, confirmed via `getBoundingClientRect()` before/after at a
+1920px viewport: `.dicekingdom` went from 1124px → 1580px (its real
+max-width), and the inner grid from ~1096px → 1548px. Screenshotted in
+both light and dark after the fix - the reserve pool column and other
+previously-crushed zones now have real width, reading as the wide,
+horizontal table the reference always was rather than a tall, narrow
+one. `/game`'s own landing page reloaded and screenshotted afterward to
+confirm the shared `App.css` change didn't regress it (still renders at
+its normal 1126px, untouched - the new rule is purely additive via
+`:has()`).
+
+**Lesson for next time a "does this match the reference" complaint
+doesn't move after a plausible-looking fix**: check the actual rendered
+width/DOM geometry via `getBoundingClientRect()` before iterating on
+the CSS inside the suspect component again - two straight rounds of
+real, verified color/spacing fixes couldn't have worked, because the
+box they were all happening inside was never the size the CSS assumed
+it was.
