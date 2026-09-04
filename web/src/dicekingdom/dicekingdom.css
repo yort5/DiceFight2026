@@ -51,7 +51,7 @@
   }
 }
 @media (prefers-color-scheme: dark) {
-  .dicekingdom {
+  :root:not([data-theme="light"]) .dicekingdom {
     --claw: #e07a4a;
     --shell: #5fa085;
     --wing: #6fabd9;
@@ -59,6 +59,14 @@
     --wild: #a79c89;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 20px -10px rgba(0, 0, 0, 0.55);
   }
+}
+:root[data-theme="dark"] .dicekingdom {
+  --claw: #e07a4a;
+  --shell: #5fa085;
+  --wing: #6fabd9;
+  --eye: #b085d1;
+  --wild: #a79c89;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 20px -10px rgba(0, 0, 0, 0.55);
 }
 
 .dicekingdom .eyebrow {
@@ -164,6 +172,20 @@
   gap: 10px;
   flex-wrap: wrap;
   margin-bottom: 10px;
+}
+.dicekingdom .dk-titlebar-right {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.dicekingdom .theme-toggle {
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--panel-bg);
+  color: inherit;
+  font: 600 11px var(--sans);
+  cursor: pointer;
 }
 .dicekingdom .step-ribbon {
   display: flex;
@@ -674,12 +696,66 @@
   gap: 9px;
   min-height: 6px;
 }
+.dicekingdom .roster {
+  margin-bottom: 14px;
+}
 .dicekingdom .roster summary {
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   opacity: 0.75;
-  margin: 10px 0 6px;
+  margin: 4px 0 6px;
+}
+
+/* Compact roster chips - a single row (avatar, name, cost, count left),
+   not a full card. There can be a lot of these and they're glanced at
+   constantly, not the focal point the way a rolled die on the mat is. */
+.dicekingdom .roster-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.dicekingdom .roster-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 6px;
+  border-radius: 999px;
+  border: 1.5px solid var(--border);
+  background: var(--panel-bg);
+  color: inherit;
+  font: inherit;
+  cursor: default;
+}
+.dicekingdom .roster-chip svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+.dicekingdom .roster-chip .rc-name {
+  font: 600 11.5px var(--sans);
+}
+.dicekingdom .roster-chip .rc-cost {
+  font: 500 10.5px var(--mono);
+  opacity: 0.7;
+}
+.dicekingdom .roster-chip .rc-left {
+  font: 700 10.5px var(--mono);
+  opacity: 0.55;
+}
+.dicekingdom .roster-chip.clickable {
+  cursor: pointer;
+  border-color: var(--cc, var(--border));
+}
+.dicekingdom .roster-chip.clickable:hover {
+  background: var(--code-bg);
+}
+.dicekingdom .roster-chip.picked {
+  border-color: var(--text-h);
+  background: var(--code-bg);
+}
+.dicekingdom .roster-chip:disabled {
+  opacity: 0.55;
 }
 
 .dicekingdom .dietile {
@@ -874,12 +950,18 @@
   opacity: 0.65;
 }
 @media (prefers-color-scheme: dark) {
-  .dicekingdom .log-line.yours .log-text {
+  :root:not([data-theme="light"]) .dicekingdom .log-line.yours .log-text {
     color: oklch(0.75 0.15 145);
   }
-  .dicekingdom .log-line.theirs .log-text {
+  :root:not([data-theme="light"]) .dicekingdom .log-line.theirs .log-text {
     color: oklch(0.72 0.06 75);
   }
+}
+:root[data-theme="dark"] .dicekingdom .log-line.yours .log-text {
+  color: oklch(0.75 0.15 145);
+}
+:root[data-theme="dark"] .dicekingdom .log-line.theirs .log-text {
+  color: oklch(0.72 0.06 75);
 }
 
 .dicekingdom details.how {

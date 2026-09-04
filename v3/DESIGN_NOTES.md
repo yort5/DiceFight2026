@@ -723,3 +723,60 @@ real lines ("Lion draws 3 dice.", "Lion rolls.", "Lion fields a
 Tardigrade.") - confirms the log is reading real engine events, not a
 static string. 908 tests pass - the new `LogEvent` call sites had no
 prior test coverage asserting their absence.
+
+## Roster mirroring bug (again), compact roster chips, and a real theme override (2026-09-04)
+
+"Oh for heaven's sake... The unpurchased roster for the opponent is now
+in the middle of the dang play area between field zone and attack zone
+again. Any why are they so big? ... Still the huge gap on the top. At
+the very least can we go with the dark theme?" Diagnosed by measuring
+the live page rather than guessing again (`.roster`'s `getBoundingClientRect()`
+against `.mat`'s and `.combat-lane`'s): confirmed all three.
+
+1. **Roster position** - the exact bug class this session already hit
+   and fixed once for `/game`'s own roster (`DESIGN_LOG.md`): rendered
+   as a fixed mat-then-roster JSX sequence regardless of `mirrored`, so
+   it always landed BELOW the mat - which for the mirrored (opponent)
+   board is the edge next to Field Zone and the shared Attack Zone
+   (mirrored rows run the opposite order), not the outer edge away from
+   it. `/game` fixed this with CSS `order` (its DOM order is fixed,
+   flex `order` repositions per `mirrored`); Dice Kingdom's `renderBoard`
+   fully controls its own JSX, so the actual fix is simpler - swap which
+   literally renders first, `roster` then `mat` when `mirrored`, `mat`
+   then `roster` otherwise.
+2. **Size** - the roster reused the same `.dietile` component as an
+   in-play die on the mat (94×166px stacked card), when it's reference
+   content glanced at constantly, not the focal point a rolled die is.
+   New `.roster-chip` - a single-row compact pill (icon, name, cost,
+   ×left) - replaces it; confirmed via measurement, 166px tall down to
+   28px.
+3. **The gap at top** - not a separate bug, the same one: with the
+   roster correctly repositioned to the outer edge AND shrunk to a
+   compact row, the opponent's board now opens with a small roster row
+   immediately below the ribbon instead of the mat's mostly-empty
+   Bag/Drawn/Carried row filling that space alone.
+4. **Theme** - a real accessibility complaint ("this light, faded stuff
+   is horrible for people who don't do well with colors"), not a
+   preference one, and the site had no way to get dark mode besides the
+   OS setting. Added an explicit three-state theme (`system`/`light`/
+   `dark`) to `index.css` and `dicekingdom.css`: every existing
+   `@media (prefers-color-scheme: dark)` block gained a
+   `:root:not([data-theme="light"])` guard (system dark still applies
+   unless overridden to light) plus a parallel `:root[data-theme="dark"]`
+   block (wins regardless of system preference). New `ThemeToggle.tsx`
+   exports `useTheme()` (persists to `localStorage`, applies the
+   `data-theme` attribute) and a toggle button. Real bug caught in this
+   same pass: the toggle button only lived inside the live-game view, so
+   applying dark then reloading straight back to the pre-game setup
+   screen (where nothing was mounted to reapply the attribute) silently
+   reverted to system - fixed by calling `useTheme()` unconditionally at
+   the top of `DiceKingdomPage`, before either screen's early return,
+   confirmed by reading `data-theme` back after an actual page reload
+   (not just after the toggle click).
+
+Verified with headless Chromium: `.roster`'s bottom edge sits above
+`.mat`'s top edge for the opponent board (not between `.mat` and
+`.combat-lane`), roster chips measure 28px tall, and `data-theme`
+persists across a real `page.reload()` (the bug above would have shown
+green right up until this specific check). 908 tests pass - frontend/
+index.css only, no engine changes this round.

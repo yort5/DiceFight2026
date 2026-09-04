@@ -8,6 +8,7 @@ import { DieCube } from "./DieCube";
 import { facesFor } from "./dieFaces";
 import { StepRibbon } from "./StepRibbon";
 import { MatchLog } from "./MatchLog";
+import { ThemeToggle, useTheme } from "./ThemeToggle";
 import type { BlockAssignment, CardDef, Die, GameState, PlayerState } from "./types";
 
 const POLL_INTERVAL_MS = 2000;
@@ -229,6 +230,10 @@ function DieTile({
 }
 
 export function DiceKingdomPage() {
+  // Applied unconditionally, before either screen below renders - a
+  // stored preference has to re-apply on the pre-game setup screen too,
+  // not just once a game exists (see useTheme's own remarks).
+  const [theme, setTheme] = useTheme();
   const [game, setGame] = useState<GameState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -379,6 +384,9 @@ export function DiceKingdomPage() {
   if (!game) {
     return (
       <div className="dicekingdom">
+        <div className="dk-titlebar-right" style={{ float: "right" }}>
+          <ThemeToggle theme={theme} setTheme={setTheme} />
+        </div>
         <p className="eyebrow" style={{ opacity: 0.6, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.1em" }}>
           DiceFight v3
         </p>
@@ -572,83 +580,108 @@ export function DiceKingdomPage() {
       );
     }
 
-    return (
-      <div key={playerId} className={`playerboard${turnClass}`}>
-        <div className={`mat${mirrored ? " mirrored" : ""}`}>
-          <div className="mat-slot mat-field">
-            <div className="zone zone-field">
-              <h4>
-                Field <span className="count">{field.length}</span>
-              </h4>
-              <div className="dierow">
-                {field.map((d) => {
-                  const clickable = d.controllerId === you && isYourTurn && step === "select-attackers";
-                  const picked = d.id === selection.primary || selection.secondary.includes(d.id);
-                  return (
-                    <DieTile
-                      key={d.id}
-                      die={d}
-                      zone="FieldZone"
-                      cardsById={cardsById}
-                      accent={accent}
-                      mine={playerId === you}
-                      clickable={clickable}
-                      picked={picked}
-                      onClick={() => toggleDie(d.id)}
-                    />
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-          <div className="mat-slot mat-used">{pileZone("Used Pile", "UsedPile", used)}</div>
-          <div className="mat-slot mat-reserve">{rolledZone("Reserve Pool", "ReservePool", reserve)}</div>
-          <div className="mat-slot mat-prep">{rolledZone("Prep Area", "PrepArea", prep)}</div>
-          <div className="mat-slot mat-outofplay">{pileZone("Out of Play", "OutOfPlay", outOfPlay)}</div>
-          <div className="mat-slot mat-bag">{pileZone("Bag", "Bag", bag)}</div>
-          <div className="mat-slot mat-drawn">{pileZone("Drawn This Turn", "DiceFromBag", drawn)}</div>
-          <div className="mat-slot mat-carried">{pileZone("Carried From Prep", "DiceFromPrep", carried)}</div>
-        </div>
-        {/* Always visible, matching ../PlayerBoard.tsx's own roster - a
-            player checks "what's left to buy" constantly during a game,
-            so it stays open by default rather than only appearing for
-            the active player mid-Main (real feedback: hiding it most of
-            the turn just read as a blank gap on the board where content
-            was supposed to be). Purchasing only actually enables when
-            it's legal - own board, your turn, Main step - everything
-            else here still shows so both rosters stay checkable at a
-            glance. */}
-        <details className="roster" open>
-          <summary>Unpurchased roster ({[...unpurchasedByCard.values()].reduce((n, d) => n + d.length, 0)})</summary>
-          <div className="dierow">
-            {unpurchasedByCard.size === 0 && <span style={{ opacity: 0.5, fontSize: 12 }}>nothing left to buy</span>}
-            {[...unpurchasedByCard.entries()].map(([cardId, dice]) => {
-                const card = cardsById.get(cardId);
-                const Avatar = CHARACTER_ICONS[cardId];
-                const dieId = dice[0].id;
-                const canPurchaseNow = isYourTurn && playerId === you && step === "main";
-                const clickable = canPurchaseNow && (selection.primary === null || selection.primary === dieId);
-                const picked = selection.primary === dieId;
+    const mat = (
+      <div className={`mat${mirrored ? " mirrored" : ""}`}>
+        <div className="mat-slot mat-field">
+          <div className="zone zone-field">
+            <h4>
+              Field <span className="count">{field.length}</span>
+            </h4>
+            <div className="dierow">
+              {field.map((d) => {
+                const clickable = d.controllerId === you && isYourTurn && step === "select-attackers";
+                const picked = d.id === selection.primary || selection.secondary.includes(d.id);
                 return (
-                  <button
-                    key={cardId}
-                    type="button"
-                    className={`dietile${clickable ? " clickable" : ""}${picked ? " picked" : ""}`}
-                    disabled={!clickable}
-                    style={accent ? ({ ["--cc" as string]: accent, color: accent } as const) : undefined}
-                    onClick={() => toggleDie(dieId)}
-                  >
-                    {Avatar && <Avatar size={34} />}
-                    <div className="lbl">Buy {card?.name ?? cardId}</div>
-                    <div className="stat">
-                      {card?.purchaseCost} {card?.energyTypes[0]}
-                    </div>
-                    <div className="lbl">{dice.length} left</div>
-                  </button>
+                  <DieTile
+                    key={d.id}
+                    die={d}
+                    zone="FieldZone"
+                    cardsById={cardsById}
+                    accent={accent}
+                    mine={playerId === you}
+                    clickable={clickable}
+                    picked={picked}
+                    onClick={() => toggleDie(d.id)}
+                  />
                 );
               })}
+            </div>
           </div>
-        </details>
+        </div>
+        <div className="mat-slot mat-used">{pileZone("Used Pile", "UsedPile", used)}</div>
+        <div className="mat-slot mat-reserve">{rolledZone("Reserve Pool", "ReservePool", reserve)}</div>
+        <div className="mat-slot mat-prep">{rolledZone("Prep Area", "PrepArea", prep)}</div>
+        <div className="mat-slot mat-outofplay">{pileZone("Out of Play", "OutOfPlay", outOfPlay)}</div>
+        <div className="mat-slot mat-bag">{pileZone("Bag", "Bag", bag)}</div>
+        <div className="mat-slot mat-drawn">{pileZone("Drawn This Turn", "DiceFromBag", drawn)}</div>
+        <div className="mat-slot mat-carried">{pileZone("Carried From Prep", "DiceFromPrep", carried)}</div>
+      </div>
+    );
+
+    // Always visible, matching ../PlayerBoard.tsx's own roster - a
+    // player checks "what's left to buy" constantly during a game, so
+    // it stays open by default rather than only appearing for the
+    // active player mid-Main. Purchasing only actually enables when
+    // it's legal - own board, your turn, Main step - everything else
+    // here still shows so both rosters stay checkable at a glance.
+    // Compact chips, not full dietile cards - direct feedback: these
+    // were the same big card size as an in-play die, when they're
+    // reference-only most of the game (../CommunityCards.tsx's own
+    // compact-row precedent for "a lot of these, glanced at often").
+    const roster = (
+      <details className="roster" open>
+        <summary>Unpurchased roster ({[...unpurchasedByCard.values()].reduce((n, d) => n + d.length, 0)})</summary>
+        <div className="roster-row">
+          {unpurchasedByCard.size === 0 && <span style={{ opacity: 0.5, fontSize: 12 }}>nothing left to buy</span>}
+          {[...unpurchasedByCard.entries()].map(([cardId, dice]) => {
+            const card = cardsById.get(cardId);
+            const Avatar = CHARACTER_ICONS[cardId];
+            const dieId = dice[0].id;
+            const canPurchaseNow = isYourTurn && playerId === you && step === "main";
+            const clickable = canPurchaseNow && (selection.primary === null || selection.primary === dieId);
+            const picked = selection.primary === dieId;
+            return (
+              <button
+                key={cardId}
+                type="button"
+                className={`roster-chip${clickable ? " clickable" : ""}${picked ? " picked" : ""}`}
+                disabled={!clickable}
+                style={accent ? ({ ["--cc" as string]: accent } as const) : undefined}
+                onClick={() => toggleDie(dieId)}
+              >
+                {Avatar && <Avatar size={20} />}
+                <span className="rc-name">{card?.name ?? cardId}</span>
+                <span className="rc-cost">
+                  {card?.purchaseCost} {card?.energyTypes[0]}
+                </span>
+                <span className="rc-left">×{dice.length}</span>
+              </button>
+            );
+          })}
+        </div>
+      </details>
+    );
+
+    // The roster sits on the OUTER edge of each board, away from the
+    // shared Attack Zone between the two mats - real bug, found by
+    // direct feedback: rendered as a fixed mat-then-roster sequence
+    // regardless of `mirrored`, it landed BELOW the mat every time,
+    // which for the mirrored board is the edge next to Field Zone and
+    // the Attack Zone (the mirrored mat's rows run the opposite order -
+    // see the .mat.mirrored CSS), not away from it.
+    return (
+      <div key={playerId} className={`playerboard${turnClass}`}>
+        {mirrored ? (
+          <>
+            {roster}
+            {mat}
+          </>
+        ) : (
+          <>
+            {mat}
+            {roster}
+          </>
+        )}
       </div>
     );
   }
@@ -724,14 +757,17 @@ export function DiceKingdomPage() {
           spends once a match starts. */}
       <div className="dk-titlebar">
         <StepRibbon game={game} />
-        <details className="how">
-          <summary>How to play</summary>
-          <ul>
-            <li>Draw, then Roll - each die may be rerolled once, together with any others you select, before Continue.</li>
-            <li>Field a rolled creature (Tardigrades are free; your Character costs energy, any type) or Purchase another copy of your Character (matching type or Wild only).</li>
-            <li>Proceed to Attack, pick attackers; the other seat assigns blockers, then Resolve Combat.</li>
-          </ul>
-        </details>
+        <div className="dk-titlebar-right">
+          <ThemeToggle theme={theme} setTheme={setTheme} />
+          <details className="how">
+            <summary>How to play</summary>
+            <ul>
+              <li>Draw, then Roll - each die may be rerolled once, together with any others you select, before Continue.</li>
+              <li>Field a rolled creature (Tardigrades are free; your Character costs energy, any type) or Purchase another copy of your Character (matching type or Wild only).</li>
+              <li>Proceed to Attack, pick attackers; the other seat assigns blockers, then Resolve Combat.</li>
+            </ul>
+          </details>
+        </div>
       </div>
 
       {/* Two columns, same shape as /game's main-column + side-column
