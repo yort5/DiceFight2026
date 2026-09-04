@@ -1171,3 +1171,61 @@ headless Chromium: ribbon aligns with the board column, selecting a die
 no longer opens a gap (the lane box grows instead), clicking "Reroll
 Selected" jumps straight to the Main tab with no second click, and both
 players' starting Bag reads 8.
+
+## Round 4: flat panels instead of gradient bleed, active-mat highlight (2026-09-06)
+
+Three items, one of them a real color-mixing bug:
+
+**"Clean-line borders... instead of the overlapping gradients we
+currently have."** Every zone tint (`.zone-field`/`.zone-reserve`/etc.)
+was a translucent `oklch(... / alpha)` layered directly over
+`.dicekingdom`'s own page-level radial gradient - fine for a narrow
+box, but Field Zone spans nearly the whole mat width, so the page
+gradient showed through differently at each edge and read as a
+gradient smear rather than the reference's flat, single-tone panels.
+Same issue on `.championbox`, which used an actual `linear-gradient`
+for its fill. Fixed by compositing each tint as an opaque `color-mix()`
+against `--panel-bg` instead of a translucent overlay - no dependency
+on whatever renders behind it, still fully theme-adaptive since
+`--panel-bg` itself flips per light/dark.
+
+**Real bug found applying that fix**: the first pass used `color-mix
+(in oklch, ...)`, and several zones rendered as garish, way-too-
+saturated **purple/magenta** instead of their intended hue (amber
+Reserve Pool/Prep Area looked identical to violet Out of
+Play/staging). Cause: `oklch`-space mixing interpolates hue along the
+circle's *shorter arc* between the two colors' hues - and the shorter
+arc from `--panel-bg`'s own blue-violet hue (dark mode's `#2e3548`)
+to an amber target (~75°) runs *through* magenta/pink (300-360°)
+rather than the expected warm direction, so every partial mix landed
+in the wrong part of the color wheel. Switched to `color-mix(in oklab,
+...)` - a Cartesian, non-hue-based space that blends via straight-line
+interpolation and can't take the "wrong way around" - and reduced the
+mix percentages (28/24/20/16/26/22% → 18-25%) since oklab's blend
+reads visibly stronger than the old alpha-transparency did at the same
+number. Real lesson for next time a `color-mix(in oklch, ...)` tint
+looks wrong: check whether the two colors are far apart in hue before
+assuming the percentage is the problem.
+
+**"Highlight the currently active playmat"** - `.playerboard` (roster +
+mat together) had no box of its own at all: no border, no padding, no
+radius. `.turn-mine`/`.turn-waiting`'s border-color override had
+nothing to color, and the ring's box-shadow hugged flush against the
+nested zone boxes with zero breathing room, easy to miss entirely. Gave
+`.playerboard` a real card shape (padding, radius, a transparent base
+border for the override to color) so the active board now reads as one
+clearly outlined region, matching how `.championbox.turn-mine` already
+worked.
+
+**"The 'Active teamA' probably needs a highlight around it, it kind of
+disappears in dark mode"** - was plain colored text with no background.
+Replaced with a real solid pill using the same fill + `--on-fill`-text
+pattern `.ribbon-chip.current` already uses (proven to hold contrast in
+both themes, unlike a translucent tint whose contrast against its own
+text shifts with the page's light/dark background).
+
+Verified with headless Chromium in both light and dark: zone panels are
+flat and color-coded with no gradient bleed, the active player's whole
+board carries a clear green/amber outline, "Active: teamA" reads as a
+solid pill. `tsc -b`/`vite build`/`oxlint` clean, full click-through
+zero console errors.

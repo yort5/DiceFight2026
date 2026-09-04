@@ -307,6 +307,19 @@
   box-shadow: 0 0 0 2px oklch(0.62 0.06 75 / 0.3), var(--shadow);
 }
 
+/* .playerboard (roster + mat together) previously had no box of its own
+   at all - no border, no padding, no radius - so .turn-mine/.turn-
+   waiting's border-color override had nothing to color and the ring's
+   box-shadow hugged flush against the nested zone boxes with no
+   breathing room, easy to miss entirely. Direct feedback (2026-09-06):
+   "highlight the currently active playmat." Now a real card so the
+   whole active board reads as one clearly outlined region. */
+.dicekingdom .playerboard {
+  border-radius: 14px;
+  border: 1px solid transparent;
+  padding: 8px;
+}
+
 /* ---- Title bar - ribbon + a compact How-to-play toggle, replacing the
    old full-width title/description/topbar. Direct feedback: those took
    up vertical space above the fold that /game's live board never
@@ -406,12 +419,25 @@
   opacity: 0.85;
   margin-bottom: 8px;
 }
-.dicekingdom .whose-turn.mine {
-  color: oklch(0.5 0.13 145);
+/* A real solid pill, not just tinted text - direct feedback (2026-09-06):
+   the old plain colored text "kind of disappears in dark mode" against
+   a busy background. Same solid-fill + --on-fill pattern
+   .ribbon-chip.current already uses (proven to read in both themes,
+   unlike a translucent tint whose contrast against its own text shifts
+   with the page's light/dark background). */
+.dicekingdom .whose-turn {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
   font-weight: 700;
+  color: var(--on-fill);
+}
+.dicekingdom .whose-turn.mine {
+  background: oklch(0.62 0.15 145);
 }
 .dicekingdom .whose-turn.waiting {
-  color: oklch(0.5 0.05 75);
+  background: oklch(0.62 0.09 75);
 }
 .dicekingdom .invite-row {
   display: flex;
@@ -473,7 +499,9 @@
   box-shadow: 0 0 0 2px oklch(0.62 0.06 75 / 0.35);
 }
 .dicekingdom .championbox {
-  background: linear-gradient(120deg, color-mix(in srgb, var(--cc, var(--border)) 14%, var(--panel-bg)), var(--panel-bg));
+  /* Flat composite, not a gradient sheen - same "clean panel, not a
+     gradient" direction as the zone tints above. */
+  background: color-mix(in srgb, var(--cc, var(--border)) 10%, var(--panel-bg));
   border: 1px solid var(--border);
   border-left: 4px solid var(--cc, var(--border));
   border-radius: 10px;
@@ -601,17 +629,22 @@
   padding: 6px 9px 7px;
   border: 1px solid transparent;
 }
-/* Tint alphas bumped from the original 0.06-0.12 range to 0.14-0.22 -
-   direct feedback: at the old values these read as barely-there smudges
-   next to the reference's clearly color-coded zones, part of the same
-   "brightness turned way down" complaint the token rework above
-   addresses. */
+/* Backgrounds are opaque color-mix composites against --panel-bg, not
+   translucent oklch(... / alpha) layers - direct feedback (2026-09-06):
+   a translucent tint lets .dicekingdom's own page-level radial gradient
+   show through differently at each edge of a wide zone (Field Zone
+   spans nearly the whole mat), which read as "overlapping gradients"
+   rather than the reference's clean flat panels with crisp borders.
+   color-mix bakes the tint into a single flat, opaque, still fully
+   theme-adaptive (blends against light/dark --panel-bg alike) color -
+   no dependency on whatever happens to render behind it. Border colors
+   stay as thin translucent oklch lines (1px, no visible bleed there). */
 .dicekingdom .zone-field {
-  background: oklch(0.55 0.09 145 / 0.22);
+  background: color-mix(in oklab, oklch(0.6 0.12 145) 18%, var(--panel-bg));
   border-color: oklch(0.6 0.1 145 / 0.55);
 }
 .dicekingdom .zone-reserve {
-  background: oklch(0.4 0.02 75 / 0.26);
+  background: color-mix(in oklab, oklch(0.55 0.09 75) 24%, var(--panel-bg));
   border-color: oklch(0.6 0.08 75 / 0.55);
   box-shadow: inset 0 3px 10px oklch(0.2 0.02 75 / 0.2);
   /* The dice tray - taller than its neighbors and the only zone that
@@ -622,11 +655,11 @@
 }
 .dicekingdom .zone-used,
 .dicekingdom .zone-bag {
-  background: oklch(0.5 0.015 260 / 0.2);
+  background: color-mix(in oklab, oklch(0.55 0.02 260) 14%, var(--panel-bg));
   border-color: oklch(0.6 0.02 260 / 0.5);
 }
 .dicekingdom .zone-outofplay {
-  background: oklch(0.5 0.03 300 / 0.15);
+  background: color-mix(in oklab, oklch(0.55 0.05 300) 11%, var(--panel-bg));
   border: 1px dashed oklch(0.6 0.06 300 / 0.6);
 }
 .dicekingdom .zone-note {
@@ -638,11 +671,11 @@
   margin-top: -4px;
 }
 .dicekingdom .zone-prep {
-  background: oklch(0.55 0.06 70 / 0.22);
+  background: color-mix(in oklab, oklch(0.6 0.1 70) 25%, var(--panel-bg));
   border-color: oklch(0.6 0.09 70 / 0.55);
 }
 .dicekingdom .zone-staging {
-  background: oklch(0.5 0.04 300 / 0.2);
+  background: color-mix(in oklab, oklch(0.55 0.06 300) 15%, var(--panel-bg));
   border-color: oklch(0.6 0.06 300 / 0.5);
 }
 
