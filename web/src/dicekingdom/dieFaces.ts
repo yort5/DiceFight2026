@@ -47,7 +47,7 @@ const TARDIGRADE_FACES: CubeFace[] = [
   { kind: "character", level: 2, fieldingCost: 0, attack: 1, defense: 1 },
   { kind: "character", level: 2, fieldingCost: 0, attack: 1, defense: 1 },
   { kind: "character", level: 3, fieldingCost: 0, attack: 1, defense: 3 }, // Bulwark
-  { kind: "energy", icon: "Wild", amount: 2 }, // Surge
+  { kind: "energy", icon: "Wild", amount: 1 }, // Surge - dropped from 2 (2026-09-05 playtest experiment)
 ];
 
 function defaultFaces(die: Die, card: CardDef | undefined): CubeFace[] {

@@ -1633,3 +1633,66 @@ the die still legitimately sitting in the Bag, not yet drawn).
 Verified live: Bag 8 -> 4, Drawn This Turn 3, Out of Play 1, log now a
 single line - "Wolf draws 4 dice, setting 1 Out of Play for going
 first." Full 913-test suite green.
+
+## 2026-09-05 (later still) - Playtesting experiment: Surge to 1 Wild, real partial-spend
+
+Direct feedback: "it feels a little too easy to spend energy... let's
+change the Surge die to just be one wild and see how that feels... we
+need to be able to partially spend energy - so if we spend half of the
+double energy die, it should spin to the L2 side with single energy."
+Explicitly framed as an experiment (before touching monochromatic
+teams), not a rules-accuracy fix - unlike the last several passes.
+
+1. **Surge: 2 Wild -> 1 Wild.** One line in `TardigradeDie` -
+   `InstinctClashConfig.cs`. A second copy of the same table exists on
+   the frontend purely for the 3D cube's other 5 (currently-hidden)
+   faces during a roll/reroll animation (`TARDIGRADE_FACES` in
+   `dieFaces.ts`, explicitly commented as mirroring the backend) - found
+   and fixed to match, or the badge would have kept reading "2" whenever
+   a die happened to be resting on a different face mid-animation. At
+   amount 1 the small in-cube amount badge doesn't render at all
+   (`DieCube.tsx`'s own `amount > 1` gate) - correct, matching how a
+   plain single-pip anywhere else never gets one either.
+
+2. **Real partial-spend / spin-down** (rule 2.6.1.4), ported from v1's
+   `TurnEngine.SpendEnergy` at last - this was an explicitly flagged gap
+   in V2's own header comment ("an overspent die is simply consumed
+   whole"), and now closed. Two behavior changes to V2's `SpendEnergy`,
+   both real, not just the spin-down itself:
+   - It now stops consuming dice the instant `amountNeeded` is met -
+     anything offered beyond that is left completely untouched (still
+     spendable later this turn), rather than every offered die being
+     spent regardless of whether it was needed.
+   - The one die that ends up only partially needed (always the last
+     one included, by construction) spins to whichever OTHER face of
+     that SAME physical die shows exactly the leftover amount of the
+     same energy type (`TrySpinDown` - a straight search of
+     `GetDieDefinition(die).Faces` for a single-symbol match), and stays
+     right where it is instead of moving to `spentZone`. For a
+     Tardigrade this means exactly what was asked: spend 1 of an L1
+     die's 2 Claw, and it spins to the matching L2 face (1 Claw, and a
+     real 1A/1D creature face too, not just a number change) still
+     sitting in the Reserve Pool. No matching lower face (Bulwark, a
+     Character's own single-energy face, the now-1-Wild Surge face) -
+     or a face offering more than one symbol type at once, which
+     nothing in this catalog does yet - just falls back to a full
+     consume, same as before.
+   - Deliberately NOT ported: v1's virtual-generic-energy banking for a
+     Generic double with no single face to spin to (rule 2.6.1.6) - V2
+     has no virtual-energy concept at all yet, and nothing in this
+     catalog's faces are Generic, so there's nothing for that path to
+     ever reach.
+
+   One existing test's assertion flipped from "moves to Out of Play" to
+   the new correct "stays in the Reserve Pool, now showing the single-
+   energy face" outcome (it happened to spend a double-energy die for
+   exactly half its value); rewritten against a fielding cost that
+   fully matches the die's face instead, to keep its own original
+   "fully spent" intent, plus a brand new dedicated test locking in the
+   spin-down mechanic itself precisely (face index, symbol amount, and
+   the resulting creature stats all asserted).
+
+Verified: the full 914-test suite green, a live purchase (full-spend
+path) still completing cleanly with zero console errors across several
+random rolls, and the frontend's stale Surge-face mirror caught and
+fixed by the live check itself (not by inspection).

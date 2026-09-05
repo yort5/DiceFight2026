@@ -21,6 +21,11 @@ public static class InstinctClashConfig
     // energy type, matching v3/DESIGN_NOTES.md's locked spec exactly:
     // two L1, two L2, one Bulwark, one Surge). ---
 
+    // Surge dropped to 1 Wild (was 2) - direct feedback (2026-09-05):
+    // "it feels a little too easy to spend energy... let's change the
+    // Surge die to just be one wild and see how that feels," a
+    // deliberate playtesting experiment before touching monochromatic
+    // teams, not a rules-accuracy fix like the other Tardigrade faces.
     private static DieDefinition TardigradeDie(string energyType) => new($"Tardigrade{energyType}",
     [
         new Face([new SymbolAmount(energyType, 2)], new CharacterFaceData(1, FieldingCost: 0, Attack: 0, Defense: 1), Kind: FaceKind.CharacterFace),
@@ -28,7 +33,7 @@ public static class InstinctClashConfig
         new Face([new SymbolAmount(energyType, 1)], new CharacterFaceData(2, FieldingCost: 0, Attack: 1, Defense: 1), Kind: FaceKind.CharacterFace),
         new Face([new SymbolAmount(energyType, 1)], new CharacterFaceData(2, FieldingCost: 0, Attack: 1, Defense: 1), Kind: FaceKind.CharacterFace),
         new Face([], new CharacterFaceData(3, FieldingCost: 0, Attack: 1, Defense: 3), Kind: FaceKind.CharacterFace), // Bulwark
-        new Face([new SymbolAmount("Wild", 2)], Kind: FaceKind.EnergyFace), // Surge - no character face at all
+        new Face([new SymbolAmount("Wild", 1)], Kind: FaceKind.EnergyFace), // Surge - no character face at all
     ]);
 
     // --- Characters: a small, simple-ability pool, reskinned from

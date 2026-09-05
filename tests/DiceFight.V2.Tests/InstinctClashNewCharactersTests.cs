@@ -179,11 +179,46 @@ public class InstinctClashNewCharactersTests
         Assert.Null(face.Character); // an energy face, not a stat face
         Assert.Equal(2, face.Symbols.Single(s => s.SymbolId == "Claw").Count);
 
+        // Wolverine's fielding cost (2) exactly matches the die's full
+        // 2-energy face - spent in full, not partially (see the spin-down
+        // test below for that case), so it should still leave for Out of
+        // Play exactly as any fully-spent energy die does. Wolverine
+        // specifically (not Grizzly/Orca) because its ability is
+        // On-Attack, not On-Field - fielding it alone triggers nothing,
+        // so this test stays about energy spending, not target choices.
+        var wolverine = ReadyCharacter(state, InstinctClashConfig.Wolverine.Id, "p1"); // fielding cost 2
+        TurnEngine.Field(state, queue, wolverine.Id, [honeyBadgerEnergy.Id]);
+        Drain(state, queue);
+
+        Assert.Equal(Zone.FieldZone, wolverine.Zone);
+        Assert.Equal(Zone.OutOfPlay, honeyBadgerEnergy.Zone); // spent in full
+    }
+
+    // Rule 2.6.1.4 - direct feedback (2026-09-05): "we need to be able to
+    // partially spend energy - so if we spend half of the double energy
+    // die, it should spin to the L2 side with single energy." Spending
+    // only 1 of a Tardigrade's 2-energy L1 face for Stoat's fielding cost
+    // (1) should leave the die showing the matching single-energy L2
+    // face, still sitting right in the Reserve Pool - not consumed.
+    [Fact]
+    public void Partially_Spending_A_Tardigrades_Double_Energy_Face_Spins_It_Down_To_The_Single_Energy_Face()
+    {
+        var state = NewGame();
+        var queue = new AbilityQueue();
+
+        var energyDie = TardigradeEnergy(state, "p1", "Claw", 1)[0]; // L1 face, 2 Claw
+        var die = state.Dice.Single(d => d.Id == energyDie);
+        Assert.Equal(0, die.CurrentFaceIndex); // L1, the first of the two double-energy faces
+
         var stoat = ReadyCharacter(state, InstinctClashConfig.Stoat.Id, "p1"); // fielding cost 1
-        TurnEngine.Field(state, queue, stoat.Id, [honeyBadgerEnergy.Id]);
+        TurnEngine.Field(state, queue, stoat.Id, [energyDie]);
         Drain(state, queue);
 
         Assert.Equal(Zone.FieldZone, stoat.Zone);
-        Assert.Equal(Zone.OutOfPlay, honeyBadgerEnergy.Zone); // spent
+        Assert.Equal(Zone.ReservePool, die.Zone); // NOT spent - spun down and kept
+        Assert.Equal(2, die.CurrentFaceIndex); // one of the two L2 (single-energy) faces
+        var spunFace = state.GetCurrentFace(die)!;
+        Assert.Equal(1, spunFace.Symbols.Single(s => s.SymbolId == "Claw").Count);
+        Assert.Equal(2, spunFace.Character!.Level); // L2 - a real, still-fieldable creature face too
     }
 }

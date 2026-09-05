@@ -26,9 +26,6 @@ namespace DiceFight.V2;
 //    combat/Action-die mechanic exists to emit them from - they'll be
 //    wired at the same time those mechanics are built (Phase 5 KO
 //    effects, Phase 7 combat), not fabricated early.
-//  - SpendEnergy doesn't implement partial-spend "spin down to the
-//    unused value" (v1 rule 2.6.1.5/2.6.1.6) - an overspent die is simply
-//    consumed whole.
 public static class TurnEngine
 {
     // Rule 2.3.3 - the very first turn of the game draws normally, then
@@ -651,7 +648,6 @@ public static class TurnEngine
         GameState state, IReadOnlyList<DieInstance> energyDice, int amountNeeded,
         IReadOnlyList<string> requiredSymbolIds, Zone spentZone = Zone.OutOfPlay)
     {
-        var total = 0;
         var wildIds = new HashSet<string>(state.Config.EnergySymbols.Where(s => s.IsWild).Select(s => s.Id));
         var genericIds = new HashSet<string>(state.Config.EnergySymbols.Where(s => s.IsGeneric).Select(s => s.Id));
 
@@ -662,9 +658,22 @@ public static class TurnEngine
         var unmatched = amountNeeded == 0 ? [] : new HashSet<string>(requiredSymbolIds);
         var wildPips = 0;
 
+        // Rule 2.6.1.4 - stop consuming dice the instant the amount is
+        // met; anything offered beyond that stays completely untouched
+        // (still spendable later this turn) rather than being spent for
+        // no reason. At most one die - the last one needed - can ever be
+        // partially spent, by construction: every die included before it
+        // was required in full to reach amountNeeded. Direct feedback
+        // (2026-09-05): "we need to be able to partially spend energy" -
+        // previously every OFFERED die was spent in full regardless of
+        // how much was actually needed.
+        var included = new List<DieInstance>();
+        var total = 0;
         foreach (var die in energyDice)
         {
+            if (total >= amountNeeded) break;
             var face = state.GetCurrentFace(die) ?? throw new InvalidOperationException($"Die '{die.Id}' is not showing a face.");
+            included.Add(die);
             // Generic counts here and ONLY here - rule 1.4.3: it "can be
             // spent on purchasing/fielding/abilities but is not considered
             // to be any type of energy".
@@ -706,10 +715,43 @@ public static class TurnEngine
         if (unmatched.Count > 0)
             throw new InvalidOperationException($"Offered energy doesn't include the required symbol(s) {string.Join(", ", unmatched)}.");
 
-        foreach (var die in energyDice)
+        var overspend = total - amountNeeded;
+        for (var i = 0; i < included.Count; i++)
         {
-            die.Zone = spentZone; // face index left intact - see class remarks
+            var die = included[i];
+            var isPartial = i == included.Count - 1 && overspend > 0;
+            if (isPartial && TrySpinDown(state, die, overspend)) continue; // stays in place, showing the reduced face
+            die.Zone = spentZone;
         }
+    }
+
+    // Rule 2.6.1.4 - a die spent for less than its printed face value
+    // spins to whichever OTHER face of the SAME physical die shows
+    // exactly the leftover amount of the same energy type, staying right
+    // where it is (still spendable later this turn) instead of being
+    // fully consumed. Only ever tried on a face offering exactly one
+    // symbol type - true of every hybrid Character/Tardigrade energy
+    // face in this catalog; anything else (or a die with no matching
+    // lower face at all - Bulwark, the single-Wild Surge face, a
+    // Character's own single-energy face) just falls back to a full
+    // consume via the caller's own `spentZone` assignment.
+    private static bool TrySpinDown(GameState state, DieInstance die, int leftover)
+    {
+        var face = state.GetCurrentFace(die)!;
+        if (face.Symbols.Count != 1) return false;
+        var symbolId = face.Symbols[0].SymbolId;
+
+        var faces = state.GetDieDefinition(die).Faces;
+        for (var i = 0; i < faces.Count; i++)
+        {
+            var candidate = faces[i].Symbols;
+            if (candidate.Count == 1 && candidate[0].SymbolId == symbolId && candidate[0].Count == leftover)
+            {
+                die.CurrentFaceIndex = i;
+                return true;
+            }
+        }
+        return false;
     }
 
     private static List<DieInstance> ResolveOwnReservePoolEnergy(GameState state, IReadOnlyList<string> dieIds) =>
