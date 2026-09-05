@@ -990,6 +990,12 @@
   font-weight: 700;
   color: oklch(0.72 0.17 25);
 }
+.dicekingdom .die-cube-energy-icon {
+  position: absolute;
+  right: 8%;
+  top: 5%;
+  line-height: 1;
+}
 .dicekingdom .die-cube-amount {
   position: absolute;
   right: 10%;

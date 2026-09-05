@@ -235,10 +235,22 @@ function DieTile({
   turnOffset?: number;
 }) {
   const isRolled = ROLLED_ZONES.has(zone) && rolled(die);
-  const Avatar = die.cardId ? CHARACTER_ICONS[die.cardId] : null;
   const name = die.cardId ? (cardsById.get(die.cardId)?.name ?? die.cardId) : "Tardigrade";
   const cls = ["dietile", clickable ? "clickable" : "", picked ? "picked" : ""].filter(Boolean).join(" ");
   const style = accent ? ({ textAlign: "center", ["--cc" as string]: accent, color: accent } as const) : { textAlign: "center" as const };
+  // Direct feedback (2026-09-05): "Surge" is a Tardigrade-specific term
+  // (v3/DESIGN_NOTES.md's own name for its energy-only face) - a
+  // Character's own energy-only face was getting the same label, which
+  // read as if it were a Tardigrade. The card's own name now shows
+  // there instead - identity DieCube's new centered avatar (see
+  // dieFaces.ts's `avatar` field) reinforces visually, and the old
+  // external avatar badge this tile drew for stat faces only is gone,
+  // redundant now that the cube carries it on every face itself.
+  const label =
+    labelOverride ??
+    (die.effectiveAttack === null
+      ? (die.isTardigrade ? "Surge" : name)
+      : `L${die.level}${die.isTardigrade && !die.energySymbolId ? " · free" : ""}`);
   return (
     <button type="button" className={cls} onClick={onClick} disabled={!clickable} style={style}>
       {count && count > 1 && <span className="chip-count">×{count}</span>}
@@ -253,10 +265,7 @@ function DieTile({
               flat stat badge - a rolled die is a physical object showing
               a real face, not text about one. */}
           <DieCube {...facesFor(die, cardsById)} size={34} mine={mine ?? true} spin={spin} turnOffset={turnOffset} />
-          {die.effectiveAttack !== null && Avatar && <Avatar size={16} />}
-          <div className="lbl">
-            {labelOverride ?? (die.effectiveAttack === null ? "Surge" : `L${die.level}${die.isTardigrade && !die.energySymbolId ? " · free" : ""}`)}
-          </div>
+          <div className="lbl">{label}</div>
           {die.energySymbolId && die.energyAmount > 0 && (
             <PipBadge type={die.energySymbolId} amount={die.energyAmount} />
           )}
@@ -293,7 +302,7 @@ export function DiceKingdomPage() {
   // The dice-cube roll animation - ported verbatim from ../useDiceRoll.ts.
   // README calls this "the single most important piece to port
   // faithfully" - see animateRolledDice below for how a roll is detected.
-  const { spins, offsets, rolling, launch: launchRoll } = useDiceRoll();
+  const { spins, offsets, rolling, launch: launchRoll, spinTo: spinDie } = useDiceRoll();
   const [bagOpen, setBagOpen] = useState(false);
   const [oppBagOpen, setOppBagOpen] = useState(false);
   // Which roster card's detail popover (ability + per-level stats) is
@@ -408,10 +417,18 @@ export function DiceKingdomPage() {
   // identical animateRolledDice. `rolledDieIds` names dice an action
   // deliberately rolled (reroll knows its own ids up front); without it,
   // a reroll landing the same face again wouldn't animate at all.
+  //
+  // A face can also change WITHOUT the caller naming it a roll at all -
+  // partially spending a double-energy die spins it down to its single-
+  // energy face (TurnEngine.SpendEnergy's TrySpinDown). Direct feedback
+  // (2026-09-05): that should read as a distinct "twist," not the same
+  // toss-and-tumble a real roll gets - so any die whose face changed but
+  // ISN'T in `rolledDieIds` goes through spinDie instead of launchRoll.
   function animateRolledDice(previous: GameState, next: GameState, rolledDieIds?: string[]) {
     const before = new Map(previous.dice.map((d) => [d.id, d]));
     const explicit = new Set(rolledDieIds ?? []);
-    const targets: RollTarget[] = [];
+    const rolledTargets: RollTarget[] = [];
+    const spunTargets: RollTarget[] = [];
     for (const die of next.dice) {
       const was = before.get(die.id);
       if (!was) continue;
@@ -421,9 +438,10 @@ export function DiceKingdomPage() {
         was.energySymbolId !== die.energySymbolId || was.energyAmount !== die.energyAmount;
       if (!explicit.has(die.id) && !changedFace) continue;
       const { index } = facesFor(die, cardsById);
-      targets.push({ dieId: die.id, faceIndex: index });
+      (explicit.has(die.id) ? rolledTargets : spunTargets).push({ dieId: die.id, faceIndex: index });
     }
-    launchRoll(targets);
+    launchRoll(rolledTargets);
+    spinDie(spunTargets);
   }
 
   async function run(fn: () => Promise<GameState>, rolledDieIds?: string[]) {

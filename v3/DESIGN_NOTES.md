@@ -1696,3 +1696,75 @@ Verified: the full 914-test suite green, a live purchase (full-spend
 path) still completing cleanly with zero console errors across several
 random rolls, and the frontend's stale Surge-face mirror caught and
 fixed by the live check itself (not by inspection).
+
+## 2026-09-05 (yet later) - Die-face polish: identity, overlap, and a real spin animation
+
+Direct feedback on the Surge/spin-down work above, from actually looking
+at it:
+
+1. **Spin-down looked exactly like a real roll.** The player asked for
+   it explicitly: "probably need a different animation for spin-down/
+   spin-up, it shouldn't look the same as an actual randomized roll."
+   Root cause: `animateRolledDice`'s own "did this die's face change"
+   fallback (there specifically so a reroll landing the SAME face still
+   animates) doesn't distinguish WHY the face changed - a spin-down
+   tripped the identical fallback a real roll's explicit `rolledDieIds`
+   does, and got the same toss-and-tumble. Added `useDiceRoll.spinTo` -
+   no flight phase, no multi-360 tumble, no random tilt, just one direct
+   turn to the new face - and split `animateRolledDice`'s targets into
+   `rolledTargets` (explicit -> `launchRoll`) vs. `spunTargets` (the
+   implicit-only case -> `spinTo`). The "tray shakes on a roll"
+   (`rolling` state) deliberately stays untouched by a spin - a partial
+   spend isn't a dice-tray event.
+
+2. **Energy icons were covering up the character die faces.** Real
+   layout bug, not a taste call: the energy TYPE icon (Claw/Shell/etc.)
+   was rendered dead-center at over half the die's size - exactly where
+   a hybrid Tardigrade face's OWN avatar/identity would need to live,
+   and visually competing with anything else in that space. Shrunk it
+   (size 0.52 -> 0.3) and moved it into the same top-right corner slot
+   a character face's own ATK number uses (the two kinds never share a
+   face, so there's no real conflict reusing the position) - the amount
+   badge stays where it always was, bottom-right.
+
+3. **No way to tell which die is which.** "I don't really know which
+   dice are Tardigrades and which one is a Pangolin, etc." Real gaps,
+   not just a wish: an energy-only face (Surge, or a Character's own
+   pure-energy face) carried NO identity at all - not even the old
+   external avatar badge, which only ever showed on STAT faces
+   (`die.effectiveAttack !== null` gated it out entirely for anything
+   else). And the "Surge" text label itself was wrong for a non-
+   Tardigrade: `effectiveAttack === null` is true for ANY pure-energy
+   face, Tardigrade or not, so a Character's own energy face was
+   mislabeled "Surge" too. Fixed both: added a generic `TardigradeIcon`
+   glyph (icons.tsx) for the one die shape with no CardId/card avatar of
+   its own, and every `CubeFace` (dieFaces.ts) now carries an optional
+   `avatar` - the die's OWN identity icon, independent of which face is
+   currently showing - which DieCube renders centered on every face,
+   stat or energy alike. Real Character cards still only show an avatar
+   for the 8 already-drawn icons (`CHARACTER_ICONS`) - the other 24 of
+   the 32-card roster have no icon yet (a content gap, not a bug) and
+   just show no avatar, same as before this pass. The now-redundant
+   external avatar badge in `DieTile` is gone; the "Surge" label is now
+   gated on `die.isTardigrade` specifically, falling back to the card's
+   own name otherwise.
+
+4. **"Character stat faces should definitely have that character's
+   symbol in the center."** The same `avatar` field/rendering above
+   covers this directly - it replaces the old generic diagonal-stripe
+   `die-cube-art` placeholder texture that carried no identity at all.
+
+`facesFor()`'s live/static merge (the static per-die table's printed
+values overlaid with the DTO's real, modifier-inclusive numbers) now
+also carries `avatar` across that merge - the freshly-built "showing"
+face from the live DTO never has one of its own, so it has to come from
+whichever static slot it landed in.
+
+Verified live via headless Chromium across several purchases, including
+one deliberately ordered to force a real overspend (an L2's 1 energy
+plus an L1's 2, against a cost of 2): the L2 fully consumed to Out of
+Play, the L1 correctly spun to its own L2 face (1 energy, a real 1A/1D
+creature face) and stayed in the Reserve Pool - screenshotted mid- and
+post-animation, zero console errors across every run. `tsc -b`/`oxlint`/
+`vite build` clean; the full 914-test C# suite (untouched this pass)
+still green.

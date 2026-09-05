@@ -20,6 +20,16 @@ const DONE_AT_MS = 1080;
 const FLIGHT_EASE = "cubic-bezier(.22,.62,.4,.98)";
 const SETTLE_EASE = "cubic-bezier(.28,1.5,.42,.96)";
 
+// Direct feedback (2026-09-05): a die spinning down to a lower energy
+// face after a partial spend "shouldn't look the same as an actual
+// randomized roll" - no toss-up, no multi-360 tumble, no random tilt,
+// just a single direct turn from its current face to the new one. Its
+// own distinct feel (a smooth "twist," not a "throw") comes entirely
+// from what it DOESN'T do relative to launch() above, not from any
+// extra flourish.
+const SPIN_MS = 380;
+const SPIN_EASE = "cubic-bezier(.32,1.42,.46,1)";
+
 export interface RollTarget {
   dieId: string;
   /** Which face the server says the die landed on. */
@@ -103,5 +113,56 @@ export function useDiceRoll() {
     });
   }, []);
 
-  return { spins, offsets, rolling, launch };
+  // Direct feedback (2026-09-05): "we need to be able to partially
+  // spend energy... a different animation for spin-down/spin-up, it
+  // shouldn't look the same as an actual randomized roll." A single
+  // smooth turn straight to the new face, keeping whatever turnOffset
+  // the die already had (so it doesn't visually "unwind" the extra
+  // full turns a real roll left it on) - no flight, no tumble, no tray
+  // shake (`rolling` is deliberately left untouched).
+  const spinTo = useCallback((targets: RollTarget[]) => {
+    if (targets.length === 0) return;
+    clearTimers();
+
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+
+    const settle: Record<string, CubeSpin> = {};
+    targets.forEach((target) => {
+      const [restX, restY] = FACE_ORIENTATIONS[target.faceIndex] ?? FACE_ORIENTATIONS[0];
+      settle[target.dieId] = {
+        rx: restX,
+        ry: restY,
+        rz: 0,
+        tx: 0,
+        ty: 0,
+        durationMs: SPIN_MS,
+        delayMs: 0,
+        easing: SPIN_EASE,
+      };
+    });
+
+    setSpins((current) => ({ ...current, ...settle }));
+    setOffsets((current) => {
+      // The transient spin above targets the bare resting angle (no
+      // turnOffset added), so any prior accumulated turns have to be
+      // cleared in lockstep - otherwise dropping back to the plain
+      // resting transform once this clears would jump.
+      const next = { ...current };
+      for (const target of targets) delete next[target.dieId];
+      return next;
+    });
+
+    const after = (ms: number, fn: () => void) => {
+      timers.current.push(setTimeout(fn, ms) as unknown as number);
+    };
+    after(SPIN_MS, () => {
+      setSpins((current) => {
+        const next = { ...current };
+        for (const target of targets) delete next[target.dieId];
+        return next;
+      });
+    });
+  }, []);
+
+  return { spins, offsets, rolling, launch, spinTo };
 }

@@ -1,3 +1,5 @@
+import type { ReactElement } from "react";
+import { CHARACTER_ICONS, TardigradeIcon } from "./icons";
 import type { CardDef, Die } from "./types";
 
 // The six faces of a physical die, for the 3D cube in DieCube.tsx.
@@ -32,9 +34,22 @@ export const FACE_ORIENTATIONS: readonly (readonly [number, number])[] = [
   [0, 0], [0, -180], [0, -90], [0, 90], [-90, 0], [90, 0],
 ];
 
+// `avatar` is optional on both variants and carries no gameplay meaning
+// of its own - it's the SAME icon on every face of a given physical die
+// (see defaultFaces below), just along for the ride so DieCube can put
+// it in the face's spare center space. Direct feedback (2026-09-05):
+// "I don't really know which dice are Tardigrades and which one is a
+// Pangolin... Character stat faces should definitely have that
+// character's symbol in the center" - without this, only a card's OWN
+// stat faces carried any per-card identity at all (via the small
+// external badge DieTile used to draw beside the cube, now removed as
+// redundant); an energy face - Surge included - looked identical no
+// matter which physical card it belonged to.
+type Avatar = (p: { size?: number }) => ReactElement;
+
 export type CubeFace =
-  | { kind: "character"; level: number; fieldingCost: number; attack: number; defense: number }
-  | { kind: "energy"; icon: string; amount: number };
+  | { kind: "character"; level: number; fieldingCost: number; attack: number; defense: number; avatar?: Avatar }
+  | { kind: "energy"; icon: string; amount: number; avatar?: Avatar };
 
 const FACE_COUNT = 6;
 
@@ -42,12 +57,12 @@ const FACE_COUNT = 6;
 // InstinctClashConfig.cs - not derived from a CardDef, since a Tardigrade
 // die has no cardId at all (isTardigrade instead).
 const TARDIGRADE_FACES: CubeFace[] = [
-  { kind: "character", level: 1, fieldingCost: 0, attack: 0, defense: 1 },
-  { kind: "character", level: 1, fieldingCost: 0, attack: 0, defense: 1 },
-  { kind: "character", level: 2, fieldingCost: 0, attack: 1, defense: 1 },
-  { kind: "character", level: 2, fieldingCost: 0, attack: 1, defense: 1 },
-  { kind: "character", level: 3, fieldingCost: 0, attack: 1, defense: 3 }, // Bulwark
-  { kind: "energy", icon: "Wild", amount: 1 }, // Surge - dropped from 2 (2026-09-05 playtest experiment)
+  { kind: "character", level: 1, fieldingCost: 0, attack: 0, defense: 1, avatar: TardigradeIcon },
+  { kind: "character", level: 1, fieldingCost: 0, attack: 0, defense: 1, avatar: TardigradeIcon },
+  { kind: "character", level: 2, fieldingCost: 0, attack: 1, defense: 1, avatar: TardigradeIcon },
+  { kind: "character", level: 2, fieldingCost: 0, attack: 1, defense: 1, avatar: TardigradeIcon },
+  { kind: "character", level: 3, fieldingCost: 0, attack: 1, defense: 3, avatar: TardigradeIcon }, // Bulwark
+  { kind: "energy", icon: "Wild", amount: 1, avatar: TardigradeIcon }, // Surge - dropped from 2 (2026-09-05 playtest experiment)
 ];
 
 function defaultFaces(die: Die, card: CardDef | undefined): CubeFace[] {
@@ -55,12 +70,13 @@ function defaultFaces(die: Die, card: CardDef | undefined): CubeFace[] {
   const levels = card?.levels ?? [];
   if (levels.length === 0) return TARDIGRADE_FACES;
   const energyType = card?.energyTypes[0] ?? "Wild";
+  const avatar = CHARACTER_ICONS[die.cardId];
   const faces: CubeFace[] = levels.map((level, i) => ({
-    kind: "character", level: i + 1, fieldingCost: level.fieldingCost, attack: level.attack, defense: level.defense,
+    kind: "character", level: i + 1, fieldingCost: level.fieldingCost, attack: level.attack, defense: level.defense, avatar,
   }));
-  faces.push({ kind: "energy", icon: energyType, amount: 2 });
-  faces.push({ kind: "energy", icon: energyType, amount: 2 });
-  faces.push({ kind: "energy", icon: energyType, amount: 1 });
+  faces.push({ kind: "energy", icon: energyType, amount: 2, avatar });
+  faces.push({ kind: "energy", icon: energyType, amount: 2, avatar });
+  faces.push({ kind: "energy", icon: energyType, amount: 1, avatar });
   return faces.slice(0, FACE_COUNT);
 }
 
@@ -95,11 +111,14 @@ export function facesFor(die: Die, cardsById: Map<string, CardDef>): DieFaces {
   );
   const slot = found >= 0 ? found : faces.length - 1;
   // Keep the static table's printed fielding cost (not a live/modified
-  // stat - the die itself doesn't carry one) while letting the true,
-  // modifier-inclusive attack/defense win.
+  // stat - the die itself doesn't carry one) and its avatar (`showing`,
+  // built fresh from the live DTO, never carries one) while letting the
+  // true, modifier-inclusive attack/defense win.
   const existing = faces[slot];
-  faces[slot] = showing.kind === "character" && existing.kind === "character"
-    ? { ...showing, fieldingCost: existing.fieldingCost }
-    : showing;
+  faces[slot] = {
+    ...showing,
+    avatar: existing.avatar,
+    ...(showing.kind === "character" && existing.kind === "character" ? { fieldingCost: existing.fieldingCost } : {}),
+  };
   return { faces, index: slot };
 }

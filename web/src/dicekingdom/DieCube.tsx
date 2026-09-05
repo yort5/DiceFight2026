@@ -91,9 +91,19 @@ export function DieCube(props: {
                 boxShadow: `inset 0 0 ${Math.round(size * 0.3)}px oklch(0.1 0.02 250 / 0.8)`,
               }}
             >
+              {/* The card's own identity, centered - direct feedback
+                  (2026-09-05): "I don't really know which dice are
+                  Tardigrades and which one is a Pangolin... Character
+                  stat faces should definitely have that character's
+                  symbol in the center." Same spot on every face kind
+                  (replaces the old generic diagonal-stripe texture on
+                  character faces, which carried no identity at all) -
+                  the corner-positioned stats/energy-type icon sit on
+                  top of it, never over it, so it never competes with
+                  the numbers that actually have to be read precisely. */}
+              {face.avatar && <face.avatar size={Math.round(size * 0.48)} />}
               {face.kind === "character" && (
                 <>
-                  <span className="die-cube-art" />
                   {/* Always shown, including 0 - direct feedback
                       (2026-09-07): a Tardigrade's free faces should still
                       print "0" rather than leave the corner blank, so a
@@ -106,9 +116,22 @@ export function DieCube(props: {
                   )}
                 </>
               )}
-              {Icon && <Icon size={Math.round(size * 0.52)} />}
-              {face.kind === "energy" && face.amount > 1 && (
-                <span className="die-cube-amount">{face.amount}</span>
+              {face.kind === "energy" && (
+                <>
+                  {/* Shrunk and moved off the center - direct feedback
+                      (2026-09-05): "the energy icons are covering up
+                      stuff on the character die faces... maybe the icon
+                      needs to be a little smaller." Same top-right slot
+                      .die-cube-attack uses on a character face - the two
+                      never appear on the same face, so there's no clash
+                      reusing the position. */}
+                  {Icon && (
+                    <span className="die-cube-energy-icon">
+                      <Icon size={Math.round(size * 0.3)} />
+                    </span>
+                  )}
+                  {face.amount > 1 && <span className="die-cube-amount">{face.amount}</span>}
+                </>
               )}
             </span>
           );

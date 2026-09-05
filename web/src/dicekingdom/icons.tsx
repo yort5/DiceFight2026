@@ -165,6 +165,29 @@ export const CHAMPION_ICONS: Record<string, (p: IconProps) => ReactElement> = {
   GreatHornedOwl: GreatHornedOwlIcon,
 };
 
+// A generic glyph for the basic pool creature - direct feedback
+// (2026-09-05): "I don't really know which dice are Tardigrades and
+// which one is a Pangolin" - every die's cube face now shows SOME
+// identity glyph regardless of which face it's resting on (see
+// dieFaces.ts's `avatar` field), and a Tardigrade has no CardId/card
+// avatar of its own to use for that. Not meant to be a scientifically
+// accurate tardigrade, just a simple, at-a-glance "this is the basic
+// creature, not someone's Character" silhouette in the same plain-path
+// style as the rest of this file.
+export function TardigradeIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <ellipse cx={32} cy={34} rx={19} ry={13} fill="currentColor" />
+      <g fill="currentColor">
+        <circle cx={15} cy={24} r={4} />
+        <circle cx={13} cy={38} r={4} />
+        <circle cx={49} cy={24} r={4} />
+        <circle cx={51} cy={38} r={4} />
+      </g>
+    </Svg>
+  );
+}
+
 // ---- Character avatars (the 8-card v3 pool) ----
 
 const CREAM = "#FFF8EC";
