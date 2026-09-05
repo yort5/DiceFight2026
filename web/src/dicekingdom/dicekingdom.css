@@ -1091,6 +1091,11 @@
   margin-top: 4px;
   color: #fff8ec;
 }
+.dicekingdom .pip svg {
+  width: 11px;
+  height: 11px;
+  flex: none;
+}
 
 .dicekingdom .panel {
   background: var(--panel-bg);
@@ -1335,6 +1340,128 @@
 }
 .dicekingdom .bag-popover .dierow {
   gap: 6px;
+}
+
+/* ---- Roster card detail popover - direct feedback (2026-09-07): "we'll
+   need some kind of ability to click the card and see the ability, as
+   well as the stats." Same up/down-anchored popover pattern as the Bag
+   inspector above, just triggered by the roster chip itself instead of
+   a separate "click to inspect" hint - viewing works regardless of
+   whether the card is purchasable right now (the actual Purchase button
+   lives inside the popover, gated separately). ---- */
+.dicekingdom .roster-chip-wrap {
+  position: relative;
+}
+.dicekingdom .roster-chip.open {
+  border-color: var(--text-h);
+}
+.dicekingdom .card-popover {
+  position: absolute;
+  left: 0;
+  z-index: 6;
+  width: 220px;
+  padding: 10px 12px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--panel-bg);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  text-align: left;
+}
+.dicekingdom .card-popover.up {
+  bottom: calc(100% + 6px);
+}
+.dicekingdom .card-popover.down {
+  top: calc(100% + 6px);
+}
+.dicekingdom .card-popover-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.dicekingdom .card-popover-head svg,
+.dicekingdom .card-popover-head img {
+  width: 28px;
+  height: 28px;
+  flex: none;
+}
+.dicekingdom .card-popover-name {
+  font: 400 16px/1.1 var(--display);
+  text-transform: uppercase;
+  color: var(--text-h);
+}
+.dicekingdom .card-popover-cost {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+.dicekingdom .card-popover-levels {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 6px;
+}
+.dicekingdom .card-popover-level-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--text);
+}
+.dicekingdom .card-popover-level-row .lvl-label {
+  font-weight: 700;
+  color: var(--text-h);
+  width: 16px;
+  flex: none;
+}
+.dicekingdom .card-popover-level-row .lvl-stats {
+  flex: 1;
+}
+.dicekingdom .card-popover-level-row .lvl-cost {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--text-dim);
+  flex: none;
+}
+.dicekingdom .card-popover-energy-note {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  font-size: 10px;
+  color: var(--text-dim);
+  margin: 0 0 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.dicekingdom .card-popover-text {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text);
+  margin: 0 0 10px;
+}
+.dicekingdom .card-popover button.btn {
+  width: 100%;
+  font-size: 11.5px;
+  padding: 8px 12px;
+}
+.dicekingdom .rc-cost,
+.dicekingdom .card-popover-cost {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.dicekingdom .rc-cost svg,
+.dicekingdom .card-popover-cost svg,
+.dicekingdom .card-popover-levels svg,
+.dicekingdom .card-popover-energy-note svg {
+  width: 11px;
+  height: 11px;
+  flex: none;
 }
 
 /* ---- Selected die (rail) - README: name, level/stats, contextual

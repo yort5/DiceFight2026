@@ -110,6 +110,22 @@ export function WolfIcon({ size = 24 }: IconProps) {
   );
 }
 
+// A plain currentColor glyph in the same minimal style as the other
+// three Champions - kept alongside WolfIcon (the real photo) for
+// whatever small/tinted context a flat raster image doesn't suit (the
+// photo can't pick up an accent color the way this can, and doesn't
+// shrink to a tiny badge as cleanly as a few paths do).
+export function WolfGlyphIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path
+        fill="currentColor"
+        d="M14,14 L26,24 L32,18 L38,24 L50,14 L46,32 L52,40 L40,42 L32,56 L24,42 L12,40 L18,32 Z"
+      />
+    </Svg>
+  );
+}
+
 export function ArmadilloIcon(props: IconProps) {
   return (
     <Svg {...props}>

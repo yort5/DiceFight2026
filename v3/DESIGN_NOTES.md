@@ -1382,3 +1382,56 @@ Honey Badger sitting on its own double-Claw-energy face pays Stoat's
 fielding cost through the ordinary `TurnEngine.Field` path, same as any
 Tardigrade or Reserve Pool energy die would. Full solution suite:
 912/912 passing (319 V2 + 580 Engine + 13 Api).
+
+## Roster card detail popover, icon-based costs, a Wolf glyph (2026-09-07)
+
+Three smaller asks from the same round, all frontend:
+
+**Click a roster card to see its ability and stats.** The card was a
+`<button disabled={!clickable}>` where `clickable` only turned on
+during your own Main step - meaning most of the game, the card
+couldn't be clicked for anything at all, viewing included. Split the
+two concerns: the visible chip now always toggles a detail popover
+(`openCardId`, one page-level id so only one is ever open regardless of
+which side's roster it's on), and the actual purchase action moved to
+a real "Select to Purchase" button *inside* the popover, shown only
+when `canPurchaseNow`. The popover shows the name, purchase cost, all
+three levels' `ATK/DEF` + fielding cost, a line noting the other 3
+faces (always 2 double + 1 single of the card's own type now - nothing
+per-card to fetch, per the die-layout change above), and the ability
+text.
+
+Real layout bug found building it: the level rows were first an HTML
+`<table>` with `display: flex` on the `<td>`s (to lay out the stat +
+cost-icon pair inline) - setting `display: flex` on a table cell drops
+it out of table layout entirely, so rows rendered in a scrambled stack
+instead of aligned columns. Replaced the whole table with a plain flex
+column of flex rows - no table semantics needed for 3 rows anyway.
+
+**Icons instead of words for energy costs** - `PipBadge` (the sideboard's
+"Energy in your pool" chips) and the roster chip's cost label both
+spelled the type out ("2 Claw"). Both now render the type's own
+`ENERGY_ICONS` glyph next to the number instead (a new small `CostIcon`
+helper, reused by the popover's cost/level rows and energy-faces note
+too).
+
+**A vector Wolf glyph alongside the photo** - `WolfIcon` only ever
+rendered the real JPEG, which can't pick up an accent tint the way the
+other three Champions' `currentColor` SVGs can, and doesn't shrink to a
+tiny badge as cleanly. Added `WolfGlyphIcon`, a plain path-based icon
+in the same minimal style as `ArmadilloIcon`/`GoldenEagleIcon`/
+`GreatHornedOwlIcon` - not wired into `CHAMPION_ICONS` (the photo stays
+the champion box/picker's real icon, confirmed correct in the last
+round), just available for whatever small/tinted context comes up next
+that a flat raster image doesn't suit.
+
+Verified live with headless Chromium: opened several cards' popovers
+(Honey Badger, Grizzly Bear) in both a non-Main step (view-only, no
+Purchase button) and Main step (Purchase button appears, clicking it
+selects the die the same way the old direct click used to), ran a full
+purchase through to completion (energy dice selected, Purchase button
+enabled, die moved to Used Pile, log entry correct, roster count
+decremented) - real proof the popover's button reaches the same
+`toggleDie`/`selectionAction` path the rest of the board already uses,
+not a parallel one. `tsc -b`/`vite build`/`oxlint` clean, full
+click-through zero console errors.

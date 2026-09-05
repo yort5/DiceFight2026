@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import "./dicekingdom.css";
 import { api } from "./api";
-import { CHAMPION_ICONS, CHARACTER_ICONS } from "./icons";
+import { CHAMPION_ICONS, CHARACTER_ICONS, ENERGY_ICONS } from "./icons";
 import { claimSeatFromUrl, inviteLink, nameClaimedSeat, rememberSeats } from "./seats";
 import { CombatLane } from "./CombatLane";
 import { DieCube, type CubeSpin } from "./DieCube";
@@ -165,11 +165,21 @@ function InviteRow({ link }: { link: string }) {
 
 function PipBadge({ type, amount }: { type: string; amount: number }) {
   const cssVar = type === "Wild" ? "var(--wild)" : `var(--${type.toLowerCase()})`;
+  const Icon = ENERGY_ICONS[type];
   return (
-    <span className="pip" style={{ background: cssVar }}>
-      {amount} {type}
+    <span className="pip" style={{ background: cssVar }} title={`${amount} ${type}`}>
+      {amount} {Icon ? <Icon size={11} /> : type}
     </span>
   );
+}
+
+// A cost as a number + the energy's own icon, instead of spelling the
+// type out - direct feedback (2026-09-07): "can we get the icons in
+// there instead of the words." Bare span (not a colored pip like
+// PipBadge) so it drops into existing text-sized cost labels unchanged.
+function CostIcon({ energyType }: { energyType: string }) {
+  const Icon = ENERGY_ICONS[energyType];
+  return Icon ? <Icon size={11} /> : <>{energyType}</>;
 }
 
 function DieTile({
@@ -268,6 +278,14 @@ export function DiceKingdomPage() {
   const { spins, offsets, rolling, launch: launchRoll } = useDiceRoll();
   const [bagOpen, setBagOpen] = useState(false);
   const [oppBagOpen, setOppBagOpen] = useState(false);
+  // Which roster card's detail popover (ability + per-level stats) is
+  // open, if any - a single page-level id rather than per-board state,
+  // since only one should reasonably be open at a time regardless of
+  // which side's roster it's on. Deliberately separate from `selection`:
+  // viewing a card's detail has to work even when it isn't purchasable
+  // right now (most of the game), which selection's own clickable gate
+  // would otherwise block entirely.
+  const [openCardId, setOpenCardId] = useState<string | null>(null);
 
   useEffect(() => {
     api.getCards().then((cards) => setCardsById(new Map(cards.map((c) => [c.id, c]))));
@@ -712,25 +730,74 @@ export function DiceKingdomPage() {
             const card = cardsById.get(cardId);
             const Avatar = CHARACTER_ICONS[cardId];
             const dieId = dice[0].id;
+            const energyType = card?.energyTypes[0] ?? "Wild";
             const canPurchaseNow = isYourTurn && playerId === you && step === "main";
-            const clickable = canPurchaseNow && (selection.primary === null || selection.primary === dieId);
             const picked = selection.primary === dieId;
+            const detailOpen = openCardId === cardId;
             return (
-              <button
-                key={cardId}
-                type="button"
-                className={`roster-chip${clickable ? " clickable" : ""}${picked ? " picked" : ""}`}
-                disabled={!clickable}
-                style={accent ? ({ ["--cc" as string]: accent } as const) : undefined}
-                onClick={() => toggleDie(dieId)}
-              >
-                {Avatar && <Avatar size={18} />}
-                <span className="rc-name">{card?.name ?? cardId}</span>
-                <span className="rc-cost">
-                  {card?.purchaseCost} {card?.energyTypes[0]}
-                </span>
-                <span className="rc-left">×{dice.length} left</span>
-              </button>
+              // Not a <button> disabled outside Purchase's own window -
+              // direct feedback (2026-09-07): viewing a card's ability
+              // and stats has to work all game, not just when it's your
+              // Main step. The actual purchase click moved into a real
+              // button inside the popover below, which IS gated on
+              // canPurchaseNow.
+              <div key={cardId} className="roster-chip-wrap">
+                <button
+                  type="button"
+                  className={`roster-chip${detailOpen ? " open" : ""}${picked ? " picked" : ""}`}
+                  style={accent ? ({ ["--cc" as string]: accent } as const) : undefined}
+                  onClick={() => setOpenCardId((c) => (c === cardId ? null : cardId))}
+                >
+                  {Avatar && <Avatar size={18} />}
+                  <span className="rc-name">{card?.name ?? cardId}</span>
+                  <span className="rc-cost">
+                    {card?.purchaseCost} <CostIcon energyType={energyType} />
+                  </span>
+                  <span className="rc-left">×{dice.length} left</span>
+                </button>
+                {detailOpen && (
+                  <div className={`card-popover ${mirrored ? "down" : "up"}`}>
+                    <div className="card-popover-head">
+                      {Avatar && <Avatar size={28} />}
+                      <div>
+                        <div className="card-popover-name">{card?.name ?? cardId}</div>
+                        <div className="card-popover-cost">
+                          Cost {card?.purchaseCost} <CostIcon energyType={energyType} />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="card-popover-levels">
+                      {card?.levels.map((level, i) => (
+                        <div className="card-popover-level-row" key={i}>
+                          <span className="lvl-label">L{i + 1}</span>
+                          <span className="lvl-stats">{level.attack}A / {level.defense}D</span>
+                          <span className="lvl-cost">
+                            {level.fieldingCost} <CostIcon energyType={energyType} />
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Later-Dice-Masters layout (2026-09-07): every
+                        Character's other 3 faces are always exactly this -
+                        2 double + 1 single energy of its own type - so
+                        there's nothing per-card to fetch here. */}
+                    <p className="card-popover-energy-note">
+                      Plus 2 faces of 2 <CostIcon energyType={energyType} /> and 1 face of 1 <CostIcon energyType={energyType} />
+                    </p>
+                    <p className="card-popover-text">{card?.rawText}</p>
+                    {canPurchaseNow && (
+                      <button
+                        type="button"
+                        className="btn"
+                        disabled={selection.primary !== null && selection.primary !== dieId}
+                        onClick={() => toggleDie(dieId)}
+                      >
+                        {picked ? "Selected - pay energy above" : "Select to Purchase"}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
