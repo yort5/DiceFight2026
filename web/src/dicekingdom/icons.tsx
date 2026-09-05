@@ -174,15 +174,25 @@ export const CHAMPION_ICONS: Record<string, (p: IconProps) => ReactElement> = {
 // accurate tardigrade, just a simple, at-a-glance "this is the basic
 // creature, not someone's Character" silhouette in the same plain-path
 // style as the rest of this file.
+// Side profile, not the original front-on blob-plus-four-dots - direct
+// feedback (2026-09-08): "I think that's more recognizable" at the tiny
+// sizes this actually renders at. A rounded snout at the front, a
+// plump tapering body, four stubby legs trailing along the bottom -
+// the classic "water bear" silhouette, simplified down to what still
+// reads at 15-20px.
 export function TardigradeIcon(props: IconProps) {
   return (
     <Svg {...props}>
-      <ellipse cx={32} cy={34} rx={19} ry={13} fill="currentColor" />
+      <path
+        fill="currentColor"
+        d="M14,30 C14,20 22,14 34,14 C46,14 54,21 54,30 C54,39 46,44 34,44 C20,44 14,40 14,30 Z"
+      />
+      <circle cx={13} cy={28} r={6} fill="currentColor" />
       <g fill="currentColor">
-        <circle cx={15} cy={24} r={4} />
-        <circle cx={13} cy={38} r={4} />
-        <circle cx={49} cy={24} r={4} />
-        <circle cx={51} cy={38} r={4} />
+        <rect x={18} y={42} width={5} height={10} rx={2.5} />
+        <rect x={28} y={43} width={5} height={10} rx={2.5} />
+        <rect x={38} y={43} width={5} height={10} rx={2.5} />
+        <rect x={47} y={41} width={5} height={10} rx={2.5} />
       </g>
     </Svg>
   );

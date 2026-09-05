@@ -1101,6 +1101,14 @@
   opacity: 0.55;
 }
 
+/* Wraps the tile itself plus its own info popover (direct feedback,
+   2026-09-08: "much like clicking on the character itself") - same
+   position:relative anchor role .roster-chip-wrap already plays for
+   the roster's popover, just one per die instead of one per card. */
+.dicekingdom .dietile-wrap {
+  position: relative;
+  display: inline-flex;
+}
 .dicekingdom .dietile {
   position: relative;
   width: 78px;
@@ -1142,11 +1150,15 @@
   box-shadow: 0 0 0 3px color-mix(in oklab, var(--cc, var(--text-h)) 45%, transparent), var(--shadow);
   transform: translateY(-2px);
 }
-.dicekingdom .dietile svg {
-  width: 26px;
-  height: 26px;
-  margin: 0 auto 2px;
-}
+/* No more ".dietile svg { width:26px; ... }" here - real bug, found
+   2026-09-08: it was written for the old external avatar badge this
+   tile used to draw directly (removed - see DieTile's own remarks), but
+   as a plain descendant selector it also reached every svg INSIDE the
+   die-cube (DieCube.tsx's own avatar and per-face energy icon), forcing
+   both to ~26px regardless of their real, deliberately different inline
+   sizes - undoing the "shrink the energy icon, don't cover the stats"
+   fix from the previous pass. DieCube's own icons are all explicitly
+   sized already; nothing here needs a blanket override. */
 .dicekingdom .dietile .stat {
   font: 400 18px/1 var(--display);
   font-variant-numeric: tabular-nums;
@@ -1516,6 +1528,17 @@
   gap: 10px;
   font-size: 11px;
   color: var(--text);
+}
+/* Which row matches the die this popover was opened from - DieTile's
+   own info popover (direct feedback, 2026-09-08), not the roster's
+   (a roster card has no single current level to highlight). */
+.dicekingdom .card-popover-level-row.current {
+  background: color-mix(in oklab, var(--cc, var(--text-h)) 16%, transparent);
+  border-radius: 6px;
+  margin: 0 -6px;
+  padding: 2px 6px;
+  font-weight: 700;
+  color: var(--text-h);
 }
 .dicekingdom .card-popover-level-row .lvl-label {
   font-weight: 700;

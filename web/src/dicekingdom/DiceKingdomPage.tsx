@@ -11,7 +11,7 @@ import { MatchLog } from "./MatchLog";
 import { ThemeToggle, useTheme } from "./ThemeToggle";
 import { useDiceRoll, type RollTarget } from "./useDiceRoll";
 import { characterFaceInfo, dieLabel } from "./dieHelpers";
-import type { BlockAssignment, CardDef, Die, GameState, PlayerState } from "./types";
+import type { BlockAssignment, CardDef, CharacterFace, Die, GameState, PlayerState } from "./types";
 
 const POLL_INTERVAL_MS = 2000;
 const CHAMPIONS = [
@@ -47,6 +47,18 @@ function rolled(d: Die): boolean {
 // effectiveAttack directly is what fixes a spent/KO'd die still showing
 // its last rolled stats in the Used Pile.
 const ROLLED_ZONES = new Set(["ReservePool", "PrepArea", "FieldZone", "AttackZone"]);
+
+// v3's locked Tardigrade spec (v3/DESIGN_NOTES.md), for DieTile's own
+// info popover - a Tardigrade has no CardDef/`levels` of its own to
+// read this from the way a Character does. Matches TardigradeDie in
+// InstinctClashConfig.cs's three stat levels (each printed on 2 of its
+// 6 faces, except L3/"Bulwark" on just 1 - the 6th face, Surge, is pure
+// energy and called out in its own sentence instead of a 4th row here).
+const TARDIGRADE_SPEC: CharacterFace[] = [
+  { fieldingCost: 0, attack: 0, defense: 1 },
+  { fieldingCost: 0, attack: 1, defense: 1 },
+  { fieldingCost: 0, attack: 1, defense: 3 },
+];
 
 // What the rail's "Now" header says for each step - ported from
 // ../TurnRail.tsx's STEP_GUIDANCE/ATTACK_SUB_STEPS. Real feedback: the
@@ -134,7 +146,11 @@ function ChampionBox({ player, isActivePlayer, you }: { player: PlayerState; isA
         <div className="championbox-text">
           <div className="championbox-name-row">
             <div className="championbox-name">{player.champion.name}</div>
-            {EnergyIcon && <EnergyIcon size={15} />}
+            {/* Direct feedback (2026-09-08): "pull the size of the
+                Champion energy down just a tad... more on par with the
+                size of the word" - was reading noticeably heavier than
+                the name text next to it despite a nearby pixel size. */}
+            {EnergyIcon && <EnergyIcon size={12} />}
           </div>
           <div className="championbox-note">{player.champion.passiveText}</div>
         </div>
@@ -234,44 +250,112 @@ function DieTile({
   spin?: CubeSpin;
   turnOffset?: number;
 }) {
+  const [showInfo, setShowInfo] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  // Closes on a click anywhere outside this one tile - same pattern the
+  // roster's own card-popover uses, just scoped locally (this popover's
+  // open/closed state lives on the tile itself, not page-level, since
+  // there's no reason only one die's info can be open at a time).
+  useEffect(() => {
+    if (!showInfo) return;
+    function handlePointerDown(e: PointerEvent) {
+      if (!(e.target instanceof Node) || !wrapRef.current?.contains(e.target)) setShowInfo(false);
+    }
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [showInfo]);
   const isRolled = ROLLED_ZONES.has(zone) && rolled(die);
-  const name = die.cardId ? (cardsById.get(die.cardId)?.name ?? die.cardId) : "Tardigrade";
+  const card = die.cardId ? cardsById.get(die.cardId) : undefined;
+  const name = die.cardId ? (card?.name ?? die.cardId) : "Tardigrade";
   const cls = ["dietile", clickable ? "clickable" : "", picked ? "picked" : ""].filter(Boolean).join(" ");
   const style = accent ? ({ textAlign: "center", ["--cc" as string]: accent, color: accent } as const) : { textAlign: "center" as const };
-  // Direct feedback (2026-09-05): "Surge" is a Tardigrade-specific term
-  // (v3/DESIGN_NOTES.md's own name for its energy-only face) - a
-  // Character's own energy-only face was getting the same label, which
-  // read as if it were a Tardigrade. The card's own name now shows
-  // there instead - identity DieCube's new centered avatar (see
-  // dieFaces.ts's `avatar` field) reinforces visually, and the old
-  // external avatar badge this tile drew for stat faces only is gone,
-  // redundant now that the cube carries it on every face itself.
-  const label =
-    labelOverride ??
-    (die.effectiveAttack === null
-      ? (die.isTardigrade ? "Surge" : name)
-      : `L${die.level}${die.isTardigrade && !die.energySymbolId ? " · free" : ""}`);
+  // Direct feedback (2026-09-08): "the Level probably isn't need-to-know
+  // information... provide that on a click." The die-cube itself already
+  // prints the real attack/defense/cost numbers on its face (see
+  // DieCube.tsx), so the level number below it was pure repetition -
+  // dropped for a stat face entirely to shrink the tile; kept only for
+  // an energy face, where "Surge" (or the card's own name, for a
+  // Character's own energy face - see the remarks this replaced below)
+  // is the one thing the face itself doesn't otherwise say.
+  const label = labelOverride ?? (die.effectiveAttack === null ? (die.isTardigrade ? "Surge" : name) : null);
+  const Avatar = die.cardId ? CHARACTER_ICONS[die.cardId] : null;
+  const energyType = card?.energyTypes[0];
+  // A rolled die that ISN'T currently part of an active selection has
+  // nothing else a click would do - direct feedback (2026-09-08): "much
+  // like clicking on the character itself" (the roster's own card-
+  // popover). Deliberately NOT wired up for a clickable die: selecting
+  // it (to pay energy, attack, block, ...) stays the one thing a click
+  // there does, unchanged.
+  const canShowInfo = isRolled && !clickable;
   return (
-    <button type="button" className={cls} onClick={onClick} disabled={!clickable} style={style}>
-      {count && count > 1 && <span className="chip-count">×{count}</span>}
-      {!isRolled ? (
-        <>
-          <div className="lbl">{name}</div>
-          <div className="stat">—</div>
-        </>
-      ) : (
-        <>
-          {/* The same 3D cube /game's board uses (../DieCube.tsx), not a
-              flat stat badge - a rolled die is a physical object showing
-              a real face, not text about one. */}
-          <DieCube {...facesFor(die, cardsById)} size={34} mine={mine ?? true} spin={spin} turnOffset={turnOffset} />
-          <div className="lbl">{label}</div>
-          {die.energySymbolId && die.energyAmount > 0 && (
-            <PipBadge type={die.energySymbolId} amount={die.energyAmount} />
+    <div ref={wrapRef} className={`dietile-wrap${showInfo ? " info-open" : ""}`}>
+      <button
+        type="button"
+        className={cls}
+        onClick={clickable ? onClick : canShowInfo ? () => setShowInfo((v) => !v) : undefined}
+        style={style}
+      >
+        {count && count > 1 && <span className="chip-count">×{count}</span>}
+        {!isRolled ? (
+          <>
+            <div className="lbl">{name}</div>
+            <div className="stat">—</div>
+          </>
+        ) : (
+          <>
+            {/* The same 3D cube /game's board uses (../DieCube.tsx), not a
+                flat stat badge - a rolled die is a physical object showing
+                a real face, not text about one. */}
+            <DieCube {...facesFor(die, cardsById)} size={34} mine={mine ?? true} spin={spin} turnOffset={turnOffset} />
+            {label && <div className="lbl">{label}</div>}
+            {die.energySymbolId && die.energyAmount > 0 && (
+              <PipBadge type={die.energySymbolId} amount={die.energyAmount} />
+            )}
+          </>
+        )}
+      </button>
+      {showInfo && (
+        <div className="card-popover down">
+          <div className="card-popover-head">
+            {Avatar && <Avatar size={28} />}
+            <div>
+              <div className="card-popover-name">{name}</div>
+              {card && (
+                <div className="card-popover-cost">
+                  Cost {card.purchaseCost} <CostIcon energyType={card.energyTypes[0] ?? "Wild"} />
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="card-popover-levels">
+            {(card ? card.levels : TARDIGRADE_SPEC).map((level, i) => (
+              <div className={`card-popover-level-row${die.level === i + 1 ? " current" : ""}`} key={i}>
+                <span className="lvl-label">L{i + 1}</span>
+                <span className="lvl-stats">
+                  {level.attack}A / {level.defense}D
+                </span>
+                <span className="lvl-cost">
+                  {level.fieldingCost} {energyType && <CostIcon energyType={energyType} />}
+                </span>
+              </div>
+            ))}
+          </div>
+          {card ? (
+            <>
+              <p className="card-popover-energy-note">
+                Plus 2 faces of 2 <CostIcon energyType={card.energyTypes[0] ?? "Wild"} /> and 1 face of 1{" "}
+                <CostIcon energyType={card.energyTypes[0] ?? "Wild"} />
+              </p>
+              <p className="card-popover-text">{card.rawText}</p>
+            </>
+          ) : (
+            <p className="card-popover-text">
+              Two L1, two L2, one L3 (&ldquo;Bulwark&rdquo;), one Surge face - a fixed spec every Tardigrade shares.
+            </p>
           )}
-        </>
+        </div>
       )}
-    </button>
+    </div>
   );
 }
 

@@ -1799,3 +1799,67 @@ from the previous pass) centered on their own die's cube face. Verified
 live across all four rosters (Claw/Shell/Wing/Eye, one full 8-card strip
 each) - every roster chip renders an `<svg>`, zero console errors.
 `tsc -b`/`oxlint`/`vite build` clean.
+
+## 2026-09-08 - Reserve Pool compression, a side-profile Tardigrade, Champion energy size
+
+Four small requests, one real bug found along the way:
+
+1. **Compress the Reserve Pool tile.** Direct feedback: "the Level
+   probably isn't need-to-know information, we could provide that on a
+   click that would bring up the full character information (much like
+   clicking on the character itself)." The die-cube face already prints
+   the real attack/defense/fielding-cost numbers directly (a prior
+   pass's own work), so the "L1"/"L2" text line underneath was pure
+   repetition - dropped entirely for a stat face (kept only for an
+   energy face, where "Surge"/the card's name is the one thing the face
+   itself doesn't say), shrinking every rolled tile by a full text row.
+   In its place: `DieTile` now opens its own info popover on click -
+   name, per-level stat table (current level highlighted), the "plus 2
+   faces of 2/1 faces of 1" energy note, and ability text, mirroring the
+   roster's own card-popover almost exactly (a Tardigrade gets its fixed
+   3-level spec instead, since it has no CardDef to read one from).
+   Deliberately scoped to a die that ISN'T currently part of an active
+   selection (`clickable`) - selecting a die (to pay energy, attack,
+   block, ...) stays the one thing a click does there, unchanged; the
+   popover only opens where a click would otherwise do nothing at all,
+   which in practice is most of a Reserve Pool's on-screen lifetime
+   (opponent's pool, your own outside Main, Field Zone outside Attack,
+   ...). Own local open/closed state per tile (not lifted to page level
+   like the roster's `openCardId`) - there is no reason only one die's
+   info can be open at once - with the same outside-click-closes
+   behavior, scoped to that one tile's own wrapper.
+
+2. **Real bug, found while touching this area again:** a leftover
+   `.dietile svg { width:26px; height:26px; }` rule - written for the
+   external avatar badge this tile used to draw directly, removed two
+   passes ago - was still a plain descendant selector, so it ALSO
+   reached every svg inside the die-cube itself (DieCube.tsx's own
+   avatar and per-face energy-type icon), forcing both to ~26px
+   regardless of their real, deliberately different inline sizes. That
+   silently undid the previous pass's "shrink the energy icon so it
+   stops covering the stats" fix. Removed - DieCube's own icons are all
+   explicitly sized already and need no blanket override.
+
+3. **A side-profile Tardigrade.** Direct feedback: "I think that's more
+   recognizable (acknowledging that we don't have a lot of space to work
+   with)." Replaced the front-on blob-plus-four-dots glyph with a side
+   silhouette - a rounded snout, a plump tapering body, four stubby legs
+   trailing along the bottom - the classic "water bear" profile,
+   simplified down to what still reads at 15-20px.
+
+4. **Champion energy icon size.** "Pull the size... down just a tad...
+   more on par with the size of the word." 15px -> 12px next to the
+   Champion's name.
+
+Also noted for later: the user may send in-house animal drawings to
+match against or swap in for existing roster art (a bigger image
+becomes a Champion portrait, a smaller one a Character's card art) -
+store first if there's no obvious match rather than guessing, and don't
+build/push a slotted image in unless asked to.
+
+Verified live: Reserve Pool tiles visibly shorter with no console
+errors; a Field Zone die's info popover opens with its Tardigrade spec
+correctly highlighting L2 (the die's actual current level) and closes
+on an outside click; the Champion box's energy glyph now reads closer
+in weight to the name text beside it. `tsc -b`/`oxlint`/`vite build`
+clean.
