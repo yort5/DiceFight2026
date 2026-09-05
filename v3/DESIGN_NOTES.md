@@ -1330,3 +1330,55 @@ the backend started seeding them. Verified with headless Chromium: 16
 `.roster-chip` elements on the board (8 per player) after Start Match,
 all names/costs/counts correct, chips wrap cleanly within the mat
 width, zero console errors, `tsc -b`/`vite build`/`oxlint` clean.
+
+## Real proof abilities fire, then a genuine die-layout change (2026-09-07)
+
+Asked directly: "do the abilities actually work yet?" `Config_And_
+Catalog_Are_Structurally_Valid` only schema-validates ability/target
+wiring - it never resolves one. Added `InstinctClashNewCharactersTests.
+cs`, exercising the real firing path (`TurnEngine` action -> `EventBus`
+-> `AbilityQueue` -> `EffectInterpreter.DrainQueue`, same discipline
+`DpsCardsTests.cs` uses for v1's migrated pool) for the effect shapes
+genuinely new to this catalog: Grizzly Bear's `Ko`, Stoat's direct
+damage, Cape Buffalo's ATK aura. All passed on the first real run.
+Real catch along the way: the aura test's first draft expected +1 ATK
+and got +2 - not a bug, `ChampionRegistry.RegisterAll` (called from
+`GameSetup.NewGame`) already stacks Wolf's own +1 ATK Champion passive
+on every one of the player's dice, aura included.
+
+Then a second, separate ask: whether Character dice should actually
+change to match LATER Dice Masters sets - 3 stat faces (one per level,
+not doubled) + 3 energy faces of the card's own type (two double, one
+single) - replacing the classic-run layout (6 doubled stat faces, 0
+energy) the original 8 cards shipped with. Explicitly a real engine/
+balance change, not a display tweak (confirmed with the user before
+touching anything, given 32 cards' worth of blast radius): every
+Character now has genuine odds of rolling energy instead of a body,
+same as a Tardigrade always did.
+
+`CharacterDie` (`InstinctClashConfig.cs`) took a new `energyType`
+parameter and rewrote its face-building loop: one `CharacterFaceData`
+face per level (was two), plus 2 double- and 1 single-`SymbolAmount`
+energy face of that type (mirrors `TardigradeDie`'s own energy-face
+shape, just without a hybrid stat+energy face - user's call was pure
+energy faces, not hybrid ones). All 32 `CharacterDie(...)` call sites
+updated via a scripted per-section pass (each of the four `// Claw`/
+`// Shell`/`// Wing`/`// Eye` sections inserts its own energy type) -
+verified by grep, not just build success, since a script silently
+tagging the wrong section wrong would still compile.
+
+Frontend needed one matching fix: `dieFaces.ts`'s `defaultFaces` (the
+LOCAL reconstruction of "what an unrolled Character die's faces
+probably look like", used only for the placeholder cube before a real
+roll is known) was hardcoded to the old doubled-stat-faces/no-energy
+assumption. Rewritten to build 3 stat faces + 3 energy faces (2 double,
+1 single) of `card.energyTypes[0]`, matching the real die exactly -
+otherwise the placeholder cube would show a die shape that no longer
+exists.
+
+Added a 4th test proving the actual point of the change - a Character
+die's energy face is real, spendable energy, not a display artifact:
+Honey Badger sitting on its own double-Claw-energy face pays Stoat's
+fielding cost through the ordinary `TurnEngine.Field` path, same as any
+Tardigrade or Reserve Pool energy die would. Full solution suite:
+912/912 passing (319 V2 + 580 Engine + 13 Api).

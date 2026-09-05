@@ -52,15 +52,15 @@ public class InstinctClashNewCharactersTests
     // Field - skips ClearAndDraw/Roll/Purchase entirely (already
     // exercised by InstinctClashConfigTests' own full-cycle test), since
     // these tests are only about what happens once a Character IS
-    // fielded. CharacterDie prints each level twice in a row (Part
-    // 34/CharacterDie's own doubling), so level N's first copy sits at
-    // index (N-1)*2.
+    // fielded. CharacterDie's later-Dice-Masters layout (2026-09-07)
+    // prints each level once (indices 0-2), then 3 energy faces (3-5) -
+    // no more doubling, so level N sits at index N-1 directly.
     private static DieInstance ReadyCharacter(GameState state, string cardId, string controllerId, int level = 1)
     {
         var die = new DieInstance
         {
             Id = $"{controllerId}-{cardId}-ready", CardId = cardId, OwnerId = controllerId,
-            ControllerId = controllerId, Zone = Zone.ReservePool, CurrentFaceIndex = (level - 1) * 2,
+            ControllerId = controllerId, Zone = Zone.ReservePool, CurrentFaceIndex = level - 1,
         };
         state.Dice.Add(die);
         return die;
@@ -71,7 +71,7 @@ public class InstinctClashNewCharactersTests
         var die = new DieInstance
         {
             Id = $"{controllerId}-{cardId}-active", CardId = cardId, OwnerId = controllerId,
-            ControllerId = controllerId, Zone = Zone.FieldZone, CurrentFaceIndex = (level - 1) * 2,
+            ControllerId = controllerId, Zone = Zone.FieldZone, CurrentFaceIndex = level - 1,
         };
         state.Dice.Add(die);
         return die;
@@ -156,5 +156,34 @@ public class InstinctClashNewCharactersTests
         // passive (+1 ATK to all your dice, ChampionRegistry) - both
         // apply to every one of p1's dice, this one included.
         Assert.Equal(2, QueryEngine.GetAttack(state, honeyBadger));
+    }
+
+    // The actual point of the whole 2026-09-07 face-layout change: a
+    // Character die's energy faces are real, spendable energy - not a
+    // display artifact. Indices 3/4 are its two double-energy faces,
+    // index 5 the single (see CharacterDie's own remarks).
+    [Fact]
+    public void Character_Die_Provides_Real_Spendable_Energy_On_Its_Energy_Faces()
+    {
+        var state = NewGame();
+        var queue = new AbilityQueue();
+
+        var honeyBadgerEnergy = new DieInstance
+        {
+            Id = "p1-honeybadger-energy", CardId = InstinctClashConfig.HoneyBadger.Id, OwnerId = "p1",
+            ControllerId = "p1", Zone = Zone.ReservePool, CurrentFaceIndex = 3,
+        };
+        state.Dice.Add(honeyBadgerEnergy);
+
+        var face = state.GetCurrentFace(honeyBadgerEnergy)!;
+        Assert.Null(face.Character); // an energy face, not a stat face
+        Assert.Equal(2, face.Symbols.Single(s => s.SymbolId == "Claw").Count);
+
+        var stoat = ReadyCharacter(state, InstinctClashConfig.Stoat.Id, "p1"); // fielding cost 1
+        TurnEngine.Field(state, queue, stoat.Id, [honeyBadgerEnergy.Id]);
+        Drain(state, queue);
+
+        Assert.Equal(Zone.FieldZone, stoat.Zone);
+        Assert.Equal(Zone.OutOfPlay, honeyBadgerEnergy.Zone); // spent
     }
 }

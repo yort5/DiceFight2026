@@ -12,9 +12,10 @@ import type { CardDef, Die } from "./types";
 // CharacterDie, which are the authority. A Tardigrade die's six faces are
 // a fixed, locked spec (v3/DESIGN_NOTES.md): two L1 (0A/1D), two L2
 // (1A/1D), one L3 "Bulwark" (1A/3D), one "Surge" (a pure Wild-energy
-// face, no character stats at all). Every other die (a real Character)
-// has three levels, each printed twice - no energy faces at all, unlike
-// v1's Character dice.
+// face, no character stats at all). A Character die (2026-09-07, later-
+// Dice-Masters layout, was "three levels each printed twice, no energy
+// at all"): three stat faces, one per level (no doubling), plus three
+// energy faces of the card's own type - two double, one single.
 
 // Cube geometry - identical to v1's, since this is pure 3D placement math
 // with nothing Marvel- or animal-specific in it.
@@ -52,13 +53,14 @@ const TARDIGRADE_FACES: CubeFace[] = [
 function defaultFaces(die: Die, card: CardDef | undefined): CubeFace[] {
   if (die.isTardigrade || !die.cardId) return TARDIGRADE_FACES;
   const levels = card?.levels ?? [];
-  const faces: CubeFace[] = [];
-  for (const [i, level] of levels.entries()) {
-    const face: CubeFace = { kind: "character", level: i + 1, fieldingCost: level.fieldingCost, attack: level.attack, defense: level.defense };
-    faces.push(face, face);
-  }
-  if (faces.length === 0) return TARDIGRADE_FACES;
-  while (faces.length < FACE_COUNT) faces.push(faces[faces.length - 1]);
+  if (levels.length === 0) return TARDIGRADE_FACES;
+  const energyType = card?.energyTypes[0] ?? "Wild";
+  const faces: CubeFace[] = levels.map((level, i) => ({
+    kind: "character", level: i + 1, fieldingCost: level.fieldingCost, attack: level.attack, defense: level.defense,
+  }));
+  faces.push({ kind: "energy", icon: energyType, amount: 2 });
+  faces.push({ kind: "energy", icon: energyType, amount: 2 });
+  faces.push({ kind: "energy", icon: energyType, amount: 1 });
   return faces.slice(0, FACE_COUNT);
 }
 
