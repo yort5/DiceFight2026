@@ -52,8 +52,8 @@ public class DiceFightClassicConfigTests
         Assert.Equal(8, state.DiceIn("p1", Zone.Bag).Count());
 
         TurnEngine.ClearAndDraw(state, queue, new Random(1));
-        Assert.Equal(4, state.DiceIn("p1", Zone.DiceFromBag).Count()); // DrawCount(4), full
-        Assert.Single(state.DiceIn("p1", Zone.OutOfPlay)); // first turn: rule 2.3.3's going-first die
+        Assert.Equal(3, state.DiceIn("p1", Zone.DiceFromBag).Count()); // DrawCount(4) minus the 1 set Out of Play below
+        Assert.Single(state.DiceIn("p1", Zone.OutOfPlay)); // first turn: rule 2.3.3's going-first die (one of the 4 drawn, not a 5th)
     }
 
     // Direction C - a variant ruleset expressed purely as a different
@@ -93,7 +93,7 @@ public class DiceFightClassicConfigTests
 
         var queue = new AbilityQueue();
         TurnEngine.ClearAndDraw(state, queue, new Random(1));
-        Assert.Equal(6, state.DiceIn("p1", Zone.DiceFromBag).Count()); // DrawCount(6), full
-        Assert.Single(state.DiceIn("p1", Zone.OutOfPlay)); // first turn: rule 2.3.3's going-first die
+        Assert.Equal(5, state.DiceIn("p1", Zone.DiceFromBag).Count()); // DrawCount(6) minus the 1 set Out of Play below
+        Assert.Single(state.DiceIn("p1", Zone.OutOfPlay)); // first turn: rule 2.3.3's going-first die (one of the 6 drawn, not a 7th)
     }
 }

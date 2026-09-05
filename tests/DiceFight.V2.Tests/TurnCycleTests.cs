@@ -80,29 +80,29 @@ public class TurnCycleTests
         Assert.Equal("p1", state.ActivePlayerId);
         Assert.Equal(TurnStep.StartOfTurn, state.CurrentStep); // Spike C - the turn opens on the start-of-turn window
 
-        // --- Clear and Draw (first turn: draws DrawCount=3 normally, then
-        // 1 more straight to Out of Play - rule 2.3.3's going-first
-        // penalty - exhausting the 4-die pool exactly) ---
+        // --- Clear and Draw (first turn: draws DrawCount=3 (the normal
+        // count, same as any other turn), then sets ONE of those SAME 3
+        // drawn dice - not a 4th extra draw - straight to Out of Play,
+        // rule 2.3.3's going-first penalty; the Bag ends down by exactly
+        // DrawCount, not DrawCount + 1) ---
         DiceFight.V2.TurnEngine.ClearAndDraw(state, queue, new Random(1));
 
-        Assert.Equal(3, state.DiceIn("p1", Zone.DiceFromBag).Count());
+        Assert.Equal(2, state.DiceIn("p1", Zone.DiceFromBag).Count());
         Assert.Single(state.DiceIn("p1", Zone.OutOfPlay));
-        Assert.Empty(state.DiceIn("p1", Zone.Bag));
+        Assert.Single(state.DiceIn("p1", Zone.Bag));
         Assert.Equal(TurnStep.RollAndReroll, state.CurrentStep);
 
-        // --- Roll (one lands on the Fist energy face, the rest on a
-        // character face - which physical pool die gets which face
-        // doesn't matter, only that there's exactly one energy die to
-        // pay with) ---
-        var roller = new ScriptedRoller(1, 2, 2);
+        // --- Roll (one lands on the Fist energy face, the other on a
+        // character face) ---
+        var roller = new ScriptedRoller(1, 2);
         DiceFight.V2.TurnEngine.Roll(state, queue, roller);
         DiceFight.V2.TurnEngine.FinishRoll(state, queue);
 
         Assert.Equal(TurnStep.Main, state.CurrentStep);
         var reserveDice = state.DiceIn("p1", Zone.ReservePool).ToList();
-        Assert.Equal(3, reserveDice.Count);
+        Assert.Equal(2, reserveDice.Count);
         var energyDie = reserveDice.Single(d => state.GetCurrentFace(d)!.Character is null);
-        var characterDie = reserveDice.First(d => state.GetCurrentFace(d)!.Character is not null);
+        var characterDie = reserveDice.Single(d => state.GetCurrentFace(d)!.Character is not null);
 
         // --- Purchase (T001 costs 1 Fist) ---
         var unpurchasedDieId = FindUnpurchasedDieId(state, "T001");
@@ -222,25 +222,29 @@ public class TurnCycleTests
         var state = DiceFight.V2.GameSetup.NewGame(config, new Dictionary<string, CardDef> { [card.Id] = card }, playerOne, playerTwo);
         var queue = new DiceFight.V2.AbilityQueue();
 
-        // First turn: DrawCount(3) + 1 going-first die (rule 2.3.3) = 4,
-        // exhausting the whole 4-die pool.
+        // First turn: DrawCount(3) drawn (one of those 3 set Out of Play
+        // for going first - rule 2.3.3), leaving 1 of the 4-die pool
+        // still in the Bag.
         DiceFight.V2.TurnEngine.ClearAndDraw(state, queue, new Random(1));
-        Assert.Empty(state.DiceIn("p1", Zone.Bag));
+        Assert.Single(state.DiceIn("p1", Zone.Bag));
 
         // Simulate the rest of that turn having happened - everything
-        // drawn ends up spent in the Used Pile, exactly what a real
-        // Clean Up does to Reserve Pool/Out of Play dice (TurnEngine.
-        // CleanUp) - done directly here so this test stays focused on
-        // the draw/refill mechanic rather than playing out a second
-        // full player's turn in between.
-        foreach (var die in state.Dice.Where(d => d.OwnerId == "p1"))
+        // actually drawn/spent this turn ends up in the Used Pile,
+        // exactly what a real Clean Up does to Reserve Pool/Out of Play
+        // dice (TurnEngine.CleanUp) - done directly here so this test
+        // stays focused on the draw/refill mechanic rather than playing
+        // out a second full player's turn in between. The 1 die still
+        // sitting in the Bag is untouched, same as a real Clean Up would
+        // leave it.
+        foreach (var die in state.Dice.Where(d => d.OwnerId == "p1" && d.Zone != Zone.Bag))
             die.Zone = Zone.UsedPile;
         state.CurrentStep = TurnStep.StartOfTurn;
 
-        // Second turn: the Bag is empty but the Used Pile holds all 4 -
-        // this must reshuffle them back into the Bag and keep drawing to
-        // the real count (not the going-first count - IsFirstTurn is
-        // false again after the first ClearAndDraw call above).
+        // Second turn: the Bag holds only 1 of the 3 dice this turn
+        // needs - it must run dry mid-draw, reshuffle the Used Pile's 3
+        // dice back in, and keep drawing to the real count (not the
+        // going-first count - IsFirstTurn is false again after the first
+        // ClearAndDraw call above).
         DiceFight.V2.TurnEngine.ClearAndDraw(state, queue, new Random(2));
 
         Assert.Equal(3, state.DiceIn("p1", Zone.DiceFromBag).Count());

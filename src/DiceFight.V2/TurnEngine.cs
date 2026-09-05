@@ -100,19 +100,25 @@ public static class TurnEngine
         {
             EventBus.Fire(state, queue, new GameEvent(TriggerKind.DiceDrawn, null, state.ActivePlayerId, state.CurrentStepId));
         }
-        state.LogEvent(state.ActivePlayerId, $"{state.NameOf(state.ActivePlayerId)} draws {drawn.Count} {(drawn.Count == 1 ? "die" : "dice")}.");
 
-        // Rule 2.3.3's other half - drawn straight to Out of Play, not
-        // left sitting undrawn in the Bag (a real behavioral gap the
-        // previous "draw one fewer" implementation had: the Bag ended
-        // the draw one die too full compared to a normal turn, and
-        // nothing recorded that a 4th die had even been touched).
-        if (state.IsFirstTurn)
+        // Rule 2.3.3 - the very first turn draws the normal count, then
+        // sets ONE of those SAME drawn dice straight to Out of Play - not
+        // an extra 5th draw on top (direct feedback, 2026-09-05: "the one
+        // that goes to Out of Play is from the four that were drawn...
+        // this preserves the standard deck-building trope of the first
+        // hand being all starter cards/dice" - the Bag should end the
+        // turn down by exactly DrawCount, not DrawCount + 1). Which one
+        // is arbitrary (DrawFromBag's own random picks already decided
+        // draw order), so the last one drawn is as good as any.
+        if (state.IsFirstTurn && drawn.Count > 0)
         {
-            var extra = DrawFromBag(state, state.ActivePlayerId, 1, random);
-            foreach (var die in extra) die.Zone = Zone.OutOfPlay;
-            if (extra.Count > 0)
-                state.LogEvent(state.ActivePlayerId, $"{state.NameOf(state.ActivePlayerId)} sets 1 die Out of Play for going first.");
+            drawn[^1].Zone = Zone.OutOfPlay;
+            state.LogEvent(state.ActivePlayerId,
+                $"{state.NameOf(state.ActivePlayerId)} draws {drawn.Count} dice, setting 1 Out of Play for going first.");
+        }
+        else
+        {
+            state.LogEvent(state.ActivePlayerId, $"{state.NameOf(state.ActivePlayerId)} draws {drawn.Count} {(drawn.Count == 1 ? "die" : "dice")}.");
         }
 
         state.IsFirstTurn = false;

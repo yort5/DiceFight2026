@@ -51,9 +51,9 @@ public class V2GamesControllerTests
 
         var afterDraw = V2SeatedController.Dto(teamA.ClearAndDraw(session.Id));
         Assert.Equal("roll-and-reroll", afterDraw.CurrentStepId);
-        Assert.Equal(4, afterDraw.Dice.Count(d => d.ControllerId == "teamA" && d.Zone == "DiceFromBag"));
-        // Rule 2.3.3 - going-first penalty: one more die drawn straight
-        // to Out of Play, on top of the normal 4.
+        // Rule 2.3.3 - going-first penalty: one of the normal 4 drawn
+        // dice (not a 5th extra draw) is set straight to Out of Play.
+        Assert.Equal(3, afterDraw.Dice.Count(d => d.ControllerId == "teamA" && d.Zone == "DiceFromBag"));
         Assert.Single(afterDraw.Dice, d => d.ControllerId == "teamA" && d.Zone == "OutOfPlay");
 
         // Roll (rule 2.4.2) lands every rolled die straight in the
@@ -61,7 +61,7 @@ public class V2GamesControllerTests
         // holding zone (see TurnEngine.Roll's own remarks).
         var afterRoll = V2SeatedController.Dto(teamA.Roll(session.Id));
         var rolledDice = afterRoll.Dice.Where(d => d.ControllerId == "teamA" && d.Zone == "ReservePool").ToList();
-        Assert.Equal(4, rolledDice.Count);
+        Assert.Equal(3, rolledDice.Count);
         // Every rolled face is either a character face (both stats known)
         // or the pure-energy Surge face (neither) - never a half-known mix.
         Assert.All(rolledDice, d => Assert.True(

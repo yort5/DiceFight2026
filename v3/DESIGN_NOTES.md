@@ -1603,3 +1603,33 @@ C# suite and `tsc -b`/`oxlint`/`vite build`, all clean.
 All four verified live via headless Chromium (both themes where
 relevant), plus the full 913-test C# suite and `tsc -b`/`oxlint`/
 `vite build`, all clean.
+
+## 2026-09-05 (correction) - The going-first die comes FROM the 4, not on top of it
+
+Direct feedback caught a real misread of my own fix above: "the first
+player should 'draw 4 and place one out of play', leaving 4 in the bag.
+I.e., the one that goes to Out of Play is from the four that were drawn.
+This preserves the standard deck-building trope of 'the first two hands
+are all starter cards' - or in our case, dice."
+
+What shipped a moment earlier drew `DrawCount` normally, then drew ONE
+MORE on top and set that one Out of Play - `DrawCount + 1` total,
+draining the Bag by 5 on an 8-die starting pool instead of 4. Fixed to
+match exactly what was asked: draw `DrawCount` once, then set the LAST
+of those SAME dice Out of Play (no second `DrawFromBag` call at all) -
+so "drawn this turn" reads `DrawCount - 1`, Out of Play reads 1, and the
+Bag ends the turn down by exactly `DrawCount`. Which of the `DrawCount`
+dice gets set aside is arbitrary (`DrawFromBag`'s own random pick
+already decided the whole draw's order), so simplest is fine.
+
+Six test files' draw-count assertions (and two `ScriptedRoller` face
+counts) went from the wrong DrawCount+1 numbers back down to the correct
+DrawCount ones: `TurnCycleTests`, `InstinctClashConfigTests`,
+`DiceFightClassicConfigTests` (both its base and its DrawCount=6 variant
+test), `V2GamesControllerTests`, and the dedicated bag-refill regression
+test (which also needed its "sweep to Used Pile" step scoped to exclude
+the die still legitimately sitting in the Bag, not yet drawn).
+
+Verified live: Bag 8 -> 4, Drawn This Turn 3, Out of Play 1, log now a
+single line - "Wolf draws 4 dice, setting 1 Out of Play for going
+first." Full 913-test suite green.
