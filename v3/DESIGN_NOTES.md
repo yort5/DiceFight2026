@@ -1863,3 +1863,19 @@ correctly highlighting L2 (the die's actual current level) and closes
 on an outside click; the Champion box's energy glyph now reads closer
 in weight to the name text beside it. `tsc -b`/`oxlint`/`vite build`
 clean.
+
+## 2026-09-08 (correction) - The Champion energy icon resize never actually took effect
+
+Direct feedback: "It doesn't look like the champion energy changed at
+all." It hadn't - same bug class as the die-cube one two entries above,
+just a different rule: `.championbox-body svg { width:72px; height:72px;
+... }` (written for the big Champion portrait/photo) is a plain
+descendant selector, so it ALSO reached the small energy icon nested two
+levels deeper inside `.championbox-name-row`, forcing it to 72px no
+matter what the component's own `size` prop said. The earlier 15px ->
+12px change was real in the JSX the whole time; it just never had any
+visible effect. Fixed by scoping that rule to `.championbox-body >
+svg`/`> img` (direct child only) - the portrait is a direct child of
+`.championbox-body`, the energy icon isn't. Confirmed live: the icon's
+own rendered `<svg>` now genuinely measures 12x12, not 72x72, and reads
+right at a glance next to the name text.

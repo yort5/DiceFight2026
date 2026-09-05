@@ -559,8 +559,14 @@
   flex-direction: column;
   justify-content: center;
 }
-.dicekingdom .championbox-body svg,
-.dicekingdom .championbox-body img {
+/* Direct child only, not ".championbox-body svg" - real bug, found
+   2026-09-08: the descendant form also reached the small energy icon
+   nested two levels deeper inside .championbox-name-row, forcing it to
+   72px regardless of its own inline `size` prop. That's why an earlier
+   attempt to shrink it (15px -> 12px) had no visible effect at all -
+   this rule always won. */
+.dicekingdom .championbox-body > svg,
+.dicekingdom .championbox-body > img {
   width: 72px;
   height: 72px;
   flex: none;
