@@ -291,13 +291,363 @@ function HyenaIcon(props: IconProps) {
   );
 }
 
+// The remaining 24 of the 32-card roster (2026-09-05) - ported from the
+// "Forty-five personal marks" avatar-sheet artifact (the same one the
+// first 8 above already came from), picking out the ones matching this
+// roster's actual names; the sheet's other marks (Rhino, Wolf, Snow
+// Leopard, etc.) were earlier brainstorm alternates for animals that
+// aren't in the final 32 and are left unported. Box Turtle isn't on
+// that sheet at all - drawn fresh below, in the same plain-path style,
+// since Snapping Turtle already claimed the sheet's one turtle concept
+// (a snapped twig, for its aggressive bite).
+
+function GrizzlyBearIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M12,26 C16,18 28,15 38,20 C30,23 20,26 12,26 Z" fill="currentColor" />
+      <path d="M12,26 L5,20 L7,28 Z" fill="currentColor" />
+      <path
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={4}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M12,42 L19,35 L26,42 L33,35 L40,42 L47,35 L54,42"
+      />
+    </Svg>
+  );
+}
+
+function OrcaIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path
+        fill="currentColor"
+        d="M18,20 C30,16 46,22 48,34 C42,40 30,42 22,36 C26,34 28,28 24,24 C22,26 20,24 18,20 Z"
+      />
+    </Svg>
+  );
+}
+
+function PeregrineFalconIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path
+        fill="currentColor"
+        d="M14,50 C22,34 34,20 50,12 C44,22 38,32 34,40 C30,46 22,50 14,50 Z"
+      />
+    </Svg>
+  );
+}
+
+function TigerIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x={12} y={20} width={40} height={24} rx={10} fill="currentColor" />
+      <g stroke={CREAM} strokeWidth={3.4} strokeLinecap="round">
+        <path d="M20,22 C24,28 24,36 20,42" />
+        <path d="M32,20 C36,28 36,36 32,44" />
+        <path d="M44,22 C48,28 48,36 44,42" />
+      </g>
+    </Svg>
+  );
+}
+
+function StoatIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path
+        fill="currentColor"
+        d="M14,18 C26,14 38,22 34,34 C31,42 22,44 16,40 C22,40 28,36 28,30 C28,22 20,20 14,22 Z"
+      />
+      <circle cx={16} cy={40} r={5} fill="currentColor" />
+    </Svg>
+  );
+}
+
+function CapeBuffaloIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path
+        fill="currentColor"
+        d="M32,26 C26,26 22,20 14,20 C20,26 24,30 24,34 C24,38 20,44 16,48 C24,46 30,38 32,32 C34,38 40,46 48,48 C44,44 40,38 40,34 C40,30 44,26 50,20 C42,20 38,26 32,26 Z"
+      />
+    </Svg>
+  );
+}
+
+function PangolinIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path
+        fill="currentColor"
+        d="M42,14 C24,14 14,26 16,38 C17,46 24,52 34,50 C28,48 22,42 24,34 C26,26 34,22 42,24 C36,20 38,16 42,14 Z"
+      />
+      <g fill="none" stroke={CREAM} strokeWidth={2}>
+        <path d="M22,32 C26,30 30,30 33,32" />
+        <path d="M20,38 C25,36 30,36 33,39" />
+      </g>
+    </Svg>
+  );
+}
+
+function HermitCrabIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={3}
+        d="M20,44 C14,34 18,18 34,16 C48,15 52,28 46,38 C40,47 26,48 20,44 Z"
+      />
+      <path d="M16,46 L8,42 M16,48 L8,52" stroke="currentColor" strokeWidth={3} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+function OpossumIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <ellipse cx={32} cy={34} rx={18} ry={9} fill="currentColor" />
+      <g stroke="currentColor" strokeWidth={3} strokeLinecap="round">
+        <path d="M18,27 L14,16" />
+        <path d="M26,25 L24,14" />
+        <path d="M38,25 L40,14" />
+        <path d="M46,27 L50,16" />
+      </g>
+      <g stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+        <path d="M27,32 L31,36 M31,32 L27,36" />
+        <path d="M33,32 L37,36 M37,32 L33,36" />
+      </g>
+    </Svg>
+  );
+}
+
+function QueenTermiteIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path fill="currentColor" d="M32,10 C36,24 42,38 46,52 L18,52 C22,38 28,24 32,10 Z" />
+      <g stroke={CREAM} strokeWidth={2}>
+        <path d="M23,32 L41,32" />
+        <path d="M21,42 L43,42" />
+      </g>
+    </Svg>
+  );
+}
+
+function SnappingTurtleIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={4.5}
+        strokeLinecap="round"
+        d="M12,44 L26,30 L22,24 L38,20 L52,10"
+      />
+    </Svg>
+  );
+}
+
+// Not on the source avatar sheet - Snapping Turtle already claimed its
+// one turtle concept (a snapped twig). A domed, hinge-lined shell
+// stands in for Box Turtle's own defining trait instead: a hinged
+// plastron that lets it seal shut completely, unlike a snapper's.
+function BoxTurtleIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path
+        fill="currentColor"
+        d="M12,38 C12,24 20,16 32,16 C44,16 52,24 52,38 C52,42 44,44 32,44 C20,44 12,42 12,38 Z"
+      />
+      <line x1={32} y1={20} x2={32} y2={42} stroke={CREAM} strokeWidth={1.6} />
+      <line x1={18} y1={34} x2={46} y2={34} stroke={CREAM} strokeWidth={1.6} />
+    </Svg>
+  );
+}
+
+function HummingbirdIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path fill="currentColor" d="M32,50 C24,36 24,22 32,12 C40,22 40,36 32,50 Z" />
+      <g fill="currentColor">
+        <polygon points="32,12 26,4 32,7 38,4" />
+        <polygon points="20,18 12,14 18,20 12,24" />
+        <polygon points="44,18 52,14 46,20 52,24" />
+      </g>
+    </Svg>
+  );
+}
+
+function MountainGoatIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path fill="currentColor" d="M10,50 L10,38 L22,38 L22,28 L34,28 L34,18 L46,18 L46,10 L54,10 L54,50 Z" />
+    </Svg>
+  );
+}
+
+function MonarchButterflyIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path fill="currentColor" d="M32,10 C42,14 46,26 40,40 C36,50 28,50 24,40 C18,26 22,14 32,10 Z" />
+      <line x1={32} y1={14} x2={32} y2={46} stroke={CREAM} strokeWidth={1.6} />
+    </Svg>
+  );
+}
+
+function HomingPigeonIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <ellipse cx={32} cy={32} rx={16} ry={8} fill="none" stroke="currentColor" strokeWidth={4} />
+      <rect x={27} y={40} width={10} height={8} rx={1.5} fill="currentColor" />
+    </Svg>
+  );
+}
+
+function GreyhoundIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <line x1={16} y1={12} x2={16} y2={52} stroke="currentColor" strokeWidth={3} />
+      <path fill="currentColor" d="M16,16 L44,16 L36,26 L44,36 L16,36 Z" />
+      <g fill={CREAM}>
+        <rect x={19} y={18} width={6} height={6} />
+        <rect x={31} y={18} width={6} height={6} />
+        <rect x={25} y={24} width={6} height={6} />
+        <rect x={19} y={30} width={6} height={4} />
+      </g>
+    </Svg>
+  );
+}
+
+function AlbatrossIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path fill="currentColor" d="M22,26 C26,22 38,22 42,26 C38,24 26,24 22,26 Z" />
+      <g fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round">
+        <path d="M10,40 C18,36 26,44 34,40" />
+        <path d="M28,46 C36,42 44,50 52,46" />
+      </g>
+    </Svg>
+  );
+}
+
+function AnglerfishIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" d="M18,46 C18,30 24,20 30,14" />
+      <circle cx={30} cy={12} r={5} fill="currentColor" />
+      <g stroke="currentColor" strokeWidth={1.6} strokeLinecap="round">
+        <path d="M30,4 L30,1" />
+        <path d="M22,8 L19,6" />
+        <path d="M38,8 L41,6" />
+      </g>
+    </Svg>
+  );
+}
+
+function CowbirdIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <g fill="currentColor">
+        <ellipse cx={18} cy={34} rx={4} ry={6} transform="rotate(-15 18 34)" />
+        <polygon points="14,20 18,12 22,20" />
+        <polygon points="6,24 10,16 14,24" />
+        <polygon points="22,24 26,16 30,24" />
+      </g>
+      <g fill="currentColor">
+        <ellipse cx={44} cy={30} rx={6} ry={9} transform="rotate(10 44 30)" />
+        <ellipse cx={52} cy={32} rx={6} ry={9} transform="rotate(10 52 32)" />
+      </g>
+    </Svg>
+  );
+}
+
+function MagpieIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path fill="currentColor" d="M32,10 C40,20 42,36 34,54 C30,36 30,20 32,10 Z" />
+      <line x1={32} y1={14} x2={32} y2={50} stroke={CREAM} strokeWidth={1.4} />
+      <g stroke={CREAM} strokeWidth={1.2}>
+        <path d="M32,22 L26,26" />
+        <path d="M32,22 L38,26" />
+        <path d="M32,32 L25,36" />
+        <path d="M32,32 L39,36" />
+      </g>
+    </Svg>
+  );
+}
+
+function RavenIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <polygon points="32,16 42,32 32,48 22,32" fill="currentColor" />
+      <g stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+        <path d="M46,14 L50,10" />
+        <path d="M50,14 L46,10" />
+      </g>
+    </Svg>
+  );
+}
+
+function ElephantIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={5}
+        strokeLinecap="round"
+        d="M24,14 C40,14 44,24 38,32 C32,40 40,42 34,48"
+      />
+      <circle cx={34} cy={54} r={3} fill="currentColor" />
+    </Svg>
+  );
+}
+
+function FoxIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path
+        fill="currentColor"
+        d="M14,20 C30,18 46,28 46,42 C36,44 24,40 20,30 C18,26 16,22 14,20 Z"
+      />
+      <path fill={CREAM} d="M46,42 C40,44 34,42 30,38 C36,36 42,38 46,42 Z" />
+    </Svg>
+  );
+}
+
 export const CHARACTER_ICONS: Record<string, (p: IconProps) => ReactElement> = {
   "IC-CLAW-01": HoneyBadgerIcon,
   "IC-CLAW-02": WolverineIcon,
+  "IC-CLAW-03": GrizzlyBearIcon,
+  "IC-CLAW-04": OrcaIcon,
+  "IC-CLAW-05": PeregrineFalconIcon,
+  "IC-CLAW-06": TigerIcon,
+  "IC-CLAW-07": StoatIcon,
+  "IC-CLAW-08": CapeBuffaloIcon,
   "IC-SHELL-01": HippopotamusIcon,
   "IC-SHELL-02": MuskOxIcon,
+  "IC-SHELL-03": PangolinIcon,
+  "IC-SHELL-04": HermitCrabIcon,
+  "IC-SHELL-05": OpossumIcon,
+  "IC-SHELL-06": QueenTermiteIcon,
+  "IC-SHELL-07": SnappingTurtleIcon,
+  "IC-SHELL-08": BoxTurtleIcon,
   "IC-WING-01": OspreyIcon,
   "IC-WING-02": BarnSwallowIcon,
+  "IC-WING-03": HummingbirdIcon,
+  "IC-WING-04": MountainGoatIcon,
+  "IC-WING-05": MonarchButterflyIcon,
+  "IC-WING-06": HomingPigeonIcon,
+  "IC-WING-07": GreyhoundIcon,
+  "IC-WING-08": AlbatrossIcon,
   "IC-EYE-01": BarnOwlIcon,
   "IC-EYE-02": HyenaIcon,
+  "IC-EYE-03": AnglerfishIcon,
+  "IC-EYE-04": CowbirdIcon,
+  "IC-EYE-05": MagpieIcon,
+  "IC-EYE-06": RavenIcon,
+  "IC-EYE-07": ElephantIcon,
+  "IC-EYE-08": FoxIcon,
 };

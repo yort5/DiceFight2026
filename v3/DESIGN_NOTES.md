@@ -1768,3 +1768,34 @@ creature face) and stayed in the Reserve Pool - screenshotted mid- and
 post-animation, zero console errors across every run. `tsc -b`/`oxlint`/
 `vite build` clean; the full 914-test C# suite (untouched this pass)
 still green.
+
+## 2026-09-05 (final) - The other 24 character icons
+
+Direct feedback: the user had already generated a full 45-mark avatar
+sheet as its own Claude Artifact earlier in this project's life ("Forty-
+five personal marks") - only the original 8 characters (from before the
+roster expanded to 8-per-type) had ever actually been ported into
+`icons.tsx`. Read that artifact back and ported the 24 remaining
+matches by name: Grizzly Bear, Orca, Peregrine Falcon, Tiger, Stoat,
+Cape Buffalo (Claw); Pangolin, Hermit Crab, Opossum, Queen Termite,
+Snapping Turtle (Shell); Hummingbird, Mountain Goat, Monarch Butterfly,
+Homing Pigeon, Greyhound, Albatross (Wing); Anglerfish, Cowbird, Magpie,
+Raven, Elephant, Fox (Eye) - same conversion the original 8 already
+used: `var(--seal-ink)` -> `currentColor`, `var(--seal-bg)` -> the
+existing `CREAM` cutout constant.
+
+One real gap: the sheet has 45 marks total (drawn before this roster's
+final 32 names were locked in) and never covered Box Turtle at all -
+Snapping Turtle already claimed its one turtle concept (a snapped twig,
+for the bite). Drew a new one instead: a domed shell with hinge lines,
+standing in for a box turtle's actual defining trait (a plastron hinge
+that lets it seal shut completely, which a snapper's can't do) - same
+plain-path style as everything else in the file, not an attempt to
+match the sheet's own hand.
+
+All 32 Characters across all four energy types now show a real per-card
+icon, both in the roster strip and (via dieFaces.ts's `avatar` field
+from the previous pass) centered on their own die's cube face. Verified
+live across all four rosters (Claw/Shell/Wing/Eye, one full 8-card strip
+each) - every roster chip renders an `<svg>`, zero console errors.
+`tsc -b`/`oxlint`/`vite build` clean.
