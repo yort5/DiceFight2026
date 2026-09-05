@@ -29,13 +29,13 @@ namespace DiceFight.V2;
 //  - SpendEnergy doesn't implement partial-spend "spin down to the
 //    unused value" (v1 rule 2.6.1.5/2.6.1.6) - an overspent die is simply
 //    consumed whole.
-//  - No Bag-refill-from-Used-Pile-when-empty (rule ~2.3's reshuffle) yet.
 public static class TurnEngine
 {
-    // Rule 2.3.3 - the very first turn of the game draws one fewer die.
-    // Takes its own Random (draw order) separately from IDiceRoller (face
-    // results at the Roll step) - the caller controls both independently
-    // for deterministic tests.
+    // Rule 2.3.3 - the very first turn of the game draws normally, then
+    // draws ONE more die and sets it straight to Out of Play (the going-
+    // first penalty). Takes its own Random (draw order) separately from
+    // IDiceRoller (face results at the Roll step) - the caller controls
+    // both independently for deterministic tests.
     // Opens the turn. The TURN SUMMARY's first entry is "any abilities
     // that take place at the start of your turn" - a peer window BEFORE
     // Clear and Draw, which Spike C models as its own step rather than as
@@ -94,15 +94,7 @@ public static class TurnEngine
         foreach (var die in state.DiceIn(state.ActivePlayerId, Zone.PrepArea).ToList())
             die.Zone = Zone.DiceFromPrep;
 
-        var drawCount = state.Config.Rules.DrawCount - (state.IsFirstTurn ? 1 : 0);
-        var bag = state.DiceIn(state.ActivePlayerId, Zone.Bag).ToList();
-        Shuffle(bag, random);
-
-        var drawn = bag.Take(Math.Max(0, drawCount)).ToList();
-        foreach (var die in drawn)
-        {
-            die.Zone = Zone.DiceFromBag;
-        }
+        var drawn = DrawFromBag(state, state.ActivePlayerId, state.Config.Rules.DrawCount, random);
 
         if (drawn.Count > 0)
         {
@@ -110,8 +102,50 @@ public static class TurnEngine
         }
         state.LogEvent(state.ActivePlayerId, $"{state.NameOf(state.ActivePlayerId)} draws {drawn.Count} {(drawn.Count == 1 ? "die" : "dice")}.");
 
+        // Rule 2.3.3's other half - drawn straight to Out of Play, not
+        // left sitting undrawn in the Bag (a real behavioral gap the
+        // previous "draw one fewer" implementation had: the Bag ended
+        // the draw one die too full compared to a normal turn, and
+        // nothing recorded that a 4th die had even been touched).
+        if (state.IsFirstTurn)
+        {
+            var extra = DrawFromBag(state, state.ActivePlayerId, 1, random);
+            foreach (var die in extra) die.Zone = Zone.OutOfPlay;
+            if (extra.Count > 0)
+                state.LogEvent(state.ActivePlayerId, $"{state.NameOf(state.ActivePlayerId)} sets 1 die Out of Play for going first.");
+        }
+
         state.IsFirstTurn = false;
         state.MoveToStep(StepIds.RollAndReroll);
+    }
+
+    // Rule 2.3.2/2.3.5-2.3.9 - draw randomly from the Bag, refilling from
+    // the Used Pile (shuffled back in) whenever the Bag runs dry mid-draw,
+    // stopping short (rather than throwing) only once both are truly
+    // empty. Ported from v1's identical TurnEngine.DrawFromBag (Engine
+    // project) - previously unported here (direct feedback, 2026-09-05:
+    // drawing with only 1 die left in the Bag drew just that 1, instead
+    // of refilling from the Used Pile and continuing to the real count).
+    private static List<DieInstance> DrawFromBag(GameState state, string playerId, int count, Random random)
+    {
+        var drawn = new List<DieInstance>();
+        for (var i = 0; i < count; i++)
+        {
+            var bag = state.DiceIn(playerId, Zone.Bag).ToList();
+            if (bag.Count == 0)
+            {
+                var usedPile = state.DiceIn(playerId, Zone.UsedPile).ToList();
+                if (usedPile.Count == 0) break;
+                foreach (var die in usedPile) die.Zone = Zone.Bag;
+                bag = state.DiceIn(playerId, Zone.Bag).ToList();
+            }
+
+            var picked = bag[random.Next(bag.Count)];
+            picked.Zone = Zone.DiceFromBag; // out of the Bag immediately, so it isn't drawn twice this loop
+            drawn.Add(picked);
+        }
+
+        return drawn;
     }
 
     // Rule 2.4.1/2.4.2 - rolls this turn's fresh draw (DiceFromBag) plus
@@ -701,12 +735,4 @@ public static class TurnEngine
             throw new InvalidOperationException($"This action requires the {expected} step (currently {state.CurrentStep}).");
     }
 
-    private static void Shuffle(List<DieInstance> dice, Random random)
-    {
-        for (var i = dice.Count - 1; i > 0; i--)
-        {
-            var j = random.Next(i + 1);
-            (dice[i], dice[j]) = (dice[j], dice[i]);
-        }
-    }
 }

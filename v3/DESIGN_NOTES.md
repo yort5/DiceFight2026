@@ -1521,3 +1521,85 @@ All eight verified live via headless Chromium in both themes (full
 purchase-popover flow, a real Skip Attack Step -> Clean Up -> End Turn
 turn-pass, zone border contrast, sideboard total) plus the full 912-test
 C# suite and `tsc -b`/`oxlint`/`vite build`, all clean.
+
+## 2026-09-05 (later) - Four bug reports: first-turn draw, popover lifetime, blocking UX, selection contrast
+
+1. **First-turn draw was wrong twice over.** Direct feedback: "First
+   player should 'draw four dice and then place one of them in Out of
+   Play.' Currently it just draws three, leaving five in the bag." Real
+   bug, and a real gap, found together:
+   - `TurnEngine.ClearAndDraw`'s first-turn handling was `DrawCount - 1`
+     - the 4th die was never drawn at all, just left sitting undrawn in
+     the Bag. v1's real rule 2.3.3 draws the normal count, then draws
+     ONE MORE and sets it straight to Out of Play - ported that exactly
+     (`TurnEngine.cs` now draws `DrawCount`, then an extra 1 on
+     `IsFirstTurn`, moved to `Zone.OutOfPlay`).
+   - Along the way: **the Bag never refilled from the Used Pile when it
+     ran short mid-draw** - a gap this file's own header comment had
+     flagged as unported. Also ported from v1's `DrawFromBag`: a shared
+     internal helper both draws use, reshuffling the Used Pile back into
+     the Bag whenever it empties mid-loop, stopping short only once both
+     are genuinely empty. New test:
+     `ClearAndDraw_Refills_The_Bag_From_The_Used_Pile_When_It_Runs_Short`.
+   - Six existing tests across `TurnCycleTests`, `InstinctClashConfigTests`,
+     `DiceFightClassicConfigTests`, and `V2GamesControllerTests` had their
+     draw-count assertions updated to the new (correct) numbers.
+
+2. **The roster card popover stuck around indefinitely.** Direct
+   feedback: it should close once the die is purchased, or the moment
+   the player clicks anything else. Two fixes together: `run()` (every
+   server action) now clears `openCardId` on success, and a
+   `pointerdown` listener on `document` closes it the instant a click
+   lands outside `.roster-chip-wrap` (the trigger chip and its own
+   popover both count as "inside," so clicking the Purchase button
+   inside the popover doesn't self-close it).
+
+3. **Blocking was a separate right-hand-pane picker.** Direct feedback:
+   "it shouldn't be necessary to 'click an attacker, then a defender to
+   block it'... I should be able to just click whichever dice I want and
+   click the zone to add it to... not intuitive having to select
+   blockers from the right hand pane." Real redesign, not just a wording
+   change: the `BlockPanel` component (a chip-list picker) is gone.
+   Instead:
+   - The defender's own Field Zone dice become clickable during Assign
+     Blockers (same shared `toggleDie`/`selection.primary` every other
+     board interaction already uses - just a widened `clickable` gate).
+   - `CombatLane`'s blocker slot - the actual empty/filled box drawn
+     right across from each attacker - is now the real drop target:
+     `canAssignBlockers`/`onSlotClick` props, an `onClickCapture` handler
+     (capture phase, so a filled slot's own blocker-die button doesn't
+     also fire its own toggle-select underneath), and a `.targeting`
+     highlight state that only lights up once a candidate blocker is
+     actually selected ("assign here").
+   - `handleBlockerSlotClick` in `DiceKingdomPage.tsx` builds the same
+     local `blockAssignments` record as before (still submitted via one
+     "Confirm Blocks" call) - clicking a slot with a die selected moves
+     that die there (clearing it from wherever it was previously
+     assigned, so one physical die is never double-booked); clicking an
+     already-filled slot with nothing selected clears it.
+   - Verified live with a real two-seat scenario (Playwright driving one
+     page, re-navigating via each seat's own invite-link token to flip
+     `yourPlayerId` between clicks - the only way to genuinely exercise
+     the DEFENDER's perspective, since a single unclaimed session is
+     always seated as player one): fielded a creature each side, teamA
+     declared an attacker, teamB clicked their own Field die then the
+     lane's "assign here" slot, Confirm Blocks - server accepted it,
+     log read "Armadillo assigns 1 blocker," and the die correctly
+     stayed in the Field Zone list (not yet AttackZone) right up until
+     that real Confirm Blocks call, only then moving - confirming the
+     local/pending vs. confirmed staging is intact under the new UI.
+
+4. **Selection highlight invisible in light mode.** Direct feedback:
+   "when I select a die... it changes the background color... if that
+   happens in light mode, I can't see it." Root cause: `--tile-bg` and
+   `--panel-bg` are BOTH `#ffffff` in light mode, so the old `.picked`
+   state (a background swap between those two tokens) was reading fine
+   only in dark mode's much larger --tile-bg/--panel-bg gap. Fixed the
+   same way `turn-mine`/`turn-waiting` already reads reliably in both
+   themes: a real ring via `box-shadow`, colored from the tile's own
+   `--cc` accent (already set inline per die/card) rather than a theme
+   background token - never subtle regardless of theme.
+
+All four verified live via headless Chromium (both themes where
+relevant), plus the full 913-test C# suite and `tsc -b`/`oxlint`/
+`vite build`, all clean.

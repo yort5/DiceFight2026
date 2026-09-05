@@ -305,6 +305,25 @@ export function DiceKingdomPage() {
   // would otherwise block entirely.
   const [openCardId, setOpenCardId] = useState<string | null>(null);
 
+  // Direct feedback (2026-09-05): the popover stuck around indefinitely -
+  // it needs to close once the die it was showing is actually purchased
+  // (handled in run(), below) or the moment the player clicks anywhere
+  // else on the page. `closest` walks up from whatever was clicked
+  // (which for a click INSIDE the popover or its own trigger chip is
+  // still under .roster-chip-wrap) rather than requiring an exact target
+  // match, so clicking the popover's own Purchase button doesn't
+  // immediately reopen/close it out from under itself.
+  useEffect(() => {
+    if (!openCardId) return;
+    function handlePointerDown(e: PointerEvent) {
+      if (!(e.target instanceof Element) || !e.target.closest(".roster-chip-wrap")) {
+        setOpenCardId(null);
+      }
+    }
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [openCardId]);
+
   useEffect(() => {
     api.getCards().then((cards) => setCardsById(new Map(cards.map((c) => [c.id, c]))));
   }, []);
@@ -417,6 +436,7 @@ export function DiceKingdomPage() {
       setGame(next);
       if (previous) animateRolledDice(previous, next, rolledDieIds);
       clearSelection();
+      setOpenCardId(null); // e.g. a completed Purchase - see openCardId's own remarks
       if (next.currentStepId !== "roll-and-reroll") setRerolledIds([]);
       if (next.currentStepId !== "assign-blockers") setBlockAssignments({});
       return next;
@@ -707,7 +727,12 @@ export function DiceKingdomPage() {
             </h4>
             <div className="dierow">
               {field.map((d) => {
-                const clickable = d.controllerId === you && isYourTurn && step === "select-attackers";
+                // Attack: pick your own attackers. Defend: pick a
+                // candidate blocker from your own Field Zone dice - see
+                // handleBlockerSlotClick for where that selection goes.
+                const clickable =
+                  d.controllerId === you &&
+                  ((isYourTurn && step === "select-attackers") || (!isYourTurn && step === "assign-blockers"));
                 const picked = d.id === selection.primary || selection.secondary.includes(d.id);
                 return (
                   <DieTile
@@ -881,8 +906,40 @@ export function DiceKingdomPage() {
         onGroupClick={(ids) => toggleDie(ids[0])}
         spins={spins}
         turnOffsets={offsets}
+        canAssignBlockers={step === "assign-blockers" && !isYourTurn}
+        onSlotClick={handleBlockerSlotClick}
       />
     );
+  }
+
+  // Direct feedback (2026-09-05): blocking used to be a separate right-
+  // hand-pane picker ("click an attacker, then a defender to block it"),
+  // not the board itself. Now: click one of your own Field Zone dice
+  // (made clickable during this step - see the Field Zone map below),
+  // which becomes `selection.primary` through the same shared toggleDie
+  // every other selection uses, then click the lane's blocker slot
+  // across from whichever attacker you want it to block (CombatLane's
+  // onSlotClick, wired above). Reselecting an already-assigned die and
+  // clicking a different slot MOVES it rather than double-booking it;
+  // clicking a filled slot with nothing selected clears it. Purely
+  // local state until "Confirm Blocks" actually submits it - unchanged
+  // from before, only how it gets built changed.
+  function handleBlockerSlotClick(attackerDieId: string) {
+    if (selection.primary) {
+      const die = game!.dice.find((d) => d.id === selection.primary);
+      if (die && die.controllerId === you && die.zone === "FieldZone") {
+        const blockerId = selection.primary;
+        setBlockAssignments((prev) => {
+          const next: Record<string, string | null> = {};
+          for (const [aid, bid] of Object.entries(prev)) next[aid] = bid === blockerId ? null : bid;
+          next[attackerDieId] = blockerId;
+          return next;
+        });
+      }
+      clearSelection();
+    } else if (blockAssignments[attackerDieId]) {
+      setBlockAssignments((prev) => ({ ...prev, [attackerDieId]: null }));
+    }
   }
 
   const link = inviteLink(game.gameId);
@@ -1060,15 +1117,26 @@ export function DiceKingdomPage() {
         ) : game.pendingChoice ? (
           <p className="dek">Waiting on the other player's choice…</p>
         ) : step === "assign-blockers" && !isYourTurn ? (
-          <BlockPanel
-            game={game}
-            you={you}
-            blocks={blockAssignments}
-            setBlocks={setBlockAssignments}
-            selection={selection}
-            onPickAttacker={(id) => setSelection({ primary: id, secondary: [] })}
-            run={run}
-          />
+          <div className="panel">
+            <p>
+              <b>Assign blockers.</b> Click one of your Field Zone dice below, then
+              click the open slot across from the attacker you want it to block.
+              Click a filled slot again (nothing selected) to clear it. Anything
+              left unblocked hits you directly.
+            </p>
+            <button
+              className="btn"
+              disabled={busy}
+              onClick={() => {
+                const assignments = Object.entries(blockAssignments)
+                  .filter(([, v]) => v)
+                  .map(([attackerDieId, blockerDieId]) => ({ attackerDieId, blockerDieId: blockerDieId! }));
+                run(() => api.declareBlockers(game.gameId, assignments));
+              }}
+            >
+              Confirm Blocks
+            </button>
+          </div>
         ) : step === "assign-blockers" && isYourTurn ? (
           <p className="dek">Waiting on the other player to assign blockers…</p>
         ) : step === "action-global-window" && isYourTurn ? (
@@ -1233,68 +1301,3 @@ function PendingChoiceChips({
   );
 }
 
-function BlockPanel({
-  game,
-  you,
-  blocks,
-  setBlocks,
-  selection,
-  onPickAttacker,
-  run,
-}: {
-  game: GameState;
-  you: string;
-  blocks: Record<string, string | null>;
-  setBlocks: (u: (b: Record<string, string | null>) => Record<string, string | null>) => void;
-  selection: Selection;
-  onPickAttacker: (id: string) => void;
-  run: (fn: () => Promise<GameState>) => Promise<GameState>;
-}) {
-  const attackerDice = game.dice.filter((d) => d.zone === "AttackZone");
-  const blockers = game.dice.filter((d) => d.controllerId === you && d.zone === "FieldZone");
-  const used = new Set(Object.values(blocks).filter((v): v is string => !!v));
-  const blockPick = selection.primary;
-  return (
-    <div className="panel">
-      <p>
-        <b>Assign blockers.</b> Click an attacker, then a defender to block it (or leave unblocked).
-      </p>
-      <div className="chiprow">
-        {attackerDice.map((a) => (
-          <span key={a.id} className={`chip${blockPick === a.id ? " on" : ""}`} onClick={() => onPickAttacker(a.id)}>
-            {a.effectiveAttack}/{a.effectiveDefense} ← {blocks[a.id] ? "blocked" : "unblocked"}
-          </span>
-        ))}
-      </div>
-      {blockPick && (
-        <div className="chiprow">
-          <span className="chip" onClick={() => setBlocks((b) => ({ ...b, [blockPick]: null }))}>
-            no block
-          </span>
-          {blockers
-            .filter((b) => !used.has(b.id) || blocks[blockPick] === b.id)
-            .map((b) => (
-              <span
-                key={b.id}
-                className={`chip${blocks[blockPick] === b.id ? " on" : ""}`}
-                onClick={() => setBlocks((prev) => ({ ...prev, [blockPick]: b.id }))}
-              >
-                {b.effectiveAttack}/{b.effectiveDefense}
-              </span>
-            ))}
-        </div>
-      )}
-      <button
-        className="btn"
-        onClick={async () => {
-          const assignments = Object.entries(blocks)
-            .filter(([, v]) => v)
-            .map(([attackerDieId, blockerDieId]) => ({ attackerDieId, blockerDieId: blockerDieId! }));
-          await run(() => api.declareBlockers(game.gameId, assignments));
-        }}
-      >
-        Confirm Blocks
-      </button>
-    </div>
-  );
-}

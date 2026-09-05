@@ -52,15 +52,19 @@ public class InstinctClashConfigTests
         Assert.Equal(8, state.DiceIn("p1", Zone.Bag).Count());
         Assert.Equal(20, playerOne.Life);
 
-        // --- Clear and Draw (first turn: DrawCount - 1 = 3, all Tardigrades - Characters start Unpurchased) ---
+        // --- Clear and Draw (first turn: draws DrawCount=4 normally, then
+        // 1 more straight to Out of Play - rule 2.3.3's going-first
+        // penalty; all Tardigrades - Characters start Unpurchased) ---
         TurnEngine.ClearAndDraw(state, queue, new Random(1));
-        Assert.Equal(3, state.DiceIn("p1", Zone.DiceFromBag).Count());
+        Assert.Equal(4, state.DiceIn("p1", Zone.DiceFromBag).Count());
+        Assert.Single(state.DiceIn("p1", Zone.OutOfPlay));
+        Assert.Equal(3, state.DiceIn("p1", Zone.Bag).Count());
 
         // --- Roll: every drawn die lands on the L1 face (index 0, 2 Claw energy) ---
-        TurnEngine.Roll(state, queue, new ScriptedRoller(0, 0, 0));
+        TurnEngine.Roll(state, queue, new ScriptedRoller(0, 0, 0, 0));
         TurnEngine.FinishRoll(state, queue);
         var reserve = state.DiceIn("p1", Zone.ReservePool).ToList();
-        Assert.Equal(3, reserve.Count);
+        Assert.Equal(4, reserve.Count);
         Assert.All(reserve, d => Assert.Equal(2, state.GetCurrentFace(d)!.Symbols.Single().Count));
 
         // --- Purchase Honey Badger (cost 2 Claw) using one L1 die's 2 energy ---

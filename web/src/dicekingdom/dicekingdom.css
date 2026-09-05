@@ -838,6 +838,27 @@
   letter-spacing: 0.1em;
   color: var(--text-h);
 }
+/* Assign Blockers - the slot IS the drop target now (direct feedback,
+   2026-09-05: no more separate right-hand-pane picker). .clickable marks
+   any slot that will accept a click at all (defending player, that
+   attacker isn't theirs); .targeting is the stronger cue shown only
+   while a candidate blocker die is actually selected, so "click here"
+   only lights up once there's something to drop. */
+.dicekingdom .lane-slot.clickable {
+  cursor: pointer;
+}
+.dicekingdom .lane-slot.clickable:hover {
+  border-color: var(--text-h);
+}
+.dicekingdom .lane-slot.targeting {
+  border-color: oklch(0.62 0.15 145 / 0.85);
+  border-style: solid;
+  background: oklch(0.62 0.15 145 / 0.14);
+  box-shadow: 0 0 0 2px oklch(0.62 0.15 145 / 0.3);
+}
+.dicekingdom .lane-slot.targeting .lane-slot-hint {
+  color: oklch(0.62 0.15 145);
+}
 .dicekingdom .lane-connector {
   position: relative;
   z-index: 1;
@@ -1058,9 +1079,16 @@
 .dicekingdom .roster-chip.clickable:hover {
   transform: translateY(-2px);
 }
+/* A real ring, not just a background swap - direct feedback (2026-09-05):
+   in light mode --tile-bg and --panel-bg are both white, so the old
+   "picked" state (a background-only change) was nearly invisible there
+   even though it read fine in dark mode. box-shadow's color comes from
+   the tile's own accent (--cc, already set inline per die/card) rather
+   than a theme token, so it's never subtle regardless of theme. */
 .dicekingdom .roster-chip.picked {
-  border-color: var(--text-h);
+  border-color: var(--cc, var(--text-h));
   background: var(--panel-bg-strong);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--cc, var(--text-h)) 45%, transparent), var(--shadow);
   transform: translateY(-2px);
 }
 .dicekingdom .roster-chip:disabled {
@@ -1101,9 +1129,11 @@
   transform: translateY(-2px);
   border-color: var(--text-h);
 }
+/* Same real-ring fix as .roster-chip.picked above, same reason. */
 .dicekingdom .dietile.picked {
-  border-color: var(--text-h);
+  border-color: var(--cc, var(--text-h));
   background: var(--panel-bg);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--cc, var(--text-h)) 45%, transparent), var(--shadow);
   transform: translateY(-2px);
 }
 .dicekingdom .dietile svg {

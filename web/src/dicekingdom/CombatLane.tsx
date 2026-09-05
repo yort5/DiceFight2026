@@ -70,6 +70,16 @@ export function CombatLane(props: {
   onGroupClick: (ids: string[]) => void;
   spins?: Record<string, CubeSpin>;
   turnOffsets?: Record<string, number>;
+  /** True only for the defender during Assign Blockers - direct feedback
+   *  (2026-09-05): blocking used to require a separate right-hand-pane
+   *  picker ("click an attacker, then a defender to block it"); now the
+   *  blocker slot itself - the zone drawn right across from each
+   *  attacker - is the drop target: click your own Field Zone die, then
+   *  click the slot across from whichever attacker you want it to
+   *  block. Clicking an already-filled slot with nothing selected
+   *  clears it back to unblocked. */
+  canAssignBlockers?: boolean;
+  onSlotClick?: (attackerDieId: string) => void;
 }) {
   const { dice, cardsById, assignments, nearPlayerId } = props;
   const byId = new Map(dice.map((d) => [d.id, d]));
@@ -125,13 +135,39 @@ export function CombatLane(props: {
                   ? { text: `${attack} to face`, className: "lane-marker unblocked" }
                   : { text: `${attack} on blocker`, className: "lane-marker" };
 
+              // Only the slot across from an attacker that ISN'T yours is
+              // ever a real drop target - you block the opponent's
+              // attackers, never your own.
+              const slotClickable = !!props.canAssignBlockers && !attackerIsNear;
+              const targeting = slotClickable && !!props.selection.primary;
               const blockerSlot = (
                 <div
-                  className={`lane-slot${blockers.length ? " filled" : " empty"}`}
+                  className={[
+                    "lane-slot",
+                    blockers.length ? "filled" : "empty",
+                    slotClickable ? "clickable" : "",
+                    targeting ? "targeting" : "",
+                  ].filter(Boolean).join(" ")}
                   style={cell(i, attackerIsNear ? 1 : 3)}
+                  role={slotClickable ? "button" : undefined}
+                  tabIndex={slotClickable ? 0 : undefined}
+                  // Capture phase, not bubble - when the slot is already
+                  // filled it contains the blocker's own EngagementDie
+                  // button, whose own click (a plain toggle-select) would
+                  // otherwise fire too; this intercepts first so clicking
+                  // anywhere in the slot always means "assign/unassign
+                  // here," never both.
+                  onClickCapture={
+                    slotClickable
+                      ? (e) => {
+                          e.stopPropagation();
+                          props.onSlotClick?.(attacker.id);
+                        }
+                      : undefined
+                  }
                 >
                   {blockers.length === 0 ? (
-                    <span className="lane-slot-hint">unblocked</span>
+                    <span className="lane-slot-hint">{slotClickable && targeting ? "assign here" : "unblocked"}</span>
                   ) : (
                     blockers.map((blocker) => (
                       <EngagementDie
