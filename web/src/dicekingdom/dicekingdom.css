@@ -577,10 +577,11 @@
   align-items: center;
   gap: 6px;
 }
-.dicekingdom .championbox-name-row svg {
-  color: var(--cc, var(--text-h));
-  flex: none;
-}
+/* No more ".championbox-name-row svg { color: var(--cc) }" here - it
+   would win over .energy-badge's own inherited cream color (a plain
+   descendant selector beats inheritance regardless of specificity),
+   turning the badge's white icon back to the accent hue. The circle's
+   fill is the accent now; the icon stays cream on top of it. */
 .dicekingdom .championbox-name {
   font: 400 21px/1 var(--display);
   text-transform: uppercase;
@@ -1176,19 +1177,25 @@
   letter-spacing: 0.03em;
   margin-top: 1px;
 }
-.dicekingdom .pip {
+/* One colored circle per energy point instead of a "N + icon" pill -
+   direct feedback (2026-09-08), after comparing it against the old pill
+   in a published mockup: "I like Variant A... let's implement it
+   wherever we have energy symbols." Circles overlap slightly when a die
+   is worth more than one, the same look the mockup itself tested. */
+.dicekingdom .pip-stack {
+  display: inline-flex;
+  margin-top: 4px;
+}
+.dicekingdom .pip-stack .energy-badge + .energy-badge {
+  margin-left: -6px;
+  box-shadow: 0 0 0 2px var(--tile-bg);
+}
+.dicekingdom .energy-badge {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
-  font: 700 10px var(--mono);
-  padding: 2px 7px;
-  border-radius: 999px;
-  margin-top: 4px;
+  justify-content: center;
+  border-radius: 50%;
   color: #fff8ec;
-}
-.dicekingdom .pip svg {
-  width: 11px;
-  height: 11px;
   flex: none;
 }
 
@@ -1590,14 +1597,12 @@
   align-items: center;
   gap: 3px;
 }
-.dicekingdom .rc-cost svg,
-.dicekingdom .card-popover-cost svg,
-.dicekingdom .card-popover-levels svg,
-.dicekingdom .card-popover-energy-note svg {
-  width: 11px;
-  height: 11px;
-  flex: none;
-}
+/* No more blanket svg-sizing rule here - real bug, same class as the
+   .dietile one above: as a descendant selector it reached straight
+   through CostIcon's new .energy-badge wrapper (2026-09-08) to force
+   its inner icon back to a fixed 11px, fighting the badge's own size
+   prop. EnergyBadge sizes its own icon internally; nothing here needs
+   to override it. */
 
 /* ---- Selected die (rail) - README: name, level/stats, contextual
    action buttons. Reuses .panel/.now-* rather than new rules; only the

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import "./dicekingdom.css";
 import { api } from "./api";
-import { CHAMPION_ICONS, CHARACTER_ICONS, ENERGY_ICONS } from "./icons";
+import { CHAMPION_ICONS, CHARACTER_ICONS, EnergyBadge, TardigradePhotoIcon } from "./icons";
 import { claimSeatFromUrl, inviteLink, nameClaimedSeat, rememberSeats } from "./seats";
 import { CombatLane } from "./CombatLane";
 import { DieCube, type CubeSpin } from "./DieCube";
@@ -131,11 +131,6 @@ function LifeBox({ player, you, activePlayerId }: { player: PlayerState; you: st
 function ChampionBox({ player, isActivePlayer, you }: { player: PlayerState; isActivePlayer: boolean; you: string }) {
   if (!player.champion) return null;
   const Icon = CHAMPION_ICONS[player.champion.id];
-  // Direct feedback (2026-09-05): even once every Champion has a real
-  // avatar, the energy type still needs to read at a glance - a photo
-  // alone doesn't carry that the way a plain color glyph did. Shown
-  // alongside the name rather than replacing the avatar.
-  const EnergyIcon = ENERGY_ICONS[player.champion.energySymbolId];
   const mine = player.id === you;
   const accent = `var(--${player.champion.energySymbolId.toLowerCase()})`;
   const turnClass = isActivePlayer ? (mine ? " turn-mine" : " turn-waiting") : "";
@@ -146,11 +141,13 @@ function ChampionBox({ player, isActivePlayer, you }: { player: PlayerState; isA
         <div className="championbox-text">
           <div className="championbox-name-row">
             <div className="championbox-name">{player.champion.name}</div>
-            {/* Direct feedback (2026-09-08): "pull the size of the
-                Champion energy down just a tad... more on par with the
-                size of the word" - was reading noticeably heavier than
-                the name text next to it despite a nearby pixel size. */}
-            {EnergyIcon && <EnergyIcon size={12} />}
+            {/* Direct feedback (2026-09-05): even once every Champion has
+                a real avatar, the energy type still needs to read at a
+                glance - a photo alone doesn't carry that the way a color
+                glyph did. Variant A badge (2026-09-08) since this is
+                exactly the kind of small, low-contrast spot the earlier
+                bare icon kept losing its own sizing bug in. */}
+            <EnergyBadge type={player.champion.energySymbolId} size={14} />
           </div>
           <div className="championbox-note">{player.champion.passiveText}</div>
         </div>
@@ -187,33 +184,29 @@ function InviteRow({ link }: { link: string }) {
   );
 }
 
+// One EnergyBadge circle per energy point, overlapping when a die is
+// worth more than one - direct feedback (2026-09-08), after comparing
+// this against the old "N + icon" pill in a published mockup: "I like
+// Variant A... let's implement it wherever we have energy symbols."
 function PipBadge({ type, amount }: { type: string; amount: number }) {
-  const cssVar = type === "Wild" ? "var(--wild)" : `var(--${type.toLowerCase()})`;
-  const Icon = ENERGY_ICONS[type];
   return (
-    <span className="pip" style={{ background: cssVar }} title={`${amount} ${type}`}>
-      {amount} {Icon ? <Icon size={11} /> : type}
+    <span className="pip-stack" title={`${amount} ${type}`}>
+      {Array.from({ length: Math.max(1, amount) }, (_, i) => (
+        <EnergyBadge key={i} type={type} size={16} />
+      ))}
     </span>
   );
 }
 
-// A cost as a number + the energy's own icon, instead of spelling the
+// A cost as a number + the energy's own badge, instead of spelling the
 // type out - direct feedback (2026-09-07): "can we get the icons in
-// there instead of the words." Bare span (not a colored pip like
-// PipBadge) so it drops into existing text-sized cost labels unchanged.
-// Colored to the energy's own accent rather than inheriting the
-// surrounding text color - direct feedback (2026-09-05): inheriting
-// --text-dim (as roster/popover cost labels do) left Claw's icon a dim
-// grey in dark mode, easy to lose against the panel.
+// there instead of the words," then (2026-09-08) upgraded from a bare
+// colored icon to the same EnergyBadge circle every other energy symbol
+// now uses, for the same reason: a bare icon in --text-dim (as roster/
+// popover cost labels sit in) went a dim grey in dark mode, easy to
+// lose against the panel - a filled circle doesn't have that problem.
 function CostIcon({ energyType }: { energyType: string }) {
-  const Icon = ENERGY_ICONS[energyType];
-  if (!Icon) return <>{energyType}</>;
-  const cssVar = energyType === "Wild" ? "var(--wild)" : `var(--${energyType.toLowerCase()})`;
-  return (
-    <span style={{ color: cssVar, display: "inline-flex" }}>
-      <Icon size={11} />
-    </span>
-  );
+  return <EnergyBadge type={energyType} size={14} />;
 }
 
 function DieTile({
@@ -317,7 +310,7 @@ function DieTile({
       {showInfo && (
         <div className="card-popover down">
           <div className="card-popover-head">
-            {Avatar && <Avatar size={28} />}
+            {Avatar ? <Avatar size={28} /> : <TardigradePhotoIcon size={28} />}
             <div>
               <div className="card-popover-name">{name}</div>
               {card && (

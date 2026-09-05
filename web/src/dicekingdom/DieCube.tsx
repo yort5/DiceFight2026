@@ -1,16 +1,11 @@
-import { ENERGY_ICONS } from "./icons";
+import { EnergyBadge } from "./icons";
 import { FACE_ORIENTATIONS, FACE_TRANSFORMS, type CubeFace } from "./dieFaces";
 
 // A die as a real CSS 3D cube rather than a flat badge - ported from
-// ../DieCube.tsx verbatim except for `faceIcon`, which resolves an icon
-// as one of Dice Kingdom's own SVG components (ClawIcon, ShellIcon, ...)
-// instead of v1's `<img src>` GameIcon. See ../DieCube.tsx for the
-// geometry commentary (unchanged - it's just 3D placement math).
-
-function faceIcon(face: CubeFace) {
-  if (face.kind !== "energy") return null;
-  return ENERGY_ICONS[face.icon] ?? null;
-}
+// ../DieCube.tsx verbatim except for the energy corner, which draws one
+// of Dice Kingdom's own EnergyBadge circles instead of v1's `<img src>`
+// GameIcon. See ../DieCube.tsx for the geometry commentary (unchanged -
+// it's just 3D placement math).
 
 export interface CubeSpin {
   rx: number;
@@ -77,7 +72,6 @@ export function DieCube(props: {
         }}
       >
         {faces.map((face, i) => {
-          const Icon = faceIcon(face);
           return (
             <span
               key={i}
@@ -124,12 +118,13 @@ export function DieCube(props: {
                       needs to be a little smaller." Same top-right slot
                       .die-cube-attack uses on a character face - the two
                       never appear on the same face, so there's no clash
-                      reusing the position. */}
-                  {Icon && (
-                    <span className="die-cube-energy-icon">
-                      <Icon size={Math.round(size * 0.3)} />
-                    </span>
-                  )}
+                      reusing the position. Variant A badge (2026-09-08)
+                      instead of a bare cream icon - this one had NO color
+                      coding at all before (its currentColor just
+                      inherited the face's own fixed cream text tone). */}
+                  <span className="die-cube-energy-icon">
+                    <EnergyBadge type={face.icon} size={Math.round(size * 0.34)} />
+                  </span>
                   {face.amount > 1 && <span className="die-cube-amount">{face.amount}</span>}
                 </>
               )}

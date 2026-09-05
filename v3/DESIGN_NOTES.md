@@ -1879,3 +1879,53 @@ svg`/`> img` (direct child only) - the portrait is a direct child of
 `.championbox-body`, the energy icon isn't. Confirmed live: the icon's
 own rendered `<svg>` now genuinely measures 12x12, not 72x72, and reads
 right at a glance next to the name text.
+
+## 2026-09-08 (later) - Variant A everywhere: a shared EnergyBadge
+
+Direct feedback after comparing the two corner-badge color directions
+live: "I like Variant A... Let's implement Variant A wherever we have
+energy symbols and push to see how it looks live."
+
+New shared component - `EnergyBadge({ type, size })` in `icons.tsx`: a
+circle filled with the energy type's own color, its icon in white/cream
+on top, sized however the call site needs. Replaces every ad-hoc energy
+icon treatment in the app with the one look:
+
+- **`PipBadge`** (a die's own rolled energy amount - DieTile below the
+  cube, and the sideboard's "Energy in your pool" list): was a colored
+  pill printing "N + icon"; now renders `amount` EnergyBadge circles in
+  a row, overlapping when a die is worth two - the exact "no number,
+  just symbols" idea the corner-badge mockup tested, now live wherever a
+  die's energy actually shows, not just the exploration.
+- **`CostIcon`** (roster chip costs, the roster/die-info popover's cost
+  and per-level costs and its "plus 2 faces of..." note): was a bare
+  colored icon with no backing shape - upgraded to the same badge,
+  small, single circle, the printed number staying right next to it
+  exactly as before (costs aren't capped at 2 the way a rolled face is,
+  so these don't get the "repeat the icon" treatment - just the color
+  treatment).
+- **`ChampionBox`**'s energy glyph next to the Champion's name and
+  **`DieCube`**'s own top-right energy-type corner icon (a pure-energy
+  face like Surge) both switch to the same badge too - the die-cube
+  corner one in particular had NO color coding at all before this
+  (it inherited the die face's fixed cream text color, not its type).
+
+Two more of the same "blanket CSS rule reaching through a new wrapper"
+bugs this session has already hit twice, caught and fixed before they
+shipped:
+- `.rc-cost svg` / `.card-popover-cost svg` / etc. were forcing
+  CostIcon's inner icon back to a fixed 11px regardless of the badge's
+  own size prop, the same class of bug as the `.dietile svg`/
+  `.championbox-body svg` ones from earlier passes - removed.
+- `.championbox-name-row svg { color: var(--cc) }` would have won over
+  EnergyBadge's own inherited cream color (inheritance loses to ANY
+  matching rule regardless of specificity), turning the badge's white
+  icon back to the accent hue - removed before it ever rendered wrong.
+
+Verified live: champion box, roster chips, the roster/die-info popover,
+Reserve Pool tiles, and the sideboard energy pool all show the new
+circular badges consistently; a real purchase completes cleanly end to
+end; a 4-energy sideboard pool (2 Wild singles + one 2-Claw pair)
+renders as 4 correctly-grouped, correctly-overlapped circles matching
+its own printed total. Zero console errors across every check.
+`tsc -b`/`oxlint`/`vite build` clean.

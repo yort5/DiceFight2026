@@ -1,5 +1,7 @@
 import type { ReactElement, ReactNode } from "react";
 import wolfChampionArt from "./assets/wolf-champion.jpg";
+import tardigradeSketch from "./assets/tardigrade-sketch.jpg";
+import barnSwallowDuck from "./assets/barn-swallow-duck.jpg";
 
 // Hand-drawn icon set for Dice Kingdom - the same SVG concepts already
 // designed and reviewed as Claude artifacts this session (the energy-pip
@@ -88,6 +90,26 @@ export const ENERGY_ICONS: Record<string, (p: IconProps) => ReactElement> = {
   Eye: EyeIcon,
   Wild: WildIcon,
 };
+
+// "Variant A" from the corner-badge mockup (2026-09-08, compared
+// alongside a neutral-circle/colored-symbol alternative): the energy
+// type's own color as a circle's FILL, its icon in white/cream on top -
+// direct feedback picked this one specifically because it "reads faster
+// and stays legible even shrunk small," unlike a bare colored icon with
+// no backing shape. One shared badge for every place that shows an
+// energy type - a die's own rolled amount, a printed cost, a popover
+// detail - each just asking for whatever size that spot needs, so the
+// look stays the same everywhere instead of drifting per call site.
+export function EnergyBadge({ type, size = 16 }: { type: string; size?: number }) {
+  const Icon = ENERGY_ICONS[type];
+  if (!Icon) return <span style={{ fontSize: size * 0.6 }}>{type}</span>;
+  const cssVar = type === "Wild" ? "var(--wild)" : `var(--${type.toLowerCase()})`;
+  return (
+    <span className="energy-badge" style={{ width: size, height: size, background: cssVar }}>
+      <Icon size={Math.round(size * 0.62)} />
+    </span>
+  );
+}
 
 // ---- Champion avatars (no energy tie-in - see v3/DESIGN_NOTES.md on why
 // avatars are deliberately orthogonal to energy color) ----
@@ -198,6 +220,25 @@ export function TardigradeIcon(props: IconProps) {
   );
 }
 
+// A real sketch, kept alongside the vector TardigradeIcon rather than
+// replacing it - direct feedback pattern (2026-09-08): the vector glyph
+// is what actually renders at die-cube sizes (15-20px, where a scanned
+// pencil drawing would just look like noise), but a bigger context - a
+// Tardigrade's own info popover (DieTile's own "click for full
+// information", added the same day) - has the room for the real thing,
+// same "bigger image" rule the user gave for a Champion portrait.
+export function TardigradePhotoIcon({ size = 24 }: IconProps) {
+  return (
+    <img
+      src={tardigradeSketch}
+      alt="Tardigrade"
+      width={size}
+      height={size}
+      style={{ objectFit: "contain", borderRadius: "20%", background: "#fff" }}
+    />
+  );
+}
+
 // ---- Character avatars (the 8-card v3 pool) ----
 
 const CREAM = "#FFF8EC";
@@ -267,16 +308,20 @@ function OspreyIcon(props: IconProps) {
   );
 }
 
-function BarnSwallowIcon(props: IconProps) {
+// A real drawing, not the original nest-glyph - direct feedback
+// (2026-09-08): the user's own example of what a house-drawn animal
+// picture could replace ("if I upload a duck, you could swap out the
+// barn swallow"), then an actual duck drawing arrived a few messages
+// later. Same img-based pattern as WolfIcon.
+function BarnSwallowIcon({ size = 24 }: IconProps) {
   return (
-    <Svg {...props}>
-      <path d="M12,40 C12,26 52,26 52,40 C52,42 12,42 12,40 Z" fill="currentColor" />
-      <g fill={CREAM}>
-        <circle cx={22} cy={36} r={1.6} />
-        <circle cx={32} cy={34} r={1.6} />
-        <circle cx={42} cy={36} r={1.6} />
-      </g>
-    </Svg>
+    <img
+      src={barnSwallowDuck}
+      alt="Barn Swallow"
+      width={size}
+      height={size}
+      style={{ objectFit: "contain", borderRadius: "20%", background: "#fff" }}
+    />
   );
 }
 
