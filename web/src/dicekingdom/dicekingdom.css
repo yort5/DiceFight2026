@@ -315,11 +315,33 @@
    box-shadow hugged flush against the nested zone boxes with no
    breathing room, easy to miss entirely. Direct feedback (2026-09-06):
    "highlight the currently active playmat." Now a real card so the
-   whole active board reads as one clearly outlined region. */
+   whole active board reads as one clearly outlined region.
+
+   Direct feedback (2026-09-05): a thin ring still wasn't obvious enough
+   - "the whole thing needs to be obviously active or inactive... I
+   should be able to easily tell when my opponent passes over to me by
+   the way the mat/screen changes." Every board now always carries one
+   of three states instead of "highlighted" vs "nothing": a real tinted
+   background wash for whichever board is live (turn-mine/turn-waiting,
+   background added here; the border/box-shadow ring below is unchanged
+   and still layers on top), and a dimmed, desaturated look for
+   whichever board ISN'T (.turn-inactive) - so the two boards visibly
+   swap look and feel the instant the turn passes, not just a border. */
 .dicekingdom .playerboard {
   border-radius: 14px;
   border: 1px solid transparent;
   padding: 8px;
+  transition: opacity 0.2s ease, filter 0.2s ease, background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.dicekingdom .playerboard.turn-mine {
+  background: color-mix(in oklab, oklch(0.62 0.15 145) 15%, var(--panel-bg));
+}
+.dicekingdom .playerboard.turn-waiting {
+  background: color-mix(in oklab, oklch(0.62 0.09 75) 15%, var(--panel-bg));
+}
+.dicekingdom .playerboard.turn-inactive {
+  opacity: 0.66;
+  filter: saturate(0.55);
 }
 
 /* ---- Title bar - ribbon + a compact How-to-play toggle, replacing the
@@ -544,6 +566,15 @@
   flex: none;
   border-radius: 10px;
 }
+.dicekingdom .championbox-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.dicekingdom .championbox-name-row svg {
+  color: var(--cc, var(--text-h));
+  flex: none;
+}
 .dicekingdom .championbox-name {
   font: 400 21px/1 var(--display);
   text-transform: uppercase;
@@ -659,11 +690,21 @@
    theme-adaptive (blends against light/dark --panel-bg alike) color -
    no dependency on whatever happens to render behind it. Border colors
    stay as thin translucent oklch lines (1px, no visible bleed there). */
-.dicekingdom .zone-field {
+/* Real bug, direct feedback (2026-09-05): "we kind of lost our lines
+   between zones, it's hard to tell where Used Pile ends and Out of Play
+   begins." Every rule below lost its fight for `border-color` against
+   `.mat-slot .zone { border: 1px solid transparent; }` above - that
+   selector is 3 classes deep (.dicekingdom .mat-slot .zone) and these
+   were only 2 (.dicekingdom .zone-used), so the transparent border
+   always won regardless of source order, leaving every zone's tint
+   visible but its crisp edge invisible. Adding `.zone` to each selector
+   ties the specificity, and cascade order (these come later in the
+   file) then lets the real color win. */
+.dicekingdom .zone.zone-field {
   background: color-mix(in oklab, oklch(0.6 0.12 145) 18%, var(--panel-bg));
   border-color: oklch(0.6 0.1 145 / 0.55);
 }
-.dicekingdom .zone-reserve {
+.dicekingdom .zone.zone-reserve {
   background: color-mix(in oklab, oklch(0.55 0.09 75) 24%, var(--panel-bg));
   border-color: oklch(0.6 0.08 75 / 0.55);
   box-shadow: inset 0 3px 10px oklch(0.2 0.02 75 / 0.2);
@@ -673,12 +714,12 @@
      shorter than it should. */
   min-height: 82px;
 }
-.dicekingdom .zone-used,
-.dicekingdom .zone-bag {
+.dicekingdom .zone.zone-used,
+.dicekingdom .zone.zone-bag {
   background: color-mix(in oklab, oklch(0.55 0.02 260) 14%, var(--panel-bg));
   border-color: oklch(0.6 0.02 260 / 0.5);
 }
-.dicekingdom .zone-outofplay {
+.dicekingdom .zone.zone-outofplay {
   background: color-mix(in oklab, oklch(0.55 0.05 300) 11%, var(--panel-bg));
   border: 1px dashed oklch(0.6 0.06 300 / 0.6);
 }
@@ -690,11 +731,11 @@
   color: var(--text-dim);
   margin-top: -4px;
 }
-.dicekingdom .zone-prep {
+.dicekingdom .zone.zone-prep {
   background: color-mix(in oklab, oklch(0.6 0.1 70) 25%, var(--panel-bg));
   border-color: oklch(0.6 0.09 70 / 0.55);
 }
-.dicekingdom .zone-staging {
+.dicekingdom .zone.zone-staging {
   background: color-mix(in oklab, oklch(0.55 0.06 300) 15%, var(--panel-bg));
   border-color: oklch(0.6 0.06 300 / 0.5);
 }
@@ -1286,6 +1327,35 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+/* The running total - direct feedback (2026-09-05): "makes me also want
+   to have a total there - a number on one side separated by a vertical
+   bar with the total energy in a circle." */
+.dicekingdom .sideboard-pool-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dicekingdom .sideboard-pool-row .sideboard-pool {
+  flex: 1;
+}
+.dicekingdom .pool-divider {
+  align-self: stretch;
+  width: 1px;
+  background: var(--border);
+  flex: none;
+}
+.dicekingdom .pool-total {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--text-h);
+  color: var(--on-fill);
+  font: 700 12px var(--mono);
+  flex: none;
 }
 
 /* ---- Bag inspector - README: "the box is a button that opens an

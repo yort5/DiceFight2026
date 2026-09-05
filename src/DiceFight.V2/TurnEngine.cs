@@ -450,21 +450,29 @@ public static class TurnEngine
         EventBus.Fire(state, queue, new GameEvent(TriggerKind.TurnStepEntered, null, state.ActivePlayerId, StepIds.SelectAttackers));
     }
 
-    // A player may decline to attack at all, straight from the Main Step
-    // or after entering the Attack Step and choosing no attackers.
-    // Delegates to EnterAttackStep when coming from Main so the
-    // TurnStepEntered(Attack) event fires exactly once either way, not a
-    // separate "skip" event of its own - Combat itself is Phase 7.
+    // A player may decline to attack at all. Ported from v1's identical
+    // TurnEngine.SkipAttackStep (Engine project), which jumps straight
+    // from Main to Clean Up - V2 has no single transition to jump to
+    // that way (CleanUp requires TurnStep.Attack, and there's no "empty
+    // combat" shortcut into it), so this runs the real Combat pipeline
+    // with nobody attacking, nothing blocked, and no damage assigned,
+    // landing on the same ReturnToField step a real (empty) combat ends
+    // on - one call, same as v1's one call, just via the granular V2
+    // steps instead of a direct step assignment. Every step's real
+    // events still fire along the way (DieAttacks/DieBlocks would if
+    // there were any, TurnStepEntered for each sub-step), so a future
+    // ability hooked to one of them still sees it. No forced-attack
+    // keyword exists in this catalog yet (V2_PLAN.md ground rule 2), so
+    // there's nothing here to reject the way v1's MustAttackThisTurn
+    // check does - CombatEngine.DeclareAttackers's own MustAttack check
+    // still applies if that ever changes.
     public static void SkipAttackStep(GameState state, AbilityQueue queue)
     {
-        if (state.CurrentStep == TurnStep.Main)
-        {
-            EnterAttackStep(state, queue);
-        }
-        else if (state.CurrentStep != TurnStep.Attack)
-        {
-            throw new InvalidOperationException($"Cannot skip the Attack Step from {state.CurrentStep}.");
-        }
+        RequireStep(state, TurnStep.Main);
+        EnterAttackStep(state, queue);
+        CombatEngine.DeclareAttackers(state, queue, []);
+        CombatEngine.DeclareBlockers(state, queue, new CombatAssignment(), []);
+        CombatEngine.AssignCombatDamage(state, queue, new CombatAssignment(), new Dictionary<string, IReadOnlyDictionary<string, int>>());
     }
 
     // Reserve Pool dice (never spent) and Out of Play dice (spent energy)

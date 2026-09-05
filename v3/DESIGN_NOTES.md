@@ -1435,3 +1435,89 @@ decremented) - real proof the popover's button reaches the same
 `toggleDie`/`selectionAction` path the rest of the board already uses,
 not a parallel one. `tsc -b`/`vite build`/`oxlint` clean, full
 click-through zero console errors.
+
+## 2026-09-05 - Seven-item feedback pass on the popover/rail/board polish
+
+Direct feedback on the previous batch, in order:
+
+1. **Wolf champion box: icon AND photo.** "Eventually all Champions will
+   have a cool animal avatar, but we still need to know at a glance
+   which energy they are." Added the Claw glyph next to the "WOLF" name
+   text (`.championbox-name-row`), alongside (not instead of) the real
+   photo - every Champion gets this now, not just Wolf, since it's keyed
+   off `player.champion.energySymbolId` generically.
+
+2. **"The slashes for Claw get washed out in dark mode."** Root cause:
+   `CostIcon` (roster/popover cost labels) inherited its color from
+   context, and every caller sat inside `--text-dim` (a muted grey) -
+   fine for the word "Claw", illegible for a thin 3-path glyph at 11px
+   in dark mode. Fixed by coloring `CostIcon` to the energy's own accent
+   variable directly, matching how `PipBadge`'s solid pill already reads
+   fine.
+
+3. **"Tardigrades should still have a 0 in the upper left for fielding
+   cost."** `DieCube`'s `die-cube-cost` span was gated on `> 0`, so a
+   free (0-cost) face printed nothing there at all - looked unfinished
+   rather than "free". Now always prints, including 0.
+
+4. **Purchase popover covering the Reserve Pool.** Real bug: the
+   popover's up/down direction was keyed to `mirrored` in a way that
+   pointed it AT this board's own mat instead of away from it - on your
+   own board (mat-then-roster), "up" grew the popover right over the
+   Reserve Pool exactly when a purchase asked you to click into it to
+   pay energy. Inverted the ternary so it opens away from the mat on
+   both boards instead.
+
+5. **"We lost our lines between zones."** A real CSS specificity bug,
+   not a design regression: `.mat-slot .zone { border: 1px solid
+   transparent }` (3 classes deep counting `.dicekingdom`) was more
+   specific than every per-zone tint rule (`.zone-used`, `.zone-field`,
+   etc., 2 classes), so the transparent border always won regardless of
+   source order - only the tinted backgrounds were ever actually
+   visible. Fixed by adding `.zone` to each tint selector to tie
+   specificity and let cascade order (they come later) decide. Borders
+   are crisp and distinct again in both themes.
+
+6. **Energy pool total.** Added a running total to the sideboard's
+   "Energy in your pool" panel - the existing pip list plus a vertical
+   divider plus a solid circle badge with the summed amount.
+
+7. **Skip Attack Step was missing entirely**, and the story behind
+   getting it back turned out bigger than a missing button: V2's
+   `TurnEngine.SkipAttackStep` was already wired end-to-end (API route,
+   client method) but its actual implementation just called
+   `EnterAttackStep` - i.e. "skip" landed you IN Select Attackers, not
+   past it, so it still cost a "Confirm Attackers (0)" click and never
+   matched the name. v1's real `SkipAttackStep` (Engine project) jumps
+   straight from Main to Clean Up in one shot. V2 has no single
+   transition to jump to that way (`CleanUp` requires `TurnStep.Attack`,
+   and every one of Select Attackers/Assign Blockers/Action-Global/
+   Return-to-Field maps to that same coarse `TurnStep`), so the fix runs
+   the real Combat pipeline once, synchronously, with nobody attacking,
+   nothing blocked, and no damage assigned - `DeclareAttackers([])` ->
+   `DeclareBlockers([])` -> `AssignCombatDamage([])` - landing on
+   `ReturnToField` exactly like a real empty combat would, with every
+   step's own events still firing along the way for any future ability
+   that hooks one. No forced-attack keyword exists in this catalog yet,
+   so there's nothing to reject the way v1's `MustAttackThisTurn` check
+   does; `CombatEngine.DeclareAttackers`'s own check still applies if
+   that ever changes. Verified live: click Skip Attack Step from Main ->
+   log shows "declares no attackers" / "leaves every attacker unblocked"
+   / "ends their turn" -> turn passes to the other player in one click.
+
+8. **"The whole thing needs to be obviously active or inactive."** The
+   thin `turn-mine`/`turn-waiting` ring wasn't enough on its own. Added
+   a real three-state treatment to `.playerboard`: a tinted background
+   wash for whichever board is actually live right now (on top of the
+   existing ring), and a new `.turn-inactive` state - 0.66 opacity +
+   `saturate(0.55)` - for whichever board ISN'T. Verified live via
+   computed style after a real Skip Attack Step -> End Turn round trip:
+   the board that was `turn-mine` at full opacity becomes
+   `turn-inactive` at 0.66 opacity the instant the turn passes, and the
+   other board picks up `turn-waiting` at full saturation - a real,
+   visible swap, not just a border color change.
+
+All eight verified live via headless Chromium in both themes (full
+purchase-popover flow, a real Skip Attack Step -> Clean Up -> End Turn
+turn-pass, zone border contrast, sideboard total) plus the full 912-test
+C# suite and `tsc -b`/`oxlint`/`vite build`, all clean.

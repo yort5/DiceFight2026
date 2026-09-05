@@ -119,6 +119,11 @@ function LifeBox({ player, you, activePlayerId }: { player: PlayerState; you: st
 function ChampionBox({ player, isActivePlayer, you }: { player: PlayerState; isActivePlayer: boolean; you: string }) {
   if (!player.champion) return null;
   const Icon = CHAMPION_ICONS[player.champion.id];
+  // Direct feedback (2026-09-05): even once every Champion has a real
+  // avatar, the energy type still needs to read at a glance - a photo
+  // alone doesn't carry that the way a plain color glyph did. Shown
+  // alongside the name rather than replacing the avatar.
+  const EnergyIcon = ENERGY_ICONS[player.champion.energySymbolId];
   const mine = player.id === you;
   const accent = `var(--${player.champion.energySymbolId.toLowerCase()})`;
   const turnClass = isActivePlayer ? (mine ? " turn-mine" : " turn-waiting") : "";
@@ -127,7 +132,10 @@ function ChampionBox({ player, isActivePlayer, you }: { player: PlayerState; isA
       <div className="championbox-role">{mine ? "Your Champion" : "Opponent Champion"}</div>
       <div className="championbox-body">
         <div className="championbox-text">
-          <div className="championbox-name">{player.champion.name}</div>
+          <div className="championbox-name-row">
+            <div className="championbox-name">{player.champion.name}</div>
+            {EnergyIcon && <EnergyIcon size={15} />}
+          </div>
           <div className="championbox-note">{player.champion.passiveText}</div>
         </div>
         {Icon && <Icon size={72} />}
@@ -177,9 +185,19 @@ function PipBadge({ type, amount }: { type: string; amount: number }) {
 // type out - direct feedback (2026-09-07): "can we get the icons in
 // there instead of the words." Bare span (not a colored pip like
 // PipBadge) so it drops into existing text-sized cost labels unchanged.
+// Colored to the energy's own accent rather than inheriting the
+// surrounding text color - direct feedback (2026-09-05): inheriting
+// --text-dim (as roster/popover cost labels do) left Claw's icon a dim
+// grey in dark mode, easy to lose against the panel.
 function CostIcon({ energyType }: { energyType: string }) {
   const Icon = ENERGY_ICONS[energyType];
-  return Icon ? <Icon size={11} /> : <>{energyType}</>;
+  if (!Icon) return <>{energyType}</>;
+  const cssVar = energyType === "Wild" ? "var(--wild)" : `var(--${energyType.toLowerCase()})`;
+  return (
+    <span style={{ color: cssVar, display: "inline-flex" }}>
+      <Icon size={11} />
+    </span>
+  );
 }
 
 function DieTile({
@@ -577,7 +595,12 @@ export function DiceKingdomPage() {
     // that reads as "something's wrong," not "waiting your turn". Same
     // two hues as /game's identical cue (DESIGN_LOG.md, 2026-09-03).
     const isActivePlayer = playerId === game!.activePlayerId;
-    const turnClass = isActivePlayer ? (playerId === you ? " turn-mine" : " turn-waiting") : "";
+    // A real "turn-inactive" state for whichever board ISN'T live right
+    // now, not just "no highlight" - direct feedback (2026-09-05): a
+    // thin ring around the active board wasn't obvious enough; the whole
+    // board needs to visibly change when the turn passes. See
+    // .playerboard.turn-inactive.
+    const turnClass = isActivePlayer ? (playerId === you ? " turn-mine" : " turn-waiting") : " turn-inactive";
 
     // A single die-count zone, matching v1's PlayerBoard.tsx's mat-slot
     // shape - used for the three grid cells that just show a group of
@@ -756,7 +779,14 @@ export function DiceKingdomPage() {
                   <span className="rc-left">×{dice.length} left</span>
                 </button>
                 {detailOpen && (
-                  <div className={`card-popover ${mirrored ? "down" : "up"}`}>
+                  // Opens AWAY from this board's own mat, not toward it -
+                  // direct feedback (2026-09-05): the roster sits below
+                  // the mat on your own board (mat-then-roster) and above
+                  // it on the opponent's (roster-then-mat, see `mirrored`
+                  // below the mat/roster JSX), so opening toward the mat
+                  // (the previous mirrored-ternary) covered the Reserve
+                  // Pool right as a purchase asked you to click into it.
+                  <div className={`card-popover ${mirrored ? "up" : "down"}`}>
                     <div className="card-popover-head">
                       {Avatar && <Avatar size={28} />}
                       <div>
@@ -936,13 +966,23 @@ export function DiceKingdomPage() {
             <h4>Energy in your pool</h4>
             {(() => {
               const yourEnergy = diceFor(you, "ReservePool").filter((d) => d.energySymbolId);
-              return yourEnergy.length === 0 ? (
-                <p className="sideboard-empty">nothing to spend</p>
-              ) : (
-                <div className="sideboard-pool">
-                  {yourEnergy.map((d) => (
-                    <PipBadge key={d.id} type={d.energySymbolId!} amount={d.energyAmount} />
-                  ))}
+              if (yourEnergy.length === 0) return <p className="sideboard-empty">nothing to spend</p>;
+              const total = yourEnergy.reduce((sum, d) => sum + d.energyAmount, 0);
+              return (
+                // A running total, separated from the individual pips by
+                // a vertical divider - direct feedback (2026-09-05): the
+                // pip list alone didn't say "how much do I actually
+                // have" at a glance.
+                <div className="sideboard-pool-row">
+                  <div className="sideboard-pool">
+                    {yourEnergy.map((d) => (
+                      <PipBadge key={d.id} type={d.energySymbolId!} amount={d.energyAmount} />
+                    ))}
+                  </div>
+                  <span className="pool-divider" />
+                  <span className="pool-total" title={`${total} total energy`}>
+                    {total}
+                  </span>
                 </div>
               );
             })()}
@@ -1098,6 +1138,21 @@ export function DiceKingdomPage() {
                 {!primaryDie && (
                   <button className="btn" disabled={busy} onClick={() => run(() => api.enterAttackStep(game.gameId))}>
                     Proceed to Attack
+                  </button>
+                )}
+                {/* Ported from ../App.tsx's identical "Clean Up (skip
+                    attack) ▶" - dropped during the redesign, direct
+                    feedback (2026-09-05) asked for it back. The server
+                    (TurnEngine.SkipAttackStep) still rejects this with a
+                    real error if a forced attacker is outstanding; no
+                    client-side gating needed beyond the step check. */}
+                {!primaryDie && (
+                  <button
+                    className="btn ghost"
+                    disabled={busy}
+                    onClick={() => run(() => api.skipAttackStep(game.gameId))}
+                  >
+                    Skip Attack Step
                   </button>
                 )}
               </div>

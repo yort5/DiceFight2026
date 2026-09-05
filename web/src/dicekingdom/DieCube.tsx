@@ -94,7 +94,11 @@ export function DieCube(props: {
               {face.kind === "character" && (
                 <>
                   <span className="die-cube-art" />
-                  {face.fieldingCost > 0 && <span className="die-cube-cost">{face.fieldingCost}</span>}
+                  {/* Always shown, including 0 - direct feedback
+                      (2026-09-07): a Tardigrade's free faces should still
+                      print "0" rather than leave the corner blank, so a
+                      free die reads as "costs 0" and not "cost unknown". */}
+                  <span className="die-cube-cost">{face.fieldingCost}</span>
                   <span className="die-cube-attack">{face.attack}</span>
                   <span className="die-cube-defense">{face.defense}</span>
                   {i === index && (props.damage ?? 0) > 0 && (
