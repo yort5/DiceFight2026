@@ -46,6 +46,11 @@ function rolled(d: Die): boolean {
 // effectiveAttack directly is what fixes a spent/KO'd die still showing
 // its last rolled stats in the Used Pile.
 const ROLLED_ZONES = new Set(["ReservePool", "PrepArea", "FieldZone", "AttackZone"]);
+// Used Pile/Out of Play tiles show only the card/Tardigrade icon (see
+// DieTile's own remarks) - shared here so groupDice can group them by
+// that same identity alone, ignoring whatever face they happened to be
+// on when they left play (see groupDice's own comment).
+const ICON_ONLY_ZONES = new Set(["UsedPile", "OutOfPlay"]);
 
 // v3's locked Tardigrade spec (v3/DESIGN_NOTES.md), for DieTile's own
 // info popover - a Tardigrade has no CardDef/`levels` of its own to
@@ -89,9 +94,18 @@ function groupDice(dice: Die[], zone: string): DieGroup[] {
   if (ROLLED_ZONES.has(zone)) {
     return dice.map((d) => ({ key: d.id, sample: d, count: 1, ids: [d.id] }));
   }
+  // Icon-only piles show identity alone, nothing else - direct feedback
+  // (2026-09-10): "they're all the same die, so... they could be
+  // grouped all together." Grouping on the rolled-face fields below
+  // (still right for Bag, whose popover shows real stats) split
+  // identical Tardigrades that happened to leave play on different
+  // faces into separate piles, even though the tile itself no longer
+  // shows any of that.
   const groups = new Map<string, DieGroup>();
   for (const d of dice) {
-    const key = [d.cardId ?? "tardigrade", d.level, d.effectiveAttack, d.effectiveDefense, d.energySymbolId, d.energyAmount].join("|");
+    const key = ICON_ONLY_ZONES.has(zone)
+      ? (d.cardId ?? "tardigrade")
+      : [d.cardId ?? "tardigrade", d.level, d.effectiveAttack, d.effectiveDefense, d.energySymbolId, d.energyAmount].join("|");
     const existing = groups.get(key);
     if (existing) {
       existing.count += 1;
@@ -286,7 +300,7 @@ function DieTile({
   // Unlike Bag/Drawn/Carried, these two piles accumulate the most dice
   // over a game, so they're the ones that actually benefit from
   // dropping the text row.
-  const iconOnly = zone === "UsedPile" || zone === "OutOfPlay";
+  const iconOnly = ICON_ONLY_ZONES.has(zone);
   return (
     <div ref={wrapRef} className={`dietile-wrap${showInfo ? " info-open" : ""}`}>
       <button

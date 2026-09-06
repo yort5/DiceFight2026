@@ -2173,3 +2173,41 @@ and "Attack"/"Skip Attack" both render as one row instead of wrapping,
 and an Out of Play die shows its Tardigrade icon inside a tinted
 square frame. Zero console errors. `tsc -b`/`oxlint`/`vite build`
 clean.
+
+## Two small bugs from the icon-only piles: bad grouping, and a lopsided Wing badge (2026-09-10, later still)
+
+1. **Out of Play wasn't grouping identical dice.** Direct feedback: "the
+   spent tardigrade dice went to Out of Play, [and] grouped into
+   separate piles. They're all the same die, so... they could be
+   grouped all together... this does work properly when they go to the
+   Used Pile." Real bug, not a display quirk: `groupDice`'s key included
+   `level`/`effectiveAttack`/`effectiveDefense`/`energySymbolId`/
+   `energyAmount` - fields describing whatever face a die was rolled to
+   right before it left play, which differ die-to-die even for
+   identical Tardigrades, and which the icon-only tile doesn't show
+   anyway. Used Pile "worked" by coincidence (its dice more often
+   happened to share a face); Out of Play just as often didn't. Added
+   `ICON_ONLY_ZONES` (the same `UsedPile`/`OutOfPlay` set `DieTile`
+   already checks for its icon-only rendering, now shared instead of
+   duplicated) and grouped by card identity alone there, ignoring the
+   rolled-face fields entirely.
+2. **Wing's badge had a stray black sliver.** "Something a little off
+   with the circle border for Wing energy. Didn't notice it with Claw."
+   Measured it rather than guessing: every other energy glyph's
+   farthest point from center sits around 25-26 units (well inside the
+   64-unit viewBox's own 32-unit inscribed circle), but Wing's
+   unscaled path reached about 34 - just far enough that the outline
+   filter's dilate poked a sliver past the badge's circular edge,
+   invisible at Claw's size but visible once dilated on a shape that
+   already grazed the boundary. Wrapped `WingIcon`'s path in a
+   `scale(0.75)` about center, bringing its own farthest point in line
+   with the other three glyphs.
+
+Verified live: Used Pile shows one grouped `×3` Tardigrade tile after
+several were sent there across three turns (screenshot confirms real
+in-game state, not a synthetic count), and Golden Eagle's champion box
+energy badge renders as a clean circle with no black sliver outside
+its edge, sitting alongside Wolf's Claw badge which was already clean.
+Zero console errors (aside from an expected, pre-existing 403 from the
+other seat's auto-skip attempt - unrelated to this change). `tsc -b`/
+`oxlint`/`vite build` clean.

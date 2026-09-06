@@ -52,10 +52,19 @@ export function ShellIcon(props: IconProps) {
 export function WingIcon(props: IconProps) {
   return (
     <Svg {...props}>
-      <path
-        fill="currentColor"
-        d="M8,54 C10,40 16,24 30,14 C38,9 46,7 56,8 C50,12 45,15 41,21 C46,20 51,20 55,23 C48,26 42,28 38,33 C44,33 49,35 52,38 C44,41 37,42 33,47 C29,51 23,53 18,55 C14,56 10,56 8,54 Z"
-      />
+      {/* Scaled to 75% about center (2026-09-10) - direct feedback: "the
+          circle border for Wing energy" looked "a little off" (only
+          Wing, not Claw). The un-scaled path's own corners reached
+          ~34 units from center, past the ~32-unit inscribed circle
+          every other energy glyph stays within (Claw/Shell/Eye all
+          land around 25-26) - just enough for the outline filter's
+          dilate to poke a sliver past the badge's circular edge. */}
+      <g transform="translate(32,32) scale(0.75) translate(-32,-32)">
+        <path
+          fill="currentColor"
+          d="M8,54 C10,40 16,24 30,14 C38,9 46,7 56,8 C50,12 45,15 41,21 C46,20 51,20 55,23 C48,26 42,28 38,33 C44,33 49,35 52,38 C44,41 37,42 33,47 C29,51 23,53 18,55 C14,56 10,56 8,54 Z"
+        />
+      </g>
     </Svg>
   );
 }
