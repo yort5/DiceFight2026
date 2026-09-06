@@ -10,7 +10,6 @@ import { StepRibbon } from "./StepRibbon";
 import { MatchLog } from "./MatchLog";
 import { ThemeToggle, useTheme } from "./ThemeToggle";
 import { useDiceRoll, type RollTarget } from "./useDiceRoll";
-import { characterFaceInfo, dieLabel } from "./dieHelpers";
 import type { BlockAssignment, CardDef, CharacterFace, Die, GameState, PlayerState } from "./types";
 
 const POLL_INTERVAL_MS = 2000;
@@ -299,7 +298,7 @@ function DieTile({
         {count && count > 1 && <span className="chip-count">×{count}</span>}
         {!isRolled ? (
           iconOnly ? (
-            <div className="tile-icon">{Avatar ? <Avatar size={30} /> : <TardigradeIcon size={30} />}</div>
+            <div className="tile-icon">{Avatar ? <Avatar size={24} /> : <TardigradeIcon size={24} />}</div>
           ) : (
             <>
               <div className="lbl">{name}</div>
@@ -1090,7 +1089,7 @@ export function DiceKingdomPage() {
     if (step === "roll-and-reroll" && (primaryDie.zone === "PrepArea" || primaryDie.zone === "ReservePool")) {
       const ids = [primaryDie.id, ...secondaryIds];
       return {
-        label: `Reroll Selected (${ids.length})`,
+        label: `Reroll (${ids.length})`,
         rolledIds: ids,
         run: async () => {
           const next = await api.reroll(game!.gameId, ids);
@@ -1210,28 +1209,18 @@ export function DiceKingdomPage() {
               regardless of which contextual panel renders below it
               (pending choice, block assignment, or the plain action
               buttons), same as v1's Now panel sitting above whichever
-              of ActionTray/DeclareBlockersPanel/etc. is active. */}
+              of ActionTray/DeclareBlockersPanel/etc. is active. Eyebrow
+              and title share one line now (2026-09-10) - direct
+              feedback, part of the same pass that dropped the "Selected
+              die" panel below: this rail used to grow every time a die
+              was picked, shifting the buttons underneath it down, which
+              read as jarring rather than informative. */}
           {STEP_GUIDANCE[step] && (
             <div className="now-header">
-              <span className="now-eyebrow">Now</span>
-              <h3 className="now-title">{STEP_GUIDANCE[step].title}</h3>
+              <h3 className="now-title">
+                <span className="now-eyebrow">Now</span> {STEP_GUIDANCE[step].title}
+              </h3>
               <p className="now-guidance">{STEP_GUIDANCE[step].text}</p>
-            </div>
-          )}
-          {/* README's rail "Selected die" panel - name, level/stats, and
-              whatever contextual action is legal. Shown whenever a die is
-              selected, on top of whichever panel/action-row renders
-              below (those still drive the actual buttons - this is just
-              "what am I looking at"). */}
-          {primaryDie && (
-            <div className="panel selected-die-panel">
-              <span className="now-eyebrow">Selected die</span>
-              <h3 className="now-title">{dieLabel(primaryDie, cardsById)}</h3>
-              {characterFaceInfo(primaryDie) && (
-                <p className="selected-die-stats">
-                  L{primaryDie.level} · {characterFaceInfo(primaryDie)!.attack}A/{characterFaceInfo(primaryDie)!.defense}D
-                </p>
-              )}
             </div>
           )}
           {game.pendingChoice && you === game.pendingChoice.controllerId ? (
@@ -1313,8 +1302,13 @@ export function DiceKingdomPage() {
                     {action.label}
                   </button>
                 )}
+                {/* Shortened from "Continue to Main Phase" (2026-09-10) so
+                    it fits beside the Reroll button on one line in the
+                    rail's 300px column - the Now header above already
+                    says "Roll & Reroll," so "Continue" alone still reads
+                    as "move on from this step." */}
                 <button className="btn ghost" disabled={busy} onClick={() => run(() => api.finishRoll(game.gameId))}>
-                  Continue to Main Phase
+                  Continue
                 </button>
               </div>
             )}
@@ -1338,7 +1332,7 @@ export function DiceKingdomPage() {
                 )}
                 {!primaryDie && (
                   <button className="btn" disabled={busy} onClick={() => run(() => api.enterAttackStep(game.gameId))}>
-                    Proceed to Attack
+                    Attack
                   </button>
                 )}
                 {/* Ported from ../App.tsx's identical "Clean Up (skip
@@ -1346,14 +1340,17 @@ export function DiceKingdomPage() {
                     feedback (2026-09-05) asked for it back. The server
                     (TurnEngine.SkipAttackStep) still rejects this with a
                     real error if a forced attacker is outstanding; no
-                    client-side gating needed beyond the step check. */}
+                    client-side gating needed beyond the step check.
+                    Shortened from "Proceed to Attack"/"Skip Attack Step"
+                    (2026-09-10) so this pair fits on one line, same
+                    reason as Roll & Reroll's Reroll/Continue pair. */}
                 {!primaryDie && (
                   <button
                     className="btn ghost"
                     disabled={busy}
                     onClick={() => run(() => api.skipAttackStep(game.gameId))}
                   >
-                    Skip Attack Step
+                    Skip Attack
                   </button>
                 )}
               </div>

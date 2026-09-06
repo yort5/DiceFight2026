@@ -2130,3 +2130,46 @@ Reserve Pool die shows a tight ring with no "Selected" text and no
 "Surge" label, and an Out of Play die shows the same vector Tardigrade
 symbol as the die's own face. Zero console errors. `tsc -b`/`oxlint`/
 `vite build` clean.
+
+## Out of Play's icon needed a frame back, and the right rail no longer jumps on selection (2026-09-10, later still)
+
+Two more pieces of the same compaction thread:
+
+1. **Icon-only tiles got their "die" back.** Direct feedback: "we lost
+   the 'die' part of the die in Out of Play - we probably want to keep
+   that or things will get messy when there's multiple things in
+   there." The bare icon (no frame at all) read as just a floating
+   symbol once more than one sat in a pile. `.tile-icon` is now a flat
+   34px tinted square (`color-mix` against the tile's own `--cc` accent,
+   the same custom property `.dietile`'s style prop already sets) - a
+   real "die-shaped" object again without bringing back the 3D cube
+   (these never roll, so that would be misleading).
+2. **The right rail no longer grows when a die is selected.** This was
+   a known, previously-documented tradeoff (see `.dk-row-lane`'s own
+   remarks above) - picking a die used to insert a whole "Selected die"
+   panel above the action buttons, shifting them down and reading as
+   jarring rather than informative. Direct feedback confirmed the panel
+   itself is no longer load-bearing now that the die-cube shows its own
+   stats and the selection ring is unambiguous: removed outright (along
+   with `dieLabel`/`characterFaceInfo`, now unused in this file). The
+   "Now" panel's eyebrow moved onto the same line as the step title
+   (`<span>` inside the `<h3>` instead of its own line above it) -
+   "the 'Now' box could at least combine the 'NOW' on the same line as
+   ...the stage." And the rail's action-row buttons shrank
+   (`.controlcenter button.btn` - scoped there, not global, so the
+   pre-game "Start Match" button and card-popover buttons keep their
+   normal size) plus three long two-button pairs got shorter labels so
+   they'd actually fit the 300px rail on one line instead of wrapping:
+   "Reroll Selected (n)" → "Reroll (n)", "Continue to Main Phase" →
+   "Continue", "Proceed to Attack"/"Skip Attack Step" → "Attack"/"Skip
+   Attack". Padding alone wasn't enough here - the button text itself
+   was wider than the whole rail column, confirmed by measuring actual
+   rendered button widths rather than guessing at a padding value.
+
+Verified live: selecting a Reserve Pool die during Roll & Reroll no
+longer changes `.controlcenter`'s measured height at all (127.6px
+before and after, previously grew by 40px), "Reroll (1)"/"Continue"
+and "Attack"/"Skip Attack" both render as one row instead of wrapping,
+and an Out of Play die shows its Tardigrade icon inside a tinted
+square frame. Zero console errors. `tsc -b`/`oxlint`/`vite build`
+clean.

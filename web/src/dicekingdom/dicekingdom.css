@@ -1195,11 +1195,21 @@
   font: 400 18px/1 var(--display);
   font-variant-numeric: tabular-nums;
 }
+/* A flat tinted square, not just a bare icon (2026-09-10) - direct
+   feedback: "we lost the 'die' part of the die in Out of Play... things
+   will get messy when there's multiple things in there." Reuses the
+   same `--cc` accent custom property .dietile's own style prop already
+   sets, so it reads as the same family of object as a real rolled die
+   without bringing back the 3D cube (these never roll). */
 .dicekingdom .tile-icon {
+  width: 34px;
+  height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2px 0;
+  border-radius: 7px;
+  background: color-mix(in oklab, var(--cc, var(--border)) 20%, var(--panel-bg));
+  border: 1px solid color-mix(in oklab, var(--cc, var(--border)) 45%, transparent);
 }
 .dicekingdom .dietile .lbl {
   font-size: 9px;
@@ -1294,6 +1304,15 @@
   gap: 10px;
   flex-wrap: wrap;
 }
+/* Tighter than the default .btn (used as-is on the pre-game setup
+   screen and card popovers) - direct feedback (2026-09-10): a pair
+   like "Reroll Selected"/"Continue to Main Phase" should stay on one
+   line rather than wrap in the rail's 300px column. Scoped to the
+   rail's own action row rather than shrinking .btn globally. */
+.dicekingdom .controlcenter button.btn {
+  padding: 8px 12px;
+  font-size: 12px;
+}
 
 /* The shared strip between the two boards - where combat/payment/reroll
    panels live, so they never appear far from the board a click came from
@@ -1311,22 +1330,26 @@
   display: none;
 }
 .dicekingdom .now-header {
-  padding: 10px 12px 12px;
+  padding: 8px 12px 10px;
   border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--panel-bg);
   margin-bottom: 10px;
 }
+/* Eyebrow sits inline before the title now (2026-09-10), not on its own
+   line above it - direct feedback: "the 'Now' box could at least
+   combine the 'NOW' on the same line as the... stage." */
 .dicekingdom .now-eyebrow {
   font-size: 9.5px;
   text-transform: uppercase;
   letter-spacing: 0.14em;
   color: var(--text-dim);
+  margin-right: 2px;
 }
 .dicekingdom .now-title {
   font: 700 15px var(--sans);
   letter-spacing: 0.02em;
-  margin: 2px 0 6px;
+  margin: 0 0 4px;
   color: var(--text-h);
 }
 .dicekingdom .now-guidance {
@@ -1642,15 +1665,6 @@
    prop. EnergyBadge sizes its own icon internally; nothing here needs
    to override it. */
 
-/* ---- Selected die (rail) - README: name, level/stats, contextual
-   action buttons. Reuses .panel/.now-* rather than new rules; only the
-   stat line is new. ---- */
-.dicekingdom .selected-die-stats {
-  font-size: 11px;
-  color: var(--text-dim);
-  margin: 0 0 10px;
-  font-variant-numeric: tabular-nums;
-}
 
 /* ---- Roll animation - the tray shake (df-shake in the design doc,
    renamed dk-shake for this file's own prefix) plus the reserve pool's
