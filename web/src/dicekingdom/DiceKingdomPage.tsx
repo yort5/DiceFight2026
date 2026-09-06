@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import "./dicekingdom.css";
 import { api } from "./api";
-import { CHAMPION_ICONS, CHARACTER_ICONS, EnergyBadge, TardigradePhotoIcon } from "./icons";
+import { CHAMPION_ICONS, CHARACTER_ICONS, EnergyBadge, TardigradeIcon, TardigradePhotoIcon } from "./icons";
 import { claimSeatFromUrl, inviteLink, nameClaimedSeat, rememberSeats } from "./seats";
 import { CombatLane } from "./CombatLane";
 import { DieCube, type CubeSpin } from "./DieCube";
@@ -237,7 +237,7 @@ function DieTile({
   /** Tints the die-cube's faces apart from the opponent's - see
    *  ../DieCube.tsx. Only matters in a rolled zone, where the cube shows. */
   mine?: boolean;
-  /** Overrides the bottom label - used for "already rerolled"/"selected" state during Roll & Reroll. */
+  /** Overrides the bottom label - used for "already rerolled" during Roll & Reroll. */
   label?: string;
   /** Mid-roll transform and accumulated turn count - see useDiceRoll.ts. */
   spin?: CubeSpin;
@@ -266,11 +266,12 @@ function DieTile({
   // information... provide that on a click." The die-cube itself already
   // prints the real attack/defense/cost numbers on its face (see
   // DieCube.tsx), so the level number below it was pure repetition -
-  // dropped for a stat face entirely to shrink the tile; kept only for
-  // an energy face, where "Surge" (or the card's own name, for a
-  // Character's own energy face - see the remarks this replaced below)
-  // is the one thing the face itself doesn't otherwise say.
-  const label = labelOverride ?? (die.effectiveAttack === null ? (die.isTardigrade ? "Surge" : name) : null);
+  // dropped for a stat face entirely to shrink the tile. A Tardigrade's
+  // energy face used to print "Surge" here too, but direct feedback
+  // (2026-09-10) dropped that as well - the energy corner circle already
+  // says what it is. A Character's own energy face still prints its
+  // name, since that's the only thing on that face saying whose die it is.
+  const label = labelOverride ?? (die.effectiveAttack === null && !die.isTardigrade ? name : null);
   const Avatar = die.cardId ? CHARACTER_ICONS[die.cardId] : null;
   const energyType = card?.energyTypes[0];
   // A rolled die that ISN'T currently part of an active selection has
@@ -298,7 +299,7 @@ function DieTile({
         {count && count > 1 && <span className="chip-count">×{count}</span>}
         {!isRolled ? (
           iconOnly ? (
-            <div className="tile-icon">{Avatar ? <Avatar size={30} /> : <TardigradePhotoIcon size={30} />}</div>
+            <div className="tile-icon">{Avatar ? <Avatar size={30} /> : <TardigradeIcon size={30} />}</div>
           ) : (
             <>
               <div className="lbl">{name}</div>
@@ -741,13 +742,10 @@ export function DiceKingdomPage() {
     const turnClass = isActivePlayer ? (playerId === you ? " turn-mine" : " turn-waiting") : " turn-inactive";
 
     // A single die-count zone, matching v1's PlayerBoard.tsx's mat-slot
-    // shape - used for the three grid cells that just show a group of
-    // dice (Used Pile, Out of Play, Bag), so the grid markup below reads
+    // shape - used for the two grid cells that show a group of dice as
+    // real tiles (Used Pile, Out of Play), so the grid markup below reads
     // as "which zone goes where" rather than repeating this each time.
-    const ZONE_TINTS: Record<string, string> = {
-      UsedPile: "used", OutOfPlay: "outofplay", Bag: "bag",
-      PrepArea: "prep", DiceFromBag: "staging", DiceFromPrep: "staging",
-    };
+    const ZONE_TINTS: Record<string, string> = { UsedPile: "used", OutOfPlay: "outofplay", PrepArea: "prep" };
     function pileZone(title: string, zoneName: string, dice: Die[], note?: string) {
       return (
         <div className={`zone zone-${ZONE_TINTS[zoneName] ?? "plain"}`}>
@@ -765,23 +763,35 @@ export function DiceKingdomPage() {
       );
     }
 
-    // Bag - README: a count that's also a button opening an inspector
-    // popover ("contents known, order is not"). Bag contents are public
-    // information in this game (same rule the design doc cites), so both
-    // players' bags are inspectable; the local player's opens upward,
-    // the opponent's downward - see .bag-popover.up/.down.
-    function bagZone(dice: Die[]) {
+    // Bag/Drawn This Turn/Carried From Prep, all on one line under Reserve
+    // Pool - direct feedback (2026-09-10): "those areas... normally don't
+    // need their exact contents seen" is true of all three, not just Bag,
+    // so name+count is all any of them show now - no dice tiles, no hint
+    // text ("we'll let them figure that out" re: the old "click to
+    // inspect"). Bag alone stays clickable, opening the same inspector
+    // popover it always has (contents are public info - see the popover's
+    // own remarks below); Drawn/Carried are plain text, nothing to expand.
+    function trayItem(label: string, count: number, onClick?: () => void) {
+      const content = (
+        <>
+          {label} <span className="count">{count}</span>
+        </>
+      );
+      return onClick ? (
+        <button type="button" className="tray-item tray-item-btn" onClick={onClick}>
+          {content}
+        </button>
+      ) : (
+        <span className="tray-item">{content}</span>
+      );
+    }
+    function bagTray(dice: Die[]) {
       const mine = playerId === you;
       const open = mine ? bagOpen : oppBagOpen;
       const setOpen = mine ? setBagOpen : setOppBagOpen;
       return (
-        <div className="zone zone-bag">
-          <button type="button" className="bag-button" onClick={() => setOpen((o) => !o)}>
-            <h4>
-              Bag <span className="count">{dice.length}</span>
-            </h4>
-            <span className="bag-hint">{open ? "hide contents" : "click to inspect"}</span>
-          </button>
+        <>
+          {trayItem("Bag", dice.length, () => setOpen((o) => !o))}
           {open && (
             <div className={`bag-popover ${mine ? "up" : "down"}`}>
               <h5>Contents known, order is not</h5>
@@ -793,7 +803,7 @@ export function DiceKingdomPage() {
               </div>
             </div>
           )}
-        </div>
+        </>
       );
     }
 
@@ -824,7 +834,7 @@ export function DiceKingdomPage() {
                   mine={playerId === you}
                   clickable={reservePoolClickable(d)}
                   picked={picked}
-                  label={already ? "rerolled" : step === "roll-and-reroll" && rolled(d) ? (picked ? "selected" : undefined) : undefined}
+                  label={already ? "rerolled" : undefined}
                   onClick={() => toggleDie(d.id)}
                   spin={spins[d.id]}
                   turnOffset={offsets[d.id]}
@@ -875,11 +885,13 @@ export function DiceKingdomPage() {
         <div className="mat-slot mat-outofplay">
           {pileZone("Out of Play", "OutOfPlay", outOfPlay, playerId === you ? "yours only · moves to Used at end of turn" : "theirs · moves to Used at end of turn")}
         </div>
-        <div className="mat-slot mat-stash">
-          {bagZone(bag)}
-          {pileZone("Drawn This Turn", "DiceFromBag", drawn)}
+        <div className="mat-slot mat-tray">
+          <div className="tray">
+            {bagTray(bag)}
+            {trayItem("Drawn This Turn", drawn.length)}
+            {trayItem("Carried From Prep", carried.length)}
+          </div>
         </div>
-        <div className="mat-slot mat-carried">{pileZone("Carried From Prep", "DiceFromPrep", carried)}</div>
       </div>
     );
 

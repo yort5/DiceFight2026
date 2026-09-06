@@ -599,14 +599,13 @@
   margin-bottom: 18px;
 }
 
-/* The mat grid - the exact shape of /game's PlayerBoard.tsx .mat (App.css
-   lines ~932-994), not a scaled-down variant: left column is the die
-   cycle (Used Pile, Out of Play, Bag, stacked), right column is what's
-   coming back (Prep Area, Carried From Prep - no Intimidated, v3 has no
-   such rule, so that grid cell is just "." - explicitly empty), Reserve
-   Pool spans the two middle rows between them because it's the tray and
-   wants the height, Field Zone spans the full width against whichever
-   edge is closest to the shared Attack Zone between the two mats. */
+/* The mat grid - originally ported from /game's PlayerBoard.tsx .mat
+   (App.css lines ~932-994); left/right columns and the full-width tray
+   row have since diverged from that shape (see the 2026-09-10 comment
+   below) as Dice Kingdom's own zones got compacted down. Reserve Pool
+   spans the two middle rows because it's the tray and wants the height;
+   Field Zone spans the full width against whichever edge is closest to
+   the shared Attack Zone between the two mats. */
 /* Real bug, direct feedback (2026-09-05): the reference's own grid has a
    "." (empty, v1's unused Intimidated slot) in the row below Prep Area,
    which read as "a big empty space" and "Prep Area doesn't fill up the
@@ -615,29 +614,32 @@
    zone to put there, so Prep now spans the same two rows Reserve does
    instead of leaving that cell empty - the two boxes read as one even
    pair, and there's no orphan gap. */
-/* Bag rejoins Drawn This Turn in the middle column (2026-09-10) - direct
-   feedback: "one thing we lost from the design was that 'Bag' was
-   supposed to go underneath the Reserve Pool with 'Drawn this Turn'."
-   Bag no longer shares the left column with Used Pile/Out of Play; that
-   column's bottom cell goes empty ("."), matching the "." convention
-   this grid already uses for a deliberately unused cell. */
+/* Bag, Drawn This Turn and Carried From Prep all collapse onto one full-
+   width line under Reserve Pool/Prep Area (2026-09-10) - direct
+   feedback: "let's put them both on the same line, along with 'Carried
+   from Prep'... the whole thing should be only as vertically high as
+   one line of text." Replaces the earlier two-cell version (Bag+Drawn
+   stacked in the middle column, Carried still separate on the right) -
+   that was more compact than the original layout but still nowhere
+   near "one line." Left column's bottom cell stays "." (empty) since
+   nothing moved back into it. */
 .dicekingdom .mat {
   display: grid;
   grid-template-columns: 196px minmax(0, 1fr) 196px;
   grid-template-areas:
-    "field     field   field"
-    "used      reserve prep"
+    "field field field"
+    "used  reserve prep"
     "outofplay reserve prep"
-    ".         stash   carried";
+    "tray  tray  tray";
   gap: 6px;
   margin-bottom: 10px;
 }
 .dicekingdom .mat.mirrored {
   grid-template-areas:
-    ".         stash   carried"
+    "tray  tray  tray"
     "outofplay reserve prep"
-    "used      reserve prep"
-    "field     field   field";
+    "used  reserve prep"
+    "field field field";
 }
 @media (max-width: 900px) {
   .dicekingdom .mat,
@@ -649,8 +651,7 @@
       "used"
       "prep"
       "outofplay"
-      "stash"
-      "carried";
+      "tray";
   }
 }
 .dicekingdom .mat-field {
@@ -668,26 +669,45 @@
 .dicekingdom .mat-outofplay {
   grid-area: outofplay;
 }
-.dicekingdom .mat-stash {
-  grid-area: stash;
+.dicekingdom .mat-tray {
+  grid-area: tray;
+}
+/* Deliberately not a `.zone` - no border/tint/padding to separate it
+   from the mat's own background, since it's just three counts on a
+   line, not a box of dice. */
+.dicekingdom .tray {
+  position: relative;
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 2px 2px;
 }
-/* Both zones in here are rarely-inspected piles - direct feedback:
-   "those areas... normally don't need their exact contents seen, so
-   they likely only need to be tall enough to fit one die row." Tighter
-   padding than a normal mat zone, and the die row scrolls sideways
-   instead of wrapping to a second line. */
-.dicekingdom .mat-stash .zone {
-  padding: 4px 8px 5px;
+/* Both selectors carry the text styling directly (not `font: inherit`
+   on the button variant) - a <button> doesn't reliably inherit font
+   from its parent across browsers, which is exactly what made "Bag"
+   render in the page's default button font instead of this compact
+   style the first time this shipped. */
+.dicekingdom .tray-item,
+.dicekingdom .tray-item-btn {
+  font: 700 11px var(--sans);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-dim);
+  white-space: nowrap;
 }
-.dicekingdom .mat-stash .dierow {
-  flex-wrap: nowrap;
-  overflow-x: auto;
+.dicekingdom .tray-item .count {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-h);
 }
-.dicekingdom .mat-carried {
-  grid-area: carried;
+.dicekingdom .tray-item-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+.dicekingdom .tray-item-btn:hover {
+  color: var(--text-h);
 }
 .dicekingdom .mat-slot .zone {
   height: 100%;
@@ -738,8 +758,7 @@
      shorter than it should. */
   min-height: 82px;
 }
-.dicekingdom .zone.zone-used,
-.dicekingdom .zone.zone-bag {
+.dicekingdom .zone.zone-used {
   background: color-mix(in oklab, oklch(0.55 0.02 260) 14%, var(--panel-bg));
   border-color: oklch(0.6 0.02 260 / 0.5);
 }
@@ -759,11 +778,6 @@
   background: color-mix(in oklab, oklch(0.6 0.1 70) 25%, var(--panel-bg));
   border-color: oklch(0.6 0.09 70 / 0.55);
 }
-.dicekingdom .zone.zone-staging {
-  background: color-mix(in oklab, oklch(0.55 0.06 300) 15%, var(--panel-bg));
-  border-color: oklch(0.6 0.06 300 / 0.5);
-}
-
 /* ---- Combat lane - the shared strip where the two mats meet, ported
    from ../CombatLane.tsx/App.css's .combat-lane/.lane-* verbatim. The
    divider seam is blue on the far half, orange on the near half - same
@@ -1123,14 +1137,19 @@
    feedback: "now that we've got everything on the die, we no longer
    need so much space in the box around the die... we can use it to
    help indicate selection." That chrome now only shows up on
-   `.picked` below, so an ordinary tile is just the die/icon itself. */
+   `.picked` below, so an ordinary tile is just the die/icon itself.
+   Width dropped from a fixed 78px to auto at the same time (also
+   direct feedback: "that border can be a lot smaller - just slightly
+   bigger than the die itself") - the tile now sizes to whatever it's
+   actually showing (the 34px die-cube, a 30px icon, or a text label)
+   instead of reserving space for the old level/name text underneath. */
 .dicekingdom .dietile {
   position: relative;
-  width: 78px;
+  width: auto;
   border: 1.5px solid transparent;
   border-radius: 10px;
   background: transparent;
-  padding: 4px 5px;
+  padding: 3px;
   text-align: center;
   color: inherit;
   font: inherit;
@@ -1160,7 +1179,7 @@
 .dicekingdom .dietile.picked {
   border-color: var(--cc, var(--text-h));
   background: var(--panel-bg);
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--cc, var(--text-h)) 45%, transparent), var(--shadow);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--cc, var(--text-h)) 45%, transparent), var(--shadow);
   transform: translateY(-2px);
 }
 /* No more ".dietile svg { width:26px; ... }" here - real bug, found
@@ -1461,29 +1480,9 @@
 /* ---- Bag inspector - README: "the box is a button that opens an
    inspector popover... contents known, order is not." Both players' bags
    are inspectable (public information), the local player's opens upward,
-   the opponent's downward, matching where each bag sits on the page. ---- */
-.dicekingdom .zone-bag {
-  position: relative;
-}
-.dicekingdom .bag-button {
-  display: block;
-  width: 100%;
-  text-align: left;
-  background: transparent;
-  border: none;
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-  padding: 0;
-}
-.dicekingdom .bag-hint {
-  display: block;
-  font-size: 8.5px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-dim);
-  margin-top: 2px;
-}
+   the opponent's downward, matching where each bag sits on the page.
+   Anchored off `.tray` (position: relative, see the mat-tray rules
+   above) now that Bag is a `.tray-item` rather than its own zone box. ---- */
 .dicekingdom .bag-popover {
   position: absolute;
   left: 0;

@@ -2080,3 +2080,53 @@ background, both mats' Bag+Drawn cells sit correctly under Reserve
 Pool with the bag popover still opening and overlaying correctly, and
 an Out of Play die renders as just its Tardigrade sketch icon. Zero
 console errors. `tsc -b`/`oxlint`/`vite build` clean.
+
+## One more compaction pass: Bag/Drawn/Carried to a single line, real Tardigrade symbol, quieter selection (2026-09-10, later)
+
+The previous round's Bag+Drawn cell still read as "way too much vertical
+space." Four more pieces of direct feedback, same session:
+
+1. **Bag, Drawn This Turn and Carried From Prep onto one line.** All
+   three collapse into a single `.mat-tray` grid row spanning the mat's
+   full width (previously Bag+Drawn were a two-zone cell in the middle
+   column, Carried still separate on the right) - "the whole thing
+   should be only as vertically high as one line of text." Each is now
+   just `trayItem(label, count)` - plain text, no dice tiles, no "click
+   to inspect" hint ("we'll let them figure that out"). Bag alone keeps
+   its click-to-open inspector popover (contents are public info), now
+   anchored off `.tray` itself rather than a `.zone-bag` wrapper that no
+   longer exists. Found and fixed a real bug in the same pass: the
+   button's own CSS used `font: inherit`, but a `<button>` doesn't
+   reliably inherit font from its parent across browsers - "Bag" was
+   rendering in the page's default button font while "Drawn This Turn"/
+   "Carried From Prep" (plain `<span>`s) used the intended compact
+   style. Fixed by giving `.tray-item`/`.tray-item-btn` the same
+   explicit font declaration instead of leaning on inheritance.
+2. **Out of Play/Used Pile's icon was the wrong icon.** The previous
+   pass used `TardigradePhotoIcon` (the house-drawn sketch photo) for a
+   basic-pool die's icon-only tile - direct feedback: "I was thinking
+   just the same tardigrade symbol that is on the dice in the reserve
+   pool," i.e. the vector `TardigradeIcon` `dieFaces.ts` already puts on
+   every Tardigrade face's `avatar`. Swapped to that (the photo icon
+   stays where it was for the bigger card-info popover header).
+3. **"Surge" and "Selected" text dropped.** `DieTile`'s label fallback
+   no longer prints "Surge" for a Tardigrade's energy face - the corner
+   badge already says what it is. `rolledZone`'s Roll & Reroll label
+   override no longer prints "Selected" either - "the bright... border
+   should be plenty." Only "rerolled" survives as a labelOverride value.
+4. **The tile itself shrank to match.** `.dietile`'s `width: 78px` (a
+   leftover from when it held level text and a name label) is now
+   `width: auto` with 3px padding - "that border can be a lot smaller,
+   just slightly bigger than the die itself." The tile sizes to
+   whatever it's actually showing (the 34px die, a 30px icon, or a
+   label) instead of reserving fixed space no longer needed once
+   Surge/Selected's text was removed. `.picked`'s ring dropped from 3px
+   to 2px to match the smaller box.
+
+Verified live: the tray reads as one line under Reserve Pool/Prep Area
+on both mats (mat height dropped visibly in a full-page screenshot),
+"Bag" now matches the other two labels' font after the fix, a picked
+Reserve Pool die shows a tight ring with no "Selected" text and no
+"Surge" label, and an Out of Play die shows the same vector Tardigrade
+symbol as the die's own face. Zero console errors. `tsc -b`/`oxlint`/
+`vite build` clean.
