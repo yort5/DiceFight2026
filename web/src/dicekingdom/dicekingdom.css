@@ -615,6 +615,12 @@
    zone to put there, so Prep now spans the same two rows Reserve does
    instead of leaving that cell empty - the two boxes read as one even
    pair, and there's no orphan gap. */
+/* Bag rejoins Drawn This Turn in the middle column (2026-09-10) - direct
+   feedback: "one thing we lost from the design was that 'Bag' was
+   supposed to go underneath the Reserve Pool with 'Drawn this Turn'."
+   Bag no longer shares the left column with Used Pile/Out of Play; that
+   column's bottom cell goes empty ("."), matching the "." convention
+   this grid already uses for a deliberately unused cell. */
 .dicekingdom .mat {
   display: grid;
   grid-template-columns: 196px minmax(0, 1fr) 196px;
@@ -622,13 +628,13 @@
     "field     field   field"
     "used      reserve prep"
     "outofplay reserve prep"
-    "bag       drawn   carried";
+    ".         stash   carried";
   gap: 6px;
   margin-bottom: 10px;
 }
 .dicekingdom .mat.mirrored {
   grid-template-areas:
-    "bag       drawn   carried"
+    ".         stash   carried"
     "outofplay reserve prep"
     "used      reserve prep"
     "field     field   field";
@@ -643,8 +649,7 @@
       "used"
       "prep"
       "outofplay"
-      "bag"
-      "drawn"
+      "stash"
       "carried";
   }
 }
@@ -663,11 +668,23 @@
 .dicekingdom .mat-outofplay {
   grid-area: outofplay;
 }
-.dicekingdom .mat-bag {
-  grid-area: bag;
+.dicekingdom .mat-stash {
+  grid-area: stash;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
-.dicekingdom .mat-drawn {
-  grid-area: drawn;
+/* Both zones in here are rarely-inspected piles - direct feedback:
+   "those areas... normally don't need their exact contents seen, so
+   they likely only need to be tall enough to fit one die row." Tighter
+   padding than a normal mat zone, and the die row scrolls sideways
+   instead of wrapping to a second line. */
+.dicekingdom .mat-stash .zone {
+  padding: 4px 8px 5px;
+}
+.dicekingdom .mat-stash .dierow {
+  flex-wrap: nowrap;
+  overflow-x: auto;
 }
 .dicekingdom .mat-carried {
   grid-area: carried;
@@ -1102,20 +1119,23 @@
   position: relative;
   display: inline-flex;
 }
+/* No border/background/shadow by default (2026-09-10) - direct
+   feedback: "now that we've got everything on the die, we no longer
+   need so much space in the box around the die... we can use it to
+   help indicate selection." That chrome now only shows up on
+   `.picked` below, so an ordinary tile is just the die/icon itself. */
 .dicekingdom .dietile {
   position: relative;
   width: 78px;
-  border: 1.5px solid var(--border);
-  border-top: 4px solid var(--cc, var(--border));
+  border: 1.5px solid transparent;
   border-radius: 10px;
-  background: var(--tile-bg);
-  padding: 6px 5px 6px;
+  background: transparent;
+  padding: 4px 5px;
   text-align: center;
   color: inherit;
   font: inherit;
   cursor: default;
-  box-shadow: var(--shadow);
-  transition: transform 0.1s ease;
+  transition: transform 0.1s ease, border-color 0.1s ease, background-color 0.1s ease, box-shadow 0.1s ease;
 }
 .dicekingdom .dietile .chip-count {
   position: absolute;
@@ -1134,7 +1154,7 @@
 }
 .dicekingdom .dietile.clickable:hover {
   transform: translateY(-2px);
-  border-color: var(--text-h);
+  border-color: var(--cc, var(--text-h));
 }
 /* Same real-ring fix as .roster-chip.picked above, same reason. */
 .dicekingdom .dietile.picked {
@@ -1155,6 +1175,12 @@
 .dicekingdom .dietile .stat {
   font: 400 18px/1 var(--display);
   font-variant-numeric: tabular-nums;
+}
+.dicekingdom .tile-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 0;
 }
 .dicekingdom .dietile .lbl {
   font-size: 9px;

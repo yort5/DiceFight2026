@@ -280,6 +280,13 @@ function DieTile({
   // it (to pay energy, attack, block, ...) stays the one thing a click
   // there does, unchanged.
   const canShowInfo = isRolled && !clickable;
+  // Direct feedback (2026-09-10): "when in 'Out of Play' or 'Used Pile'
+  // rather than take up space with the word we should just put the
+  // character symbol... just the symbol, though, no stats or energy."
+  // Unlike Bag/Drawn/Carried, these two piles accumulate the most dice
+  // over a game, so they're the ones that actually benefit from
+  // dropping the text row.
+  const iconOnly = zone === "UsedPile" || zone === "OutOfPlay";
   return (
     <div ref={wrapRef} className={`dietile-wrap${showInfo ? " info-open" : ""}`}>
       <button
@@ -290,10 +297,14 @@ function DieTile({
       >
         {count && count > 1 && <span className="chip-count">×{count}</span>}
         {!isRolled ? (
-          <>
-            <div className="lbl">{name}</div>
-            <div className="stat">—</div>
-          </>
+          iconOnly ? (
+            <div className="tile-icon">{Avatar ? <Avatar size={30} /> : <TardigradePhotoIcon size={30} />}</div>
+          ) : (
+            <>
+              <div className="lbl">{name}</div>
+              <div className="stat">—</div>
+            </>
+          )
         ) : (
           <>
             {/* The same 3D cube /game's board uses (../DieCube.tsx), not a
@@ -864,8 +875,10 @@ export function DiceKingdomPage() {
         <div className="mat-slot mat-outofplay">
           {pileZone("Out of Play", "OutOfPlay", outOfPlay, playerId === you ? "yours only · moves to Used at end of turn" : "theirs · moves to Used at end of turn")}
         </div>
-        <div className="mat-slot mat-bag">{bagZone(bag)}</div>
-        <div className="mat-slot mat-drawn">{pileZone("Drawn This Turn", "DiceFromBag", drawn)}</div>
+        <div className="mat-slot mat-stash">
+          {bagZone(bag)}
+          {pileZone("Drawn This Turn", "DiceFromBag", drawn)}
+        </div>
         <div className="mat-slot mat-carried">{pileZone("Carried From Prep", "DiceFromPrep", carried)}</div>
       </div>
     );

@@ -2038,3 +2038,45 @@ Reserve Pool die, the Champion box's glyph, and the "Energy in your
 pool" pips all show a crisp, non-muddy outline; a full purchase still
 completes cleanly, zero console errors across two rolls. `tsc -b`/
 `oxlint`/`vite build` clean.
+
+## Die tile chrome removed, Bag rejoins Drawn This Turn, Used/Out of Play go icon-only (2026-09-10)
+
+Three more compaction requests, all direct feedback in the same
+message, now that every die's own face carries its full identity
+(avatar, stats, energy corner):
+
+1. **`.dietile`'s box was pure overhead.** It used to need a border,
+   accent border-top, tinted background and shadow to read as a
+   distinct object; now that the die-cube itself is the object, that
+   chrome is gone by default (`border: 1.5px solid transparent`,
+   `background: transparent`, no box-shadow) and reserved entirely for
+   `.picked` - "we no longer need so much space in the box around the
+   die... we can use it to help indicate selection." `.clickable:hover`
+   also switched from a flat `var(--text-h)` border to `var(--cc,
+   var(--text-h))`, so the hover cue uses the same accent color the
+   selected ring does.
+2. **Bag rejoins Drawn This Turn.** Direct feedback: "one thing we lost
+   from the design was that 'Bag' was supposed to go underneath the
+   Reserve Pool with 'Drawn this Turn'." Bag moved out of the left
+   column (where it sat stacked under Used Pile/Out of Play) into a new
+   `.mat-stash` grid cell in the middle column, alongside Drawn This
+   Turn - the vacated left-column cell is now `.` (empty), matching the
+   grid's own existing convention for a deliberately unused cell. Both
+   zones inside `.mat-stash` get tighter padding and a `.dierow` that
+   scrolls sideways instead of wrapping, so the whole cell reads as "one
+   die row tall" rather than a full independent zone - "those areas...
+   normally don't need their exact contents seen."
+3. **Used Pile/Out of Play show just the symbol.** `DieTile`'s
+   `!isRolled` branch now checks `zone === "UsedPile" || zone ===
+   "OutOfPlay"` and renders only the card's `CHARACTER_ICONS` avatar (or
+   `TardigradePhotoIcon` for a basic-pool die) - no name text, no stat
+   placeholder, no energy. Bag/Drawn/Carried keep the existing
+   name+stat text (they're either collapsed behind Bag's own button or
+   rarely accumulate enough dice to need it).
+
+Verified live: default reserve-pool tiles now show only the die cube
+(no box), the selected-ring still reads clearly against that plain
+background, both mats' Bag+Drawn cells sit correctly under Reserve
+Pool with the bag popover still opening and overlaying correctly, and
+an Out of Play die renders as just its Tardigrade sketch icon. Zero
+console errors. `tsc -b`/`oxlint`/`vite build` clean.
