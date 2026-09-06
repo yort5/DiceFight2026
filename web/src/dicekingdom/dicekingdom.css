@@ -997,20 +997,6 @@
   font-weight: 700;
   color: oklch(0.72 0.17 25);
 }
-.dicekingdom .die-cube-energy-icon {
-  position: absolute;
-  right: 8%;
-  top: 5%;
-  line-height: 1;
-}
-.dicekingdom .die-cube-amount {
-  position: absolute;
-  right: 10%;
-  bottom: 6%;
-  font-size: 0.62em;
-  font-weight: 700;
-  opacity: 0.85;
-}
 .dicekingdom .zone h4 {
   font: 700 11px var(--sans);
   text-transform: uppercase;
@@ -1186,6 +1172,17 @@
   display: inline-flex;
   margin-top: 4px;
 }
+/* On the die itself, in its own lower-left corner, instead of a separate
+   box below it - direct feedback (2026-09-09): "it's supposed to be in
+   the lower left hand corner INSIDE the die itself." Reuses .pip-stack's
+   own overlap rule below unchanged, just repositioned. */
+.dicekingdom .pip-stack.on-die {
+  position: absolute;
+  left: 3%;
+  bottom: 3%;
+  margin-top: 0;
+  pointer-events: none;
+}
 .dicekingdom .pip-stack .energy-badge + .energy-badge {
   margin-left: -6px;
   box-shadow: 0 0 0 2px var(--tile-bg);
@@ -1195,8 +1192,22 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  color: #fff8ec;
+  /* Bright white, not the cream every other cutout/badge text uses, and
+     outlined - direct feedback (2026-09-09): "the white... needs to be
+     BRIGHTER. It fades into the rest of the color." The drop-shadow
+     stack below outlines the icon's whole silhouette (including its own
+     internal cutout details, like Shell's spine line) without touching
+     any icon's own stroke attributes - a plain CSS stroke on the SVG
+     would fight those. */
+  color: #ffffff;
   flex: none;
+}
+.dicekingdom .energy-badge svg {
+  filter:
+    drop-shadow(0.75px 0 0 rgba(0, 0, 0, 0.6))
+    drop-shadow(-0.75px 0 0 rgba(0, 0, 0, 0.6))
+    drop-shadow(0 0.75px 0 rgba(0, 0, 0, 0.6))
+    drop-shadow(0 -0.75px 0 rgba(0, 0, 0, 0.6));
 }
 
 .dicekingdom .panel {

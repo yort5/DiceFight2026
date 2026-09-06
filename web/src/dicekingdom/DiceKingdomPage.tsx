@@ -298,12 +298,24 @@ function DieTile({
           <>
             {/* The same 3D cube /game's board uses (../DieCube.tsx), not a
                 flat stat badge - a rolled die is a physical object showing
-                a real face, not text about one. */}
-            <DieCube {...facesFor(die, cardsById)} size={34} mine={mine ?? true} spin={spin} turnOffset={turnOffset} />
+                a real face, not text about one. In the die's own lower-
+                left corner now, not a separate box below it - direct
+                feedback (2026-09-09): "the energy ended up in the wrong
+                place. It's supposed to be in the lower left hand corner
+                INSIDE the die itself." */}
+            <DieCube
+              {...facesFor(die, cardsById)}
+              size={34}
+              mine={mine ?? true}
+              spin={spin}
+              turnOffset={turnOffset}
+              energyCorner={
+                die.energySymbolId && die.energyAmount > 0
+                  ? { type: die.energySymbolId, amount: die.energyAmount }
+                  : undefined
+              }
+            />
             {label && <div className="lbl">{label}</div>}
-            {die.energySymbolId && die.energyAmount > 0 && (
-              <PipBadge type={die.energySymbolId} amount={die.energyAmount} />
-            )}
           </>
         )}
       </button>
@@ -899,14 +911,18 @@ export function DiceKingdomPage() {
                   <span className="rc-left">×{dice.length} left</span>
                 </button>
                 {detailOpen && (
-                  // Opens AWAY from this board's own mat, not toward it -
-                  // direct feedback (2026-09-05): the roster sits below
-                  // the mat on your own board (mat-then-roster) and above
-                  // it on the opponent's (roster-then-mat, see `mirrored`
-                  // below the mat/roster JSX), so opening toward the mat
-                  // (the previous mirrored-ternary) covered the Reserve
-                  // Pool right as a purchase asked you to click into it.
-                  <div className={`card-popover ${mirrored ? "up" : "down"}`}>
+                  // Always down, not away-from-mat - direct feedback
+                  // (2026-09-09): the opponent's roster sits at the very
+                  // TOP of the page (roster-then-mat), so the previous
+                  // "away from the mat" rule opened it upward straight
+                  // off the top of the screen, invisible. Down still
+                  // covers their Reserve Pool, same as it would have
+                  // before - "that one is probably fine to show up
+                  // underneath, since you won't be needing to click in
+                  // the opponent's Reserve Pool while reading a character
+                  // info." Your own roster (mat-then-roster, at the
+                  // bottom) still has nothing below it either way.
+                  <div className="card-popover down">
                     <div className="card-popover-head">
                       {Avatar && <Avatar size={28} />}
                       <div>

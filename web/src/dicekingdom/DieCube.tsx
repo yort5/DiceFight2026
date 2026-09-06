@@ -2,10 +2,17 @@ import { EnergyBadge } from "./icons";
 import { FACE_ORIENTATIONS, FACE_TRANSFORMS, type CubeFace } from "./dieFaces";
 
 // A die as a real CSS 3D cube rather than a flat badge - ported from
-// ../DieCube.tsx verbatim except for the energy corner, which draws one
-// of Dice Kingdom's own EnergyBadge circles instead of v1's `<img src>`
-// GameIcon. See ../DieCube.tsx for the geometry commentary (unchanged -
-// it's just 3D placement math).
+// ../DieCube.tsx verbatim. See that file for the geometry commentary
+// (unchanged - it's just 3D placement math).
+//
+// No more per-face energy icon/amount (2026-09-09) - a hybrid face's
+// energy has no home in the CubeFace model at all (only stat-face
+// fields), so that indicator always had to come from the live die state
+// anyway. `energyCorner` draws it once, as a sibling of the rotating
+// cube INSIDE die-cube-box (not a separate wrapper positioned around
+// this whole component) - box-relative percentages then land exactly on
+// the die's own visible edges, not stretched by the box's own trailing
+// margin the way an external wrapper's would be.
 
 export interface CubeSpin {
   rx: number;
@@ -34,6 +41,9 @@ export function DieCube(props: {
   /** Full turns this die accumulated when it was last rolled, kept so
    *  dropping the spin leaves it exactly where it landed. */
   turnOffset?: number;
+  /** The die's own live energy, read straight off the DTO rather than
+   *  the (rotating, face-specific) cube model - see the file header. */
+  energyCorner?: { type: string; amount: number };
 }) {
   const { faces, index, size, mine, spin } = props;
   const half = size / 2;
@@ -110,28 +120,17 @@ export function DieCube(props: {
                   )}
                 </>
               )}
-              {face.kind === "energy" && (
-                <>
-                  {/* Shrunk and moved off the center - direct feedback
-                      (2026-09-05): "the energy icons are covering up
-                      stuff on the character die faces... maybe the icon
-                      needs to be a little smaller." Same top-right slot
-                      .die-cube-attack uses on a character face - the two
-                      never appear on the same face, so there's no clash
-                      reusing the position. Variant A badge (2026-09-08)
-                      instead of a bare cream icon - this one had NO color
-                      coding at all before (its currentColor just
-                      inherited the face's own fixed cream text tone). */}
-                  <span className="die-cube-energy-icon">
-                    <EnergyBadge type={face.icon} size={Math.round(size * 0.34)} />
-                  </span>
-                  {face.amount > 1 && <span className="die-cube-amount">{face.amount}</span>}
-                </>
-              )}
             </span>
           );
         })}
       </span>
+      {props.energyCorner && (
+        <span className="pip-stack on-die">
+          {Array.from({ length: Math.max(1, props.energyCorner.amount) }, (_, i) => (
+            <EnergyBadge key={i} type={props.energyCorner!.type} size={Math.round(size * 0.34)} />
+          ))}
+        </span>
+      )}
     </span>
   );
 }

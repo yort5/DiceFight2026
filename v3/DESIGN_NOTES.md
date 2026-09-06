@@ -1929,3 +1929,54 @@ end; a 4-energy sideboard pool (2 Wild singles + one 2-Claw pair)
 renders as 4 correctly-grouped, correctly-overlapped circles matching
 its own printed total. Zero console errors across every check.
 `tsc -b`/`oxlint`/`vite build` clean.
+
+## 2026-09-09 - Three real bugs in the last pass, fixed
+
+Direct feedback on the just-shipped EnergyBadge work:
+
+1. **The upper (opponent's) roster popover went off-screen entirely.**
+   Real bug in the "open away from this board's own mat" rule from
+   2026-09-05: for the opponent's board (roster-then-mat, sitting at the
+   very TOP of the page), "away from the mat" meant opening upward -
+   straight off the top of the screen, into nothing. Fixed to always
+   open downward, per the correction: "that one is probably fine to show
+   up underneath, since you won't be needing to click in the opponent's
+   Reserve Pool while reading a character info." Your own roster
+   (bottom of the page) has nothing below it either way, so this is safe
+   there too - the mirrored ternary is gone entirely, just one direction
+   now.
+
+2. **The new EnergyBadge icon was too washed out.** "The white... needs
+   to be BRIGHTER. It fades into the rest of the color." Two fixes: the
+   icon's fill moved from the cream every other cutout/badge text on
+   this page uses (`#fff8ec`) to pure white, and a 4-direction
+   `drop-shadow` stack now outlines the icon's whole rendered silhouette
+   - including its own internal cutout details, like Shell's spine line
+   - without touching any icon's own stroke attributes (a plain CSS
+   `stroke` override would have fought those, the same class of bug this
+   session keeps finding in blanket selectors).
+
+3. **The energy landed outside the die, on the wrong side.** "It's
+   supposed to be in the lower left hand corner INSIDE the die itself."
+   Two things were wrong at once: DieCube's own pre-existing top-right
+   corner badge (for a pure-energy face like Surge) was never moved, and
+   the NEW hybrid-face badge (added via an external wrapper span around
+   DieCube) was pushed outside the die's own visible box entirely - a
+   real bug, not just a wrong corner: `.die-cube-box` carries its own
+   trailing `margin: 0 auto 3px`, so the wrapper's total height was 3px
+   taller than the die itself, and every percentage-based position
+   inside it landed on the WRONG box's edges. Fixed properly, not just
+   patched: `DieCube` now takes an `energyCorner` prop and draws the
+   badge itself, as a plain sibling of the rotating cube INSIDE
+   `die-cube-box` - the same box the stat corners already position
+   against - instead of a separate wrapper with its own sizing quirks.
+   This also deleted the old, now-fully-redundant top-right badge/amount
+   code for energy-kind faces, since the one true energy indicator now
+   lives in one place for every face kind.
+
+Verified live: the opponent's popover now renders fully on-screen
+(positive y-coordinate, confirmed via bounding box, not just a
+screenshot); a die's energy badge, zoomed to actual rendered size,
+sits cleanly inside the die's own rounded corner with a crisp white
+outlined icon; a full purchase still completes with zero console
+errors across three separate rolls. `tsc -b`/`oxlint`/`vite build` clean.
