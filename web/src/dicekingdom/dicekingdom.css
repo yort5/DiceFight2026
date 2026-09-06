@@ -1202,12 +1202,14 @@
   color: #ffffff;
   flex: none;
 }
+/* A crisp outline, not a blurred one - direct feedback (2026-09-09):
+   "I don't think the shadow makes it pop, I think it just makes it
+   muddy." Swapped the 4-direction drop-shadow stack for the
+   feMorphology-based filter defined once in DiceKingdomPage's own JSX
+   (see its own remarks) - a hard-edged dilate-then-fill, not a soft
+   shadow, so it stays sharp even at these icons' real 8-13px sizes. */
 .dicekingdom .energy-badge svg {
-  filter:
-    drop-shadow(0.75px 0 0 rgba(0, 0, 0, 0.6))
-    drop-shadow(-0.75px 0 0 rgba(0, 0, 0, 0.6))
-    drop-shadow(0 0.75px 0 rgba(0, 0, 0, 0.6))
-    drop-shadow(0 -0.75px 0 rgba(0, 0, 0, 0.6));
+  filter: url(#energy-badge-outline);
 }
 
 .dicekingdom .panel {

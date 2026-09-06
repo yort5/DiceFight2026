@@ -2002,3 +2002,39 @@ icon after direct feedback that the shipped 4-direction drop-shadow
 "just makes it muddy" - a quick side-by-side [no outline / the current
 drop-shadow / a crisp SVG feMorphology outline / a soft centered glow]
 was sent for a pick; the badge's own coloring is unchanged pending that.)
+
+## 2026-09-09 (later still) - The muddy shadow becomes a real outline
+
+Direct feedback: "I don't think the shadow makes it pop, I think it
+just makes it muddy?" Rather than guess again, built a quick side-by-
+side of the actual icon at its actual shipped sizes (12/14/16px, plus a
+2x zoom for detail): plain white with no outline at all, the shipped
+4-direction drop-shadow, a crisp SVG `feMorphology`-based outline, and a
+soft centered glow. The zoomed comparison made the difference obvious -
+the drop-shadow's blur reads as a soft, uneven halo, while
+`feMorphology` (dilate the icon's own alpha mask into a hard-edged
+shape, flood it solid, then merge the real icon on top) gives a
+genuinely crisp line around the WHOLE silhouette, including internal
+cutout details like Shell's spine line, without touching any icon's own
+stroke attributes. User picked this one ("Let's go with D").
+
+One filter def, not one per badge - SVG filters only need to exist once
+per document; every `EnergyBadge` instance just references it via
+`filter: url(#energy-badge-outline)`. Rendered once in
+`DiceKingdomPage`'s own JSX (a hidden 0x0 svg, same pattern index-doc
+symbol sheets use), since that's the branch every `EnergyBadge` call
+site actually lives inside.
+
+Also worth recording, since it's the reason none of this had to be
+perfect: "the shield and the eye would have different color
+backgrounds, right? So the color is the main differentiator when it's
+really small, thus it's ok if the symbol isn't perfect." Confirmed -
+each energy type's badge is colored to its own accent, so the outline's
+job is just to keep the white symbol from visually fusing with that
+color, not to make the symbol itself legible in isolation.
+
+Verified live at real size (not just zoomed): the corner badge on a
+Reserve Pool die, the Champion box's glyph, and the "Energy in your
+pool" pips all show a crisp, non-muddy outline; a full purchase still
+completes cleanly, zero console errors across two rolls. `tsc -b`/
+`oxlint`/`vite build` clean.

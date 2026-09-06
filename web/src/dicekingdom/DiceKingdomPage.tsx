@@ -1090,6 +1090,28 @@ export function DiceKingdomPage() {
 
   return (
     <div className="dicekingdom">
+      {/* EnergyBadge's outline (2026-09-09, replacing a 4-direction
+          drop-shadow stack that read as "muddy" rather than crisp) -
+          feMorphology dilates the icon's own alpha silhouette (including
+          any internal cutout details, like Shell's spine line) into a
+          hard-edged mask, then fills that mask solid and merges the real
+          icon on top - a genuinely crisp outline, not a blurred one.
+          Rendered once here (referenced via CSS `filter: url(#...)`),
+          not per-badge - an SVG filter def only needs to exist once per
+          document regardless of how many elements point at it. */}
+      <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true">
+        <defs>
+          <filter id="energy-badge-outline" x="-50%" y="-50%" width="200%" height="200%">
+            <feMorphology operator="dilate" radius="1.1" in="SourceAlpha" result="dilated" />
+            <feFlood floodColor="#1a1006" floodOpacity="0.9" result="black" />
+            <feComposite in="black" in2="dilated" operator="in" result="outline" />
+            <feMerge>
+              <feMergeNode in="outline" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+      </svg>
       {error && <p className="error">{error}</p>}
 
       {/* Once a game is live, /game shows almost no chrome above the
