@@ -1130,31 +1130,6 @@ export function DiceKingdomPage() {
             <span className="sideboard-sub">either player, any window</span>
             <p className="sideboard-empty">No Globals designed yet.</p>
           </div>
-          <div className="sideboard-panel">
-            <h4>Energy in your pool</h4>
-            {(() => {
-              const yourEnergy = diceFor(you, "ReservePool").filter((d) => d.energySymbolId);
-              if (yourEnergy.length === 0) return <p className="sideboard-empty">nothing to spend</p>;
-              const total = yourEnergy.reduce((sum, d) => sum + d.energyAmount, 0);
-              return (
-                // A running total, separated from the individual pips by
-                // a vertical divider - direct feedback (2026-09-05): the
-                // pip list alone didn't say "how much do I actually
-                // have" at a glance.
-                <div className="sideboard-pool-row">
-                  <div className="sideboard-pool">
-                    {yourEnergy.map((d) => (
-                      <PipBadge key={d.id} type={d.energySymbolId!} amount={d.energyAmount} />
-                    ))}
-                  </div>
-                  <span className="pool-divider" />
-                  <span className="pool-total" title={`${total} total energy`}>
-                    {total}
-                  </span>
-                </div>
-              );
-            })()}
-          </div>
         </div>
 
         <div className="dk-row-opp">{renderBoard(opponentId, true)}</div>
@@ -1365,6 +1340,35 @@ export function DiceKingdomPage() {
             isActivePlayer={game.activePlayerId === you}
             you={you}
           />
+          {/* Moved off the sideboard and onto your own rail, right under
+              your Champion box - direct feedback (2026-09-09): this is
+              specifically YOUR energy, sitting right above the log that
+              already tracks everything you've done with it. */}
+          <div className="sideboard-panel">
+            <h4>Energy in your pool</h4>
+            {(() => {
+              const yourEnergy = diceFor(you, "ReservePool").filter((d) => d.energySymbolId);
+              if (yourEnergy.length === 0) return <p className="sideboard-empty">nothing to spend</p>;
+              const total = yourEnergy.reduce((sum, d) => sum + d.energyAmount, 0);
+              return (
+                // A running total, separated from the individual pips by
+                // a vertical divider - direct feedback (2026-09-05): the
+                // pip list alone didn't say "how much do I actually
+                // have" at a glance.
+                <div className="sideboard-pool-row">
+                  <div className="sideboard-pool">
+                    {yourEnergy.map((d) => (
+                      <PipBadge key={d.id} type={d.energySymbolId!} amount={d.energyAmount} />
+                    ))}
+                  </div>
+                  <span className="pool-divider" />
+                  <span className="pool-total" title={`${total} total energy`}>
+                    {total}
+                  </span>
+                </div>
+              );
+            })()}
+          </div>
           <MatchLog entries={game.log} nearPlayerId={you} />
         </div>
       </div>

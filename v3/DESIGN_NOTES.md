@@ -1980,3 +1980,25 @@ screenshot); a die's energy badge, zoomed to actual rendered size,
 sits cleanly inside the die's own rounded corner with a crisp white
 outlined icon; a full purchase still completes with zero console
 errors across three separate rolls. `tsc -b`/`oxlint`/`vite build` clean.
+
+## 2026-09-09 (later) - "Energy in your pool" moved to the rail
+
+Direct feedback: "move the 'Energy in your Pool' to underneath the
+Champion box, on top of the log." Moved from the left sideboard (where
+it sat below the still-empty Basic Actions/Global Abilities panels) to
+the right rail, between your own Champion box and the match log -
+specifically YOUR energy, now sitting right above the log that already
+tracks everything you've done with it, instead of grouped with two
+panels that have no content in this game yet. Same panel/markup, just
+relocated - `.sideboard-panel`'s styling (border/radius/background, no
+fixed width) already adapts to whichever column width it sits in.
+
+Verified live: sideboard now holds only Basic Actions and Global
+Abilities; the rail reads Champion box -> Energy in your pool -> Log,
+zero console errors.
+
+(Separately, still open: comparing outline treatments for EnergyBadge's
+icon after direct feedback that the shipped 4-direction drop-shadow
+"just makes it muddy" - a quick side-by-side [no outline / the current
+drop-shadow / a crisp SVG feMorphology outline / a soft centered glow]
+was sent for a pick; the badge's own coloring is unchanged pending that.)
