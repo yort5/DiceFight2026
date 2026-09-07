@@ -168,13 +168,20 @@
       "railbottom"
       "side";
   }
-  .dicekingdom .dk-titlebar {
-    grid-template-columns: 1fr;
-  }
-  .dicekingdom .step-ribbon,
-  .dicekingdom .dk-titlebar-right {
-    grid-column: 1;
-  }
+  /* .dk-titlebar/.step-ribbon/.dk-titlebar-right's own narrow-viewport
+     overrides live further down (right after their base rules, near
+     .step-ribbon's own definition) - NOT here alongside .dk-layout's.
+     Real bug, direct feedback (2026-09-07): a mobile screenshot showed
+     the ribbon collapsed into a stack of near-circular blobs instead of
+     wrapping normally. Root cause was exactly that split: this block
+     comes BEFORE those three selectors' base rules later in the file
+     (~357-386), so even though the media query matched, the later
+     unconditional base rule won the cascade (same specificity, later
+     source position beats an earlier media-conditional rule) and this
+     override never actually applied at any width - `.dk-titlebar`
+     stayed a 200px/minmax(0,1fr)/300px grid, and on a narrow phone the
+     middle column got squeezed to 0px, leaving `.step-ribbon` with
+     zero width to wrap its chips inside. */
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .dicekingdom {
@@ -383,6 +390,19 @@
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+}
+/* Placed here, after all three base rules above, not up with
+   .dk-layout's own narrow-viewport override near the top of the file -
+   see that override's own comment for why (source order beats an
+   earlier media-conditional rule at equal specificity). */
+@media (max-width: 1100px) {
+  .dicekingdom .dk-titlebar {
+    grid-template-columns: 1fr;
+  }
+  .dicekingdom .step-ribbon,
+  .dicekingdom .dk-titlebar-right {
+    grid-column: 1;
+  }
 }
 .dicekingdom .ribbon-chip {
   padding: 5px 10px;
@@ -641,17 +661,28 @@
     "used  reserve prep"
     "field field field";
 }
+/* Narrower columns, same shape - direct feedback (2026-09-07), from an
+   iPhone SE screenshot of the old version below: "Main play area also
+   stacks vertically. These should keep their position, just be
+   smaller." A full single-column reflow (every zone its own full-width
+   row, in a different order than the desktop grid) was a bigger change
+   than "smaller" - Used Pile/Out of Play and Reserve/Prep lost their
+   left/middle-right relationship entirely. This keeps the exact same
+   `grid-template-areas` as the base rule (inherited unchanged - only
+   the column widths shrink here) at both this breakpoint and the
+   narrower one below it. */
 @media (max-width: 900px) {
   .dicekingdom .mat,
   .dicekingdom .mat.mirrored {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "field"
-      "reserve"
-      "used"
-      "prep"
-      "outofplay"
-      "tray";
+    grid-template-columns: 130px minmax(0, 1fr) 130px;
+    gap: 5px;
+  }
+}
+@media (max-width: 480px) {
+  .dicekingdom .mat,
+  .dicekingdom .mat.mirrored {
+    grid-template-columns: 88px minmax(0, 1fr) 88px;
+    gap: 4px;
   }
 }
 .dicekingdom .mat-field {

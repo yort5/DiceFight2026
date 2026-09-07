@@ -2211,3 +2211,53 @@ its edge, sitting alongside Wolf's Claw badge which was already clean.
 Zero console errors (aside from an expected, pre-existing 403 from the
 other seat's auto-skip attempt - unrelated to this change). `tsc -b`/
 `oxlint`/`vite build` clean.
+
+## First real mobile check: two responsive bugs, one of them long-standing (2026-09-07)
+
+User checked the live site on an iPhone SE (375px CSS width) for the
+first time this session and sent two screenshots.
+
+1. **The step ribbon collapsed into a stack of near-circular blobs.**
+   Measured rather than guessed (`.step-ribbon`'s own bounding box and
+   computed styles at 375px): its width was 0px, and `.dk-titlebar`'s
+   `grid-template-columns` computed to `200px 0px 300px` - the DESKTOP
+   3-column template, not the `1fr` mobile override that was supposed
+   to apply under 1100px. Root cause: that override (`@media
+   (max-width: 1100px) { .dicekingdom .dk-titlebar { grid-template-
+   columns: 1fr; } ... }`) sat near the TOP of the file, textually
+   BEFORE `.dk-titlebar`'s own unconditional base rule further down
+   (~line 357). Equal specificity, so cascade order decides - and a
+   later unconditional rule beats an earlier media-conditional one
+   regardless of whether the media query matches. That override had
+   never actually applied at ANY viewport width since it was written;
+   only `.dk-layout`'s neighboring override in the same block worked,
+   because IT (unlike `.dk-titlebar`/`.step-ribbon`/`.dk-titlebar-
+   right`) sits after its own base rule. With the middle column
+   collapsed to 0px, `.step-ribbon` (a flex container with `flex-wrap:
+   wrap`) had zero width to wrap chips into, so each chip's pill text
+   wrapped onto 2-3 lines inside a barely-wider-than-tall blob instead.
+   Fixed by moving the three misplaced overrides into a second `@media
+   (max-width: 1100px)` block positioned right after their real base
+   rules (next to `.step-ribbon`'s own definition), leaving only
+   `.dk-layout`'s (correctly-placed) override in the original block.
+2. **The mat's own 3-column layout fully reflowed on mobile instead of
+   shrinking.** Not a bug exactly - a deliberate `@media (max-width:
+   900px)` fallback that had never been checked on a real phone - but
+   direct feedback rejected the design: "these should keep their
+   position, just be smaller." The old fallback swapped
+   `grid-template-areas` entirely, turning Used Pile/Out of Play
+   (previously the left column) and Reserve Pool/Prep Area (previously
+   middle-right) into one flat list of full-width rows in a different
+   order - losing the whole left/middle-right relationship, not just
+   shrinking it. Replaced with two narrower breakpoints (900px, then
+   480px) that keep the EXACT SAME `grid-template-areas` as desktop and
+   only shrink the two fixed side columns (196px → 130px → 88px) plus
+   the grid gap - the shape survives, just smaller, matching what was
+   asked.
+
+Verified live at 375×667 (iPhone SE's real CSS viewport, not just
+"under 900px" in the abstract): `.step-ribbon`'s bounding box is now
+341px wide (full titlebar width, not 0), and `.dk-row-you .mat`'s
+computed `grid-template-columns` reads `88px 139px 88px` - narrower,
+same 3-column shape, not a single-column stack. Zero console errors.
+`tsc -b`/`oxlint`/`vite build` clean.
