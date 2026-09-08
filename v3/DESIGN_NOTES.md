@@ -2452,3 +2452,47 @@ and reaching Assign Blockers keeps the opponent's mat collapsed
 already uses) while Field Zone stays clickable. Zero console errors
 (aside from the expected, pre-existing 403 from the other seat's
 auto-skip attempt). `tsc -b`/`oxlint`/`vite build` clean.
+
+## The Champion panel, round 2: a real miscommunication, sorted out with a preview question (2026-09-08)
+
+The merged Champion+life "thin panel" from last round wasn't what was
+meant: "I said 'panel' and you translated that to 'row.' I meant
+column, like we had it previously." Asked a clarifying question with
+two ASCII mockups rather than guess a third time (this was already a
+second miss on the same feature) - the user couldn't pick from
+description alone, and gave the actual requirement instead: "we'd
+always want the life totals to be visible somewhere, I don't want to
+have to scroll to see if I'm winning or losing... the 'energy in your
+pool' is only helpful if it's visible when I'm purchasing a character."
+Two genuinely separate asks, not one:
+
+1. **Life totals need to be scroll-proof, not just "compact."** New
+   `Scoreboard` component - a real `position: fixed` bar pinned to the
+   TOP edge on the narrow layout (same technique `.dk-rail-mid` already
+   uses for the bottom, mirrored), showing just both players' life
+   totals. Nothing else lives here on purpose: champion name/ability is
+   reference material worth looking up occasionally, not something
+   that earns a permanent pin the way "am I winning" does. `.dicekingdom`
+   gained matching `padding-top` so the fixed bar doesn't cover the
+   ribbon, same as the bottom bar's own `padding-bottom`; the CSS block
+   sits after `.scoreboard`'s base rule, not up with `.dk-layout`'s
+   override - the ordering bug from `.dk-titlebar`'s fix two rounds ago
+   would have silently repeated here otherwise.
+2. **"Column, like we had it previously" was about ChampionBox's own
+   text, not a request to keep life inside it.** With life now living
+   in Scoreboard, ChampionBox went back to a real stacked column - role
+   label, then name+badge, then the passive note, each its own line -
+   instead of the squeezed single row from last round. No life line in
+   here at all any more.
+3. **"Energy in your pool" gated to the Main step**, where spending it
+   is actually on the table, instead of a permanent sideboard panel -
+   direct feedback confirmed it's only useful during purchasing.
+
+Verified live at 375×667: `.scoreboard` computes `position: fixed; top:
+0px` and measures 55px tall regardless of scroll position (screenshot
+at the initial view and again after scrolling past several boards'
+worth of content both show it pinned); ChampionBox reads as three
+stacked lines (ROLE, then NAME+badge, then the ability note) with no
+life number in it; "Energy in your pool" is absent outside Main and
+present with the right total once there. Zero console errors. `tsc
+-b`/`oxlint`/`vite build` clean.

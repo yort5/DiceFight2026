@@ -124,13 +124,17 @@ function groupDice(dice: Die[], zone: string): DieGroup[] {
 // fix along the way: the old inline version only ever highlighted
 // playerOne's box, never playerTwo's.
 //
-// Merged with the standalone LifeBox this used to sit next to
-// (2026-09-08) - direct feedback: "since we've moved the turn controls,
-// [the Champion panel] would just be the score and the champion
-// details - can we try to squeeze that into a thin panel." One row now
-// (small icon, name, energy badge, life total) instead of a role label
-// + a 72px portrait + a separate life-totals grid elsewhere in the
-// rail; the passive text is the only thing still on its own line.
+// Life total moved OUT to the new fixed Scoreboard below (2026-09-08) -
+// direct feedback, after a first attempt merged it into one squeezed
+// row here got corrected: "I said 'panel' and you translated that to
+// 'row.' I meant column, like we had it previously," followed by "we'd
+// always want the life totals to be visible somewhere, I don't want to
+// have to scroll to see if I'm winning or losing." Life needing to be
+// scroll-proof and this box's own text reading as a stacked column
+// turned out to be two separate asks - this box goes back to a role
+// label/name+badge/note column (no life line at all now), and
+// Scoreboard (a real fixed bar, same technique as the turn-controls
+// rail) is what's actually always on screen.
 function ChampionBox({ player, isActivePlayer, you }: { player: PlayerState; isActivePlayer: boolean; you: string }) {
   const mine = player.id === you;
   const turnClass = isActivePlayer ? (mine ? " turn-mine" : " turn-waiting") : "";
@@ -142,20 +146,50 @@ function ChampionBox({ player, isActivePlayer, you }: { player: PlayerState; isA
       <div className="championbox-row">
         {Icon && <Icon size={30} />}
         <div className="championbox-text">
-          <div className="championbox-name-row">
-            <span className="championbox-role">{mine ? "You" : "Opponent"}</span>
-            {champion && <span className="championbox-name">{champion.name}</span>}
-            {/* Direct feedback (2026-09-05): even once every Champion has
-                a real avatar, the energy type still needs to read at a
-                glance - a photo alone doesn't carry that the way a color
-                glyph did. Variant A badge (2026-09-08) since this is
-                exactly the kind of small, low-contrast spot the earlier
-                bare icon kept losing its own sizing bug in. */}
-            {champion && <EnergyBadge type={champion.energySymbolId} size={13} />}
-          </div>
+          <div className="championbox-role">{mine ? "Your Champion" : "Opponent Champion"}</div>
+          {champion && (
+            <div className="championbox-name-row">
+              <span className="championbox-name">{champion.name}</span>
+              {/* Direct feedback (2026-09-05): even once every Champion
+                  has a real avatar, the energy type still needs to read
+                  at a glance - a photo alone doesn't carry that the way
+                  a color glyph did. Variant A badge (2026-09-08) since
+                  this is exactly the kind of small, low-contrast spot
+                  the earlier bare icon kept losing its own sizing bug
+                  in. */}
+              <EnergyBadge type={champion.energySymbolId} size={13} />
+            </div>
+          )}
           {champion?.passiveText && <div className="championbox-note">{champion.passiveText}</div>}
         </div>
-        <div className="championbox-life">{player.life}</div>
+      </div>
+    </div>
+  );
+}
+
+// A real fixed bar, not just a panel somewhere in the rail - direct
+// feedback (2026-09-08): "we'd always want the life totals to be
+// visible somewhere, I don't want to have to scroll to see if I'm
+// winning or losing." Same `position: fixed` technique .dk-rail-mid
+// already uses for the turn controls, pinned to the opposite edge
+// (top) so the two fixed bars don't compete for the same space. Just
+// the two life totals - not a fuller scoreboard - since that's the one
+// thing that's genuinely useful to see with zero scrolling on every
+// single screen of the game; champion name/ability is reference
+// material you look up occasionally, not something worth a permanent
+// pin (see ChampionBox above, back in normal flow).
+function Scoreboard({ opponent, mine }: { opponent: PlayerState; mine: PlayerState }) {
+  const oppAccent = opponent.champion ? `var(--${opponent.champion.energySymbolId.toLowerCase()})` : undefined;
+  const mineAccent = mine.champion ? `var(--${mine.champion.energySymbolId.toLowerCase()})` : undefined;
+  return (
+    <div className="scoreboard">
+      <div className="scoreboard-side" style={oppAccent ? ({ ["--cc" as string]: oppAccent } as const) : undefined}>
+        <span className="scoreboard-label">Opponent</span>
+        <span className="scoreboard-life">{opponent.life}</span>
+      </div>
+      <div className="scoreboard-side mine" style={mineAccent ? ({ ["--cc" as string]: mineAccent } as const) : undefined}>
+        <span className="scoreboard-label">You</span>
+        <span className="scoreboard-life">{mine.life}</span>
       </div>
     </div>
   );
@@ -1419,6 +1453,9 @@ export function DiceKingdomPage() {
       </div>
     );
 
+  const oppPlayer = opponentId === game.playerOne.id ? game.playerOne : game.playerTwo;
+  const yourPlayer = you === game.playerOne.id ? game.playerOne : game.playerTwo;
+
   return (
     <div className="dicekingdom">
       {/* EnergyBadge's outline (2026-09-09, replacing a 4-direction
@@ -1444,6 +1481,8 @@ export function DiceKingdomPage() {
         </defs>
       </svg>
       {error && <p className="error">{error}</p>}
+
+      <Scoreboard opponent={oppPlayer} mine={yourPlayer} />
 
       {/* Once a game is live, /game shows almost no chrome above the
           table at all - title/description/How-to-Play live only on the
@@ -1497,7 +1536,7 @@ export function DiceKingdomPage() {
             {link && <InviteRow link={link} />}
           </div>
           <ChampionBox
-            player={opponentId === game.playerOne.id ? game.playerOne : game.playerTwo}
+            player={oppPlayer}
             isActivePlayer={game.activePlayerId === opponentId}
             you={you}
           />
@@ -1529,39 +1568,46 @@ export function DiceKingdomPage() {
 
         <div className="dk-rail-bottom">
           <ChampionBox
-            player={you === game.playerOne.id ? game.playerOne : game.playerTwo}
+            player={yourPlayer}
             isActivePlayer={game.activePlayerId === you}
             you={you}
           />
           {/* Moved off the sideboard and onto your own rail, right under
               your Champion box - direct feedback (2026-09-09): this is
               specifically YOUR energy, sitting right above the log that
-              already tracks everything you've done with it. */}
-          <div className="sideboard-panel">
-            <h4>Energy in your pool</h4>
-            {(() => {
-              const yourEnergy = diceFor(you, "ReservePool").filter((d) => d.energySymbolId);
-              if (yourEnergy.length === 0) return <p className="sideboard-empty">nothing to spend</p>;
-              const total = yourEnergy.reduce((sum, d) => sum + d.energyAmount, 0);
-              return (
-                // A running total, separated from the individual pips by
-                // a vertical divider - direct feedback (2026-09-05): the
-                // pip list alone didn't say "how much do I actually
-                // have" at a glance.
-                <div className="sideboard-pool-row">
-                  <div className="sideboard-pool">
-                    {yourEnergy.map((d) => (
-                      <PipBadge key={d.id} type={d.energySymbolId!} amount={d.energyAmount} />
-                    ))}
+              already tracks everything you've done with it.
+              Shown only during Main (2026-09-08 direct feedback):
+              "'Energy in your pool' is only helpful if it's visible when
+              I'm purchasing a character" - every other step it's just
+              permanent clutter, so it's gone entirely outside the one
+              step where spending it is actually on the table. */}
+          {step === "main" && (
+            <div className="sideboard-panel">
+              <h4>Energy in your pool</h4>
+              {(() => {
+                const yourEnergy = diceFor(you, "ReservePool").filter((d) => d.energySymbolId);
+                if (yourEnergy.length === 0) return <p className="sideboard-empty">nothing to spend</p>;
+                const total = yourEnergy.reduce((sum, d) => sum + d.energyAmount, 0);
+                return (
+                  // A running total, separated from the individual pips by
+                  // a vertical divider - direct feedback (2026-09-05): the
+                  // pip list alone didn't say "how much do I actually
+                  // have" at a glance.
+                  <div className="sideboard-pool-row">
+                    <div className="sideboard-pool">
+                      {yourEnergy.map((d) => (
+                        <PipBadge key={d.id} type={d.energySymbolId!} amount={d.energyAmount} />
+                      ))}
+                    </div>
+                    <span className="pool-divider" />
+                    <span className="pool-total" title={`${total} total energy`}>
+                      {total}
+                    </span>
                   </div>
-                  <span className="pool-divider" />
-                  <span className="pool-total" title={`${total} total energy`}>
-                    {total}
-                  </span>
-                </div>
-              );
-            })()}
-          </div>
+                );
+              })()}
+            </div>
+          )}
           <MatchLog entries={game.log} nearPlayerId={you} />
         </div>
       </div>
