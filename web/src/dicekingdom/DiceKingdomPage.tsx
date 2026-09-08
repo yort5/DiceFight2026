@@ -123,49 +123,39 @@ function groupDice(dice: Die[], zone: string): DieGroup[] {
 // green/amber-grey pattern (DESIGN_LOG.md, 2026-09-03) - and a real bug
 // fix along the way: the old inline version only ever highlighted
 // playerOne's box, never playerTwo's.
-function LifeBox({ player, you, activePlayerId }: { player: PlayerState; you: string; activePlayerId: string }) {
-  const isActive = activePlayerId === player.id;
-  const mine = player.id === you;
-  const cls = isActive ? (mine ? " turn-mine" : " turn-waiting") : "";
-  return (
-    <div className={`life-panel${cls}`}>
-      <span className="life-label">{mine ? "You" : "Opponent"}</span>
-      <span className="life-value">{player.life}</span>
-    </div>
-  );
-}
-
-// README's Column 3 "Champion boxes": a role label, the champion's name
-// in the display face, its passive as the note. Lives in the rail, one
-// per player - see .dk-rail-top/.dk-rail-bottom in the JSX below for
-// *where*: sharing the same grid rows as the opponent/lane/you board
-// rows is what puts the opponent's box under the life panels and yours
-// with its top edge on the combat divider, matching the reference,
-// without measuring anything in JS.
+//
+// Merged with the standalone LifeBox this used to sit next to
+// (2026-09-08) - direct feedback: "since we've moved the turn controls,
+// [the Champion panel] would just be the score and the champion
+// details - can we try to squeeze that into a thin panel." One row now
+// (small icon, name, energy badge, life total) instead of a role label
+// + a 72px portrait + a separate life-totals grid elsewhere in the
+// rail; the passive text is the only thing still on its own line.
 function ChampionBox({ player, isActivePlayer, you }: { player: PlayerState; isActivePlayer: boolean; you: string }) {
-  if (!player.champion) return null;
-  const Icon = CHAMPION_ICONS[player.champion.id];
   const mine = player.id === you;
-  const accent = `var(--${player.champion.energySymbolId.toLowerCase()})`;
   const turnClass = isActivePlayer ? (mine ? " turn-mine" : " turn-waiting") : "";
+  const champion = player.champion;
+  const accent = champion ? `var(--${champion.energySymbolId.toLowerCase()})` : undefined;
+  const Icon = champion ? CHAMPION_ICONS[champion.id] : null;
   return (
-    <div className={`championbox${turnClass}`} style={{ ["--cc" as string]: accent }}>
-      <div className="championbox-role">{mine ? "Your Champion" : "Opponent Champion"}</div>
-      <div className="championbox-body">
+    <div className={`championbox${turnClass}`} style={accent ? ({ ["--cc" as string]: accent } as const) : undefined}>
+      <div className="championbox-row">
+        {Icon && <Icon size={30} />}
         <div className="championbox-text">
           <div className="championbox-name-row">
-            <div className="championbox-name">{player.champion.name}</div>
+            <span className="championbox-role">{mine ? "You" : "Opponent"}</span>
+            {champion && <span className="championbox-name">{champion.name}</span>}
             {/* Direct feedback (2026-09-05): even once every Champion has
                 a real avatar, the energy type still needs to read at a
                 glance - a photo alone doesn't carry that the way a color
                 glyph did. Variant A badge (2026-09-08) since this is
                 exactly the kind of small, low-contrast spot the earlier
                 bare icon kept losing its own sizing bug in. */}
-            <EnergyBadge type={player.champion.energySymbolId} size={14} />
+            {champion && <EnergyBadge type={champion.energySymbolId} size={13} />}
           </div>
-          <div className="championbox-note">{player.champion.passiveText}</div>
+          {champion?.passiveText && <div className="championbox-note">{champion.passiveText}</div>}
         </div>
-        {Icon && <Icon size={72} />}
+        <div className="championbox-life">{player.life}</div>
       </div>
     </div>
   );
@@ -460,6 +450,11 @@ export function DiceKingdomPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
+  // Scrolled into view after every action - see the effect below, near
+  // the other early hooks (both need to run unconditionally, before
+  // the `!game` early return further down).
+  const oppRowRef = useRef<HTMLDivElement>(null);
+  const yourRowRef = useRef<HTMLDivElement>(null);
   const [setupA, setSetupA] = useState<string | null>(null);
   const [setupB, setSetupB] = useState<string | null>(null);
 
@@ -553,6 +548,23 @@ export function DiceKingdomPage() {
       window.clearInterval(timer);
     };
   }, [gameId, gameVersion]);
+
+  // Keeps the active player's own board in view after every action -
+  // direct feedback (2026-09-08), offered as an alternative to actually
+  // fixing "if I scroll at all, then trying to tap 'Draw' or 'Roll'...
+  // does not actually Draw or Roll": "can we default the focus to the
+  // active player's mat?" `block: "nearest"` makes this a no-op when
+  // that board is already adequately in view, so a normal tap from a
+  // sensible scroll position doesn't get an unwanted scroll-jump on top
+  // of it - this only actually moves anything when the view really was
+  // left somewhere unhelpful.
+  useEffect(() => {
+    if (!game) return;
+    const activeId = game.activePlayerId;
+    const meId = game.yourPlayerId ?? game.playerOne.id;
+    const ref = activeId === meId ? yourRowRef : oppRowRef;
+    ref.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [game?.version, game?.activePlayerId]);
 
   // v2's CombatEngine.DeclareAttackers unconditionally enters
   // AssignBlockers regardless of attacker count, and DeclareBlockers
@@ -895,10 +907,10 @@ export function DiceKingdomPage() {
     // reroll selection either way. Each die shown individually (not
     // grouped) since a rolled zone is about each die's own face, not a
     // count - see ROLLED_ZONES.
-    function rolledZone(title: string, zoneName: string, dice: Die[]) {
+    function rolledZone(title: string, zoneName: string, dice: Die[], compact?: boolean) {
       const isRollingHere = rolling && dice.some((d) => spins[d.id]);
       return (
-        <div className={`zone zone-${ZONE_TINTS[zoneName] ?? "reserve"}${isRollingHere ? " rolling" : ""}`}>
+        <div className={`zone zone-${ZONE_TINTS[zoneName] ?? "reserve"}${isRollingHere ? " rolling" : ""}${compact ? " compact" : ""}`}>
           <h4>
             {title} <span className="count">{dice.length}</span>
           </h4>
@@ -928,39 +940,41 @@ export function DiceKingdomPage() {
       );
     }
 
+    const fieldZone = (
+      <div className="zone zone-field">
+        <h4>
+          Field <span className="count">{field.length}</span>
+        </h4>
+        <div className="dierow">
+          {field.map((d) => {
+            // Attack: pick your own attackers. Defend: pick a
+            // candidate blocker from your own Field Zone dice - see
+            // handleBlockerSlotClick for where that selection goes.
+            const clickable =
+              d.controllerId === you &&
+              ((isYourTurn && step === "select-attackers") || (!isYourTurn && step === "assign-blockers"));
+            const picked = d.id === selection.primary || selection.secondary.includes(d.id);
+            return (
+              <DieTile
+                key={d.id}
+                die={d}
+                zone="FieldZone"
+                cardsById={cardsById}
+                accent={accent}
+                mine={playerId === you}
+                clickable={clickable}
+                picked={picked}
+                onClick={() => toggleDie(d.id)}
+              />
+            );
+          })}
+        </div>
+      </div>
+    );
+
     const mat = (
       <div className={`mat${mirrored ? " mirrored" : ""}`}>
-        <div className="mat-slot mat-field">
-          <div className="zone zone-field">
-            <h4>
-              Field <span className="count">{field.length}</span>
-            </h4>
-            <div className="dierow">
-              {field.map((d) => {
-                // Attack: pick your own attackers. Defend: pick a
-                // candidate blocker from your own Field Zone dice - see
-                // handleBlockerSlotClick for where that selection goes.
-                const clickable =
-                  d.controllerId === you &&
-                  ((isYourTurn && step === "select-attackers") || (!isYourTurn && step === "assign-blockers"));
-                const picked = d.id === selection.primary || selection.secondary.includes(d.id);
-                return (
-                  <DieTile
-                    key={d.id}
-                    die={d}
-                    zone="FieldZone"
-                    cardsById={cardsById}
-                    accent={accent}
-                    mine={playerId === you}
-                    clickable={clickable}
-                    picked={picked}
-                    onClick={() => toggleDie(d.id)}
-                  />
-                );
-              })}
-            </div>
-          </div>
-        </div>
+        <div className="mat-slot mat-field">{fieldZone}</div>
         <div className="mat-slot mat-used">{pileZone("Used Pile", "UsedPile", used)}</div>
         <div className="mat-slot mat-reserve">{rolledZone("Reserve Pool", "ReservePool", reserve)}</div>
         <div className="mat-slot mat-prep">{rolledZone("Prep Area", "PrepArea", prep)}</div>
@@ -974,6 +988,23 @@ export function DiceKingdomPage() {
             {trayItem("Carried From Prep", carried.length)}
           </div>
         </div>
+      </div>
+    );
+
+    // Collapsed stand-in for `mat` when this is the opponent's board and
+    // it isn't their turn - direct feedback (2026-09-08): "the main
+    // thing I would want to know about my opponent's mat on my turn,
+    // aside from the characters in their field zone, is if they have
+    // any energy in their Reserve Pool to spend on globals... the
+    // opponent's mat could probably be compressed to be much shorter."
+    // Used Pile/Out of Play/Prep Area/the Bag tray all drop out entirely
+    // here - none of them matter to a decision you'd make on your own
+    // turn, unlike Field Zone (what you're attacking/being blocked by)
+    // and Reserve Pool (energy they could spend on a shared Global).
+    const collapsedMat = (
+      <div className="mat-collapsed">
+        {fieldZone}
+        {rolledZone("Reserve Pool", "ReservePool", reserve, true)}
       </div>
     );
 
@@ -1107,16 +1138,18 @@ export function DiceKingdomPage() {
     // which for the mirrored board is the edge next to Field Zone and
     // the Attack Zone (the mirrored mat's rows run the opposite order -
     // see the .mat.mirrored CSS), not away from it.
+    const collapsedOpponent = isOpponentBoard && !isActivePlayer;
+    const shownMat = collapsedOpponent ? collapsedMat : mat;
     return (
       <div key={playerId} className={`playerboard${turnClass}`}>
         {mirrored ? (
           <>
             {roster}
-            {mat}
+            {shownMat}
           </>
         ) : (
           <>
-            {mat}
+            {shownMat}
             {roster}
           </>
         )}
@@ -1448,22 +1481,20 @@ export function DiceKingdomPage() {
           </div>
         </div>
 
-        <div className="dk-row-opp">{renderBoard(opponentId, true)}</div>
+        <div className="dk-row-opp" ref={oppRowRef}>{renderBoard(opponentId, true)}</div>
         <div className="dk-row-lane">{renderAttackZone()}</div>
-        <div className="dk-row-you">{renderBoard(you, false)}</div>
+        <div className="dk-row-you" ref={yourRowRef}>{renderBoard(you, false)}</div>
 
         <div className="dk-rail-top">
-          {/* Active + Invite on one line, then life totals side by side -
-              ../TurnRail.tsx's own shape. */}
+          {/* Active + Invite on one line - ../TurnRail.tsx's own shape.
+              Life totals used to sit in their own grid here (LifeBox);
+              merged into ChampionBox below instead (2026-09-08 direct
+              feedback). */}
           <div className="active-line">
             <span className={isYourTurn ? "whose-turn mine" : "whose-turn waiting"}>
               <strong>Active:</strong> {game.activePlayerId}
             </span>
             {link && <InviteRow link={link} />}
-          </div>
-          <div className="life-panels">
-            <LifeBox player={opponentId === game.playerOne.id ? game.playerOne : game.playerTwo} you={you} activePlayerId={game.activePlayerId} />
-            <LifeBox player={you === game.playerOne.id ? game.playerOne : game.playerTwo} you={you} activePlayerId={game.activePlayerId} />
           </div>
           <ChampionBox
             player={opponentId === game.playerOne.id ? game.playerOne : game.playerTwo}

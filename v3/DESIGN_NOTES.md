@@ -2388,3 +2388,67 @@ fully inside the 375px viewport (a real off-screen bug in the titlebar
 case, caught by measuring bounding boxes rather than trusting the
 screenshot). Zero console errors throughout. `tsc -b`/`oxlint`/`vite
 build` clean.
+
+## Mobile round 4: a possible tap-swallowing bug, the collapsed opponent mat, and a merged Champion+life panel (2026-09-08)
+
+1. **"If I scroll at all, then trying to tap 'Draw' or 'Roll' resets
+   the screen and does not actually Draw or Roll."** This is a known
+   class of iOS Safari bug, not something reproducible in this sandbox
+   (headless Chromium doesn't share WebKit's specific scroll/tap
+   handling) - a `position: fixed` element can lag a repaint behind the
+   page during/right after a scroll gesture, so the first tap right
+   after scrolling can hit-test against a stale position instead of
+   reaching the button, and gets swallowed by Safari settling its own
+   scroll/chrome state. Applied the two standard mitigations: promoting
+   `.dk-rail-mid` to its own GPU compositor layer (`transform:
+   translateZ(0)` + `will-change: transform`, so it's genuinely pinned
+   rather than repainted late) and `touch-action: manipulation` on its
+   buttons (removes the ~300ms tap-vs-double-tap-zoom delay that makes
+   a tap easy to misread as part of a scroll). Can't confirm from here
+   whether this fully resolves it on a real device - worth a direct
+   follow-up check.
+2. **The user's own suggested fallback, implemented as a genuine
+   improvement regardless of (1):** "can we default the focus to the
+   active player's mat?" A new effect scrolls whichever board belongs
+   to `game.activePlayerId` into view after every action (keyed on
+   `game.version`, so it fires on Draw/Roll too, not just an actual
+   turn change - the exact case (1) was about), using `block: "nearest"`
+   so it's a no-op whenever that board is already adequately visible -
+   only a genuinely bad scroll position gets corrected.
+3. **The opponent's mat compresses to Field Zone + one-row Reserve Pool
+   when it isn't their turn.** "The main thing I would want to know
+   about my opponent's mat on my turn, aside from the characters in
+   their field zone, is if they have any energy in their Reserve Pool
+   to spend on globals." `renderBoard` now builds a `collapsedMat`
+   alongside the full `mat` (sharing the same `fieldZone` JSX so Field
+   Zone's own clickable/picked behavior - needed for Assign Blockers
+   too - isn't duplicated) and picks between them via `collapsedOpponent
+   = isOpponentBoard && !isActivePlayer`. Used Pile/Out of Play/Prep
+   Area/the Bag tray/all drop out entirely rather than shrinking further
+   - none of them inform a decision on your own turn. Uses the same
+   `activePlayerId`-based definition of "active" the rest of the page
+   already uses for turn-mine/turn-waiting styling, so it stays
+   collapsed through Assign Blockers (activePlayerId is the attacker
+   for the whole turn, not the momentary defender) - Field Zone (what
+   blocking actually needs) is still fully visible and clickable there
+   either way, so this doesn't block play.
+4. **ChampionBox merged with the life total it used to sit next to.**
+   "Since we've moved the turn controls, [the Champion panel] would
+   just be the score and the champion details - can we try to squeeze
+   that into a thin panel?" Dropped the standalone `LifeBox`/
+   `.life-panels` grid and the old role-label-then-72px-portrait layout
+   entirely; `ChampionBox` is now one row (a 30px icon, role, name,
+   energy badge, and the life total at the far end) with the passive
+   text as a second, smaller line underneath - measured at 45px tall
+   total, down from well over 100px.
+
+Verified live at 375×667: the merged Champion box renders as one
+45px-tall row per player; the opponent's mat collapses to Roster (icon
+bar, from last round) + Field 0 + Reserve Pool 0 while it's the user's
+own turn, and your own mat stays fully expanded (Used Pile/Out of
+Play/Prep Area/roster all present) at the same time; ending the turn
+and reaching Assign Blockers keeps the opponent's mat collapsed
+(matches the existing `activePlayerId` semantics the rest of the page
+already uses) while Field Zone stays clickable. Zero console errors
+(aside from the expected, pre-existing 403 from the other seat's
+auto-skip attempt). `tsc -b`/`oxlint`/`vite build` clean.

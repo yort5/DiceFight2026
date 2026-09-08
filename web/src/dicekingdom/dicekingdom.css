@@ -210,6 +210,25 @@
     padding: 8px 16px calc(10px + env(safe-area-inset-bottom, 0px));
     background: var(--dk-page-b);
     box-shadow: 0 -10px 24px -8px rgba(0, 0, 0, 0.45);
+    /* Direct feedback: "if I scroll at all, then trying to tap 'Draw'
+       or 'Roll' resets the screen and does not actually Draw or Roll."
+       A known class of iOS Safari bug: a `position: fixed` element can
+       lag a repaint behind the page during/right after a scroll
+       gesture, so the first tap right after scrolling can hit-test
+       against where the element WAS rather than where it's actually
+       drawn - swallowed by Safari settling its own scroll/chrome
+       state instead of reaching the button. Promoting this box to its
+       own GPU compositor layer (the standard fix for this) keeps it
+       genuinely pinned rather than repainted late. */
+    transform: translateZ(0);
+    will-change: transform;
+  }
+  .dicekingdom .dk-rail-mid button.btn {
+    /* Cuts the ~300ms tap-delay browsers otherwise reserve to
+       distinguish a tap from the start of a double-tap-to-zoom
+       gesture - the same delay that makes a tap easy to misread as
+       "part of a scroll" right after one. */
+    touch-action: manipulation;
   }
   /* Room at the bottom of the page so the fixed bar above never
      permanently covers the sideboard's last panel. */
@@ -613,38 +632,13 @@
   font-size: 11px;
   cursor: pointer;
 }
-.dicekingdom .life-panels {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-.dicekingdom .life-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 8px 10px 6px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--panel-bg);
-}
-.dicekingdom .life-label {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--text-h);
-}
-.dicekingdom .life-value {
-  font: 400 30px/1 var(--display);
-  font-variant-numeric: tabular-nums;
-}
-
-/* Champion box - README's Column 3 spec: a role label, the champion's
-   name in the display face, and its passive as a note. Renamed from the
-   old horizontal "champbanner" (which lived inline above each board) to
-   a rail panel, matching the reference's placement under the life panels
-   (opponent) and just above the log (yours) - see .dk-rail-top/-bottom
-   in the JSX for placement, not this rule. */
+/* Champion box - merged with the life totals that used to live in their
+   own grid alongside it (2026-09-08 direct feedback: "since we've moved
+   the turn controls, [this] would just be the score and the champion
+   details - squeeze that into a thin panel"). One row: a small icon,
+   role+name+energy badge, the passive note tucked underneath, and the
+   life total at the far end - not the old role-label-then-72px-portrait
+   layout, which alone was taller than this whole panel is now. */
 .dicekingdom .championbox.turn-mine {
   box-shadow: 0 0 0 2px oklch(0.62 0.15 145 / 0.4);
 }
@@ -658,70 +652,60 @@
   border: 1px solid var(--border);
   border-left: 4px solid var(--cc, var(--border));
   border-radius: 10px;
-  padding: 9px 12px 10px;
+  padding: 6px 10px;
 }
-.dicekingdom .championbox-role {
-  font: 700 10px var(--sans);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--text-h);
-}
-/* Text on the left, a big portrait filling the rest of the box on the
-   right - direct feedback (2026-09-06): the old small icon-then-text
-   row left most of the box empty. Text no longer competes with the
-   icon for space (it gets its own column, vertically centered), and
-   the portrait scales to fill whatever's left rather than sitting at a
-   fixed small size - same treatment for every Champion (not just the
-   one with a real photo), so a plain SVG glyph just reads as a big
-   simple icon instead of a special case. */
-.dicekingdom .championbox-body {
+.dicekingdom .championbox-row {
   display: flex;
-  align-items: stretch;
-  gap: 10px;
-  margin-top: 4px;
-  min-height: 72px;
+  align-items: center;
+  gap: 8px;
+}
+.dicekingdom .championbox-row > svg,
+.dicekingdom .championbox-row > img {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: 6px;
 }
 .dicekingdom .championbox-text {
   flex: 1;
   min-width: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-/* Direct child only, not ".championbox-body svg" - real bug, found
-   2026-09-08: the descendant form also reached the small energy icon
-   nested two levels deeper inside .championbox-name-row, forcing it to
-   72px regardless of its own inline `size` prop. That's why an earlier
-   attempt to shrink it (15px -> 12px) had no visible effect at all -
-   this rule always won. */
-.dicekingdom .championbox-body > svg,
-.dicekingdom .championbox-body > img {
-  width: 72px;
-  height: 72px;
-  flex: none;
-  border-radius: 10px;
 }
 .dicekingdom .championbox-name-row {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 6px;
 }
-/* No more ".championbox-name-row svg { color: var(--cc) }" here - it
-   would win over .energy-badge's own inherited cream color (a plain
-   descendant selector beats inheritance regardless of specificity),
-   turning the badge's white icon back to the accent hue. The circle's
-   fill is the accent now; the icon stays cream on top of it. */
+.dicekingdom .championbox-role {
+  font: 700 9.5px var(--sans);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+}
+/* Baseline-align the badge with the text beside it, not centered on the
+   row - real bug, found 2026-09-08: .energy-badge is a circle sized off
+   its own `size` prop, so with `align-items: baseline` (needed for the
+   role/name pair above) it drifted noticeably off the name's cap-height
+   until pinned. */
+.dicekingdom .championbox-name-row .energy-badge {
+  align-self: center;
+}
 .dicekingdom .championbox-name {
-  font: 400 21px/1 var(--display);
+  font: 400 15px/1 var(--display);
   text-transform: uppercase;
   letter-spacing: 0.01em;
   color: var(--cc, var(--text-h));
 }
 .dicekingdom .championbox-note {
-  font-size: 10.5px;
+  font-size: 10px;
   color: var(--text);
-  margin: 3px 0 0;
-  line-height: 1.35;
+  margin: 1px 0 0;
+  line-height: 1.3;
+}
+.dicekingdom .championbox-life {
+  flex: none;
+  font: 400 22px/1 var(--display);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-h);
 }
 
 .dicekingdom .zone {
@@ -752,6 +736,23 @@
    that was more compact than the original layout but still nowhere
    near "one line." Left column's bottom cell stays "." (empty) since
    nothing moved back into it. */
+/* The opponent's mat when it isn't their turn - direct feedback
+   (2026-09-08): "the main thing I would want to know about my
+   opponent's mat on my turn... is if they have any energy in their
+   Reserve Pool... the opponent's mat could probably be compressed to be
+   much shorter, probably only tall enough for one row of dice most of
+   the time." Just Field Zone (full detail - what you're attacking or
+   could be blocked by) and a one-row Reserve Pool; Used Pile/Out of
+   Play/Prep Area/the Bag tray drop out entirely rather than being
+   shrunk further - none of them inform a decision on your own turn. A
+   plain flex column, not the full grid `.mat` needs for its extra
+   zones. */
+.dicekingdom .mat-collapsed {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
 .dicekingdom .mat {
   display: grid;
   grid-template-columns: 196px minmax(0, 1fr) 196px;
@@ -897,6 +898,12 @@
      this pass, which is part of why Prep Area (right beside it) read as
      shorter than it should. */
   min-height: 82px;
+}
+/* Used by the collapsed opponent mat (see .mat-collapsed below) - no
+   reason to reserve room for a second row of dice there, unlike the
+   full board's own Reserve Pool. */
+.dicekingdom .zone.zone-reserve.compact {
+  min-height: 0;
 }
 .dicekingdom .zone.zone-used {
   background: color-mix(in oklab, oklch(0.55 0.02 260) 14%, var(--panel-bg));
