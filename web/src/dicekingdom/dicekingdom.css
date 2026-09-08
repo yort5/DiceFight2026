@@ -182,6 +182,37 @@
      stayed a 200px/minmax(0,1fr)/300px grid, and on a narrow phone the
      middle column got squeezed to 0px, leaving `.step-ribbon` with
      zero width to wrap its chips inside. */
+  /* Turn controls become a fixed bottom bar on mobile, not another
+     block in the stacked flow - direct feedback: "I have to click Roll
+     then scroll up to see what happened, then scroll down to do the
+     next action." With opponent board/lane/your board/champion boxes
+     all stacked into one long page, `.dk-rail-mid`'s NATURAL position
+     could be several screens down - `position: sticky` wouldn't help
+     here, since sticky only engages once the page is scrolled to an
+     element's own resting position, which does nothing for someone
+     reading the board further up. `position: fixed` instead pins it to
+     the viewport itself regardless of scroll position, reachable from
+     anywhere. Internal scroll + a max-height cap the rare tall state
+     (a pending-choice chip list, block-assignment instructions)
+     instead of letting it eat the whole screen. */
+  .dicekingdom .dk-rail-mid {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    margin: 0;
+    max-height: 42vh;
+    overflow-y: auto;
+    padding: 8px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+    background: var(--dk-page-b);
+    box-shadow: 0 -10px 24px -8px rgba(0, 0, 0, 0.45);
+  }
+  /* Room at the bottom of the page so the fixed bar above never
+     permanently covers the sideboard's last panel. */
+  .dicekingdom {
+    padding-bottom: 220px;
+  }
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .dicekingdom {
@@ -825,7 +856,7 @@
   flex-direction: column;
   justify-content: center;
   box-sizing: border-box;
-  padding: 8px 12px;
+  padding: 6px 10px;
   border-radius: 12px;
   border: 1px solid oklch(0.5 0.07 25 / 0.35);
   background: linear-gradient(
@@ -835,12 +866,18 @@
     oklch(0.3 0.06 60 / 0.08) 53%,
     oklch(0.32 0.07 60 / 0.16) 100%
   );
-  margin: 4px 0 18px;
+  margin: 4px 0 10px;
   overflow-x: auto;
 }
+/* Row height dropped from a flat 84px min (2026-09-08) - direct
+   feedback: "Attack zone can probably be much smaller." That figure
+   was sized for the old full-height DieTile card (166px, then still
+   94px after an earlier pass); today's tile is a ~40px auto-width die,
+   so an empty "NO BLOCKER" slot was carrying nearly twice the height
+   its own content needs. */
 .dicekingdom .lane-grid {
   display: grid;
-  grid-template-rows: minmax(84px, auto) 34px minmax(84px, auto);
+  grid-template-rows: minmax(50px, auto) 26px minmax(50px, auto);
   gap: 4px 8px;
   min-width: 100%;
 }
@@ -1076,7 +1113,7 @@
 .dicekingdom .dierow {
   display: flex;
   flex-wrap: wrap;
-  gap: 9px;
+  gap: 6px;
   min-height: 6px;
 }
 /* Roster strip - README's Column 2 "portrait" roster cards. Always

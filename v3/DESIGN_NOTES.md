@@ -2261,3 +2261,50 @@ Verified live at 375×667 (iPhone SE's real CSS viewport, not just
 computed `grid-template-columns` reads `88px 139px 88px` - narrower,
 same 3-column shape, not a single-column stack. Zero console errors.
 `tsc -b`/`oxlint`/`vite build` clean.
+
+## Mobile round 2: a fixed bottom action bar, and shrinking the empty Attack Zone (2026-09-08)
+
+Confirmed CI/CD deploys automatically on push to `main` (corrects an
+earlier assistant assumption this same round - the trigger lives
+outside the repo, not as a `.github/workflows` file, so its absence
+here isn't evidence there's no pipeline; saved to memory so this
+doesn't get asserted wrong again). Two more pieces of direct feedback
+from the live mobile check:
+
+1. **The three page sections (sideboard, board, rail) stacking meant
+   the turn controls sat far below the board itself.** "I have to click
+   Roll then scroll up to see what happened, then scroll down to do the
+   next action." The existing mobile order was opp/lane/you/railtop/
+   railmid(turn controls)/railbottom/side - with a full board (both
+   players' mats plus the combat lane) all stacked above it, `.dk-rail-
+   mid`'s natural position could be several screens down. `position:
+   sticky` wouldn't fix this - sticky only starts holding an element in
+   place once the page has scrolled TO roughly its own natural resting
+   position, which does nothing for someone reading content further up
+   the page (e.g. still on the opponent's board, screens above where
+   the controls naturally sit). Used `position: fixed` instead - pinned
+   to the viewport's own bottom edge unconditionally, reachable from
+   anywhere in the scroll - with `max-height: 42vh` + internal scroll
+   for the rare tall state (a pending-choice chip list, block-
+   assignment instructions) so it can never eat the whole screen, and
+   220px of extra bottom padding added to the page so the fixed bar
+   never permanently covers the sideboard's last panel.
+2. **The Attack Zone's empty slots were much taller than their own
+   content.** "Attack zone can probably be much smaller." `.lane-grid`'s
+   two rows had a flat `minmax(84px, auto)` - a figure inherited from
+   when a DieTile was a 166px (then 94px) card; today's tile is a
+   ~40px auto-width die, so an empty "NO BLOCKER" slot was carrying
+   nearly twice the height its own label needs. Dropped to `minmax(50px,
+   auto)` (and the seam's middle row 34px → 26px to match), plus
+   tightened `.combat-lane`'s own padding/margin. Also acted on the
+   more general "there might be more space than necessary between
+   [dice]" - `.dierow`'s gap dropped from 9px to 6px, sized for the old
+   bigger tiles, now more than these ~40px auto-width ones need.
+
+Verified live at 375×667: `.dk-rail-mid` computes `position: fixed;
+bottom: 0px` regardless of scroll position - screenshotted at the very
+top of the page (before any scrolling) and again after scrolling to
+the opponent's board, both show the Now panel/action button still
+pinned at the bottom without needing to scroll to it. The Attack Zone's
+"NO BLOCKER" placeholders read visibly tighter. Zero console errors.
+`tsc -b`/`oxlint`/`vite build` clean.
