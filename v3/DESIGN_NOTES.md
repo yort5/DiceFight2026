@@ -2308,3 +2308,83 @@ the opponent's board, both show the Now panel/action button still
 pinned at the bottom without needing to scroll to it. The Attack Zone's
 "NO BLOCKER" placeholders read visibly tighter. Zero console errors.
 `tsc -b`/`oxlint`/`vite build` clean.
+
+## Mobile round 3: one-line turn controls, collapsed Attack Zone/opponent roster, icon titlebar (2026-09-08)
+
+Four more compression requests, all landing together:
+
+1. **Turn controls collapsed to one line.** Direct feedback: "move the
+   reminder text of what the turn is to an info icon... combine the
+   turn name and the button on the same line, so that the whole turn
+   control box is one thin line." The old `.now-header` (eyebrow+title,
+   then a full guidance sentence on its own line, THEN a separate
+   action-row block below) is gone. `STEP_GUIDANCE[step].text` moved
+   behind a new `NowInfoButton` - a small icon that opens a popover with
+   the reminder text, instead of always printing it. The whole render
+   chain for "what does this step need from the player" was pulled out
+   of JSX into a plain `stepContent`/`stepContentIsPanel` pair of values
+   computed once, so it can be placed either inline next to the title
+   (`.now-bar`, the common case: a button or two, or a short "waiting
+   on..." note) or on its own line below (only for a REAL situational
+   panel - a pending-choice picker, the Assign Blockers paragraph -
+   which isn't the generic per-step reminder NowInfoButton now hides,
+   and genuinely can't fit on one line). Verified the common case
+   (Roll & Reroll, Main, even "Attack · Declare Attackers") all render
+   as one row; the panel cases still show their real instructions below
+   the one-line title bar.
+2. **The opponent's roster collapses to icon-only.** "For now, I would
+   make the whole thing one section, and tapping anywhere in there
+   would expand to show the full details of all eight cards." Your own
+   roster (what you're actually shopping from) is untouched;
+   `renderBoard` now branches on `playerId !== you` to render a single
+   full-width `.roster-collapse-toggle` button (icons only) in place of
+   the detailed grid, toggled by one new `oppRosterOpen` state (not
+   per-board - only the opponent's side ever needs it).
+3. **"Dark mode"/"How to play" became icon buttons sharing the ribbon's
+   row.** Two new small glyphs in `icons.tsx` - `HelpIcon` (a plain "?"
+   circle) and `SettingsIcon` (a sliders glyph, not a literal gear - "a
+   hand-drawn gear tooth shape is fussy at this size... reads as
+   'settings' just as clearly"). `ThemeToggle.tsx` gained `SettingsMenu`
+   (icon + popover holding the existing light/dark toggle); the old
+   `<details className="how">` became `HowToPlayMenu`, same pattern.
+   `.dk-titlebar`/`.step-ribbon`/`.dk-titlebar-right` all go `display:
+   contents` on mobile so the ribbon chips and the two icon buttons
+   become direct flex items of one shared row, wrapping together
+   instead of each claiming its own full-width block. Real bug found
+   measuring rather than guessing: the icon buttons' own popover was
+   still anchored (`right: 0`) to their own tiny 26px wrap, which could
+   land anywhere along the wrapped row - a 220px popover anchored to a
+   button near the LEFT of the row ran off the left edge of the
+   viewport. Fixed by making `.dk-titlebar` itself (a wide, stable box)
+   the positioned ancestor instead, scoped narrowly (`.dk-titlebar
+   .icon-menu-wrap { position: static }`) so NowInfoButton's own,
+   differently-anchored popover elsewhere on the page is untouched.
+4. **The Attack Zone collapses outside the three combat steps.** "Attack
+   zone can also probably be collapsed until we get to those stages."
+   Reverses an earlier decision (`renderAttackZone`'s own comment used
+   to argue for "always visible, reads as a permanent part of the
+   table") in favor of compression - collapses to a single-line
+   `.combat-lane-collapsed` bar unless the current step is one of
+   `select-attackers`/`assign-blockers`/`action-global-window`, OR a
+   real attacker is still sitting in the zone (never hides actual game
+   state, only the three-empty-placeholder-column view nobody's using
+   yet).
+
+Also fixed along the way: `.dk-rail-mid`'s `overflow-y: auto` (added
+last round to cap a rare tall panel) would have clipped NowInfoButton's
+popover, which has to open UPWARD out of that same fixed bar on mobile
+(downward would run off the bottom of the screen). Moved the
+scroll/max-height onto a new `.now-panel-scroll` wrapper around ONLY
+the panel-case content, leaving `.dk-rail-mid` itself unclipped.
+
+Verified live at 375×667: the titlebar renders as ribbon-chips-then-
+icons all wrapping together; the opponent's roster toggle expands to
+the full 8-card grid on tap; Roll & Reroll's title+button and even the
+longer "Attack · Declare Attackers" + "Confirm Attackers (0)" both
+render as one row; the Attack Zone shows a collapsed one-line bar
+during Clear & Draw/Roll & Reroll/Main and the real lane once Attack is
+reached; NowInfoButton's and the titlebar icons' popovers both measured
+fully inside the 375px viewport (a real off-screen bug in the titlebar
+case, caught by measuring bounding boxes rather than trusting the
+screenshot). Zero console errors throughout. `tsc -b`/`oxlint`/`vite
+build` clean.

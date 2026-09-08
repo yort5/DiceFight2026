@@ -100,6 +100,39 @@ export const ENERGY_ICONS: Record<string, (p: IconProps) => ReactElement> = {
   Wild: WildIcon,
 };
 
+// ---- Small UI glyphs (How to Play / Settings) - plain chrome, not game
+// content, so these stay simple rather than earning a full hand-drawn
+// treatment like the energy/animal icons above. ----
+export function HelpIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <circle cx={32} cy={32} r={28} fill="none" stroke="currentColor" strokeWidth={5} />
+      <text x={32} y={44} fontSize={32} fontWeight={700} textAnchor="middle" fill="currentColor">
+        ?
+      </text>
+    </Svg>
+  );
+}
+
+// A "sliders" glyph, not a literal gear - direct feedback asked for "a
+// gear for settings," but a hand-drawn gear tooth shape is fussy at
+// this size; this reads as "settings" just as clearly and is far
+// simpler to keep crisp small.
+export function SettingsIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <g stroke="currentColor" strokeWidth={5} strokeLinecap="round">
+        <line x1={10} y1={18} x2={54} y2={18} />
+        <line x1={10} y1={32} x2={54} y2={32} />
+        <line x1={10} y1={46} x2={54} y2={46} />
+      </g>
+      <circle cx={22} cy={18} r={5.5} fill="currentColor" />
+      <circle cx={42} cy={32} r={5.5} fill="currentColor" />
+      <circle cx={26} cy={46} r={5.5} fill="currentColor" />
+    </Svg>
+  );
+}
+
 // "Variant A" from the corner-badge mockup (2026-09-08, compared
 // alongside a neutral-circle/colored-symbol alternative): the energy
 // type's own color as a circle's FILL, its icon in white/cream on top -

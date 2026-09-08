@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import "./dicekingdom.css";
 import { api } from "./api";
-import { CHAMPION_ICONS, CHARACTER_ICONS, EnergyBadge, TardigradeIcon, TardigradePhotoIcon } from "./icons";
+import { CHAMPION_ICONS, CHARACTER_ICONS, EnergyBadge, HelpIcon, TardigradeIcon, TardigradePhotoIcon } from "./icons";
 import { claimSeatFromUrl, inviteLink, nameClaimedSeat, rememberSeats } from "./seats";
 import { CombatLane } from "./CombatLane";
 import { DieCube, type CubeSpin } from "./DieCube";
 import { facesFor } from "./dieFaces";
 import { StepRibbon } from "./StepRibbon";
 import { MatchLog } from "./MatchLog";
-import { ThemeToggle, useTheme } from "./ThemeToggle";
+import { SettingsMenu, ThemeToggle, useTheme } from "./ThemeToggle";
 import { useDiceRoll, type RollTarget } from "./useDiceRoll";
 import type { BlockAssignment, CardDef, CharacterFace, Die, GameState, PlayerState } from "./types";
 
@@ -77,6 +77,7 @@ const STEP_GUIDANCE: Record<string, { title: string; text: string }> = {
   "action-global-window": { title: "Attack · Resolve Combat", text: "Last window before combat damage lands." },
   "return-to-field": { title: "Clean Up", text: "Damage clears and it becomes the other player's turn." },
 };
+const ATTACK_STEPS = new Set(["select-attackers", "assign-blockers", "action-global-window"]);
 
 interface DieGroup {
   key: string;
@@ -389,6 +390,67 @@ function DieTile({
   );
 }
 
+// The live board's compact stand-in for the old <details className="how">
+// text toggle - same content, an icon+popover instead so it can share the
+// ribbon's row (see SettingsMenu in ThemeToggle.tsx, the same pattern,
+// same reason).
+function HowToPlayMenu() {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    function handlePointerDown(e: PointerEvent) {
+      if (!(e.target instanceof Node) || !wrapRef.current?.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [open]);
+  return (
+    <div ref={wrapRef} className="icon-menu-wrap">
+      <button type="button" className="icon-btn" aria-label="How to play" onClick={() => setOpen((o) => !o)}>
+        <HelpIcon size={16} />
+      </button>
+      {open && (
+        <div className="icon-menu-popover">
+          <ul>
+            <li>Draw, then Roll - each die may be rerolled once, together with any others you select, before Continue.</li>
+            <li>Field a rolled creature (Tardigrades are free; your Character costs energy, any type) or Purchase another copy of your Character (matching type or Wild only).</li>
+            <li>Proceed to Attack, pick attackers; the other seat assigns blockers, then Resolve Combat.</li>
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// The rail's per-step reminder text ("Roll everything drawn...") used to
+// sit under the step title as its own line - direct feedback (2026-09-08):
+// "move the reminder text of what the turn is to an info icon that can be
+// tapped." Opens UPWARD (unlike Help/Settings above, which open down) -
+// this control bar is a fixed strip pinned to the viewport's bottom edge
+// on mobile (see .dk-rail-mid's own CSS), so a downward popover would run
+// off the bottom of the screen.
+function NowInfoButton({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    function handlePointerDown(e: PointerEvent) {
+      if (!(e.target instanceof Node) || !wrapRef.current?.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [open]);
+  return (
+    <div ref={wrapRef} className="icon-menu-wrap">
+      <button type="button" className="icon-btn" aria-label="What this step means" onClick={() => setOpen((o) => !o)}>
+        <HelpIcon size={13} />
+      </button>
+      {open && <div className="icon-menu-popover up">{text}</div>}
+    </div>
+  );
+}
+
 export function DiceKingdomPage() {
   // Applied unconditionally, before either screen below renders - a
   // stored preference has to re-apply on the pre-game setup screen too,
@@ -419,6 +481,13 @@ export function DiceKingdomPage() {
   const { spins, offsets, rolling, launch: launchRoll, spinTo: spinDie } = useDiceRoll();
   const [bagOpen, setBagOpen] = useState(false);
   const [oppBagOpen, setOppBagOpen] = useState(false);
+  // The opponent's roster collapses to icon-only until tapped - direct
+  // feedback (2026-09-08): "for now, I would make the whole thing one
+  // section, and tapping anywhere in there would expand to show the
+  // full details of all eight cards." Only the opponent's needs this;
+  // your own roster is the thing you're actually shopping from every
+  // turn, so it stays expanded (see renderBoard's own remarks).
+  const [oppRosterOpen, setOppRosterOpen] = useState(false);
   // Which roster card's detail popover (ability + per-level stats) is
   // open, if any - a single page-level id rather than per-board state,
   // since only one should reasonably be open at a time regardless of
@@ -908,16 +977,17 @@ export function DiceKingdomPage() {
       </div>
     );
 
-    // Always visible (README's Column 2 roster strip - a player checks
-    // "what's left to buy" constantly, so this isn't hidden behind a
-    // <details> the way the compact-chip version had it). Portrait cards
-    // per README's chosen variant, one per Character (Dice Kingdom's
-    // roster is a Champion + 2 Characters, not Dice Masters' 8, so this
-    // reads as a short strip rather than the reference's full row).
-    const roster = (
-      <div className="roster">
-        <div className="roster-head">Roster</div>
-        <div className="roster-row">
+    // Always visible for your own board (README's Column 2 roster strip -
+    // a player checks "what's left to buy" constantly, so this isn't
+    // hidden behind a <details> the way the compact-chip version had
+    // it). Portrait cards per README's chosen variant, one per Character
+    // (Dice Kingdom's roster is a Champion + 2 Characters, not Dice
+    // Masters' 8, so this reads as a short strip rather than the
+    // reference's full row). The opponent's own board collapses this
+    // row behind a tap instead - see the `isOpponentBoard` branch below.
+    const isOpponentBoard = playerId !== you;
+    const rosterRow = (
+      <div className="roster-row">
           {unpurchasedByCard.size === 0 && <span style={{ opacity: 0.5, fontSize: 12 }}>nothing left to buy</span>}
           {[...unpurchasedByCard.entries()].map(([cardId, dice]) => {
             const card = cardsById.get(cardId);
@@ -1004,7 +1074,29 @@ export function DiceKingdomPage() {
               </div>
             );
           })}
-        </div>
+      </div>
+    );
+    const roster = isOpponentBoard ? (
+      <div className="roster">
+        <button
+          type="button"
+          className={`roster-collapse-toggle${oppRosterOpen ? " open" : ""}`}
+          onClick={() => setOppRosterOpen((o) => !o)}
+        >
+          <span className="roster-head">Roster</span>
+          <span className="roster-collapse-icons">
+            {[...unpurchasedByCard.keys()].map((cardId) => {
+              const Avatar = CHARACTER_ICONS[cardId];
+              return Avatar ? <Avatar key={cardId} size={16} /> : <TardigradeIcon key={cardId} size={16} />;
+            })}
+          </span>
+        </button>
+        {oppRosterOpen && rosterRow}
+      </div>
+    ) : (
+      <div className="roster">
+        <div className="roster-head">Roster</div>
+        {rosterRow}
       </div>
     );
 
@@ -1036,15 +1128,25 @@ export function DiceKingdomPage() {
   // Zone/CombatLane.tsx: attackers from BOTH players sit here at once
   // (that's the whole point of it facing across the table), each paired
   // against whatever's blocking it, with the same blue-to-orange divider
-  // seam ../CombatLane.tsx draws between the two halves. Always rendered,
-  // even with nothing declared - CombatLane itself draws three empty
-  // "no blocker"/"open slot" placeholder columns in that case, so the
-  // lane reads as a permanent part of the table instead of appearing and
-  // disappearing as the turn moves through combat.
+  // seam ../CombatLane.tsx draws between the two halves.
+  //
+  // Used to always render the full lane, even with nothing declared, so
+  // it read as "a permanent part of the table" rather than appearing/
+  // disappearing through the turn - direct feedback (2026-09-08)
+  // reversed that call in the name of compression: "Attack zone can
+  // also probably be collapsed until we get to those stages." Collapses
+  // to a single-line bar outside the three combat steps UNLESS there's
+  // still a real attacker sitting in the zone (a lingering post-combat
+  // die before Clean Up processes it) - never hides actual game state,
+  // only the empty three-placeholder-column view nobody's using yet.
   function renderAttackZone() {
     const assignments: BlockAssignment[] = Object.entries(blockAssignments)
       .filter((entry): entry is [string, string] => !!entry[1])
       .map(([attackerDieId, blockerDieId]) => ({ attackerDieId, blockerDieId }));
+    const hasAttackers = game!.dice.some((d) => d.zone === "AttackZone");
+    if (!ATTACK_STEPS.has(step) && !hasAttackers) {
+      return <div className="combat-lane-collapsed">Attack Zone</div>;
+    }
     return (
       <CombatLane
         dice={game!.dice}
@@ -1126,6 +1228,164 @@ export function DiceKingdomPage() {
     ? selection.secondary.reduce((sum, id) => sum + (game.dice.find((d) => d.id === id)?.energyAmount ?? 0), 0)
     : 0;
 
+  // Whatever the current step needs from the player - pulled out of the
+  // rail's JSX into a plain value (2026-09-08) so it can be placed EITHER
+  // inline next to the step title (the common case: one or two buttons,
+  // or a short "waiting on..." note - "combine the turn name and the
+  // button on the same line, so the whole turn control box is one thin
+  // line") OR on its own line below it (stepContentIsPanel: real,
+  // situational instructions - a pending-choice picker, or the Assign
+  // Blockers paragraph - that can't honestly fit on one line and aren't
+  // the generic per-step reminder text NowInfoButton now hides).
+  const stepContentIsPanel =
+    (!!game.pendingChoice && you === game.pendingChoice.controllerId) || (step === "assign-blockers" && !isYourTurn);
+  const stepContent =
+    game.pendingChoice && you === game.pendingChoice.controllerId ? (
+      <div className="panel">
+        <p>
+          <b>{game.pendingChoice.description}</b>
+        </p>
+        <PendingChoiceChips
+          candidateIds={game.pendingChoice.candidateIds}
+          max={game.pendingChoice.maxCount}
+          dice={game.dice}
+          cardsById={cardsById}
+          onSubmit={(ids) => run(() => api.resolvePendingChoice(game.gameId, ids))}
+        />
+      </div>
+    ) : game.pendingChoice ? (
+      <span className="now-bar-note">Waiting on the other player's choice…</span>
+    ) : step === "assign-blockers" && !isYourTurn ? (
+      <div className="panel">
+        <p>
+          <b>Assign blockers.</b> Click one of your Field Zone dice below, then
+          click the open slot across from the attacker you want it to block.
+          Click a filled slot again (nothing selected) to clear it. Anything
+          left unblocked hits you directly.
+        </p>
+        <button
+          className="btn"
+          disabled={busy}
+          onClick={() => {
+            const assignments = Object.entries(blockAssignments)
+              .filter(([, v]) => v)
+              .map(([attackerDieId, blockerDieId]) => ({ attackerDieId, blockerDieId: blockerDieId! }));
+            run(() => api.declareBlockers(game.gameId, assignments));
+          }}
+        >
+          Confirm Blocks
+        </button>
+      </div>
+    ) : step === "assign-blockers" && isYourTurn ? (
+      <span className="now-bar-note">Waiting on the other player to assign blockers…</span>
+    ) : step === "action-global-window" && isYourTurn ? (
+      <button
+        className="btn"
+        disabled={busy}
+        onClick={() =>
+          run(() =>
+            api.assignCombatDamage(
+              game.gameId,
+              Object.entries(blockAssignments)
+                .filter(([, b]) => b)
+                .map(([attackerDieId, blockerDieId]) => ({ attackerDieId, blockerDieId: blockerDieId! })),
+            ),
+          )
+        }
+      >
+        Resolve Combat
+      </button>
+    ) : !isYourTurn ? (
+      <span className="now-bar-note">Waiting on the other player…</span>
+    ) : (
+      <div className="actionrow">
+        {step === "start-of-turn" && (
+          <button className="btn" disabled={busy} onClick={() => run(() => api.clearAndDraw(game.gameId))}>
+            Draw
+          </button>
+        )}
+
+        {step === "roll-and-reroll" && !diceFor(you).some((d) => (d.zone === "PrepArea" || d.zone === "ReservePool") && rolled(d)) && (
+          <button className="btn" disabled={busy} onClick={() => run(() => api.roll(game.gameId))}>
+            Roll
+          </button>
+        )}
+        {step === "roll-and-reroll" && diceFor(you).some((d) => (d.zone === "PrepArea" || d.zone === "ReservePool") && rolled(d)) && (
+          <>
+            {action && (
+              <button className="btn" disabled={busy} onClick={() => run(action.run, action.rolledIds)}>
+                {action.label}
+              </button>
+            )}
+            {/* Shortened from "Continue to Main Phase" (2026-09-10) so it
+                fits beside the Reroll button on one line - the step title
+                right next to this already says "Roll & Reroll," so
+                "Continue" alone still reads as "move on from this step." */}
+            <button className="btn ghost" disabled={busy} onClick={() => run(() => api.finishRoll(game.gameId))}>
+              Continue
+            </button>
+          </>
+        )}
+
+        {step === "main" && (
+          <>
+            {primaryDie && action && cost && (
+              <span style={{ alignSelf: "center", fontSize: 13 }}>
+                {action.label} {cost.amount > 0 ? `— cost ${cost.amount}${cost.matchType ? ` ${cost.matchType}` : ""} (${spent}/${cost.amount} selected)` : "— free"}
+              </span>
+            )}
+            {action && (
+              <button className="btn" disabled={busy || (cost !== null && spent < cost.amount)} onClick={() => run(action.run, action.rolledIds)}>
+                {action.label}
+              </button>
+            )}
+            {primaryDie && (
+              <button className="btn ghost" disabled={busy} onClick={clearSelection}>
+                Cancel
+              </button>
+            )}
+            {!primaryDie && (
+              <button className="btn" disabled={busy} onClick={() => run(() => api.enterAttackStep(game.gameId))}>
+                Attack
+              </button>
+            )}
+            {/* Ported from ../App.tsx's identical "Clean Up (skip attack)
+                ▶" - dropped during the redesign, direct feedback
+                (2026-09-05) asked for it back. The server
+                (TurnEngine.SkipAttackStep) still rejects this with a real
+                error if a forced attacker is outstanding; no client-side
+                gating needed beyond the step check. Shortened from
+                "Proceed to Attack"/"Skip Attack Step" (2026-09-10) so this
+                pair fits on one line, same reason as Roll & Reroll's
+                Reroll/Continue pair. */}
+            {!primaryDie && (
+              <button className="btn ghost" disabled={busy} onClick={() => run(() => api.skipAttackStep(game.gameId))}>
+                Skip Attack
+              </button>
+            )}
+          </>
+        )}
+
+        {step === "select-attackers" && (
+          <button
+            className="btn"
+            disabled={busy}
+            onClick={() =>
+              run(() => api.declareAttackers(game.gameId, primaryDie ? [primaryDie.id, ...selection.secondary] : []))
+            }
+          >
+            Confirm Attackers ({primaryDie ? 1 + selection.secondary.length : 0})
+          </button>
+        )}
+
+        {step === "return-to-field" && (
+          <button className="btn" disabled={busy} onClick={() => run(() => api.cleanUp(game.gameId))}>
+            End Turn
+          </button>
+        )}
+      </div>
+    );
+
   return (
     <div className="dicekingdom">
       {/* EnergyBadge's outline (2026-09-09, replacing a 4-direction
@@ -1157,19 +1417,15 @@ export function DiceKingdomPage() {
           pre-game screen or behind a small toggle, never as a persistent
           block. Direct feedback: the old title+description+How-to-play+
           topbar stack here was costing real vertical space /game never
-          spends once a match starts. */}
+          spends once a match starts. Text buttons ("Dark mode"/"How to
+          play") swapped for icon+popover ones (2026-09-08 direct
+          feedback) so they can share the ribbon's row instead of
+          claiming their own. */}
       <div className="dk-titlebar">
         <StepRibbon game={game} />
         <div className="dk-titlebar-right">
-          <ThemeToggle theme={theme} setTheme={setTheme} />
-          <details className="how">
-            <summary>How to play</summary>
-            <ul>
-              <li>Draw, then Roll - each die may be rerolled once, together with any others you select, before Continue.</li>
-              <li>Field a rolled creature (Tardigrades are free; your Character costs energy, any type) or Purchase another copy of your Character (matching type or Wild only).</li>
-              <li>Proceed to Attack, pick attackers; the other seat assigns blockers, then Resolve Combat.</li>
-            </ul>
-          </details>
+          <HowToPlayMenu />
+          <SettingsMenu theme={theme} setTheme={setTheme} />
         </div>
       </div>
 
@@ -1218,177 +1474,25 @@ export function DiceKingdomPage() {
 
         <div className="dk-rail-mid">
           <div className="controlcenter">
-          {/* Ported from ../TurnRail.tsx's Now panel - a step title and
-              one-line description, not just a bare button. Shown
-              regardless of which contextual panel renders below it
-              (pending choice, block assignment, or the plain action
-              buttons), same as v1's Now panel sitting above whichever
-              of ActionTray/DeclareBlockersPanel/etc. is active. Eyebrow
-              and title share one line now (2026-09-10) - direct
-              feedback, part of the same pass that dropped the "Selected
-              die" panel below: this rail used to grow every time a die
-              was picked, shifting the buttons underneath it down, which
-              read as jarring rather than informative. */}
-          {STEP_GUIDANCE[step] && (
-            <div className="now-header">
-              <h3 className="now-title">
-                <span className="now-eyebrow">Now</span> {STEP_GUIDANCE[step].title}
-              </h3>
-              <p className="now-guidance">{STEP_GUIDANCE[step].text}</p>
+            {/* Title + info icon + (usually) the action button(s), all on
+                one line - direct feedback (2026-09-08): "combine the turn
+                name and the button on the same line, so that the whole
+                turn control box is one thin line." The per-step reminder
+                text lives behind NowInfoButton now instead of printed
+                underneath (same feedback). A genuine situational panel
+                (a pending-choice picker, the Assign Blockers paragraph -
+                stepContentIsPanel, computed above) still needs its own
+                line below; everything else - the common case - fits here. */}
+            <div className="now-bar">
+              {STEP_GUIDANCE[step] && (
+                <>
+                  <NowInfoButton text={STEP_GUIDANCE[step].text} />
+                  <span className="now-bar-title">{STEP_GUIDANCE[step].title}</span>
+                </>
+              )}
+              {!stepContentIsPanel && <div className="now-bar-actions">{stepContent}</div>}
             </div>
-          )}
-          {game.pendingChoice && you === game.pendingChoice.controllerId ? (
-          <div className="panel">
-            <p>
-              <b>{game.pendingChoice.description}</b>
-            </p>
-            <PendingChoiceChips
-              candidateIds={game.pendingChoice.candidateIds}
-              max={game.pendingChoice.maxCount}
-              dice={game.dice}
-              cardsById={cardsById}
-              onSubmit={(ids) => run(() => api.resolvePendingChoice(game.gameId, ids))}
-            />
-          </div>
-        ) : game.pendingChoice ? (
-          <p className="dek">Waiting on the other player's choice…</p>
-        ) : step === "assign-blockers" && !isYourTurn ? (
-          <div className="panel">
-            <p>
-              <b>Assign blockers.</b> Click one of your Field Zone dice below, then
-              click the open slot across from the attacker you want it to block.
-              Click a filled slot again (nothing selected) to clear it. Anything
-              left unblocked hits you directly.
-            </p>
-            <button
-              className="btn"
-              disabled={busy}
-              onClick={() => {
-                const assignments = Object.entries(blockAssignments)
-                  .filter(([, v]) => v)
-                  .map(([attackerDieId, blockerDieId]) => ({ attackerDieId, blockerDieId: blockerDieId! }));
-                run(() => api.declareBlockers(game.gameId, assignments));
-              }}
-            >
-              Confirm Blocks
-            </button>
-          </div>
-        ) : step === "assign-blockers" && isYourTurn ? (
-          <p className="dek">Waiting on the other player to assign blockers…</p>
-        ) : step === "action-global-window" && isYourTurn ? (
-          <div className="panel">
-            <button
-              className="btn"
-              disabled={busy}
-              onClick={() =>
-                run(() =>
-                  api.assignCombatDamage(
-                    game.gameId,
-                    Object.entries(blockAssignments)
-                      .filter(([, b]) => b)
-                      .map(([attackerDieId, blockerDieId]) => ({ attackerDieId, blockerDieId: blockerDieId! })),
-                  ),
-                )
-              }
-            >
-              Resolve Combat
-            </button>
-          </div>
-        ) : !isYourTurn ? (
-          <p className="dek">Waiting on the other player…</p>
-        ) : (
-          <div className="actionrow" style={{ margin: "10px 0", flexDirection: "column", alignItems: "flex-start" }}>
-            {step === "start-of-turn" && (
-              <button className="btn" disabled={busy} onClick={() => run(() => api.clearAndDraw(game.gameId))}>
-                Draw
-              </button>
-            )}
-
-            {step === "roll-and-reroll" && !diceFor(you).some((d) => (d.zone === "PrepArea" || d.zone === "ReservePool") && rolled(d)) && (
-              <button className="btn" disabled={busy} onClick={() => run(() => api.roll(game.gameId))}>
-                Roll
-              </button>
-            )}
-            {step === "roll-and-reroll" && diceFor(you).some((d) => (d.zone === "PrepArea" || d.zone === "ReservePool") && rolled(d)) && (
-              <div className="actionrow">
-                {action && (
-                  <button className="btn" disabled={busy} onClick={() => run(action.run, action.rolledIds)}>
-                    {action.label}
-                  </button>
-                )}
-                {/* Shortened from "Continue to Main Phase" (2026-09-10) so
-                    it fits beside the Reroll button on one line in the
-                    rail's 300px column - the Now header above already
-                    says "Roll & Reroll," so "Continue" alone still reads
-                    as "move on from this step." */}
-                <button className="btn ghost" disabled={busy} onClick={() => run(() => api.finishRoll(game.gameId))}>
-                  Continue
-                </button>
-              </div>
-            )}
-
-            {step === "main" && (
-              <div className="actionrow">
-                {primaryDie && action && cost && (
-                  <span style={{ alignSelf: "center", fontSize: 13 }}>
-                    {action.label} {cost.amount > 0 ? `— cost ${cost.amount}${cost.matchType ? ` ${cost.matchType}` : ""} (${spent}/${cost.amount} selected)` : "— free"}
-                  </span>
-                )}
-                {action && (
-                  <button className="btn" disabled={busy || (cost !== null && spent < cost.amount)} onClick={() => run(action.run, action.rolledIds)}>
-                    {action.label}
-                  </button>
-                )}
-                {primaryDie && (
-                  <button className="btn ghost" disabled={busy} onClick={clearSelection}>
-                    Cancel
-                  </button>
-                )}
-                {!primaryDie && (
-                  <button className="btn" disabled={busy} onClick={() => run(() => api.enterAttackStep(game.gameId))}>
-                    Attack
-                  </button>
-                )}
-                {/* Ported from ../App.tsx's identical "Clean Up (skip
-                    attack) ▶" - dropped during the redesign, direct
-                    feedback (2026-09-05) asked for it back. The server
-                    (TurnEngine.SkipAttackStep) still rejects this with a
-                    real error if a forced attacker is outstanding; no
-                    client-side gating needed beyond the step check.
-                    Shortened from "Proceed to Attack"/"Skip Attack Step"
-                    (2026-09-10) so this pair fits on one line, same
-                    reason as Roll & Reroll's Reroll/Continue pair. */}
-                {!primaryDie && (
-                  <button
-                    className="btn ghost"
-                    disabled={busy}
-                    onClick={() => run(() => api.skipAttackStep(game.gameId))}
-                  >
-                    Skip Attack
-                  </button>
-                )}
-              </div>
-            )}
-
-            {step === "select-attackers" && (
-              <button
-                className="btn"
-                disabled={busy}
-                onClick={() =>
-                  run(() => api.declareAttackers(game.gameId, primaryDie ? [primaryDie.id, ...selection.secondary] : []))
-                }
-              >
-                Confirm Attackers ({primaryDie ? 1 + selection.secondary.length : 0})
-              </button>
-            )}
-
-            {step === "return-to-field" && (
-              <button className="btn" disabled={busy} onClick={() => run(() => api.cleanUp(game.gameId))}>
-                End Turn
-              </button>
-            )}
-          </div>
-        )}
+            {stepContentIsPanel && <div className="now-panel-scroll">{stepContent}</div>}
           </div>
         </div>
 
