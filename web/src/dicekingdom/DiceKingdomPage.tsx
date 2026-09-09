@@ -184,7 +184,7 @@ function Scoreboard({ opponent, mine }: { opponent: PlayerState; mine: PlayerSta
   return (
     <div className="scoreboard">
       <div className="scoreboard-side" style={oppAccent ? ({ ["--cc" as string]: oppAccent } as const) : undefined}>
-        <span className="scoreboard-label">Opponent</span>
+        <span className="scoreboard-label">Opp</span>
         <span className="scoreboard-life">{opponent.life}</span>
       </div>
       <div className="scoreboard-side mine" style={mineAccent ? ({ ["--cc" as string]: mineAccent } as const) : undefined}>

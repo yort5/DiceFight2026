@@ -701,14 +701,20 @@
 /* A real fixed bar, not another panel in the rail's own flow - direct
    feedback (2026-09-08): "we'd always want the life totals to be
    visible somewhere, I don't want to have to scroll to see if I'm
-   winning or losing." Pinned to the TOP edge (the turn-controls bar
-   already owns the bottom - see .dk-rail-mid) on mobile, where the
-   page is one long stacked scroll; on desktop, life totals are already
-   on screen alongside the board without scrolling, so this only needs
-   to actually float on the narrow breakpoint (see the media query
-   below) - on wider layouts it just sits inline at the top of the
+   winning or losing." First tried as a fixed bar across the TOP edge;
+   corrected the next round: "vertical space will be at a premium. I'd
+   like to try it with that information in a thin column on the right
+   side" - a full-width top bar spent height, the one resource this
+   page is shortest on with everything already stacked into one long
+   scroll. A narrow vertical strip spends WIDTH instead, which this
+   page has more slack in - see the media query below, which turns
+   `.scoreboard` sideways into a right-edge column instead. On desktop,
+   life totals are already on screen alongside the board without
+   scrolling, so this only needs to actually float on the narrow
+   breakpoint - on wider layouts it just sits inline at the top of the
    page, same as the titlebar beside it. */
 .dicekingdom .scoreboard {
+  box-sizing: border-box;
   display: flex;
   gap: 8px;
   margin-bottom: 10px;
@@ -736,27 +742,53 @@
   font-variant-numeric: tabular-nums;
   color: var(--text-h);
 }
-/* Fixed to the top edge only on the narrow layout where the page is
-   one long stacked scroll (see .scoreboard's own comment above for
-   why) - placed here, after the base rule, not up with .dk-layout's
-   override near the top of the file; same cascade-order lesson as
-   .dk-titlebar's own fix. */
+/* Fixed to the right edge, full height, only on the narrow layout
+   where the page is one long stacked scroll (see .scoreboard's own
+   comment above for why a column, not a bar) - placed here, after the
+   base rule, not up with .dk-layout's override near the top of the
+   file; same cascade-order lesson as .dk-titlebar's own fix. */
 @media (max-width: 1100px) {
   .dicekingdom .scoreboard {
     position: fixed;
-    left: 0;
-    right: 0;
     top: 0;
-    z-index: 40;
+    right: 0;
+    bottom: 0;
+    left: auto;
+    z-index: 41;
+    width: 54px;
     margin: 0;
-    padding: calc(6px + env(safe-area-inset-top, 0px)) 16px 6px;
+    padding: 10px 4px calc(10px + env(safe-area-inset-bottom, 0px));
+    flex-direction: column;
+    justify-content: center;
+    gap: 20px;
     background: var(--dk-page-b);
-    box-shadow: 0 10px 24px -8px rgba(0, 0, 0, 0.45);
+    box-shadow: -10px 0 24px -8px rgba(0, 0, 0, 0.45);
   }
-  /* Room at the top of the page so the fixed bar above never overlaps
-     the ribbon - the mirror of .dk-rail-mid's own bottom-padding fix. */
+  .dicekingdom .scoreboard-side {
+    flex: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 8px 2px;
+    border-top: none;
+    border-left: 3px solid var(--cc, var(--border));
+  }
+  .dicekingdom .scoreboard-life {
+    font-size: 20px;
+  }
+  /* Room on the right of the page so the column above never overlaps
+     the board, and the fixed bottom bar stops before it instead of
+     running underneath (both fixed, `.dk-rail-mid`'s own z-index is
+     lower - without this it would be visually cut off at the same
+     corner instead of sitting flush beside the column). No more
+     `padding-top` here - that belonged to the earlier top-bar version
+     of this same fix, dropped now that nothing pins to the top edge. */
   .dicekingdom {
-    padding-top: 64px;
+    padding-right: 58px;
+  }
+  .dicekingdom .dk-rail-mid {
+    right: 54px;
   }
 }
 

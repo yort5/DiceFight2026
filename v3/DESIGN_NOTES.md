@@ -2496,3 +2496,36 @@ stacked lines (ROLE, then NAME+badge, then the ability note) with no
 life number in it; "Energy in your pool" is absent outside Main and
 present with the right total once there. Zero console errors. `tsc
 -b`/`oxlint`/`vite build` clean.
+
+## Scoreboard, round 3: from a top bar to a right-edge column (2026-09-09)
+
+Direct feedback on the fixed top bar from the previous round: "That
+could work... but vertical space will be at a premium. I'd like to try
+it with that information in a thin column on the right side." Right -
+a full-width top bar spends the one resource this page is shortest on
+(height, with everything already stacked into one long scroll);
+`.scoreboard` turns sideways instead on the narrow layout, same fixed
+technique, different edge: `position: fixed; top: 0; right: 0; bottom:
+0;`, 54px wide, both life totals stacked vertically instead of side by
+side. "Opponent" shortened to "Opp" in the JSX (matches "You"'s own
+length) - it doesn't fit a 54px column at any reasonable size.
+`.dk-rail-mid` (the bottom action bar) now stops at `right: 54px`
+instead of running the full width, so the two fixed elements sit flush
+in the corner instead of overlapping; `.dicekingdom` swapped its
+`padding-top` (needed for the old top-bar version) for a matching
+`padding-right`. Real bug caught before it shipped, by measuring
+rather than eyeballing: `.scoreboard`'s `width: 54px` didn't include
+its own padding (default `box-sizing: content-box`), so the rendered
+column was actually 62px wide while the page had only reserved 58px
+and the bottom bar only backed off 54px - an 8px sliver where the two
+fixed elements genuinely overlapped. Added `box-sizing: border-box`,
+confirmed via bounding boxes: column now spans exactly 321-375px,
+bottom bar exactly 0-321px, no gap and no overlap, and
+`document.documentElement.scrollWidth` stays at the true 375px (no
+horizontal scrollbar introduced).
+
+Verified live at 375×667: screenshotted at the top of the page and
+again after scrolling well past the roster/mat/attack-zone content -
+both life totals stay pinned to the right edge throughout, spending no
+vertical space at all. Zero console errors. `tsc -b`/`oxlint`/`vite
+build` clean.
