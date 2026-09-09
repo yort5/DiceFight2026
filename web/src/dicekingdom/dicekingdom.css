@@ -324,6 +324,13 @@
   gap: 16px;
   margin-bottom: 16px;
 }
+/* Direct feedback (2026-09-09): "let's put a vertical bar or some
+   visual distinction between 'Player 1' and 'Player 2'." Otherwise
+   two side-by-side grids can read as one continuous block, especially
+   once both show the same 4 champion options. */
+.dicekingdom .champ-pick-column:first-child {
+  border-right: 1px solid var(--border);
+}
 .dicekingdom .champ-pick {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -678,8 +685,17 @@
 .dicekingdom .scoreboard-tap:disabled {
   cursor: default;
 }
-.dicekingdom .scoreboard-tap svg,
-.dicekingdom .scoreboard-tap img {
+/* Direct child only, not ".scoreboard-tap svg" - real bug, direct
+   feedback (2026-09-09): "the claw energy symbol looks like it's
+   bleeding a bit outside the circle." The descendant form also reached
+   EnergyBadge's own INNER icon svg, two levels deeper inside
+   .energy-badge - same recurring bug class as .championbox-body's own
+   fix earlier this session (a blanket selector written for one direct
+   child later also matching a differently-sized icon nested inside a
+   sibling). Forced the energy icon to 26px regardless of EnergyBadge's
+   own 14px sizing, ballooning it past its own circle's edge. */
+.dicekingdom .scoreboard-tap > svg,
+.dicekingdom .scoreboard-tap > img {
   width: 26px;
   height: 26px;
   flex: none;
@@ -764,6 +780,17 @@
   .dicekingdom .scoreboard-life {
     margin-left: 0;
     font-size: 18px;
+  }
+  /* Direct feedback (2026-09-09): "mirror the life, energy, etc on the
+     bottom, so that both life totals are directly next to each other."
+     Opponent (top of the column) reads label/avatar/badge/life
+     top-to-bottom as normal, so its life sits at the BOTTOM of its own
+     segment; reversing "mine" (bottom of the column) to life/badge/
+     avatar/label puts ITS life at the TOP of its own segment - the two
+     numbers end up adjacent across the gap between the two segments,
+     both labels pushed out to the column's own top/bottom edges. */
+  .dicekingdom .scoreboard-side.mine .scoreboard-tap {
+    flex-direction: column-reverse;
   }
   /* The column is pinned to the far right edge here, so a popover
      opening the default (downward-right) way would run off the screen

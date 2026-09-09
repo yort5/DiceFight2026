@@ -2587,3 +2587,41 @@ turn-mine glow, tapping it opens a popover with the champion's real
 name and ability text fully inside the viewport, and `.championbox`
 count is 0 (confirms the old panels are actually gone, not just
 hidden). Zero console errors. `tsc -b`/`oxlint`/`vite build` clean.
+
+## Scoreboard polish: a divider, a mirrored column, and another blanket-selector bug (2026-09-09)
+
+Three quick pieces of direct feedback on the last round's work:
+
+1. **A vertical divider between Player 1 and Player 2** on the pre-game
+   picker - "let's put a vertical bar or some visual distinction
+   between them." `.champ-pick-column:first-child { border-right: 1px
+   solid var(--border); }` - two side-by-side 4-option grids with the
+   same options read as one continuous block without it.
+2. **The scoreboard column mirrored so both life totals sit adjacent.**
+   "Mirror the life, energy, etc on the bottom, so that both life
+   totals are directly next to each other." Opponent (top of the
+   column) still reads label→avatar→badge→life top-to-bottom, so its
+   life lands at the bottom of its own segment; `.scoreboard-side.mine
+   .scoreboard-tap { flex-direction: column-reverse; }` flips only
+   "mine" (the bottom segment) to life→badge→avatar→label, so ITS life
+   lands at the TOP of its segment - the two numbers now sit right next
+   to each other across the gap, with both labels pushed out to the
+   column's outer top/bottom edges instead.
+3. **The Claw energy badge was bleeding outside its circle.** Same
+   recurring bug class as `.championbox-body`'s own fix earlier this
+   session, caught on sight this time rather than needing a side-by-
+   side comparison: `.scoreboard-tap svg` (written for the champion
+   avatar, a DIRECT child) was a descendant selector, so it also
+   reached EnergyBadge's own inner icon svg two levels deeper inside
+   `.energy-badge`, forcing it to 26px regardless of EnergyBadge's own
+   14px sizing and ballooning it past its own circle's edge. Scoped to
+   `.scoreboard-tap > svg`/`> img` (direct children only) - the same
+   fix shape as every other instance of this bug pattern this session.
+
+Verified live at 375×667, deviceScaleFactor 4 for a close look at the
+badge specifically: the picker shows a visible rule between the two
+columns; the scoreboard screenshot shows both "20"s adjacent across the
+gap with OPP/YOU pushed to the outer edges; a cropped screenshot of
+just `.energy-badge` shows a clean circle with the Claw icon fully
+contained, no bleed. Zero console errors. `tsc -b`/`oxlint`/`vite
+build` clean.
