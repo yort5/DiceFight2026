@@ -2529,3 +2529,61 @@ again after scrolling well past the roster/mat/attack-zone content -
 both life totals stay pinned to the right edge throughout, spending no
 vertical space at all. Zero console errors. `tsc -b`/`oxlint`/`vite
 build` clean.
+
+## Everything moves into the column, and a two-column champion picker (2026-09-09)
+
+Direct feedback: "move the other stuff from that panel into that
+column as well - the active team text and the champions. We may not be
+able to fit the Champion name on there, but we should be able to fit
+the Avatar, the symbol, and the energy vertically. 'Invite' and 'Copy
+link' can stay on the bottom for now." Plus, separately: "can we do the
+two column approach with the 'select Champion' screen as well, so I
+don't have to scroll?"
+
+1. **ChampionBox and "Active: X" both folded into Scoreboard.** The
+   two standalone ChampionBox panels (dk-rail-top/-bottom) and the
+   `.active-line` "Active: X" text are gone. Each `ScoreboardSide` is
+   now a tappable summary - label (You/Opp), avatar, energy badge, life
+   - with a popover for the one thing that doesn't fit a 54px column:
+   name and ability text (same "always-visible summary, full detail on
+   tap" split this session already used for NowInfoButton and How to
+   Play). "Active" is a highlight on the live side now
+   (`.scoreboard-side.turn-mine`/`.turn-waiting`, the same green/amber-
+   grey the rest of the page already uses for this) instead of separate
+   text - the column's own You/Opp labels already say which side is
+   which. The popover opens LEFTWARD on the narrow layout (`right:
+   calc(100% + 6px)`, vertically centered on its own trigger rather
+   than anchored to a top/bottom edge) - the column is pinned at the
+   viewport's own right edge, so a normal downward-right popover would
+   run off-screen, and a segment can sit anywhere along the column's
+   full height (unlike the titlebar/turn-controls popovers, which
+   always open from a predictable edge).
+2. **The pre-game champion picker went two columns too** (Player 1 |
+   Player 2, side by side) - also collapsed the two players' near-
+   identical JSX blocks into one `.map()` over `[{label, value,
+   setValue}, ...]` along the way, since they'd only ever differed by
+   which setup state they wrote to. Real bug caught by measuring, not
+   assuming the restructure alone was enough: `document.body.
+   scrollHeight` was still 824px against a 667px viewport after the
+   two-column change. Root cause wasn't the picker at all - `.dicekingdom
+   { padding-bottom: 220px }` and `{ padding-right: 58px }` (reserved
+   for the in-game fixed action bar and Scoreboard column) apply to
+   BOTH screens, since the pre-game screen shares the exact same
+   `.dicekingdom` wrapper class, but the pre-game screen has neither
+   fixed element - that padding was pure dead space there. Fixed with
+   `:has()`: `.dicekingdom:has(.dk-rail-mid)` and `.dicekingdom:has(.scoreboard)`
+   scope each padding to instances that actually contain the element
+   it's clearing space for, no JSX changes needed. Also trimmed the
+   intro text (h1/dek) and `.panel` padding at the same breakpoint,
+   and `.champ-opt`'s own icon/padding/font, since even the narrower
+   per-column champ-pick grid was taller than it needed to be.
+
+Verified live at 375×667: the pre-game screen's `document.body.
+scrollHeight` now reads exactly 667px (was 824px) - the picker fits
+with zero scrolling, confirmed against a real measurement rather than a
+screenshot alone. In-game, both `.scoreboard-side`s show label/avatar/
+badge/life stacked correctly, the "You" side (active) shows the green
+turn-mine glow, tapping it opens a popover with the champion's real
+name and ability text fully inside the viewport, and `.championbox`
+count is 0 (confirms the old panels are actually gone, not just
+hidden). Zero console errors. `tsc -b`/`oxlint`/`vite build` clean.

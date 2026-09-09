@@ -231,8 +231,15 @@
     touch-action: manipulation;
   }
   /* Room at the bottom of the page so the fixed bar above never
-     permanently covers the sideboard's last panel. */
-  .dicekingdom {
+     permanently covers the sideboard's last panel. `:has(.dk-rail-mid)`
+     - real bug, found 2026-09-09: the pre-game champion-picker screen
+     shares this same `.dicekingdom` wrapper class but has no fixed bar
+     at all, so this padding was reserving 220px of pure dead space
+     there too, forcing a scroll that had nothing to do with the
+     picker's own content. Scoping to instances that actually contain
+     the fixed bar (only the live-game view does) fixes that without
+     touching either screen's JSX. */
+  .dicekingdom:has(.dk-rail-mid) {
     padding-bottom: 220px;
   }
   /* The scroll area formerly on .dk-rail-mid itself - see that rule's
@@ -304,16 +311,29 @@
   margin: 0 0 20px;
 }
 
+/* Side by side, not stacked (2026-09-09 direct feedback: "the two
+   column approach with the 'select Champion' screen... so I don't
+   have to scroll"). Each column is already only ~half the page's own
+   width, so its own champ-pick grid below fixes at 2 across instead of
+   the old auto-fit(150px) - that math assumed the full page width and
+   would have collapsed to 1 column here, which is taller, not
+   shorter. */
+.dicekingdom .champ-pick-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
 .dicekingdom .champ-pick {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 12px;
-  margin-bottom: 20px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 0;
 }
 .dicekingdom .champ-opt {
   border: 2px solid var(--border);
   border-radius: 14px;
-  padding: 16px 12px;
+  padding: 10px 8px;
   text-align: center;
   cursor: pointer;
   background: var(--panel-bg);
@@ -331,15 +351,15 @@
 }
 .dicekingdom .champ-opt svg,
 .dicekingdom .champ-opt img {
-  width: 42px;
-  height: 42px;
+  width: 34px;
+  height: 34px;
   border-radius: 8px;
 }
 .dicekingdom .champ-opt .cname {
-  font: 400 15px var(--display);
+  font: 400 12px var(--display);
   text-transform: uppercase;
   letter-spacing: 0.02em;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
 .dicekingdom button.btn {
@@ -578,39 +598,8 @@
   left: 0;
 }
 
-/* ---- Rail: Active/Invite line, then life totals side by side - ported
-   from ../TurnRail.tsx's shape, moved off the table entirely (real
-   feedback: life totals flanking a phase pill above the board were
-   still costing vertical space, just differently). ---- */
-.dicekingdom .active-line {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 12px;
-  opacity: 0.85;
-  margin-bottom: 8px;
-}
-/* A real solid pill, not just tinted text - direct feedback (2026-09-06):
-   the old plain colored text "kind of disappears in dark mode" against
-   a busy background. Same solid-fill + --on-fill pattern
-   .ribbon-chip.current already uses (proven to read in both themes,
-   unlike a translucent tint whose contrast against its own text shifts
-   with the page's light/dark background). */
-.dicekingdom .whose-turn {
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-weight: 700;
-  color: var(--on-fill);
-}
-.dicekingdom .whose-turn.mine {
-  background: oklch(0.62 0.15 145);
-}
-.dicekingdom .whose-turn.waiting {
-  background: oklch(0.62 0.09 75);
-}
+/* ---- Rail: just Invite now - "Active: X" and life totals both moved
+   into Scoreboard (see that component's own remarks). ---- */
 .dicekingdom .invite-row {
   display: flex;
   align-items: center;
@@ -632,87 +621,27 @@
   font-size: 11px;
   cursor: pointer;
 }
-/* Champion box - merged with the life totals that used to live in their
-   own grid alongside it, then that merge itself corrected (2026-09-08
-   direct feedback): "I said 'panel' and you translated that to 'row.'
-   I meant column, like we had it previously" - text stacked as its own
-   short column (role label, then name+badge, then the passive note),
-   a small icon beside it, no life total in here at all any more (moved
-   to the always-visible .scoreboard below - see ChampionBox's own
-   comment for why life and "reads as a column" turned out to be two
-   separate requests). Still nowhere near the old role-label-then-72px-
-   portrait layout's height. */
-.dicekingdom .championbox.turn-mine {
-  box-shadow: 0 0 0 2px oklch(0.62 0.15 145 / 0.4);
-}
-.dicekingdom .championbox.turn-waiting {
-  box-shadow: 0 0 0 2px oklch(0.62 0.06 75 / 0.35);
-}
-.dicekingdom .championbox {
-  /* Flat composite, not a gradient sheen - same "clean panel, not a
-     gradient" direction as the zone tints above. */
-  background: color-mix(in srgb, var(--cc, var(--border)) 10%, var(--panel-bg));
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--cc, var(--border));
-  border-radius: 10px;
-  padding: 7px 10px;
-}
-.dicekingdom .championbox-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.dicekingdom .championbox-row > svg,
-.dicekingdom .championbox-row > img {
-  width: 28px;
-  height: 28px;
-  flex: none;
-  border-radius: 6px;
-}
-.dicekingdom .championbox-text {
-  flex: 1;
-  min-width: 0;
-}
-.dicekingdom .championbox-role {
-  font: 700 9.5px var(--sans);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--text-dim);
-}
-.dicekingdom .championbox-name-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 1px;
-}
-.dicekingdom .championbox-name {
-  font: 400 15px/1 var(--display);
-  text-transform: uppercase;
-  letter-spacing: 0.01em;
-  color: var(--cc, var(--text-h));
-}
-.dicekingdom .championbox-note {
-  font-size: 10px;
-  color: var(--text);
-  margin: 2px 0 0;
-  line-height: 1.3;
-}
-
-/* A real fixed bar, not another panel in the rail's own flow - direct
-   feedback (2026-09-08): "we'd always want the life totals to be
-   visible somewhere, I don't want to have to scroll to see if I'm
-   winning or losing." First tried as a fixed bar across the TOP edge;
-   corrected the next round: "vertical space will be at a premium. I'd
-   like to try it with that information in a thin column on the right
-   side" - a full-width top bar spent height, the one resource this
-   page is shortest on with everything already stacked into one long
-   scroll. A narrow vertical strip spends WIDTH instead, which this
-   page has more slack in - see the media query below, which turns
-   `.scoreboard` sideways into a right-edge column instead. On desktop,
-   life totals are already on screen alongside the board without
-   scrolling, so this only needs to actually float on the narrow
-   breakpoint - on wider layouts it just sits inline at the top of the
-   page, same as the titlebar beside it. */
+/* Scoreboard - now holds everything that used to be split across the
+   standalone ChampionBox panels AND the "Active: X" text (2026-09-09
+   direct feedback): "move the other stuff from that panel into that
+   column as well - the active team text and the champions... the
+   Avatar, the symbol, and the energy." Each side is a tappable summary
+   (avatar, energy badge, life) plus a popover for the one thing that
+   doesn't fit a ~54px column - name and ability text. "Active" is a
+   highlight on the live side now (.turn-mine/.turn-waiting, same
+   colors the rest of the page already uses for this), not separate
+   text - position alone (You/Opp) already says which side is which.
+   First tried as a fixed bar across the TOP edge; corrected the next
+   round: "vertical space will be at a premium. I'd like to try it with
+   that information in a thin column on the right side" - a full-width
+   top bar spent height, the one resource this page is shortest on with
+   everything already stacked into one long scroll. A narrow vertical
+   strip spends WIDTH instead, which this page has more slack in - see
+   the media query below, which turns `.scoreboard` sideways into a
+   right-edge column. On desktop, this is already on screen alongside
+   the board without scrolling, so the fixed positioning only needs to
+   actually apply on the narrow breakpoint - on wider layouts it just
+   sits inline at the top of the page, same as the titlebar beside it. */
 .dicekingdom .scoreboard {
   box-sizing: border-box;
   display: flex;
@@ -720,16 +649,41 @@
   margin-bottom: 10px;
 }
 .dicekingdom .scoreboard-side {
+  position: relative;
   flex: 1;
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 6px 12px;
   border-radius: 10px;
   border: 1px solid var(--border);
   border-top: 3px solid var(--cc, var(--border));
   background: var(--panel-bg);
+}
+.dicekingdom .scoreboard-side.turn-mine {
+  box-shadow: 0 0 0 2px oklch(0.62 0.15 145 / 0.4);
+}
+.dicekingdom .scoreboard-side.turn-waiting {
+  box-shadow: 0 0 0 2px oklch(0.62 0.06 75 / 0.35);
+}
+.dicekingdom .scoreboard-tap {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.dicekingdom .scoreboard-tap:disabled {
+  cursor: default;
+}
+.dicekingdom .scoreboard-tap svg,
+.dicekingdom .scoreboard-tap img {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: 6px;
 }
 .dicekingdom .scoreboard-label {
   font: 700 10px var(--sans);
@@ -738,14 +692,41 @@
   color: var(--text-dim);
 }
 .dicekingdom .scoreboard-life {
+  margin-left: auto;
   font: 400 26px/1 var(--display);
   font-variant-numeric: tabular-nums;
   color: var(--text-h);
 }
+.dicekingdom .scoreboard-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  width: 200px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--panel-bg);
+  box-shadow: var(--shadow);
+  font-size: 12px;
+  text-align: left;
+}
+.dicekingdom .scoreboard-popover-name {
+  font: 400 16px/1 var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  color: var(--cc, var(--text-h));
+  margin-bottom: 4px;
+}
+.dicekingdom .scoreboard-popover-note {
+  margin: 0;
+  color: var(--text);
+  line-height: 1.35;
+}
 /* Fixed to the right edge, full height, only on the narrow layout
    where the page is one long stacked scroll (see .scoreboard's own
    comment above for why a column, not a bar) - placed here, after the
-   base rule, not up with .dk-layout's override near the top of the
+   base rules, not up with .dk-layout's override near the top of the
    file; same cascade-order lesson as .dk-titlebar's own fix. */
 @media (max-width: 1100px) {
   .dicekingdom .scoreboard {
@@ -766,25 +747,46 @@
   }
   .dicekingdom .scoreboard-side {
     flex: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 2px;
-    padding: 8px 2px;
     border-top: none;
     border-left: 3px solid var(--cc, var(--border));
   }
+  .dicekingdom .scoreboard-tap {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 6px 2px;
+    text-align: center;
+  }
+  .dicekingdom .scoreboard-label {
+    font-size: 8px;
+  }
   .dicekingdom .scoreboard-life {
-    font-size: 20px;
+    margin-left: 0;
+    font-size: 18px;
+  }
+  /* The column is pinned to the far right edge here, so a popover
+     opening the default (downward-right) way would run off the screen
+     - opens leftward into the board instead, vertically centered on
+     its own trigger rather than anchored to its top edge (a segment
+     can sit anywhere along the column's full height, unlike the
+     titlebar/turn-controls popovers this session, which always open
+     from a predictable top or bottom edge). */
+  .dicekingdom .scoreboard-popover {
+    top: 50%;
+    left: auto;
+    right: calc(100% + 6px);
+    transform: translateY(-50%);
   }
   /* Room on the right of the page so the column above never overlaps
      the board, and the fixed bottom bar stops before it instead of
      running underneath (both fixed, `.dk-rail-mid`'s own z-index is
      lower - without this it would be visually cut off at the same
-     corner instead of sitting flush beside the column). No more
-     `padding-top` here - that belonged to the earlier top-bar version
-     of this same fix, dropped now that nothing pins to the top edge. */
-  .dicekingdom {
+     corner instead of sitting flush beside the column). `:has()`
+     scoped the same way `.dk-rail-mid`'s own padding-bottom fix is -
+     the pre-game screen shares this wrapper class but has no
+     Scoreboard at all (no game yet to show life totals for). */
+  .dicekingdom:has(.scoreboard) {
     padding-right: 58px;
   }
   .dicekingdom .dk-rail-mid {
@@ -1568,6 +1570,29 @@
 .dicekingdom .panel p {
   margin: 0 0 10px;
   font-size: 13px;
+}
+/* The pre-game intro (eyebrow/h1/dek, above .champ-pick-columns) still
+   fits full mobile-viewport width, but at full desktop size it alone
+   pushed the champion picker below the fold - direct feedback
+   (2026-09-09): "the two column approach with the 'select Champion'
+   screen... so I don't have to scroll." Placed here, after .panel's
+   own base rule (the later of the several base rules this touches),
+   not up with .dk-layout's override near the top of the file - same
+   cascade-order lesson as every other narrow-viewport fix this
+   session. */
+@media (max-width: 1100px) {
+  .dicekingdom h1 {
+    font: 400 32px/0.95 var(--display);
+    margin: 0 0 6px;
+  }
+  .dicekingdom .dek {
+    font-size: 13px;
+    margin: 0 0 12px;
+  }
+  .dicekingdom .panel {
+    padding: 12px 14px;
+    margin: 8px 0;
+  }
 }
 .dicekingdom .chiprow {
   display: flex;

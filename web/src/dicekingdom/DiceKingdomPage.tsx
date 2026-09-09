@@ -120,77 +120,86 @@ function groupDice(dice: Die[], zone: string): DieGroup[] {
 
 // Green = active AND it's you; amber-grey = active and it's not you
 // (waiting); no highlight otherwise. Same cue as /game's identical
-// green/amber-grey pattern (DESIGN_LOG.md, 2026-09-03) - and a real bug
-// fix along the way: the old inline version only ever highlighted
-// playerOne's box, never playerTwo's.
+// green/amber-grey pattern (DESIGN_LOG.md, 2026-09-03).
 //
-// Life total moved OUT to the new fixed Scoreboard below (2026-09-08) -
-// direct feedback, after a first attempt merged it into one squeezed
-// row here got corrected: "I said 'panel' and you translated that to
-// 'row.' I meant column, like we had it previously," followed by "we'd
-// always want the life totals to be visible somewhere, I don't want to
-// have to scroll to see if I'm winning or losing." Life needing to be
-// scroll-proof and this box's own text reading as a stacked column
-// turned out to be two separate asks - this box goes back to a role
-// label/name+badge/note column (no life line at all now), and
-// Scoreboard (a real fixed bar, same technique as the turn-controls
-// rail) is what's actually always on screen.
-function ChampionBox({ player, isActivePlayer, you }: { player: PlayerState; isActivePlayer: boolean; you: string }) {
-  const mine = player.id === you;
-  const turnClass = isActivePlayer ? (mine ? " turn-mine" : " turn-waiting") : "";
+// The old standalone ChampionBox panels (in dk-rail-top/-bottom) and
+// the "Active: X" text are both gone now, folded into this one column
+// instead (2026-09-09 direct feedback): "move the other stuff from
+// that panel into that column as well - the active team text and the
+// champions. We may not be able to fit the Champion name... but we
+// should be able to fit the Avatar, the symbol, and the energy
+// vertically." Name and ability text don't fit a ~54px column, so
+// they're a tap away instead (ScoreboardPopover) rather than dropped -
+// same "always-visible summary, full detail on demand" split this
+// session already used for the per-step reminder text and How to Play.
+// "Active" is now a highlight on whichever side is live, not separate
+// text - the column's own You/Opp labels already say which side is
+// which, so a color cue says the rest.
+function ScoreboardSide({ player, mine, isActivePlayer }: { player: PlayerState; mine: boolean; isActivePlayer: boolean }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    function handlePointerDown(e: PointerEvent) {
+      if (!(e.target instanceof Node) || !wrapRef.current?.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [open]);
   const champion = player.champion;
   const accent = champion ? `var(--${champion.energySymbolId.toLowerCase()})` : undefined;
   const Icon = champion ? CHAMPION_ICONS[champion.id] : null;
+  const turnClass = isActivePlayer ? (mine ? " turn-mine" : " turn-waiting") : "";
   return (
-    <div className={`championbox${turnClass}`} style={accent ? ({ ["--cc" as string]: accent } as const) : undefined}>
-      <div className="championbox-row">
-        {Icon && <Icon size={30} />}
-        <div className="championbox-text">
-          <div className="championbox-role">{mine ? "Your Champion" : "Opponent Champion"}</div>
-          {champion && (
-            <div className="championbox-name-row">
-              <span className="championbox-name">{champion.name}</span>
-              {/* Direct feedback (2026-09-05): even once every Champion
-                  has a real avatar, the energy type still needs to read
-                  at a glance - a photo alone doesn't carry that the way
-                  a color glyph did. Variant A badge (2026-09-08) since
-                  this is exactly the kind of small, low-contrast spot
-                  the earlier bare icon kept losing its own sizing bug
-                  in. */}
-              <EnergyBadge type={champion.energySymbolId} size={13} />
-            </div>
-          )}
-          {champion?.passiveText && <div className="championbox-note">{champion.passiveText}</div>}
+    <div
+      ref={wrapRef}
+      className={`scoreboard-side${mine ? " mine" : ""}${turnClass}`}
+      style={accent ? ({ ["--cc" as string]: accent } as const) : undefined}
+    >
+      <button type="button" className="scoreboard-tap" onClick={() => setOpen((o) => !o)} disabled={!champion}>
+        <span className="scoreboard-label">{mine ? "You" : "Opp"}</span>
+        {Icon && <Icon size={26} />}
+        {/* Direct feedback (2026-09-05): even once every Champion has a
+            real avatar, the energy type still needs to read at a
+            glance - a photo alone doesn't carry that the way a color
+            glyph did. */}
+        {champion && <EnergyBadge type={champion.energySymbolId} size={14} />}
+        <span className="scoreboard-life">{player.life}</span>
+      </button>
+      {open && champion && (
+        <div className="scoreboard-popover">
+          <div className="scoreboard-popover-name">{champion.name}</div>
+          {champion.passiveText && <p className="scoreboard-popover-note">{champion.passiveText}</p>}
         </div>
-      </div>
+      )}
     </div>
   );
 }
 
-// A real fixed bar, not just a panel somewhere in the rail - direct
-// feedback (2026-09-08): "we'd always want the life totals to be
-// visible somewhere, I don't want to have to scroll to see if I'm
-// winning or losing." Same `position: fixed` technique .dk-rail-mid
-// already uses for the turn controls, pinned to the opposite edge
-// (top) so the two fixed bars don't compete for the same space. Just
-// the two life totals - not a fuller scoreboard - since that's the one
-// thing that's genuinely useful to see with zero scrolling on every
-// single screen of the game; champion name/ability is reference
-// material you look up occasionally, not something worth a permanent
-// pin (see ChampionBox above, back in normal flow).
-function Scoreboard({ opponent, mine }: { opponent: PlayerState; mine: PlayerState }) {
-  const oppAccent = opponent.champion ? `var(--${opponent.champion.energySymbolId.toLowerCase()})` : undefined;
-  const mineAccent = mine.champion ? `var(--${mine.champion.energySymbolId.toLowerCase()})` : undefined;
+// A real fixed column, not just a panel somewhere in the rail - direct
+// feedback: "we'd always want the life totals to be visible somewhere,
+// I don't want to have to scroll to see if I'm winning or losing," then
+// (once a full-width top bar version proved too tall) "vertical space
+// will be at a premium... a thin column on the right side." Same
+// `position: fixed` technique .dk-rail-mid already uses for the turn
+// controls, pinned to the opposite edge on mobile so the two fixed
+// pieces don't compete for the same space - see the CSS for the rest
+// of that story (and why it's a column, not a bar, there).
+function Scoreboard({
+  opponent,
+  mine,
+  opponentActive,
+  mineActive,
+}: {
+  opponent: PlayerState;
+  mine: PlayerState;
+  opponentActive: boolean;
+  mineActive: boolean;
+}) {
   return (
     <div className="scoreboard">
-      <div className="scoreboard-side" style={oppAccent ? ({ ["--cc" as string]: oppAccent } as const) : undefined}>
-        <span className="scoreboard-label">Opp</span>
-        <span className="scoreboard-life">{opponent.life}</span>
-      </div>
-      <div className="scoreboard-side mine" style={mineAccent ? ({ ["--cc" as string]: mineAccent } as const) : undefined}>
-        <span className="scoreboard-label">You</span>
-        <span className="scoreboard-life">{mine.life}</span>
-      </div>
+      <ScoreboardSide player={opponent} mine={false} isActivePlayer={opponentActive} />
+      <ScoreboardSide player={mine} mine={true} isActivePlayer={mineActive} />
     </div>
   );
 }
@@ -741,45 +750,40 @@ export function DiceKingdomPage() {
         </p>
         {error && <p className="error">{error}</p>}
         <div className="panel">
-          <h3 style={{ margin: "0 0 10px" }}>Player 1</h3>
-          <div className="champ-pick">
-            {CHAMPIONS.map((c) => {
-              const Icon = CHAMPION_ICONS[c.id];
-              return (
-                <button
-                  key={c.id}
-                  type="button"
-                  className={`champ-opt${setupA === c.id ? " selected" : ""}`}
-                  style={{ ["--sel" as string]: `var(--${c.energy.toLowerCase()})`, color: `var(--${c.energy.toLowerCase()})` }}
-                  onClick={() => setSetupA(c.id)}
-                >
-                  <Icon />
-                  <div className="cname" style={{ color: "var(--text-h)" }}>
-                    {c.id.replace(/([A-Z])/g, " $1").trim()}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-          <h3 style={{ margin: "0 0 10px" }}>Player 2</h3>
-          <div className="champ-pick">
-            {CHAMPIONS.map((c) => {
-              const Icon = CHAMPION_ICONS[c.id];
-              return (
-                <button
-                  key={c.id}
-                  type="button"
-                  className={`champ-opt${setupB === c.id ? " selected" : ""}`}
-                  style={{ ["--sel" as string]: `var(--${c.energy.toLowerCase()})`, color: `var(--${c.energy.toLowerCase()})` }}
-                  onClick={() => setSetupB(c.id)}
-                >
-                  <Icon />
-                  <div className="cname" style={{ color: "var(--text-h)" }}>
-                    {c.id.replace(/([A-Z])/g, " $1").trim()}
-                  </div>
-                </button>
-              );
-            })}
+          {/* Side by side, not stacked - direct feedback (2026-09-09):
+              "can we do the two column approach with the 'select
+              Champion' screen as well, so I don't have to scroll?"
+              Both players' pickers were identical apart from which
+              setup state they wrote to, so this also collapses the
+              previous copy-pasted pair into one map over the two. */}
+          <div className="champ-pick-columns">
+            {[
+              { label: "Player 1", value: setupA, setValue: setSetupA },
+              { label: "Player 2", value: setupB, setValue: setSetupB },
+            ].map(({ label, value, setValue }) => (
+              <div className="champ-pick-column" key={label}>
+                <h3 style={{ margin: "0 0 10px" }}>{label}</h3>
+                <div className="champ-pick">
+                  {CHAMPIONS.map((c) => {
+                    const Icon = CHAMPION_ICONS[c.id];
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        className={`champ-opt${value === c.id ? " selected" : ""}`}
+                        style={{ ["--sel" as string]: `var(--${c.energy.toLowerCase()})`, color: `var(--${c.energy.toLowerCase()})` }}
+                        onClick={() => setValue(c.id)}
+                      >
+                        <Icon />
+                        <div className="cname" style={{ color: "var(--text-h)" }}>
+                          {c.id.replace(/([A-Z])/g, " $1").trim()}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
           <button className="btn" disabled={!setupA || !setupB || busy} onClick={startMatch}>
             Start Match
@@ -1482,7 +1486,12 @@ export function DiceKingdomPage() {
       </svg>
       {error && <p className="error">{error}</p>}
 
-      <Scoreboard opponent={oppPlayer} mine={yourPlayer} />
+      <Scoreboard
+        opponent={oppPlayer}
+        mine={yourPlayer}
+        opponentActive={game.activePlayerId === opponentId}
+        mineActive={game.activePlayerId === you}
+      />
 
       {/* Once a game is live, /game shows almost no chrome above the
           table at all - title/description/How-to-Play live only on the
@@ -1525,21 +1534,11 @@ export function DiceKingdomPage() {
         <div className="dk-row-you" ref={yourRowRef}>{renderBoard(you, false)}</div>
 
         <div className="dk-rail-top">
-          {/* Active + Invite on one line - ../TurnRail.tsx's own shape.
-              Life totals used to sit in their own grid here (LifeBox);
-              merged into ChampionBox below instead (2026-09-08 direct
-              feedback). */}
-          <div className="active-line">
-            <span className={isYourTurn ? "whose-turn mine" : "whose-turn waiting"}>
-              <strong>Active:</strong> {game.activePlayerId}
-            </span>
-            {link && <InviteRow link={link} />}
-          </div>
-          <ChampionBox
-            player={oppPlayer}
-            isActivePlayer={game.activePlayerId === opponentId}
-            you={you}
-          />
+          {/* "Active: X" and both Champion panels moved into Scoreboard
+              (2026-09-09 direct feedback - see that component's own
+              remarks); Invite stays here - "Invite and Copy link can
+              stay on the bottom for now." */}
+          {link && <InviteRow link={link} />}
         </div>
 
         <div className="dk-rail-mid">
@@ -1567,15 +1566,12 @@ export function DiceKingdomPage() {
         </div>
 
         <div className="dk-rail-bottom">
-          <ChampionBox
-            player={yourPlayer}
-            isActivePlayer={game.activePlayerId === you}
-            you={you}
-          />
           {/* Moved off the sideboard and onto your own rail, right under
               your Champion box - direct feedback (2026-09-09): this is
               specifically YOUR energy, sitting right above the log that
-              already tracks everything you've done with it.
+              already tracks everything you've done with it. (Champion
+              box itself has since moved into Scoreboard - see that
+              component's own remarks.)
               Shown only during Main (2026-09-08 direct feedback):
               "'Energy in your pool' is only helpful if it's visible when
               I'm purchasing a character" - every other step it's just
