@@ -882,12 +882,21 @@
   align-items: center;
   gap: 8px 14px;
 }
-/* Without this, `.zone`'s own margin-bottom (meant for zones stacked
-   in a column) would still apply here, and a flex-row item defaults to
-   stretching cross-axis (height) - `flex: none` keeps Reserve Pool
-   sized to its own header/dice instead of matching the row's height. */
-.dicekingdom .mini-pile-row .zone {
+/* Without this, `.zone`'s own margin-bottom (meant for zones stacked in
+   a column, collapsed by .mat-slot elsewhere) would still apply to
+   Field Zone here - flexbox doesn't collapse an item's margin against
+   its container the way block layout does, so that 18px was real extra
+   height tacked onto .mat-collapsed's own bottom margin, on top of it
+   rather than instead of it. Real bug, found by direct feedback
+   (2026-09-11) still reading as "a lot of empty space" after the
+   Reserve Pool compaction above. */
+.dicekingdom .mat-collapsed .zone {
   margin-bottom: 0;
+}
+/* A flex-row item defaults to stretching cross-axis (height) - `flex:
+   none` keeps Reserve Pool sized to its own header/dice instead of
+   matching the row's height. */
+.dicekingdom .mini-pile-row .zone {
   flex: none;
 }
 .dicekingdom .mat {

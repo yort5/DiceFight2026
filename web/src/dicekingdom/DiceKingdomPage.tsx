@@ -1084,12 +1084,18 @@ export function DiceKingdomPage() {
     // your own turn, per the 2026-09-08 feedback above) - just sized to
     // its own content instead of stretched, since a flex-row item does
     // that by default.
+    //
+    // Drawn This Turn/Carried From Prep are dropped here entirely
+    // (still shown in the full mat's own tray) - direct feedback
+    // (2026-09-11): "most of the time we won't need those sections, so
+    // hide them for now." Unlike Used/Prep/Out/Bag, which at least name
+    // a real zone worth a tap, these two are turn-scoped bookkeeping
+    // that's almost always 0 outside the opponent's own turn (when the
+    // full mat renders instead of this one anyway).
     const collapsedMat = (
       <div className="mat-collapsed">
         <div className="mini-pile-row">
           {bagTray(bag)}
-          {trayItem("Drawn", drawn.length)}
-          {trayItem("Carried", carried.length)}
           {miniPile("Used", "UsedPile", used)}
           {miniPile("Prep", "PrepArea", prep)}
           {miniPile("Out", "OutOfPlay", outOfPlay)}
