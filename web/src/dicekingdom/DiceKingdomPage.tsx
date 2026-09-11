@@ -1092,14 +1092,19 @@ export function DiceKingdomPage() {
     // a real zone worth a tap, these two are turn-scoped bookkeeping
     // that's almost always 0 outside the opponent's own turn (when the
     // full mat renders instead of this one anyway).
+    // Used, Reserve Pool, Prep - same left-to-right order as the full
+    // mat's own grid ("used reserve prep"/"outofplay reserve prep"),
+    // not alphabetical/arbitrary - direct feedback (2026-09-11):
+    // "Reserve Pool should be in the middle... matching the active
+    // player arrangement."
     const collapsedMat = (
       <div className="mat-collapsed">
         <div className="mini-pile-row">
           {bagTray(bag)}
           {miniPile("Used", "UsedPile", used)}
+          {rolledZone("Reserve Pool", "ReservePool", reserve, true)}
           {miniPile("Prep", "PrepArea", prep)}
           {miniPile("Out", "OutOfPlay", outOfPlay)}
-          {rolledZone("Reserve Pool", "ReservePool", reserve, true)}
         </div>
         {fieldZone}
       </div>
