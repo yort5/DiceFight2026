@@ -1075,6 +1075,15 @@ export function DiceKingdomPage() {
     // Field Zone sits last (nearest the shared Attack Zone rendered
     // right below this board, opp-then-lane-then-you) - it was first
     // before, which put it furthest from the lane it actually feeds.
+    // Reserve Pool rides in the same wrapping row as the pile badges
+    // instead of claiming a full-width strip of its own - direct
+    // feedback (2026-09-11): "still a lot of empty space we could
+    // compact... Reserve doesn't have to span the whole width, it can
+    // share with Used and Prep." It's still real die tiles, not a
+    // count-only badge (energy there is the one thing worth checking on
+    // your own turn, per the 2026-09-08 feedback above) - just sized to
+    // its own content instead of stretched, since a flex-row item does
+    // that by default.
     const collapsedMat = (
       <div className="mat-collapsed">
         <div className="mini-pile-row">
@@ -1084,8 +1093,8 @@ export function DiceKingdomPage() {
           {miniPile("Used", "UsedPile", used)}
           {miniPile("Prep", "PrepArea", prep)}
           {miniPile("Out", "OutOfPlay", outOfPlay)}
+          {rolledZone("Reserve Pool", "ReservePool", reserve, true)}
         </div>
-        {rolledZone("Reserve Pool", "ReservePool", reserve, true)}
         {fieldZone}
       </div>
     );

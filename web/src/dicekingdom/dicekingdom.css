@@ -471,53 +471,54 @@
   font: 600 11px var(--sans);
   cursor: pointer;
 }
+/* Scrolls horizontally instead of wrapping onto a second line - direct
+   feedback (2026-09-11), replacing the wrap-then-merge-with-the-icons
+   trick below. `flex: none` on .ribbon-chip (further down) is what
+   makes the row actually overflow into scroll instead of shrinking the
+   chips to fit; the scrollbar itself is hidden (still fully scrollable
+   by touch/drag/wheel) so five little pill chips don't sprout a visible
+   scrollbar track under them. */
 .dicekingdom .step-ribbon {
   grid-column: 2;
   display: flex;
   gap: 6px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.dicekingdom .step-ribbon::-webkit-scrollbar {
+  display: none;
 }
 /* Placed here, after all three base rules above, not up with
    .dk-layout's own narrow-viewport override near the top of the file -
    see that override's own comment for why (source order beats an
    earlier media-conditional rule at equal specificity). */
 @media (max-width: 1100px) {
-  /* The ribbon and the Help/Settings icons share ONE flex-wrap row
-     instead of two separate stacked blocks (2026-09-08) - direct
-     feedback: "'dark mode' and 'how to play' cause a lot of vertical
-     space... maybe [icons]... on the same line as the ribbon." Both
-     wrappers go `display: contents` so their own children (the ribbon
-     chips; the two icon-menu buttons) become direct flex items of
-     `.dk-titlebar` itself and wrap together as one group, rather than
-     each wrapper claiming its own full-width row. */
+  /* The ribbon now scrolls in its own lane rather than wrapping onto
+     the icons' line (2026-09-11) - simpler than the old "merge both
+     into one flex-wrap group via display: contents" trick this
+     replaced (see git history), since a scrolling ribbon never needs a
+     second line to wrap onto in the first place. The icon buttons stay
+     genuinely pinned to the row's right edge now (flex: none on
+     .dk-titlebar-right, ribbon taking the rest via flex: 1), so their
+     popover's `right: 0` anchors correctly off .icon-menu-wrap itself
+     again - no positioned-ancestor override needed either. */
   .dicekingdom .dk-titlebar {
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
     gap: 6px;
-    /* Real bug, found by measuring rather than guessing: with the icon
-       buttons now flowing wherever the wrapped ribbon happens to leave
-       room for them (not pinned to a right edge), their popover - still
-       anchored to the tiny 26px .icon-menu-wrap via `right: 0` - could
-       render up to 220px to the LEFT of wherever that small box landed,
-       running off the left edge of the viewport whenever the icon
-       wasn't already near the container's own right edge. Making
-       .dk-titlebar itself the positioned ancestor (and .icon-menu-wrap
-       NOT one, just for wraps inside here - see below) anchors the
-       popover to the full-width titlebar instead of the icon's own
-       narrow box, so it always lands within the page's real margins
-       regardless of which line the icon wrapped onto. */
-    position: relative;
   }
-  .dicekingdom .step-ribbon,
+  .dicekingdom .step-ribbon {
+    flex: 1;
+    min-width: 0;
+  }
   .dicekingdom .dk-titlebar-right {
-    display: contents;
-  }
-  .dicekingdom .dk-titlebar .icon-menu-wrap {
-    position: static;
+    flex: none;
   }
 }
 .dicekingdom .ribbon-chip {
+  flex: none;
   padding: 5px 10px;
   border-radius: 999px;
   font: 600 11px var(--sans);
@@ -870,13 +871,24 @@
    collapsed opponent mat - same `.tray` shape (position: relative so
    each pile's popover, `.bag-popover`, anchors off this row) just
    reused here since the collapsed mat has no `.mat-tray` grid cell of
-   its own. */
+   its own. Reserve Pool's real zone box (still full die tiles, not a
+   badge - see collapsedMat's own remarks) rides in this same row too;
+   `center` rather than `baseline` now that the row mixes plain text
+   badges with a bordered box. */
 .dicekingdom .mini-pile-row {
   position: relative;
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  gap: 14px;
+  align-items: center;
+  gap: 8px 14px;
+}
+/* Without this, `.zone`'s own margin-bottom (meant for zones stacked
+   in a column) would still apply here, and a flex-row item defaults to
+   stretching cross-axis (height) - `flex: none` keeps Reserve Pool
+   sized to its own header/dice instead of matching the row's height. */
+.dicekingdom .mini-pile-row .zone {
+  margin-bottom: 0;
+  flex: none;
 }
 .dicekingdom .mat {
   display: grid;
