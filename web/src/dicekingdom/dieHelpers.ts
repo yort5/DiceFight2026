@@ -1,9 +1,4 @@
-import type { CardDef, Die } from "./types";
-
-export function dieLabel(die: Die, cardsById: Map<string, CardDef>): string {
-  if (die.isTardigrade || !die.cardId) return "Tardigrade";
-  return cardsById.get(die.cardId)?.name ?? die.cardId;
-}
+import type { Die } from "./types";
 
 export interface CharacterFaceInfo {
   attack: number;

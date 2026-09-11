@@ -1,7 +1,7 @@
 import { Fragment } from "react";
 import { DieCube, type CubeSpin } from "./DieCube";
 import { facesFor } from "./dieFaces";
-import { characterFaceInfo, dieLabel } from "./dieHelpers";
+import { characterFaceInfo } from "./dieHelpers";
 import type { BlockAssignment, CardDef, Die } from "./types";
 
 // Where the two mats meet - ported from ../CombatLane.tsx verbatim
@@ -39,23 +39,24 @@ function EngagementDie(props: {
   turnOffsets?: Record<string, number>;
 }) {
   const { die, cardsById } = props;
-  const face = characterFaceInfo(die);
   const selected = props.selection.primary === die.id || props.selection.secondary.includes(die.id);
+  // Just the cube, same as a rolled Field Zone tile (DiceKingdomPage.tsx's
+  // DieTile) - direct feedback (2026-09-11): "the dice in the attack zone
+  // are still the old 'big' version with the name and extra information
+  // underneath. We don't need all that, we can make them the same as in
+  // the field zone." The cube's own faces already carry the real
+  // attack/defense/cost numbers (see DieCube.tsx); name/level were pure
+  // repetition once Field Zone dropped them for the same reason.
   return (
-    <button
-      className={`lane-die${selected ? " selected" : ""}`}
-      onClick={() => props.onGroupClick([die.id])}
-      style={{ width: props.size + 22 }}
-    >
+    <button className={`lane-die${selected ? " selected" : ""}`} onClick={() => props.onGroupClick([die.id])}>
       <DieCube
         {...facesFor(die, cardsById)}
         size={props.size}
         mine={props.mine}
         spin={props.spins?.[die.id]}
         turnOffset={props.turnOffsets?.[die.id]}
+        energyCorner={die.energySymbolId && die.energyAmount > 0 ? { type: die.energySymbolId, amount: die.energyAmount } : undefined}
       />
-      <span className="lane-die-name">{dieLabel(die, cardsById)}</span>
-      {face && <span className="lane-die-stats">L{die.level} · {face.attack}A/{face.defense}D</span>}
     </button>
   );
 }

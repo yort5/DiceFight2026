@@ -178,6 +178,30 @@
        row rhythm itself rather than chasing more margins. */
     gap: 8px;
   }
+  /* Cinches opp/lane/you snug against each other specifically, on top
+     of the general row-gap reduction just above - direct feedback
+     (2026-09-11): "on a real mat there is no gap at all... we
+     definitely don't need one that big." .dk-row-lane's negative
+     margin cancels this row's own 8px share of the grid gap on both
+     sides (safe here: unlike desktop, mobile's .dk-row-lane doesn't
+     share its grid row with .dk-rail-mid - see .dk-row-lane's own
+     comment up top - so nothing else depends on its exact box size at
+     this width); the two playerboards' padding is trimmed only on the
+     specific edge that faces the lane, not all four, so the "card"
+     framing around the roster/roster-facing edges is untouched.
+     Scoped to mobile on purpose rather than touching the shared
+     desktop rule - the divide-aligns-with-the-rail-column trick
+     .dk-row-lane/.dk-rail-mid share there (see their own comments) is
+     tuned precisely enough that it isn't worth risking unverified. */
+  .dicekingdom .dk-row-lane {
+    margin: -8px 0;
+  }
+  .dicekingdom .dk-row-opp .playerboard {
+    padding-bottom: 3px;
+  }
+  .dicekingdom .dk-row-you .playerboard {
+    padding-top: 3px;
+  }
   /* .dk-titlebar/.step-ribbon/.dk-titlebar-right's own narrow-viewport
      overrides live further down (right after their base rules, near
      .step-ribbon's own definition) - NOT here alongside .dk-layout's.
@@ -871,11 +895,18 @@
    shrunk further - none of them inform a decision on your own turn. A
    plain flex column, not the full grid `.mat` needs for its extra
    zones. */
+/* No margin-bottom (2026-09-11, was 10px) - this is always the last
+   thing in the opponent's playerboard (roster comes first for the
+   mirrored/opponent side - see renderBoard's own return), so it always
+   sits directly against the shared Attack Zone below. Direct feedback:
+   "on a real mat there is no gap at all, so we definitely don't need
+   one that big" - the playerboard's own padding (further tightened for
+   this edge specifically, mobile-only, below) is the only spacing this
+   needs. */
 .dicekingdom .mat-collapsed {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin-bottom: 10px;
 }
 /* Used Pile/Prep Area/Out of Play/Bag as one-line badges on the
    collapsed opponent mat - same `.tray` shape (position: relative so
@@ -1259,12 +1290,15 @@
     animation: none;
   }
 }
+/* Just the cube now, no name/stats footer (see EngagementDie's own
+   remarks) - `display: inline-flex` still centers it and gives the
+   `.selected` highlight below some breathing room around the cube
+   instead of hugging its edges. */
 .dicekingdom .lane-die {
-  display: flex;
-  flex-direction: column;
+  display: inline-flex;
   align-items: center;
-  gap: 2px;
-  padding: 4px 2px 5px;
+  justify-content: center;
+  padding: 5px;
   border-radius: 9px;
   border: 1px solid transparent;
   background: transparent;
@@ -1275,20 +1309,6 @@
 .dicekingdom .lane-die.selected {
   background: oklch(0.6 0.09 70 / 0.16);
   border-color: oklch(0.55 0.11 70 / 0.6);
-}
-.dicekingdom .lane-die-name {
-  font-size: 9.5px;
-  line-height: 1.15;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.dicekingdom .lane-die-stats {
-  font-size: 9px;
-  color: var(--text-dim);
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
 }
 
 /* ---- The 3D die cube - ported from ../DieCube.tsx/App.css's .die-cube*
