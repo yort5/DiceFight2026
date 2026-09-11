@@ -519,6 +519,11 @@ export function DiceKingdomPage() {
   const { spins, offsets, rolling, launch: launchRoll, spinTo: spinDie } = useDiceRoll();
   const [bagOpen, setBagOpen] = useState(false);
   const [oppBagOpen, setOppBagOpen] = useState(false);
+  // Which pile's inspector popover is open in the collapsed opponent mat
+  // (see miniPile below) - a single id rather than per-zone booleans
+  // since collapsedMat only ever renders for one board at a time and
+  // only one pile's contents are worth showing at once.
+  const [collapsedZoneOpen, setCollapsedZoneOpen] = useState<string | null>(null);
   // The opponent's roster collapses to icon-only until tapped - direct
   // feedback (2026-09-08): "for now, I would make the whole thing one
   // section, and tapping anywhere in there would expand to show the
@@ -939,6 +944,33 @@ export function DiceKingdomPage() {
       );
     }
 
+    // Compact stand-in for a pile in the collapsed opponent mat - same
+    // label+count `trayItem` Bag/Drawn/Carried already use, but with its
+    // own click-to-inspect popover (direct feedback, 2026-09-11): "we've
+    // lost the other zones (used pile, prep area, etc)... they can be
+    // small and only have a badge (or die) indicating the number of dice
+    // in that area, and if we want to know exactly what is in there we
+    // can click on it." Shares `collapsedZoneOpen` rather than its own
+    // per-call state so opening one closes any other already open.
+    function miniPile(label: string, zoneName: string, dice: Die[]) {
+      const open = collapsedZoneOpen === zoneName;
+      return (
+        <>
+          {trayItem(label, dice.length, () => setCollapsedZoneOpen((z) => (z === zoneName ? null : zoneName)))}
+          {open && (
+            <div className="bag-popover down">
+              <div className="dierow">
+                {dice.length === 0 && <span style={{ opacity: 0.5, fontSize: 12 }}>empty</span>}
+                {groupDice(dice, zoneName).map((g) => (
+                  <DieTile key={g.key} die={g.sample} zone={zoneName} count={g.count} cardsById={cardsById} accent={accent} />
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      );
+    }
+
     // Reserve Pool and Prep Area behave identically during Roll & Reroll -
     // reservePoolClickable is zone-agnostic (it only reads step/selection/
     // rolled state), and these are the tiles a player clicks to build a
@@ -1035,14 +1067,26 @@ export function DiceKingdomPage() {
     // aside from the characters in their field zone, is if they have
     // any energy in their Reserve Pool to spend on globals... the
     // opponent's mat could probably be compressed to be much shorter."
-    // Used Pile/Out of Play/Prep Area/the Bag tray all drop out entirely
-    // here - none of them matter to a decision you'd make on your own
-    // turn, unlike Field Zone (what you're attacking/being blocked by)
-    // and Reserve Pool (energy they could spend on a shared Global).
+    // Used Pile/Out of Play/Prep Area/the Bag tray all shrink to a
+    // one-line badge each here rather than dropping out entirely (see
+    // miniPile above) - direct feedback (2026-09-11) reversed the
+    // original "drop them" call: they're still real zones, just not
+    // ones worth full tile rows on a board you're not deciding from.
+    // Field Zone sits last (nearest the shared Attack Zone rendered
+    // right below this board, opp-then-lane-then-you) - it was first
+    // before, which put it furthest from the lane it actually feeds.
     const collapsedMat = (
       <div className="mat-collapsed">
-        {fieldZone}
+        <div className="mini-pile-row">
+          {bagTray(bag)}
+          {trayItem("Drawn", drawn.length)}
+          {trayItem("Carried", carried.length)}
+          {miniPile("Used", "UsedPile", used)}
+          {miniPile("Prep", "PrepArea", prep)}
+          {miniPile("Out", "OutOfPlay", outOfPlay)}
+        </div>
         {rolledZone("Reserve Pool", "ReservePool", reserve, true)}
+        {fieldZone}
       </div>
     );
 

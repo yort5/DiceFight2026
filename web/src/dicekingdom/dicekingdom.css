@@ -866,6 +866,18 @@
   gap: 6px;
   margin-bottom: 10px;
 }
+/* Used Pile/Prep Area/Out of Play/Bag as one-line badges on the
+   collapsed opponent mat - same `.tray` shape (position: relative so
+   each pile's popover, `.bag-popover`, anchors off this row) just
+   reused here since the collapsed mat has no `.mat-tray` grid cell of
+   its own. */
+.dicekingdom .mini-pile-row {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 14px;
+}
 .dicekingdom .mat {
   display: grid;
   grid-template-columns: 196px minmax(0, 1fr) 196px;
