@@ -167,6 +167,16 @@
       "railmid"
       "railbottom"
       "side";
+    /* Desktop's 14px is really "space between the board and the rail
+       column" - on mobile, with opp/lane/you now stacked as rows in
+       this same grid, that same 14px lands between every one of them
+       too. Direct feedback (2026-09-11), after the Field Zone/Attack
+       Zone double-margin bugs were already fixed: the still-correct
+       remaining gap (this grid gap, plus each playerboard's own 8px
+       padding on top of it) read as "still a lot of empty space" once
+       everything else on the board got this compact - tightened the
+       row rhythm itself rather than chasing more margins. */
+    gap: 8px;
   }
   /* .dk-titlebar/.step-ribbon/.dk-titlebar-right's own narrow-viewport
      overrides live further down (right after their base rules, near
