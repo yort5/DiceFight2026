@@ -13,9 +13,9 @@ namespace DiceFight.Api.Controllers;
 // V2_PLAN.md's own Phase 9 note ("keeps v1 untouched").
 //
 // No team-builder: creating a game picks two Champions and
-// InstinctClashConfig.CharactersByEnergyType builds each team
+// InstinctClashConfig.CharactersByChampion builds each team
 // automatically. No Global abilities/Range/Tag Out/Continuous-die
-// endpoints - none of InstinctClashConfig's 8 Characters use those
+// endpoints - none of InstinctClashConfig's Characters use those
 // mechanisms, so there is nothing for them to drive yet.
 [ApiController]
 [Route("api/v2/games")]
@@ -43,7 +43,7 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase
         var champion = InstinctClashConfig.Champions.FirstOrDefault(c => c.Id == championId)
             ?? throw new InvalidOperationException($"Unknown Champion id '{championId}'.");
         var player = new Player { Id = id, Name = champion.Name, ChampionId = champion.Id };
-        player.TeamCardIds.AddRange(InstinctClashConfig.CharactersByEnergyType[champion.EnergySymbolId]);
+        player.TeamCardIds.AddRange(InstinctClashConfig.CharactersByChampion[champion.Id]);
         return player;
     }
 

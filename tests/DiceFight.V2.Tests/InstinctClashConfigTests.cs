@@ -27,10 +27,40 @@ public class InstinctClashConfigTests
     }
 
     [Fact]
-    public void Every_Energy_Type_Has_Exactly_Eight_Characters()
+    public void Every_Champion_Has_Exactly_Eight_Characters_With_No_Duplicates()
     {
-        foreach (var (_, ids) in InstinctClashConfig.CharactersByEnergyType)
+        var seenAcrossChampions = new HashSet<string>();
+        foreach (var (championId, ids) in InstinctClashConfig.CharactersByChampion)
+        {
             Assert.Equal(8, ids.Count);
+            Assert.Equal(8, ids.Distinct().Count()); // no repeats within one Champion's own pack
+            foreach (var id in ids)
+                Assert.True(seenAcrossChampions.Add(id), $"\"{id}\" appears on more than one Champion's pack (via {championId}).");
+        }
+    }
+
+    // Direct feedback (2026-09-12): every Champion's own-energy four needs
+    // "at least one 2-cost and one 3-cost... a mid-range and a higher
+    // cost power card." Checks the rule itself, not just today's specific
+    // picks, so a future roster edit that breaks the curve fails loudly.
+    [Fact]
+    public void Every_Champions_Own_Energy_Characters_Cover_A_Real_Cost_Curve()
+    {
+        var catalog = InstinctClashConfig.Catalog;
+        foreach (var champion in InstinctClashConfig.Champions)
+        {
+            var ownEnergyCosts = InstinctClashConfig.CharactersByChampion[champion.Id]
+                .Select(id => catalog[id])
+                .Where(c => c.EnergySymbolIds.Contains(champion.EnergySymbolId))
+                .Select(c => c.PurchaseCost)
+                .OrderBy(c => c)
+                .ToList();
+
+            Assert.True(ownEnergyCosts.Count >= 4, $"{champion.Id} has fewer than 4 own-energy Characters.");
+            Assert.Contains(2, ownEnergyCosts);
+            Assert.Contains(3, ownEnergyCosts);
+            Assert.True(ownEnergyCosts.Max() >= 5, $"{champion.Id} has no higher-cost \"power card\" (5+) in its own energy.");
+        }
     }
 
     [Fact]
@@ -40,9 +70,9 @@ public class InstinctClashConfigTests
         var catalog = InstinctClashConfig.Catalog;
 
         var playerOne = new Player { Id = "p1", Name = "Wolf Player", ChampionId = "Wolf" };
-        playerOne.TeamCardIds.AddRange(InstinctClashConfig.CharactersByEnergyType["Claw"]);
+        playerOne.TeamCardIds.AddRange(InstinctClashConfig.CharactersByChampion["Wolf"]);
         var playerTwo = new Player { Id = "p2", Name = "Armadillo Player", ChampionId = "Armadillo" };
-        playerTwo.TeamCardIds.AddRange(InstinctClashConfig.CharactersByEnergyType["Shell"]);
+        playerTwo.TeamCardIds.AddRange(InstinctClashConfig.CharactersByChampion["Armadillo"]);
 
         var state = GameSetup.NewGame(config, catalog, playerOne, playerTwo);
         var queue = new AbilityQueue();

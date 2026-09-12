@@ -127,7 +127,7 @@ public sealed record V2GameStateDto(
 
 // No team-builder yet (v3/DESIGN_NOTES.md's own open question) - picking
 // a Champion picks the team: both of InstinctClashConfig.
-// CharactersByEnergyType[energy type] automatically.
+// CharactersByChampion[championId] automatically.
 public sealed record CreateV2GameRequest(string PlayerOneChampionId, string PlayerTwoChampionId);
 public sealed record V2PurchaseRequest(string DieId, IReadOnlyList<string> EnergyDieIds);
 public sealed record V2FieldRequest(string DieId, IReadOnlyList<string> EnergyDieIds);

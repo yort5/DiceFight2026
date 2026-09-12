@@ -2625,3 +2625,94 @@ gap with OPP/YOU pushed to the outer edges; a cropped screenshot of
 just `.energy-badge` shows a clean circle with the Claw icon fully
 contained, no bleed. Zero console errors. `tsc -b`/`oxlint`/`vite
 build` clean.
+
+## Champion packs mix energies now, not monochrome (2026-09-12)
+
+Direct feedback: "mix up the energies a bit. So for the champion packs
+of eight characters, I'd like to keep four of them the same energy type
+as the champion, two of them be a 'symbiotic' energy type, and then one
+of each of the others," plus a cost-curve rule for the four own-type
+picks ("at least one 2-cost and one 3-cost... a mid-range and a higher
+cost power card" - the other four "can be more or less random"). Every
+Champion's pack had been all 8 of its own energy type since the
+2026-09-06/07 roster expansion - this was the first real break from
+that.
+
+**Symbiotic pairing, confirmed with the user**: Claw<->Wing (aggro +
+tempo - hit fast) and Shell<->Eye (defense + control - grind it out).
+Chosen partly for archetype fit, partly because it makes the
+redistribution math come out exactly even: each energy pool has 8
+cards, and 4 (own) + 2 (partner) + 1 + 1 (the other two) = 8 - a clean
+partition with nothing left over, if every pool has exactly 8.
+
+**The real cost data didn't support that on its own**, checked before
+touching anything: Claw's 8 costs were 2/4/4/5/5/6/6/6 (no 3-cost),
+Wing's were 3/3/4/4/4/4/4/5 (no 2-cost), Eye's were 3/3/4/4/5/6/6/7 (no
+2-cost) - only Shell already had a full curve. Direct instruction on
+how to close the gap: "I'd rather find cards in the catalog to fill out
+the decks that [than] change the numbers on existing cards. Shouldn't
+be too hard to find another 2 or 3 cost to port to our engine" - so
+three new Characters were mined from the wider 145-card migrated DPS
+pool (`DpsCards.cs`, the same "already buildable against the closed
+vocabulary" source CARD_INSPIRATION.md's original 45 picks came from),
+not from renumbering any of the existing eight:
+
+| New Character | Energy | Cost | Ability | Source |
+|---|---|---|---|---|
+| Mongoose | Claw | 3 | Whenever this levels up: deal 2 damage to a target creature. | Toad, "Secondary Mutation" (DPS054) - dropped its affiliation-gated "Teamwatch" second clause |
+| Swift | Wing | 2 | On attack: draw a die into your Prep Area. | Beast, "Combat Ready" (DPS098) - dropped its one-time meta-cost "Founder" clause; printed cost was already 2 |
+| Cuttlefish | Eye | 2 | On attack: spin a target opposing level 1 creature to an energy face. | Iceman, "Icy Interference" (DPS034) - cost discounted from its printed 4 (no closer-fitting Eye pick prints at 2; same "cost is a starting point, not balanced" latitude CARD_INSPIRATION.md's Method section already claims) |
+
+That grows Claw/Wing/Eye to 9 cards each (Shell stays at 8), so each of
+those three pools has exactly one card left over after the 4+2+1+1
+split - Orca, Monarch Butterfly, and Anglerfish are still real,
+findable `Catalog` entries, just not on any Champion's team yet.
+
+**`InstinctClashConfig.CharactersByEnergyType` (per-energy-type) was
+replaced outright with `CharactersByChampion` (per-champion)** - the
+old shape had no way to express "borrow 2 from another pool." Only one
+real call site needed updating (`V2GamesController.BuildPlayer`, keyed
+on `champion.Id` now instead of `champion.EnergySymbolId`) -
+`GameSetup.SeedTeamDice` was already fully generic (just seeds
+`DieLimit` copies of whatever's in `TeamCardIds`, no energy-matching
+assumption), so no engine change was needed at all, confirmed by
+reading it before assuming otherwise.
+
+Final packs (own 4 first, then the 2 symbiotic, then 1 + 1):
+
+- **Wolf (Claw)**: Honey Badger(2)/Mongoose(3)/Wolverine(4)/Tiger(6),
+  Mountain Goat(3)/Greyhound(4) [Wing], Hippopotamus(4) [Shell],
+  Elephant(6) [Eye].
+- **Armadillo (Shell)**: Hermit Crab(2)/Pangolin(3)/Musk Ox(4)/Snapping
+  Turtle(5), Fox(5)/Cowbird(3) [Eye], Cape Buffalo(6) [Claw],
+  Hummingbird(4) [Wing].
+- **Golden Eagle (Wing)**: Swift(2)/Barn Swallow(3)/Osprey(4)/
+  Albatross(5), Grizzly Bear(5)/Peregrine Falcon(6) [Claw], Box
+  Turtle(3) [Shell], Barn Owl(4) [Eye].
+- **Great Horned Owl (Eye)**: Cuttlefish(2)/Magpie(3)/Hyena(4)/Raven(7),
+  Opossum(3)/Queen Termite(4) [Shell], Stoat(4) [Claw], Homing
+  Pigeon(4) [Wing].
+
+Bonus, not a design goal going in: this gives the Tardigrade Surge
+face's Wild pip - previously just a rare bonus, since every card in a
+team was the same type anyway - a real reason to matter. It's now the
+one guaranteed way to pay an off-type splash card's purchase cost.
+
+**Two new tests, not just updated old ones**: `Every_Champion_Has_
+Exactly_Eight_Characters_With_No_Duplicates` (each pack is 8, no
+repeats within one, no card shared across two Champions) and
+`Every_Champions_Own_Energy_Characters_Cover_A_Real_Cost_Curve`
+(asserts the RULE - a 2, a 3, and a 5+ present in each Champion's own-
+energy subset - not today's specific picks, so a future roster edit
+that breaks the curve fails loudly instead of silently). Also fixed
+`V2GamesControllerTests`' now-wrong `Create_Builds_Each_Team_From_Its_
+Champions_Energy_Type` (asserted every card `StartsWith("IC-CLAW-")`,
+the exact invariant this change intentionally breaks) to check "matches
+`CharactersByChampion` exactly" instead. 322 V2 + 580 Engine + 13 Api
+tests pass.
+
+Verified against the real running API, not just the test suite: a
+`POST /api/v2/games` for Wolf vs. Great Horned Owl returned exactly the
+8+8 card ids listed above (not the old all-Claw/all-Eye lists), and a
+headless-Chromium screenshot of Wolf's actual roster strip shows all
+four energies' icons side by side on one team.

@@ -173,3 +173,20 @@ Shelled/Shell specifically share a root word, which the Claw/Pawed pair
 doesn't. Worth either renaming this one tag (e.g. "Armored") or deciding the
 echo is fine because the axes are visually distinct enough in the UI not to
 matter.
+
+---
+
+## Later additions, sourced the same way (2026-09-12)
+
+Three more picks, mined from the wider 145-card `DpsCards.cs` pool rather
+than the curated lists above, specifically to fill cost-curve gaps the
+original 32-card build left in Claw (no 3-cost)/Wing (no 2-cost)/Eye (no
+2-cost) - see `DESIGN_NOTES.md`'s "Champion packs mix energies now" entry
+for why that gap needed closing. Same method: original stats/cost are a
+starting point, not balanced for this game.
+
+| Animal | Energy | Cost | Ability | Source |
+|---|---|---|---|---|
+| Mongoose | Claw | 3 | Whenever this levels up: deal 2 damage to a target creature. | Toad, "Secondary Mutation" (DPS054) |
+| Swift | Wing | 2 | On attack: draw a die into your Prep Area. | Beast, "Combat Ready" (DPS098) |
+| Cuttlefish | Eye | 2 | On attack: spin a target opposing level 1 creature to an energy face. | Iceman, "Icy Interference" (DPS034) - cost discounted from its printed 4 |

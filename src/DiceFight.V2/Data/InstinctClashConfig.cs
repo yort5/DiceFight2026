@@ -155,6 +155,28 @@ public static class InstinctClashConfig
         Abilities: [],
         Continuous: [new StatAura(OwnCreatures, AtkDelta: new Fixed(1))]);
 
+    // 2026-09-12 addition - Claw had no natural 3-cost pick among the
+    // original 8 (2, 4, 4, 5, 5, 6, 6, 6), which the new pack-composition
+    // rule below (CharactersByChampion) needs for every Champion's own-
+    // type four. Ported rather than renumbering an existing card, per
+    // direct instruction: "I'd rather find cards in the catalog to fill
+    // out the decks that change the numbers on existing cards... shouldn't
+    // be too hard to find another 2 or 3 cost to port." Source: Toad,
+    // "Secondary Mutation" (DPS054) - dropped its own "Teamwatch: spin
+    // Toad up a level" second clause (affiliation-gated; v3 doesn't use
+    // Affiliations for gameplay yet, same latitude CARD_INSPIRATION.md's
+    // other partial ports already take).
+    public static readonly CardDef Mongoose = new(
+        Id: "IC-CLAW-09", Name: "Mongoose", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        PurchaseCost: 3, EnergySymbolIds: ["Claw"],
+        Die: CharacterDie("IC-CLAW-09Die", energyType: "Claw", fieldingCost: 1, (2, 1), (3, 2), (4, 4)),
+        DieLimit: 4, Affiliations: [], Keywords: [],
+        RawText: "Whenever this levels up: deal 2 damage to a target creature.",
+        Abilities: [new TriggeredAbility(TriggerKind.DieFaceChanged,
+            new DealDamage(new Fixed(2), new TargetFilter(Kind: TargetKind.CharacterDie)),
+            Filter: new EventFilter(LevelIncreased: true, RequireSelf: true))],
+        Continuous: []);
+
     // Shell
 
     public static readonly CardDef Hippopotamus = new(
@@ -324,6 +346,21 @@ public static class InstinctClashConfig
             new DealDamage(new Fixed(2), new TargetFilter(Kind: TargetKind.CharacterDie)))],
         Continuous: []);
 
+    // 2026-09-12 addition - Wing had no natural 2-cost pick among the
+    // original 8 (3, 3, 4, 4, 4, 4, 4, 5) - see Mongoose's own remarks
+    // above for why this was ported rather than a renumbering. Source:
+    // Beast, "Combat Ready" (DPS098) - dropped its own "Founder: first
+    // Beast die you purchase each game costs 1 extra" clause (a one-time
+    // meta-cost rule with nothing to hook into for a fresh pick).
+    public static readonly CardDef Swift = new(
+        Id: "IC-WING-09", Name: "Swift", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        PurchaseCost: 2, EnergySymbolIds: ["Wing"],
+        Die: CharacterDie("IC-WING-09Die", energyType: "Wing", fieldingCost: 1, (2, 1), (2, 2), (3, 2)),
+        DieLimit: 4, Affiliations: [], Keywords: [],
+        RawText: "On attack: draw a die into your Prep Area.",
+        Abilities: [new TriggeredAbility(TriggerKind.DieAttacks, new DrawToZone(1, Zone.PrepArea, Zone.Bag))],
+        Continuous: []);
+
     // Eye
 
     public static readonly CardDef BarnOwl = new(
@@ -408,28 +445,69 @@ public static class InstinctClashConfig
         Abilities: [],
         Continuous: [new StatAura(OwnCreatures, DefDelta: new Fixed(1))]);
 
+    // 2026-09-12 addition - Eye had no natural 2-cost pick among the
+    // original 8 (3, 3, 4, 4, 5, 6, 6, 7) - see Mongoose's own remarks
+    // above for why this was ported rather than a renumbering. Source:
+    // Iceman, "Icy Interference" (DPS034) - cost discounted from its
+    // printed 4 to 2 (no other close-fitting Eye pick prints at 2; same
+    // "cost is a starting point, not a balanced number for this game"
+    // latitude CARD_INSPIRATION.md's own Method section already claims).
+    public static readonly CardDef Cuttlefish = new(
+        Id: "IC-EYE-09", Name: "Cuttlefish", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        PurchaseCost: 2, EnergySymbolIds: ["Eye"],
+        Die: CharacterDie("IC-EYE-09Die", energyType: "Eye", fieldingCost: 1, (2, 4), (3, 6), (4, 6)),
+        DieLimit: 4, Affiliations: [], Keywords: [],
+        RawText: "On attack: spin a target opposing level 1 creature to an energy face.",
+        Abilities: [new TriggeredAbility(TriggerKind.DieAttacks,
+            new SpinToEnergy(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Opposing, Stat: new StatThreshold(StatKind.Level, Min: 1, Max: 1))))],
+        Continuous: []);
+
     public static readonly IReadOnlyDictionary<string, CardDef> Catalog = new List<CardDef>
     {
-        HoneyBadger, Wolverine, GrizzlyBear, Orca, PeregrineFalcon, Tiger, Stoat, CapeBuffalo,
+        HoneyBadger, Wolverine, GrizzlyBear, Orca, PeregrineFalcon, Tiger, Stoat, CapeBuffalo, Mongoose,
         Hippopotamus, MuskOx, Pangolin, HermitCrab, Opossum, QueenTermite, SnappingTurtle, BoxTurtle,
-        Osprey, BarnSwallow, Hummingbird, MountainGoat, MonarchButterfly, HomingPigeon, Greyhound, Albatross,
-        BarnOwl, Hyena, Anglerfish, Cowbird, Magpie, Raven, Elephant, Fox,
+        Osprey, BarnSwallow, Hummingbird, MountainGoat, MonarchButterfly, HomingPigeon, Greyhound, Albatross, Swift,
+        BarnOwl, Hyena, Anglerfish, Cowbird, Magpie, Raven, Elephant, Fox, Cuttlefish,
     }.ToDictionary(c => c.Id);
 
-    // Which eight Characters a team gets when it picks a Champion - the
-    // v3 "one energy type per team" starting point (v3/DESIGN_NOTES.md's
-    // own open question: whether Champion/Character energy must match).
-    // API layer (Phase 3) reads this to build TeamCardIds from a Champion
-    // choice alone, no deckbuilding UI needed yet. Bumped from 2 to 8
-    // per type (2026-09-06/07, "build out a full roster... 8 different
-    // animals") - see Config.Rules.MaxTeamCards/MaxTeamDice below, which
-    // have to grow in lockstep.
-    public static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> CharactersByEnergyType = new Dictionary<string, IReadOnlyList<string>>
+    // Which eight Characters a team gets when it picks a Champion. API
+    // layer (Phase 3) reads this to build TeamCardIds from a Champion
+    // choice alone, no deckbuilding UI needed yet.
+    //
+    // Redesigned 2026-09-12 - was a straight per-energy-type mapping
+    // (every team got all 8 of its Champion's own energy type; "one
+    // energy type per team" was v3's original starting point, see
+    // v3/DESIGN_NOTES.md). Direct feedback: "mix up the energies a bit...
+    // four of them the same energy type as the champion, two of them a
+    // 'symbiotic' energy type, and then one of each of the others,"
+    // plus a cost-curve rule for the four own-type picks (at least one
+    // 2-cost and one 3-cost, a mid-range, and a higher-cost "power
+    // card" - the non-Champion-energy four "can be more or less
+    // random"). Symbiotic pairing, confirmed with the user: Claw<->Wing
+    // (aggro+tempo - hit fast) and Shell<->Eye (defense+control - grind
+    // it out).
+    //
+    // That pairing makes the redistribution math come out even: each
+    // energy pool has exactly 8 (Shell) or 9 (Claw/Wing/Eye, after the
+    // three cost-curve ports above - Mongoose/Swift/Cuttlefish) cards,
+    // and every Champion's 8-card pack draws 4 (own) + 2 (symbiotic
+    // partner) + 1 + 1 (the other two energies) = 8 - so a 9-card pool
+    // has exactly one spare left unassigned (Orca, Monarch Butterfly,
+    // Anglerfish - still in Catalog, just not on any team yet; a Shell's
+    // own 8 cards all get placed with none spare). Bonus: this gives the
+    // Tardigrade Surge face's Wild pip (previously only useful for a
+    // same-type purchase) a real reason to matter - it's now the one
+    // guaranteed way to pay for an off-type splash card.
+    public static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> CharactersByChampion = new Dictionary<string, IReadOnlyList<string>>
     {
-        ["Claw"] = [HoneyBadger.Id, Wolverine.Id, GrizzlyBear.Id, Orca.Id, PeregrineFalcon.Id, Tiger.Id, Stoat.Id, CapeBuffalo.Id],
-        ["Shell"] = [Hippopotamus.Id, MuskOx.Id, Pangolin.Id, HermitCrab.Id, Opossum.Id, QueenTermite.Id, SnappingTurtle.Id, BoxTurtle.Id],
-        ["Wing"] = [Osprey.Id, BarnSwallow.Id, Hummingbird.Id, MountainGoat.Id, MonarchButterfly.Id, HomingPigeon.Id, Greyhound.Id, Albatross.Id],
-        ["Eye"] = [BarnOwl.Id, Hyena.Id, Anglerfish.Id, Cowbird.Id, Magpie.Id, Raven.Id, Elephant.Id, Fox.Id],
+        // Own 2/3/mid/power: HoneyBadger(2)/Mongoose(3)/Wolverine(4)/Tiger(6).
+        ["Wolf"] = [HoneyBadger.Id, Mongoose.Id, Wolverine.Id, Tiger.Id, MountainGoat.Id, Greyhound.Id, Hippopotamus.Id, Elephant.Id],
+        // Own 2/3/mid/power: HermitCrab(2)/Pangolin(3)/MuskOx(4)/SnappingTurtle(5).
+        ["Armadillo"] = [HermitCrab.Id, Pangolin.Id, MuskOx.Id, SnappingTurtle.Id, Fox.Id, Cowbird.Id, CapeBuffalo.Id, Hummingbird.Id],
+        // Own 2/3/mid/power: Swift(2)/BarnSwallow(3)/Osprey(4)/Albatross(5).
+        ["GoldenEagle"] = [Swift.Id, BarnSwallow.Id, Osprey.Id, Albatross.Id, GrizzlyBear.Id, PeregrineFalcon.Id, BoxTurtle.Id, BarnOwl.Id],
+        // Own 2/3/mid/power: Cuttlefish(2)/Magpie(3)/Hyena(4)/Raven(7).
+        ["GreatHornedOwl"] = [Cuttlefish.Id, Magpie.Id, Hyena.Id, Raven.Id, Opossum.Id, QueenTermite.Id, Stoat.Id, HomingPigeon.Id],
     };
 
     // --- Champions: no die, one flat always-on passive, plus the

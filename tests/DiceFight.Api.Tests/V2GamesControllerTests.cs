@@ -1,4 +1,5 @@
 using DiceFight.Api;
+using DiceFight.V2.Data;
 
 namespace DiceFight.Api.Tests;
 
@@ -23,7 +24,7 @@ public class V2GamesControllerTests
     }
 
     [Fact]
-    public void Create_Builds_Each_Team_From_Its_Champions_Energy_Type()
+    public void Create_Builds_Each_Team_From_Its_Champions_Character_Pack()
     {
         var (_, session) = CreateGame("Wolf", "GreatHornedOwl");
         var state = session.State;
@@ -32,14 +33,19 @@ public class V2GamesControllerTests
         // Deck-building basics: every Character copy sits Unpurchased
         // until bought (v1's TeamSetup shape, unchanged for v3) - no free
         // starting copies, only the Tardigrades start in Bag.
-        Assert.Equal(32, state.DiceIn("teamA", DiceFight.V2.Model.Zone.Unpurchased).Count()); // 8 Claw Characters x DieLimit 4
-        Assert.Equal(8, state.DiceIn("teamA", DiceFight.V2.Model.Zone.Bag).Count()); // Claw Tardigrades
-        Assert.All(state.DiceIn("teamA", DiceFight.V2.Model.Zone.Unpurchased),
-            d => Assert.StartsWith("IC-CLAW-", d.CardId));
+        Assert.Equal(32, state.DiceIn("teamA", DiceFight.V2.Model.Zone.Unpurchased).Count()); // 8 Characters x DieLimit 4
+        Assert.Equal(8, state.DiceIn("teamA", DiceFight.V2.Model.Zone.Bag).Count()); // Claw Tardigrades - Wolf's own type, unaffected by the mixed-energy Character pack
+        // Wolf's pack mixes energies (2026-09-12: 4 Claw/2 Wing/1 Shell/1
+        // Eye, not a monochrome 8) - the real invariant now is "matches
+        // CharactersByChampion exactly," not "every card is Claw."
+        Assert.Equal(
+            InstinctClashConfig.CharactersByChampion["Wolf"].ToHashSet(),
+            state.DiceIn("teamA", DiceFight.V2.Model.Zone.Unpurchased).Select(d => d.CardId!).ToHashSet());
 
         Assert.Equal("GreatHornedOwl", state.PlayerTwo.ChampionId);
-        Assert.All(state.DiceIn("teamB", DiceFight.V2.Model.Zone.Unpurchased),
-            d => Assert.StartsWith("IC-EYE-", d.CardId));
+        Assert.Equal(
+            InstinctClashConfig.CharactersByChampion["GreatHornedOwl"].ToHashSet(),
+            state.DiceIn("teamB", DiceFight.V2.Model.Zone.Unpurchased).Select(d => d.CardId!).ToHashSet());
     }
 
     [Fact]

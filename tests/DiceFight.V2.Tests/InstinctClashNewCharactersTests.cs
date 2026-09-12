@@ -40,9 +40,9 @@ public class InstinctClashNewCharactersTests
         var config = InstinctClashConfig.Config;
         var catalog = InstinctClashConfig.Catalog;
         var playerOne = new Player { Id = "p1", Name = "One", ChampionId = "Wolf" };
-        playerOne.TeamCardIds.AddRange(InstinctClashConfig.CharactersByEnergyType["Claw"]);
+        playerOne.TeamCardIds.AddRange(InstinctClashConfig.CharactersByChampion["Wolf"]);
         var playerTwo = new Player { Id = "p2", Name = "Two", ChampionId = "Armadillo" };
-        playerTwo.TeamCardIds.AddRange(InstinctClashConfig.CharactersByEnergyType["Shell"]);
+        playerTwo.TeamCardIds.AddRange(InstinctClashConfig.CharactersByChampion["Armadillo"]);
         var state = GameSetup.NewGame(config, catalog, playerOne, playerTwo);
         state.CurrentStep = TurnStep.Main;
         return state;
