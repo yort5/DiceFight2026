@@ -21,14 +21,14 @@ public sealed record V2CharacterFaceDto(int FieldingCost, int Attack, int Defens
 public sealed record V2CardDefDto(
     string Id, string Name, string? Subtitle, int PurchaseCost,
     IReadOnlyList<string> EnergyTypes, int DieLimit,
-    IReadOnlyList<V2CharacterFaceDto> Levels, string RawText)
+    IReadOnlyList<V2CharacterFaceDto> Levels, string RawText, IReadOnlyList<string> Keywords)
 {
     public static V2CardDefDto From(CardDef card) => new(
         card.Id, card.Name, card.Subtitle, card.PurchaseCost, card.EnergySymbolIds, card.DieLimit,
         card.Die.Faces.Where(f => f.Character is not null)
             .Select(f => new V2CharacterFaceDto(f.Character!.FieldingCost, f.Character.Attack, f.Character.Defense))
             .ToList(),
-        card.RawText);
+        card.RawText, card.Keywords);
 }
 
 // EffectiveAttack/EffectiveDefense run through QueryEngine (Champion
@@ -47,7 +47,7 @@ public sealed record V2CardDefDto(
 public sealed record V2DieDto(
     string Id, string? CardId, string OwnerId, string ControllerId, string Zone,
     bool IsTardigrade, int? Level, int? EffectiveAttack, int? EffectiveDefense,
-    string? EnergySymbolId, int EnergyAmount)
+    string? EnergySymbolId, int EnergyAmount, int? Lane)
 {
     private static readonly HashSet<DiceFight.V2.Model.Zone> InPlayZones =
         [DiceFight.V2.Model.Zone.FieldZone, DiceFight.V2.Model.Zone.AttackZone];
@@ -63,7 +63,7 @@ public sealed record V2DieDto(
             face?.Character?.Level,
             face?.Character is not null ? (inPlay ? QueryEngine.GetAttack(state, die) : QueryEngine.GetBaseAttack(state, die)) : null,
             face?.Character is not null ? (inPlay ? QueryEngine.GetDefense(state, die) : QueryEngine.GetBaseDefense(state, die)) : null,
-            symbol?.SymbolId, symbol?.Count ?? 0);
+            symbol?.SymbolId, symbol?.Count ?? 0, die.Lane);
     }
 }
 
@@ -132,7 +132,11 @@ public sealed record CreateV2GameRequest(string PlayerOneChampionId, string Play
 public sealed record V2PurchaseRequest(string DieId, IReadOnlyList<string> EnergyDieIds);
 public sealed record V2FieldRequest(string DieId, IReadOnlyList<string> EnergyDieIds);
 public sealed record V2RerollRequest(IReadOnlyList<string> DieIds);
-public sealed record V2DeclareAttackersRequest(IReadOnlyList<string> AttackerDieIds);
+// Lane is which of the Attack Zone's four fixed lanes (0-3) the die is
+// declared into - mobile refresh (2026-09), see DieInstance.Lane's own
+// remarks. Several attackers may share a lane.
+public sealed record V2AttackerDeclaration(string DieId, int Lane);
+public sealed record V2DeclareAttackersRequest(IReadOnlyList<V2AttackerDeclaration> Attackers);
 public sealed record V2BlockAssignment(string AttackerDieId, string BlockerDieId);
 public sealed record V2DeclareBlockersRequest(IReadOnlyList<V2BlockAssignment> Assignments);
 // No manual damage-split field, unlike v1's AssignCombatDamageRequest -

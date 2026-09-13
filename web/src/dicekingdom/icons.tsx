@@ -714,6 +714,56 @@ function FoxIcon(props: IconProps) {
   );
 }
 
+// ---- Mobile refresh (2026-09) chrome glyphs ----
+// A second, unrelated icon language from the animal/energy set above -
+// stroke-based on a 24-unit viewBox, straight from the design handoff's
+// literal paths (design_handoff_dice_kingdom_mobile/README.md), not
+// reproduced by eye. Kept separate from Svg/ENERGY_ICONS/CHARACTER_ICONS
+// rather than forced into that 64-unit fill-based style, since these
+// really are a different visual language (phase-rail pills, not game
+// pieces) - the handoff itself draws this distinction.
+function StrokeSvg({ size = 17, strokeWidth = 1.9, children }: IconProps & { strokeWidth?: number; children: ReactNode }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {children}
+    </svg>
+  );
+}
+
+export type PhaseKey = "clear" | "roll" | "main" | "attack" | "cleanup";
+
+const PHASE_PATHS: Record<PhaseKey, string> = {
+  clear: "M12 3v10M8 9l4 4 4-4M4 15v5h16v-5",
+  roll: "M4 4h16v16H4zM9 9h0.01M15 15h0.01",
+  main: "M12 5v14M5 12h14",
+  attack: "M5 4l5 16M11 4l5 16M17 5l4 12",
+  cleanup: "M20 12a8 8 0 1 1-2.4-5.7M20 4v4h-4",
+};
+
+export function PhaseIcon({ phase, size = 17 }: { phase: PhaseKey; size?: number }) {
+  return (
+    <StrokeSvg size={size}>
+      <path d={PHASE_PATHS[phase]} />
+    </StrokeSvg>
+  );
+}
+
+export function ChevronDownIcon({ size = 10 }: IconProps) {
+  return (
+    <StrokeSvg size={size} strokeWidth={2.6}>
+      <path d="M6 9l6 6 6-6" />
+    </StrokeSvg>
+  );
+}
+
+export function ArrowRightIcon({ size = 14 }: IconProps) {
+  return (
+    <StrokeSvg size={size} strokeWidth={2}>
+      <path d="M5 12h14M14 7l5 5-5 5" />
+    </StrokeSvg>
+  );
+}
+
 export const CHARACTER_ICONS: Record<string, (p: IconProps) => ReactElement> = {
   "IC-CLAW-01": HoneyBadgerIcon,
   "IC-CLAW-02": WolverineIcon,

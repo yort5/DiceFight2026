@@ -147,7 +147,8 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase
     {
         var state = RequireTurn(gameId, V2Actor.Active);
         var queue = new AbilityQueue();
-        CombatEngine.DeclareAttackers(state, queue, request.AttackerDieIds);
+        var lanes = request.Attackers.ToDictionary(a => a.DieId, a => a.Lane);
+        CombatEngine.DeclareAttackers(state, queue, lanes);
         Drain(state, queue);
         return Ok(Result(gameId, state));
     }

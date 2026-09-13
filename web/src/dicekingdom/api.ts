@@ -55,8 +55,11 @@ export const api = {
 
   enterAttackStep: (id: string) => request<GameState>(`/${id}/enter-attack-step`, { method: "POST" }),
   skipAttackStep: (id: string) => request<GameState>(`/${id}/skip-attack-step`, { method: "POST" }),
-  declareAttackers: (id: string, attackerDieIds: string[]) =>
-    request<GameState>(`/${id}/declare-attackers`, { method: "POST", body: JSON.stringify({ attackerDieIds }) }),
+  // attackers: which lane (0-3) each declared attacker is placed into -
+  // see DieInstance.Lane's own remarks. A lane is a display grouping
+  // only; blocking below is still assigned per individual attacker.
+  declareAttackers: (id: string, attackers: { dieId: string; lane: number }[]) =>
+    request<GameState>(`/${id}/declare-attackers`, { method: "POST", body: JSON.stringify({ attackers }) }),
   declareBlockers: (id: string, assignments: BlockAssignment[]) =>
     request<GameState>(`/${id}/declare-blockers`, { method: "POST", body: JSON.stringify({ assignments }) }),
   assignCombatDamage: (id: string, assignments: BlockAssignment[]) =>

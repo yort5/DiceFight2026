@@ -20,6 +20,7 @@ export interface CardDef {
   dieLimit: number;
   levels: CharacterFace[];
   rawText: string;
+  keywords: string[];
 }
 
 export interface Champion {
@@ -41,6 +42,9 @@ export interface Die {
   effectiveDefense: number | null;
   energySymbolId: string | null;
   energyAmount: number;
+  /** Which of the Attack Zone's four fixed lanes (0-3) this attacker was
+   *  declared into - a display grouping only, null outside AttackZone. */
+  lane: number | null;
 }
 
 export interface PlayerState {

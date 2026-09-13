@@ -28,9 +28,28 @@ public static class CombatEngine
     // CantAttack for eligibility purposes - a judgment call, not specified
     // further anywhere in the frozen vocabulary (no authored card uses it
     // yet); revisit if a real migrated card needs a different reading.
-    public static void DeclareAttackers(GameState state, AbilityQueue queue, IReadOnlyList<string> attackerDieIds)
+    // Mobile refresh (2026-09) - the Attack Zone is now four fixed lanes
+    // rather than one ad hoc column per attacker. attackerLanes carries
+    // each declared attacker's chosen lane (0-3); several attackers may
+    // share a lane. This is purely which lane a die is DISPLAYED in -
+    // blocking and damage resolution below are completely untouched,
+    // still per-individual-attacker via CombatAssignment, since
+    // InstinctClashConfig grants no BlocksN/MinBlockers keyword that
+    // would need lane-pooled math (see V2GamesController.AssignCombatDamage's
+    // own remark: every attacker has at most one live blocker here).
+    public const int LaneCount = 4;
+
+    // Convenience overload for callers (tests, TurnEngine's skip-combat
+    // path) that don't care which lane an attacker lands in - spreads
+    // them round-robin across the four lanes so nothing has to reason
+    // about lane assignment just to declare an attack.
+    public static void DeclareAttackers(GameState state, AbilityQueue queue, IReadOnlyList<string> attackerDieIds) =>
+        DeclareAttackers(state, queue, attackerDieIds.Select((id, i) => (id, lane: i % LaneCount)).ToDictionary(x => x.id, x => x.lane));
+
+    public static void DeclareAttackers(GameState state, AbilityQueue queue, IReadOnlyDictionary<string, int> attackerLanes)
     {
         RequireStep(state, StepIds.SelectAttackers);
+        var attackerDieIds = attackerLanes.Keys.ToList();
 
         var forcedButOmitted = state.DiceIn(state.ActivePlayerId, Zone.FieldZone)
             .Where(d => d.CombatFlags.Contains(CombatFlagKind.MustAttack) && !attackerDieIds.Contains(d.Id))
@@ -38,15 +57,18 @@ public static class CombatEngine
         if (forcedButOmitted.Count > 0)
             throw new InvalidOperationException($"{string.Join(", ", forcedButOmitted.Select(d => d.Id))} must attack this turn.");
 
-        foreach (var id in attackerDieIds)
+        foreach (var (id, lane) in attackerLanes)
         {
             var die = FindDie(state, id);
             if (die.ControllerId != state.ActivePlayerId || die.Zone != Zone.FieldZone || state.GetCurrentFace(die)?.Character is null)
                 throw new InvalidOperationException($"Die '{id}' is not an eligible attacker.");
             if (die.CombatFlags.Contains(CombatFlagKind.CantAttack) || die.CombatFlags.Contains(CombatFlagKind.OnlyBlocker))
                 throw new InvalidOperationException($"Die '{id}' cannot attack this turn.");
+            if (lane < 0 || lane >= LaneCount)
+                throw new InvalidOperationException($"Lane {lane} is out of range for die '{id}'.");
 
             die.Zone = Zone.AttackZone;
+            die.Lane = lane;
             // Rule 2.7.1.2 - "when attacks" fires for each attacking die.
             EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieAttacks, die, die.ControllerId, state.CurrentStepId));
         }
@@ -261,7 +283,10 @@ public static class CombatEngine
         // Field Zone", the TURN SUMMARY's own final Attack Step entry.
         EnterStep(state, queue, StepIds.ReturnToField);
         foreach (var die in state.Dice.Where(d => d.Zone == Zone.AttackZone))
+        {
             die.Zone = Zone.FieldZone;
+            die.Lane = null;
+        }
         // Unlike v1, this does NOT also advance CurrentStep to CleanUp -
         // the caller calls TurnEngine.CleanUp explicitly afterward, same
         // as the skip-combat path already does; keeps CleanUp's own

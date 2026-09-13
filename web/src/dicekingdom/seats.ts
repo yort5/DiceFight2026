@@ -68,13 +68,13 @@ export function forgetSeats(): void {
   write(null);
 }
 
-export function inviteLink(gameId: string): string | null {
+export function inviteLink(gameId: string, path = "/dice-kingdom"): string | null {
   const stored = read();
   if (!stored || stored.gameId !== gameId) return null;
   const other = stored.seats.find((s) => s.playerId !== stored.activePlayerId);
   if (!other) return null;
   const url = new URL(window.location.href);
-  url.pathname = "/dice-kingdom";
+  url.pathname = path;
   url.search = `?g=${encodeURIComponent(gameId)}&s=${encodeURIComponent(other.token)}`;
   url.hash = "";
   return url.toString();

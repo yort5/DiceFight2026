@@ -1505,9 +1505,15 @@ export function DiceKingdomPage() {
           <button
             className="btn"
             disabled={busy}
-            onClick={() =>
-              run(() => api.declareAttackers(game.gameId, primaryDie ? [primaryDie.id, ...selection.secondary] : []))
-            }
+            onClick={() => {
+              // Desktop still shows one column per attacker (CombatLane.tsx
+              // never groups by lane) - which lane each one lands in has no
+              // visible effect here, so this just spreads them round-robin
+              // across the four lanes the engine now requires a value for.
+              const ids = primaryDie ? [primaryDie.id, ...selection.secondary] : [];
+              const attackers = ids.map((dieId, i) => ({ dieId, lane: i % 4 }));
+              run(() => api.declareAttackers(game.gameId, attackers));
+            }}
           >
             Confirm Attackers ({primaryDie ? 1 + selection.secondary.length : 0})
           </button>

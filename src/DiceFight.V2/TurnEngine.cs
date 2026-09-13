@@ -507,7 +507,7 @@ public static class TurnEngine
     {
         RequireStep(state, TurnStep.Main);
         EnterAttackStep(state, queue);
-        CombatEngine.DeclareAttackers(state, queue, []);
+        CombatEngine.DeclareAttackers(state, queue, new Dictionary<string, int>());
         CombatEngine.DeclareBlockers(state, queue, new CombatAssignment(), []);
         CombatEngine.AssignCombatDamage(state, queue, new CombatAssignment(), new Dictionary<string, IReadOnlyDictionary<string, int>>());
     }

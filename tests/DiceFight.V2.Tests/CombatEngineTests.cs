@@ -125,6 +125,56 @@ public class CombatEngineTests
         Assert.Throws<InvalidOperationException>(() => CombatEngine.DeclareAttackers(state, new AbilityQueue(), [attacker.Id]));
     }
 
+    // Mobile refresh (2026-09) - the Attack Zone's four fixed lanes are a
+    // display grouping only; declaring two attackers into the same lane
+    // must not touch blocking/damage resolution at all (see
+    // DieInstance.Lane's own remarks).
+    [Fact]
+    public void DeclareAttackers_RecordsChosenLane_AndAllowsSharingALane()
+    {
+        var bruiser = BuildCard("Bruiser", [Level1Char]);
+        var state = BuildState(bruiser);
+        var a1 = AddDie(state, bruiser, "p1", "a1");
+        var a2 = AddDie(state, bruiser, "p1", "a2");
+
+        CombatEngine.DeclareAttackers(state, new AbilityQueue(), new Dictionary<string, int> { [a1.Id] = 2, [a2.Id] = 2 });
+
+        Assert.Equal(2, a1.Lane);
+        Assert.Equal(2, a2.Lane);
+    }
+
+    [Fact]
+    public void DeclareAttackers_RejectsOutOfRangeLane()
+    {
+        var bruiser = BuildCard("Bruiser", [Level1Char]);
+        var state = BuildState(bruiser);
+        var attacker = AddDie(state, bruiser, "p1");
+
+        Assert.Throws<InvalidOperationException>(() =>
+            CombatEngine.DeclareAttackers(state, new AbilityQueue(), new Dictionary<string, int> { [attacker.Id] = 4 }));
+    }
+
+    [Fact]
+    public void AssignCombatDamage_ClearsLaneWhenAttackersReturnToField()
+    {
+        var tankFace = new Face([], new CharacterFaceData(Level: 1, FieldingCost: 1, Attack: 0, Defense: 99), Kind: FaceKind.CharacterFace);
+        var bruiser = BuildCard("Bruiser", [Level1Char]); // 3A/2D
+        var tank = BuildCard("Tank", [tankFace]); // 0A/99D - survives and deals nothing back
+        var state = BuildState(bruiser, tank);
+        var attacker = AddDie(state, bruiser, "p1");
+        var blocker = AddDieAt(state, tank, "p2", 0);
+        var queue = new AbilityQueue();
+
+        CombatEngine.DeclareAttackers(state, queue, new Dictionary<string, int> { [attacker.Id] = 1 });
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attacker.Id, blocker.Id);
+        CombatEngine.DeclareBlockers(state, queue, assignment, [blocker.Id]);
+        CombatEngine.AssignCombatDamage(state, queue, assignment, SoloSplit(attacker.Id, blocker.Id, 3));
+
+        Assert.Equal(Zone.FieldZone, attacker.Zone); // survived - both sides dealt no lethal damage
+        Assert.Null(attacker.Lane);
+    }
+
     [Fact]
     public void BlockerRemovedBeforeDamageResolves_WithoutOvercrush_WastesTheDamage()
     {

@@ -91,6 +91,14 @@ public sealed class DieInstance
     // not consulted anywhere yet.
     public HashSet<CombatFlagKind> CombatFlags { get; } = [];
 
+    // Which of the Attack Zone's four fixed lanes this attacker was
+    // declared into - a display/UI grouping only (Dice Kingdom mobile
+    // refresh, 2026-09). Several attackers may now share a lane; each
+    // still keeps its own independent blocker (CombatAssignment already
+    // maps attacker -> blockers per-attacker, untouched by this). Null
+    // for a blocker, or any die not currently an attacker.
+    public int? Lane { get; set; }
+
     public bool IsSidekick => CardId is null;
 }
 

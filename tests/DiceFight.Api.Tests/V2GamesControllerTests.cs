@@ -93,7 +93,7 @@ public class V2GamesControllerTests
         Assert.True(fielded.EffectiveAttack >= 1);
 
         V2SeatedController.Dto(teamA.EnterAttackStep(session.Id));
-        V2SeatedController.Dto(teamA.DeclareAttackers(session.Id, new V2DeclareAttackersRequest([fielded.Id])));
+        V2SeatedController.Dto(teamA.DeclareAttackers(session.Id, new V2DeclareAttackersRequest([new V2AttackerDeclaration(fielded.Id, 0)])));
         V2SeatedController.Dto(teamB.DeclareBlockers(session.Id, new V2DeclareBlockersRequest([])));
         var afterDamage = V2SeatedController.Dto(teamA.AssignCombatDamage(session.Id, new V2AssignCombatDamageRequest([])));
         Assert.True(afterDamage.PlayerTwo.Life < 20); // unblocked attacker landed some damage

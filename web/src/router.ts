@@ -6,12 +6,17 @@ import { useSyncExternalStore } from "react";
 // refresh on /teambuilder works server-side), and Vite's dev server does
 // the same by default - this only needs to read the current path and react
 // to browser back/forward.
-export type Route = "/game" | "/teambuilder" | "/dice-kingdom";
+export type Route = "/game" | "/teambuilder" | "/dice-kingdom" | "/dice-kingdom/mobile";
 
 function normalize(pathname: string): Route {
   // "/" and anything unrecognized fall back to /game - preserves today's
   // existing behavior/bookmarks (the site was just "/" before this).
   if (pathname === "/teambuilder") return "/teambuilder";
+  // Mobile refresh (2026-09) - a genuinely separate route/UI, not a
+  // responsive breakpoint of /dice-kingdom (see DiceKingdomMobilePage.tsx's
+  // own remarks: two completely separate front ends sharing the same
+  // engine, by design, for now).
+  if (pathname === "/dice-kingdom/mobile") return "/dice-kingdom/mobile";
   if (pathname === "/dice-kingdom") return "/dice-kingdom";
   return "/game";
 }

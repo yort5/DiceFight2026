@@ -2097,3 +2097,880 @@
     animation: none;
   }
 }
+
+/* =====================================================================
+   Dice Kingdom - MOBILE refresh (2026-09)
+   design_handoff_dice_kingdom_mobile/README.md, turn 5 / option 5a.
+
+   Deliberately NOT nested under .dicekingdom - this is a genuinely
+   separate front end (DiceKingdomMobilePage.tsx), sharing this file only
+   for the font-face/keyframe loads and so its own token values can sit
+   next to the desktop palette they were read out of, per the user's own
+   call ("I'm actually fine having two completely separate UIs for
+   mobile and browser"). Colors below are the handoff's literal dark-mat
+   hex values, matching this file's existing --claw/--shell/--wing/--eye/
+   --wild dark-theme values exactly (they were read out of this file) -
+   duplicated as fixed tokens rather than reused via the light/dark
+   :root switch because the handoff only ever specifies ONE surface/ink
+   palette (the dark one, in every one of its 8 screenshots) - this is
+   a phone game screen, not a themed document, so it stays dark
+   regardless of the site's own light/dark toggle for now.
+   ===================================================================== */
+.dk-mobile {
+  --claw: #e78a5a;
+  --shell: #6cb494;
+  --wing: #7cb8e6;
+  --eye: #c093dd;
+  --wild: #b3a892;
+  --dkm-card: #20232e;
+  --dkm-raised: #2e3548;
+  --dkm-attacker: #3a4258;
+  --dkm-border: #5c6484;
+  --dkm-hairline: rgba(92, 100, 132, 0.45);
+  --dkm-ink: #fff;
+  --dkm-ink-2: #c7cce0;
+  --dkm-ink-dim: #9198b0;
+  --dkm-ink-disabled: #7a8099;
+  --dkm-on-accent: #14151c;
+  --dkm-cream: #fff8ec;
+
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: radial-gradient(120% 90% at 50% 0%, #2b3143 0%, #14151c 100%);
+  color: var(--dkm-ink-2);
+  font-family: "Work Sans", var(--sans);
+  box-sizing: border-box;
+  /* #root (index.css) defaults to text-align: center for the un-styled
+     Vite template state; this page renders standalone (no .app wrapper),
+     so it leaks through here the same way it did for ../DiceKingdomPage.tsx
+     (that page's own identical fix, .dicekingdom's own comment). */
+  text-align: left;
+}
+.dk-mobile * {
+  box-sizing: border-box;
+}
+.dk-mobile button {
+  font-family: inherit;
+  color: inherit;
+  border: none;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.dk-mobile button:disabled {
+  cursor: default;
+}
+
+/* ---- Pre-game champion picker ---- */
+.dk-mobile .dkm-eyebrow {
+  font: 700 11px/1 "Work Sans", var(--sans);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--wild);
+  margin: 24px 16px 4px;
+}
+.dk-mobile .dkm-title {
+  font: 400 34px/1.1 var(--display);
+  text-transform: uppercase;
+  color: var(--dkm-ink);
+  margin: 0 16px 6px;
+}
+.dk-mobile .dkm-dek {
+  margin: 0 16px 16px;
+  font-size: 13px;
+  color: var(--dkm-ink-dim);
+}
+.dk-mobile .dkm-error {
+  margin: 0 16px 12px;
+  padding: 8px 11px;
+  border-radius: 8px;
+  background: rgba(220, 90, 70, 0.15);
+  border: 1px solid #c0553f;
+  color: #ffb4a3;
+  font-size: 12.5px;
+}
+.dk-mobile .dkm-champ-pick {
+  margin: 0 16px 16px;
+}
+.dk-mobile .dkm-champ-pick h3 {
+  font: 600 12px/1 "Work Sans", var(--sans);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--dkm-ink-dim);
+  margin: 0 0 8px;
+}
+.dk-mobile .dkm-champ-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+.dk-mobile .dkm-champ-opt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 8px;
+  border-radius: 10px;
+  background: var(--dkm-card);
+  border: 1px solid var(--dkm-border);
+  color: var(--dkm-ink-2);
+}
+.dk-mobile .dkm-champ-opt.selected {
+  border-color: var(--cc);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--cc);
+}
+.dk-mobile .dkm-champ-opt span {
+  font: 600 11px/1 "Work Sans", var(--sans);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ---- Header (fixed) ---- */
+.dk-mobile .dkm-header {
+  flex: 0 0 auto;
+  padding: max(14px, env(safe-area-inset-top, 0px)) 14px 0;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: #14151c;
+}
+.dk-mobile .dkm-phase-rail {
+  display: flex;
+  gap: 5px;
+  width: 100%;
+  min-width: 0;
+}
+.dk-mobile .dkm-phase-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 38px;
+  border-radius: 10px;
+  padding: 0 10px;
+  /* Shrinkable (unlike a hard 0 0 auto) so five pills plus the active
+     one's label can never overflow the 375px SE viewport by a hair and
+     clip the last pill - real bug found via headless-Chromium screenshot
+     at 402px, where the un-shrinkable version clipped Clean Up's icon. */
+  flex: 0 1 auto;
+  min-width: 0;
+  border: 1px solid var(--dkm-hairline);
+  color: var(--dkm-ink-disabled);
+  background: transparent;
+}
+.dk-mobile .dkm-phase-pill.done {
+  background: var(--dkm-card);
+  border-color: var(--dkm-border);
+  color: var(--dkm-ink-2);
+}
+.dk-mobile .dkm-phase-pill.active {
+  flex: 1 1 auto;
+  background: var(--claw);
+  border-color: var(--claw);
+  color: var(--dkm-on-accent);
+}
+.dk-mobile .dkm-phase-pill svg {
+  flex: 0 0 auto;
+}
+.dk-mobile .dkm-phase-label {
+  font: 600 9.5px/1 "Work Sans", var(--sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.dk-mobile .dkm-step-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  margin-top: 9px;
+  padding-bottom: 9px;
+  text-align: left;
+}
+.dk-mobile .dkm-step-title {
+  font: 400 23px/1.3 var(--display);
+  text-transform: uppercase;
+  color: var(--dkm-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dk-mobile .dkm-step-chip {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 9px;
+  border-radius: 8px;
+  background: var(--dkm-card);
+  border: 1px solid var(--dkm-border);
+  font: 600 9.5px/1 "Work Sans", var(--sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dkm-ink-dim);
+}
+
+/* ---- Scroll region ---- */
+.dk-mobile .dkm-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 11px 14px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  scrollbar-width: none;
+}
+.dk-mobile .dkm-scroll::-webkit-scrollbar {
+  display: none;
+}
+.dk-mobile .dkm-invite {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--dkm-ink-dim);
+}
+
+/* ---- Shared card chrome ---- */
+.dk-mobile .dkm-card {
+  background: var(--dkm-card);
+  border: 1px solid var(--dkm-border);
+  border-radius: 12px;
+  padding: 10px 11px;
+}
+.dk-mobile .dkm-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.dk-mobile .dkm-card-title {
+  font: 400 15px/1 var(--display);
+  text-transform: uppercase;
+  color: var(--dkm-ink);
+}
+.dk-mobile .dkm-card-title.accent {
+  color: var(--claw);
+}
+.dk-mobile .dkm-card-hint {
+  font: 600 10px/1 "Work Sans", var(--sans);
+  color: var(--dkm-ink-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.dk-mobile .dkm-empty-hint {
+  font-size: 12px;
+  color: var(--dkm-ink-dim);
+  opacity: 0.8;
+}
+.dk-mobile .dkm-empty-dash {
+  color: var(--dkm-ink-dim);
+}
+
+/* ---- Mat card ---- */
+.dk-mobile .dkm-mat {
+  background: var(--dkm-card);
+  border: 1px solid var(--dkm-border);
+  border-radius: 12px;
+  padding: 10px 11px;
+}
+.dk-mobile .dkm-mat.mine {
+  border-color: var(--claw);
+}
+.dk-mobile .dkm-mat-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.dk-mobile .dkm-mat-label {
+  font: 600 9.5px/1 "Work Sans", var(--sans);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--cc);
+}
+.dk-mobile .dkm-mat-life {
+  font: 400 20px/1 var(--display);
+  color: var(--dkm-ink);
+}
+.dk-mobile .dkm-mat.mine .dkm-mat-life {
+  font-size: 22px;
+}
+.dk-mobile .dkm-mat-life small {
+  font: 400 10px/1 "Work Sans", var(--sans);
+  color: var(--dkm-ink-dim);
+  margin-left: 3px;
+  text-transform: none;
+}
+.dk-mobile .dkm-mat-head-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.dk-mobile .dkm-chip-btn {
+  padding: 5px 9px;
+  border-radius: 8px;
+  background: var(--dkm-raised);
+  border: 1px solid var(--dkm-border);
+  font: 600 9.5px/1 "Work Sans", var(--sans);
+  text-transform: uppercase;
+  color: var(--dkm-ink-2);
+}
+.dk-mobile .dkm-text-btn {
+  font: 600 10px/1 "Work Sans", var(--sans);
+  text-transform: uppercase;
+  color: var(--dkm-ink-dim);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.dk-mobile .dkm-reserve-empty {
+  font-size: 11px;
+  color: var(--dkm-ink-dim);
+}
+.dk-mobile .dkm-energy-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.dk-mobile .dkm-energy-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  border-radius: 7px;
+  background: var(--dkm-raised);
+  border: 1px solid var(--dkm-border);
+  font: 400 14px/1 var(--display);
+}
+.dk-mobile .dkm-pile-grid {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 9px;
+  border-top: 1px solid var(--dkm-hairline);
+  margin-bottom: 9px;
+}
+.dk-mobile .dkm-pile-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dk-mobile .dkm-pile-label {
+  font: 600 9px/1 "Work Sans", var(--sans);
+  text-transform: uppercase;
+  color: var(--dkm-ink-dim);
+}
+.dk-mobile .dkm-bag-count {
+  font: 400 15px/1 var(--display);
+  color: var(--dkm-ink);
+}
+.dk-mobile .dkm-collapsed-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 9px;
+  font: 600 9px/1 "Work Sans", var(--sans);
+  text-transform: uppercase;
+  color: var(--dkm-ink-dim);
+}
+.dk-mobile .dkm-collapsed-row b {
+  font: 400 15px/1 var(--display);
+  color: var(--dkm-ink);
+  margin-right: 3px;
+  text-transform: none;
+}
+.dk-mobile .dkm-field-label {
+  display: block;
+  font: 600 9.5px/1 "Work Sans", var(--sans);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--cc);
+  margin-bottom: 7px;
+}
+
+/* ---- Tiles ---- */
+.dk-mobile .dkm-tile-row {
+  display: flex;
+  gap: 7px;
+}
+.dk-mobile .dkm-tile-row.wrap {
+  flex-wrap: wrap;
+}
+.dk-mobile .dkm-tile {
+  padding: 0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.dk-mobile .dkm-tile.clickable {
+  cursor: pointer;
+}
+.dk-mobile .dkm-tile.picked {
+  box-shadow: 0 0 0 2px #fff;
+  border-radius: 10px;
+}
+.dk-mobile .dkm-facedown {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: var(--dkm-raised);
+  border: 1px solid var(--dkm-border);
+}
+.dk-mobile .dkm-avatar-disc {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  flex: 0 0 auto;
+}
+.dk-mobile .dkm-stack-tile {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--dkm-card);
+  border: 1.5px solid var(--dkm-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dk-mobile .dkm-badge {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 400 10px/1 var(--display);
+  color: var(--dkm-on-accent);
+}
+
+/* ---- Global rail (visual shell) ---- */
+.dk-mobile .dkm-global-rail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.dk-mobile .dkm-global-caption {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.dk-mobile .dkm-global-title {
+  font: 600 9px/1 "Work Sans", var(--sans);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--wild);
+}
+.dk-mobile .dkm-global-note {
+  font: 400 9.5px/1 "Work Sans", var(--sans);
+  color: var(--dkm-ink-dim);
+}
+.dk-mobile .dkm-global-empty {
+  font-size: 11px;
+  color: var(--dkm-ink-dim);
+  opacity: 0.7;
+  font-style: italic;
+}
+
+/* ---- Tray / Buy cards ---- */
+.dk-mobile .dkm-buy-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.dk-mobile .dkm-buy-tile {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 6px;
+  border-radius: 10px;
+  background: var(--dkm-raised);
+  border: 1px solid transparent;
+}
+.dk-mobile .dkm-buy-tile.picked {
+  border-color: var(--claw);
+}
+.dk-mobile .dkm-buy-tile.unaffordable {
+  opacity: 0.45;
+}
+.dk-mobile .dkm-buy-name {
+  font: 600 9.5px/1.2 "Work Sans", var(--sans);
+  text-align: center;
+  color: var(--dkm-ink-2);
+}
+.dk-mobile .dkm-buy-cost {
+  font: 400 15px/1 var(--display);
+  color: var(--claw);
+}
+
+/* ---- Attack lanes ---- */
+.dk-mobile .dkm-lanes {
+  display: flex;
+  gap: 6px;
+}
+.dk-mobile .dkm-lane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 5px 4px;
+  border-radius: 10px;
+  border: 1px solid var(--dkm-hairline);
+  background: transparent;
+  min-width: 0;
+}
+.dk-mobile .dkm-lane.targeted {
+  border-color: var(--claw);
+  background: rgba(231, 138, 90, 0.09);
+}
+.dk-mobile .dkm-lane-blockers,
+.dk-mobile .dkm-lane-attackers {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.dk-mobile .dkm-lane-tile {
+  position: relative;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font: 600 8.5px/1.1 "Work Sans", var(--sans);
+  color: var(--dkm-ink-2);
+  text-align: center;
+  padding: 2px;
+}
+.dk-mobile .dkm-lane-tile.blocker {
+  background: var(--dkm-raised);
+}
+.dk-mobile .dkm-lane-tile.attacker {
+  background: var(--dkm-attacker);
+}
+.dk-mobile .dkm-lane-tile.picked {
+  box-shadow: inset 0 0 0 2px #fff;
+}
+.dk-mobile .dkm-lane-tile.empty {
+  height: 26px;
+  border: 1px dashed var(--dkm-hairline);
+  background: transparent;
+  color: var(--dkm-ink-disabled);
+  font-size: 8px;
+}
+.dk-mobile .dkm-lane-tile.attacker-empty {
+  border-color: rgba(231, 138, 90, 0.5);
+}
+.dk-mobile .dkm-lane-atk {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  font: 400 11px/1 var(--display);
+  color: var(--dkm-ink);
+}
+.dk-mobile .dkm-lane-def {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  font: 400 11px/1 var(--display);
+  color: var(--wing);
+}
+.dk-mobile .dkm-lane-name {
+  font-size: 7.5px;
+  line-height: 1.1;
+  opacity: 0.85;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+}
+.dk-mobile .dkm-lane-chip {
+  align-self: center;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font: 600 9px/1 "Work Sans", var(--sans);
+  text-transform: uppercase;
+  color: var(--dkm-on-accent);
+  background: var(--claw);
+}
+.dk-mobile .dkm-lane-number {
+  align-self: center;
+  font: 600 9.5px/1 "Work Sans", var(--sans);
+  letter-spacing: 0.1em;
+  color: var(--dkm-ink-dim);
+}
+
+/* ---- Clean Up ledger ---- */
+.dk-mobile .dkm-ledger-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--dkm-ink-dim);
+  font: 600 10.5px/1 "Work Sans", var(--sans);
+}
+.dk-mobile .dkm-ledger-count {
+  font: 400 17px/1 var(--display);
+  color: var(--dkm-ink);
+}
+
+/* ---- Roster sheet rows ---- */
+.dk-mobile .dkm-roster-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--dkm-hairline);
+}
+.dk-mobile .dkm-roster-avatar {
+  color: var(--dkm-ink-2);
+}
+.dk-mobile .dkm-roster-mid {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.dk-mobile .dkm-roster-name {
+  font: 600 12px/1.2 "Work Sans", var(--sans);
+  color: var(--dkm-ink);
+}
+.dk-mobile .dkm-roster-cost {
+  font: 400 16px/1 var(--display);
+  color: var(--claw);
+}
+.dk-mobile .dkm-roster-left {
+  font: 400 16px/1 var(--display);
+  color: var(--dkm-ink);
+  min-width: 18px;
+  text-align: right;
+}
+.dk-mobile .dkm-dashed-badge {
+  align-self: flex-start;
+  padding: 1px 6px;
+  border: 1px dashed var(--wild);
+  border-radius: 5px;
+  font: 600 9px/1.4 "Work Sans", var(--sans);
+  text-transform: uppercase;
+  color: var(--wild);
+}
+
+/* ---- Log ---- */
+.dk-mobile .dkm-log {
+  padding: 4px 2px 2px;
+}
+.dk-mobile .dkm-log-label {
+  display: block;
+  font: 600 9.5px/1 "Work Sans", var(--sans);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--dkm-ink-dim);
+  margin-bottom: 6px;
+}
+.dk-mobile .dkm-log-line {
+  margin: 0 0 4px;
+  font: 400 10.5px/1.5 "Work Sans", var(--sans);
+  color: var(--dkm-ink-dim);
+}
+.dk-mobile .dkm-log-line.newest {
+  color: var(--dkm-ink-2);
+}
+
+/* ---- Bottom bar ---- */
+.dk-mobile .dkm-bottom-bar {
+  flex: 0 0 auto;
+  position: sticky;
+  bottom: 0;
+  background: var(--dkm-card);
+  border-top: 1px solid var(--dkm-border);
+  box-shadow: 0 -14px 34px rgba(0, 0, 0, 0.55);
+  padding: 10px 14px calc(16px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dk-mobile .dkm-inspect {
+  position: relative;
+  display: grid;
+  grid-template-columns: 42px 1fr auto;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 10px 11px;
+  border-radius: 10px;
+  background: var(--dkm-raised);
+  border: 1px solid var(--cc);
+}
+.dk-mobile .dkm-inspect-mid {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.dk-mobile .dkm-inspect-name {
+  font: 400 17px/1 var(--display);
+  text-transform: uppercase;
+  color: var(--dkm-ink);
+}
+.dk-mobile .dkm-inspect-sub {
+  font: 400 10px/1.3 "Work Sans", var(--sans);
+  color: var(--dkm-ink-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dk-mobile .dkm-inspect-close {
+  font-size: 18px;
+  line-height: 1;
+  color: var(--dkm-ink-dim);
+  padding: 4px;
+}
+.dk-mobile .dkm-inspect-action {
+  grid-column: 1 / -1;
+  height: 38px;
+  border-radius: 9px;
+  background: var(--claw);
+  color: var(--dkm-on-accent);
+  font: 600 12px/1 "Work Sans", var(--sans);
+  text-transform: uppercase;
+}
+.dk-mobile .dkm-inspect-action:disabled {
+  opacity: 0.5;
+}
+.dk-mobile .dkm-primary-btn {
+  height: 50px;
+  border-radius: 12px;
+  background: var(--claw);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+}
+.dk-mobile .dkm-primary-btn span {
+  font: 400 17px/1 var(--display);
+  text-transform: uppercase;
+  color: var(--dkm-on-accent);
+}
+.dk-mobile .dkm-primary-btn small {
+  font: 600 10px/1 "Work Sans", var(--sans);
+  color: rgba(20, 21, 28, 0.65);
+}
+.dk-mobile .dkm-primary-btn:disabled {
+  opacity: 0.55;
+}
+
+/* ---- Overlays ---- */
+.dk-mobile .dkm-overlay-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(0, 0, 0, 0.4);
+}
+.dk-mobile .dkm-popout {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  top: 150px;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 13px;
+  border-radius: 13px;
+  background: var(--dkm-card);
+  border: 1px solid var(--dkm-border);
+  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.65);
+}
+.dk-mobile .dkm-popout-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.dk-mobile .dkm-popout-title {
+  font: 400 16px/1 var(--display);
+  text-transform: uppercase;
+  color: var(--dkm-ink);
+}
+.dk-mobile .dkm-popout-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 6px;
+  border-radius: 7px;
+}
+.dk-mobile .dkm-popout-row.current {
+  background: rgba(231, 138, 90, 0.14);
+}
+.dk-mobile .dkm-popout-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(92, 100, 132, 0.7);
+  flex: 0 0 auto;
+}
+.dk-mobile .dkm-popout-dot.done {
+  background: var(--dkm-border);
+  border-color: var(--dkm-border);
+}
+.dk-mobile .dkm-popout-dot.current {
+  background: var(--claw);
+  border-color: var(--claw);
+}
+.dk-mobile .dkm-popout-label {
+  flex: 1;
+  font: 600 11px/1.2 "Work Sans", var(--sans);
+  color: var(--dkm-ink-2);
+}
+.dk-mobile .dkm-popout-row.current .dkm-popout-label {
+  color: var(--dkm-ink);
+}
+.dk-mobile .dkm-popout-note {
+  margin: 10px 0 0;
+  font: 400 10px/1.4 "Work Sans", var(--sans);
+  color: var(--dkm-ink-dim);
+}
+.dk-mobile .dkm-sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 170px;
+  bottom: 0;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 13px 16px;
+  border-radius: 16px 16px 0 0;
+  background: var(--dkm-card);
+  box-shadow: 0 -20px 50px rgba(0, 0, 0, 0.7);
+  overflow-y: auto;
+}
+.dk-mobile .dkm-sheet-handle {
+  width: 34px;
+  height: 4px;
+  border-radius: 3px;
+  background: var(--dkm-border);
+  margin: 0 auto 12px;
+}
+
+/* Phone-width guard - this page is designed for ~402px/375px viewports;
+   the max-width above already keeps it from stretching wide, this just
+   guarantees no accidental horizontal scroll on the very narrowest
+   supported phones. */
+@media (max-width: 400px) {
+  .dk-mobile .dkm-lane-name {
+    display: none;
+  }
+}
