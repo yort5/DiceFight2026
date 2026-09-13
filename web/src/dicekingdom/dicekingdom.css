@@ -2148,7 +2148,27 @@
      so it leaks through here the same way it did for ../DiceKingdomPage.tsx
      (that page's own identical fix, .dicekingdom's own comment). */
   text-align: left;
+  /* Cancels .dicekingdom's own 24px/16px/64px padding (see the .dicekingdom
+     class also being applied below) - this page manages its own edge
+     spacing per-region (header/scroll/bottom-bar), a page-level padding
+     on top of that just pushes the fixed header/bottom bar in from the
+     real screen edge. */
+  padding: 0;
 }
+/* Also carries .dicekingdom itself (not just .dk-mobile) - NOT for that
+   class's own page-level rules (every property it sets that matters here
+   - max-width, padding, text-align, the token values - is re-declared
+   above and wins on source order), but because DieCube.tsx/icons.tsx's
+   EnergyBadge are REUSED components whose own visual styling (die-cube-
+   face/cost/attack/defense corners, the pip-stack energy badges and
+   their white-icon/outline-filter treatment) is only ever defined under
+   a ".dicekingdom X" selector. Real bug, direct feedback (2026-09-13):
+   without this, energy symbols on rolled dice and in the Reserve energy
+   chips rendered with no color/outline at all - technically present,
+   effectively invisible. Confirmed no other .dicekingdom rule leaks in
+   unwanted layout (audited: the only two bare `.dicekingdom { ... }`
+   blocks in this file set nothing else this page doesn't already retake
+   below, and no `.dicekingdom *`/button/svg universal reset exists). */
 .dk-mobile * {
   box-sizing: border-box;
 }

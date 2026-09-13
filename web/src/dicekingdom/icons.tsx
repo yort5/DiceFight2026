@@ -764,6 +764,52 @@ export function ArrowRightIcon({ size = 14 }: IconProps) {
   );
 }
 
+// Three cards added to the roster after the original 32-card sheet
+// (InstinctClashConfig.cs's own Mongoose/Swift/Cuttlefish remarks -
+// extra cost-curve entries per type) with no avatar drawn for them yet -
+// real bug, direct feedback (2026-09-13): all three silently fell back
+// to TardigradeIcon (CHARACTER_ICONS had no "IC-CLAW-09"/"IC-WING-09"/
+// "IC-EYE-09" entry at all), most visibly "Mongoose looks like a
+// Tardigrade" in the roster/buy strip.
+
+function MongooseIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path
+        fill="currentColor"
+        d="M8,36 C8,28 16,24 26,24 C36,24 46,28 52,32 C46,32 38,30 30,30 C34,34 34,40 28,44 C24,47 16,47 10,44 C15,43 19,40 19,36 C15,38 11,38 8,36 Z"
+      />
+      <polygon points="8,36 2,32 4,40" fill="currentColor" />
+    </Svg>
+  );
+}
+
+function SwiftIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path
+        fill="currentColor"
+        d="M32,30 C24,18 12,14 4,16 C12,20 18,26 20,32 C12,32 4,36 0,42 C10,42 18,40 24,34 C26,40 30,46 38,50 C36,42 34,36 34,30 C40,34 48,36 56,34 C48,30 40,28 32,30 Z"
+      />
+    </Svg>
+  );
+}
+
+function CuttlefishIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <ellipse cx={30} cy={26} rx={14} ry={10} fill="currentColor" />
+      <g stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" fill="none">
+        <path d="M20,34 C18,42 16,48 14,52" />
+        <path d="M26,36 C25,43 24,48 23,52" />
+        <path d="M34,36 C35,43 36,48 37,52" />
+        <path d="M40,34 C42,42 44,48 46,52" />
+      </g>
+      <circle cx={35} cy={24} r={2.2} fill={CREAM} />
+    </Svg>
+  );
+}
+
 export const CHARACTER_ICONS: Record<string, (p: IconProps) => ReactElement> = {
   "IC-CLAW-01": HoneyBadgerIcon,
   "IC-CLAW-02": WolverineIcon,
@@ -773,6 +819,7 @@ export const CHARACTER_ICONS: Record<string, (p: IconProps) => ReactElement> = {
   "IC-CLAW-06": TigerIcon,
   "IC-CLAW-07": StoatIcon,
   "IC-CLAW-08": CapeBuffaloIcon,
+  "IC-CLAW-09": MongooseIcon,
   "IC-SHELL-01": HippopotamusIcon,
   "IC-SHELL-02": MuskOxIcon,
   "IC-SHELL-03": PangolinIcon,
@@ -789,6 +836,7 @@ export const CHARACTER_ICONS: Record<string, (p: IconProps) => ReactElement> = {
   "IC-WING-06": HomingPigeonIcon,
   "IC-WING-07": GreyhoundIcon,
   "IC-WING-08": AlbatrossIcon,
+  "IC-WING-09": SwiftIcon,
   "IC-EYE-01": BarnOwlIcon,
   "IC-EYE-02": HyenaIcon,
   "IC-EYE-03": AnglerfishIcon,
@@ -797,4 +845,5 @@ export const CHARACTER_ICONS: Record<string, (p: IconProps) => ReactElement> = {
   "IC-EYE-06": RavenIcon,
   "IC-EYE-07": ElephantIcon,
   "IC-EYE-08": FoxIcon,
+  "IC-EYE-09": CuttlefishIcon,
 };

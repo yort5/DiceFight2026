@@ -187,6 +187,32 @@ function chainFor(
   }
 }
 
+// The energy-badge glyphs' white-icon-with-a-hard-edged-outline look
+// (icons.tsx's EnergyBadge, styled by .dicekingdom .energy-badge svg)
+// depends on this filter existing SOMEWHERE in the document under this
+// exact id - normally rendered once by ../DiceKingdomPage.tsx, which
+// this page never mounts alongside (mutually exclusive routes), so it
+// has to render its own copy. Real bug, direct feedback (2026-09-13):
+// without it, energy symbols read as "barely visible" - present, just
+// with no color/outline separating the glyph from its own badge fill.
+function EnergyBadgeOutlineDefs() {
+  return (
+    <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true">
+      <defs>
+        <filter id="energy-badge-outline" x="-50%" y="-50%" width="200%" height="200%">
+          <feMorphology operator="dilate" radius="1.1" in="SourceAlpha" result="dilated" />
+          <feFlood floodColor="#1a1006" floodOpacity="0.9" result="black" />
+          <feComposite in="black" in2="dilated" operator="in" result="outline" />
+          <feMerge>
+            <feMergeNode in="outline" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+    </svg>
+  );
+}
+
 // ---- Small shared bits ----
 
 function AvatarGlyph({ die, size = 15, color }: { die: Die; cardsById?: never; size?: number; color: string }) {
@@ -947,7 +973,8 @@ export function DiceKingdomMobilePage() {
 
   if (!game) {
     return (
-      <div className="dk-mobile dkm-root">
+      <div className="dicekingdom dk-mobile dkm-root">
+        <EnergyBadgeOutlineDefs />
         <p className="dkm-eyebrow">DiceFight v3 · mobile</p>
         <h1 className="dkm-title">Dice Kingdom</h1>
         <p className="dkm-dek">Pick a Champion for each seat, then send the invite link from inside the match.</p>
@@ -1220,7 +1247,8 @@ export function DiceKingdomMobilePage() {
   }));
 
   return (
-    <div className="dk-mobile dkm-root">
+    <div className="dicekingdom dk-mobile dkm-root">
+      <EnergyBadgeOutlineDefs />
       <div className="dkm-header">
         <PhaseRail current={phase} onTap={() => {}} />
         <StepLine title={chainSteps[chainIndex]?.label ?? phaseLabel} index={chainIndex} total={chainSteps.length} onToggle={() => setStepsOpen((v) => !v)} />
