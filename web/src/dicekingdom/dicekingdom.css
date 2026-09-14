@@ -2122,6 +2122,27 @@
   --wing: #7cb8e6;
   --eye: #c093dd;
   --wild: #b3a892;
+  /* This page also carries the plain .dicekingdom class (see that fix's
+     own remarks) so DieCube/EnergyBadge's shared styling applies - but
+     .dicekingdom's OWN --panel-bg/--border/--text-h/etc tokens still
+     follow the SITE's light/dark toggle by default, which would make
+     any reused desktop chrome (the champion picker's .panel/.champ-opt/
+     .btn - direct feedback 2026-09-14: "make the champion picker the
+     same as desktop") render as a jarring light card on this page's
+     always-dark background whenever the site itself is in light mode.
+     Pinned to the same fixed dark values as everything else here rather
+     than left to follow the toggle, for the same "this is a phone game
+     screen, not a themed document" reasoning as the rest of this file's
+     .dk-mobile tokens. */
+  --panel-bg: #2e3548;
+  --panel-bg-strong: #3a4258;
+  --tile-bg: #20232e;
+  --border: #5c6484;
+  --text: #c7cce0;
+  --text-dim: #9198b0;
+  --text-h: #ffffff;
+  --on-fill: #14151c;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 10px 24px -10px rgba(0, 0, 0, 0.75);
   --dkm-card: #20232e;
   --dkm-raised: #2e3548;
   --dkm-attacker: #3a4258;
@@ -2213,42 +2234,9 @@
   color: #ffb4a3;
   font-size: 12.5px;
 }
-.dk-mobile .dkm-champ-pick {
-  margin: 0 16px 16px;
-}
-.dk-mobile .dkm-champ-pick h3 {
-  font: 600 12px/1 "Work Sans", var(--sans);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--dkm-ink-dim);
-  margin: 0 0 8px;
-}
-.dk-mobile .dkm-champ-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-}
-.dk-mobile .dkm-champ-opt {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 12px 8px;
-  border-radius: 10px;
-  background: var(--dkm-card);
-  border: 1px solid var(--dkm-border);
-  color: var(--dkm-ink-2);
-}
-.dk-mobile .dkm-champ-opt.selected {
-  border-color: var(--cc);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--cc);
-}
-.dk-mobile .dkm-champ-opt span {
-  font: 600 11px/1 "Work Sans", var(--sans);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
+/* Champion picker now reuses ../DiceKingdomPage.tsx's own .champ-pick-
+   columns/.champ-opt/.panel classes directly (see the picker JSX's own
+   remarks) rather than a mobile-specific .dkm-champ-* set. */
 
 /* ---- Header (fixed) ---- */
 .dk-mobile .dkm-header {

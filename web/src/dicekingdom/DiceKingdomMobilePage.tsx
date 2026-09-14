@@ -979,34 +979,47 @@ export function DiceKingdomMobilePage() {
         <h1 className="dkm-title">Dice Kingdom</h1>
         <p className="dkm-dek">Pick a Champion for each seat, then send the invite link from inside the match.</p>
         {error && <p className="dkm-error">{error}</p>}
-        {[
-          { label: "Player 1", value: setupA, setValue: setSetupA },
-          { label: "Player 2", value: setupB, setValue: setSetupB },
-        ].map(({ label, value, setValue }) => (
-          <div className="dkm-champ-pick" key={label}>
-            <h3>{label}</h3>
-            <div className="dkm-champ-grid">
-              {CHAMPIONS.map((c) => {
-                const Icon = CHAMPION_ICONS[c.id];
-                return (
-                  <button
-                    key={c.id}
-                    type="button"
-                    className={`dkm-champ-opt${value === c.id ? " selected" : ""}`}
-                    style={{ ["--cc" as string]: `var(--${c.energy.toLowerCase()})` }}
-                    onClick={() => setValue(c.id)}
-                  >
-                    <Icon size={26} />
-                    <span>{c.id.replace(/([A-Z])/g, " $1").trim()}</span>
-                  </button>
-                );
-              })}
-            </div>
+        {/* Same two-column layout as ../DiceKingdomPage.tsx's own picker
+            (direct feedback, 2026-09-14: "makes more sense to have them
+            in two columns") - reuses that page's own .champ-pick-columns/
+            .champ-opt classes verbatim rather than a mobile-specific
+            reimplementation, now that this page carries the .dicekingdom
+            class those are scoped under (see the energy-badge fix's own
+            remarks on why that class was added here). */}
+        <div className="panel">
+          <div className="champ-pick-columns">
+            {[
+              { label: "Player 1", value: setupA, setValue: setSetupA },
+              { label: "Player 2", value: setupB, setValue: setSetupB },
+            ].map(({ label, value, setValue }) => (
+              <div className="champ-pick-column" key={label}>
+                <h3 style={{ margin: "0 0 10px" }}>{label}</h3>
+                <div className="champ-pick">
+                  {CHAMPIONS.map((c) => {
+                    const Icon = CHAMPION_ICONS[c.id];
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        className={`champ-opt${value === c.id ? " selected" : ""}`}
+                        style={{ ["--sel" as string]: `var(--${c.energy.toLowerCase()})`, color: `var(--${c.energy.toLowerCase()})` }}
+                        onClick={() => setValue(c.id)}
+                      >
+                        <Icon />
+                        <div className="cname" style={{ color: "var(--text-h)" }}>
+                          {c.id.replace(/([A-Z])/g, " $1").trim()}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
-        <button className="dkm-primary-btn" disabled={!setupA || !setupB || busy} onClick={startMatch}>
-          <span>Start Match</span>
-        </button>
+          <button className="btn" disabled={!setupA || !setupB || busy} onClick={startMatch}>
+            Start Match
+          </button>
+        </div>
       </div>
     );
   }
