@@ -2637,6 +2637,16 @@
   text-align: center;
   color: var(--dkm-ink-2);
 }
+/* Wraps the cost number with one EnergyBadge per required type (usually
+   one, two for a crossover card - see BuyCard's own remarks) so the
+   type you need to pay in is visible before you tap, not just the
+   amount - direct feedback (2026-09-15): "no indication of which base
+   energy is required." */
+.dk-mobile .dkm-buy-cost-row {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
 .dk-mobile .dkm-buy-cost {
   font: 400 15px/1 var(--display);
   color: var(--claw);
@@ -2759,7 +2769,27 @@
   padding: 8px 0;
   border-bottom: 1px solid var(--dkm-hairline);
 }
+/* Labels the two number columns once instead of on every row - direct
+   feedback (2026-09-15): "no indicator of what the two columns of
+   numbers mean." Not a real roster entry, so no bottom hairline of its
+   own and dimmer text; the two empty leading spans just hold its
+   avatar/name columns' width so "Cost"/"Dice left" land over the real
+   numbers below rather than sliding left. */
+.dk-mobile .dkm-roster-head {
+  padding-bottom: 4px;
+  border-bottom: none;
+}
+.dk-mobile .dkm-roster-col-label {
+  font: 600 9px/1 "Work Sans", var(--sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dkm-ink-dim);
+  min-width: 18px;
+  text-align: right;
+}
 .dk-mobile .dkm-roster-avatar {
+  width: 20px;
+  flex-shrink: 0;
   color: var(--dkm-ink-2);
 }
 .dk-mobile .dkm-roster-mid {
@@ -2773,9 +2803,19 @@
   font: 600 12px/1.2 "Work Sans", var(--sans);
   color: var(--dkm-ink);
 }
+/* Pairs the cost with an EnergyBadge (see RosterSheet's own remarks) -
+   direct feedback (2026-09-15): "no indication of which base energy is
+   required." The number's own color used to be a flat var(--claw)
+   regardless of the card's real type, which happened to look right for
+   an all-Claw roster like Wolf's but was quietly wrong for any card
+   whose own type isn't Claw - now set inline per-card instead. */
+.dk-mobile .dkm-roster-cost-wrap {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
 .dk-mobile .dkm-roster-cost {
   font: 400 16px/1 var(--display);
-  color: var(--claw);
 }
 .dk-mobile .dkm-roster-left {
   font: 400 16px/1 var(--display);

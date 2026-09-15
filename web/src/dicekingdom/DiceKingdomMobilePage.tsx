@@ -630,7 +630,14 @@ function BuyCard({
   onSelect: (id: string) => void;
   onOpenRoster: () => void;
 }) {
-  const fieldable = reserve.filter((d) => rolled(d) && d.effectiveAttack !== null);
+  // ALL rolled reserve dice, not just the character-face ones you could
+  // field - direct feedback (2026-09-15): folding the energy-only dice
+  // into just the mat header's total left "confusing... I think we need
+  // to continue to show all of them" (they're shown as individual tiles
+  // everywhere else, Roll & Reroll included). Energy dice render here
+  // too now, just not clickable - there's nothing to select them FOR,
+  // Purchase/Field auto-picks payment via pickEnergyForCost below.
+  const rolledReserve = reserve.filter((d) => rolled(d));
   // Three at a time, same as the handoff's own spec - "FULL ROSTER"
   // opens the sheet for the rest, this card is a quick-buy strip, not
   // the whole roster.
@@ -658,18 +665,37 @@ function BuyCard({
             >
               <span className="dkm-buy-avatar">{Avatar ? <Avatar size={22} /> : <TardigradeIcon size={22} />}</span>
               <span className="dkm-buy-name">{card?.name ?? cardId}</span>
-              <span className="dkm-buy-cost">{card?.purchaseCost}</span>
+              <span className="dkm-buy-cost-row">
+                {(card?.energyTypes ?? []).map((t) => (
+                  <EnergyBadge key={t} type={t} size={11} />
+                ))}
+                <b className="dkm-buy-cost" style={{ color: `var(--${(card?.energyTypes[0] ?? "claw").toLowerCase()})` }}>
+                  {card?.purchaseCost}
+                </b>
+              </span>
             </button>
           );
         })}
         {unpurchasedByCard.size === 0 && <span className="dkm-empty-hint">Nothing left to buy.</span>}
       </div>
-      <span className="dkm-field-label">Reserve · creature faces</span>
+      <span className="dkm-field-label">Reserve</span>
       <div className="dkm-tile-row wrap">
-        {fieldable.length === 0 && <span className="dkm-empty-hint">Nothing rolled to field yet.</span>}
-        {fieldable.map((d) => (
-          <DTile key={d.id} die={d} cardsById={cardsById} size={50} mine picked={selectedId === d.id} clickable onClick={() => onSelect(d.id)} />
-        ))}
+        {rolledReserve.length === 0 && <span className="dkm-empty-hint">Nothing rolled yet.</span>}
+        {rolledReserve.map((d) => {
+          const fieldable = d.effectiveAttack !== null;
+          return (
+            <DTile
+              key={d.id}
+              die={d}
+              cardsById={cardsById}
+              size={50}
+              mine
+              picked={selectedId === d.id}
+              clickable={fieldable}
+              onClick={fieldable ? () => onSelect(d.id) : undefined}
+            />
+          );
+        })}
       </div>
       {void you}
     </div>
@@ -811,8 +837,20 @@ function RosterSheet({
             tap to close
           </button>
         </div>
+        {/* Neither number column said what it was - direct feedback
+            (2026-09-15). A one-time header instead of repeating a label
+            on all eight rows; "left" gets the fuller "dice left" since
+            "cost" alone is self-evident next to a purchase price but
+            "left" alone reads ambiguous out of context. */}
+        <div className="dkm-roster-row dkm-roster-head">
+          <span className="dkm-roster-avatar" />
+          <div className="dkm-roster-mid" />
+          <span className="dkm-roster-col-label">Cost</span>
+          <span className="dkm-roster-col-label">Dice left</span>
+        </div>
         {cards.map(({ card, cardId, remaining }) => {
           const Avatar = CHARACTER_ICONS[cardId];
+          const types = card?.energyTypes ?? [];
           return (
             <div key={cardId} className="dkm-roster-row">
               <span className="dkm-roster-avatar">{Avatar ? <Avatar size={20} /> : <TardigradeIcon size={20} />}</span>
@@ -820,7 +858,17 @@ function RosterSheet({
                 <span className="dkm-roster-name">{card?.name ?? cardId}</span>
                 {card && card.keywords.length > 0 && <span className="dkm-dashed-badge">{card.keywords.join(", ")}</span>}
               </div>
-              <span className="dkm-roster-cost">{card?.purchaseCost}</span>
+              {/* One EnergyBadge per required type - usually one, two for
+                  a crossover/splash card - so the cost number is never
+                  shown without saying what it's a cost OF. */}
+              <span className="dkm-roster-cost-wrap">
+                {types.map((t) => (
+                  <EnergyBadge key={t} type={t} size={12} />
+                ))}
+                <b className="dkm-roster-cost" style={{ color: `var(--${(types[0] ?? "claw").toLowerCase()})` }}>
+                  {card?.purchaseCost}
+                </b>
+              </span>
               <span className="dkm-roster-left">{remaining}</span>
             </div>
           );
