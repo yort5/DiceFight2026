@@ -2516,13 +2516,28 @@
   padding: 0;
   border-radius: 8px;
   overflow: hidden;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
 .dk-mobile .dkm-tile.clickable {
   cursor: pointer;
 }
+/* Direct feedback (2026-09-15): a 2px plain-white ring read as no
+   feedback at all against a die face that already prints its own
+   similar-toned border (.die-cube-face) on this page's dark tiles - "I
+   can't tell which one is selected." Same "real ring" fix desktop's
+   .dietile.picked/.roster-chip.picked already got on 2026-09-05, sized
+   up further since this one has no border-color/background change to
+   help it (DTile has no per-die accent variable to borrow the way
+   desktop's --cc is set inline, so this reuses --claw as a fixed
+   highlight color - already how .dkm-buy-tile.picked/.dkm-lane.targeted
+   use it elsewhere on this page, not really about Claw energy). The lift
+   is a second, independent cue (like desktop's picked states) so this
+   still reads even for a color-blind viewer or a device that clips the
+   glow. */
 .dk-mobile .dkm-tile.picked {
-  box-shadow: 0 0 0 2px #fff;
+  box-shadow: 0 0 0 3px var(--claw), 0 4px 10px rgba(0, 0, 0, 0.4);
   border-radius: 10px;
+  transform: translateY(-3px);
 }
 .dk-mobile .dkm-facedown {
   display: flex;
