@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import "./dicekingdom.css";
-import { api } from "./api";
+import { api, apiAs } from "./api";
 import { CHAMPION_ICONS, CHARACTER_ICONS, EnergyBadge, HelpIcon, TardigradeIcon, TardigradePhotoIcon } from "./icons";
 import { claimSeatFromUrl, inviteLink, nameClaimedSeat, rememberSeats } from "./seats";
 import { CombatLane } from "./CombatLane";
@@ -10,9 +10,13 @@ import { StepRibbon } from "./StepRibbon";
 import { MatchLog } from "./MatchLog";
 import { SettingsMenu, ThemeToggle, useTheme } from "./ThemeToggle";
 import { useDiceRoll, type RollTarget } from "./useDiceRoll";
+import { decideAttackers, decideBlockers, decideMainAction, decidePendingChoice, decisionOwner, rolled } from "./bot";
 import type { BlockAssignment, CardDef, CharacterFace, Die, GameState, PlayerState } from "./types";
 
 const POLL_INTERVAL_MS = 2000;
+// Pause before each computer-opponent move, so a Main Step full of
+// purchases reads as a sequence you can follow rather than one jump-cut.
+const BOT_MOVE_DELAY_MS = 700;
 const CHAMPIONS = [
   { id: "Wolf", energy: "Claw" },
   { id: "Armadillo", energy: "Shell" },
@@ -33,10 +37,6 @@ interface Selection {
   secondary: string[];
 }
 const EMPTY_SELECTION: Selection = { primary: null, secondary: [] };
-
-function rolled(d: Die): boolean {
-  return d.effectiveAttack !== null || d.energySymbolId !== null;
-}
 
 // The only zones where a die is actually showing a rolled face (rule
 // 1.5, mirrors ../PlayerBoard.tsx's own ROLLED_ZONES) - everywhere else
@@ -500,6 +500,25 @@ export function DiceKingdomPage() {
   const yourRowRef = useRef<HTMLDivElement>(null);
   const [setupA, setSetupA] = useState<string | null>(null);
   const [setupB, setSetupB] = useState<string | null>(null);
+  // Player Two becomes a basic rule-based opponent instead of a second
+  // human seat - see bot.ts. Fixed to player two rather than "whichever
+  // seat I didn't claim" because vs-computer games never go through the
+  // invite-link claim flow at all (both seats' tokens stay in this one
+  // browser, same as ordinary pass-and-play - see api.ts's rememberSeats
+  // call in startMatch below).
+  const [vsComputer, setVsComputer] = useState(false);
+  const gameRef = useRef<GameState | null>(null);
+  useEffect(() => {
+    gameRef.current = game;
+  }, [game]);
+  const botActingRef = useRef(false);
+  // Unpurchased/fieldable dice the bot tried and had rejected this turn
+  // (a legality rule bot.ts doesn't model, e.g. a lockout ability) - reset
+  // each time a new turn starts so it isn't permanently blacklisted.
+  const botSkipIdsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    botSkipIdsRef.current = new Set();
+  }, [game?.activePlayerId]);
 
   const [selection, setSelection] = useState<Selection>(EMPTY_SELECTION);
   // Dice that already used their one reroll this Roll & Reroll step - the
@@ -631,13 +650,29 @@ export function DiceKingdomPage() {
     : 0;
   useEffect(() => {
     if (!gameId || !game) return;
+    // Goes through apiAs(gameId, owner) - the player REQUIRED to submit
+    // this, per decisionOwner - rather than the shared `api` (whichever
+    // seat this browser currently "plays as"). Those are the same thing
+    // in ordinary two-tab pass-and-play (each tab only ever knows its
+    // own token, so apiAs either finds that same token or, on the wrong
+    // tab, no token at all - a silent no-op either way, unchanged from
+    // before). They're NOT the same in vs-computer mode: this one browser
+    // holds both tokens, and whichever of these two steps needs the
+    // COMPUTER's token would otherwise always be submitted as the human
+    // instead and 403 forever with nothing left to retry it (found via a
+    // real playthrough, 2026-09-15 - a human declaring 0 attackers, or an
+    // attacking computer whose attack the human leaves entirely
+    // unblocked, both landed here and stuck).
+    const owner = decisionOwner(game);
+    if (!owner) return;
+    const client = apiAs(gameId, owner);
     if (game.currentStepId === "assign-blockers" && assignBlockersAttackerCount === 0) {
-      runQuiet(() => api.declareBlockers(gameId, []));
+      runQuiet(() => client.declareBlockers(gameId, []));
     } else if (
       game.currentStepId === "action-global-window" &&
       Object.values(blockAssignments).filter(Boolean).length === 0
     ) {
-      runQuiet(() => api.assignCombatDamage(gameId, []));
+      runQuiet(() => client.assignCombatDamage(gameId, []));
     }
   }, [gameId, game?.version, game?.currentStepId, assignBlockersAttackerCount, blockAssignments]);
 
@@ -720,7 +755,14 @@ export function DiceKingdomPage() {
     if (busyRef.current) return;
     busyRef.current = true;
     try {
-      const next = await fn();
+      const raw = await fn();
+      // In vs-computer mode this may have gone out via apiAs as the
+      // computer's own seat (the auto-skip effect above) - the human is
+      // always Player One there, so undo the resulting yourPlayerId flip
+      // the same way runBot does; see its own remarks for why. A no-op
+      // in ordinary pass-and-play, where this always was the human's own
+      // token/response already.
+      const next = vsComputer ? { ...raw, yourPlayerId: raw.playerOne.id } : raw;
       setGame(next);
     } catch {
       // Expected on whichever browser doesn't hold the seat this
@@ -729,6 +771,165 @@ export function DiceKingdomPage() {
       busyRef.current = false;
     }
   }
+
+  // Same shape as run(), for the computer opponent - failures here are
+  // routine (see performBotAction's own remarks on why a scheduled bot
+  // action can find itself stale by the time it actually fires) and
+  // shouldn't flash the human-facing error banner or crash as an
+  // unhandled rejection the way run()'s own rethrow would; console.warn
+  // is enough of a trail if the bot is genuinely stuck. Returns null on
+  // failure so callers can tell "nothing changed" apart from a real
+  // GameState without needing try/catch of their own.
+  async function runBot(fn: () => Promise<GameState>): Promise<GameState | null> {
+    if (busyRef.current) return null;
+    setBusy(true);
+    busyRef.current = true;
+    try {
+      const previous = game;
+      const raw = await fn();
+      // apiAs(gid, botId) means the response reflects the COMPUTER's own
+      // seat (V2GamesController.Result sets yourPlayerId from whichever
+      // token the request carried) - the human is always Player One in
+      // vs-computer mode (see the vsComputer state var's own remarks), so
+      // patch it back rather than let "You"/"Opp" swap on screen for
+      // however long until the next poll or human action happens to use
+      // the human's own token again and self-correct it.
+      const next = { ...raw, yourPlayerId: raw.playerOne.id };
+      setGame(next);
+      if (previous) animateRolledDice(previous, next);
+      return next;
+    } catch (e) {
+      console.warn("[bot] action failed, skipping:", e);
+      return null;
+    } finally {
+      setBusy(false);
+      busyRef.current = false;
+    }
+  }
+
+  // One step of the computer opponent's turn - see bot.ts for the actual
+  // decisions. Re-reads gameRef.current (rather than trusting whatever
+  // GameState triggered the effect below) because this runs after a
+  // deliberate pacing delay, during which a poll or another action may
+  // already have moved the game past the step this was scheduled for;
+  // re-checking decisionOwner keeps a stale timer from firing a now-
+  // illegal action instead of just quietly doing nothing.
+  async function performBotAction(botId: string) {
+    const g = gameRef.current;
+    if (!g || decisionOwner(g) !== botId) return;
+    const gid = g.gameId;
+    const step = g.currentStepId;
+    // NOT the shared `api` - this browser only ever holds ONE seat's
+    // token as its "current" identity (seats.ts's tokenFor), the human's,
+    // same as any other pass-and-play session. Acting as the computer
+    // needs Player Two's own token instead, without touching that shared
+    // identity out from under the human's next click - see apiAs's own
+    // remarks. (Found the hard way, 2026-09-15: every bot action 403'd
+    // with "It is not your turn" until this existed - `api` alone can
+    // never act as a seat this browser hasn't selected.)
+    const botApi = apiAs(gid, botId);
+
+    if (g.pendingChoice) {
+      await runBot(() => botApi.resolvePendingChoice(gid, decidePendingChoice(g)));
+      return;
+    }
+    if (step === "start-of-turn") {
+      await runBot(() => botApi.clearAndDraw(gid));
+      return;
+    }
+    if (step === "roll-and-reroll") {
+      const hasRolled = g.dice.some(
+        (d) => d.controllerId === botId && (d.zone === "PrepArea" || d.zone === "ReservePool") && rolled(d),
+      );
+      await runBot(() => (hasRolled ? botApi.finishRoll(gid) : botApi.roll(gid)));
+      return;
+    }
+    if (step === "main") {
+      const decision = decideMainAction(g, botId, cardsById, botSkipIdsRef.current);
+      if (decision.kind === "enterAttackStep") {
+        await runBot(() => botApi.enterAttackStep(gid));
+        return;
+      }
+      const result =
+        decision.kind === "field"
+          ? await runBot(() => botApi.field(gid, decision.dieId, decision.energyDieIds))
+          : await runBot(() => botApi.purchase(gid, decision.dieId, decision.energyDieIds));
+      if (!result) {
+        // Either a legality rule bot.ts doesn't model rejected this
+        // candidate (see decideMainAction's own remarks), or the action
+        // was simply stale - either way, rule it out for this turn and
+        // let the next tick try something else instead of retrying it
+        // forever.
+        botSkipIdsRef.current.add(decision.dieId);
+      }
+      return;
+    }
+    if (step === "select-attackers") {
+      const result = await runBot(() => botApi.declareAttackers(gid, decideAttackers(g, botId)));
+      if (!result) await runBot(() => botApi.declareAttackers(gid, []));
+      return;
+    }
+    if (step === "assign-blockers") {
+      const assignments = decideBlockers(g, botId);
+      // Mirrors handleBlockerSlotClick's own bookkeeping: whichever side
+      // ends up resolving Action/Global Window (action-global-window,
+      // below) reads the pairing back out of this same local state, not
+      // out of GameState - see that branch's own remarks.
+      const map: Record<string, string | null> = {};
+      for (const a of assignments) map[a.attackerDieId] = a.blockerDieId;
+      setBlockAssignments(map);
+      const result = await runBot(() => botApi.declareBlockers(gid, assignments));
+      if (!result) {
+        setBlockAssignments({});
+        await runBot(() => botApi.declareBlockers(gid, []));
+      }
+      return;
+    }
+    if (step === "action-global-window") {
+      const assignments = Object.entries(blockAssignments)
+        .filter(([, b]) => b)
+        .map(([attackerDieId, blockerDieId]) => ({ attackerDieId, blockerDieId: blockerDieId! }));
+      // The empty case is handled generically by the auto-skip effect
+      // above (now identity-correct for vs-computer too, via apiAs - see
+      // its own remarks) - only step in here for a real pairing, so the
+      // two never race to submit the same "nothing to resolve" call.
+      if (assignments.length === 0) return;
+      await runBot(() => botApi.assignCombatDamage(gid, assignments));
+      return;
+    }
+    if (step === "return-to-field") {
+      await runBot(() => botApi.cleanUp(gid));
+    }
+  }
+
+  // A heartbeat, not a one-shot scheduled off `game`'s own dependencies -
+  // deliberately so. An earlier version rescheduled itself purely by
+  // reacting to game?.version changing, which seemed right (every real
+  // move changes the version, so each move re-triggers the next) but
+  // deadlocked the very first time runBot's own action failed: a no-op
+  // failure leaves `game` completely unchanged, so nothing would ever
+  // fire the effect again and the computer's turn just stopped forever
+  // (caught 2026-09-15 via a real Playwright playthrough - the board
+  // froze after exactly one "It is not your turn" console warning).
+  // Polling on an interval instead means a failed attempt just gets
+  // tried again next tick, same as this file's own poll-for-the-other-
+  // player's-moves effect above already does for the opposite direction.
+  useEffect(() => {
+    if (!vsComputer || !gameId) return;
+    const timer = window.setInterval(() => {
+      if (botActingRef.current || busyRef.current) return;
+      const g = gameRef.current;
+      if (!g) return;
+      const botId = g.playerTwo.id;
+      if (decisionOwner(g) !== botId) return;
+      botActingRef.current = true;
+      performBotAction(botId).finally(() => {
+        botActingRef.current = false;
+      });
+    }, BOT_MOVE_DELAY_MS);
+    return () => window.clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vsComputer, gameId]);
 
   async function startMatch() {
     if (!setupA || !setupB) return;
@@ -761,10 +962,15 @@ export function DiceKingdomPage() {
               Both players' pickers were identical apart from which
               setup state they wrote to, so this also collapses the
               previous copy-pasted pair into one map over the two. */}
+          <label style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 0 14px", fontSize: 14 }}>
+            <input type="checkbox" checked={vsComputer} onChange={(e) => setVsComputer(e.target.checked)} />
+            Play vs Computer - a basic rule-based opponent (highest attacker attacks, best affordable
+            purchase/block), not a strategic one
+          </label>
           <div className="champ-pick-columns">
             {[
               { label: "Player 1", value: setupA, setValue: setSetupA },
-              { label: "Player 2", value: setupB, setValue: setSetupB },
+              { label: vsComputer ? "Computer" : "Player 2", value: setupB, setValue: setSetupB },
             ].map(({ label, value, setValue }) => (
               <div className="champ-pick-column" key={label}>
                 <h3 style={{ margin: "0 0 10px" }}>{label}</h3>
@@ -1389,7 +1595,7 @@ export function DiceKingdomPage() {
         />
       </div>
     ) : game.pendingChoice ? (
-      <span className="now-bar-note">Waiting on the other player's choice…</span>
+      <span className="now-bar-note">{vsComputer ? "Computer is choosing…" : "Waiting on the other player's choice…"}</span>
     ) : step === "assign-blockers" && !isYourTurn ? (
       <div className="panel">
         <p>
@@ -1412,7 +1618,9 @@ export function DiceKingdomPage() {
         </button>
       </div>
     ) : step === "assign-blockers" && isYourTurn ? (
-      <span className="now-bar-note">Waiting on the other player to assign blockers…</span>
+      <span className="now-bar-note">
+        {vsComputer ? "Computer is assigning blockers…" : "Waiting on the other player to assign blockers…"}
+      </span>
     ) : step === "action-global-window" && isYourTurn ? (
       <button
         className="btn"
@@ -1431,7 +1639,7 @@ export function DiceKingdomPage() {
         Resolve Combat
       </button>
     ) : !isYourTurn ? (
-      <span className="now-bar-note">Waiting on the other player…</span>
+      <span className="now-bar-note">{vsComputer ? "Computer is thinking…" : "Waiting on the other player…"}</span>
     ) : (
       <div className="actionrow">
         {step === "start-of-turn" && (
@@ -1608,7 +1816,7 @@ export function DiceKingdomPage() {
               (2026-09-09 direct feedback - see that component's own
               remarks); Invite stays here - "Invite and Copy link can
               stay on the bottom for now." */}
-          {link && <InviteRow link={link} />}
+          {!vsComputer && link && <InviteRow link={link} />}
         </div>
 
         <div className="dk-rail-mid">

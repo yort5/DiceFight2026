@@ -2716,3 +2716,73 @@ Verified against the real running API, not just the test suite: a
 8+8 card ids listed above (not the old all-Claw/all-Eye lists), and a
 headless-Chromium screenshot of Wolf's actual roster strip shows all
 four energies' icons side by side on one team.
+
+## Basic computer opponent (2026-09-15)
+
+Desktop `/dice-kingdom` only - added a "Play vs Computer" checkbox on
+the setup screen that makes Player Two a rule-based bot instead of a
+second human seat, so the game is playable solo. Deliberately not
+smart: no lookahead, no combo/keyword awareness, just per-step
+heuristics (`web/src/dicekingdom/bot.ts`, pure decision functions taking
+`GameState` + `CardDef` lookup and returning what to do next) - field
+the best affordable character or buy the priciest affordable card,
+attack with every fielded die that has nonzero attack, block using a
+kills-then-survives greedy match, satisfy a pending choice's minimum
+count. `DiceKingdomPage.tsx` drives it: a `setInterval` heartbeat
+(`BOT_MOVE_DELAY_MS` = 700ms, deliberately a heartbeat and not a one-
+shot re-schedule off `game`'s own version - see below) calls
+`performBotAction` whenever `bot.ts`'s `decisionOwner()` says it's the
+computer's move.
+
+**Two real "stuck forever" bugs found only by an actual multi-turn
+Playwright playthrough** (`~/.devtools/playwright/vs-computer.js`, not
+kept in the repo - ad hoc), neither caught by `tsc`/`oxlint`/a quick
+click-through:
+
+1. The first scheduler design rescheduled itself by reacting to
+   `game.version` changing - seemed right (every real move changes the
+   version) until the very first `runBot` failure, which by definition
+   changes nothing, so nothing ever re-triggered the effect and the
+   computer's turn just stopped. Fixed by switching to a `setInterval`
+   heartbeat that re-checks and retries every tick regardless of
+   whether the previous attempt did anything, rather than a `setTimeout`
+   chained off state changes.
+2. Bigger one: this app's pass-and-play was never actually "one browser,
+   both seats, freely" - `seats.ts`'s `tokenFor()` is ONE stored
+   "who am I" flag per browser tab (real two-human pass-and-play here
+   means a second browser CONTEXT via the invite link, not sharing a
+   tab), so the shared `api` client could only ever act as Player One.
+   Every computer action 403'd with "It is not your turn" until `api.ts`
+   grew `apiAs(gameId, playerId)` - the same client shape bound to one
+   specific seat's own remembered token (both tokens are already saved
+   locally for a vs-computer game, same `rememberSeats` call ordinary
+   pass-and-play already made) - and `performBotAction` switched to it.
+   The pre-existing generic "auto-submit an empty Assign Blockers/
+   Action-Global-Window" effect had the exact same bug (it also used the
+   shared `api`) and got the same fix, resolving correctly identifies
+   the required actor via `decisionOwner()` now instead of assuming
+   "whoever this tab is" is always right - true in ordinary pass-and-
+   play, false here. Both fixes are provably no-ops for ordinary two-tab
+   play (verified with a normal-hotseat Playwright run): `apiAs` finds
+   the same single token `tokenFor` would have, or finds nothing and
+   fails exactly as silently as before.
+
+Also worth knowing about the response DTO: `yourPlayerId` reflects
+whichever seat token the REQUEST carried (`V2GamesController.Result`),
+so a bot action submitted via `apiAs` flips it to Player Two for that
+one response. Patched back to Player One (always the human, by this
+mode's own construction) inside `runBot`/`runQuiet` rather than left to
+self-correct on the next poll - otherwise the You/Opp boards visibly
+swap for up to `POLL_INTERVAL_MS` after every computer move.
+
+Known gap, not a bug: the bot only ever buys/fields dice it directly
+owns or controls - it can't purchase a shared/community Basic Action die
+even though the rules allow it, because `CardDef` (the client's card
+shape) doesn't carry a card-type/community flag to tell those apart.
+InstinctClashConfig doesn't have any Basic Actions among the launch
+Characters yet, so this doesn't currently cost the bot anything real;
+revisit if that changes. Verified end-to-end via
+`vs-computer.js`: a ~150-action scripted playthrough (computer fully
+autonomous, a human side that only ever skips/blocks nothing) ran many
+full turns with real purchases, fields, attacks, and damage (life went
+to -25) with zero stuck steps and zero uncaught errors.
