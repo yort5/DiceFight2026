@@ -487,6 +487,7 @@ function MatCard({
   onTapDie: (id: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [championOpen, setChampionOpen] = useState(false);
   const zone = (name: string) => dice.filter((d) => d.zone === name);
   const field = zone("FieldZone");
   const used = zone("UsedPile");
@@ -504,11 +505,18 @@ function MatCard({
   // lost, just not doubled up on the mat chrome too.
   const accent = mine ? "var(--claw)" : "var(--eye)";
   const turnClass = isActivePlayer ? " active" : "";
+  const ChampIcon = player.champion ? CHAMPION_ICONS[player.champion.id] : null;
 
   return (
     <div className={`dkm-mat${mine ? " mine" : ""}${turnClass}`} style={{ ["--cc" as string]: accent }}>
       <div className="dkm-mat-head">
         <span className="dkm-mat-label">{mine ? "You" : "Opp"}</span>
+        {player.champion && (
+          <button type="button" className="dkm-champion-badge" onClick={() => setChampionOpen((v) => !v)}>
+            {ChampIcon && <ChampIcon size={16} />}
+            <span>{player.champion.name}</span>
+          </button>
+        )}
         <span className="dkm-mat-life">
           {player.life} <small>life</small>
         </span>
@@ -524,6 +532,15 @@ function MatCard({
           )}
         </span>
       </div>
+
+      {/* Real gap, direct feedback (2026-09-17): "once the game is in
+          session, I can't tell what either myself or my opponent picked
+          as champion" - the champion badge above names WHO, this names
+          WHAT IT DOES, since a stat that looks off is often just a
+          passive you can't see applying (the same feedback's own
+          example: a die reading a little high/low on attack or defense
+          because of the OTHER player's champion, not yours). */}
+      {championOpen && player.champion && <p className="dkm-champion-passive">{player.champion.passiveText}</p>}
 
       {!expandable || expanded ? (
         <div className={expandable ? "dkm-mat-expanded" : undefined}>

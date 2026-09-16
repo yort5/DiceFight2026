@@ -2489,6 +2489,24 @@
   text-transform: uppercase;
   color: var(--cc);
 }
+/* Names WHO (real gap, direct feedback 2026-09-17: "I can't tell what
+   either myself or my opponent picked as champion"). Tap reveals the
+   passive line below (.dkm-champion-passive) - names WHAT IT DOES, since
+   a stat that looks off is often just a passive you can't see applying. */
+.dk-mobile .dkm-champion-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--dkm-ink-2);
+}
+.dk-mobile .dkm-champion-badge span {
+  font: 600 10.5px/1 "Work Sans", var(--sans);
+}
+.dk-mobile .dkm-champion-passive {
+  margin: -2px 0 8px;
+  font: 400 10.5px/1.4 "Work Sans", var(--sans);
+  color: var(--dkm-ink-dim);
+}
 .dk-mobile .dkm-mat-life {
   font: 400 20px/1 var(--display);
   color: var(--dkm-ink);
