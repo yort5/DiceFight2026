@@ -43,6 +43,11 @@ import type { CardDef, Die, GameState, PlayerState } from "./types";
 //   - see deriveAttackChain's own remarks.
 
 const POLL_INTERVAL_MS = 2000;
+// The tumble itself (useDiceRoll.ts's TUMBLE_MS) plus a genuine pause to
+// actually read the result, before runWithReveal below moves on to
+// whatever phase the reroll response really lands on - direct feedback
+// (2026-09-16): "pause for a second to see what the results were."
+const TUMBLE_REVEAL_HOLD_MS = 1900;
 const CHAMPIONS = [
   { id: "Wolf", energy: "Claw" },
   { id: "Armadillo", energy: "Shell" },
@@ -982,6 +987,49 @@ export function DiceKingdomMobilePage() {
     }
   }
 
+  // A reroll ends the WHOLE Roll & Reroll step server-side, in one shot -
+  // the real tabletop rule ("you get one reroll decision, and taking it
+  // ends the step"), confirmed against the live engine (2026-09-16): the
+  // /reroll response already carries currentStepId "main". Calling the
+  // ordinary run() above for it used to swap this page's phase-stage
+  // card straight from the tray to Buy & Field the instant that response
+  // landed - maybe 150ms into the tumble's 900ms - direct feedback: "the
+  // dice disappear right away and you can't see it." This holds the OLD
+  // phase on screen (so the tray stays mounted and the tumble has
+  // somewhere to land that's actually visible) while adopting the NEW
+  // dice data (so it tumbles to the real result), then waits out the
+  // tumble plus a genuine pause to actually read it before revealing
+  // the real state underneath. The poll in the effect above already
+  // skips itself while `busy` is true, so it can't race in with the
+  // real state early and cut the hold short.
+  async function runWithReveal(fn: () => Promise<GameState>, revealedDieIds: string[]) {
+    setBusy(true);
+    busyRef.current = true;
+    setError(null);
+    try {
+      const previous = game;
+      const next = await fn();
+      if (!previous) {
+        setGame(next);
+        return next;
+      }
+      setGame({ ...next, currentStep: previous.currentStep, currentStepId: previous.currentStepId });
+      animateRolledDice(previous, next, revealedDieIds);
+      setSelectedId(null);
+      setRerollPicked([]);
+      setRerollUsedThisStep(true);
+      await new Promise((resolve) => setTimeout(resolve, TUMBLE_REVEAL_HOLD_MS));
+      setGame(next);
+      return next;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      throw e;
+    } finally {
+      setBusy(false);
+      busyRef.current = false;
+    }
+  }
+
   async function runQuiet(fn: () => Promise<GameState>) {
     if (busyRef.current) return;
     busyRef.current = true;
@@ -1259,8 +1307,7 @@ export function DiceKingdomMobilePage() {
       primaryRun = () => run(() => api.roll(game.gameId), drawnZone.map((d) => d.id));
     } else if (rerollPicked.length > 0) {
       primaryLabel = `Reroll (${rerollPicked.length})`;
-      primaryRun = () =>
-        run(() => api.reroll(game.gameId, rerollPicked), rerollPicked).then(() => setRerollUsedThisStep(true));
+      primaryRun = () => runWithReveal(() => api.reroll(game.gameId, rerollPicked), rerollPicked);
     } else {
       primaryLabel = "To Reserve";
       primaryRun = () => run(() => api.finishRoll(game.gameId));
@@ -1352,58 +1399,67 @@ export function DiceKingdomMobilePage() {
 
         <GlobalRail />
 
-        {phase === "clear" && (
-          <TrayCard
-            title="Draw"
-            hint={`${yourDice.filter((d) => d.zone === "Bag").length} in bag`}
-            dice={[]}
-            cardsById={cardsById}
-            rolledYet={false}
-            rerollPicked={[]}
-            onToggleReroll={() => {}}
-            spins={spins}
-            turnOffsets={offsets}
-          />
-        )}
-        {phase === "roll" && (
-          <TrayCard
-            title={hasRolledThisStep ? "Tray · tap to select for reroll" : "Tray"}
-            hint={`${drawnZone.length || yourReserve.length} dice`}
-            dice={hasRolledThisStep ? yourReserve : drawnZone}
-            cardsById={cardsById}
-            rolledYet={hasRolledThisStep}
-            rerollPicked={rerollPicked}
-            onToggleReroll={toggleReroll}
-            spins={spins}
-            turnOffsets={offsets}
-          />
-        )}
-        {phase === "main" && (
-          <BuyCard
-            unpurchasedByCard={unpurchasedByCard}
-            cardsById={cardsById}
-            reserve={yourReserve}
-            you={you}
-            selectedId={selectedId}
-            onSelect={toggleSelect}
-            onOpenRoster={() => setRosterOpen(true)}
-          />
-        )}
-        {phase === "attack" && (
-          <AttackLanesCard
-            isYourTurn={isYourTurn}
-            step={step}
-            attackersByLane={attackersByLane}
-            blockersByAttacker={blockersByAttacker}
-            cardsById={cardsById}
-            laneSel={laneSel}
-            onTapLane={setLaneSel}
-            onTapAttacker={onTapAttacker}
-            onTapBlockerOnAttacker={(id) => toggleSelect(id)}
-            selectedId={selectedId}
-          />
-        )}
-        {phase === "cleanup" && <CleanUpCard reserve={yourReserve} cardsById={cardsById} you={you} />}
+        {/* Keyed by phase so React remounts this on every phase change,
+            replaying dkPhaseIn (dicekingdom.css) - a plain settle-in
+            rather than a hard cut when the view swaps to a new phase's
+            card, direct feedback (2026-09-16): "...then shrink them into
+            their destination." (runWithReveal above is what makes sure
+            this swap only happens once a reroll's tumble has actually
+            been seen, not the instant the server responds.) */}
+        <div key={phase} className="dkm-phase-stage">
+          {phase === "clear" && (
+            <TrayCard
+              title="Draw"
+              hint={`${yourDice.filter((d) => d.zone === "Bag").length} in bag`}
+              dice={[]}
+              cardsById={cardsById}
+              rolledYet={false}
+              rerollPicked={[]}
+              onToggleReroll={() => {}}
+              spins={spins}
+              turnOffsets={offsets}
+            />
+          )}
+          {phase === "roll" && (
+            <TrayCard
+              title={hasRolledThisStep ? "Tray · tap to select for reroll" : "Tray"}
+              hint={`${drawnZone.length || yourReserve.length} dice`}
+              dice={hasRolledThisStep ? yourReserve : drawnZone}
+              cardsById={cardsById}
+              rolledYet={hasRolledThisStep}
+              rerollPicked={rerollPicked}
+              onToggleReroll={toggleReroll}
+              spins={spins}
+              turnOffsets={offsets}
+            />
+          )}
+          {phase === "main" && (
+            <BuyCard
+              unpurchasedByCard={unpurchasedByCard}
+              cardsById={cardsById}
+              reserve={yourReserve}
+              you={you}
+              selectedId={selectedId}
+              onSelect={toggleSelect}
+              onOpenRoster={() => setRosterOpen(true)}
+            />
+          )}
+          {phase === "attack" && (
+            <AttackLanesCard
+              isYourTurn={isYourTurn}
+              step={step}
+              attackersByLane={attackersByLane}
+              blockersByAttacker={blockersByAttacker}
+              cardsById={cardsById}
+              laneSel={laneSel}
+              onTapLane={setLaneSel}
+              onTapAttacker={onTapAttacker}
+              onTapBlockerOnAttacker={(id) => toggleSelect(id)}
+              selectedId={selectedId}
+            />
+          )}
+          {phase === "cleanup" && <CleanUpCard reserve={yourReserve} cardsById={cardsById} you={you} />}
+        </div>
 
         <MatCard
           mine

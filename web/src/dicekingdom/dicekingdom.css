@@ -2588,7 +2588,6 @@
 .dk-mobile .dkm-tile {
   padding: 0;
   border-radius: 8px;
-  overflow: hidden;
   transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
 .dk-mobile .dkm-tile.clickable {
@@ -2680,6 +2679,20 @@
   color: var(--dkm-ink-dim);
   opacity: 0.7;
   font-style: italic;
+}
+
+/* A plain settle-in for the phase-stage card, replayed on every phase
+   change (DiceKingdomMobilePage.tsx keys the wrapper by `phase`) - not a
+   hard cut when the view swaps, e.g. once a reroll's tumble has actually
+   been shown (see runWithReveal's own remarks). Deliberately modest -
+   this is a card appearing, not a die landing, so it borrows none of the
+   tumble's bounce. */
+@keyframes dkPhaseIn {
+  from { opacity: 0; transform: scale(.96) translateY(4px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.dk-mobile .dkm-phase-stage {
+  animation: dkPhaseIn 260ms cubic-bezier(.22,.68,.36,1) both;
 }
 
 /* ---- Tray / Buy cards ---- */
