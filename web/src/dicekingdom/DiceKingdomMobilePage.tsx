@@ -738,12 +738,52 @@ function BuyCard({
 // strictly per-attacker) - a lane is a display grouping, not a pooled-
 // damage mechanic, so blocking a SPECIFIC attacker still means tapping
 // that specific attacker's own tile, not just "the lane".
+// A die sitting in a lane, wrapped so a tap both selects it AND stops the
+// tap from also bubbling up to the lane's own onTapLane (DTile's own
+// button doesn't take an event, only a plain callback, so this wrapper
+// is what actually owns stopPropagation - see its own onClick).
+function LaneDie({
+  die,
+  cardsById,
+  you,
+  size,
+  picked,
+  onTap,
+}: {
+  die: Die;
+  cardsById: Map<string, CardDef>;
+  you: string;
+  size: number;
+  picked: boolean;
+  onTap: () => void;
+}) {
+  return (
+    <div
+      className="dkm-lane-die-wrap"
+      onClick={(e) => {
+        e.stopPropagation();
+        onTap();
+      }}
+    >
+      <DTile die={die} cardsById={cardsById} size={size} mine={die.controllerId === you} clickable picked={picked} />
+    </div>
+  );
+}
+
+// Real bug, direct feedback (2026-09-17): "Dice don't show up properly
+// in Attack Zone" - these tiles were a bespoke text-only placeholder
+// (a bare number plus a name string), never the same DieCube every
+// other zone on this page actually renders dice with. Now uses the
+// shared DTile (size shrinks with LaneDie's own tileSize, same as
+// before) so an attacker/blocker in a lane looks like the same physical
+// die it is everywhere else - full stats, avatar, type-colored border.
 function AttackLanesCard({
   isYourTurn,
   step,
   attackersByLane,
   blockersByAttacker,
   cardsById,
+  you,
   laneSel,
   onTapLane,
   onTapAttacker,
@@ -755,6 +795,7 @@ function AttackLanesCard({
   attackersByLane: Die[][];
   blockersByAttacker: Map<string, Die[]>;
   cardsById: Map<string, CardDef>;
+  you: string;
   laneSel: number;
   onTapLane: (lane: number) => void;
   onTapAttacker: (id: string) => void;
@@ -780,21 +821,19 @@ function AttackLanesCard({
           const tileSize = attackers.length <= 1 ? 52 : attackers.length === 2 ? 42 : 34;
           const chipText = attackers.length === 0 ? null : blockers.length === 0 ? `${totalAtk} to face` : `${totalAtk} v ${totalDef}`;
           return (
-            <button key={lane} type="button" className={`dkm-lane${targeted ? " targeted" : ""}`} onClick={() => onTapLane(lane)}>
+            <div
+              key={lane}
+              role="button"
+              tabIndex={0}
+              className={`dkm-lane${targeted ? " targeted" : ""}`}
+              onClick={() => onTapLane(lane)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") onTapLane(lane);
+              }}
+            >
               <div className="dkm-lane-blockers">
                 {attackers.flatMap((a) => blockersByAttacker.get(a.id) ?? []).map((b) => (
-                  <div
-                    key={b.id}
-                    className="dkm-lane-tile blocker"
-                    style={{ height: tileSize }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onTapBlockerOnAttacker(b.id);
-                    }}
-                  >
-                    <span className="dkm-lane-def">{b.effectiveDefense}</span>
-                    <span className="dkm-lane-name">{nameOf(b, cardsById)}</span>
-                  </div>
+                  <LaneDie key={b.id} die={b} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === b.id} onTap={() => onTapBlockerOnAttacker(b.id)} />
                 ))}
                 {step === "assign-blockers" && !isYourTurn && attackers.length > 0 && blockers.length === 0 && (
                   <div className="dkm-lane-tile empty blocker-empty">no blocker</div>
@@ -803,23 +842,12 @@ function AttackLanesCard({
               {chipText && <span className="dkm-lane-chip">{chipText}</span>}
               <div className="dkm-lane-attackers">
                 {attackers.map((a) => (
-                  <div
-                    key={a.id}
-                    className={`dkm-lane-tile attacker${selectedId === a.id ? " picked" : ""}`}
-                    style={{ height: tileSize }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onTapAttacker(a.id);
-                    }}
-                  >
-                    <span className="dkm-lane-atk">{a.effectiveAttack}</span>
-                    <span className="dkm-lane-name">{nameOf(a, cardsById)}</span>
-                  </div>
+                  <LaneDie key={a.id} die={a} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === a.id} onTap={() => onTapAttacker(a.id)} />
                 ))}
                 {attackers.length === 0 && <div className="dkm-lane-tile empty attacker-empty" />}
               </div>
               <span className="dkm-lane-number">{String(lane + 1).padStart(2, "0")}</span>
-            </button>
+            </div>
           );
         })}
       </div>
@@ -1747,6 +1775,7 @@ export function DiceKingdomMobilePage() {
               attackersByLane={attackersByLane}
               blockersByAttacker={blockersByAttacker}
               cardsById={cardsById}
+              you={you}
               laneSel={laneSel}
               onTapLane={setLaneSel}
               onTapAttacker={onTapAttacker}

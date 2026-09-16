@@ -2764,6 +2764,15 @@
   border: 1px solid var(--dkm-hairline);
   background: transparent;
   min-width: 0;
+  /* Now a <div role="button"> (real bug: DTile - a real <button> - can't
+     legally nest inside another <button>, per the die-tile fix above),
+     so it needs its own cursor/outline treatment the global
+     `.dk-mobile button` reset no longer covers. */
+  cursor: pointer;
+}
+.dk-mobile .dkm-lane:focus-visible {
+  outline: 2px solid var(--claw);
+  outline-offset: 1px;
 }
 .dk-mobile .dkm-lane.targeted {
   border-color: var(--claw);
@@ -2773,7 +2782,18 @@
 .dk-mobile .dkm-lane-attackers {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 3px;
+}
+/* Real bug, direct feedback (2026-09-17): "Dice don't show up properly
+   in Attack Zone" - these tiles are the real DieCube now (LaneDie, in
+   DiceKingdomMobilePage.tsx), same as every other zone, not a bespoke
+   text-only placeholder. align-items:center above (rather than the
+   default stretch) is what keeps each square die tile centered in its
+   own narrow lane column instead of stretching full-width with the
+   fixed-size cube sitting off to one side of the extra space. */
+.dk-mobile .dkm-lane-die-wrap {
+  cursor: pointer;
 }
 .dk-mobile .dkm-lane-tile {
   position: relative;
@@ -2787,15 +2807,6 @@
   text-align: center;
   padding: 2px;
 }
-.dk-mobile .dkm-lane-tile.blocker {
-  background: var(--dkm-raised);
-}
-.dk-mobile .dkm-lane-tile.attacker {
-  background: var(--dkm-attacker);
-}
-.dk-mobile .dkm-lane-tile.picked {
-  box-shadow: inset 0 0 0 2px #fff;
-}
 .dk-mobile .dkm-lane-tile.empty {
   height: 26px;
   border: 1px dashed var(--dkm-hairline);
@@ -2805,29 +2816,6 @@
 }
 .dk-mobile .dkm-lane-tile.attacker-empty {
   border-color: rgba(231, 138, 90, 0.5);
-}
-.dk-mobile .dkm-lane-atk {
-  position: absolute;
-  top: 2px;
-  right: 3px;
-  font: 400 11px/1 var(--display);
-  color: var(--dkm-ink);
-}
-.dk-mobile .dkm-lane-def {
-  position: absolute;
-  top: 2px;
-  right: 3px;
-  font: 400 11px/1 var(--display);
-  color: var(--wing);
-}
-.dk-mobile .dkm-lane-name {
-  font-size: 7.5px;
-  line-height: 1.1;
-  opacity: 0.85;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  width: 100%;
 }
 .dk-mobile .dkm-lane-chip {
   align-self: center;
@@ -3165,12 +3153,3 @@
   margin: 0 auto 12px;
 }
 
-/* Phone-width guard - this page is designed for ~402px/375px viewports;
-   the max-width above already keeps it from stretching wide, this just
-   guarantees no accidental horizontal scroll on the very narrowest
-   supported phones. */
-@media (max-width: 400px) {
-  .dk-mobile .dkm-lane-name {
-    display: none;
-  }
-}
