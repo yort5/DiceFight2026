@@ -1,6 +1,6 @@
 import { startTransition, useEffect, useRef, useState } from "react";
 import "./dicekingdom.css";
-import { api } from "./api";
+import { api, apiAs } from "./api";
 import {
   ArrowRightIcon,
   CHAMPION_ICONS,
@@ -15,6 +15,7 @@ import { claimSeatFromUrl, inviteLink, nameClaimedSeat, rememberSeats } from "./
 import { DieCube, type CubeSpin } from "./DieCube";
 import { facesFor } from "./dieFaces";
 import { useDiceRoll, type RollTarget } from "./useDiceRoll";
+import { decideAttackers, decideBlockers, decideMainAction, decidePendingChoice, decisionOwner } from "./bot";
 import type { CardDef, Die, GameState, PlayerState } from "./types";
 
 // Dice Kingdom - mobile refresh (2026-09). A GENUINELY SEPARATE front end
@@ -55,6 +56,13 @@ const CHAMPIONS = [
   { id: "GreatHornedOwl", energy: "Eye" },
 ];
 const LANE_COUNT = 4;
+// Same pacing as ../DiceKingdomPage.tsx's identical "Play vs Computer"
+// feature (2026-09-17 port - direct feedback: "how do I actually use the
+// automated opponent?" - it only ever existed on desktop). bot.ts's
+// decision functions and api.ts's apiAs are already shared, page-
+// agnostic modules; only the stateful wiring below (whose turn it is,
+// the heartbeat timer, the identity patch) needed porting.
+const BOT_MOVE_DELAY_MS = 700;
 
 function rolled(d: Die): boolean {
   return d.effectiveAttack !== null || d.energySymbolId !== null;
@@ -954,6 +962,25 @@ export function DiceKingdomMobilePage() {
   const busyRef = useRef(false);
   const [setupA, setSetupA] = useState<string | null>(null);
   const [setupB, setSetupB] = useState<string | null>(null);
+  // Player Two becomes a basic rule-based opponent instead of a second
+  // human seat - see bot.ts, and ../DiceKingdomPage.tsx's identical
+  // vsComputer for the fuller remarks (fixed to player two rather than
+  // "whichever seat I didn't claim" since vs-computer games never go
+  // through the invite-link claim flow at all - both tokens stay in this
+  // one browser, same as ordinary pass-and-play).
+  const [vsComputer, setVsComputer] = useState(false);
+  const gameRef = useRef<GameState | null>(null);
+  useEffect(() => {
+    gameRef.current = game;
+  }, [game]);
+  const botActingRef = useRef(false);
+  // Unpurchased/fieldable dice the bot tried and had rejected this turn
+  // (a legality rule bot.ts doesn't model) - reset each new turn so it
+  // isn't permanently blacklisted.
+  const botSkipIdsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    botSkipIdsRef.current = new Set();
+  }, [game?.activePlayerId]);
   const [cardsById, setCardsById] = useState<Map<string, CardDef>>(new Map());
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -969,6 +996,17 @@ export function DiceKingdomMobilePage() {
   // showed YOUR OWN unpurchased cards regardless of which one was
   // tapped, so the opponent's button silently showed your roster.
   const [rosterViewFor, setRosterViewFor] = useState<string | null>(null);
+  // A brief confirmation that startMatch's auto-copy (below) actually
+  // landed - clipboard writes can silently fail (permissions, an
+  // unsupported browser), so this only shows on the real success
+  // callback, not just "we tried." Self-clears; the persistent Invite
+  // row above the Log is still there afterward for a second copy.
+  const [inviteCopiedBanner, setInviteCopiedBanner] = useState(false);
+  useEffect(() => {
+    if (!inviteCopiedBanner) return;
+    const timer = window.setTimeout(() => setInviteCopiedBanner(false), 4000);
+    return () => window.clearTimeout(timer);
+  }, [inviteCopiedBanner]);
 
   const { spins, offsets, launch: launchRoll, spinTo: spinDie } = useDiceRoll();
 
@@ -1113,11 +1151,21 @@ export function DiceKingdomMobilePage() {
     }
   }
 
+  // Same shape as run(), for an auto-fired action THIS browser may not
+  // hold the seat for - see the auto-skip effect below. In ordinary
+  // pass-and-play that's just "the other tab doesn't have the token, a
+  // 403 is expected." In vs-computer mode it can ALSO go out via apiAs
+  // as the computer's own seat (the auto-skip effect uses decisionOwner,
+  // which can name either player) - the human is always Player One
+  // there (see vsComputer's own remarks), so undo the resulting
+  // yourPlayerId flip the same way runBot does, or "You"/"Opp" swap on
+  // screen until the next human action self-corrects it.
   async function runQuiet(fn: () => Promise<GameState>) {
     if (busyRef.current) return;
     busyRef.current = true;
     try {
-      const next = await fn();
+      const raw = await fn();
+      const next = vsComputer ? { ...raw, yourPlayerId: raw.playerOne.id } : raw;
       setGame(next);
     } catch {
       // expected on whichever browser doesn't hold the seat this needed
@@ -1127,27 +1175,171 @@ export function DiceKingdomMobilePage() {
   }
 
   // Same auto-skip-through-an-empty-window behavior as the desktop page
-  // and /game before it - see ../DiceKingdomPage.tsx's identical effect.
+  // and /game before it - see ../DiceKingdomPage.tsx's identical effect,
+  // including why this goes through apiAs(gameId, owner) rather than the
+  // shared `api`: in vs-computer mode this one browser holds both
+  // tokens, and whichever of these two steps needs the COMPUTER's token
+  // would otherwise always be submitted as the human instead and 403
+  // forever with nothing left to retry it.
   const assignBlockersAttackerCount = game
     ? game.dice.filter((d) => d.zone === "AttackZone" && d.controllerId === game.activePlayerId).length
     : 0;
   useEffect(() => {
     if (!gameId || !game) return;
+    const owner = decisionOwner(game);
+    if (!owner) return;
+    const client = apiAs(gameId, owner);
     if (game.currentStepId === "assign-blockers" && assignBlockersAttackerCount === 0) {
-      runQuiet(() => api.declareBlockers(gameId, []));
+      runQuiet(() => client.declareBlockers(gameId, []));
     } else if (game.currentStepId === "action-global-window" && Object.values(blockAssignments).filter(Boolean).length === 0) {
-      runQuiet(() => api.assignCombatDamage(gameId, []));
+      runQuiet(() => client.assignCombatDamage(gameId, []));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId, game?.version, game?.currentStepId, assignBlockersAttackerCount]);
 
+  // Same shape as run(), for the computer opponent - see
+  // ../DiceKingdomPage.tsx's identical runBot for why failures here are
+  // routine (console.warn, not the human-facing error banner) and why
+  // yourPlayerId gets patched back to Player One.
+  async function runBot(fn: () => Promise<GameState>): Promise<GameState | null> {
+    if (busyRef.current) return null;
+    setBusy(true);
+    busyRef.current = true;
+    try {
+      const previous = game;
+      const raw = await fn();
+      const next = { ...raw, yourPlayerId: raw.playerOne.id };
+      startTransition(() => setGame(next));
+      if (previous) requestAnimationFrame(() => animateRolledDice(previous, next));
+      return next;
+    } catch (e) {
+      console.warn("[bot] action failed, skipping:", e);
+      return null;
+    } finally {
+      setBusy(false);
+      busyRef.current = false;
+    }
+  }
+
+  // One step of the computer opponent's turn - see bot.ts for the actual
+  // decisions, and ../DiceKingdomPage.tsx's identical performBotAction
+  // for the fuller remarks (re-reading gameRef.current rather than
+  // trusting whatever triggered the scheduling effect, since a deliberate
+  // pacing delay means the game may have already moved past this step by
+  // the time it actually fires).
+  async function performBotAction(botId: string) {
+    const g = gameRef.current;
+    if (!g || decisionOwner(g) !== botId) return;
+    const gid = g.gameId;
+    const step = g.currentStepId;
+    const botApi = apiAs(gid, botId);
+
+    if (g.pendingChoice) {
+      await runBot(() => botApi.resolvePendingChoice(gid, decidePendingChoice(g)));
+      return;
+    }
+    if (step === "start-of-turn") {
+      await runBot(() => botApi.clearAndDraw(gid));
+      return;
+    }
+    if (step === "roll-and-reroll") {
+      const hasRolled = g.dice.some(
+        (d) => d.controllerId === botId && (d.zone === "PrepArea" || d.zone === "ReservePool") && rolled(d),
+      );
+      await runBot(() => (hasRolled ? botApi.finishRoll(gid) : botApi.roll(gid)));
+      return;
+    }
+    if (step === "main") {
+      const decision = decideMainAction(g, botId, cardsById, botSkipIdsRef.current);
+      if (decision.kind === "enterAttackStep") {
+        await runBot(() => botApi.enterAttackStep(gid));
+        return;
+      }
+      const result =
+        decision.kind === "field"
+          ? await runBot(() => botApi.field(gid, decision.dieId, decision.energyDieIds))
+          : await runBot(() => botApi.purchase(gid, decision.dieId, decision.energyDieIds));
+      if (!result) botSkipIdsRef.current.add(decision.dieId);
+      return;
+    }
+    if (step === "select-attackers") {
+      const result = await runBot(() => botApi.declareAttackers(gid, decideAttackers(g, botId)));
+      if (!result) await runBot(() => botApi.declareAttackers(gid, []));
+      return;
+    }
+    if (step === "assign-blockers") {
+      const assignments = decideBlockers(g, botId);
+      const map: Record<string, string | null> = {};
+      for (const a of assignments) map[a.attackerDieId] = a.blockerDieId;
+      setBlockAssignments(map);
+      const result = await runBot(() => botApi.declareBlockers(gid, assignments));
+      if (!result) {
+        setBlockAssignments({});
+        await runBot(() => botApi.declareBlockers(gid, []));
+      }
+      return;
+    }
+    if (step === "action-global-window") {
+      const assignments = Object.entries(blockAssignments)
+        .filter((e): e is [string, string] => !!e[1])
+        .map(([attackerDieId, blockerDieId]) => ({ attackerDieId, blockerDieId }));
+      // The empty case is handled generically by the auto-skip effect
+      // above - only step in here for a real pairing.
+      if (assignments.length === 0) return;
+      await runBot(() => botApi.assignCombatDamage(gid, assignments));
+      return;
+    }
+    if (step === "return-to-field") {
+      await runBot(() => botApi.cleanUp(gid));
+    }
+  }
+
+  // A heartbeat, not a one-shot scheduled off `game`'s own dependencies -
+  // see ../DiceKingdomPage.tsx's identical effect for why (a failed
+  // no-op action would otherwise leave `game` unchanged and the
+  // scheduling effect would never fire again, freezing the computer's
+  // turn permanently).
+  useEffect(() => {
+    if (!vsComputer || !gameId) return;
+    const timer = window.setInterval(() => {
+      if (botActingRef.current || busyRef.current) return;
+      const g = gameRef.current;
+      if (!g) return;
+      const botId = g.playerTwo.id;
+      if (decisionOwner(g) !== botId) return;
+      botActingRef.current = true;
+      performBotAction(botId).finally(() => {
+        botActingRef.current = false;
+      });
+    }, BOT_MOVE_DELAY_MS);
+    return () => window.clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vsComputer, gameId]);
+
   async function startMatch() {
     if (!setupA || !setupB) return;
-    await run(async () => {
+    const next = await run(async () => {
       const created = await api.createGame(setupA, setupB);
       rememberSeats(created.game.gameId, created.seats);
       return created.game;
     });
+    // Copies the invite link the moment the match exists, right off the
+    // Start Match tap - direct feedback (2026-09-17), asked for alongside
+    // moving the persistent Invite row down to above the Log: "maybe we
+    // could also include it on the 'Start Match' screen." There's no
+    // link before a game exists to build one from, so this is the
+    // closest real equivalent - the very first thing that happens after
+    // starting is the link already being in your clipboard, ready to
+    // send, rather than needing to scroll down to find the button.
+    if (!vsComputer) {
+      const link = inviteLink(next.gameId, "/dice-kingdom/mobile");
+      if (link) {
+        navigator.clipboard?.writeText(link).then(
+          () => setInviteCopiedBanner(true),
+          () => {}, // clipboard write blocked - the manual button above the log still works
+        );
+      }
+    }
   }
 
   if (!game) {
@@ -1166,10 +1358,15 @@ export function DiceKingdomMobilePage() {
             class those are scoped under (see the energy-badge fix's own
             remarks on why that class was added here). */}
         <div className="panel">
+          <label style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 0 14px", fontSize: 14 }}>
+            <input type="checkbox" checked={vsComputer} onChange={(e) => setVsComputer(e.target.checked)} />
+            Play vs Computer - a basic rule-based opponent (highest attacker attacks, best affordable
+            purchase/block), not a strategic one
+          </label>
           <div className="champ-pick-columns">
             {[
               { label: "Player 1", value: setupA, setValue: setSetupA },
-              { label: "Player 2", value: setupB, setValue: setSetupB },
+              { label: vsComputer ? "Computer" : "Player 2", value: setupB, setValue: setSetupB },
             ].map(({ label, value, setValue }) => (
               <div className="champ-pick-column" key={label}>
                 <h3 style={{ margin: "0 0 10px" }}>{label}</h3>
@@ -1479,14 +1676,7 @@ export function DiceKingdomMobilePage() {
 
       <div className="dkm-scroll">
         {error && <p className="dkm-error">{error}</p>}
-        {link && (
-          <div className="dkm-invite">
-            <span>Invite</span>
-            <button type="button" className="dkm-text-btn" onClick={() => navigator.clipboard?.writeText(link)}>
-              Copy link
-            </button>
-          </div>
-        )}
+        {inviteCopiedBanner && <p className="dkm-invite-toast">Invite link copied — send it to your opponent.</p>}
 
         <MatCard
           mine={false}
@@ -1584,6 +1774,20 @@ export function DiceKingdomMobilePage() {
           }
           onTapDie={onTapMatDie}
         />
+
+        {/* Moved down from the top of the scroll region (direct feedback,
+            2026-09-17): "it takes up a lot of room up there for
+            something that will only be clicked once." Hidden entirely
+            in vs-computer mode - there's no second seat to invite, both
+            tokens already live in this one browser. */}
+        {!vsComputer && link && (
+          <div className="dkm-invite">
+            <span>Invite</span>
+            <button type="button" className="dkm-text-btn" onClick={() => navigator.clipboard?.writeText(link)}>
+              Copy link
+            </button>
+          </div>
+        )}
 
         <div className="dkm-log">
           <span className="dkm-log-label">Log</span>
