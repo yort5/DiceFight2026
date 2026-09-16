@@ -73,14 +73,30 @@ function nameOf(die: Die, cardsById: Map<string, CardDef>): string {
 // the scenes rather than asking the player to hunt for exact-type dice
 // one at a time - there is no meaningful choice being taken away (every
 // die of a matching type is fungible for paying a cost).
+// Real bug, direct feedback (2026-09-16): "I still can't purchase the
+// non-champion energy characters, even though I have a Wild." This used
+// to require EVERY spent pip to match the card's own type (or be Wild),
+// which silently made an off-type purchase need its ENTIRE cost in
+// Wild alone - confirmed wrong against the real rule (TurnEngine.
+// SpendEnergy): only ONE offered pip has to satisfy the required type
+// (a printed match or a Wild pip standing in for it); every other pip
+// spent just counts toward the total amount, of ANY type at all. A
+// Claw-heavy reserve can absolutely buy a Wing card, one Wild pip plus
+// spare Claim for the rest, same as the physical game.
 function pickEnergyForCost(reserve: Die[], cost: number, matchType: string | null): string[] | null {
   if (cost <= 0) return [];
-  const eligible = reserve
-    .filter((d) => d.energyAmount > 0 && (!matchType || d.energySymbolId === matchType || d.energySymbolId === "Wild"))
-    .sort((a, b) => a.energyAmount - b.energyAmount);
+  let pool = reserve.filter((d) => d.energyAmount > 0).sort((a, b) => a.energyAmount - b.energyAmount);
   const picked: string[] = [];
   let total = 0;
-  for (const d of eligible) {
+  if (matchType) {
+    const matchIdx = pool.findIndex((d) => d.energySymbolId === matchType || d.energySymbolId === "Wild");
+    if (matchIdx === -1) return null; // nothing at all satisfies the type requirement
+    const matchDie = pool[matchIdx];
+    picked.push(matchDie.id);
+    total += matchDie.energyAmount;
+    pool = pool.filter((_, i) => i !== matchIdx);
+  }
+  for (const d of pool) {
     if (total >= cost) break;
     picked.push(d.id);
     total += d.energyAmount;
