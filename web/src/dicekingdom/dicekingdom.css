@@ -2855,6 +2855,21 @@
   padding: 8px 0;
   border-bottom: 1px solid var(--dkm-hairline);
 }
+/* Only your own roster, during Main, on your turn is ever a <button>
+   (RosterSheet's own remarks on `canBuy`) - width/text-align reset since
+   a button doesn't stretch and left-align like a div does by default. */
+.dk-mobile .dkm-roster-row-btn {
+  width: 100%;
+  text-align: left;
+}
+.dk-mobile .dkm-roster-row-btn.unaffordable {
+  opacity: 0.45;
+}
+.dk-mobile .dkm-roster-stats {
+  font: 400 9.5px/1.3 "Work Sans", var(--sans);
+  font-variant-numeric: tabular-nums;
+  color: var(--dkm-ink-dim);
+}
 /* Labels the two number columns once instead of on every row - direct
    feedback (2026-09-15): "no indicator of what the two columns of
    numbers mean." Not a real roster entry, so no bottom hairline of its

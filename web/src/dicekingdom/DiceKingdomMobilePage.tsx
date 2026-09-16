@@ -825,11 +825,36 @@ function CleanUpCard({ reserve, cardsById, you }: { reserve: Die[]; cardsById: M
   );
 }
 
+// Fielding/attack/defense per level, slash-separated - direct feedback
+// (2026-09-16): "we still need to put stats in the roster somehow - even
+// if it's just with slashes." Neither this sheet nor the Buy strip
+// showed a card's actual battlefield stats anywhere, only its purchase
+// cost - the one thing you can't tell from a name and an avatar.
+function levelStatsLine(card: CardDef | undefined): string {
+  if (!card) return "";
+  return card.levels.map((l) => `${l.fieldingCost}/${l.attack}/${l.defense}`).join("  ·  ");
+}
+
 function RosterSheet({
+  title,
   cards,
+  canBuy,
+  reserve,
+  onBuy,
   onClose,
 }: {
-  cards: { card: CardDef | undefined; cardId: string; remaining: number }[];
+  title: string;
+  cards: { card: CardDef | undefined; cardId: string; dieId: string; remaining: number }[];
+  /** Only true for your OWN roster, during Main, on your turn - see the
+   *  real bug this fixed (2026-09-16): every "Roster" button on the page
+   *  used to open this same sheet always showing YOUR cards, so tapping
+   *  the OPPONENT's button silently showed (and, once buying was added
+   *  here, would have let you buy from) your own roster instead of
+   *  theirs. `cards`/`canBuy` are now both keyed off which button was
+   *  actually tapped (DiceKingdomMobilePage's `rosterViewFor`). */
+  canBuy: boolean;
+  reserve: Die[];
+  onBuy: (dieId: string) => void;
   onClose: () => void;
 }) {
   return (
@@ -837,7 +862,7 @@ function RosterSheet({
       <div className="dkm-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="dkm-sheet-handle" />
         <div className="dkm-popout-head">
-          <span className="dkm-popout-title">Roster</span>
+          <span className="dkm-popout-title">{title}</span>
           <button type="button" className="dkm-text-btn" onClick={onClose}>
             tap to close
           </button>
@@ -853,15 +878,18 @@ function RosterSheet({
           <span className="dkm-roster-col-label">Cost</span>
           <span className="dkm-roster-col-label">Dice left</span>
         </div>
-        {cards.map(({ card, cardId, remaining }) => {
+        {cards.length === 0 && <p className="dkm-empty-hint">Nothing left to buy.</p>}
+        {cards.map(({ card, cardId, dieId, remaining }) => {
           const Avatar = CHARACTER_ICONS[cardId];
           const types = card?.energyTypes ?? [];
-          return (
-            <div key={cardId} className="dkm-roster-row">
+          const affordable = canBuy && pickEnergyForCost(reserve, card?.purchaseCost ?? 0, types[0] ?? null) !== null;
+          const row = (
+            <>
               <span className="dkm-roster-avatar">{Avatar ? <Avatar size={20} /> : <TardigradeIcon size={20} />}</span>
               <div className="dkm-roster-mid">
                 <span className="dkm-roster-name">{card?.name ?? cardId}</span>
                 {card && card.keywords.length > 0 && <span className="dkm-dashed-badge">{card.keywords.join(", ")}</span>}
+                <span className="dkm-roster-stats">{levelStatsLine(card)}</span>
               </div>
               {/* One EnergyBadge per required type - usually one, two for
                   a crossover/splash card - so the cost number is never
@@ -875,6 +903,24 @@ function RosterSheet({
                 </b>
               </span>
               <span className="dkm-roster-left">{remaining}</span>
+            </>
+          );
+          return canBuy ? (
+            <button
+              key={cardId}
+              type="button"
+              className={`dkm-roster-row dkm-roster-row-btn${affordable ? "" : " unaffordable"}`}
+              disabled={!affordable}
+              onClick={() => {
+                onBuy(dieId);
+                onClose();
+              }}
+            >
+              {row}
+            </button>
+          ) : (
+            <div key={cardId} className="dkm-roster-row">
+              {row}
             </div>
           );
         })}
@@ -901,7 +947,12 @@ export function DiceKingdomMobilePage() {
   const [laneSel, setLaneSel] = useState(0);
   const [blockAssignments, setBlockAssignments] = useState<Record<string, string | null>>({});
   const [stepsOpen, setStepsOpen] = useState(false);
-  const [rosterOpen, setRosterOpen] = useState(false);
+  // Which player's roster the sheet is showing, or null when closed -
+  // NOT a bare boolean (real bug, direct feedback 2026-09-16): both
+  // mats' Roster buttons used to open the exact same sheet, which always
+  // showed YOUR OWN unpurchased cards regardless of which one was
+  // tapped, so the opponent's button silently showed your roster.
+  const [rosterViewFor, setRosterViewFor] = useState<string | null>(null);
 
   const { spins, offsets, launch: launchRoll, spinTo: spinDie } = useDiceRoll();
 
@@ -1137,11 +1188,16 @@ export function DiceKingdomMobilePage() {
   const hasRolledThisStep = step === "roll-and-reroll" && drawnZone.length === 0;
   const { steps: chainSteps, index: chainIndex } = chainFor(phase, step, hasRolledThisStep || rerollUsedThisStep, game.dice, game.activePlayerId, cardsById);
 
-  const unpurchasedByCard = new Map<string, Die[]>();
-  for (const d of yourDice.filter((d) => d.zone === "Unpurchased")) {
-    if (!d.cardId) continue;
-    unpurchasedByCard.set(d.cardId, [...(unpurchasedByCard.get(d.cardId) ?? []), d]);
+  function unpurchasedFor(dice: Die[]): Map<string, Die[]> {
+    const map = new Map<string, Die[]>();
+    for (const d of dice.filter((d) => d.zone === "Unpurchased")) {
+      if (!d.cardId) continue;
+      map.set(d.cardId, [...(map.get(d.cardId) ?? []), d]);
+    }
+    return map;
   }
+  const unpurchasedByCard = unpurchasedFor(yourDice);
+  const oppUnpurchasedByCard = unpurchasedFor(oppDice);
 
   // Attackers grouped by lane for the real (post-declare) steps; during
   // Declare Attackers itself the lanes preview the LOCAL pending picks
@@ -1357,11 +1413,16 @@ export function DiceKingdomMobilePage() {
 
   const link = inviteLink(game.gameId, "/dice-kingdom/mobile");
   const logEntries = game.log.slice(-4);
-  const rosterCards = [...unpurchasedByCard.keys()].map((cardId) => ({
-    card: cardsById.get(cardId),
-    cardId,
-    remaining: unpurchasedByCard.get(cardId)?.length ?? 0,
-  }));
+  function rosterRowsFor(map: Map<string, Die[]>) {
+    return [...map.entries()].map(([cardId, dice]) => ({
+      card: cardsById.get(cardId),
+      cardId,
+      dieId: dice[0].id,
+      remaining: dice.length,
+    }));
+  }
+  const rosterCards = rosterRowsFor(unpurchasedByCard);
+  const oppRosterCards = rosterRowsFor(oppUnpurchasedByCard);
 
   return (
     <div className="dicekingdom dk-mobile dkm-root">
@@ -1388,7 +1449,7 @@ export function DiceKingdomMobilePage() {
           dice={oppDice}
           cardsById={cardsById}
           isActivePlayer={opponentId === game.activePlayerId}
-          onOpenRoster={() => setRosterOpen(true)}
+          onOpenRoster={() => setRosterViewFor(opponentId)}
           expandable
           spins={spins}
           turnOffsets={offsets}
@@ -1441,7 +1502,7 @@ export function DiceKingdomMobilePage() {
               you={you}
               selectedId={selectedId}
               onSelect={toggleSelect}
-              onOpenRoster={() => setRosterOpen(true)}
+              onOpenRoster={() => setRosterViewFor(you)}
             />
           )}
           {phase === "attack" && (
@@ -1467,7 +1528,7 @@ export function DiceKingdomMobilePage() {
           dice={yourDice}
           cardsById={cardsById}
           isActivePlayer={you === game.activePlayerId}
-          onOpenRoster={() => setRosterOpen(true)}
+          onOpenRoster={() => setRosterViewFor(you)}
           expandable={false}
           spins={spins}
           turnOffsets={offsets}
@@ -1536,7 +1597,16 @@ export function DiceKingdomMobilePage() {
       </div>
 
       {stepsOpen && <StepPopout phaseLabel={phaseLabel} steps={chainSteps} index={chainIndex} onClose={() => setStepsOpen(false)} />}
-      {rosterOpen && <RosterSheet cards={rosterCards} onClose={() => setRosterOpen(false)} />}
+      {rosterViewFor && (
+        <RosterSheet
+          title={rosterViewFor === you ? "Your Roster" : "Their Roster"}
+          cards={rosterViewFor === you ? rosterCards : oppRosterCards}
+          canBuy={rosterViewFor === you && isYourTurn && step === "main"}
+          reserve={yourReserve}
+          onBuy={toggleSelect}
+          onClose={() => setRosterViewFor(null)}
+        />
+      )}
     </div>
   );
 }
