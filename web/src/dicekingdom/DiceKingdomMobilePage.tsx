@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { startTransition, useEffect, useRef, useState } from "react";
 import "./dicekingdom.css";
 import { api } from "./api";
 import {
@@ -1035,8 +1035,23 @@ export function DiceKingdomMobilePage() {
     try {
       const previous = game;
       const next = await fn();
-      setGame(next);
-      if (previous) animateRolledDice(previous, next, rolledDieIds);
+      // Split across two commits/frames (2026-09-16, direct feedback:
+      // "the dice rolling seems a bit choppy") - real, measured cause (a
+      // Chrome trace during a roll, not a guess): setGame(next) re-
+      // renders the WHOLE page (a CDP trace showed a single Layout pass
+      // touching 329 of 462 DOM nodes, React's own scheduler blocking
+      // the main thread for 40-80ms in one chunk) - calling
+      // animateRolledDice in the SAME tick used to bundle starting the
+      // tumble's CSS animation into that exact same expensive commit, so
+      // its first frame was competing with the heaviest possible layout
+      // pass for the same paint budget. startTransition lets React chunk
+      // its own reconciliation instead of blocking in one piece; the
+      // rAF defers the animation start to the NEXT frame, after the
+      // data commit has already had a frame to settle, rather than
+      // stacking both into one. Confirmed with a rAF frame-timing probe
+      // across several runs, not just by eye.
+      startTransition(() => setGame(next));
+      if (previous) requestAnimationFrame(() => animateRolledDice(previous, next, rolledDieIds));
       setSelectedId(null);
       if (next.currentStepId !== "roll-and-reroll") {
         setRerollPicked([]);
@@ -1080,13 +1095,14 @@ export function DiceKingdomMobilePage() {
         setGame(next);
         return next;
       }
-      setGame({ ...next, currentStep: previous.currentStep, currentStepId: previous.currentStepId });
-      animateRolledDice(previous, next, revealedDieIds);
+      startTransition(() => setGame({ ...next, currentStep: previous.currentStep, currentStepId: previous.currentStepId }));
+      // Deferred a frame - see run()'s identical remarks on why.
+      requestAnimationFrame(() => animateRolledDice(previous, next, revealedDieIds));
       setSelectedId(null);
       setRerollPicked([]);
       setRerollUsedThisStep(true);
       await new Promise((resolve) => setTimeout(resolve, TUMBLE_REVEAL_HOLD_MS));
-      setGame(next);
+      startTransition(() => setGame(next));
       return next;
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));

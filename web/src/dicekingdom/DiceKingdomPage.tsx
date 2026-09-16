@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { startTransition, useEffect, useRef, useState } from "react";
 import "./dicekingdom.css";
 import { api, apiAs } from "./api";
 import { CHAMPION_ICONS, CHARACTER_ICONS, EnergyBadge, HelpIcon, TardigradeIcon, TardigradePhotoIcon } from "./icons";
@@ -729,8 +729,23 @@ export function DiceKingdomPage() {
     try {
       const previous = game;
       const next = await fn();
-      setGame(next);
-      if (previous) animateRolledDice(previous, next, rolledDieIds);
+      // Split across two commits/frames (2026-09-16, direct feedback:
+      // "the dice rolling seems a bit choppy... both on mobile and on
+      // desktop") - see ../DiceKingdomMobilePage.tsx's identical run()
+      // for the real, measured cause (a Chrome trace during a roll, not
+      // a guess) and why this is two changes, not one: setGame(next)
+      // re-renders the WHOLE page (a CDP trace showed a single Layout
+      // pass touching 329 of 462 DOM nodes, React's own scheduler
+      // blocking the main thread for 40-80ms in one chunk) - calling
+      // animateRolledDice in the SAME tick used to bundle starting the
+      // tumble's CSS animation into that exact same expensive commit.
+      // startTransition lets React chunk its own reconciliation instead
+      // of blocking in one piece; the rAF defers the animation start to
+      // the next frame, after the data commit has already had a frame
+      // to settle. Confirmed with a rAF frame-timing probe across
+      // several runs, not just by eye.
+      startTransition(() => setGame(next));
+      if (previous) requestAnimationFrame(() => animateRolledDice(previous, next, rolledDieIds));
       clearSelection();
       setOpenCardId(null); // e.g. a completed Purchase - see openCardId's own remarks
       if (next.currentStepId !== "roll-and-reroll") setRerolledIds([]);
