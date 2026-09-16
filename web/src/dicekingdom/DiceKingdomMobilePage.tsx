@@ -1356,6 +1356,17 @@ export function DiceKingdomMobilePage() {
   let primaryNote: string | undefined;
   let primaryDisabled = busy;
   let primaryRun: (() => void) | null = null;
+  // Main's own secondary action - real bug, direct feedback (2026-09-16):
+  // "we lost the ability to skip the attack step." ../DiceKingdomPage.tsx
+  // has always paired "Attack"/"Skip Attack" as two buttons right on
+  // Main (its own comment: brought back after 2026-09-05 feedback asked
+  // for it once already) - this page only ever built the "Attack" half
+  // (as the primary button) and never added the second. The server side
+  // (TurnEngine.SkipAttackStep) still rejects it with a real error if a
+  // forced attacker is outstanding, same as desktop - no client-side
+  // gating needed beyond the step check already gating the primary.
+  let secondaryLabel: string | undefined;
+  let secondaryRun: (() => void) | null = null;
 
   if (!isYourTurn && step !== "assign-blockers") {
     primaryLabel = "Waiting…";
@@ -1388,6 +1399,8 @@ export function DiceKingdomMobilePage() {
     primaryLabel = "Done buying";
     primaryNote = "enter the Attack Step";
     primaryRun = () => run(() => api.enterAttackStep(game.gameId));
+    secondaryLabel = "Skip Attack";
+    secondaryRun = () => run(() => api.skipAttackStep(game.gameId));
   } else if (step === "select-attackers") {
     const n = Object.keys(pendingAttackers).length;
     primaryLabel = `Declare Attackers (${n})`;
@@ -1606,10 +1619,17 @@ export function DiceKingdomMobilePage() {
             ))}
           </div>
         )}
-        <button type="button" className="dkm-primary-btn" disabled={primaryDisabled} onClick={() => primaryRun?.()}>
-          <span>{primaryLabel}</span>
-          {primaryNote && <small>{primaryNote}</small>}
-        </button>
+        <div className="dkm-primary-row">
+          {secondaryLabel && (
+            <button type="button" className="dkm-secondary-btn" disabled={primaryDisabled} onClick={() => secondaryRun?.()}>
+              {secondaryLabel}
+            </button>
+          )}
+          <button type="button" className="dkm-primary-btn" disabled={primaryDisabled} onClick={() => primaryRun?.()}>
+            <span>{primaryLabel}</span>
+            {primaryNote && <small>{primaryNote}</small>}
+          </button>
+        </div>
       </div>
 
       {stepsOpen && <StepPopout phaseLabel={phaseLabel} steps={chainSteps} index={chainIndex} onClose={() => setStepsOpen(false)} />}

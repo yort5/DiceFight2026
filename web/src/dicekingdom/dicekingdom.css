@@ -3015,7 +3015,32 @@
 .dk-mobile .dkm-inspect-action:disabled {
   opacity: 0.5;
 }
+/* Main's own secondary "Skip Attack" sits beside the primary button, not
+   stacked above it - both are tap targets a thumb reaches at the very
+   bottom of the screen, so they share one row rather than costing extra
+   vertical space most steps never use (every step besides Main only
+   ever populates the primary side of this row). */
+.dk-mobile .dkm-primary-row {
+  display: flex;
+  gap: 8px;
+}
+.dk-mobile .dkm-secondary-btn {
+  flex: 0 0 auto;
+  height: 50px;
+  padding: 0 16px;
+  border-radius: 12px;
+  background: transparent;
+  border: 1px solid var(--dkm-border);
+  font: 600 12px/1 "Work Sans", var(--sans);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--dkm-ink-2);
+}
+.dk-mobile .dkm-secondary-btn:disabled {
+  opacity: 0.5;
+}
 .dk-mobile .dkm-primary-btn {
+  flex: 1;
   height: 50px;
   border-radius: 12px;
   background: var(--claw);
