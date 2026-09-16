@@ -848,21 +848,49 @@ function AttackLanesCard({
                 if (e.key === "Enter" || e.key === " ") onTapLane(lane);
               }}
             >
-              <div className="dkm-lane-blockers">
-                {attackers.flatMap((a) => blockersByAttacker.get(a.id) ?? []).map((b) => (
-                  <LaneDie key={b.id} die={b} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === b.id} onTap={() => onTapBlockerOnAttacker(b.id)} />
-                ))}
-                {step === "assign-blockers" && !isYourTurn && attackers.length > 0 && blockers.length === 0 && (
-                  <div className="dkm-lane-tile empty blocker-empty">no blocker</div>
-                )}
-              </div>
-              {chipText && <span className="dkm-lane-chip">{chipText}</span>}
-              <div className="dkm-lane-attackers">
-                {attackers.map((a) => (
-                  <LaneDie key={a.id} die={a} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === a.id} onTap={() => onTapAttacker(a.id)} />
-                ))}
-                {attackers.length === 0 && <div className="dkm-lane-tile empty attacker-empty" />}
-              </div>
+              {/* Real bug, direct feedback (2026-09-17): the opponent's mat
+                  renders above the lanes and yours renders below, so a
+                  lane's own dice need to sit on the side matching who
+                  attacked - otherwise it reads as "the dice on top belong
+                  to the mat on top" when it's actually the opposite. The
+                  attacking side's dice are always the active player's, so
+                  when you're defending (isYourTurn false, active player is
+                  the opponent) the attackers belong on top near their mat
+                  and your blockers belong on the bottom near yours. */}
+              {isYourTurn ? (
+                <>
+                  <div className="dkm-lane-blockers">
+                    {blockers.map((b) => (
+                      <LaneDie key={b.id} die={b} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === b.id} onTap={() => onTapBlockerOnAttacker(b.id)} />
+                    ))}
+                  </div>
+                  {chipText && <span className="dkm-lane-chip">{chipText}</span>}
+                  <div className="dkm-lane-attackers">
+                    {attackers.map((a) => (
+                      <LaneDie key={a.id} die={a} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === a.id} onTap={() => onTapAttacker(a.id)} />
+                    ))}
+                    {attackers.length === 0 && <div className="dkm-lane-tile empty attacker-empty" />}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="dkm-lane-attackers">
+                    {attackers.map((a) => (
+                      <LaneDie key={a.id} die={a} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === a.id} onTap={() => onTapAttacker(a.id)} />
+                    ))}
+                    {attackers.length === 0 && <div className="dkm-lane-tile empty attacker-empty" />}
+                  </div>
+                  {chipText && <span className="dkm-lane-chip">{chipText}</span>}
+                  <div className="dkm-lane-blockers">
+                    {blockers.map((b) => (
+                      <LaneDie key={b.id} die={b} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === b.id} onTap={() => onTapBlockerOnAttacker(b.id)} />
+                    ))}
+                    {step === "assign-blockers" && !isYourTurn && attackers.length > 0 && blockers.length === 0 && (
+                      <div className="dkm-lane-tile empty blocker-empty">no blocker</div>
+                    )}
+                  </div>
+                </>
+              )}
               <span className="dkm-lane-number">{String(lane + 1).padStart(2, "0")}</span>
             </div>
           );
