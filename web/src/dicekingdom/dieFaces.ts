@@ -20,7 +20,24 @@ import type { CardDef, Die } from "./types";
 // energy faces of the card's own type - two double, one single.
 
 // Cube geometry - identical to v1's, since this is pure 3D placement math
-// with nothing Marvel- or animal-specific in it.
+// with nothing Marvel- or animal-specific in it. Each slot's fixed LOCAL
+// position within the cube - slot 0 is always the forward-facing slot
+// (DieCube's `.front`, whichever face is the die's current value); slots
+// 1-5 are the other five faces, shown as decorative fill during a tumble.
+//
+// Animation refresh (2026-09-16, design_handoff.../ANIMATIONS.md): the
+// cube itself no longer carries a per-value RESTING rotation the way it
+// used to (a removed FACE_ORIENTATIONS table rotated the whole cube so
+// slot `index` ended up forward) - every tumble keyframe track (see
+// useDiceRoll.ts) starts AND ends at a whole multiple of 360°, i.e.
+// always visually identical to flat/no-rotation, so slot 0 is ALWAYS the
+// forward slot at rest. Which value that slot shows is just "whatever
+// `.front`'s content prop currently is" - a plain React re-render, not a
+// rotation target - which is what makes decoupling the two safe: mid-
+// tumble, slot 0 is rotated away from the camera anyway, so its content
+// can update the instant new data arrives without the viewer ever seeing
+// a mismatched face-vs-rotation frame; it's only readable again once the
+// keyframes return it to flat, by which point it's already correct.
 export const FACE_TRANSFORMS = [
   "",
   "rotateY(180deg)",
@@ -28,10 +45,6 @@ export const FACE_TRANSFORMS = [
   "rotateY(-90deg)",
   "rotateX(90deg)",
   "rotateX(-90deg)",
-];
-
-export const FACE_ORIENTATIONS: readonly (readonly [number, number])[] = [
-  [0, 0], [0, -180], [0, -90], [0, 90], [-90, 0], [90, 0],
 ];
 
 // `avatar` is optional on both variants and carries no gameplay meaning

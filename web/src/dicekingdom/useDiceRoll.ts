@@ -1,46 +1,63 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { FACE_ORIENTATIONS } from "./dieFaces";
-import type { CubeSpin } from "./DieCube";
+import type { CubeSpin, TumbleTrack } from "./DieCube";
 
-// The roll: two CSS transitions per die, no physics engine. Ported
-// verbatim from ../useDiceRoll.ts (see there for the flight/settle
-// commentary - nothing here is Dice-Kingdom-specific, it's pure
-// animation math against the same FACE_ORIENTATIONS geometry DieCube.tsx
-// already shares with v1's). The only real difference from v1: this
-// module has no `isRoll`/`Die` helper of its own - Dice Kingdom's `rolled()`
-// in DiceKingdomPage.tsx already answers "did this die just show a face"
-// for v2's Die shape, so callers pass RollTargets straight from that.
+// The roll: real CSS keyframe tumbles, not transitions between computed
+// poses. Motion refresh (2026-09-16), ported from design_handoff_dice_
+// kingdom_mobile/ANIMATIONS.md - a spec Claude Design produced for this
+// exact hook's roll/re-roll animation. Replaces the previous flight/
+// settle two-transition fake (a real physics-free hack that worked but
+// never looked like a genuine tumble) with the spec's four named CSS
+// keyframe tracks (dicekingdom.css's dkTumbleA-D) - DieCube.tsx just
+// picks one per die and lets the browser run it; this hook's whole job
+// is choosing which track, how long, and how staggered, then clearing
+// the spin once it's done (see DieCube.tsx/dieFaces.ts for why every
+// track can be cleared without a "let it finish landing" dance: they all
+// start and end at a whole multiple of 360°, so a die that's mid-flight
+// when its `spin` entry disappears was already back at a flat, correct-
+// looking rest pose at that exact moment).
 
-const FLIGHT_MIN_MS = 520;
-const FLIGHT_SPREAD_MS = 120;
 const STAGGER_MS = 70;
-const SETTLE_AT_MS = 560;
-const SETTLE_MS = 430;
-const DONE_AT_MS = 1080;
-const FLIGHT_EASE = "cubic-bezier(.22,.62,.4,.98)";
-const SETTLE_EASE = "cubic-bezier(.28,1.5,.42,.96)";
+const TUMBLE_MS = 900;
+const TUMBLE_MS_REDUCED = 320;
+const TUMBLE_TRACK_COUNT = 4;
 
 // Direct feedback (2026-09-05): a die spinning down to a lower energy
 // face after a partial spend "shouldn't look the same as an actual
 // randomized roll" - no toss-up, no multi-360 tumble, no random tilt,
-// just a single direct turn from its current face to the new one. Its
-// own distinct feel (a smooth "twist," not a "throw") comes entirely
-// from what it DOESN'T do relative to launch() above, not from any
-// extra flourish.
+// just a single direct turn from its current face to the new one.
+// ANIMATIONS.md doesn't cover this case (scoped to roll/re-roll and zone
+// moves) - kept as its own, simpler mechanism; see DieCube.tsx's own
+// remarks on why a transition (not a keyframe track) is safe here.
 const SPIN_MS = 380;
-const SPIN_EASE = "cubic-bezier(.32,1.42,.46,1)";
+
+function reducedMotionPreferred(): boolean {
+  return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+}
 
 export interface RollTarget {
   dieId: string;
-  /** Which face the server says the die landed on. */
+  /** Kept for caller compatibility (../DiceKingdomPage.tsx/DiceKingdomMobilePage.tsx
+   *  both already compute this from facesFor() to detect a changed face) -
+   *  unused by this hook itself now. The tumble tracks spin and land flat
+   *  regardless of which face is landed on; see dieFaces.ts's remarks on
+   *  why rotation no longer needs to target a specific face at all. */
   faceIndex: number;
 }
 
 export function useDiceRoll() {
   const [spins, setSpins] = useState<Record<string, CubeSpin>>({});
   const [offsets, setOffsets] = useState<Record<string, number>>({});
+  // Mirrors `offsets` synchronously so spinTo can read the CURRENT
+  // accumulated angle without depending on React's functional-updater
+  // timing (spinTo's own closure is stale - useCallback(..., []) - so it
+  // can't just read the `offsets` state variable directly either).
+  const offsetsRef = useRef<Record<string, number>>({});
   const [rolling, setRolling] = useState(false);
   const timers = useRef<number[]>([]);
+  // A monotonic counter, not Date.now() - guarantees every generation is
+  // unique even if two rolls somehow land in the same millisecond, which
+  // wall-clock time can't promise.
+  const generationRef = useRef(0);
 
   const clearTimers = () => {
     timers.current.forEach(clearTimeout);
@@ -52,114 +69,76 @@ export function useDiceRoll() {
     if (targets.length === 0) return;
     clearTimers();
 
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
-      setSpins({});
-      setOffsets((current) => {
-        const next = { ...current };
-        for (const target of targets) delete next[target.dieId];
-        return next;
-      });
-      return;
-    }
+    const reduced = reducedMotionPreferred();
+    const duration = reduced ? TUMBLE_MS_REDUCED : TUMBLE_MS;
 
-    const flight: Record<string, CubeSpin> = {};
-    const settle: Record<string, CubeSpin> = {};
-    const turnOffsets: Record<string, number> = {};
-
+    const next: Record<string, CubeSpin> = {};
     targets.forEach((target, i) => {
-      const [restX, restY] = FACE_ORIENTATIONS[target.faceIndex] ?? FACE_ORIENTATIONS[0];
-      const offset = -360 * (2 + Math.floor(Math.random() * 3));
-      turnOffsets[target.dieId] = offset;
-      const delay = i * STAGGER_MS;
-
-      flight[target.dieId] = {
-        rx: restX + offset - 140,
-        ry: restY + offset + 90,
-        rz: (Math.random() - 0.5) * 220,
-        tx: (Math.random() - 0.5) * 120,
-        ty: -26 - Math.random() * 16,
-        durationMs: FLIGHT_MIN_MS + Math.random() * FLIGHT_SPREAD_MS,
-        delayMs: delay,
-        easing: FLIGHT_EASE,
-      };
-      settle[target.dieId] = {
-        rx: restX + offset,
-        ry: restY + offset,
-        rz: 0,
-        tx: (Math.random() - 0.5) * 34,
-        ty: 0,
-        durationMs: SETTLE_MS,
-        delayMs: 0,
-        easing: SETTLE_EASE,
+      generationRef.current += 1;
+      next[target.dieId] = {
+        kind: "tumble",
+        track: Math.floor(Math.random() * TUMBLE_TRACK_COUNT) as TumbleTrack,
+        durationMs: duration,
+        delayMs: reduced ? 0 : i * STAGGER_MS,
+        reduced,
+        // Forces DieCube's .die-cube span to remount (React `key`) so
+        // the CSS animation restarts cleanly even on a die that's rolled
+        // again before its previous tumble finished - ANIMATIONS.md §3's
+        // own retriggering note.
+        generation: generationRef.current,
       };
     });
 
-    setSpins((current) => ({ ...current, ...flight }));
-    setOffsets((current) => ({ ...current, ...turnOffsets }));
+    setSpins((current) => ({ ...current, ...next }));
     setRolling(true);
 
-    const maxDelay = (targets.length - 1) * STAGGER_MS;
+    const maxDelay = reduced ? 0 : (targets.length - 1) * STAGGER_MS;
     const after = (ms: number, fn: () => void) => {
       timers.current.push(setTimeout(fn, ms) as unknown as number);
     };
-    after(SETTLE_AT_MS + maxDelay, () => setSpins((current) => ({ ...current, ...settle })));
-    after(DONE_AT_MS + maxDelay, () => {
+    after(duration + maxDelay, () => {
       setRolling(false);
       setSpins((current) => {
-        const next = { ...current };
-        for (const target of targets) delete next[target.dieId];
-        return next;
+        const cleared = { ...current };
+        for (const target of targets) delete cleared[target.dieId];
+        return cleared;
       });
     });
   }, []);
 
-  // Direct feedback (2026-09-05): "we need to be able to partially
-  // spend energy... a different animation for spin-down/spin-up, it
-  // shouldn't look the same as an actual randomized roll." A single
-  // smooth turn straight to the new face, keeping whatever turnOffset
-  // the die already had (so it doesn't visually "unwind" the extra
-  // full turns a real roll left it on) - no flight, no tumble, no tray
-  // shake (`rolling` is deliberately left untouched).
   const spinTo = useCallback((targets: RollTarget[]) => {
     if (targets.length === 0) return;
     clearTimers();
 
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    // Unlike launch(), this doesn't fall back to a shorter real spin in
+    // reduced-motion mode - ANIMATIONS.md doesn't specify one for this
+    // (spec-uncovered) case, and the twist is subtle enough already that
+    // skipping it entirely (same as before this pass) is a reasonable
+    // read of "reduce motion".
+    if (reducedMotionPreferred()) return;
 
-    const settle: Record<string, CubeSpin> = {};
-    targets.forEach((target) => {
-      const [restX, restY] = FACE_ORIENTATIONS[target.faceIndex] ?? FACE_ORIENTATIONS[0];
-      settle[target.dieId] = {
-        rx: restX,
-        ry: restY,
-        rz: 0,
-        tx: 0,
-        ty: 0,
-        durationMs: SPIN_MS,
-        delayMs: 0,
-        easing: SPIN_EASE,
-      };
-    });
-
-    setSpins((current) => ({ ...current, ...settle }));
-    setOffsets((current) => {
-      // The transient spin above targets the bare resting angle (no
-      // turnOffset added), so any prior accumulated turns have to be
-      // cleared in lockstep - otherwise dropping back to the plain
-      // resting transform once this clears would jump.
-      const next = { ...current };
-      for (const target of targets) delete next[target.dieId];
-      return next;
-    });
+    const nextSpins: Record<string, CubeSpin> = {};
+    const patch: Record<string, number> = {};
+    for (const target of targets) {
+      // Always a full +360 turn (never a bare 180) so it also always
+      // lands back at a net-identical rotation, same "terminal" property
+      // the tumble tracks have - see DieCube.tsx's own remarks.
+      const toDeg = (offsetsRef.current[target.dieId] ?? 0) + 360;
+      patch[target.dieId] = toDeg;
+      nextSpins[target.dieId] = { kind: "flip", toDeg, durationMs: SPIN_MS };
+    }
+    offsetsRef.current = { ...offsetsRef.current, ...patch };
+    setOffsets(offsetsRef.current);
+    setSpins((current) => ({ ...current, ...nextSpins }));
 
     const after = (ms: number, fn: () => void) => {
       timers.current.push(setTimeout(fn, ms) as unknown as number);
     };
     after(SPIN_MS, () => {
       setSpins((current) => {
-        const next = { ...current };
-        for (const target of targets) delete next[target.dieId];
-        return next;
+        const cleared = { ...current };
+        for (const target of targets) delete cleared[target.dieId];
+        return cleared;
       });
     });
   }, []);

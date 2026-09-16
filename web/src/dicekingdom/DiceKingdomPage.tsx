@@ -1649,7 +1649,21 @@ export function DiceKingdomPage() {
         )}
 
         {step === "roll-and-reroll" && !diceFor(you).some((d) => (d.zone === "PrepArea" || d.zone === "ReservePool") && rolled(d)) && (
-          <button className="btn" disabled={busy} onClick={() => run(() => api.roll(game.gameId))}>
+          <button
+            className="btn"
+            disabled={busy}
+            onClick={() => {
+              // Real bug, found while verifying the new tumble animation
+              // (2026-09-16): ReservePool is empty until AFTER Roll()
+              // resolves (TurnEngine.Roll moves dice from DiceFromBag/
+              // DiceFromPrep straight into it), so naming no ids here
+              // meant animateRolledDice's `explicit` set was always
+              // empty and every rolled die fell through to the "spin"
+              // (twist) animation instead of the real tumble.
+              const drawn = [...diceFor(you, "DiceFromBag"), ...diceFor(you, "DiceFromPrep")];
+              run(() => api.roll(game.gameId), drawn.map((d) => d.id));
+            }}
+          >
             Roll
           </button>
         )}

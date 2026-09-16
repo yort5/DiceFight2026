@@ -1247,7 +1247,16 @@ export function DiceKingdomMobilePage() {
   } else if (step === "roll-and-reroll") {
     if (!hasRolledThisStep) {
       primaryLabel = "Roll";
-      primaryRun = () => run(() => api.roll(game.gameId), yourReserve.map((d) => d.id));
+      // Real bug, found while verifying the tumble animation (2026-09-16):
+      // `yourReserve` is empty until AFTER this call resolves (Roll()
+      // moves dice from DiceFromBag/DiceFromPrep straight into
+      // ReservePool - see TurnEngine.Roll's own remarks), so passing it
+      // here always named zero dice, meaning animateRolledDice's
+      // `explicit` set was always empty and every rolled die fell
+      // through to the "spin" (twist) animation instead of the real
+      // tumble - unnoticed until there was a real tumble to compare
+      // against. `drawnZone` is exactly the set about to be rolled.
+      primaryRun = () => run(() => api.roll(game.gameId), drawnZone.map((d) => d.id));
     } else if (rerollPicked.length > 0) {
       primaryLabel = `Reroll (${rerollPicked.length})`;
       primaryRun = () =>

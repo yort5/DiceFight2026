@@ -1380,6 +1380,79 @@
   font-weight: 700;
   color: oklch(0.72 0.17 25);
 }
+
+/* ---- Roll/re-roll tumble (2026-09-16, design_handoff_dice_kingdom_
+   mobile/ANIMATIONS.md §3) - four keyframe tracks, picked at random per
+   die by useDiceRoll.ts, applied via inline animation-name/duration/
+   delay (DieCube.tsx) rather than a class per die, since duration/delay
+   are dynamic per roll. Global (not `.dicekingdom`-scoped) like any
+   @keyframes block - a selector can't scope a keyframframes name, only
+   which elements reference it, and DieCube.tsx is the only place that
+   ever does. Values are the spec's own, transcribed exactly - this is
+   tuned motion, not something to redraw by eye. */
+@keyframes dkTumbleA {
+  0% { transform: rotateX(0deg) rotateY(0deg); }
+  18% { transform: translateY(-34px) rotateX(169deg) rotateY(194deg); }
+  40% { transform: translateY(-14px) rotateX(439deg) rotateY(374deg); }
+  58% { transform: translateY(0) rotateX(709deg) rotateY(554deg); }
+  72% { transform: translateY(-11px) rotateX(799deg) rotateY(644deg); }
+  88% { transform: translateY(0) rotateX(1024deg) rotateY(716deg); }
+  100% { transform: rotateX(1080deg) rotateY(720deg); }
+}
+@keyframes dkTumbleB {
+  0% { transform: rotateX(0deg) rotateY(0deg); }
+  16% { transform: translateY(-38px) rotateX(124deg) rotateY(239deg) rotateZ(14deg); }
+  38% { transform: translateY(-16px) rotateX(394deg) rotateY(509deg) rotateZ(6deg); }
+  57% { transform: translateY(0) rotateX(664deg) rotateY(689deg) rotateZ(0deg); }
+  71% { transform: translateY(-12px) rotateX(754deg) rotateY(779deg) rotateZ(-5deg); }
+  88% { transform: translateY(0) rotateX(1024deg) rotateY(1049deg) rotateZ(0deg); }
+  100% { transform: rotateX(1080deg) rotateY(1080deg); }
+}
+@keyframes dkTumbleC {
+  0% { transform: rotateX(0deg) rotateY(0deg); }
+  17% { transform: translateY(-31px) rotateX(214deg) rotateY(104deg) rotateZ(-16deg); }
+  39% { transform: translateY(-13px) rotateX(484deg) rotateY(284deg) rotateZ(-7deg); }
+  56% { transform: translateY(0) rotateX(664deg) rotateY(464deg) rotateZ(0deg); }
+  70% { transform: translateY(-14px) rotateX(799deg) rotateY(554deg) rotateZ(6deg); }
+  88% { transform: translateY(0) rotateX(979deg) rotateY(689deg) rotateZ(0deg); }
+  100% { transform: rotateX(1080deg) rotateY(720deg); }
+}
+@keyframes dkTumbleD {
+  0% { transform: rotateX(0deg) rotateY(0deg); }
+  19% { transform: translateY(-40px) rotateX(79deg) rotateY(284deg) rotateZ(20deg); }
+  41% { transform: translateY(-17px) rotateX(349deg) rotateY(554deg) rotateZ(9deg); }
+  59% { transform: translateY(0) rotateX(529deg) rotateY(824deg) rotateZ(0deg); }
+  73% { transform: translateY(-9px) rotateX(664deg) rotateY(914deg) rotateZ(-6deg); }
+  89% { transform: translateY(0) rotateX(889deg) rotateY(1049deg) rotateZ(0deg); }
+  100% { transform: rotateX(1080deg) rotateY(1080deg); }
+}
+/* prefers-reduced-motion (§7): "collapses the tumble to a single 320ms
+   track with no stagger... drop the hop amplitude to 0" - a plain spin,
+   no translateY hop, rather than the real tracks with their amplitude
+   zeroed out (none of them are parameterized that way). */
+@keyframes dkTumbleReduced {
+  0% { transform: rotateX(0deg) rotateY(0deg); }
+  100% { transform: rotateX(360deg) rotateY(360deg); }
+}
+/* The contact shadow: shrinks and fades as the die lifts, so the arc
+   reads as height rather than scale (§3). Track parity pairs A/C with
+   ShA and B/D with ShB (DieCube.tsx) - not identical hop timing to its
+   tumble, just a close-enough pairing per the spec. */
+@keyframes dkShA {
+  0% { transform: scale(1); opacity: 1; }
+  18% { transform: scale(.58); opacity: .5; }
+  52% { transform: scale(1); opacity: 1; }
+  72% { transform: scale(.84); opacity: .78; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes dkShB {
+  0% { transform: scale(1); opacity: 1; }
+  16% { transform: scale(.55); opacity: .48; }
+  52% { transform: scale(1); opacity: 1; }
+  71% { transform: scale(.82); opacity: .76; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
 .dicekingdom .zone h4 {
   font: 700 11px var(--sans);
   text-transform: uppercase;
