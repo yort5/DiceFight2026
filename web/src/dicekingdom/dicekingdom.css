@@ -1373,6 +1373,18 @@
   bottom: 5%;
   font-weight: 700;
 }
+/* Attack Zone only - the stat that doesn't matter for this die's current
+   combat role (see DieCube.tsx's `dim` prop remarks: an attacker's own
+   Defense, or a blocker's own Attack, was equally bold/positioned as the
+   stat that DOES matter, direct feedback 2026-09-17: "why is this
+   '1 v 1'?"). Shrunk and faded rather than hidden, so the tile still
+   reads as a complete die outside this one context's callout. */
+.dicekingdom .die-cube-attack.dim,
+.dicekingdom .die-cube-defense.dim {
+  opacity: 0.35;
+  font-weight: 400;
+  font-size: 0.8em;
+}
 .dicekingdom .die-cube-damage {
   left: 8%;
   bottom: 5%;

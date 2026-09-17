@@ -317,6 +317,7 @@ function DTile({
   picked,
   spin,
   turnOffset,
+  dim,
   onClick,
 }: {
   die: Die;
@@ -327,6 +328,7 @@ function DTile({
   picked?: boolean;
   spin?: CubeSpin;
   turnOffset?: number;
+  dim?: "attack" | "defense";
   onClick?: () => void;
 }) {
   const cls = ["dkm-tile", clickable ? "clickable" : "", picked ? "picked" : ""].filter(Boolean).join(" ");
@@ -338,6 +340,7 @@ function DTile({
         mine={mine}
         spin={spin}
         turnOffset={turnOffset}
+        dim={dim}
         energyCorner={die.energySymbolId && die.energyAmount > 0 ? { type: die.energySymbolId, amount: die.energyAmount } : undefined}
       />
     </button>
@@ -777,6 +780,7 @@ function LaneDie({
   you,
   size,
   picked,
+  dim,
   onTap,
 }: {
   die: Die;
@@ -784,6 +788,7 @@ function LaneDie({
   you: string;
   size: number;
   picked: boolean;
+  dim?: "attack" | "defense";
   onTap: () => void;
 }) {
   return (
@@ -794,7 +799,7 @@ function LaneDie({
         onTap();
       }}
     >
-      <DTile die={die} cardsById={cardsById} size={size} mine={die.controllerId === you} clickable picked={picked} />
+      <DTile die={die} cardsById={cardsById} size={size} mine={die.controllerId === you} clickable picked={picked} dim={dim} />
     </div>
   );
 }
@@ -851,15 +856,30 @@ function AttackLanesCard({
           const totalDef = blockers.reduce((n, d) => n + (d.effectiveDefense ?? 0), 0);
           const tileSize = attackers.length <= 1 ? 52 : attackers.length === 2 ? 42 : 34;
           const chipText = attackers.length === 0 ? null : blockers.length === 0 ? `${totalAtk} to face` : `${totalAtk} v ${totalDef}`;
+          // Direct feedback (2026-09-17): "making me click on the attacker
+          // to block doesn't make sense... tapping anywhere in the lane
+          // should do it." Only unambiguous with exactly one attacker in
+          // the lane (onTapAttacker already knows how to complete/undo a
+          // block assignment against a selected blocker die) - with 2-3
+          // attackers stacked in one lane, which one a bare lane-tap would
+          // target is genuinely ambiguous, so those still require tapping
+          // the specific attacker tile.
+          const tapLane = () => {
+            if (step === "assign-blockers" && !isYourTurn && attackers.length === 1) {
+              onTapAttacker(attackers[0].id);
+              return;
+            }
+            onTapLane(lane);
+          };
           return (
             <div
               key={lane}
               role="button"
               tabIndex={0}
               className={`dkm-lane${targeted ? " targeted" : ""}`}
-              onClick={() => onTapLane(lane)}
+              onClick={tapLane}
               onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") onTapLane(lane);
+                if (e.key === "Enter" || e.key === " ") tapLane();
               }}
             >
               {/* Real bug, direct feedback (2026-09-17): the opponent's mat
@@ -875,7 +895,7 @@ function AttackLanesCard({
                 <>
                   <div className="dkm-lane-blockers">
                     {blockers.map((b) => (
-                      <LaneDie key={b.id} die={b} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === b.id} onTap={() => onTapBlockerOnAttacker(b.id)} />
+                      <LaneDie key={b.id} die={b} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === b.id} dim="attack" onTap={() => onTapBlockerOnAttacker(b.id)} />
                     ))}
                   </div>
                   {chipText && (
@@ -891,7 +911,7 @@ function AttackLanesCard({
                   )}
                   <div className="dkm-lane-attackers">
                     {attackers.map((a) => (
-                      <LaneDie key={a.id} die={a} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === a.id} onTap={() => onTapAttacker(a.id)} />
+                      <LaneDie key={a.id} die={a} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === a.id} dim="defense" onTap={() => onTapAttacker(a.id)} />
                     ))}
                     {attackers.length === 0 && <div className="dkm-lane-tile empty attacker-empty" />}
                   </div>
@@ -900,7 +920,7 @@ function AttackLanesCard({
                 <>
                   <div className="dkm-lane-attackers">
                     {attackers.map((a) => (
-                      <LaneDie key={a.id} die={a} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === a.id} onTap={() => onTapAttacker(a.id)} />
+                      <LaneDie key={a.id} die={a} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === a.id} dim="defense" onTap={() => onTapAttacker(a.id)} />
                     ))}
                     {attackers.length === 0 && <div className="dkm-lane-tile empty attacker-empty" />}
                   </div>
@@ -917,7 +937,7 @@ function AttackLanesCard({
                   )}
                   <div className="dkm-lane-blockers">
                     {blockers.map((b) => (
-                      <LaneDie key={b.id} die={b} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === b.id} onTap={() => onTapBlockerOnAttacker(b.id)} />
+                      <LaneDie key={b.id} die={b} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === b.id} dim="attack" onTap={() => onTapBlockerOnAttacker(b.id)} />
                     ))}
                     {step === "assign-blockers" && !isYourTurn && attackers.length > 0 && blockers.length === 0 && (
                       <div className="dkm-lane-tile empty blocker-empty">no blocker</div>
