@@ -85,6 +85,21 @@ function statBreakdown(base: number | null, modifiers: StatModifier[] | null, to
   return `${base}${modText} = ${total}`;
 }
 
+// How much of THIS ONE attacker's damage reaches the opponent directly -
+// zero whenever it's blocked, UNLESS it has Overcrush and clears every
+// one of its blockers (rule/CombatEngine.AssignCombatDamage's own
+// Overcrush handling - never true for a Tardigrade, which has no cardId
+// and therefore no keywords at all). Shared by the lane chip and the
+// lane breakdown panel so they can never drift apart on this math.
+function unblockedFaceDamage(a: Die, myBlockers: Die[], cardsById: Map<string, CardDef>): number {
+  const atk = a.effectiveAttack ?? 0;
+  if (myBlockers.length === 0) return atk;
+  const hasOvercrush = a.cardId ? (cardsById.get(a.cardId)?.keywords.includes("Overcrush") ?? false) : false;
+  if (!hasOvercrush) return 0;
+  const blockerDefTotal = myBlockers.reduce((n, b) => n + (b.effectiveDefense ?? 0), 0);
+  return Math.max(0, atk - blockerDefTotal);
+}
+
 // Cost is paid from whichever Reserve energy dice cover it - the mobile
 // design drops individual Reserve die tiles entirely (the divider rail's
 // own remarks: "all we need once we are past the Main step is the energy
@@ -857,15 +872,10 @@ function AttackLanesCard({
           // face for its full Attack. Full mutual-KO math (both
           // directions) lives in the tap-to-open breakdown now; the chip
           // itself only ever answers this one question.
-          const faceDamage = attackers.reduce((n, a) => {
-            const myBlockers = blockersByAttacker.get(a.id) ?? [];
-            const atk = a.effectiveAttack ?? 0;
-            if (myBlockers.length === 0) return n + atk;
-            const hasOvercrush = a.cardId ? (cardsById.get(a.cardId)?.keywords.includes("Overcrush") ?? false) : false;
-            if (!hasOvercrush) return n;
-            const blockerDefTotal = myBlockers.reduce((m, b) => m + (b.effectiveDefense ?? 0), 0);
-            return n + Math.max(0, atk - blockerDefTotal);
-          }, 0);
+          const faceDamage = attackers.reduce(
+            (n, a) => n + unblockedFaceDamage(a, blockersByAttacker.get(a.id) ?? [], cardsById),
+            0,
+          );
           const chipText = attackers.length === 0 ? null : `${faceDamage} to face`;
           // Direct feedback (2026-09-17): "making me click on the attacker
           // to block doesn't make sense... tapping anywhere in the lane
@@ -1646,6 +1656,22 @@ export function DiceKingdomMobilePage() {
     });
   }
 
+  // Direct feedback (2026-09-17): "I would like to be able to simply
+  // click on the fielded die and then click on the desired lane to
+  // declare that die attacking in that lane... Right now I have to
+  // click the die, click the lane, then scroll down to click the action
+  // button." Tapping a lane while a selectable FieldZone die of yours is
+  // selected now declares it directly (or re-lanes it, if it was already
+  // pending elsewhere) - the "Declare into lane N"/"Pull back" inspect
+  // action still exists for pulling an attacker back out.
+  function declareIntoLane(lane: number) {
+    setLaneSel(lane);
+    if (selectedDie && selectedDie.zone === "FieldZone" && selectedDie.controllerId === you) {
+      setPendingAttackers((prev) => ({ ...prev, [selectedDie.id]: lane }));
+      setSelectedId(null);
+    }
+  }
+
   function assignBlocker(attackerId: string, blockerId: string) {
     setBlockAssignments((prev) => {
       const next: Record<string, string | null> = {};
@@ -1720,6 +1746,24 @@ export function DiceKingdomMobilePage() {
     if (blockAssignments[attackerId] && step === "assign-blockers" && !isYourTurn) {
       setBlockAssignments((prev) => ({ ...prev, [attackerId]: null }));
       return;
+    }
+    // A lane that already has an attacker fills most of its own tap
+    // target with that die's tile, so tapping the lane again to add a
+    // SECOND attacker there (declareIntoLane's own remarks) actually
+    // lands on this existing tile. Read that the same way when a
+    // DIFFERENT fielded die of ours is the one currently selected -
+    // "add it to this lane" - rather than just reselecting the die
+    // that's already here.
+    if (
+      step === "select-attackers" && isYourTurn && selectedId && selectedId !== attackerId &&
+      attackerId in pendingAttackers
+    ) {
+      const selected = game.dice.find((d) => d.id === selectedId);
+      if (selected && selected.zone === "FieldZone" && selected.controllerId === you) {
+        setPendingAttackers((prev) => ({ ...prev, [selectedId]: pendingAttackers[attackerId] }));
+        setSelectedId(null);
+        return;
+      }
     }
     toggleSelect(attackerId);
   };
@@ -1909,7 +1953,7 @@ export function DiceKingdomMobilePage() {
               cardsById={cardsById}
               you={you}
               laneSel={laneSel}
-              onTapLane={setLaneSel}
+              onTapLane={declareIntoLane}
               onTapAttacker={onTapAttacker}
               onTapBlockerOnAttacker={(id) => toggleSelect(id)}
               onTapChip={toggleLaneBreakdown}
@@ -2019,19 +2063,37 @@ export function DiceKingdomMobilePage() {
                   ResolveFastOrSlowDamage - every blocker deals its own
                   full Attack back regardless of the damage split), so
                   this shows both checks: attacker ATK vs blocker DEF,
-                  AND blocker ATK vs attacker DEF. */}
+                  AND blocker ATK vs attacker DEF.
+                  Follow-up (same date): "the math isn't mathing - Lane 2
+                  has 3A total attacking and 2D total defending, a
+                  difference of 1, not 2" / "TO FACE seems to assume
+                  every die has Overcrush." Neither - a lane can hold
+                  MULTIPLE attackers that are each blocked (or not)
+                  completely independently (a lane is a display grouping,
+                  not a pooled fight - CombatEngine has no such thing as
+                  shared/pooled blocking). The confusing "2 to face" was
+                  really ONE attacker fully blocked (0 to face, no
+                  Overcrush) plus a SEPARATE, genuinely unblocked attacker
+                  hitting face for its own full Attack - spelled out
+                  per-attacker below instead of left to add up silently. */}
               {(attackersByLane[laneBreakdown] ?? []).map((a) => {
                 const myBlockers = blockersByAttacker.get(a.id) ?? [];
                 const blockerAtkTotal = myBlockers.reduce((n, b) => n + (b.effectiveAttack ?? 0), 0);
                 const blockerDefTotal = myBlockers.reduce((n, b) => n + (b.effectiveDefense ?? 0), 0);
                 const attackerKOd = myBlockers.length > 0 && blockerAtkTotal >= (a.effectiveDefense ?? 0);
                 const blockerKOd = myBlockers.length > 0 && (a.effectiveAttack ?? 0) >= blockerDefTotal;
+                const faceDamage = unblockedFaceDamage(a, myBlockers, cardsById);
                 return (
                   <div key={a.id} className="dkm-inspect-engagement">
                     <span className="dkm-inspect-stats">
                       {nameOf(a, cardsById)} (attacking) — ATK {statBreakdown(a.baseAttack, a.attackModifiers, a.effectiveAttack) ?? "-"}
                       {myBlockers.length > 0 && <>, DEF {statBreakdown(a.baseDefense, a.defenseModifiers, a.effectiveDefense) ?? "-"}</>}
                       {attackerKOd && <b className="dkm-ko-tag"> → KO'd</b>}
+                      {myBlockers.length === 0 ? (
+                        <b className="dkm-ko-tag"> — unblocked, {faceDamage} to face</b>
+                      ) : (
+                        faceDamage > 0 && <b className="dkm-ko-tag"> — Overcrush, {faceDamage} to face</b>
+                      )}
                     </span>
                     {myBlockers.map((b) => (
                       <span key={b.id} className="dkm-inspect-stats">
