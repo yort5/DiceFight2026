@@ -116,22 +116,26 @@ export function facesFor(die: Die, cardsById: Map<string, CardDef>): DieFaces {
   const showing = currentFace(die);
   if (!showing) return { faces, index: 0 };
 
-  // Only match by level/kind, not the exact printed numbers - the static
-  // table holds base stats, but `showing` carries the die's true,
-  // modifier-inclusive value, and it should win on the face it lands on.
-  const found = faces.findIndex((face) =>
-    face.kind === showing.kind && (face.kind !== "character" || face.level === (showing as { level: number }).level),
-  );
-  const slot = found >= 0 ? found : faces.length - 1;
-  // Keep the static table's printed fielding cost (not a live/modified
-  // stat - the die itself doesn't carry one) and its avatar (`showing`,
-  // built fresh from the live DTO, never carries one) while letting the
-  // true, modifier-inclusive attack/defense win.
-  const existing = faces[slot];
-  faces[slot] = {
+  // Real bug, direct feedback (2026-09-17): "both dice in the picture
+  // showed zero attack on the screen" despite different real levels -
+  // this used to write `showing` into whichever static-table slot
+  // matched the die's level/kind (e.g. slot 2 for a level-2 face) and
+  // report THAT slot as `index`. That was correct back when the cube
+  // physically rotated to bring slot `index` forward (the old, now-
+  // removed FACE_ORIENTATIONS), but DieCube.tsx's own header comment
+  // states the model this file was never updated to match: post-
+  // animation-refresh, the cube always rests at net-zero rotation, so
+  // slot 0 is the ONLY slot ever physically facing the camera - every
+  // other slot's `.front` class was correct DOM/data, but invisible.
+  // Confirmed live (a Playwright screenshot, not just DOM text) showing
+  // three different-level Tardigrades all rendering the same static
+  // level-1 default (0/1) - slot 0's un-overwritten content - while
+  // `.front`'s own (unseen) text already held the right numbers.
+  const existing = faces[0];
+  faces[0] = {
     ...showing,
     avatar: existing.avatar,
     ...(showing.kind === "character" && existing.kind === "character" ? { fieldingCost: existing.fieldingCost } : {}),
   };
-  return { faces, index: slot };
+  return { faces, index: 0 };
 }
