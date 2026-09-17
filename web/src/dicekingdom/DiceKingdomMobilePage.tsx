@@ -846,11 +846,27 @@ function AttackLanesCard({
         {Array.from({ length: LANE_COUNT }, (_, lane) => {
           const attackers = attackersByLane[lane] ?? [];
           const targeted = lane === laneSel;
-          const totalAtk = attackers.reduce((n, d) => n + (d.effectiveAttack ?? 0), 0);
           const blockers = attackers.flatMap((a) => blockersByAttacker.get(a.id) ?? []);
-          const totalDef = blockers.reduce((n, d) => n + (d.effectiveDefense ?? 0), 0);
           const tileSize = attackers.length <= 1 ? 52 : attackers.length === 2 ? 42 : 34;
-          const chipText = attackers.length === 0 ? null : blockers.length === 0 ? `${totalAtk} to face` : `${totalAtk} v ${totalDef}`;
+          // Direct feedback (2026-09-17): "get rid of '1 v 1'... it's not
+          // really helpful. Knowing what will go through 'to face' is
+          // still good info." A blocked attacker's damage doesn't reach
+          // the opponent at all UNLESS it has Overcrush and clears every
+          // one of its blockers (rule/CombatEngine.AssignCombatDamage's
+          // own Overcrush handling) - an unblocked attacker always hits
+          // face for its full Attack. Full mutual-KO math (both
+          // directions) lives in the tap-to-open breakdown now; the chip
+          // itself only ever answers this one question.
+          const faceDamage = attackers.reduce((n, a) => {
+            const myBlockers = blockersByAttacker.get(a.id) ?? [];
+            const atk = a.effectiveAttack ?? 0;
+            if (myBlockers.length === 0) return n + atk;
+            const hasOvercrush = a.cardId ? (cardsById.get(a.cardId)?.keywords.includes("Overcrush") ?? false) : false;
+            if (!hasOvercrush) return n;
+            const blockerDefTotal = myBlockers.reduce((m, b) => m + (b.effectiveDefense ?? 0), 0);
+            return n + Math.max(0, atk - blockerDefTotal);
+          }, 0);
+          const chipText = attackers.length === 0 ? null : `${faceDamage} to face`;
           // Direct feedback (2026-09-17): "making me click on the attacker
           // to block doesn't make sense... tapping anywhere in the lane
           // should do it." Only unambiguous with exactly one attacker in
