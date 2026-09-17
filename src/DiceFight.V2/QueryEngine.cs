@@ -22,7 +22,19 @@ public interface IDieStatModifier
 {
     bool AppliesTo(GameState state, DieInstance die);
     int GetDelta(GameState state, DieInstance die);
+    // Human-readable source name (a Champion's name, or the card whose
+    // continuous ability this is) - direct feedback (2026-09-17): "click
+    // on the '1 v 3' and have it explain where the numbers are coming
+    // from." Only used to build a breakdown for display; never read by
+    // the engine's own combat math.
+    string Label { get; }
 }
+
+// One named contribution to a die's Attack or Defense, in the order its
+// source modifier was registered - GetAttackBreakdown/GetDefenseBreakdown's
+// return shape, so a UI can render "Base 0, Wolf (Champion) +1 = 1"
+// instead of only ever seeing the final summed total.
+public readonly record struct StatModifierContribution(string Label, int Delta);
 
 // The card+player-scoped counterpart, for the two queries that aren't
 // about a specific rolled die (a purchase/Global cost is about a CARD and
@@ -142,6 +154,17 @@ public static class QueryEngine
 
     public static int GetDefense(GameState state, DieInstance die) =>
         GetBaseDefense(state, die) + state.DefenseModifiers.Where(m => m.AppliesTo(state, die)).Sum(m => m.GetDelta(state, die));
+
+    // Same modifier lists GetAttack/GetDefense sum over, just kept as
+    // named line items instead of collapsed into one number - see
+    // IDieStatModifier.Label's own remarks for why this exists.
+    public static IReadOnlyList<StatModifierContribution> GetAttackBreakdown(GameState state, DieInstance die) =>
+        state.AttackModifiers.Where(m => m.AppliesTo(state, die))
+            .Select(m => new StatModifierContribution(m.Label, m.GetDelta(state, die))).ToList();
+
+    public static IReadOnlyList<StatModifierContribution> GetDefenseBreakdown(GameState state, DieInstance die) =>
+        state.DefenseModifiers.Where(m => m.AppliesTo(state, die))
+            .Select(m => new StatModifierContribution(m.Label, m.GetDelta(state, die))).ToList();
 
     // Floor 1 - the game's own "to a minimum of 1" purchase-discount text
     // (Dark Phoenix "Enemy of the Shi'ar" et al.) - erratum corrected

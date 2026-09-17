@@ -16,7 +16,7 @@ import { DieCube, type CubeSpin } from "./DieCube";
 import { facesFor } from "./dieFaces";
 import { useDiceRoll, type RollTarget } from "./useDiceRoll";
 import { decideAttackers, decideBlockers, decideMainAction, decidePendingChoice, decisionOwner } from "./bot";
-import type { CardDef, Die, GameState, PlayerState } from "./types";
+import type { CardDef, Die, GameState, PlayerState, StatModifier } from "./types";
 
 // Dice Kingdom - mobile refresh (2026-09). A GENUINELY SEPARATE front end
 // from ../DiceKingdomPage.tsx, not a responsive breakpoint of it - the
@@ -71,6 +71,18 @@ function rolled(d: Die): boolean {
 function nameOf(die: Die, cardsById: Map<string, CardDef>): string {
   if (!die.cardId) return "Tardigrade";
   return cardsById.get(die.cardId)?.name ?? die.cardId;
+}
+
+// "base [+ label delta]... = total" - the server already sums this into
+// effectiveAttack/effectiveDefense; this just un-collapses it back into
+// named line items for display. Direct feedback (2026-09-17): "click on
+// the '1 v 3' and have it explain where the numbers are coming from."
+function statBreakdown(base: number | null, modifiers: StatModifier[] | null, total: number | null): string | null {
+  if (base === null || total === null) return null;
+  const mods = modifiers ?? [];
+  if (mods.length === 0) return `${base}`;
+  const modText = mods.map((m) => ` ${m.delta >= 0 ? "+" : "-"}${Math.abs(m.delta)} (${m.label})`).join("");
+  return `${base}${modText} = ${total}`;
 }
 
 // Cost is paid from whichever Reserve energy dice cover it - the mobile
@@ -805,6 +817,7 @@ function AttackLanesCard({
   onTapLane,
   onTapAttacker,
   onTapBlockerOnAttacker,
+  onTapChip,
   selectedId,
 }: {
   isYourTurn: boolean;
@@ -817,6 +830,7 @@ function AttackLanesCard({
   onTapLane: (lane: number) => void;
   onTapAttacker: (id: string) => void;
   onTapBlockerOnAttacker: (attackerId: string) => void;
+  onTapChip: (lane: number) => void;
   selectedId: string | null;
 }) {
   const totalDeclared = attackersByLane.reduce((n, l) => n + l.length, 0);
@@ -864,7 +878,17 @@ function AttackLanesCard({
                       <LaneDie key={b.id} die={b} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === b.id} onTap={() => onTapBlockerOnAttacker(b.id)} />
                     ))}
                   </div>
-                  {chipText && <span className="dkm-lane-chip">{chipText}</span>}
+                  {chipText && (
+                    <span
+                      className="dkm-lane-chip tappable"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onTapChip(lane);
+                      }}
+                    >
+                      {chipText}
+                    </span>
+                  )}
                   <div className="dkm-lane-attackers">
                     {attackers.map((a) => (
                       <LaneDie key={a.id} die={a} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === a.id} onTap={() => onTapAttacker(a.id)} />
@@ -880,7 +904,17 @@ function AttackLanesCard({
                     ))}
                     {attackers.length === 0 && <div className="dkm-lane-tile empty attacker-empty" />}
                   </div>
-                  {chipText && <span className="dkm-lane-chip">{chipText}</span>}
+                  {chipText && (
+                    <span
+                      className="dkm-lane-chip tappable"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onTapChip(lane);
+                      }}
+                    >
+                      {chipText}
+                    </span>
+                  )}
                   <div className="dkm-lane-blockers">
                     {blockers.map((b) => (
                       <LaneDie key={b.id} die={b} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === b.id} onTap={() => onTapBlockerOnAttacker(b.id)} />
@@ -1057,6 +1091,11 @@ export function DiceKingdomMobilePage() {
   const [cardsById, setCardsById] = useState<Map<string, CardDef>>(new Map());
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Which lane's Attack Zone chip is showing its stat breakdown, or null -
+  // direct feedback (2026-09-17): "click on the '1 v 3' and have it
+  // explain where the numbers are coming from." Mutually exclusive with
+  // selectedId (both use the same bottom-bar panel slot).
+  const [laneBreakdown, setLaneBreakdown] = useState<number | null>(null);
   const [rerollPicked, setRerollPicked] = useState<string[]>([]);
   const [rerollUsedThisStep, setRerollUsedThisStep] = useState(false);
   const [pendingAttackers, setPendingAttackers] = useState<Record<string, number>>({});
@@ -1164,6 +1203,7 @@ export function DiceKingdomMobilePage() {
       startTransition(() => setGame(next));
       if (previous) requestAnimationFrame(() => animateRolledDice(previous, next, rolledDieIds));
       setSelectedId(null);
+      setLaneBreakdown(null);
       if (next.currentStepId !== "roll-and-reroll") {
         setRerollPicked([]);
         setRerollUsedThisStep(false);
@@ -1210,6 +1250,7 @@ export function DiceKingdomMobilePage() {
       // Deferred a frame - see run()'s identical remarks on why.
       requestAnimationFrame(() => animateRolledDice(previous, next, revealedDieIds));
       setSelectedId(null);
+      setLaneBreakdown(null);
       setRerollPicked([]);
       setRerollUsedThisStep(true);
       await new Promise((resolve) => setTimeout(resolve, TUMBLE_REVEAL_HOLD_MS));
@@ -1547,7 +1588,13 @@ export function DiceKingdomMobilePage() {
   }
 
   function toggleSelect(id: string) {
+    setLaneBreakdown(null);
     setSelectedId((cur) => (cur === id ? null : id));
+  }
+
+  function toggleLaneBreakdown(lane: number) {
+    setSelectedId(null);
+    setLaneBreakdown((cur) => (cur === lane ? null : lane));
   }
 
   function toggleAttacker(dieId: string) {
@@ -1825,6 +1872,7 @@ export function DiceKingdomMobilePage() {
               onTapLane={setLaneSel}
               onTapAttacker={onTapAttacker}
               onTapBlockerOnAttacker={(id) => toggleSelect(id)}
+              onTapChip={toggleLaneBreakdown}
               selectedId={selectedId}
             />
           )}
@@ -1896,6 +1944,12 @@ export function DiceKingdomMobilePage() {
                     : "unrolled"}{" "}
                 · {selectedDie.zone}
               </span>
+              {selectedDie.attackModifiers && (
+                <span className="dkm-inspect-stats">
+                  ATK {statBreakdown(selectedDie.baseAttack, selectedDie.attackModifiers, selectedDie.effectiveAttack)} · DEF{" "}
+                  {statBreakdown(selectedDie.baseDefense, selectedDie.defenseModifiers, selectedDie.effectiveDefense)}
+                </span>
+              )}
             </div>
             <button type="button" className="dkm-inspect-close" onClick={() => setSelectedId(null)}>
               ×
@@ -1911,6 +1965,26 @@ export function DiceKingdomMobilePage() {
                 {a.label}
               </button>
             ))}
+          </div>
+        )}
+        {laneBreakdown !== null && (
+          <div className="dkm-inspect dkm-lane-inspect">
+            <div className="dkm-inspect-mid">
+              <span className="dkm-inspect-name">Lane {laneBreakdown + 1} breakdown</span>
+              {(attackersByLane[laneBreakdown] ?? []).map((a) => (
+                <span key={a.id} className="dkm-inspect-stats">
+                  {nameOf(a, cardsById)} ATK: {statBreakdown(a.baseAttack, a.attackModifiers, a.effectiveAttack) ?? "-"}
+                </span>
+              ))}
+              {(attackersByLane[laneBreakdown] ?? []).flatMap((a) => blockersByAttacker.get(a.id) ?? []).map((b) => (
+                <span key={b.id} className="dkm-inspect-stats">
+                  {nameOf(b, cardsById)} DEF: {statBreakdown(b.baseDefense, b.defenseModifiers, b.effectiveDefense) ?? "-"}
+                </span>
+              ))}
+            </div>
+            <button type="button" className="dkm-inspect-close" onClick={() => setLaneBreakdown(null)}>
+              ×
+            </button>
           </div>
         )}
         <div className="dkm-primary-row">

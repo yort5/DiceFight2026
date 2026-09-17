@@ -16,6 +16,7 @@ public class QueryEngineTests
     {
         public bool AppliesTo(GameState state, DieInstance die) => true;
         public int GetDelta(GameState state, DieInstance die) => delta;
+        public string Label => "Test Modifier";
     }
 
     private sealed class AlwaysAppliesCardModifier(int delta) : ICardCostModifier

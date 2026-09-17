@@ -33,13 +33,13 @@ public static class ChampionRegistry
         switch (champion.PassiveKind)
         {
             case ChampionPassiveKind.AttackBuff:
-                state.AttackModifiers.Add(new ChampionDieModifier(ownerId, champion.Amount));
+                state.AttackModifiers.Add(new ChampionDieModifier(ownerId, champion.Name, champion.Amount));
                 break;
             case ChampionPassiveKind.DefenseBuff:
-                state.DefenseModifiers.Add(new ChampionDieModifier(ownerId, champion.Amount));
+                state.DefenseModifiers.Add(new ChampionDieModifier(ownerId, champion.Name, champion.Amount));
                 break;
             case ChampionPassiveKind.FieldingCostDiscount:
-                state.FieldingCostModifiers.Add(new ChampionDieModifier(ownerId, -champion.Amount));
+                state.FieldingCostModifiers.Add(new ChampionDieModifier(ownerId, champion.Name, -champion.Amount));
                 break;
             case ChampionPassiveKind.PurchaseCostDiscount:
                 state.PurchaseCostModifiers.Add(new ChampionCostModifier(ownerId, -champion.Amount));
@@ -50,10 +50,11 @@ public static class ChampionRegistry
     // Attack/Defense/FieldingCost are all "a flat delta for every die this
     // player controls, always" - one class covers all three, registered
     // into whichever list matches the passive kind above.
-    private sealed class ChampionDieModifier(string ownerId, int delta) : IDieStatModifier
+    private sealed class ChampionDieModifier(string ownerId, string championName, int delta) : IDieStatModifier
     {
         public bool AppliesTo(GameState state, DieInstance die) => die.ControllerId == ownerId;
         public int GetDelta(GameState state, DieInstance die) => delta;
+        public string Label => $"{championName} (Champion)";
     }
 
     // Purchase cost is card+payer-scoped, not die-scoped (a purchase can

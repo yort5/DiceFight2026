@@ -110,6 +110,8 @@ public static class ContinuousRegistry
         public int GetDelta(GameState state, DieInstance die) =>
             QualifyingSources(state, card, def.ActiveWhen, def.Target, die.Id)
                 .Sum(src => AmountResolver.Resolve(state, src.ControllerId, amount, Bindings(src), includeContinuous: false));
+
+        public string Label => card.Name;
     }
 
     // --- CostModifier. Purchase/GlobalEnergy are card+payer scoped, so
@@ -137,6 +139,8 @@ public static class ContinuousRegistry
 
         public int GetDelta(GameState state, DieInstance die) =>
             QualifyingSources(state, card, def.ActiveWhen, def.Whose, die.Id).Count() * def.Delta;
+
+        public string Label => card.Name;
     }
 
     // --- TagAura ---

@@ -2844,6 +2844,12 @@
   color: var(--dkm-on-accent);
   background: var(--claw);
 }
+.dk-mobile .dkm-lane-chip.tappable {
+  cursor: pointer;
+}
+.dk-mobile .dkm-lane-chip.tappable:active {
+  filter: brightness(1.15);
+}
 .dk-mobile .dkm-lane-number {
   align-self: center;
   font: 600 9.5px/1 "Work Sans", var(--sans);
@@ -3013,6 +3019,17 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+/* The "why is this number X" breakdown (direct feedback, 2026-09-17) -
+   one line per stat/die, so a Champion or card-aura contribution reads
+   as "base + label = total" instead of only ever showing the total. */
+.dk-mobile .dkm-inspect-stats {
+  display: block;
+  font: 400 10px/1.4 "Work Sans", var(--sans);
+  color: var(--dkm-ink-dim);
+}
+.dk-mobile .dkm-lane-inspect {
+  grid-template-columns: 1fr auto;
 }
 .dk-mobile .dkm-inspect-close {
   font-size: 18px;

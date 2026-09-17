@@ -44,10 +44,23 @@ public sealed record V2CardDefDto(
 // at all. IsTardigrade mirrors v1's own DieInstance.IsSidekick precedent
 // (CardId null = the basic pool creature) - the one status distinction
 // the web client's board components actually branch on.
+public sealed record V2StatModifierDto(string Label, int Delta)
+{
+    public static V2StatModifierDto From(StatModifierContribution c) => new(c.Label, c.Delta);
+}
+
 public sealed record V2DieDto(
     string Id, string? CardId, string OwnerId, string ControllerId, string Zone,
     bool IsTardigrade, int? Level, int? EffectiveAttack, int? EffectiveDefense,
-    string? EnergySymbolId, int EnergyAmount, int? Lane)
+    string? EnergySymbolId, int EnergyAmount, int? Lane,
+    // Only populated alongside a non-null EffectiveAttack/EffectiveDefense
+    // for a die actually in play (see the class remarks above) - the
+    // printed base plus every named modifier that summed into the
+    // effective value, for the tap-to-explain breakdown UI (direct
+    // feedback, 2026-09-17: "click on the '1 v 3' and have it explain
+    // where the numbers are coming from").
+    int? BaseAttack, int? BaseDefense,
+    IReadOnlyList<V2StatModifierDto>? AttackModifiers, IReadOnlyList<V2StatModifierDto>? DefenseModifiers)
 {
     private static readonly HashSet<DiceFight.V2.Model.Zone> InPlayZones =
         [DiceFight.V2.Model.Zone.FieldZone, DiceFight.V2.Model.Zone.AttackZone];
@@ -57,13 +70,19 @@ public sealed record V2DieDto(
         var face = state.GetCurrentFace(die);
         var symbol = face?.Symbols.FirstOrDefault();
         var inPlay = InPlayZones.Contains(die.Zone);
+        var hasCharacterFace = face?.Character is not null;
+        var showBreakdown = hasCharacterFace && inPlay;
         return new(
             die.Id, die.CardId, die.OwnerId, die.ControllerId, die.Zone.ToString(),
             die.CardId is null,
             face?.Character?.Level,
-            face?.Character is not null ? (inPlay ? QueryEngine.GetAttack(state, die) : QueryEngine.GetBaseAttack(state, die)) : null,
-            face?.Character is not null ? (inPlay ? QueryEngine.GetDefense(state, die) : QueryEngine.GetBaseDefense(state, die)) : null,
-            symbol?.SymbolId, symbol?.Count ?? 0, die.Lane);
+            hasCharacterFace ? (inPlay ? QueryEngine.GetAttack(state, die) : QueryEngine.GetBaseAttack(state, die)) : null,
+            hasCharacterFace ? (inPlay ? QueryEngine.GetDefense(state, die) : QueryEngine.GetBaseDefense(state, die)) : null,
+            symbol?.SymbolId, symbol?.Count ?? 0, die.Lane,
+            showBreakdown ? QueryEngine.GetBaseAttack(state, die) : null,
+            showBreakdown ? QueryEngine.GetBaseDefense(state, die) : null,
+            showBreakdown ? QueryEngine.GetAttackBreakdown(state, die).Select(V2StatModifierDto.From).ToList() : null,
+            showBreakdown ? QueryEngine.GetDefenseBreakdown(state, die).Select(V2StatModifierDto.From).ToList() : null);
     }
 }
 

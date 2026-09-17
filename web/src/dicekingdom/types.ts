@@ -30,6 +30,11 @@ export interface Champion {
   passiveText: string;
 }
 
+export interface StatModifier {
+  label: string;
+  delta: number;
+}
+
 export interface Die {
   id: string;
   cardId: string | null;
@@ -45,6 +50,14 @@ export interface Die {
   /** Which of the Attack Zone's four fixed lanes (0-3) this attacker was
    *  declared into - a display grouping only, null outside AttackZone. */
   lane: number | null;
+  /** Printed base + named modifiers behind effectiveAttack/effectiveDefense -
+   *  only present for an in-play (FieldZone/AttackZone) character die, so
+   *  a "why is this number X" breakdown can be built without re-deriving
+   *  champion/aura math client-side. See V2Dtos.cs's V2DieDto remarks. */
+  baseAttack: number | null;
+  baseDefense: number | null;
+  attackModifiers: StatModifier[] | null;
+  defenseModifiers: StatModifier[] | null;
 }
 
 export interface PlayerState {
