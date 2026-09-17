@@ -1373,18 +1373,6 @@
   bottom: 5%;
   font-weight: 700;
 }
-/* Attack Zone only - the stat that doesn't matter for this die's current
-   combat role (see DieCube.tsx's `dim` prop remarks: an attacker's own
-   Defense, or a blocker's own Attack, was equally bold/positioned as the
-   stat that DOES matter, direct feedback 2026-09-17: "why is this
-   '1 v 1'?"). Shrunk and faded rather than hidden, so the tile still
-   reads as a complete die outside this one context's callout. */
-.dicekingdom .die-cube-attack.dim,
-.dicekingdom .die-cube-defense.dim {
-  opacity: 0.35;
-  font-weight: 400;
-  font-size: 0.8em;
-}
 .dicekingdom .die-cube-damage {
   left: 8%;
   bottom: 5%;
@@ -2825,6 +2813,24 @@
 .dk-mobile .dkm-lane-die-wrap {
   cursor: pointer;
 }
+/* Direct feedback (2026-09-17): "there is no visual [cue] to highlight
+   who is the aggressor and who is defending." A plain text caption per
+   section (not a color-only cue) so it reads the same for a color-blind
+   viewer and regardless of which section sits on top this turn (see the
+   orientation fix above). Reuses --claw/--wing the same way .dkm-lane.
+   targeted and .dkm-tile.picked already do elsewhere on this page - a
+   fixed highlight pairing, not really about Claw/Wing energy. */
+.dk-mobile .dkm-lane-role {
+  font: 700 7px/1 "Work Sans", var(--sans);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.dk-mobile .dkm-lane-role.atk {
+  color: var(--claw);
+}
+.dk-mobile .dkm-lane-role.def {
+  color: var(--wing);
+}
 .dk-mobile .dkm-lane-tile {
   position: relative;
   border-radius: 6px;
@@ -3039,6 +3045,18 @@
   display: block;
   font: 400 10px/1.4 "Work Sans", var(--sans);
   color: var(--dkm-ink-dim);
+}
+.dk-mobile .dkm-inspect-engagement {
+  margin-top: 4px;
+}
+.dk-mobile .dkm-inspect-engagement:first-child {
+  margin-top: 0;
+}
+/* Combat is mutual (direct feedback, 2026-09-17: "both directions
+   matter") - a die can be KO'd whether it's attacking or blocking, so
+   this calls it out the same way regardless of role. */
+.dk-mobile .dkm-ko-tag {
+  color: var(--claw);
 }
 .dk-mobile .dkm-lane-inspect {
   grid-template-columns: 1fr auto;

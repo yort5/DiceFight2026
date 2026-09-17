@@ -317,7 +317,6 @@ function DTile({
   picked,
   spin,
   turnOffset,
-  dim,
   onClick,
 }: {
   die: Die;
@@ -328,7 +327,6 @@ function DTile({
   picked?: boolean;
   spin?: CubeSpin;
   turnOffset?: number;
-  dim?: "attack" | "defense";
   onClick?: () => void;
 }) {
   const cls = ["dkm-tile", clickable ? "clickable" : "", picked ? "picked" : ""].filter(Boolean).join(" ");
@@ -340,7 +338,6 @@ function DTile({
         mine={mine}
         spin={spin}
         turnOffset={turnOffset}
-        dim={dim}
         energyCorner={die.energySymbolId && die.energyAmount > 0 ? { type: die.energySymbolId, amount: die.energyAmount } : undefined}
       />
     </button>
@@ -780,7 +777,6 @@ function LaneDie({
   you,
   size,
   picked,
-  dim,
   onTap,
 }: {
   die: Die;
@@ -788,7 +784,6 @@ function LaneDie({
   you: string;
   size: number;
   picked: boolean;
-  dim?: "attack" | "defense";
   onTap: () => void;
 }) {
   return (
@@ -799,7 +794,7 @@ function LaneDie({
         onTap();
       }}
     >
-      <DTile die={die} cardsById={cardsById} size={size} mine={die.controllerId === you} clickable picked={picked} dim={dim} />
+      <DTile die={die} cardsById={cardsById} size={size} mine={die.controllerId === you} clickable picked={picked} />
     </div>
   );
 }
@@ -894,8 +889,14 @@ function AttackLanesCard({
               {isYourTurn ? (
                 <>
                   <div className="dkm-lane-blockers">
+                    {/* Direct feedback (2026-09-17): "there is no visual
+                        [cue] to highlight who is the aggressor and who is
+                        defending" - a plain text role caption per section,
+                        not a color/border cue, so it reads the same
+                        regardless of position/orientation or color vision. */}
+                    {attackers.length > 0 && <span className="dkm-lane-role def">Blocking</span>}
                     {blockers.map((b) => (
-                      <LaneDie key={b.id} die={b} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === b.id} dim="attack" onTap={() => onTapBlockerOnAttacker(b.id)} />
+                      <LaneDie key={b.id} die={b} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === b.id} onTap={() => onTapBlockerOnAttacker(b.id)} />
                     ))}
                   </div>
                   {chipText && (
@@ -910,8 +911,9 @@ function AttackLanesCard({
                     </span>
                   )}
                   <div className="dkm-lane-attackers">
+                    {attackers.length > 0 && <span className="dkm-lane-role atk">Attacking</span>}
                     {attackers.map((a) => (
-                      <LaneDie key={a.id} die={a} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === a.id} dim="defense" onTap={() => onTapAttacker(a.id)} />
+                      <LaneDie key={a.id} die={a} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === a.id} onTap={() => onTapAttacker(a.id)} />
                     ))}
                     {attackers.length === 0 && <div className="dkm-lane-tile empty attacker-empty" />}
                   </div>
@@ -919,8 +921,9 @@ function AttackLanesCard({
               ) : (
                 <>
                   <div className="dkm-lane-attackers">
+                    {attackers.length > 0 && <span className="dkm-lane-role atk">Attacking</span>}
                     {attackers.map((a) => (
-                      <LaneDie key={a.id} die={a} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === a.id} dim="defense" onTap={() => onTapAttacker(a.id)} />
+                      <LaneDie key={a.id} die={a} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === a.id} onTap={() => onTapAttacker(a.id)} />
                     ))}
                     {attackers.length === 0 && <div className="dkm-lane-tile empty attacker-empty" />}
                   </div>
@@ -936,8 +939,9 @@ function AttackLanesCard({
                     </span>
                   )}
                   <div className="dkm-lane-blockers">
+                    {attackers.length > 0 && <span className="dkm-lane-role def">Blocking</span>}
                     {blockers.map((b) => (
-                      <LaneDie key={b.id} die={b} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === b.id} dim="attack" onTap={() => onTapBlockerOnAttacker(b.id)} />
+                      <LaneDie key={b.id} die={b} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === b.id} onTap={() => onTapBlockerOnAttacker(b.id)} />
                     ))}
                     {step === "assign-blockers" && !isYourTurn && attackers.length > 0 && blockers.length === 0 && (
                       <div className="dkm-lane-tile empty blocker-empty">no blocker</div>
@@ -1991,16 +1995,38 @@ export function DiceKingdomMobilePage() {
           <div className="dkm-inspect dkm-lane-inspect">
             <div className="dkm-inspect-mid">
               <span className="dkm-inspect-name">Lane {laneBreakdown + 1} breakdown</span>
-              {(attackersByLane[laneBreakdown] ?? []).map((a) => (
-                <span key={a.id} className="dkm-inspect-stats">
-                  {nameOf(a, cardsById)} ATK: {statBreakdown(a.baseAttack, a.attackModifiers, a.effectiveAttack) ?? "-"}
-                </span>
-              ))}
-              {(attackersByLane[laneBreakdown] ?? []).flatMap((a) => blockersByAttacker.get(a.id) ?? []).map((b) => (
-                <span key={b.id} className="dkm-inspect-stats">
-                  {nameOf(b, cardsById)} DEF: {statBreakdown(b.baseDefense, b.defenseModifiers, b.effectiveDefense) ?? "-"}
-                </span>
-              ))}
+              {/* Direct feedback (2026-09-17): "it's not just the
+                  attacker's attack value and the defender's defense -
+                  if the defending die's attack is >= the attacking
+                  die's defense, the attacking die is KO'd. Both
+                  directions matter." Combat is mutual (CombatEngine.
+                  ResolveFastOrSlowDamage - every blocker deals its own
+                  full Attack back regardless of the damage split), so
+                  this shows both checks: attacker ATK vs blocker DEF,
+                  AND blocker ATK vs attacker DEF. */}
+              {(attackersByLane[laneBreakdown] ?? []).map((a) => {
+                const myBlockers = blockersByAttacker.get(a.id) ?? [];
+                const blockerAtkTotal = myBlockers.reduce((n, b) => n + (b.effectiveAttack ?? 0), 0);
+                const blockerDefTotal = myBlockers.reduce((n, b) => n + (b.effectiveDefense ?? 0), 0);
+                const attackerKOd = myBlockers.length > 0 && blockerAtkTotal >= (a.effectiveDefense ?? 0);
+                const blockerKOd = myBlockers.length > 0 && (a.effectiveAttack ?? 0) >= blockerDefTotal;
+                return (
+                  <div key={a.id} className="dkm-inspect-engagement">
+                    <span className="dkm-inspect-stats">
+                      {nameOf(a, cardsById)} (attacking) — ATK {statBreakdown(a.baseAttack, a.attackModifiers, a.effectiveAttack) ?? "-"}
+                      {myBlockers.length > 0 && <>, DEF {statBreakdown(a.baseDefense, a.defenseModifiers, a.effectiveDefense) ?? "-"}</>}
+                      {attackerKOd && <b className="dkm-ko-tag"> → KO'd</b>}
+                    </span>
+                    {myBlockers.map((b) => (
+                      <span key={b.id} className="dkm-inspect-stats">
+                        {nameOf(b, cardsById)} (blocking) — DEF {statBreakdown(b.baseDefense, b.defenseModifiers, b.effectiveDefense) ?? "-"}, ATK{" "}
+                        {statBreakdown(b.baseAttack, b.attackModifiers, b.effectiveAttack) ?? "-"}
+                        {blockerKOd && <b className="dkm-ko-tag"> → KO'd</b>}
+                      </span>
+                    ))}
+                  </div>
+                );
+              })}
             </div>
             <button type="button" className="dkm-inspect-close" onClick={() => setLaneBreakdown(null)}>
               ×

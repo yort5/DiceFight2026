@@ -81,16 +81,6 @@ export function DieCube(props: {
   /** The die's own live energy, read straight off the DTO rather than
    *  the (rotating, face-specific) cube model - see the file header. */
   energyCorner?: { type: string; amount: number };
-  /** Attack Zone only: which stat is irrelevant to THIS die's current
-   *  combat role (an attacker's own Defense; a blocker's own Attack) -
-   *  direct feedback (2026-09-17): "why is this '1 v 1'?" turned out to
-   *  be real numbers the user could see, just not realizing an
-   *  attacker's bold top-right (Attack) and a blocker's bold top-right
-   *  (also Attack, but not what a blocker fights with) drew the eye
-   *  equally, while the blocker's actually-relevant Defense sat smaller
-   *  in the opposite corner. Dims the irrelevant stat instead of hiding
-   *  it, so the tile still reads correctly outside combat context. */
-  dim?: "attack" | "defense";
 }) {
   const { faces, index, size, mine, spin } = props;
   const half = size / 2;
@@ -198,8 +188,8 @@ export function DieCube(props: {
                       print "0" rather than leave the corner blank, so a
                       free die reads as "costs 0" and not "cost unknown". */}
                   <span className="die-cube-cost">{face.fieldingCost}</span>
-                  <span className={`die-cube-attack${props.dim === "attack" ? " dim" : ""}`}>{face.attack}</span>
-                  <span className={`die-cube-defense${props.dim === "defense" ? " dim" : ""}`}>{face.defense}</span>
+                  <span className="die-cube-attack">{face.attack}</span>
+                  <span className="die-cube-defense">{face.defense}</span>
                   {isFront && (props.damage ?? 0) > 0 && (
                     <span className="die-cube-damage">-{props.damage}</span>
                   )}
