@@ -91,10 +91,16 @@ function statBreakdown(base: number | null, modifiers: StatModifier[] | null, to
 // Overcrush handling - never true for a Tardigrade, which has no cardId
 // and therefore no keywords at all). Shared by the lane chip and the
 // lane breakdown panel so they can never drift apart on this math.
-function unblockedFaceDamage(a: Die, myBlockers: Die[], cardsById: Map<string, CardDef>): number {
+function unblockedFaceDamage(a: Die, myBlockers: Die[], laneAttackerCount: number, cardsById: Map<string, CardDef>): number {
   const atk = a.effectiveAttack ?? 0;
   if (myBlockers.length === 0) return atk;
-  const hasOvercrush = a.cardId ? (cardsById.get(a.cardId)?.keywords.includes("Overcrush") ?? false) : false;
+  // Direct feedback (2026-09-18): a lane with 2+ live attackers grants
+  // EVERY attacker in it Overcrush for this combat, mirroring
+  // CombatEngine.AssignCombatDamage's own (deliberately isolated,
+  // provisional) `sharesACrowdedLane` condition - not a real keyword,
+  // not stat pooling, just this one OR'd-in check.
+  const hasOvercrush =
+    (a.cardId ? (cardsById.get(a.cardId)?.keywords.includes("Overcrush") ?? false) : false) || laneAttackerCount >= 2;
   if (!hasOvercrush) return 0;
   const blockerDefTotal = myBlockers.reduce((n, b) => n + (b.effectiveDefense ?? 0), 0);
   return Math.max(0, atk - blockerDefTotal);
@@ -873,7 +879,7 @@ function AttackLanesCard({
           // directions) lives in the tap-to-open breakdown now; the chip
           // itself only ever answers this one question.
           const faceDamage = attackers.reduce(
-            (n, a) => n + unblockedFaceDamage(a, blockersByAttacker.get(a.id) ?? [], cardsById),
+            (n, a) => n + unblockedFaceDamage(a, blockersByAttacker.get(a.id) ?? [], attackers.length, cardsById),
             0,
           );
           const chipText = attackers.length === 0 ? null : `${faceDamage} to face`;
@@ -1622,6 +1628,7 @@ export function DiceKingdomMobilePage() {
       if (blocker) blockersByAttacker.set(attackerId, [blocker]);
     }
   }
+  const laneAttackersForBreakdown = laneBreakdown !== null ? (attackersByLane[laneBreakdown] ?? []) : [];
 
   function costFor(die: Die): { amount: number; matchType: string | null } {
     if (die.zone === "Unpurchased") {
@@ -2076,13 +2083,13 @@ export function DiceKingdomMobilePage() {
                   Overcrush) plus a SEPARATE, genuinely unblocked attacker
                   hitting face for its own full Attack - spelled out
                   per-attacker below instead of left to add up silently. */}
-              {(attackersByLane[laneBreakdown] ?? []).map((a) => {
+              {laneAttackersForBreakdown.map((a) => {
                 const myBlockers = blockersByAttacker.get(a.id) ?? [];
                 const blockerAtkTotal = myBlockers.reduce((n, b) => n + (b.effectiveAttack ?? 0), 0);
                 const blockerDefTotal = myBlockers.reduce((n, b) => n + (b.effectiveDefense ?? 0), 0);
                 const attackerKOd = myBlockers.length > 0 && blockerAtkTotal >= (a.effectiveDefense ?? 0);
                 const blockerKOd = myBlockers.length > 0 && (a.effectiveAttack ?? 0) >= blockerDefTotal;
-                const faceDamage = unblockedFaceDamage(a, myBlockers, cardsById);
+                const faceDamage = unblockedFaceDamage(a, myBlockers, laneAttackersForBreakdown.length, cardsById);
                 return (
                   <div key={a.id} className="dkm-inspect-engagement">
                     <span className="dkm-inspect-stats">

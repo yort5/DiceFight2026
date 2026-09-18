@@ -237,7 +237,21 @@ public static class CombatEngine
             }
 
             var blockerDefenseTotal = liveBlockerIds.Sum(id => QueryEngine.GetDefense(state, FindDie(state, id)));
-            if (QueryEngine.GetKeywords(state, attacker).Contains("Overcrush"))
+            // Direct feedback (2026-09-18): a lane holding 2+ live
+            // attackers grants EVERY attacker in it Overcrush for this
+            // combat - not stat pooling, just this one condition. Read
+            // fresh off `attackers` (captured at the top of this method,
+            // before either damage wave runs), so an attacker KO'd by an
+            // ability earlier in the Action/Global Window already isn't
+            // counted, and the survivor of a once-crowded lane correctly
+            // loses this the moment it's back down to one: "if the
+            // opponent can somehow KO one of them before damage
+            // resolution, Overcrush goes away." Deliberately isolated to
+            // this one condition (not a real keyword, not touching
+            // QueryEngine.GetKeywords) - explicitly provisional, easy to
+            // delete or move to a Champion/character ability later.
+            var sharesACrowdedLane = attackers.Count(a => a.Lane == attacker.Lane) >= 2;
+            if (QueryEngine.GetKeywords(state, attacker).Contains("Overcrush") || sharesACrowdedLane)
                 overcrushCandidates[attacker.Id] = (attack, blockerDefenseTotal, declaredBlockerIds);
         }
 

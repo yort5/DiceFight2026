@@ -267,6 +267,62 @@ public class CombatEngineTests
         Assert.Equal(15, state.PlayerTwo.Life); // full 5 attack - no live blocker defense to subtract
     }
 
+    // --- Overcrush from lane crowding (direct feedback, 2026-09-18) ---
+    // Provisional, explicitly isolated to one condition in AssignCombatDamage
+    // (see its own remarks) - a lane with 2+ live attackers grants EVERY
+    // attacker in it Overcrush for this combat, with no real keyword and
+    // no stat pooling involved.
+
+    [Fact]
+    public void TwoAttackersShareALane_BlockedOneBleedsThroughWithoutTheRealKeyword()
+    {
+        var bruiser = BuildCard("Bruiser", [new Face([], new CharacterFaceData(1, 1, 5, 2), Kind: FaceKind.CharacterFace)]); // 5A, NO Overcrush keyword
+        var laneMate = BuildCard("LaneMate", [new Face([], new CharacterFaceData(1, 1, 1, 1), Kind: FaceKind.CharacterFace)]); // just crowds the lane
+        var sidekickCard = BuildCard("Sidekick", [new Face([], new CharacterFaceData(1, 0, 1, 1), Kind: FaceKind.CharacterFace)]); // 1D
+        var state = BuildState(bruiser, laneMate, sidekickCard);
+        var attacker = AddDie(state, bruiser, "p1");
+        var laneMateDie = AddDie(state, laneMate, "p1");
+        var blocker = AddDie(state, sidekickCard, "p2");
+        var queue = new AbilityQueue();
+
+        CombatEngine.DeclareAttackers(state, queue, new Dictionary<string, int> { [attacker.Id] = 0, [laneMateDie.Id] = 0 });
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attacker.Id, blocker.Id); // laneMateDie stays unblocked
+        CombatEngine.DeclareBlockers(state, queue, assignment, [blocker.Id]);
+
+        var result = CombatEngine.AssignCombatDamage(state, queue, assignment, SoloSplit(attacker.Id, blocker.Id, 5));
+
+        Assert.Contains(blocker.Id, result.KOdDieIds);
+        // 20 - 1 (laneMate's own unblocked hit) - 4 (attacker's 5A - 1D leftover, now bleeding through despite no keyword)
+        Assert.Equal(15, state.PlayerTwo.Life);
+    }
+
+    [Fact]
+    public void TwoAttackersShareALane_ButOneIsKOdBeforeDamageResolves_SurvivorLosesOvercrush()
+    {
+        var bruiser = BuildCard("Bruiser", [new Face([], new CharacterFaceData(1, 1, 5, 2), Kind: FaceKind.CharacterFace)]);
+        var laneMate = BuildCard("LaneMate", [new Face([], new CharacterFaceData(1, 1, 1, 1), Kind: FaceKind.CharacterFace)]);
+        var sidekickCard = BuildCard("Sidekick", [new Face([], new CharacterFaceData(1, 0, 1, 1), Kind: FaceKind.CharacterFace)]);
+        var state = BuildState(bruiser, laneMate, sidekickCard);
+        var attacker = AddDie(state, bruiser, "p1");
+        var laneMateDie = AddDie(state, laneMate, "p1");
+        var blocker = AddDie(state, sidekickCard, "p2");
+        var queue = new AbilityQueue();
+
+        CombatEngine.DeclareAttackers(state, queue, new Dictionary<string, int> { [attacker.Id] = 0, [laneMateDie.Id] = 0 });
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attacker.Id, blocker.Id);
+        CombatEngine.DeclareBlockers(state, queue, assignment, [blocker.Id]);
+
+        EffectInterpreter.KoDie(state, queue, laneMateDie, triggersKOAbilities: false); // an ability KO's the lane-mate first
+
+        var result = CombatEngine.AssignCombatDamage(state, queue, assignment, SoloSplit(attacker.Id, blocker.Id, 5));
+
+        Assert.Contains(blocker.Id, result.KOdDieIds);
+        // Back down to a single attacker before damage resolved - no Overcrush, the leftover is wasted.
+        Assert.Equal(20, state.PlayerTwo.Life);
+    }
+
     // --- Fast (the rulebook's own worked example) ---
 
     private static (GameState state, DieInstance attacker, DieInstance blocker) CreateFastCombatState(
