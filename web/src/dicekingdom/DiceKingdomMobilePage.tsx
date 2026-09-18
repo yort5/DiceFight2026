@@ -1583,6 +1583,23 @@ export function DiceKingdomMobilePage() {
   const oppDice = game.dice.filter((d) => d.controllerId === opponentId);
   const yourReserve = yourDice.filter((d) => d.zone === "ReservePool");
 
+  // Direct feedback (2026-09-18): tapping a die to declare/block should
+  // visually move it out of the Field row into the Attack Zone, not
+  // leave it sitting in both places - the real die doesn't actually
+  // change zone server-side until the whole declare/block batch is
+  // submitted (AttackLanesCard's own remarks), so this is purely a
+  // local-preview filter on top of it. Covers blockers (what was
+  // reported) and attacker declarations (the identical gap - a
+  // declared-but-not-yet-submitted attacker had the same problem).
+  const pendingLocallyMovedIds = new Set<string>(
+    step === "select-attackers"
+      ? Object.keys(pendingAttackers)
+      : step === "assign-blockers"
+        ? Object.values(blockAssignments).filter((id): id is string => id !== null)
+        : [],
+  );
+  const yourFieldVisibleDice = yourDice.filter((d) => !pendingLocallyMovedIds.has(d.id));
+
   const drawnZone = yourDice.filter((d) => d.zone === "DiceFromBag" || d.zone === "DiceFromPrep");
   const hasRolledThisStep = step === "roll-and-reroll" && drawnZone.length === 0;
   const { steps: chainSteps, index: chainIndex } = chainFor(phase, step, hasRolledThisStep || rerollUsedThisStep, game.dice, game.activePlayerId, cardsById);
@@ -1973,7 +1990,7 @@ export function DiceKingdomMobilePage() {
         <MatCard
           mine
           player={youPlayer}
-          dice={yourDice}
+          dice={yourFieldVisibleDice}
           cardsById={cardsById}
           isActivePlayer={you === game.activePlayerId}
           onOpenRoster={() => setRosterViewFor(you)}
