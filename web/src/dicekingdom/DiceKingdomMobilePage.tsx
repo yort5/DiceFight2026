@@ -106,6 +106,17 @@ function unblockedFaceDamage(a: Die, myBlockers: Die[], laneAttackerCount: numbe
   return Math.max(0, atk - blockerDefTotal);
 }
 
+// blockAssignments is keyed by attacker id but holds a LIST of blockers
+// (gang-blocking) - this is the one place that shape turns into the
+// flat {attackerDieId, blockerDieId} pairs the API/bot actually want,
+// one row per blocker, shared by every submission call site so they
+// can't drift apart on the flattening.
+function blockAssignmentsToApi(assignments: Record<string, string[]>): { attackerDieId: string; blockerDieId: string }[] {
+  return Object.entries(assignments).flatMap(([attackerDieId, blockerIds]) =>
+    blockerIds.map((blockerDieId) => ({ attackerDieId, blockerDieId })),
+  );
+}
+
 // Cost is paid from whichever Reserve energy dice cover it - the mobile
 // design drops individual Reserve die tiles entirely (the divider rail's
 // own remarks: "all we need once we are past the Main step is the energy
@@ -837,7 +848,7 @@ function AttackLanesCard({
   laneSel,
   onTapLane,
   onTapAttacker,
-  onTapBlockerOnAttacker,
+  onTapBlocker,
   onTapChip,
   selectedId,
 }: {
@@ -850,7 +861,7 @@ function AttackLanesCard({
   laneSel: number;
   onTapLane: (lane: number) => void;
   onTapAttacker: (id: string) => void;
-  onTapBlockerOnAttacker: (attackerId: string) => void;
+  onTapBlocker: (attackerId: string, blockerId: string) => void;
   onTapChip: (lane: number) => void;
   selectedId: string | null;
 }) {
@@ -885,14 +896,13 @@ function AttackLanesCard({
           const chipText = attackers.length === 0 ? null : `${faceDamage} to face`;
           // Direct feedback (2026-09-17): "making me click on the attacker
           // to block doesn't make sense... tapping anywhere in the lane
-          // should do it." Only unambiguous with exactly one attacker in
-          // the lane (onTapAttacker already knows how to complete/undo a
-          // block assignment against a selected blocker die) - with 2-3
-          // attackers stacked in one lane, which one a bare lane-tap would
-          // target is genuinely ambiguous, so those still require tapping
-          // the specific attacker tile.
+          // should do it." Any live attacker in the lane works as the
+          // add-blocker target now (addBlocker only ever ADDS, never
+          // replaces - direct feedback 2026-09-18 - so which specific
+          // attacker id a blocker is nominally paired with no longer
+          // matters for a multi-attacker lane the way it used to).
           const tapLane = () => {
-            if (step === "assign-blockers" && !isYourTurn && attackers.length === 1) {
+            if (step === "assign-blockers" && !isYourTurn && attackers.length >= 1) {
               onTapAttacker(attackers[0].id);
               return;
             }
@@ -928,7 +938,7 @@ function AttackLanesCard({
                         regardless of position/orientation or color vision. */}
                     {attackers.length > 0 && <span className="dkm-lane-role def">Blocking</span>}
                     {blockers.map((b) => (
-                      <LaneDie key={b.id} die={b} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === b.id} onTap={() => onTapBlockerOnAttacker(b.id)} />
+                      <LaneDie key={b.id} die={b} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === b.id} onTap={() => onTapBlocker(attackers[0]?.id ?? "", b.id)} />
                     ))}
                   </div>
                   {chipText && (
@@ -973,7 +983,7 @@ function AttackLanesCard({
                   <div className="dkm-lane-blockers">
                     {attackers.length > 0 && <span className="dkm-lane-role def">Blocking</span>}
                     {blockers.map((b) => (
-                      <LaneDie key={b.id} die={b} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === b.id} onTap={() => onTapBlockerOnAttacker(b.id)} />
+                      <LaneDie key={b.id} die={b} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === b.id} onTap={() => onTapBlocker(attackers[0]?.id ?? "", b.id)} />
                     ))}
                     {step === "assign-blockers" && !isYourTurn && attackers.length > 0 && blockers.length === 0 && (
                       <div className="dkm-lane-tile empty blocker-empty">no blocker</div>
@@ -1156,7 +1166,13 @@ export function DiceKingdomMobilePage() {
   const [rerollUsedThisStep, setRerollUsedThisStep] = useState(false);
   const [pendingAttackers, setPendingAttackers] = useState<Record<string, number>>({});
   const [laneSel, setLaneSel] = useState(0);
-  const [blockAssignments, setBlockAssignments] = useState<Record<string, string | null>>({});
+  // Real bug, direct feedback (2026-09-18): a single blocker id per
+  // attacker meant assigning a SECOND blocker to a lane (gang-blocking -
+  // the backend's own CombatAssignment already supports it, a blocker
+  // is just never limited to one per attacker there) silently REPLACED
+  // the first one instead of adding to it - tapping an existing blocker
+  // "swapped" it back to the field. Now a list per attacker key.
+  const [blockAssignments, setBlockAssignments] = useState<Record<string, string[]>>({});
   const [stepsOpen, setStepsOpen] = useState(false);
   // Which player's roster the sheet is showing, or null when closed -
   // NOT a bare boolean (real bug, direct feedback 2026-09-16): both
@@ -1361,7 +1377,7 @@ export function DiceKingdomMobilePage() {
     const client = apiAs(gameId, owner);
     if (game.currentStepId === "assign-blockers" && assignBlockersAttackerCount === 0) {
       runQuiet(() => client.declareBlockers(gameId, []));
-    } else if (game.currentStepId === "action-global-window" && Object.values(blockAssignments).filter(Boolean).length === 0) {
+    } else if (game.currentStepId === "action-global-window" && blockAssignmentsToApi(blockAssignments).length === 0) {
       runQuiet(() => client.assignCombatDamage(gameId, []));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1439,8 +1455,8 @@ export function DiceKingdomMobilePage() {
     }
     if (step === "assign-blockers") {
       const assignments = decideBlockers(g, botId);
-      const map: Record<string, string | null> = {};
-      for (const a of assignments) map[a.attackerDieId] = a.blockerDieId;
+      const map: Record<string, string[]> = {};
+      for (const a of assignments) (map[a.attackerDieId] ??= []).push(a.blockerDieId);
       setBlockAssignments(map);
       const result = await runBot(() => botApi.declareBlockers(gid, assignments));
       if (!result) {
@@ -1450,9 +1466,7 @@ export function DiceKingdomMobilePage() {
       return;
     }
     if (step === "action-global-window") {
-      const assignments = Object.entries(blockAssignments)
-        .filter((e): e is [string, string] => !!e[1])
-        .map(([attackerDieId, blockerDieId]) => ({ attackerDieId, blockerDieId }));
+      const assignments = blockAssignmentsToApi(blockAssignments);
       // The empty case is handled generically by the auto-skip effect
       // above - only step in here for a real pairing.
       if (assignments.length === 0) return;
@@ -1595,7 +1609,7 @@ export function DiceKingdomMobilePage() {
     step === "select-attackers"
       ? Object.keys(pendingAttackers)
       : step === "assign-blockers"
-        ? Object.values(blockAssignments).filter((id): id is string => id !== null)
+        ? Object.values(blockAssignments).flat()
         : [],
   );
   const yourFieldVisibleDice = yourDice.filter((d) => !pendingLocallyMovedIds.has(d.id));
@@ -1639,10 +1653,9 @@ export function DiceKingdomMobilePage() {
   // Nothing to show yet during Declare Attackers itself.
   const blockersByAttacker = new Map<string, Die[]>();
   if (step !== "select-attackers") {
-    for (const [attackerId, blockerId] of Object.entries(blockAssignments)) {
-      if (!blockerId) continue;
-      const blocker = game.dice.find((d) => d.id === blockerId);
-      if (blocker) blockersByAttacker.set(attackerId, [blocker]);
+    for (const [attackerId, blockerIds] of Object.entries(blockAssignments)) {
+      const blockers = blockerIds.map((id) => game.dice.find((d) => d.id === id)).filter((d): d is Die => !!d);
+      if (blockers.length > 0) blockersByAttacker.set(attackerId, blockers);
     }
   }
   const laneAttackersForBreakdown = laneBreakdown !== null ? (attackersByLane[laneBreakdown] ?? []) : [];
@@ -1696,14 +1709,37 @@ export function DiceKingdomMobilePage() {
     }
   }
 
-  function assignBlocker(attackerId: string, blockerId: string) {
+  // Direct feedback (2026-09-18): "tapping for the second blocker
+  // doesn't appear to work... it just swaps the die in the field zone
+  // with the die already blocking." Gang-blocking (several of your own
+  // dice on one lane) is a real, already-supported thing server-side -
+  // this needs to ADD to whichever blockers are already there, never
+  // replace them. A blocker can still only ever be in ONE lane at a
+  // time, so it's pulled out of any other attacker's list first.
+  function addBlocker(attackerId: string, blockerId: string) {
     setBlockAssignments((prev) => {
-      const next: Record<string, string | null> = {};
-      for (const [aid, bid] of Object.entries(prev)) next[aid] = bid === blockerId ? null : bid;
-      next[attackerId] = blockerId;
+      const next: Record<string, string[]> = {};
+      for (const [aid, bids] of Object.entries(prev)) {
+        const filtered = bids.filter((id) => id !== blockerId);
+        if (filtered.length > 0) next[aid] = filtered;
+      }
+      next[attackerId] = [...(next[attackerId] ?? []), blockerId];
       return next;
     });
     setSelectedId(null);
+  }
+
+  // Removes a blocker from wherever it's currently assigned (its own
+  // lane pairing doesn't matter for this - it's only ever in one place).
+  function removeBlocker(blockerId: string) {
+    setBlockAssignments((prev) => {
+      const next: Record<string, string[]> = {};
+      for (const [aid, bids] of Object.entries(prev)) {
+        const filtered = bids.filter((id) => id !== blockerId);
+        if (filtered.length > 0) next[aid] = filtered;
+      }
+      return next;
+    });
   }
 
   const selectedDie = selectedId ? game.dice.find((d) => d.id === selectedId) ?? null : null;
@@ -1763,13 +1799,9 @@ export function DiceKingdomMobilePage() {
     if (step === "assign-blockers" && !isYourTurn && selectedId) {
       const blockerDie = game.dice.find((d) => d.id === selectedId);
       if (blockerDie && blockerDie.controllerId === you && blockerDie.zone === "FieldZone") {
-        assignBlocker(attackerId, selectedId);
+        addBlocker(attackerId, selectedId);
         return;
       }
-    }
-    if (blockAssignments[attackerId] && step === "assign-blockers" && !isYourTurn) {
-      setBlockAssignments((prev) => ({ ...prev, [attackerId]: null }));
-      return;
     }
     // A lane that already has an attacker fills most of its own tap
     // target with that die's tile, so tapping the lane again to add a
@@ -1790,6 +1822,32 @@ export function DiceKingdomMobilePage() {
       }
     }
     toggleSelect(attackerId);
+  };
+
+  // Direct feedback (2026-09-18): "if I tap the die in the field zone
+  // and then tap an existing blocker, it should add that die to that
+  // lane" - previously this bare-toggled the tapped blocker's own
+  // selection instead, abandoning whatever field die was selected.
+  // Tapping an already-SELECTED blocker again removes it (matches
+  // onTapAttacker's own "declared already -> pull it back" pattern for
+  // attackers, now expressed per-blocker instead of clearing the whole
+  // lane at once).
+  const onTapBlocker = (attackerId: string, blockerId: string) => {
+    if (step === "assign-blockers" && !isYourTurn) {
+      if (selectedId && selectedId !== blockerId) {
+        const selected = game.dice.find((d) => d.id === selectedId);
+        if (selected && selected.zone === "FieldZone" && selected.controllerId === you) {
+          addBlocker(attackerId, selectedId);
+          return;
+        }
+      }
+      if (selectedId === blockerId) {
+        removeBlocker(blockerId);
+        setSelectedId(null);
+        return;
+      }
+    }
+    toggleSelect(blockerId);
   };
 
   // ---- Primary button ----
@@ -1854,27 +1912,11 @@ export function DiceKingdomMobilePage() {
       primaryDisabled = true;
     } else {
       primaryLabel = "Blockers set";
-      primaryRun = () =>
-        run(() =>
-          api.declareBlockers(
-            game.gameId,
-            Object.entries(blockAssignments)
-              .filter((e): e is [string, string] => !!e[1])
-              .map(([attackerDieId, blockerDieId]) => ({ attackerDieId, blockerDieId })),
-          ),
-        );
+      primaryRun = () => run(() => api.declareBlockers(game.gameId, blockAssignmentsToApi(blockAssignments)));
     }
   } else if (step === "action-global-window") {
     primaryLabel = "Resolve Damage";
-    primaryRun = () =>
-      run(() =>
-        api.assignCombatDamage(
-          game.gameId,
-          Object.entries(blockAssignments)
-            .filter((e): e is [string, string] => !!e[1])
-            .map(([attackerDieId, blockerDieId]) => ({ attackerDieId, blockerDieId })),
-        ),
-      );
+    primaryRun = () => run(() => api.assignCombatDamage(game.gameId, blockAssignmentsToApi(blockAssignments)));
   } else {
     // return-to-field
     primaryLabel = "Pass Turn";
@@ -1979,7 +2021,7 @@ export function DiceKingdomMobilePage() {
               laneSel={laneSel}
               onTapLane={declareIntoLane}
               onTapAttacker={onTapAttacker}
-              onTapBlockerOnAttacker={(id) => toggleSelect(id)}
+              onTapBlocker={onTapBlocker}
               onTapChip={toggleLaneBreakdown}
               selectedId={selectedId}
             />
