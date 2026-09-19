@@ -2829,3 +2829,12 @@ Follow-up (2026-09-19): with pairings now surviving, the bot's heartbeat effect
 - Used/Prep/Out/Bag on either mat now open a bottom `PileSheet` of real die
   tiles (FacedownTile for unrolled dice) with names; state lifted to the page.
   Verified headless: `~/.devtools/playwright/pile-sheet-check.js`.
+
+## Pile strip + smarter energy spend (2026-09-19)
+- Pile view is now an inline `PileStrip` inside the owning mat (36px tiles, no
+  overlay) - the full-screen sheet blacked out the game.
+- `pickEnergy` (bot.ts, shared by the human Buy/Field auto-select and the bot)
+  now searches subsets and orders the offered dice so the LAST (partially spent)
+  die is the one that spins down usefully: Tardigrade double -> its 1A/1D single
+  face (best), Character double -> bare single energy, else the pip is lost.
+  Engine spends in offered order (TurnEngine.SpendEnergy/TrySpinDown).

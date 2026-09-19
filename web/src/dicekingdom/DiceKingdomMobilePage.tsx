@@ -15,7 +15,7 @@ import { claimSeatFromUrl, inviteLink, nameClaimedSeat, rememberSeats } from "./
 import { DieCube, type CubeSpin } from "./DieCube";
 import { facesFor } from "./dieFaces";
 import { useDiceRoll, type RollTarget } from "./useDiceRoll";
-import { decideAttackers, decideBlockers, decideMainAction, decidePendingChoice, decisionOwner } from "./bot";
+import { decideAttackers, decideBlockers, decideMainAction, decidePendingChoice, decisionOwner, pickEnergy } from "./bot";
 import type { CardDef, Die, GameState, PlayerState, StatModifier } from "./types";
 
 // Dice Kingdom - mobile refresh (2026-09). A GENUINELY SEPARATE front end
@@ -136,24 +136,8 @@ function blockAssignmentsToApi(assignments: Record<string, string[]>): { attacke
 // Claw-heavy reserve can absolutely buy a Wing card, one Wild pip plus
 // spare Claim for the rest, same as the physical game.
 function pickEnergyForCost(reserve: Die[], cost: number, matchType: string | null): string[] | null {
-  if (cost <= 0) return [];
-  let pool = reserve.filter((d) => d.energyAmount > 0).sort((a, b) => a.energyAmount - b.energyAmount);
-  const picked: string[] = [];
-  let total = 0;
-  if (matchType) {
-    const matchIdx = pool.findIndex((d) => d.energySymbolId === matchType || d.energySymbolId === "Wild");
-    if (matchIdx === -1) return null; // nothing at all satisfies the type requirement
-    const matchDie = pool[matchIdx];
-    picked.push(matchDie.id);
-    total += matchDie.energyAmount;
-    pool = pool.filter((_, i) => i !== matchIdx);
-  }
-  for (const d of pool) {
-    if (total >= cost) break;
-    picked.push(d.id);
-    total += d.energyAmount;
-  }
-  return total >= cost ? picked : null;
+  // Shared with the bot - see bot.ts pickEnergy for how the leftover die is chosen.
+  return pickEnergy(reserve, cost, matchType);
 }
 
 interface ChainStep {
@@ -339,10 +323,11 @@ function PileStack({ dice, cardsById }: { dice: Die[]; cardsById: Map<string, Ca
 type PileZone = "used" | "prep" | "out" | "bag";
 const PILE_TITLES: Record<PileZone, string> = { used: "Used", prep: "Prep", out: "Out of play", bag: "Bag" };
 
-// Bottom sheet showing a pile's dice the same way the mat shows the field:
-// real die tiles where a face is showing, identity-only tiles otherwise
-// (Bag, and anything not currently rolled). Opened from either player's mat.
-function PileSheet({
+// Compact strip of a pile's dice, shown inside the owning player's mat (no
+// overlay, so the rest of the game stays visible): real die tiles where a
+// face is showing, identity-only tiles otherwise (Bag, anything unrolled).
+// Tap the same pile again to close it.
+function PileStrip({
   title,
   dice,
   cardsById,
@@ -358,21 +343,22 @@ function PileSheet({
   const nameOf = (d: Die) => (d.cardId ? (cardsById.get(d.cardId)?.name ?? d.cardId) : "Tardigrade");
   const sorted = [...dice].sort((a, b) => nameOf(a).localeCompare(nameOf(b)));
   return (
-    <div className="dkm-overlay-backdrop" onClick={onClose}>
-      <div className="dkm-sheet dkm-pile-sheet" onClick={(e) => e.stopPropagation()}>
-        <div className="dkm-sheet-handle" />
-        <div className="dkm-sheet-title">
-          {mine ? "Your" : "Their"} {title} <small>({dice.length})</small>
-        </div>
-        {sorted.length === 0 && <span className="dkm-empty-hint">Nothing here.</span>}
-        <div className="dkm-tile-row wrap dkm-pile-sheet-tiles">
-          {sorted.map((d) => (
-            <div key={d.id} className="dkm-pile-sheet-item">
-              {rolled(d) ? <DTile die={d} cardsById={cardsById} size={54} mine={mine} /> : <FacedownTile die={d} size={54} />}
-              <span className="dkm-pile-sheet-name">{nameOf(d)}</span>
-            </div>
-          ))}
-        </div>
+    <div className="dkm-pile-strip">
+      <div className="dkm-pile-strip-head">
+        <span className="dkm-pile-label">
+          {title} ({dice.length})
+        </span>
+        <button type="button" className="dkm-text-btn" onClick={onClose}>
+          Close
+        </button>
+      </div>
+      {sorted.length === 0 && <span className="dkm-empty-hint">Nothing here.</span>}
+      <div className="dkm-tile-row wrap">
+        {sorted.map((d) => (
+          <div key={d.id} className="dkm-pile-sheet-item" title={nameOf(d)}>
+            {rolled(d) ? <DTile die={d} cardsById={cardsById} size={36} mine={mine} /> : <FacedownTile die={d} size={36} />}
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -553,6 +539,7 @@ function MatCard({
   isActivePlayer,
   onOpenRoster,
   onOpenPile,
+  openPile,
   expandable,
   spins,
   turnOffsets,
@@ -567,6 +554,7 @@ function MatCard({
   isActivePlayer: boolean;
   onOpenRoster: () => void;
   onOpenPile: (zone: PileZone) => void;
+  openPile: PileZone | null;
   expandable: boolean;
   spins: Record<string, CubeSpin>;
   turnOffsets: Record<string, number>;
@@ -666,6 +654,16 @@ function MatCard({
             <b>{bag.length}</b> bag
           </button>
         </div>
+      )}
+
+      {openPile && (
+        <PileStrip
+          title={PILE_TITLES[openPile]}
+          dice={{ used, prep, out, bag }[openPile]}
+          cardsById={cardsById}
+          mine={mine}
+          onClose={() => onOpenPile(openPile)}
+        />
       )}
 
       <span className="dkm-field-label">{mine ? "Field" : "Their field · active"}</span>
@@ -2011,7 +2009,8 @@ export function DiceKingdomMobilePage() {
           cardsById={cardsById}
           isActivePlayer={opponentId === game.activePlayerId}
           onOpenRoster={() => setRosterViewFor(opponentId)}
-          onOpenPile={(zone) => setPileView({ mine: false, zone })}
+          onOpenPile={(zone) => setPileView((c) => (c?.mine === false && c.zone === zone ? null : { mine: false, zone }))}
+          openPile={pileView?.mine === false ? pileView.zone : null}
           expandable
           spins={spins}
           turnOffsets={offsets}
@@ -2092,7 +2091,8 @@ export function DiceKingdomMobilePage() {
           dice={yourFieldVisibleDice}
           cardsById={cardsById}
           isActivePlayer={you === game.activePlayerId}
-          onOpenPile={(zone) => setPileView({ mine: true, zone })}
+          onOpenPile={(zone) => setPileView((c) => (c?.mine === true && c.zone === zone ? null : { mine: true, zone }))}
+          openPile={pileView?.mine === true ? pileView.zone : null}
           onOpenRoster={() => setRosterViewFor(you)}
           expandable={false}
           spins={spins}
@@ -2248,15 +2248,6 @@ export function DiceKingdomMobilePage() {
         </div>
       </div>
 
-      {pileView && (
-        <PileSheet
-          title={PILE_TITLES[pileView.zone]}
-          dice={(pileView.mine ? yourDice : oppDice).filter((d) => d.zone === { used: "UsedPile", prep: "PrepArea", out: "OutOfPlay", bag: "Bag" }[pileView.zone])}
-          cardsById={cardsById}
-          mine={pileView.mine}
-          onClose={() => setPileView(null)}
-        />
-      )}
       {stepsOpen && <StepPopout phaseLabel={phaseLabel} steps={chainSteps} index={chainIndex} onClose={() => setStepsOpen(false)} />}
       {rosterViewFor && (
         <RosterSheet

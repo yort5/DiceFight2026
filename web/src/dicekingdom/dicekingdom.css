@@ -3314,3 +3314,20 @@
   text-align: center;
   color: var(--dkm-ink-dim);
 }
+
+.dk-mobile .dkm-pile-strip {
+  margin: 0 0 9px;
+  padding: 7px 8px;
+  border-radius: 9px;
+  background: var(--dkm-raised);
+  border: 1px solid var(--dkm-border);
+}
+.dk-mobile .dkm-pile-strip-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.dk-mobile .dkm-pile-strip .dkm-pile-sheet-item {
+  width: auto;
+}

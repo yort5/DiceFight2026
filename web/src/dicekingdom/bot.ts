@@ -50,13 +50,51 @@ function fieldingCost(die: Die, cardsById: Map<string, CardDef>): number {
   return cardsById.get(die.cardId)?.levels[die.level - 1]?.fieldingCost ?? 0;
 }
 
-// Cheapest set of reserve energy dice covering `cost`, with at least one pip
-// matching `matchType` (or Wild) when the card has a type requirement - same
-// rule as the human UI's pickEnergyForCost / TurnEngine.SpendEnergy. Null if
-// it can't be paid.
-function pickEnergy(pool: Die[], cost: number, matchType: string | null): string[] | null {
+// Which reserve energy dice to spend on `cost`, with at least one pip matching
+// `matchType` (or Wild) when the card has a type requirement - same rule as
+// TurnEngine.SpendEnergy. Null if it can't be paid.
+//
+// The engine spends dice in the order offered and stops once the cost is met;
+// only the LAST die can be overspent, and then it spins down to its own
+// lower face (TurnEngine.TrySpinDown). What that leaves behind differs:
+//   - Tardigrade double-energy -> its single-energy face, which still has
+//     stats (1A/1D): best.
+//   - Character double-energy -> a bare single-energy face, no stats: ok.
+//   - anything else -> the leftover pip is simply lost: worst.
+// So this tries every subset/last-die choice that exactly covers the cost
+// and keeps the one whose leftover is most useful (then fewest dice).
+export function pickEnergy(pool: Die[], cost: number, matchType: string | null): string[] | null {
   if (cost <= 0) return [];
-  let rest = [...pool].sort((a, b) => a.energyAmount - b.energyAmount);
+  const dice = pool.filter((d) => d.energyAmount > 0).sort((a, b) => a.energyAmount - b.energyAmount);
+  const matches = (d: Die) => !matchType || d.energySymbolId === matchType || d.energySymbolId === "Wild";
+  if (dice.length > 14) return pickEnergyGreedy(dice, cost, matchType);
+
+  let best: { ids: string[]; score: number; count: number } | null = null;
+  for (let mask = 1; mask < 1 << dice.length; mask++) {
+    const members = dice.filter((_, i) => mask & (1 << i));
+    const sum = members.reduce((n, d) => n + d.energyAmount, 0);
+    if (sum < cost || !members.some(matches)) continue;
+    for (const last of members) {
+      if (sum - last.energyAmount >= cost) continue; // engine would have stopped before `last`
+      const overspend = sum - cost;
+      let score = 4; // exact payment, nothing left over to protect
+      if (overspend > 0) {
+        const leftover = overspend; // pips still showing on the spun-down die
+        score = last.isTardigrade && last.energyAmount === 2 && leftover === 1 ? 3
+          : !last.isTardigrade && last.energyAmount === 2 && leftover === 1 ? 2
+          : 0;
+      }
+      const count = members.length;
+      if (!best || score > best.score || (score === best.score && count < best.count)) {
+        best = { ids: [...members.filter((d) => d !== last), last].map((d) => d.id), score, count };
+      }
+    }
+  }
+  return best?.ids ?? null;
+}
+
+function pickEnergyGreedy(dice: Die[], cost: number, matchType: string | null): string[] | null {
+  let rest = [...dice];
   const picked: string[] = [];
   let total = 0;
   if (matchType) {
