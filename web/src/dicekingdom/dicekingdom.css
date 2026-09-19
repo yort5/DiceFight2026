@@ -3374,3 +3374,13 @@
 .dk-mobile .dkm-meter:not(.ko) .dkm-meter-label {
   color: var(--dkm-ink-dim);
 }
+
+/* Keep server errors (e.g. a rejected purchase) on screen wherever the page
+   is scrolled to - previously they sat at the very top and went unseen. */
+.dk-mobile .dkm-error {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: #3a1f1a;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+}
