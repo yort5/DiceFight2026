@@ -1281,7 +1281,10 @@ export function DiceKingdomMobilePage() {
         setRerollUsedThisStep(false);
       }
       if (next.currentStepId !== "select-attackers") setPendingAttackers({});
-      if (next.currentStepId !== "assign-blockers") setBlockAssignments({});
+      // Pairings must survive into action-global-window: the server doesn't
+      // persist them, and assignCombatDamage([]) treats every attacker as
+      // unblocked (so nothing is ever KO'd).
+      if (next.currentStepId !== "assign-blockers" && next.currentStepId !== "action-global-window") setBlockAssignments({});
       return next;
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));

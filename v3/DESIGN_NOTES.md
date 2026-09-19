@@ -2786,3 +2786,12 @@ revisit if that changes. Verified end-to-end via
 autonomous, a human side that only ever skips/blocks nothing) ran many
 full turns with real purchases, fields, attacks, and damage (life went
 to -25) with zero stuck steps and zero uncaught errors.
+
+## Bug: KO'd dice never left the Attack Zone on mobile (2026-09-19)
+
+Root cause was client-side, not the engine: `run()` cleared `blockAssignments`
+whenever the step wasn't `assign-blockers`, and `declareBlockers` lands on
+`action-global-window`, so "Resolve Damage" sent `[]` and the server (which
+doesn't persist pairings) treated every attacker as unblocked - no combat
+damage to blockers, no KOs. Now cleared only outside assign-blockers /
+action-global-window (mobile and desktop pages both had the line).

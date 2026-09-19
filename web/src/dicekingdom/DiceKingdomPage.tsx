@@ -749,7 +749,7 @@ export function DiceKingdomPage() {
       clearSelection();
       setOpenCardId(null); // e.g. a completed Purchase - see openCardId's own remarks
       if (next.currentStepId !== "roll-and-reroll") setRerolledIds([]);
-      if (next.currentStepId !== "assign-blockers") setBlockAssignments({});
+      if (next.currentStepId !== "assign-blockers" && next.currentStepId !== "action-global-window") setBlockAssignments({});
       return next;
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
