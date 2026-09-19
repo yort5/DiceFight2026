@@ -62,7 +62,7 @@ const LANE_COUNT = 4;
 // decision functions and api.ts's apiAs are already shared, page-
 // agnostic modules; only the stateful wiring below (whose turn it is,
 // the heartbeat timer, the identity patch) needed porting.
-const BOT_MOVE_DELAY_MS = 700;
+const BOT_MOVE_DELAY_MS = 2000; // slow enough to follow the opponent's turn
 
 function rolled(d: Die): boolean {
   return d.effectiveAttack !== null || d.energySymbolId !== null;
@@ -336,6 +336,34 @@ function PileStack({ dice, cardsById }: { dice: Die[]; cardsById: Map<string, Ca
   );
 }
 
+// Tapped-open contents of a pile: one chip per card with its glyph, name and
+// count. Works for the Bag too (composition only).
+function PileDetail({ title, dice, cardsById }: { title: string; dice: Die[]; cardsById: Map<string, CardDef> }) {
+  const groups = new Map<string, { sample: Die; count: number }>();
+  for (const d of dice) {
+    const key = d.cardId ?? "tardigrade";
+    const g = groups.get(key);
+    if (g) g.count += 1;
+    else groups.set(key, { sample: d, count: 1 });
+  }
+  return (
+    <div className="dkm-bag-contents">
+      <span className="dkm-pile-label">{title}</span>
+      {groups.size === 0 && <span className="dkm-empty-dash">Empty</span>}
+      {[...groups.entries()].map(([key, { sample, count }]) => {
+        const color = typeColorOf(sample, cardsById);
+        return (
+          <span key={key} className="dkm-bag-item" style={{ borderColor: color }}>
+            <AvatarGlyph die={sample} size={20} color={color} />
+            {key === "tardigrade" ? "Tardigrade" : (cardsById.get(key)?.name ?? key)}
+            {count > 1 && <b> ×{count}</b>}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 // The one die tile shape reused everywhere a real rolled face is on show
 // (tray after rolling, field, reserve creature faces, attack lanes) - a
 // thin wrapper around the repo's real DieCube (same 3D cube /game and
@@ -532,7 +560,8 @@ function MatCard({
 }) {
   const [expanded, setExpanded] = useState(false);
   const [championOpen, setChampionOpen] = useState(false);
-  const [bagOpen, setBagOpen] = useState(false);
+  const [openPile, setOpenPile] = useState<"used" | "prep" | "out" | "bag" | null>(null);
+  const togglePile = (k: "used" | "prep" | "out" | "bag") => setOpenPile((cur) => (cur === k ? null : k));
   const zone = (name: string) => dice.filter((d) => d.zone === name);
   const field = zone("FieldZone");
   const used = zone("UsedPile");
@@ -590,56 +619,47 @@ function MatCard({
       {!expandable || expanded ? (
         <div className={expandable ? "dkm-mat-expanded" : undefined}>
           <div className="dkm-pile-grid">
-            <div className="dkm-pile-cell dkm-pile-used">
+            <button type="button" className={`dkm-pile-cell dkm-pile-used${openPile === "used" ? " open" : ""}`} onClick={() => togglePile("used")}>
               <span className="dkm-pile-label">Used</span>
               <PileStack dice={used} cardsById={cardsById} />
-            </div>
-            <div className="dkm-pile-cell dkm-pile-prep">
+            </button>
+            <button type="button" className={`dkm-pile-cell dkm-pile-prep${openPile === "prep" ? " open" : ""}`} onClick={() => togglePile("prep")}>
               <span className="dkm-pile-label">Prep</span>
               <PileStack dice={prep} cardsById={cardsById} />
-            </div>
-            <div className="dkm-pile-cell">
+            </button>
+            <button type="button" className={`dkm-pile-cell${openPile === "out" ? " open" : ""}`} onClick={() => togglePile("out")}>
               <span className="dkm-pile-label">Out</span>
               <PileStack dice={out} cardsById={cardsById} />
-            </div>
-            <div className="dkm-pile-cell">
+            </button>
+            <button type="button" className={`dkm-pile-cell${openPile === "bag" ? " open" : ""}`} onClick={() => togglePile("bag")}>
               <span className="dkm-pile-label">Bag</span>
-              <button type="button" className="dkm-bag-count dkm-bag-btn" onClick={() => setBagOpen((v) => !v)} aria-expanded={bagOpen}>
-                {bag.length}
-              </button>
-            </div>
+              <span className="dkm-bag-count">{bag.length}</span>
+            </button>
           </div>
-          {bagOpen && (
-            <div className="dkm-bag-contents">
-              {bag.length === 0 ? (
-                <span className="dkm-empty-dash">Bag is empty</span>
-              ) : (
-                [...bag.reduce((m, d) => m.set(d.cardId ?? "tardigrade", (m.get(d.cardId ?? "tardigrade") ?? 0) + 1), new Map<string, number>())].map(
-                  ([cardId, n]) => (
-                    <span key={cardId} className="dkm-bag-item">
-                      {cardId === "tardigrade" ? "Tardigrade" : (cardsById.get(cardId)?.name ?? cardId)}
-                      {n > 1 && <b> ×{n}</b>}
-                    </span>
-                  ),
-                )
-              )}
+          {openPile && (
+            <PileDetail
+              title={{ used: "Used", prep: "Prep", out: "Out of play", bag: "Bag" }[openPile]}
+              dice={{ used, prep, out, bag }[openPile]}
+              cardsById={cardsById}
+            />
+          )}
             </div>
           )}
         </div>
       ) : (
         <div className="dkm-collapsed-row">
-          <span>
+          <button type="button" onClick={() => { setExpanded(true); setOpenPile("used"); }}>
             <b>{used.length}</b> used
-          </span>
-          <span>
+          </button>
+          <button type="button" onClick={() => { setExpanded(true); setOpenPile("prep"); }}>
             <b>{prep.length}</b> prep
-          </span>
-          <span>
+          </button>
+          <button type="button" onClick={() => { setExpanded(true); setOpenPile("out"); }}>
             <b>{out.length}</b> out
-          </span>
-          <span>
+          </button>
+          <button type="button" onClick={() => { setExpanded(true); setOpenPile("bag"); }}>
             <b>{bag.length}</b> bag
-          </span>
+          </button>
         </div>
       )}
 
@@ -1405,7 +1425,10 @@ export function DiceKingdomMobilePage() {
     if (game.currentStepId === "assign-blockers" && assignBlockersAttackerCount === 0) {
       runQuiet(() => client.declareBlockers(gameId, []));
     } else if (game.currentStepId === "action-global-window" && blockAssignmentsToApi(blockAssignments).length === 0) {
-      runQuiet(() => client.assignCombatDamage(gameId, []));
+      // Unblocked damage used to land the instant blockers were set - pause
+      // so the player can see the blocks (or lack of them) first.
+      const t = window.setTimeout(() => runQuiet(() => client.assignCombatDamage(gameId, [])), BOT_MOVE_DELAY_MS);
+      return () => window.clearTimeout(t);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId, game?.version, game?.currentStepId, assignBlockersAttackerCount]);

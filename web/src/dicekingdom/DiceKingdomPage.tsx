@@ -16,7 +16,7 @@ import type { BlockAssignment, CardDef, CharacterFace, Die, GameState, PlayerSta
 const POLL_INTERVAL_MS = 2000;
 // Pause before each computer-opponent move, so a Main Step full of
 // purchases reads as a sequence you can follow rather than one jump-cut.
-const BOT_MOVE_DELAY_MS = 700;
+const BOT_MOVE_DELAY_MS = 2000;
 const CHAMPIONS = [
   { id: "Wolf", energy: "Claw" },
   { id: "Armadillo", energy: "Shell" },

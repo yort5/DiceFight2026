@@ -2808,3 +2808,15 @@ Follow-up (2026-09-19): with pairings now surviving, the bot's heartbeat effect
   in order, remainder on the last. Not yet a player choice.
 - Mobile mat: Used = dimmed/dashed tiles with ✕; Prep = lit panel with ↻.
 - Mobile mat: Bag count is a button that lists the bag's contents by card.
+
+## Piles as tappable panels, bot pacing/purchasing/blocking (2026-09-19)
+- Mobile: Used/Prep/Out/Bag (yours AND opponent's, incl. the collapsed
+  "N used / N prep…" row) open a `PileDetail` panel of glyph+name+count chips.
+- Bot heartbeat 700ms -> 2000ms; the "no blockers -> auto Resolve Damage" also
+  waits 2s so the player can see what happened.
+- Bot never bought: it fielded first (Tardigrades cost 0, so always) and passed
+  energy in arbitrary order. Now buys first ~2/3 of the time when affordable,
+  with a type-matching cheapest-energy picker (`pickEnergy` in bot.ts).
+- Bot blocking was intentional-but-dumb (blocked only if it killed or
+  survived, so 0A/2D vs a 2+ attack never blocked). Now chump-blocks any
+  attacker with Attack > 0 as a fallback (KO'd dice just go to Prep).

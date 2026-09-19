@@ -50,6 +50,30 @@ function fieldingCost(die: Die, cardsById: Map<string, CardDef>): number {
   return cardsById.get(die.cardId)?.levels[die.level - 1]?.fieldingCost ?? 0;
 }
 
+// Cheapest set of reserve energy dice covering `cost`, with at least one pip
+// matching `matchType` (or Wild) when the card has a type requirement - same
+// rule as the human UI's pickEnergyForCost / TurnEngine.SpendEnergy. Null if
+// it can't be paid.
+function pickEnergy(pool: Die[], cost: number, matchType: string | null): string[] | null {
+  if (cost <= 0) return [];
+  let rest = [...pool].sort((a, b) => a.energyAmount - b.energyAmount);
+  const picked: string[] = [];
+  let total = 0;
+  if (matchType) {
+    const idx = rest.findIndex((d) => d.energySymbolId === matchType || d.energySymbolId === "Wild");
+    if (idx === -1) return null;
+    picked.push(rest[idx].id);
+    total += rest[idx].energyAmount;
+    rest = rest.filter((_, i) => i !== idx);
+  }
+  for (const d of rest) {
+    if (total >= cost) break;
+    picked.push(d.id);
+    total += d.energyAmount;
+  }
+  return total >= cost ? picked : null;
+}
+
 export type MainDecision =
   | { kind: "field"; dieId: string; energyDieIds: string[] }
   | { kind: "purchase"; dieId: string; energyDieIds: string[] }
@@ -69,35 +93,36 @@ export function decideMainAction(
   skipIds: ReadonlySet<string>,
 ): MainDecision {
   const energyPool = controlledBy(game, botId, "ReservePool").filter((d) => d.energyAmount > 0);
-  const energyAvailable = (excludeId?: string) =>
-    energyPool.filter((d) => d.id !== excludeId).reduce((sum, d) => sum + d.energyAmount, 0);
 
-  const fieldCandidates = controlledBy(game, botId, "ReservePool")
-    .filter((d) => rolled(d) && d.effectiveAttack !== null && !skipIds.has(d.id))
-    .sort((a, b) => (b.effectiveAttack! + (b.effectiveDefense ?? 0)) - (a.effectiveAttack! + (a.effectiveDefense ?? 0)));
-  for (const die of fieldCandidates) {
-    const cost = fieldingCost(die, cardsById);
-    if (cost <= energyAvailable(die.id)) {
-      return { kind: "field", dieId: die.id, energyDieIds: energyPool.filter((d) => d.id !== die.id).map((d) => d.id) };
-    }
-  }
-
-  // Only the bot's OWN unpurchased dice - a community Basic Action owned
-  // by the opponent would also be legal to buy, but CardDef doesn't carry
-  // enough (card type, community flag) to tell those apart from here.
-  // Missing out on buying community cards is a real gap, not a deliberate
-  // simplification - acceptable for a basic opponent, per the same
-  // "cut what won't get exercised in casual play" call as the missing
-  // win-condition check ([[dicefight2026-workflow-feedback]]).
+  // Purchases first, about two turns in three when one is affordable -
+  // previously fielding always ran first and spent the energy, so the bot
+  // never bought anything. Random per decision, so it still fields
+  // sometimes too. Cheaper-than-best candidates are fine: sorted by cost,
+  // most expensive affordable wins.
   const purchaseCandidates = ownedBy(game, botId, "Unpurchased")
     .filter((d) => d.cardId && !skipIds.has(d.id))
     .map((d) => ({ die: d, card: cardsById.get(d.cardId!) }))
     .filter((x): x is { die: Die; card: CardDef } => !!x.card)
     .sort((a, b) => b.card.purchaseCost - a.card.purchaseCost);
-  for (const { die, card } of purchaseCandidates) {
-    if (card.purchaseCost <= energyAvailable()) {
-      return { kind: "purchase", dieId: die.id, energyDieIds: energyPool.map((d) => d.id) };
+  if (Math.random() < 0.67) {
+    for (const { die, card } of purchaseCandidates) {
+      const pay = pickEnergy(energyPool, card.purchaseCost, card.energyTypes[0] ?? null);
+      if (pay) return { kind: "purchase", dieId: die.id, energyDieIds: pay };
     }
+  }
+
+  const fieldCandidates = controlledBy(game, botId, "ReservePool")
+    .filter((d) => rolled(d) && d.effectiveAttack !== null && !skipIds.has(d.id))
+    .sort((a, b) => (b.effectiveAttack! + (b.effectiveDefense ?? 0)) - (a.effectiveAttack! + (a.effectiveDefense ?? 0)));
+  for (const die of fieldCandidates) {
+    const pay = pickEnergy(energyPool.filter((d) => d.id !== die.id), fieldingCost(die, cardsById), null);
+    if (pay) return { kind: "field", dieId: die.id, energyDieIds: pay };
+  }
+
+  // Nothing fielded and the coin flip skipped buying - still buy if possible.
+  for (const { die, card } of purchaseCandidates) {
+    const pay = pickEnergy(energyPool, card.purchaseCost, card.energyTypes[0] ?? null);
+    if (pay) return { kind: "purchase", dieId: die.id, energyDieIds: pay };
   }
 
   return { kind: "enterAttackStep" };
@@ -135,7 +160,10 @@ export function decideBlockers(game: GameState, botId: string): BlockAssignment[
     for (const blocker of available.values()) {
       const kills = (blocker.effectiveAttack ?? 0) >= (attacker.effectiveDefense ?? 0);
       const survives = (blocker.effectiveDefense ?? 0) > (attacker.effectiveAttack ?? 0);
-      const score = (kills ? 2 : 0) + (survives ? 1 : 0);
+      // A blocker that neither kills nor survives still stops the attacker's
+      // damage reaching the player (and a KO'd die just goes to Prep), so a
+      // chump block beats taking it in the face: 0.5 baseline.
+      const score = (kills ? 2 : 0) + (survives ? 1 : 0) || ((attacker.effectiveAttack ?? 0) > 0 ? 0.5 : 0);
       if (score > bestScore) {
         bestScore = score;
         best = blocker;
