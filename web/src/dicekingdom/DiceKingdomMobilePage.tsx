@@ -532,6 +532,7 @@ function MatCard({
 }) {
   const [expanded, setExpanded] = useState(false);
   const [championOpen, setChampionOpen] = useState(false);
+  const [bagOpen, setBagOpen] = useState(false);
   const zone = (name: string) => dice.filter((d) => d.zone === name);
   const field = zone("FieldZone");
   const used = zone("UsedPile");
@@ -589,11 +590,11 @@ function MatCard({
       {!expandable || expanded ? (
         <div className={expandable ? "dkm-mat-expanded" : undefined}>
           <div className="dkm-pile-grid">
-            <div className="dkm-pile-cell">
+            <div className="dkm-pile-cell dkm-pile-used">
               <span className="dkm-pile-label">Used</span>
               <PileStack dice={used} cardsById={cardsById} />
             </div>
-            <div className="dkm-pile-cell">
+            <div className="dkm-pile-cell dkm-pile-prep">
               <span className="dkm-pile-label">Prep</span>
               <PileStack dice={prep} cardsById={cardsById} />
             </div>
@@ -603,9 +604,27 @@ function MatCard({
             </div>
             <div className="dkm-pile-cell">
               <span className="dkm-pile-label">Bag</span>
-              <span className="dkm-bag-count">{bag.length}</span>
+              <button type="button" className="dkm-bag-count dkm-bag-btn" onClick={() => setBagOpen((v) => !v)} aria-expanded={bagOpen}>
+                {bag.length}
+              </button>
             </div>
           </div>
+          {bagOpen && (
+            <div className="dkm-bag-contents">
+              {bag.length === 0 ? (
+                <span className="dkm-empty-dash">Bag is empty</span>
+              ) : (
+                [...bag.reduce((m, d) => m.set(d.cardId ?? "tardigrade", (m.get(d.cardId ?? "tardigrade") ?? 0) + 1), new Map<string, number>())].map(
+                  ([cardId, n]) => (
+                    <span key={cardId} className="dkm-bag-item">
+                      {cardId === "tardigrade" ? "Tardigrade" : (cardsById.get(cardId)?.name ?? cardId)}
+                      {n > 1 && <b> ×{n}</b>}
+                    </span>
+                  ),
+                )
+              )}
+            </div>
+          )}
         </div>
       ) : (
         <div className="dkm-collapsed-row">

@@ -3218,3 +3218,48 @@
   margin: 0 auto 12px;
 }
 
+
+/* Used (spent, dimmed/dashed) vs Prep (ready for next draw, lit) */
+.dk-mobile .dkm-pile-used .dkm-stack-tile {
+  border-style: dashed !important;
+  opacity: 0.55;
+}
+.dk-mobile .dkm-pile-used .dkm-pile-label::before {
+  content: "✕ ";
+}
+.dk-mobile .dkm-pile-prep {
+  padding: 0 7px 5px;
+  margin: 0 -2px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--dkm-ink) 8%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dkm-ink) 22%, transparent);
+}
+.dk-mobile .dkm-pile-prep .dkm-pile-label {
+  color: var(--dkm-ink);
+  padding-top: 5px;
+}
+.dk-mobile .dkm-pile-prep .dkm-pile-label::before {
+  content: "↻ ";
+}
+.dk-mobile .dkm-bag-btn {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+.dk-mobile .dkm-bag-contents {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 9px;
+}
+.dk-mobile .dkm-bag-item {
+  padding: 3px 7px;
+  border-radius: 7px;
+  background: var(--dkm-raised);
+  border: 1px solid var(--dkm-border);
+  font: 600 11px/1 "Work Sans", var(--sans);
+  color: var(--dkm-ink);
+}

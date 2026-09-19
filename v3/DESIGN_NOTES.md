@@ -2800,3 +2800,11 @@ Follow-up (2026-09-19): with pairings now surviving, the bot's heartbeat effect
 (deps `[vsComputer, gameId]`) still saw its first-render `blockAssignments`
 (`{}`), so it never resolved damage after the human blocked -> stuck on
 "Waiting…". Bot now reads pairings via `blockAssignmentsRef` (both pages).
+
+## Gang-block hang, Used/Prep styling, Bag contents (2026-09-19)
+- Stuck "Waiting… Armadillo is acting" after Wolf put 2 blockers on one attacker:
+  `V2GamesController.AssignCombatDamage` threw "more than one blocker" (bot
+  swallowed it). It now auto-splits: lethal (remaining Defense) to each blocker
+  in order, remainder on the last. Not yet a player choice.
+- Mobile mat: Used = dimmed/dashed tiles with ✕; Prep = lit panel with ↻.
+- Mobile mat: Bag count is a button that lists the bag's contents by card.

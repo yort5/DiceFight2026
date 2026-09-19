@@ -172,20 +172,28 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase
         var state = RequireTurn(gameId, V2Actor.Active);
         var assignment = BuildAssignment(request.Assignments);
 
-        // No CombatRuleKind.BlocksN in InstinctClashConfig's catalog, so
-        // every attacker has at most one live blocker - the split is
-        // always "all of it," never a real player decision. See
-        // V2AssignCombatDamageRequest's own remarks.
+        // Gang-blocking (several blockers on one attacker) is allowed by the
+        // mobile UI, so the attacker's damage is split automatically: each
+        // blocker in turn gets exactly its Defense (lethal), and whatever
+        // is left lands on the last blocker. Not a player decision yet.
         var splits = new Dictionary<string, IReadOnlyDictionary<string, int>>();
         foreach (var attackerId in request.Assignments.Select(a => a.AttackerDieId).Distinct())
         {
             var blockerIds = assignment.BlockersOf(attackerId);
             if (blockerIds.Count == 0) continue;
-            if (blockerIds.Count > 1)
-                throw new InvalidOperationException($"Attacker '{attackerId}' has more than one blocker - no card grants that yet.");
 
             var attacker = state.Dice.First(d => d.Id == attackerId);
-            splits[attackerId] = new Dictionary<string, int> { [blockerIds[0]] = QueryEngine.GetAttack(state, attacker) };
+            var remaining = QueryEngine.GetAttack(state, attacker);
+            var split = new Dictionary<string, int>();
+            for (var i = 0; i < blockerIds.Count; i++)
+            {
+                var blocker = state.Dice.First(d => d.Id == blockerIds[i]);
+                var lethal = Math.Max(0, QueryEngine.GetDefense(state, blocker) - blocker.Damage);
+                var give = i == blockerIds.Count - 1 ? remaining : Math.Min(remaining, lethal);
+                split[blockerIds[i]] = give;
+                remaining -= give;
+            }
+            splits[attackerId] = split;
         }
 
         var queue = new AbilityQueue();

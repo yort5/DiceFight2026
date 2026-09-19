@@ -1,0 +1,569 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Instinct Clash</title>
+<style>
+  :root {
+    --bg: #F6F1E9; --bg-elevated: #FFFDF7; --panel: #FBF6EC;
+    --text: #221C16; --text-muted: #6E6353; --border: #E6DCC7;
+    --claw: #C1502C; --shell: #3E6B58; --wing: #3E6E96; --eye: #6B4C82;
+    --wild: #8A8478; --accent-btn: #2B2118; --accent-btn-text: #FBF6EC;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #171310; --bg-elevated: #201A14; --panel: #1C1712;
+      --text: #F0E8D8; --text-muted: #A99C86; --border: #362D22;
+      --claw: #DC6D42; --shell: #57917A; --wing: #6699C4; --eye: #9575AE;
+      --wild: #A79C89; --accent-btn: #EFE4CC; --accent-btn-text: #1C1712;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #171310; --bg-elevated: #201A14; --panel: #1C1712;
+    --text: #F0E8D8; --text-muted: #A99C86; --border: #362D22;
+    --claw: #DC6D42; --shell: #57917A; --wing: #6699C4; --eye: #9575AE;
+    --wild: #A79C89; --accent-btn: #EFE4CC; --accent-btn-text: #1C1712;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: "Work Sans", ui-sans-serif, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  .page { max-width: 1000px; margin: 0 auto; padding: clamp(18px,4vw,36px) clamp(14px,4vw,28px) 60px; }
+  h1 { font: 600 clamp(24px,4vw,32px)/1.15 "Fraunces", Georgia, serif; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .eyebrow { font: 600 11.5px/1 "Work Sans"; letter-spacing: .12em; text-transform: uppercase; color: var(--text-muted); margin: 0 0 6px; }
+  .dek { font-size: 14.5px; color: var(--text-muted); max-width: 62ch; line-height: 1.55; margin: 0 0 20px; }
+
+  details.how { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 14px; padding: 14px 18px; margin-bottom: 24px; }
+  details.how summary { cursor: pointer; font-weight: 600; font-size: 14px; }
+  details.how .howbody { margin-top: 12px; font-size: 13.5px; line-height: 1.65; color: var(--text-muted); }
+  details.how .howbody b { color: var(--text); }
+  details.how ul { margin: 6px 0; padding-left: 20px; }
+
+  .setup { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 16px; padding: 24px; }
+  .setup h2 { font: 600 18px "Fraunces", serif; margin: 0 0 14px; }
+  .champ-pick { display: grid; grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); gap: 10px; margin-bottom: 22px; }
+  .champ-opt { border: 2px solid var(--border); border-radius: 12px; padding: 12px 10px; text-align: center; cursor: pointer; background: var(--panel); transition: border-color .15s; }
+  .champ-opt.sel { border-color: var(--sel-color, var(--text)); }
+  .champ-opt svg { width: 30px; height: 30px; }
+  .champ-opt .cname { font-weight: 600; font-size: 12.5px; margin-top: 6px; }
+  .champ-opt .cbuff { font-size: 10px; color: var(--text-muted); }
+  .setup-row { display: flex; gap: 28px; flex-wrap: wrap; }
+  .setup-col { flex: 1 1 260px; }
+  .setup-col h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); margin: 0 0 10px; }
+
+  button.btn { font: 600 13.5px "Work Sans"; background: var(--accent-btn); color: var(--accent-btn-text); border: none; border-radius: 9px; padding: 10px 18px; cursor: pointer; }
+  button.btn:disabled { opacity: .4; cursor: not-allowed; }
+  button.btn.ghost { background: transparent; color: var(--text); border: 1.5px solid var(--border); }
+  button.btn:focus-visible, .champ-opt:focus-visible, .dietile[tabindex]:focus-visible { outline: 2px solid var(--wing); outline-offset: 2px; }
+
+  .topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+  .lifebox { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 12px; padding: 8px 14px; display: flex; align-items: center; gap: 10px; }
+  .lifebox svg { width: 22px; height: 22px; }
+  .lifebox .lname { font-weight: 600; font-size: 13px; }
+  .lifebox .lnum { font: 700 18px/1 "Fraunces", serif; font-variant-numeric: tabular-nums; }
+  .phasepill { font: 600 12px "Work Sans"; padding: 6px 14px; border-radius: 999px; background: var(--panel); border: 1px solid var(--border); text-transform: uppercase; letter-spacing: .05em; }
+
+  .champbanner { display: flex; align-items: center; gap: 10px; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 8px 14px; margin-bottom: 14px; }
+  .champbanner svg { width: 26px; height: 26px; flex: none; }
+  .champbanner .cbname { font: 600 14px "Fraunces", serif; }
+  .champbanner .cbbuff { font-size: 12px; color: var(--text-muted); }
+
+  .zone { margin-bottom: 20px; }
+  .zone h4 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); margin: 0 0 8px; display: flex; align-items: center; gap: 8px; }
+  .zone h4 .count { font: 500 11px "IBM Plex Mono"; color: var(--text-muted); }
+  .dierow { display: flex; flex-wrap: wrap; gap: 8px; min-height: 8px; }
+
+  .dietile { width: 78px; border: 1.5px solid var(--border); border-radius: 10px; background: var(--bg-elevated); padding: 6px; text-align: center; cursor: default; }
+  .dietile.clickable { cursor: pointer; }
+  .dietile.clickable:hover { border-color: var(--text); }
+  .dietile.picked { border-color: var(--text); background: var(--panel); }
+  .dietile.unrolled { border-style: dashed; color: var(--text-muted); }
+  .dietile .dav { width: 24px; height: 24px; margin: 0 auto 2px; }
+  .dietile .stat { font: 700 13px/1 "Fraunces", serif; font-variant-numeric: tabular-nums; }
+  .dietile .lbl { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; }
+  .dietile .free { font-size: 9px; color: var(--good, var(--shell)); font-weight: 600; }
+  .pip { display: inline-flex; align-items: center; gap: 3px; font: 600 10.5px "IBM Plex Mono"; padding: 1px 6px; border-radius: 999px; margin-top: 3px; color: #fff; }
+
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; margin-top: 14px; }
+  .panel p { margin: 0 0 10px; font-size: 13.5px; }
+  .chiprow { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .chip { border: 1.5px solid var(--border); border-radius: 8px; padding: 5px 10px; font-size: 12.5px; cursor: pointer; background: var(--bg-elevated); }
+  .chip.on { border-color: var(--text); background: var(--bg); }
+  .actionrow { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  .log { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; max-height: 150px; overflow-y: auto; font: 400 12.5px/1.6 "IBM Plex Mono"; color: var(--text-muted); }
+  .log div:last-child { color: var(--text); }
+
+  .gameover { text-align: center; padding: 40px 20px; }
+  .gameover h2 { font: 600 28px "Fraunces", serif; margin: 0 0 14px; }
+
+  footer.notes { margin-top: 36px; padding-top: 18px; border-top: 1px solid var(--border); font-size: 12.5px; line-height: 1.6; color: var(--text-muted); max-width: 68ch; }
+  footer.notes b { color: var(--text); }
+</style>
+
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="av-champ-lion" viewBox="0 0 64 64">
+<circle cx="32" cy="32" r="10" fill="currentColor"/>
+<g fill="currentColor">
+<polygon points="32,4 36,16 28,16"/><polygon points="52,10 48,22 42,16"/><polygon points="60,28 48,30 50,22"/>
+<polygon points="60,36 48,34 50,42"/><polygon points="52,54 48,42 42,48"/><polygon points="32,60 36,48 28,48"/>
+<polygon points="12,54 16,42 22,48"/><polygon points="4,36 16,34 14,42"/><polygon points="4,28 16,30 14,22"/><polygon points="12,10 16,22 22,16"/>
+</g></symbol>
+<symbol id="av-champ-armadillo" viewBox="0 0 64 64">
+<path d="M10,48 C10,32 20,20 32,20 C44,20 54,32 54,48 Z" fill="none" stroke="currentColor" stroke-width="4"/>
+<line x1="10" y1="48" x2="54" y2="48" stroke="currentColor" stroke-width="4"/>
+</symbol>
+<symbol id="av-champ-eagle" viewBox="0 0 64 64">
+<path d="M14,26 C22,20 34,20 40,26 C34,26 26,30 20,38 C16,34 14,30 14,26 Z" fill="currentColor"/>
+</symbol>
+<symbol id="av-champ-owl" viewBox="0 0 64 64">
+<polygon points="18,26 24,10 30,26" fill="currentColor"/>
+<polygon points="34,26 40,10 46,26" fill="currentColor"/>
+<path d="M20,28 C20,20 44,20 44,28 C44,36 20,36 20,28 Z" fill="currentColor"/>
+</symbol>
+<symbol id="av-char-honeybadger" viewBox="0 0 64 64"><g fill="currentColor">
+<polygon points="24,17 32,21.5 32,30.5 24,35 16,30.5 16,21.5"/>
+<polygon points="40,17 48,21.5 48,30.5 40,35 32,30.5 32,21.5"/>
+<polygon points="32,32 40,36.5 40,45.5 32,50 24,45.5 24,36.5"/>
+</g></symbol>
+<symbol id="av-char-hippo" viewBox="0 0 64 64">
+<path d="M10,26 C10,20 54,20 54,26 C54,40 10,40 10,26 Z" fill="currentColor"/>
+<polygon points="16,26 21,26 18,34" fill="var(--bg-elevated)"/>
+<polygon points="48,26 43,26 46,34" fill="var(--bg-elevated)"/>
+</symbol>
+<symbol id="av-char-osprey" viewBox="0 0 64 64">
+<path d="M18,30 C22,24 32,22 40,26 C34,28 26,30 18,30 Z" fill="currentColor"/>
+<path d="M18,30 L12,26 L13,33 Z" fill="currentColor"/>
+<path fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" d="M22,30 C22,38 26,42 22,48 M30,29 C31,37 35,41 32,48"/>
+</symbol>
+<symbol id="av-char-barnowl" viewBox="0 0 64 64">
+<path d="M32,48 C14,34 14,18 32,20 C50,18 50,34 32,48 Z" fill="currentColor"/>
+</symbol>
+</defs></svg>
+
+<div class="page">
+  <p class="eyebrow">DiceFight v3 &mdash; playable prototype</p>
+  <h1>Instinct Clash</h1>
+  <p class="dek">Pass-and-play, two players, one device. No card abilities on any individual
+    creature yet, on purpose &mdash; the only "ability" in the game is each Champion's single
+    passive team-wide effect, so today's reactions stay on the <i>system</i> rather than any
+    one card's power level.</p>
+
+  <details class="how">
+    <summary>How to play (read once)</summary>
+    <div class="howbody">
+      Each player picks one Champion. A Champion has <b>no die of its own</b> &mdash; it's a
+      passive effect that's always on for your whole team, nothing more. Your actual pool is
+      <b>1 Character die</b> (an individual creature with its own printed fielding and purchase
+      cost, the way a real Dice Masters character works) plus <b>4 Tardigrade dice</b> &mdash;
+      your Champion's basic, generic troop, <b>always free to field</b>, same stat line for
+      every energy type, only the energy color differs. You can buy up to 3 more copies of your
+      Character mid-game. <b>20 life</b> each.
+      <ul>
+        <li><b>Draw &amp; Roll</b> &mdash; recycle your discard back into your bag, draw 4 dice,
+          roll them. Each die may be rerolled once.</li>
+        <li><b>Main</b> &mdash; <b>Field</b> a die showing a creature face (Tardigrades are
+          free; your Character costs energy, any type), or <b>Purchase</b> another Character
+          copy (only matching-type or Wild energy pays purchase cost). Do this as many times as
+          you can afford.</li>
+        <li><b>Attack</b> &mdash; pick any of your fielded creatures to attack. Defender assigns
+          blockers 1-for-1. Unblocked attackers hit the opponent's life directly; blocked pairs
+          trade damage, and anyone whose defense drops to 0 is KO'd to the discard.</li>
+      </ul>
+      Lose by hitting 0 life, or by having zero dice left to draw. The Tardigrade die's six
+      faces: two <b>L1</b> (weak body, 2 energy), two <b>L2</b> (better body, 1 energy), one
+      <b>Bulwark</b> (best body, no energy), one <b>Surge</b> (no body, 2 Wild energy).
+    </div>
+  </details>
+
+  <div id="app"></div>
+
+  <footer class="notes">
+    First-pass prototype &mdash; not balanced, not final art. Specifically want reactions on:
+    does each Champion's passive feel worth building around, does the uneven Tardigrade die
+    create real decisions, and does fielding-vs-purchasing your one Character feel meaningful.
+  </footer>
+</div>
+
+<script>
+const CHAMPIONS = {
+  Claw:  { name:'Lion', avatar:'av-champ-lion', color:'claw', buffText:'+1 ATK to all your dice', buff:{stat:'atk',amt:1} },
+  Shell: { name:'Armadillo', avatar:'av-champ-armadillo', color:'shell', buffText:'+1 DEF to all your dice', buff:{stat:'def',amt:1} },
+  Wing:  { name:'Golden Eagle', avatar:'av-champ-eagle', color:'wing', buffText:'Your dice cost 1 less to field (min 0)', buff:{stat:'fieldCost',amt:-1} },
+  Eye:   { name:'Great Horned Owl', avatar:'av-champ-owl', color:'eye', buffText:'Your Character purchases cost 1 less (min 1)', buff:{stat:'purchaseCost',amt:-1} },
+};
+const CHARACTERS = {
+  Claw:  { name:'Honey Badger', avatar:'av-char-honeybadger', purchaseCost:2, fieldCost:1,
+    faces:[{atk:0,def:2,lbl:'L1'},{atk:0,def:2,lbl:'L1'},{atk:0,def:3,lbl:'L2'},{atk:0,def:3,lbl:'L2'},{atk:1,def:3,lbl:'L3'},{atk:1,def:3,lbl:'L3'}] },
+  Shell: { name:'Hippopotamus', avatar:'av-char-hippo', purchaseCost:4, fieldCost:2,
+    faces:[{atk:0,def:1,lbl:'L1'},{atk:0,def:1,lbl:'L1'},{atk:1,def:1,lbl:'L2'},{atk:1,def:1,lbl:'L2'},{atk:2,def:1,lbl:'L3'},{atk:2,def:1,lbl:'L3'}] },
+  Wing:  { name:'Osprey', avatar:'av-char-osprey', purchaseCost:4, fieldCost:2,
+    faces:[{atk:0,def:4,lbl:'L1'},{atk:0,def:4,lbl:'L1'},{atk:1,def:5,lbl:'L2'},{atk:1,def:5,lbl:'L2'},{atk:2,def:6,lbl:'L3'},{atk:2,def:6,lbl:'L3'}] },
+  Eye:   { name:'Barn Owl', avatar:'av-char-barnowl', purchaseCost:4, fieldCost:2,
+    faces:[{atk:0,def:2,lbl:'L1'},{atk:0,def:2,lbl:'L1'},{atk:0,def:3,lbl:'L2'},{atk:0,def:3,lbl:'L2'},{atk:1,def:3,lbl:'L3'},{atk:1,def:3,lbl:'L3'}] },
+};
+function tardigradeFaces(type){
+  return [ {atk:0,def:1,eType:type,eAmt:2,lbl:'L1'}, {atk:0,def:1,eType:type,eAmt:2,lbl:'L1'},
+           {atk:1,def:1,eType:type,eAmt:1,lbl:'L2'}, {atk:1,def:1,eType:type,eAmt:1,lbl:'L2'},
+           {atk:1,def:3,lbl:'Bulwark'}, {noChar:true,eType:'Wild',eAmt:2,lbl:'Surge'} ];
+}
+const DRAW_COUNT = 4, LIFE_START = 20, TARDIGRADE_FIELD_COST = 0, START_UNPURCHASED = 3;
+
+let state = null;
+function nameOf(p){ return 'Player ' + (p+1); }
+function faceDataFor(d){ return d.kind==='creature' ? CHARACTERS[d.cKey].faces : tardigradeFaces(d.tType); }
+function getFace(d){ return d.faceIdx==null ? null : faceDataFor(d)[d.faceIdx]; }
+function labelFor(d){ return d.kind==='creature' ? CHARACTERS[d.cKey].name : 'Tardigrade'; }
+function avatarFor(d){ return d.kind==='creature' ? CHARACTERS[d.cKey].avatar : null; }
+function colorFor(d){ return (d.kind==='creature' ? d.cKey : d.tType).toLowerCase(); }
+function playerBuff(p){ return CHAMPIONS[state.players[p].champKey].buff; }
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function addLog(msg){ state.log.push(msg); if(state.log.length>60) state.log.shift(); }
+function nextId(){ return state.nextId++; }
+
+function effFieldCost(d){
+  const base = d.kind==='creature' ? CHARACTERS[d.cKey].fieldCost : TARDIGRADE_FIELD_COST;
+  const b = playerBuff(d.owner);
+  return b.stat==='fieldCost' ? Math.max(0, base+b.amt) : base;
+}
+function effPurchaseCost(p, cKey){
+  const base = CHARACTERS[cKey].purchaseCost;
+  const b = playerBuff(p);
+  return b.stat==='purchaseCost' ? Math.max(1, base+b.amt) : base;
+}
+function effFace(d){
+  const f = getFace(d); if(!f || f.noChar) return f;
+  const b = playerBuff(d.owner);
+  let atk=f.atk, def=f.def;
+  if(b.stat==='atk') atk += b.amt;
+  if(b.stat==='def') def += b.amt;
+  return Object.assign({}, f, {atk, def});
+}
+
+function initGame(c0, c1){
+  state = { players:[{champKey:c0, life:LIFE_START, unpurchased:START_UNPURCHASED},
+                      {champKey:c1, life:LIFE_START, unpurchased:START_UNPURCHASED}],
+            dice:[], active:0, phase:'draw', pendingAction:null, attackers:[], blocks:{},
+            log:[], nextId:0, winner:null, winMsg:'' };
+  for(let p=0;p<2;p++){
+    const ck = state.players[p].champKey;
+    state.dice.push({id:nextId(), owner:p, kind:'creature', cKey:ck, zone:'bag', faceIdx:null, rerolled:false});
+    for(let i=0;i<4;i++) state.dice.push({id:nextId(), owner:p, kind:'tardigrade', tType:ck, zone:'bag', faceIdx:null, rerolled:false});
+  }
+  addLog('New match: '+CHAMPIONS[c0].name+' vs '+CHAMPIONS[c1].name+'.');
+  clearAndDraw(state.active);
+}
+
+function clearAndDraw(p){
+  state.dice.filter(d=>d.owner===p && d.zone==='used').forEach(d=>{ d.zone='bag'; d.faceIdx=null; });
+  const bagDice = state.dice.filter(d=>d.owner===p && d.zone==='bag');
+  if(bagDice.length===0){ endGame(1-p, nameOf(p)+' has no dice left to draw and loses!'); return; }
+  shuffle(bagDice);
+  const draw = bagDice.slice(0, DRAW_COUNT);
+  draw.forEach(d=>{ d.zone='reserve'; d.faceIdx=null; d.rerolled=false; });
+  addLog(nameOf(p)+' draws '+draw.length+' dice.');
+  state.phase='roll'; render();
+}
+function rollAll(){
+  const p = state.active;
+  state.dice.filter(d=>d.owner===p && d.zone==='reserve' && d.faceIdx===null).forEach(d=>{ d.faceIdx = Math.floor(Math.random()*6); });
+  addLog(nameOf(p)+' rolls.');
+  state.phase='reroll'; render();
+}
+function rerollDie(id){
+  const d = state.dice.find(x=>x.id===id);
+  if(!d || d.zone!=='reserve' || d.rerolled) return;
+  d.faceIdx = Math.floor(Math.random()*6); d.rerolled = true;
+  render();
+}
+function toMain(){ state.phase='main'; render(); }
+
+function beginField(dieId){
+  const d = state.dice.find(x=>x.id===dieId);
+  const cost = effFieldCost(d);
+  if(cost<=0){
+    d.zone='field';
+    addLog(nameOf(state.active)+' fields '+labelFor(d)+' ('+getFace(d).lbl+') for free.');
+    render();
+    return;
+  }
+  state.pendingAction = {type:'field', dieId, cKey:null, selected:[]}; render();
+}
+function beginPurchase(cKey){ state.pendingAction = {type:'purchase', dieId:null, cKey, selected:[]}; render(); }
+function cancelAction(){ state.pendingAction=null; render(); }
+function toggleSpend(id){
+  const pa = state.pendingAction; if(!pa) return;
+  const d = state.dice.find(x=>x.id===id);
+  const face = getFace(d);
+  if(pa.type==='purchase'){
+    if(!(face && (face.eType===pa.cKey || face.eType==='Wild'))) return;
+  }
+  const i = pa.selected.indexOf(id);
+  if(i>=0) pa.selected.splice(i,1); else pa.selected.push(id);
+  render();
+}
+function spentTotal(){
+  const pa = state.pendingAction; if(!pa) return 0;
+  return pa.selected.reduce((sum,id)=>{ const f = getFace(state.dice.find(x=>x.id===id)); return sum + (f && f.eAmt ? f.eAmt : 0); },0);
+}
+function confirmAction(){
+  const pa = state.pendingAction; const p = state.active;
+  if(pa.type==='field'){
+    const d = state.dice.find(x=>x.id===pa.dieId);
+    pa.selected.forEach(id=>{ state.dice.find(x=>x.id===id).zone='used'; });
+    d.zone='field';
+    addLog(nameOf(p)+' fields '+labelFor(d)+' ('+getFace(d).lbl+').');
+  } else {
+    pa.selected.forEach(id=>{ state.dice.find(x=>x.id===id).zone='used'; });
+    state.dice.push({id:nextId(), owner:p, kind:'creature', cKey:pa.cKey, zone:'used', faceIdx:null, rerolled:false});
+    state.players[p].unpurchased -= 1;
+    addLog(nameOf(p)+' purchases another '+CHARACTERS[pa.cKey].name+'.');
+  }
+  state.pendingAction=null; render();
+}
+
+function toAttackDeclare(){ state.phase='declareAttack'; state.attackers=[]; render(); }
+function toggleAttacker(id){
+  const i = state.attackers.indexOf(id);
+  if(i>=0) state.attackers.splice(i,1); else state.attackers.push(id);
+  render();
+}
+function confirmAttackers(){
+  state._blockPick = null;
+  if(state.attackers.length===0){ state.phase='cleanup'; render(); return; }
+  state.blocks = {}; state.attackers.forEach(id=>state.blocks[id]=null);
+  state.phase='declareBlock'; render();
+}
+function assignBlock(attackerId, blockerId){
+  Object.keys(state.blocks).forEach(k=>{ if(state.blocks[k]===blockerId) state.blocks[k]=null; });
+  state.blocks[attackerId] = blockerId || null;
+  render();
+}
+function confirmBlocks(){ resolveCombat(); }
+function resolveCombat(){
+  const atkP = state.active, defP = 1-state.active;
+  let dmg = 0; const kos = [];
+  state.attackers.forEach(aid=>{
+    const A = state.dice.find(d=>d.id===aid), aFace = effFace(A);
+    const bid = state.blocks[aid];
+    if(bid){
+      const B = state.dice.find(d=>d.id===bid), bFace = effFace(B);
+      if(bFace.atk >= aFace.def) kos.push(A.id);
+      if(aFace.atk >= bFace.def) kos.push(B.id);
+    } else { dmg += aFace.atk; }
+  });
+  state.players[defP].life -= dmg;
+  kos.forEach(id=>{ const d = state.dice.find(x=>x.id===id); d.zone='used'; d.faceIdx=null; });
+  addLog(nameOf(atkP)+' deals '+dmg+' damage; '+kos.length+' creature(s) KO\'d.');
+  if(state.players[defP].life<=0){ endGame(atkP, nameOf(atkP)+' wins!'); return; }
+  state.phase='cleanup'; render();
+}
+function endTurnClick(){ state.active = 1-state.active; state.attackers=[]; state.blocks={}; clearAndDraw(state.active); }
+function endGame(winner, msg){ state.phase='gameover'; state.winner=winner; state.winMsg=msg; addLog(msg); render(); }
+
+function pipHtml(eType, amt){
+  if(!eType || !amt) return '';
+  const cls = eType==='Wild' ? 'wild' : eType.toLowerCase();
+  return '<span class="pip" style="background:var(--'+cls+')">'+amt+' '+eType+'</span>';
+}
+function dieTile(d, opts){
+  opts = opts||{};
+  const rolled = d.faceIdx!=null;
+  const face = getFace(d);
+  const eface = rolled ? effFace(d) : null;
+  const col = colorFor(d);
+  let cls = 'dietile' + (opts.clickable?' clickable':'') + (opts.picked?' picked':'') + (!rolled?' unrolled':'');
+  let inner = '';
+  if(!rolled){
+    inner = '<div class="lbl">'+ labelFor(d) +'</div><div class="stat">&mdash;</div>';
+  } else if(face.noChar){
+    inner = '<div class="lbl">'+face.lbl+'</div><div class="stat">&mdash;</div>' + pipHtml(face.eType, face.eAmt);
+  } else {
+    const av = d.kind==='creature' ? '<svg class="dav"><use href="#'+avatarFor(d)+'"/></svg>' : '';
+    const freeTag = (d.kind==='tardigrade') ? '<div class="free">free</div>' : '';
+    inner = av + '<div class="stat">'+eface.atk+'/'+eface.def+'</div><div class="lbl">'+face.lbl+'</div>' + freeTag + pipHtml(face.eType, face.eAmt);
+  }
+  const dataAttr = opts.action ? ' data-action="'+opts.action+'" data-id="'+d.id+'"' : '';
+  const tabidx = opts.clickable ? ' tabindex="0"' : '';
+  return '<div class="'+cls+'" style="color:var(--'+ (d.kind==='creature'?col:'text') +')"'+dataAttr+tabidx+'>'+inner+'</div>';
+}
+
+function renderSetup(){
+  const opts = ['Claw','Shell','Wing','Eye'];
+  function pickerHtml(who, sel){
+    return '<div class="champ-pick">' + opts.map(k=>{
+      const c = CHAMPIONS[k];
+      const isSel = sel===k;
+      return '<div class="champ-opt'+(isSel?' sel':'')+'" style="--sel-color:var(--'+c.color+')" tabindex="0" data-action="pick-'+who+'" data-id="'+k+'">'
+        + '<svg style="color:var(--'+c.color+')"><use href="#'+c.avatar+'"/></svg>'
+        + '<div class="cname">'+c.name+'</div><div class="cbuff">'+c.buffText+'</div></div>';
+    }).join('') + '</div>';
+  }
+  const c0 = state && state._setup ? state._setup.c0 : null;
+  const c1 = state && state._setup ? state._setup.c1 : null;
+  return '<div class="setup"><h2>Pick your Champions</h2><div class="setup-row">'
+    + '<div class="setup-col"><h3>Player 1</h3>'+pickerHtml('0',c0)+'</div>'
+    + '<div class="setup-col"><h3>Player 2</h3>'+pickerHtml('1',c1)+'</div>'
+    + '</div><button class="btn" data-action="start-game" '+(c0&&c1?'':'disabled')+'>Start Match</button></div>';
+}
+
+function renderPlayerBoard(p){
+  const active = state.active===p;
+  const bag = state.dice.filter(d=>d.owner===p&&d.zone==='bag').length;
+  const used = state.dice.filter(d=>d.owner===p&&d.zone==='used').length;
+  const reserve = state.dice.filter(d=>d.owner===p&&d.zone==='reserve');
+  const field = state.dice.filter(d=>d.owner===p&&d.zone==='field');
+  const champ = CHAMPIONS[state.players[p].champKey];
+  const cKey = state.players[p].champKey;
+
+  let reserveHtml = '<div class="dierow">' + reserve.map(d=>{
+    let opts = {};
+    if(state.pendingAction){
+      if(active && state.phase==='main' && d.id!==state.pendingAction.dieId && d.faceIdx!=null){
+        const eligible = state.pendingAction.type==='field' ? (getFace(d) && getFace(d).eAmt > 0) :
+          (getFace(d) && getFace(d).eAmt > 0 && (getFace(d).eType===state.pendingAction.cKey || getFace(d).eType==='Wild'));
+        if(eligible){ opts = {clickable:true, action:'toggle-spend', picked: state.pendingAction.selected.includes(d.id)}; }
+      }
+    } else if(active && state.phase==='reroll' && !d.rerolled) opts = {clickable:true, action:'reroll'};
+    else if(active && state.phase==='main' && getFace(d) && !getFace(d).noChar) opts = {clickable:true, action:'begin-field'};
+    return dieTile(d, opts);
+  }).join('') + '</div>';
+
+  let fieldHtml = '<div class="dierow">' + field.map(d=>{
+    let opts = {};
+    if(active && state.phase==='declareAttack') opts = {clickable:true, action:'toggle-attacker', picked: state.attackers.includes(d.id)};
+    return dieTile(d, opts);
+  }).join('') + '</div>';
+
+  let unpurchasedHtml = '<div class="dierow">';
+  for(let i=0;i<state.players[p].unpurchased;i++){
+    const clickable = active && state.phase==='main';
+    unpurchasedHtml += '<div class="dietile'+(clickable?' clickable':'')+'"'+(clickable?' data-action="begin-purchase" data-id="'+cKey+'" tabindex="0"':'')+' style="color:var(--'+cKey.toLowerCase()+')">'
+      + '<svg class="dav"><use href="#'+CHARACTERS[cKey].avatar+'"/></svg><div class="lbl">Buy '+CHARACTERS[cKey].name+'</div><div class="stat">'+effPurchaseCost(p,cKey)+' '+cKey+'</div></div>';
+  }
+  unpurchasedHtml += '</div>';
+
+  return '<div class="champbanner"><svg style="color:var(--'+champ.color+')"><use href="#'+champ.avatar+'"/></svg>'
+      + '<div><div class="cbname">'+nameOf(p)+' &mdash; '+champ.name+' ('+cKey+')</div><div class="cbbuff">'+champ.buffText+'</div></div></div>'
+    + '<div class="zone"><h4>Field <span class="count">'+field.length+'</span></h4>'+fieldHtml+'</div>'
+    + '<div class="zone"><h4>Reserve Pool <span class="count">'+reserve.length+'</span></h4>'+reserveHtml+'</div>'
+    + (state.phase==='main' && active ? '<div class="zone"><h4>Available to purchase <span class="count">'+state.players[p].unpurchased+' left</span></h4>'+unpurchasedHtml+'</div>' : '')
+    + '<div class="zone"><h4>Bag <span class="count">'+bag+'</span> &middot; Discard <span class="count">'+used+'</span></h4></div>';
+}
+
+function renderPendingPanel(){
+  const pa = state.pendingAction; if(!pa) return '';
+  const cost = pa.type==='field' ? effFieldCost(state.dice.find(d=>d.id===pa.dieId)) : effPurchaseCost(state.active, pa.cKey);
+  const total = spentTotal();
+  const label = pa.type==='field' ? 'Field '+labelFor(state.dice.find(d=>d.id===pa.dieId)) : 'Purchase '+CHARACTERS[pa.cKey].name;
+  const rule = pa.type==='field' ? 'Any energy type counts.' : 'Only '+pa.cKey+' or Wild energy counts.';
+  return '<div class="panel"><p><b>'+label+'</b> &mdash; cost '+cost+'. '+rule+' Selected: '+total+' / '+cost+'</p>'
+    + '<div class="actionrow">'
+    + '<button class="btn" data-action="confirm-action" '+(total>=cost?'':'disabled')+'>Confirm</button>'
+    + '<button class="btn ghost" data-action="cancel-action">Cancel</button>'
+    + '</div></div>';
+}
+
+function renderBlockPanel(){
+  const defP = 1-state.active;
+  const blockers = state.dice.filter(d=>d.owner===defP && d.zone==='field');
+  const usedBlockers = new Set(Object.values(state.blocks).filter(Boolean));
+  let html = '<div class="panel"><p><b>'+nameOf(defP)+', assign blockers.</b> Click a defender, then click an attacker to block it (or leave unblocked).</p>';
+  html += '<div class="chiprow">' + state.attackers.map(aid=>{
+    const A = state.dice.find(d=>d.id===aid);
+    const bid = state.blocks[aid];
+    const bName = bid ? labelFor(state.dice.find(d=>d.id===bid)) : 'unblocked';
+    const af = effFace(A);
+    return '<span class="chip" data-action="pick-attacker-for-block" data-id="'+aid+'">'+labelFor(A)+' '+af.atk+'/'+af.def+' &larr; '+bName+'</span>';
+  }).join('') + '</div>';
+  if(state._blockPick!=null){
+    html += '<div class="chiprow">'
+      + '<span class="chip" data-action="do-assign-block" data-id="'+state._blockPick+':none">no block</span>'
+      + blockers.filter(b=>!usedBlockers.has(b.id)||state.blocks[state._blockPick]===b.id).map(b=>{
+          const bf = effFace(b);
+          return '<span class="chip'+(state.blocks[state._blockPick]===b.id?' on':'')+'" data-action="do-assign-block" data-id="'+state._blockPick+':'+b.id+'">'+labelFor(b)+' '+bf.atk+'/'+bf.def+'</span>';
+        }).join('')
+      + '</div>';
+  }
+  html += '<div class="actionrow"><button class="btn" data-action="confirm-blocks">Resolve Combat</button></div></div>';
+  return html;
+}
+
+function render(){
+  const app = document.getElementById('app');
+  if(!state || !state.players){ app.innerHTML = renderSetup(); return; }
+
+  if(state.phase==='gameover'){
+    app.innerHTML = '<div class="gameover"><h2>'+state.winMsg+'</h2>'
+      + '<button class="btn" data-action="rematch">Play Again</button></div>'
+      + '<div class="log">'+state.log.slice(-20).map(l=>'<div>'+l+'</div>').join('')+'</div>';
+    return;
+  }
+
+  const p0 = CHAMPIONS[state.players[0].champKey], p1 = CHAMPIONS[state.players[1].champKey];
+  let top = '<div class="topbar">'
+    + '<div class="lifebox" style="border-color:'+(state.active===0?'var(--'+p0.color+')':'var(--border)')+'"><svg style="color:var(--'+p0.color+')"><use href="#'+p0.avatar+'"/></svg><span class="lname">P1</span><span class="lnum">'+state.players[0].life+'</span></div>'
+    + '<div class="phasepill">'+nameOf(state.active)+' &middot; '+phaseLabel(state.phase)+'</div>'
+    + '<div class="lifebox" style="border-color:'+(state.active===1?'var(--'+p1.color+')':'var(--border)')+'"><svg style="color:var(--'+p1.color+')"><use href="#'+p1.avatar+'"/></svg><span class="lname">P2</span><span class="lnum">'+state.players[1].life+'</span></div>'
+    + '</div>';
+
+  let body = renderPlayerBoard(state.active) + '<hr style="border:none;border-top:1px dashed var(--border);margin:18px 0">' + renderPlayerBoard(1-state.active);
+
+  let controls = '<div class="actionrow" style="margin:14px 0">';
+  if(state.phase==='roll') controls += '<button class="btn" data-action="roll-all">Roll Reserve</button>';
+  if(state.phase==='reroll') controls += '<button class="btn" data-action="to-main">Continue to Main Phase</button>';
+  if(state.phase==='main' && !state.pendingAction) controls += '<button class="btn" data-action="to-attack">Proceed to Attack</button>';
+  if(state.phase==='declareAttack') controls += '<button class="btn" data-action="confirm-attackers">Confirm Attackers ('+state.attackers.length+')</button>';
+  if(state.phase==='cleanup') controls += '<button class="btn" data-action="end-turn">End Turn</button>';
+  controls += '</div>';
+
+  let panel = '';
+  if(state.phase==='main') panel = renderPendingPanel();
+  if(state.phase==='declareBlock') panel = renderBlockPanel();
+
+  app.innerHTML = top + controls + panel + body
+    + '<div class="zone"><h4>Log</h4><div class="log">'+state.log.slice(-10).map(l=>'<div>'+l+'</div>').join('')+'</div></div>';
+}
+function phaseLabel(ph){
+  return {draw:'Draw & Roll', roll:'Roll', reroll:'Reroll', main:'Main Phase', declareAttack:'Declare Attackers',
+    declareBlock:'Declare Blockers', cleanup:'Cleanup'}[ph] || ph;
+}
+
+document.getElementById('app').addEventListener('click', function(e){
+  const el = e.target.closest('[data-action]'); if(!el) return;
+  const action = el.getAttribute('data-action'); const id = el.getAttribute('data-id');
+  if(action==='pick-0' || action==='pick-1'){
+    if(!state) state = {};
+    state._setup = state._setup || {};
+    state._setup[action==='pick-0'?'c0':'c1'] = id;
+    document.getElementById('app').innerHTML = renderSetup();
+    return;
+  }
+  if(action==='start-game'){ const s=state._setup; initGame(s.c0, s.c1); return; }
+  if(action==='rematch'){ state = null; document.getElementById('app').innerHTML = renderSetup(); return; }
+  if(action==='roll-all') return rollAll();
+  if(action==='reroll') return rerollDie(parseInt(id));
+  if(action==='to-main') return toMain();
+  if(action==='begin-field') return beginField(parseInt(id));
+  if(action==='begin-purchase') return beginPurchase(id);
+  if(action==='toggle-spend') return toggleSpend(parseInt(id));
+  if(action==='confirm-action') return confirmAction();
+  if(action==='cancel-action') return cancelAction();
+  if(action==='to-attack') return toAttackDeclare();
+  if(action==='toggle-attacker') return toggleAttacker(parseInt(id));
+  if(action==='confirm-attackers') return confirmAttackers();
+  if(action==='pick-attacker-for-block'){ state._blockPick = parseInt(id); render(); return; }
+  if(action==='do-assign-block'){
+    const [aid, bid] = id.split(':');
+    assignBlock(parseInt(aid), bid==='none'?null:parseInt(bid));
+    state._blockPick = null; render(); return;
+  }
+  if(action==='confirm-blocks') return confirmBlocks();
+  if(action==='end-turn') return endTurnClick();
+});
+
+document.getElementById('app').innerHTML = renderSetup();
+</script>
+</body>
+</html>
