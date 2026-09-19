@@ -3331,3 +3331,46 @@
 .dk-mobile .dkm-pile-strip .dkm-pile-sheet-item {
   width: auto;
 }
+
+/* Attack Zone defence meters (combat preview) */
+.dk-mobile .dkm-lane-die-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.dk-mobile .dkm-meter-bar {
+  position: relative;
+  height: 4px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--dkm-ink) 22%, transparent);
+  overflow: hidden;
+}
+.dk-mobile .dkm-meter-bar span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+.dk-mobile .dkm-meter-marked {
+  left: 0;
+  background: color-mix(in srgb, var(--dkm-ink) 60%, transparent);
+}
+.dk-mobile .dkm-meter-incoming {
+  background: #e5533d;
+}
+.dk-mobile .dkm-meter-label {
+  display: flex;
+  justify-content: space-between;
+  font: 700 9px/1 "Work Sans", var(--sans);
+  color: #e5533d;
+}
+.dk-mobile .dkm-meter-label b {
+  background: #e5533d;
+  color: #fff;
+  padding: 1px 3px;
+  border-radius: 3px;
+  font-size: 8px;
+}
+.dk-mobile .dkm-meter:not(.ko) .dkm-meter-label {
+  color: var(--dkm-ink-dim);
+}

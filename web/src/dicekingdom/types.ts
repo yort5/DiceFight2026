@@ -58,6 +58,8 @@ export interface Die {
   baseDefense: number | null;
   attackModifiers: StatModifier[] | null;
   defenseModifiers: StatModifier[] | null;
+  /** Damage already marked on this die (see V2DieDto.Damage). */
+  damage?: number;
 }
 
 export interface PlayerState {

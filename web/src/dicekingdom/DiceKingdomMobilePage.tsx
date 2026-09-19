@@ -106,6 +106,41 @@ function unblockedFaceDamage(a: Die, myBlockers: Die[], laneAttackerCount: numbe
   return Math.max(0, atk - blockerDefTotal);
 }
 
+// What combat damage would do to each die in the lanes if it resolved right
+// now - mirrors CombatEngine.AssignCombatDamage / V2GamesController's split:
+// an attacker deals its Attack to its blockers IN ORDER, lethal (remaining
+// Defense) to each and the rest on the last one; every blocker deals its own
+// full Attack back to the attacker. A die is KO'd when marked + new damage
+// reaches its Defense. Approximation: ignores Fast's two-wave ordering and
+// on-damage abilities. Only dice with a blocker relationship get an entry.
+interface DiePreview {
+  defense: number;
+  already: number; // damage already marked
+  incoming: number; // damage this combat would add
+  ko: boolean;
+}
+function combatPreview(attackers: Die[], blockersByAttacker: Map<string, Die[]>): Map<string, DiePreview> {
+  const out = new Map<string, DiePreview>();
+  const entry = (d: Die, incoming: number) => {
+    const defense = d.effectiveDefense ?? 0;
+    const already = d.damage ?? 0;
+    out.set(d.id, { defense, already, incoming, ko: already + incoming >= defense });
+  };
+  for (const a of attackers) {
+    const blockers = blockersByAttacker.get(a.id) ?? [];
+    if (blockers.length === 0) continue;
+    let remaining = a.effectiveAttack ?? 0;
+    blockers.forEach((b, i) => {
+      const lethal = Math.max(0, (b.effectiveDefense ?? 0) - (b.damage ?? 0));
+      const give = i === blockers.length - 1 ? remaining : Math.min(remaining, lethal);
+      remaining -= give;
+      entry(b, give);
+    });
+    entry(a, blockers.reduce((n, b) => n + (b.effectiveAttack ?? 0), 0));
+  }
+  return out;
+}
+
 // blockAssignments is keyed by attacker id but holds a LIST of blockers
 // (gang-blocking) - this is the one place that shape turns into the
 // flat {attackerDieId, blockerDieId} pairs the API/bot actually want,
@@ -852,6 +887,7 @@ function LaneDie({
   size,
   picked,
   onTap,
+  preview,
 }: {
   die: Die;
   cardsById: Map<string, CardDef>;
@@ -859,6 +895,7 @@ function LaneDie({
   size: number;
   picked: boolean;
   onTap: () => void;
+  preview?: DiePreview;
 }) {
   return (
     <div
@@ -869,6 +906,27 @@ function LaneDie({
       }}
     >
       <DTile die={die} cardsById={cardsById} size={size} mine={die.controllerId === you} clickable picked={picked} />
+      {preview && <DefenceMeter p={preview} width={size} />}
+    </div>
+  );
+}
+
+// Defence meter under a lane die (design option 6a): the bar is the die's own
+// Defense, dark = damage already marked, red = what this combat would add;
+// the label reads "-N" (incoming) and "KO" when that would be lethal.
+function DefenceMeter({ p, width }: { p: DiePreview; width: number }) {
+  const def = Math.max(1, p.defense);
+  const pct = (n: number) => `${Math.min(100, (n / def) * 100)}%`;
+  return (
+    <div className={`dkm-meter${p.ko ? " ko" : ""}`} style={{ width }}>
+      <div className="dkm-meter-bar">
+        <span className="dkm-meter-marked" style={{ width: pct(p.already) }} />
+        <span className="dkm-meter-incoming" style={{ width: pct(p.incoming), left: pct(p.already) }} />
+      </div>
+      <div className="dkm-meter-label">
+        <span>-{p.incoming}</span>
+        {p.ko && <b>KO</b>}
+      </div>
     </div>
   );
 }
@@ -908,6 +966,7 @@ function AttackLanesCard({
   selectedId: string | null;
 }) {
   const totalDeclared = attackersByLane.reduce((n, l) => n + l.length, 0);
+  const preview = combatPreview(attackersByLane.flat(), blockersByAttacker);
   return (
     <div className="dkm-card">
       <div className="dkm-card-head">
@@ -980,7 +1039,7 @@ function AttackLanesCard({
                         regardless of position/orientation or color vision. */}
                     {attackers.length > 0 && <span className="dkm-lane-role def">Blocking</span>}
                     {blockers.map((b) => (
-                      <LaneDie key={b.id} die={b} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === b.id} onTap={() => onTapBlocker(attackers[0]?.id ?? "", b.id)} />
+                      <LaneDie key={b.id} die={b} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === b.id} onTap={() => onTapBlocker(attackers[0]?.id ?? "", b.id)} preview={preview.get(b.id)} />
                     ))}
                   </div>
                   {chipText && (
@@ -997,7 +1056,7 @@ function AttackLanesCard({
                   <div className="dkm-lane-attackers">
                     {attackers.length > 0 && <span className="dkm-lane-role atk">Attacking</span>}
                     {attackers.map((a) => (
-                      <LaneDie key={a.id} die={a} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === a.id} onTap={() => onTapAttacker(a.id)} />
+                      <LaneDie key={a.id} die={a} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === a.id} onTap={() => onTapAttacker(a.id)} preview={preview.get(a.id)} />
                     ))}
                     {attackers.length === 0 && <div className="dkm-lane-tile empty attacker-empty" />}
                   </div>
@@ -1007,7 +1066,7 @@ function AttackLanesCard({
                   <div className="dkm-lane-attackers">
                     {attackers.length > 0 && <span className="dkm-lane-role atk">Attacking</span>}
                     {attackers.map((a) => (
-                      <LaneDie key={a.id} die={a} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === a.id} onTap={() => onTapAttacker(a.id)} />
+                      <LaneDie key={a.id} die={a} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === a.id} onTap={() => onTapAttacker(a.id)} preview={preview.get(a.id)} />
                     ))}
                     {attackers.length === 0 && <div className="dkm-lane-tile empty attacker-empty" />}
                   </div>
@@ -1025,7 +1084,7 @@ function AttackLanesCard({
                   <div className="dkm-lane-blockers">
                     {attackers.length > 0 && <span className="dkm-lane-role def">Blocking</span>}
                     {blockers.map((b) => (
-                      <LaneDie key={b.id} die={b} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === b.id} onTap={() => onTapBlocker(attackers[0]?.id ?? "", b.id)} />
+                      <LaneDie key={b.id} die={b} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === b.id} onTap={() => onTapBlocker(attackers[0]?.id ?? "", b.id)} preview={preview.get(b.id)} />
                     ))}
                     {step === "assign-blockers" && !isYourTurn && attackers.length > 0 && blockers.length === 0 && (
                       <div className="dkm-lane-tile empty blocker-empty">no blocker</div>

@@ -2838,3 +2838,15 @@ Follow-up (2026-09-19): with pairings now surviving, the bot's heartbeat effect
   die is the one that spins down usefully: Tardigrade double -> its 1A/1D single
   face (best), Character double -> bare single energy, else the pip is lost.
   Engine spends in offered order (TurnEngine.SpendEnergy/TrySpinDown).
+
+## Attack Zone combat preview - defence meters (2026-09-19)
+Design option 6a (Claude Design handoff, "Defence meters") implemented on the
+mobile Attack Zone: under every die with a blocker relationship, a bar of its
+own Defense (grey = damage already marked, red = damage this combat would add)
+plus "-N" and a KO tag when lethal. `combatPreview()` mirrors the server's
+split (attacker's Attack goes to its blockers IN ORDER, lethal to each, rest on
+the last; each blocker hits the attacker for its full Attack), so re-ordering
+blockers changes who is KO'd. New `V2DieDto.Damage` carries marked damage.
+Approximation: ignores Fast's two-wave ordering and on-damage abilities.
+Verified headless (gang-block playthrough). Blocker-side "damage dealt" is the
+attacker's own meter; option 6b's threads were NOT used (clutter).

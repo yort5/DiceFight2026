@@ -60,7 +60,10 @@ public sealed record V2DieDto(
     // feedback, 2026-09-17: "click on the '1 v 3' and have it explain
     // where the numbers are coming from").
     int? BaseAttack, int? BaseDefense,
-    IReadOnlyList<V2StatModifierDto>? AttackModifiers, IReadOnlyList<V2StatModifierDto>? DefenseModifiers)
+    IReadOnlyList<V2StatModifierDto>? AttackModifiers, IReadOnlyList<V2StatModifierDto>? DefenseModifiers,
+    // Damage already marked on the die (e.g. from an on-field ping) - the
+    // Attack Zone combat preview needs it to know how much Defense is left.
+    int Damage = 0)
 {
     private static readonly HashSet<DiceFight.V2.Model.Zone> InPlayZones =
         [DiceFight.V2.Model.Zone.FieldZone, DiceFight.V2.Model.Zone.AttackZone];
@@ -82,7 +85,8 @@ public sealed record V2DieDto(
             showBreakdown ? QueryEngine.GetBaseAttack(state, die) : null,
             showBreakdown ? QueryEngine.GetBaseDefense(state, die) : null,
             showBreakdown ? QueryEngine.GetAttackBreakdown(state, die).Select(V2StatModifierDto.From).ToList() : null,
-            showBreakdown ? QueryEngine.GetDefenseBreakdown(state, die).Select(V2StatModifierDto.From).ToList() : null);
+            showBreakdown ? QueryEngine.GetDefenseBreakdown(state, die).Select(V2StatModifierDto.From).ToList() : null,
+            die.Damage);
     }
 }
 
