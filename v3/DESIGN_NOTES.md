@@ -2820,3 +2820,12 @@ Follow-up (2026-09-19): with pairings now surviving, the bot's heartbeat effect
 - Bot blocking was intentional-but-dumb (blocked only if it killed or
   survived, so 0A/2D vs a 2+ attack never blocked). Now chump-blocks any
   attacker with Attack > 0 as a fallback (KO'd dice just go to Prep).
+
+## Pile sheets + a broken deploy (2026-09-19)
+- The previous commit ("tappable pile contents") had a leftover JSX fragment and
+  did NOT build (`vite build` failed) - its deploy would have failed, so the user
+  kept seeing the old UI. **`tsc --noEmit -p .` checks nothing in this repo; use
+  `npx tsc --noEmit -p tsconfig.app.json` and `npx vite build`.**
+- Used/Prep/Out/Bag on either mat now open a bottom `PileSheet` of real die
+  tiles (FacedownTile for unrolled dice) with names; state lifted to the page.
+  Verified headless: `~/.devtools/playwright/pile-sheet-check.js`.

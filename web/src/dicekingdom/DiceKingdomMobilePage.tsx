@@ -336,30 +336,44 @@ function PileStack({ dice, cardsById }: { dice: Die[]; cardsById: Map<string, Ca
   );
 }
 
-// Tapped-open contents of a pile: one chip per card with its glyph, name and
-// count. Works for the Bag too (composition only).
-function PileDetail({ title, dice, cardsById }: { title: string; dice: Die[]; cardsById: Map<string, CardDef> }) {
-  const groups = new Map<string, { sample: Die; count: number }>();
-  for (const d of dice) {
-    const key = d.cardId ?? "tardigrade";
-    const g = groups.get(key);
-    if (g) g.count += 1;
-    else groups.set(key, { sample: d, count: 1 });
-  }
+type PileZone = "used" | "prep" | "out" | "bag";
+const PILE_TITLES: Record<PileZone, string> = { used: "Used", prep: "Prep", out: "Out of play", bag: "Bag" };
+
+// Bottom sheet showing a pile's dice the same way the mat shows the field:
+// real die tiles where a face is showing, identity-only tiles otherwise
+// (Bag, and anything not currently rolled). Opened from either player's mat.
+function PileSheet({
+  title,
+  dice,
+  cardsById,
+  mine,
+  onClose,
+}: {
+  title: string;
+  dice: Die[];
+  cardsById: Map<string, CardDef>;
+  mine: boolean;
+  onClose: () => void;
+}) {
+  const nameOf = (d: Die) => (d.cardId ? (cardsById.get(d.cardId)?.name ?? d.cardId) : "Tardigrade");
+  const sorted = [...dice].sort((a, b) => nameOf(a).localeCompare(nameOf(b)));
   return (
-    <div className="dkm-bag-contents">
-      <span className="dkm-pile-label">{title}</span>
-      {groups.size === 0 && <span className="dkm-empty-dash">Empty</span>}
-      {[...groups.entries()].map(([key, { sample, count }]) => {
-        const color = typeColorOf(sample, cardsById);
-        return (
-          <span key={key} className="dkm-bag-item" style={{ borderColor: color }}>
-            <AvatarGlyph die={sample} size={20} color={color} />
-            {key === "tardigrade" ? "Tardigrade" : (cardsById.get(key)?.name ?? key)}
-            {count > 1 && <b> ×{count}</b>}
-          </span>
-        );
-      })}
+    <div className="dkm-overlay-backdrop" onClick={onClose}>
+      <div className="dkm-sheet dkm-pile-sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="dkm-sheet-handle" />
+        <div className="dkm-sheet-title">
+          {mine ? "Your" : "Their"} {title} <small>({dice.length})</small>
+        </div>
+        {sorted.length === 0 && <span className="dkm-empty-hint">Nothing here.</span>}
+        <div className="dkm-tile-row wrap dkm-pile-sheet-tiles">
+          {sorted.map((d) => (
+            <div key={d.id} className="dkm-pile-sheet-item">
+              {rolled(d) ? <DTile die={d} cardsById={cardsById} size={54} mine={mine} /> : <FacedownTile die={d} size={54} />}
+              <span className="dkm-pile-sheet-name">{nameOf(d)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -538,6 +552,7 @@ function MatCard({
   cardsById,
   isActivePlayer,
   onOpenRoster,
+  onOpenPile,
   expandable,
   spins,
   turnOffsets,
@@ -551,6 +566,7 @@ function MatCard({
   cardsById: Map<string, CardDef>;
   isActivePlayer: boolean;
   onOpenRoster: () => void;
+  onOpenPile: (zone: PileZone) => void;
   expandable: boolean;
   spins: Record<string, CubeSpin>;
   turnOffsets: Record<string, number>;
@@ -560,8 +576,6 @@ function MatCard({
 }) {
   const [expanded, setExpanded] = useState(false);
   const [championOpen, setChampionOpen] = useState(false);
-  const [openPile, setOpenPile] = useState<"used" | "prep" | "out" | "bag" | null>(null);
-  const togglePile = (k: "used" | "prep" | "out" | "bag") => setOpenPile((cur) => (cur === k ? null : k));
   const zone = (name: string) => dice.filter((d) => d.zone === name);
   const field = zone("FieldZone");
   const used = zone("UsedPile");
@@ -619,45 +633,36 @@ function MatCard({
       {!expandable || expanded ? (
         <div className={expandable ? "dkm-mat-expanded" : undefined}>
           <div className="dkm-pile-grid">
-            <button type="button" className={`dkm-pile-cell dkm-pile-used${openPile === "used" ? " open" : ""}`} onClick={() => togglePile("used")}>
+            <button type="button" className={`dkm-pile-cell dkm-pile-used`} onClick={() => onOpenPile("used")}>
               <span className="dkm-pile-label">Used</span>
               <PileStack dice={used} cardsById={cardsById} />
             </button>
-            <button type="button" className={`dkm-pile-cell dkm-pile-prep${openPile === "prep" ? " open" : ""}`} onClick={() => togglePile("prep")}>
+            <button type="button" className={`dkm-pile-cell dkm-pile-prep`} onClick={() => onOpenPile("prep")}>
               <span className="dkm-pile-label">Prep</span>
               <PileStack dice={prep} cardsById={cardsById} />
             </button>
-            <button type="button" className={`dkm-pile-cell${openPile === "out" ? " open" : ""}`} onClick={() => togglePile("out")}>
+            <button type="button" className={`dkm-pile-cell`} onClick={() => onOpenPile("out")}>
               <span className="dkm-pile-label">Out</span>
               <PileStack dice={out} cardsById={cardsById} />
             </button>
-            <button type="button" className={`dkm-pile-cell${openPile === "bag" ? " open" : ""}`} onClick={() => togglePile("bag")}>
+            <button type="button" className={`dkm-pile-cell`} onClick={() => onOpenPile("bag")}>
               <span className="dkm-pile-label">Bag</span>
               <span className="dkm-bag-count">{bag.length}</span>
             </button>
           </div>
-          {openPile && (
-            <PileDetail
-              title={{ used: "Used", prep: "Prep", out: "Out of play", bag: "Bag" }[openPile]}
-              dice={{ used, prep, out, bag }[openPile]}
-              cardsById={cardsById}
-            />
-          )}
-            </div>
-          )}
         </div>
       ) : (
         <div className="dkm-collapsed-row">
-          <button type="button" onClick={() => { setExpanded(true); setOpenPile("used"); }}>
+          <button type="button" onClick={() => onOpenPile("used")}>
             <b>{used.length}</b> used
           </button>
-          <button type="button" onClick={() => { setExpanded(true); setOpenPile("prep"); }}>
+          <button type="button" onClick={() => onOpenPile("prep")}>
             <b>{prep.length}</b> prep
           </button>
-          <button type="button" onClick={() => { setExpanded(true); setOpenPile("out"); }}>
+          <button type="button" onClick={() => onOpenPile("out")}>
             <b>{out.length}</b> out
           </button>
-          <button type="button" onClick={() => { setExpanded(true); setOpenPile("bag"); }}>
+          <button type="button" onClick={() => onOpenPile("bag")}>
             <b>{bag.length}</b> bag
           </button>
         </div>
@@ -1224,6 +1229,7 @@ export function DiceKingdomMobilePage() {
   // showed YOUR OWN unpurchased cards regardless of which one was
   // tapped, so the opponent's button silently showed your roster.
   const [rosterViewFor, setRosterViewFor] = useState<string | null>(null);
+  const [pileView, setPileView] = useState<{ mine: boolean; zone: PileZone } | null>(null);
   // A brief confirmation that startMatch's auto-copy (below) actually
   // landed - clipboard writes can silently fail (permissions, an
   // unsupported browser), so this only shows on the real success
@@ -2005,6 +2011,7 @@ export function DiceKingdomMobilePage() {
           cardsById={cardsById}
           isActivePlayer={opponentId === game.activePlayerId}
           onOpenRoster={() => setRosterViewFor(opponentId)}
+          onOpenPile={(zone) => setPileView({ mine: false, zone })}
           expandable
           spins={spins}
           turnOffsets={offsets}
@@ -2085,6 +2092,7 @@ export function DiceKingdomMobilePage() {
           dice={yourFieldVisibleDice}
           cardsById={cardsById}
           isActivePlayer={you === game.activePlayerId}
+          onOpenPile={(zone) => setPileView({ mine: true, zone })}
           onOpenRoster={() => setRosterViewFor(you)}
           expandable={false}
           spins={spins}
@@ -2240,6 +2248,15 @@ export function DiceKingdomMobilePage() {
         </div>
       </div>
 
+      {pileView && (
+        <PileSheet
+          title={PILE_TITLES[pileView.zone]}
+          dice={(pileView.mine ? yourDice : oppDice).filter((d) => d.zone === { used: "UsedPile", prep: "PrepArea", out: "OutOfPlay", bag: "Bag" }[pileView.zone])}
+          cardsById={cardsById}
+          mine={pileView.mine}
+          onClose={() => setPileView(null)}
+        />
+      )}
       {stepsOpen && <StepPopout phaseLabel={phaseLabel} steps={chainSteps} index={chainIndex} onClose={() => setStepsOpen(false)} />}
       {rosterViewFor && (
         <RosterSheet

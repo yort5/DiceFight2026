@@ -3289,3 +3289,28 @@
   align-items: center;
   gap: 5px;
 }
+
+.dk-mobile .dkm-sheet-title {
+  font: 400 18px/1 var(--display);
+  color: var(--dkm-ink);
+  margin-bottom: 12px;
+}
+.dk-mobile .dkm-sheet-title small {
+  font: 600 11px/1 "Work Sans", var(--sans);
+  color: var(--dkm-ink-dim);
+}
+.dk-mobile .dkm-pile-sheet-tiles {
+  gap: 12px;
+}
+.dk-mobile .dkm-pile-sheet-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  width: 64px;
+}
+.dk-mobile .dkm-pile-sheet-name {
+  font: 600 9px/1.1 "Work Sans", var(--sans);
+  text-align: center;
+  color: var(--dkm-ink-dim);
+}
