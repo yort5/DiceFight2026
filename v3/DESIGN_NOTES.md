@@ -2795,3 +2795,8 @@ whenever the step wasn't `assign-blockers`, and `declareBlockers` lands on
 doesn't persist pairings) treated every attacker as unblocked - no combat
 damage to blockers, no KOs. Now cleared only outside assign-blockers /
 action-global-window (mobile and desktop pages both had the line).
+
+Follow-up (2026-09-19): with pairings now surviving, the bot's heartbeat effect
+(deps `[vsComputer, gameId]`) still saw its first-render `blockAssignments`
+(`{}`), so it never resolved damage after the human blocked -> stuck on
+"Waiting…". Bot now reads pairings via `blockAssignmentsRef` (both pages).

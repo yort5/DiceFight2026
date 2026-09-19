@@ -1173,6 +1173,11 @@ export function DiceKingdomMobilePage() {
   // the first one instead of adding to it - tapping an existing blocker
   // "swapped" it back to the field. Now a list per attacker key.
   const [blockAssignments, setBlockAssignments] = useState<Record<string, string[]>>({});
+  // The bot heartbeat effect below closes over its first render, so it must
+  // read the live pairings through a ref (a stale {} made it skip Resolve
+  // Damage forever and left the human stuck on "Waiting…").
+  const blockAssignmentsRef = useRef(blockAssignments);
+  blockAssignmentsRef.current = blockAssignments;
   const [stepsOpen, setStepsOpen] = useState(false);
   // Which player's roster the sheet is showing, or null when closed -
   // NOT a bare boolean (real bug, direct feedback 2026-09-16): both
@@ -1469,7 +1474,7 @@ export function DiceKingdomMobilePage() {
       return;
     }
     if (step === "action-global-window") {
-      const assignments = blockAssignmentsToApi(blockAssignments);
+      const assignments = blockAssignmentsToApi(blockAssignmentsRef.current);
       // The empty case is handled generically by the auto-skip effect
       // above - only step in here for a real pairing.
       if (assignments.length === 0) return;

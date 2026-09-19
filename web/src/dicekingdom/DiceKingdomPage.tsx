@@ -531,6 +531,9 @@ export function DiceKingdomPage() {
   // `selection` because it accumulates ACROSS several picks rather than
   // being replaced by each one.
   const [blockAssignments, setBlockAssignments] = useState<Record<string, string | null>>({});
+  // Bot heartbeat closes over its first render - read live pairings via ref.
+  const blockAssignmentsRef = useRef(blockAssignments);
+  blockAssignmentsRef.current = blockAssignments;
   const [cardsById, setCardsById] = useState<Map<string, CardDef>>(new Map());
   // The dice-cube roll animation - ported verbatim from ../useDiceRoll.ts.
   // README calls this "the single most important piece to port
@@ -901,7 +904,7 @@ export function DiceKingdomPage() {
       return;
     }
     if (step === "action-global-window") {
-      const assignments = Object.entries(blockAssignments)
+      const assignments = Object.entries(blockAssignmentsRef.current)
         .filter(([, b]) => b)
         .map(([attackerDieId, blockerDieId]) => ({ attackerDieId, blockerDieId: blockerDieId! }));
       // The empty case is handled generically by the auto-skip effect
