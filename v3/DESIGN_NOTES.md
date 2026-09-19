@@ -2850,3 +2850,20 @@ blockers changes who is KO'd. New `V2DieDto.Damage` carries marked damage.
 Approximation: ignores Fast's two-wave ordering and on-damage abilities.
 Verified headless (gang-block playthrough). Blocker-side "damage dealt" is the
 attacker's own meter; option 6b's threads were NOT used (clutter).
+
+## Motion pass: flying dice + resizing phase card (2026-09-19)
+Direct feedback: Roll -> Main was a hard cut; dice blipped between zones.
+- `web/src/dicekingdom/dieFlights.ts`. `useDieFlights` snapshots every
+  `[data-fly-id]` element (dice `die:<id>`, Buy tiles `card:<cardId>`) after each
+  commit and, next commit, launches a fixed-position ghost clone from the old
+  spot to the new one when a die's zone/lane/region changed. Ghosts track the
+  destination live each frame; the real destination die stays hidden until
+  landing. No element any more (spent/KO'd/bought) -> flies into
+  `[data-pile="mine|opp-used|prep|out|bag|reserve"]`; a KO first shakes + flashes
+  red (~420ms, `dkKoShake`) then flies to Prep. A fresh draw flies out of its pile.
+- `usePhaseHeight` animates the persistent `.dkm-phase-shell` height when the
+  phase card changes (Tray -> Buy "expands"); the keyed card inside still fades in.
+- Cosmetic only; disabled under prefers-reduced-motion. KO flight path is the
+  same code as the purchase/spent-energy path but was not exercised end-to-end
+  headless (needs a real combat KO) - watch for it in play.
+- Gotcha: hooks must sit ABOVE the page's `if (!game) return` early return.

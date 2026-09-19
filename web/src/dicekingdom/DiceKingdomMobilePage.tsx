@@ -14,6 +14,7 @@ import {
 import { claimSeatFromUrl, inviteLink, nameClaimedSeat, rememberSeats } from "./seats";
 import { DieCube, type CubeSpin } from "./DieCube";
 import { facesFor } from "./dieFaces";
+import { useDieFlights, usePhaseHeight } from "./dieFlights";
 import { useDiceRoll, type RollTarget } from "./useDiceRoll";
 import { decideAttackers, decideBlockers, decideMainAction, decidePendingChoice, decisionOwner, pickEnergy } from "./bot";
 import type { CardDef, Die, GameState, PlayerState, StatModifier } from "./types";
@@ -391,7 +392,7 @@ function PileStrip({
       <div className="dkm-tile-row wrap">
         {sorted.map((d) => (
           <div key={d.id} className="dkm-pile-sheet-item" title={nameOf(d)}>
-            {rolled(d) ? <DTile die={d} cardsById={cardsById} size={36} mine={mine} /> : <FacedownTile die={d} size={36} />}
+            {rolled(d) ? <DTile die={d} cardsById={cardsById} size={36} mine={mine} flyId={false} /> : <span className="dkm-nofly"><FacedownTile die={d} size={36} /></span>}
           </div>
         ))}
       </div>
@@ -413,6 +414,7 @@ function DTile({
   spin,
   turnOffset,
   onClick,
+  flyId = true,
 }: {
   die: Die;
   cardsById: Map<string, CardDef>;
@@ -423,10 +425,12 @@ function DTile({
   spin?: CubeSpin;
   turnOffset?: number;
   onClick?: () => void;
+  /** Tag this tile as the die's on-screen home for flight animations (see dieFlights.ts). */
+  flyId?: boolean;
 }) {
   const cls = ["dkm-tile", clickable ? "clickable" : "", picked ? "picked" : ""].filter(Boolean).join(" ");
   return (
-    <button type="button" className={cls} onClick={clickable ? onClick : undefined} disabled={!clickable}>
+    <button type="button" className={cls} onClick={clickable ? onClick : undefined} disabled={!clickable} data-fly-id={flyId ? `die:${die.id}` : undefined}>
       <DieCube
         {...facesFor(die, cardsById)}
         size={size}
@@ -446,7 +450,7 @@ function DTile({
 function FacedownTile({ die, size }: { die: Die; size: number }) {
   const Avatar = die.cardId ? CHARACTER_ICONS[die.cardId] : null;
   return (
-    <div className="dkm-tile dkm-facedown" style={{ width: size, height: size }}>
+    <div className="dkm-tile dkm-facedown" style={{ width: size, height: size }} data-fly-id={`die:${die.id}`}>
       <span style={{ opacity: 0.55 }}>{Avatar ? <Avatar size={Math.round(size * 0.5)} /> : <TardigradeIcon size={Math.round(size * 0.5)} />}</span>
     </div>
   );
@@ -631,7 +635,9 @@ function MatCard({
         <span className="dkm-mat-life">
           {player.life} <small>life</small>
         </span>
-        <EnergyChips dice={reserve} size={mine ? 16 : 15} />
+        <span className="dkm-reserve-anchor" data-pile={`${mine ? "mine" : "opp"}-reserve`}>
+          <EnergyChips dice={reserve} size={mine ? 16 : 15} />
+        </span>
         <span className="dkm-mat-head-actions">
           <button type="button" className="dkm-chip-btn" onClick={onOpenRoster}>
             Roster
@@ -656,19 +662,19 @@ function MatCard({
       {!expandable || expanded ? (
         <div className={expandable ? "dkm-mat-expanded" : undefined}>
           <div className="dkm-pile-grid">
-            <button type="button" className={`dkm-pile-cell dkm-pile-used`} onClick={() => onOpenPile("used")}>
+            <button type="button" className={`dkm-pile-cell dkm-pile-used`} data-pile={`${mine ? "mine" : "opp"}-used`} onClick={() => onOpenPile("used")}>
               <span className="dkm-pile-label">Used</span>
               <PileStack dice={used} cardsById={cardsById} />
             </button>
-            <button type="button" className={`dkm-pile-cell dkm-pile-prep`} onClick={() => onOpenPile("prep")}>
+            <button type="button" className={`dkm-pile-cell dkm-pile-prep`} data-pile={`${mine ? "mine" : "opp"}-prep`} onClick={() => onOpenPile("prep")}>
               <span className="dkm-pile-label">Prep</span>
               <PileStack dice={prep} cardsById={cardsById} />
             </button>
-            <button type="button" className={`dkm-pile-cell`} onClick={() => onOpenPile("out")}>
+            <button type="button" className={`dkm-pile-cell`} data-pile={`${mine ? "mine" : "opp"}-out`} onClick={() => onOpenPile("out")}>
               <span className="dkm-pile-label">Out</span>
               <PileStack dice={out} cardsById={cardsById} />
             </button>
-            <button type="button" className={`dkm-pile-cell`} onClick={() => onOpenPile("bag")}>
+            <button type="button" className={`dkm-pile-cell`} data-pile={`${mine ? "mine" : "opp"}-bag`} onClick={() => onOpenPile("bag")}>
               <span className="dkm-pile-label">Bag</span>
               <span className="dkm-bag-count">{bag.length}</span>
             </button>
@@ -676,16 +682,16 @@ function MatCard({
         </div>
       ) : (
         <div className="dkm-collapsed-row">
-          <button type="button" onClick={() => onOpenPile("used")}>
+          <button type="button" data-pile={`${mine ? "mine" : "opp"}-used`} onClick={() => onOpenPile("used")}>
             <b>{used.length}</b> used
           </button>
-          <button type="button" onClick={() => onOpenPile("prep")}>
+          <button type="button" data-pile={`${mine ? "mine" : "opp"}-prep`} onClick={() => onOpenPile("prep")}>
             <b>{prep.length}</b> prep
           </button>
-          <button type="button" onClick={() => onOpenPile("out")}>
+          <button type="button" data-pile={`${mine ? "mine" : "opp"}-out`} onClick={() => onOpenPile("out")}>
             <b>{out.length}</b> out
           </button>
-          <button type="button" onClick={() => onOpenPile("bag")}>
+          <button type="button" data-pile={`${mine ? "mine" : "opp"}-bag`} onClick={() => onOpenPile("bag")}>
             <b>{bag.length}</b> bag
           </button>
         </div>
@@ -759,6 +765,7 @@ function TrayCard({
             <button
               key={d.id}
               type="button"
+              data-fly-id={`die:${d.id}`}
               className={`dkm-tile clickable${rerollPicked.includes(d.id) ? " picked" : ""}`}
               onClick={() => onToggleReroll(d.id)}
             >
@@ -827,6 +834,7 @@ function BuyCard({
             <button
               key={cardId}
               type="button"
+              data-fly-id={`card:${cardId}`}
               className={`dkm-buy-tile${selectedId === dieId ? " picked" : ""}${affordable ? "" : " unaffordable"}`}
               onClick={() => onSelect(dieId)}
             >
@@ -1014,6 +1022,7 @@ function AttackLanesCard({
               key={lane}
               role="button"
               tabIndex={0}
+              data-lane={lane}
               className={`dkm-lane${targeted ? " targeted" : ""}`}
               onClick={tapLane}
               onKeyDown={(e) => {
@@ -1639,9 +1648,16 @@ export function DiceKingdomMobilePage() {
     }
   }
 
+  // Hooks (must sit above the early return): dice flights + phase-card resize.
+  const stageShellRef = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const flightPhase = game ? phaseForStep(game.currentStepId) : "";
+  usePhaseHeight(stageShellRef, flightPhase);
+  useDieFlights(rootRef, game, flightPhase, game ? (game.yourPlayerId ?? game.playerOne.id) : "");
+
   if (!game) {
     return (
-      <div className="dicekingdom dk-mobile dkm-root">
+      <div ref={rootRef} className="dicekingdom dk-mobile dkm-root">
         <EnergyBadgeOutlineDefs />
         <p className="dkm-eyebrow">DiceFight v3 · mobile</p>
         <h1 className="dkm-title">Dice Kingdom</h1>
@@ -2050,7 +2066,7 @@ export function DiceKingdomMobilePage() {
   const oppRosterCards = rosterRowsFor(oppUnpurchasedByCard);
 
   return (
-    <div className="dicekingdom dk-mobile dkm-root">
+    <div ref={rootRef} className="dicekingdom dk-mobile dkm-root">
       <EnergyBadgeOutlineDefs />
       <div className="dkm-header">
         <PhaseRail current={phase} onTap={() => {}} />
@@ -2087,6 +2103,7 @@ export function DiceKingdomMobilePage() {
             their destination." (runWithReveal above is what makes sure
             this swap only happens once a reroll's tumble has actually
             been seen, not the instant the server responds.) */}
+        <div ref={stageShellRef} className="dkm-phase-shell">
         <div key={phase} className="dkm-phase-stage">
           {phase === "clear" && (
             <TrayCard
@@ -2142,6 +2159,7 @@ export function DiceKingdomMobilePage() {
             />
           )}
           {phase === "cleanup" && <CleanUpCard reserve={yourReserve} cardsById={cardsById} you={you} />}
+        </div>
         </div>
 
         <MatCard
