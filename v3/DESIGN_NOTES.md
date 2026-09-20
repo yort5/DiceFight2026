@@ -198,7 +198,7 @@ the CSS (`instinct.css` → `dicekingdom.css`, `.instinct` → `.dicekingdom`),
 the seat-storage key and invite-link path, and all on-page text. Left
 alone, deliberately: the C# engine's internal naming
 (`Data/DiceKingdomConfig.cs`, the `DiceKingdomConfig` class, card IDs
-like `IC-CLAW-01`, the `Set: "Instinct Clash"` field on each card) - none
+like `DK-CLAW-01`, the `Set: "Instinct Clash"` field on each card) - none
 of that is user-visible (the API's `CardDef` DTO doesn't even expose
 `Set`), and renaming it is pure mechanical churn across ~30 call sites for
 zero visible benefit. Same pattern as "DiceFight2026" itself being an
@@ -2706,7 +2706,7 @@ repeats within one, no card shared across two Champions) and
 energy subset - not today's specific picks, so a future roster edit
 that breaks the curve fails loudly instead of silently). Also fixed
 `V2GamesControllerTests`' now-wrong `Create_Builds_Each_Team_From_Its_
-Champions_Energy_Type` (asserted every card `StartsWith("IC-CLAW-")`,
+Champions_Energy_Type` (asserted every card `StartsWith("DK-CLAW-")`,
 the exact invariant this change intentionally breaks) to check "matches
 `CharactersByChampion` exactly" instead. 322 V2 + 580 Engine + 13 Api
 tests pass.
