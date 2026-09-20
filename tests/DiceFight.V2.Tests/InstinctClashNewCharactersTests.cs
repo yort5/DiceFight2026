@@ -99,25 +99,25 @@ public class InstinctClashNewCharactersTests
     }
 
     [Fact]
-    public void GrizzlyBear_KOs_A_Target_Creature_When_Fielded()
+    public void Orca_KOs_A_Target_Creature_When_Fielded()
     {
         var state = NewGame();
         var queue = new AbilityQueue();
 
         var target = ActiveCharacter(state, InstinctClashConfig.Hippopotamus.Id, "p2");
-        var grizzly = ReadyCharacter(state, InstinctClashConfig.GrizzlyBear.Id, "p1");
+        var orca = ReadyCharacter(state, InstinctClashConfig.Orca.Id, "p1");
         var energyIds = TardigradeEnergy(state, "p1", "Claw", 1); // fielding cost 2, one L1 Tardigrade die covers it
 
-        TurnEngine.Field(state, queue, grizzly.Id, energyIds);
+        TurnEngine.Field(state, queue, orca.Id, energyIds);
         Drain(state, queue);
         // Ko's TargetFilter is unrestricted ("a target creature" - no
         // Ownership limit, matching Honey Badger's own printed text) -
-        // Grizzly itself is a live candidate the instant it's fielded
+        // Orca itself is a live candidate the instant it's fielded
         // (rule 2.6.3.6), so with two candidates this is a real player
         // choice, not an auto-resolve.
         AnswerIfPending(state, queue, target.Id);
 
-        Assert.Equal(Zone.FieldZone, grizzly.Zone);
+        Assert.Equal(Zone.FieldZone, orca.Zone);
         Assert.Equal(Zone.PrepArea, target.Zone); // KO'd (rule 1.5.3.2)
     }
 

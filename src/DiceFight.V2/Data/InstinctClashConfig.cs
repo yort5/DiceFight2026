@@ -74,7 +74,7 @@ public static class InstinctClashConfig
     public static readonly CardDef HoneyBadger = new(
         Id: "IC-CLAW-01", Name: "Honey Badger", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
         PurchaseCost: 2, EnergySymbolIds: ["Claw"],
-        Die: CharacterDie("IC-CLAW-01Die", energyType: "Claw", fieldingCost: 1, (0, 2), (0, 3), (1, 3)),
+        Die: CharacterDie("IC-CLAW-01Die", energyType: "Claw", fieldingCost: 1, (0, 2), (1, 2), (1, 3)),
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "On field: deal 1 damage to a target creature.",
         Abilities: [new TriggeredAbility(TriggerKind.DieFielded,
@@ -84,9 +84,9 @@ public static class InstinctClashConfig
     public static readonly CardDef Wolverine = new(
         Id: "IC-CLAW-02", Name: "Wolverine", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Claw"],
-        Die: CharacterDie("IC-CLAW-02Die", energyType: "Claw", fieldingCost: 2, (0, 2), (0, 2), (1, 3)),
-        DieLimit: 4, Affiliations: [], Keywords: [],
-        RawText: "On attack: deal 1 damage to the opponent directly.",
+        Die: CharacterDie("IC-CLAW-02Die", energyType: "Claw", fieldingCost: 2, (1, 3), (2, 4), (3, 4)),
+        DieLimit: 4, Affiliations: [], Keywords: ["Fast"],
+        RawText: "Fast. On attack: deal 1 damage to the opponent directly.",
         Abilities: [new TriggeredAbility(TriggerKind.DieAttacks,
             new DealDamage(new Fixed(1), new TargetFilter(Kind: TargetKind.Player, Ownership: TargetOwnership.Opposing)))],
         Continuous: []);
@@ -101,16 +101,16 @@ public static class InstinctClashConfig
     public static readonly CardDef GrizzlyBear = new(
         Id: "IC-CLAW-03", Name: "Grizzly Bear", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
         PurchaseCost: 5, EnergySymbolIds: ["Claw"],
-        Die: CharacterDie("IC-CLAW-03Die", energyType: "Claw", fieldingCost: 2, (1, 5), (2, 6), (3, 8)),
-        DieLimit: 4, Affiliations: [], Keywords: [],
-        RawText: "On field: KO a target creature.",
-        Abilities: [new TriggeredAbility(TriggerKind.DieFielded, new Ko(new TargetFilter(Kind: TargetKind.CharacterDie)))],
+        Die: CharacterDie("IC-CLAW-03Die", energyType: "Claw", fieldingCost: 2, (2, 4), (3, 5), (4, 5)),
+        DieLimit: 4, Affiliations: [], Keywords: ["Overcrush"],
+        RawText: "Overcrush.",
+        Abilities: [],
         Continuous: []);
 
     public static readonly CardDef Orca = new(
         Id: "IC-CLAW-04", Name: "Orca", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
         PurchaseCost: 5, EnergySymbolIds: ["Claw"],
-        Die: CharacterDie("IC-CLAW-04Die", energyType: "Claw", fieldingCost: 2, (0, 3), (1, 3), (1, 4)),
+        Die: CharacterDie("IC-CLAW-04Die", energyType: "Claw", fieldingCost: 2, (1, 3), (2, 4), (2, 5)),
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "On field: KO a target creature.",
         Abilities: [new TriggeredAbility(TriggerKind.DieFielded, new Ko(new TargetFilter(Kind: TargetKind.CharacterDie)))],
@@ -119,9 +119,9 @@ public static class InstinctClashConfig
     public static readonly CardDef PeregrineFalcon = new(
         Id: "IC-CLAW-05", Name: "Peregrine Falcon", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
         PurchaseCost: 6, EnergySymbolIds: ["Claw"],
-        Die: CharacterDie("IC-CLAW-05Die", energyType: "Claw", fieldingCost: 2, (1, 5), (2, 7), (3, 8)),
-        DieLimit: 4, Affiliations: [], Keywords: [],
-        RawText: "On field: deal 3 damage to a target creature.",
+        Die: CharacterDie("IC-CLAW-05Die", energyType: "Claw", fieldingCost: 2, (1, 3), (2, 4), (3, 5)),
+        DieLimit: 4, Affiliations: [], Keywords: ["Fast"],
+        RawText: "Fast. On field: deal 3 damage to a target creature.",
         Abilities: [new TriggeredAbility(TriggerKind.DieFielded,
             new DealDamage(new Fixed(3), new TargetFilter(Kind: TargetKind.CharacterDie)))],
         Continuous: []);
@@ -129,9 +129,9 @@ public static class InstinctClashConfig
     public static readonly CardDef Tiger = new(
         Id: "IC-CLAW-06", Name: "Tiger", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
         PurchaseCost: 6, EnergySymbolIds: ["Claw"],
-        Die: CharacterDie("IC-CLAW-06Die", energyType: "Claw", fieldingCost: 2, (1, 5), (2, 7), (3, 8)),
-        DieLimit: 4, Affiliations: [], Keywords: [],
-        RawText: "On attack: deal 2 damage to the opponent directly.",
+        Die: CharacterDie("IC-CLAW-06Die", energyType: "Claw", fieldingCost: 2, (2, 3), (3, 4), (3, 5)),
+        DieLimit: 4, Affiliations: [], Keywords: ["Overcrush"],
+        RawText: "Overcrush. On attack: deal 2 damage to the opponent directly.",
         Abilities: [new TriggeredAbility(TriggerKind.DieAttacks,
             new DealDamage(new Fixed(2), new TargetFilter(Kind: TargetKind.Player, Ownership: TargetOwnership.Opposing)))],
         Continuous: []);
@@ -169,7 +169,7 @@ public static class InstinctClashConfig
     public static readonly CardDef Mongoose = new(
         Id: "IC-CLAW-09", Name: "Mongoose", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
         PurchaseCost: 3, EnergySymbolIds: ["Claw"],
-        Die: CharacterDie("IC-CLAW-09Die", energyType: "Claw", fieldingCost: 1, (2, 1), (3, 2), (4, 4)),
+        Die: CharacterDie("IC-CLAW-09Die", energyType: "Claw", fieldingCost: 1, (2, 1), (2, 1), (3, 2)),
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "Whenever this levels up: deal 2 damage to a target creature.",
         Abilities: [new TriggeredAbility(TriggerKind.DieFaceChanged,
@@ -182,16 +182,16 @@ public static class InstinctClashConfig
     public static readonly CardDef Hippopotamus = new(
         Id: "IC-SHELL-01", Name: "Hippopotamus", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Shell"],
-        Die: CharacterDie("IC-SHELL-01Die", energyType: "Shell", fieldingCost: 2, (0, 1), (1, 1), (2, 1)),
+        Die: CharacterDie("IC-SHELL-01Die", energyType: "Shell", fieldingCost: 2, (0, 6), (1, 7), (2, 8)),
         DieLimit: 4, Affiliations: [], Keywords: [],
-        RawText: "On field: gain 2 life.",
-        Abilities: [new TriggeredAbility(TriggerKind.DieFielded, new LifeChange(new Fixed(2)))],
+        RawText: "Vanilla - no ability.",
+        Abilities: [],
         Continuous: []);
 
     public static readonly CardDef MuskOx = new(
         Id: "IC-SHELL-02", Name: "Musk Ox", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Shell"],
-        Die: CharacterDie("IC-SHELL-02Die", energyType: "Shell", fieldingCost: 2, (0, 2), (1, 2), (1, 3)),
+        Die: CharacterDie("IC-SHELL-02Die", energyType: "Shell", fieldingCost: 2, (0, 5), (1, 5), (1, 6)),
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "While active, your creatures get +1 DEF.",
         Abilities: [],
@@ -206,7 +206,7 @@ public static class InstinctClashConfig
     public static readonly CardDef Pangolin = new(
         Id: "IC-SHELL-03", Name: "Pangolin", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
         PurchaseCost: 3, EnergySymbolIds: ["Shell"],
-        Die: CharacterDie("IC-SHELL-03Die", energyType: "Shell", fieldingCost: 1, (0, 2), (1, 3), (1, 3)),
+        Die: CharacterDie("IC-SHELL-03Die", energyType: "Shell", fieldingCost: 1, (0, 2), (1, 3), (2, 3)),
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "On field: gain 1 life.",
         Abilities: [new TriggeredAbility(TriggerKind.DieFielded, new LifeChange(new Fixed(1)))],
@@ -215,16 +215,16 @@ public static class InstinctClashConfig
     public static readonly CardDef HermitCrab = new(
         Id: "IC-SHELL-04", Name: "Hermit Crab", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
         PurchaseCost: 2, EnergySymbolIds: ["Shell"],
-        Die: CharacterDie("IC-SHELL-04Die", energyType: "Shell", fieldingCost: 1, (1, 1), (0, 1), (2, 1)),
+        Die: CharacterDie("IC-SHELL-04Die", energyType: "Shell", fieldingCost: 1, (0, 3), (1, 3), (1, 3)),
         DieLimit: 4, Affiliations: [], Keywords: [],
-        RawText: "On field: gain 2 life.",
-        Abilities: [new TriggeredAbility(TriggerKind.DieFielded, new LifeChange(new Fixed(2)))],
+        RawText: "Vanilla - no ability.",
+        Abilities: [],
         Continuous: []);
 
     public static readonly CardDef Opossum = new(
         Id: "IC-SHELL-05", Name: "Opossum", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
         PurchaseCost: 3, EnergySymbolIds: ["Shell"],
-        Die: CharacterDie("IC-SHELL-05Die", energyType: "Shell", fieldingCost: 1, (0, 0), (0, 1), (1, 2)),
+        Die: CharacterDie("IC-SHELL-05Die", energyType: "Shell", fieldingCost: 1, (0, 2), (1, 3), (2, 3)),
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "On field: a weak target creature (3 ATK or less) can't block this turn.",
         Abilities: [new TriggeredAbility(TriggerKind.DieFielded,
@@ -252,7 +252,7 @@ public static class InstinctClashConfig
     public static readonly CardDef BoxTurtle = new(
         Id: "IC-SHELL-08", Name: "Box Turtle", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
         PurchaseCost: 3, EnergySymbolIds: ["Shell"],
-        Die: CharacterDie("IC-SHELL-08Die", energyType: "Shell", fieldingCost: 1, (0, 1), (1, 2), (1, 3)),
+        Die: CharacterDie("IC-SHELL-08Die", energyType: "Shell", fieldingCost: 1, (0, 2), (1, 3), (1, 3)),
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "On field: deal 1 damage to a target creature.",
         Abilities: [new TriggeredAbility(TriggerKind.DieFielded,
@@ -274,7 +274,7 @@ public static class InstinctClashConfig
     public static readonly CardDef BarnSwallow = new(
         Id: "IC-WING-02", Name: "Barn Swallow", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
         PurchaseCost: 3, EnergySymbolIds: ["Wing"],
-        Die: CharacterDie("IC-WING-02Die", energyType: "Wing", fieldingCost: 1, (0, 2), (0, 3), (1, 3)),
+        Die: CharacterDie("IC-WING-02Die", energyType: "Wing", fieldingCost: 1, (0, 2), (0, 3), (1, 4)),
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "Whenever this levels up: draw a die into your Prep Area.",
         Abilities: [new TriggeredAbility(TriggerKind.DieFaceChanged, new DrawToZone(1, Zone.PrepArea, Zone.Bag),
@@ -292,7 +292,7 @@ public static class InstinctClashConfig
     public static readonly CardDef Hummingbird = new(
         Id: "IC-WING-03", Name: "Hummingbird", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Wing"],
-        Die: CharacterDie("IC-WING-03Die", energyType: "Wing", fieldingCost: 1, (0, 1), (0, 1), (1, 2)),
+        Die: CharacterDie("IC-WING-03Die", energyType: "Wing", fieldingCost: 1, (0, 2), (1, 2), (1, 3)),
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "On field: KO a target creature.",
         Abilities: [new TriggeredAbility(TriggerKind.DieFielded, new Ko(new TargetFilter(Kind: TargetKind.CharacterDie)))],
@@ -310,7 +310,7 @@ public static class InstinctClashConfig
     public static readonly CardDef MonarchButterfly = new(
         Id: "IC-WING-05", Name: "Monarch Butterfly", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Wing"],
-        Die: CharacterDie("IC-WING-05Die", energyType: "Wing", fieldingCost: 1, (0, 1), (0, 2), (1, 3)),
+        Die: CharacterDie("IC-WING-05Die", energyType: "Wing", fieldingCost: 1, (0, 2), (1, 3), (2, 3)),
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "Gets +2 ATK for each of your creatures waiting in your Prep Area.",
         Abilities: [],
@@ -320,7 +320,7 @@ public static class InstinctClashConfig
     public static readonly CardDef HomingPigeon = new(
         Id: "IC-WING-06", Name: "Homing Pigeon", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Wing"],
-        Die: CharacterDie("IC-WING-06Die", energyType: "Wing", fieldingCost: 2, (0, 3), (1, 3), (1, 4)),
+        Die: CharacterDie("IC-WING-06Die", energyType: "Wing", fieldingCost: 2, (0, 5), (1, 6), (1, 7)),
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "On field: gain 2 life.",
         Abilities: [new TriggeredAbility(TriggerKind.DieFielded, new LifeChange(new Fixed(2)))],
@@ -329,11 +329,10 @@ public static class InstinctClashConfig
     public static readonly CardDef Greyhound = new(
         Id: "IC-WING-07", Name: "Greyhound", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Wing"],
-        Die: CharacterDie("IC-WING-07Die", energyType: "Wing", fieldingCost: 2, (1, 5), (2, 6), (3, 8)),
-        DieLimit: 4, Affiliations: [], Keywords: [],
-        RawText: "On attack: deal 1 damage to the opponent directly.",
-        Abilities: [new TriggeredAbility(TriggerKind.DieAttacks,
-            new DealDamage(new Fixed(1), new TargetFilter(Kind: TargetKind.Player, Ownership: TargetOwnership.Opposing)))],
+        Die: CharacterDie("IC-WING-07Die", energyType: "Wing", fieldingCost: 2, (1, 4), (2, 5), (2, 5)),
+        DieLimit: 4, Affiliations: [], Keywords: ["Fast"],
+        RawText: "Fast.",
+        Abilities: [],
         Continuous: []);
 
     public static readonly CardDef Albatross = new(
@@ -355,7 +354,7 @@ public static class InstinctClashConfig
     public static readonly CardDef Swift = new(
         Id: "IC-WING-09", Name: "Swift", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
         PurchaseCost: 2, EnergySymbolIds: ["Wing"],
-        Die: CharacterDie("IC-WING-09Die", energyType: "Wing", fieldingCost: 1, (2, 1), (2, 2), (3, 2)),
+        Die: CharacterDie("IC-WING-09Die", energyType: "Wing", fieldingCost: 1, (1, 1), (1, 2), (2, 2)),
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "On attack: draw a die into your Prep Area.",
         Abilities: [new TriggeredAbility(TriggerKind.DieAttacks, new DrawToZone(1, Zone.PrepArea, Zone.Bag))],
@@ -366,7 +365,7 @@ public static class InstinctClashConfig
     public static readonly CardDef BarnOwl = new(
         Id: "IC-EYE-01", Name: "Barn Owl", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Eye"],
-        Die: CharacterDie("IC-EYE-01Die", energyType: "Eye", fieldingCost: 2, (0, 2), (0, 3), (1, 3)),
+        Die: CharacterDie("IC-EYE-01Die", energyType: "Eye", fieldingCost: 2, (0, 5), (1, 5), (1, 6)),
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "On field: a weak target creature (3 ATK or less) can't block this turn.",
         Abilities: [new TriggeredAbility(TriggerKind.DieFielded,
@@ -376,7 +375,7 @@ public static class InstinctClashConfig
     public static readonly CardDef Hyena = new(
         Id: "IC-EYE-02", Name: "Hyena", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Eye"],
-        Die: CharacterDie("IC-EYE-02Die", energyType: "Eye", fieldingCost: 2, (1, 3), (1, 4), (2, 5)),
+        Die: CharacterDie("IC-EYE-02Die", energyType: "Eye", fieldingCost: 2, (1, 4), (1, 5), (2, 5)),
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "Gets +1 ATK for each weak opposing creature (2 DEF or less).",
         Abilities: [],
@@ -390,7 +389,7 @@ public static class InstinctClashConfig
     public static readonly CardDef Anglerfish = new(
         Id: "IC-EYE-03", Name: "Anglerfish", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
         PurchaseCost: 6, EnergySymbolIds: ["Eye"],
-        Die: CharacterDie("IC-EYE-03Die", energyType: "Eye", fieldingCost: 2, (1, 5), (2, 7), (3, 8)),
+        Die: CharacterDie("IC-EYE-03Die", energyType: "Eye", fieldingCost: 2, (1, 4), (2, 5), (3, 6)),
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "On attack: every weak opposing creature (3 DEF or less) can't block this turn.",
         Abilities: [new TriggeredAbility(TriggerKind.DieAttacks,
@@ -400,7 +399,7 @@ public static class InstinctClashConfig
     public static readonly CardDef Cowbird = new(
         Id: "IC-EYE-04", Name: "Cowbird", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
         PurchaseCost: 3, EnergySymbolIds: ["Eye"],
-        Die: CharacterDie("IC-EYE-04Die", energyType: "Eye", fieldingCost: 1, (1, 2), (2, 3), (2, 4)),
+        Die: CharacterDie("IC-EYE-04Die", energyType: "Eye", fieldingCost: 1, (1, 2), (1, 3), (2, 2)),
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "Whenever this levels up: move an opposing die from their Prep Area back to their Bag.",
         Abilities: [new TriggeredAbility(TriggerKind.DieFaceChanged,
@@ -411,7 +410,7 @@ public static class InstinctClashConfig
     public static readonly CardDef Magpie = new(
         Id: "IC-EYE-05", Name: "Magpie", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
         PurchaseCost: 3, EnergySymbolIds: ["Eye"],
-        Die: CharacterDie("IC-EYE-05Die", energyType: "Eye", fieldingCost: 1, (1, 1), (1, 2), (2, 4)),
+        Die: CharacterDie("IC-EYE-05Die", energyType: "Eye", fieldingCost: 1, (1, 1), (1, 2), (2, 3)),
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "On field: draw a die into your Prep Area.",
         Abilities: [new TriggeredAbility(TriggerKind.DieFielded, new DrawToZone(1, Zone.PrepArea, Zone.Bag))],
@@ -419,8 +418,8 @@ public static class InstinctClashConfig
 
     public static readonly CardDef Raven = new(
         Id: "IC-EYE-06", Name: "Raven", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
-        PurchaseCost: 7, EnergySymbolIds: ["Eye"],
-        Die: CharacterDie("IC-EYE-06Die", energyType: "Eye", fieldingCost: 2, (0, 2), (0, 3), (1, 3)),
+        PurchaseCost: 5, EnergySymbolIds: ["Eye"],
+        Die: CharacterDie("IC-EYE-06Die", energyType: "Eye", fieldingCost: 2, (0, 5), (1, 6), (1, 7)),
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "On field: deal 2 damage to a target creature.",
         Abilities: [new TriggeredAbility(TriggerKind.DieFielded,
@@ -430,16 +429,16 @@ public static class InstinctClashConfig
     public static readonly CardDef Elephant = new(
         Id: "IC-EYE-07", Name: "Elephant", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
         PurchaseCost: 6, EnergySymbolIds: ["Eye"],
-        Die: CharacterDie("IC-EYE-07Die", energyType: "Eye", fieldingCost: 2, (1, 1), (2, 1), (3, 1)),
+        Die: CharacterDie("IC-EYE-07Die", energyType: "Eye", fieldingCost: 2, (2, 6), (3, 7), (3, 8)),
         DieLimit: 4, Affiliations: [], Keywords: [],
-        RawText: "On field: KO a target creature.",
-        Abilities: [new TriggeredAbility(TriggerKind.DieFielded, new Ko(new TargetFilter(Kind: TargetKind.CharacterDie)))],
+        RawText: "Vanilla - no ability.",
+        Abilities: [],
         Continuous: []);
 
     public static readonly CardDef Fox = new(
         Id: "IC-EYE-08", Name: "Fox", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
         PurchaseCost: 5, EnergySymbolIds: ["Eye"],
-        Die: CharacterDie("IC-EYE-08Die", energyType: "Eye", fieldingCost: 2, (1, 3), (1, 4), (2, 5)),
+        Die: CharacterDie("IC-EYE-08Die", energyType: "Eye", fieldingCost: 2, (1, 4), (1, 5), (2, 7)),
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "While active, your creatures get +1 DEF.",
         Abilities: [],
@@ -455,7 +454,7 @@ public static class InstinctClashConfig
     public static readonly CardDef Cuttlefish = new(
         Id: "IC-EYE-09", Name: "Cuttlefish", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
         PurchaseCost: 2, EnergySymbolIds: ["Eye"],
-        Die: CharacterDie("IC-EYE-09Die", energyType: "Eye", fieldingCost: 1, (2, 4), (3, 6), (4, 6)),
+        Die: CharacterDie("IC-EYE-09Die", energyType: "Eye", fieldingCost: 1, (0, 2), (1, 2), (1, 3)),
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "On attack: spin a target opposing level 1 creature to an energy face.",
         Abilities: [new TriggeredAbility(TriggerKind.DieAttacks,
@@ -551,7 +550,7 @@ public static class InstinctClashConfig
             new SymbolDef("Claw"), new SymbolDef("Shell"), new SymbolDef("Wing"), new SymbolDef("Eye"),
             new SymbolDef("Wild", IsWild: true),
         ],
-        Keywords: [],
+        Keywords: [new KeywordDef("Fast"), new KeywordDef("Overcrush")],
         Rules: new RulesConfig(
             StartingLife: 20,
             DrawCount: 4,
