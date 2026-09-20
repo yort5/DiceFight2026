@@ -544,6 +544,20 @@ public static class TurnEngine
         state.MoveToStep(StepIds.CleanUp);
         EventBus.Fire(state, queue, new GameEvent(TriggerKind.TurnStepEntered, null, endingPlayerId, StepIds.CleanUp));
 
+        // Keyword Deadly - a persistent ability, so it resolves here: every
+        // die still on the Field that was engaged with a Deadly die is KO'd
+        // (a die already KO'd in combat is simply not in the Field Zone).
+        foreach (var id in state.DeadlyEngagedDieIds.Keys.ToList())
+        {
+            var engaged = state.Dice.First(d => d.Id == id);
+            if (engaged.Zone == Zone.FieldZone)
+            {
+                state.LogEvent(engaged.ControllerId, "A Deadly die's engagement knocks out " + (engaged.CardId is { } cid ? state.CardCatalog[cid].Name : "a Tardigrade") + ".");
+                EffectInterpreter.KoDie(state, queue, engaged, triggersKOAbilities: true);
+            }
+        }
+        state.DeadlyEngagedDieIds.Clear();
+
         // TURN SUMMARY, Cleanup Step: "Move any unused Action Dice to the
         // Used Pile" and "End turn. Move dice from Out of Play to the
         // Used Pile." NOT the whole Reserve Pool - leftover energy

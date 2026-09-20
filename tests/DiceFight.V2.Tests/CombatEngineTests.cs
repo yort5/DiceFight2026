@@ -395,6 +395,53 @@ public class CombatEngineTests
         Assert.Contains(blocker.Id, result.KOdDieIds);
     }
 
+    // --- Deadly ---
+
+    // A 0-attack Deadly die deals no damage, yet whatever it was
+    // engaged with is KO'd at Clean Up regardless.
+    private static (GameState state, AbilityQueue queue, DieInstance attacker, DieInstance blocker) RunDeadlyCombat(bool attackerDeadly, bool blockerDeadly)
+    {
+        var attackerCard = BuildCard("Attacker", [new Face([], new CharacterFaceData(1, 1, 0, 1), Kind: FaceKind.CharacterFace)], keywords: attackerDeadly ? ["Deadly"] : []);
+        var blockerCard = BuildCard("Blocker", [new Face([], new CharacterFaceData(1, 1, 0, 9), Kind: FaceKind.CharacterFace)], keywords: blockerDeadly ? ["Deadly"] : []);
+        var state = BuildState(attackerCard, blockerCard);
+        var attacker = AddDie(state, attackerCard, "p1");
+        var blocker = AddDie(state, blockerCard, "p2");
+        var queue = new AbilityQueue();
+
+        CombatEngine.DeclareAttackers(state, queue, [attacker.Id]);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(attacker.Id, blocker.Id);
+        CombatEngine.DeclareBlockers(state, queue, assignment, [blocker.Id]);
+        var result = CombatEngine.AssignCombatDamage(state, queue, assignment, SoloSplit(attacker.Id, blocker.Id, 0));
+        Assert.Empty(result.KOdDieIds); // combat damage itself KO'd nothing
+        TurnEngine.CleanUp(state, queue);
+        return (state, queue, attacker, blocker);
+    }
+
+    [Fact]
+    public void Deadly_Attacker_KOs_Its_Blocker_At_CleanUp_Even_Without_Lethal_Damage()
+    {
+        var (_, _, attacker, blocker) = RunDeadlyCombat(attackerDeadly: true, blockerDeadly: false);
+        Assert.Equal(Zone.PrepArea, blocker.Zone);
+        Assert.Equal(Zone.FieldZone, attacker.Zone);
+    }
+
+    [Fact]
+    public void Deadly_Blocker_KOs_The_Attacker_It_Blocked_At_CleanUp()
+    {
+        var (_, _, attacker, blocker) = RunDeadlyCombat(attackerDeadly: false, blockerDeadly: true);
+        Assert.Equal(Zone.PrepArea, attacker.Zone);
+        Assert.Equal(Zone.FieldZone, blocker.Zone);
+    }
+
+    [Fact]
+    public void Without_Deadly_Nothing_Is_KOd_At_CleanUp()
+    {
+        var (_, _, attacker, blocker) = RunDeadlyCombat(attackerDeadly: false, blockerDeadly: false);
+        Assert.Equal(Zone.FieldZone, attacker.Zone);
+        Assert.Equal(Zone.FieldZone, blocker.Zone);
+    }
+
     // --- KO triggers fire through combat, aura affects combat stats ---
 
     [Fact]

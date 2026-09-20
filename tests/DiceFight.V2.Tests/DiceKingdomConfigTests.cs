@@ -1,5 +1,6 @@
 using DiceFight.V2.Data;
 using DiceFight.V2.Model;
+using DiceFight.V2.Model.Effects;
 
 namespace DiceFight.V2.Tests;
 
@@ -133,5 +134,26 @@ public class DiceKingdomConfigTests
         TurnEngine.CleanUp(state, queue);
         Assert.Equal("p2", state.ActivePlayerId);
         Assert.Equal(Zone.UsedPile, toField.Zone);
+    }
+
+    // Trigger keywords: every card whose ability fires on one of these
+    // triggers must carry the matching keyword, and vice versa, so the
+    // trigger is always codified rather than free text.
+    [Fact]
+    public void Trigger_Keywords_Match_Each_Cards_Ability_Triggers()
+    {
+        foreach (var card in DiceKingdomConfig.Catalog.Values)
+        {
+            void Check(bool hasTrigger, string keyword) =>
+                Assert.True(hasTrigger == card.Keywords.Contains(keyword),
+                    $"{card.Name}: keyword \"{keyword}\" {(hasTrigger ? "missing" : "present without a matching trigger")}.");
+
+            Check(card.Abilities.Any(a => a.Trigger == TriggerKind.DieFielded), "On Field");
+            Check(card.Abilities.Any(a => a.Trigger == TriggerKind.DieAttacks), "On Attack");
+            Check(card.Abilities.Any(a => a.Trigger == TriggerKind.DieBlocks), "On Block");
+            Check(card.Abilities.Any(a => a.Trigger == TriggerKind.DieFaceChanged && a.Filter?.LevelIncreased == true), "Awaken");
+            foreach (var keyword in card.Keywords.Where(k => k is "On Field" or "On Attack" or "On Block" or "Awaken"))
+                Assert.Contains(keyword + ":", card.RawText);
+        }
     }
 }

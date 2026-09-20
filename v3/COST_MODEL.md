@@ -20,11 +20,17 @@ The article calls ~2.0 reasonable and >2.0 strong, and notes that abilities aren
 
 Rough stat-point prices used when re-statting (per 3-level total): gain life 1.5/pt; 1 dmg to a creature 3; 2 dmg 5; 3 dmg 8; KO 9; 1 direct dmg on attack 3, 2 direct 5; draw 4-4.5; +1 ATK aura 7, +1 DEF aura 5; Fast 4; Overcrush 3. Vanilla baseline = 2.4 x total cost; an ability card gets that minus its ability price.
 
-## Keywords now on cards
+## Keywords
+
+**Trigger keywords** (codified, not free text - the trigger is the keyword; the effect after the colon varies): `On Field` (die is fielded), `On Attack` (declared as an attacker), `On Block` (declared as a blocker), `Awaken` (die levels up). Every card's RawText leads its trigger clause with the keyword, and `Trigger_Keywords_Match_Each_Cards_Ability_Triggers` fails if a card's keywords and abilities disagree.
+
+**Deadly**: a die engaged with a Deadly die (blocking it or blocked by it) is KO'd at Clean Up, even if the Deadly die dealt no damage or left combat. Recorded at declare-blockers, resolved in `TurnEngine.CleanUp`. On Opossum (a cheap deterrent: Homash ~1.2, priced ~8 stat points).
+
+## Combat keywords on cards
 
 `Fast` and `Overcrush` - both already implemented in `CombatEngine`; declared in `DiceKingdomConfig.Config.Keywords`. Cards: Wolverine (Fast + 1 direct), Peregrine Falcon (Fast + 3 dmg), Greyhound (Fast), Grizzly Bear (Overcrush), Tiger (Overcrush + 2 direct). Vanilla: Elephant, Hippopotamus, Hermit Crab.
 
-Not yet engine-supported (candidates for later): Regenerate, Retaliation, Swarm, Range/Infiltrate (UI already checks these names), Global abilities.
+Also On Block: Box Turtle. Not yet engine-supported (candidates for later): Regenerate, Retaliation, Swarm, Range/Infiltrate (UI already checks these names), Global abilities.
 
 ## Current roster
 

@@ -180,6 +180,13 @@ public sealed class GameState
     public HashSet<string> FieldedCharacterThisTurn { get; } = [];
     public HashSet<string> CharacterDiceKOdThisTurn { get; } = [];
 
+    // Keyword Deadly - "any die engaged with a Deadly die is KO'd at Clean
+    // Up". Engaged die id -> the Deadly die id(s) it was blocked by or
+    // blocking, recorded by CombatEngine.DeclareBlockers at the moment of
+    // engagement (so it still happens if either die leaves combat first)
+    // and resolved and cleared by TurnEngine.CleanUp.
+    public Dictionary<string, HashSet<string>> DeadlyEngagedDieIds { get; } = [];
+
     // Rule 2.6.1 - each die may be voluntarily rerolled at most once
     // during its own Roll and Reroll Step. Keyed by die id, not player,
     // since TurnEngine.RerollOwn checks a specific die; cleared at the

@@ -112,9 +112,29 @@ public static class CombatEngine
             ? $"{state.NameOf(inactiveId)} leaves every attacker unblocked."
             : $"{state.NameOf(inactiveId)} assigns {blockerDieIds.Count} {(blockerDieIds.Count == 1 ? "blocker" : "blockers")}.");
 
+        // Keyword Deadly - record who is engaged with a Deadly die NOW,
+        // not at damage: it counts even if either die is removed first.
+        foreach (var attacker in state.DiceIn(state.ActivePlayerId, Zone.AttackZone))
+        {
+            var attackerDeadly = QueryEngine.GetKeywords(state, attacker).Contains("Deadly");
+            foreach (var blockerId in assignment.BlockersOf(attacker.Id))
+            {
+                var blocker = FindDie(state, blockerId);
+                if (attackerDeadly) RecordDeadlyEngagement(state, blocker.Id, attacker.Id);
+                if (QueryEngine.GetKeywords(state, blocker).Contains("Deadly")) RecordDeadlyEngagement(state, attacker.Id, blocker.Id);
+            }
+        }
+
         // "Assign blockers. Resolve effects that occur due to blocking."
         EnterStep(state, queue, StepIds.BlockEffects);
         EnterStep(state, queue, StepIds.ActionGlobalWindow);
+    }
+
+    private static void RecordDeadlyEngagement(GameState state, string engagedId, string deadlyId)
+    {
+        if (!state.DeadlyEngagedDieIds.TryGetValue(engagedId, out var sources))
+            state.DeadlyEngagedDieIds[engagedId] = sources = [];
+        sources.Add(deadlyId);
     }
 
     // CombatFlagKind.Unblockable (Finding 14 - Falcon "Recon").
