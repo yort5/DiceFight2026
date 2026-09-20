@@ -34,7 +34,7 @@ public static class CombatEngine
     // share a lane. This is purely which lane a die is DISPLAYED in -
     // blocking and damage resolution below are completely untouched,
     // still per-individual-attacker via CombatAssignment, since
-    // InstinctClashConfig grants no BlocksN/MinBlockers keyword that
+    // DiceKingdomConfig grants no BlocksN/MinBlockers keyword that
     // would need lane-pooled math (see V2GamesController.AssignCombatDamage's
     // own remark: every attacker has at most one live blocker here).
     public const int LaneCount = 4;

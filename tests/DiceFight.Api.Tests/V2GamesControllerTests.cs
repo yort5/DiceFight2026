@@ -3,12 +3,12 @@ using DiceFight.V2.Data;
 
 namespace DiceFight.Api.Tests;
 
-// v3 "Instinct Clash" - permanent regression coverage for V2GamesController,
+// v3 "Dice Kingdom" - permanent regression coverage for V2GamesController,
 // matching what a manual curl-driven session already confirmed working
 // end to end this session (create -> clear-and-draw -> roll -> field a
 // free Tardigrade -> attack -> combat -> clean up, Champion passive
 // included). The controller has no injectable randomness source (unlike
-// the deterministic engine-level InstinctClashConfigTests, which script
+// the deterministic engine-level DiceKingdomConfigTests, which script
 // exact faces via a ScriptedRoller), so these assertions are written to
 // hold regardless of which face actually gets rolled, rather than
 // pinning exact numbers combat math already covers at the engine layer.
@@ -39,12 +39,12 @@ public class V2GamesControllerTests
         // Eye, not a monochrome 8) - the real invariant now is "matches
         // CharactersByChampion exactly," not "every card is Claw."
         Assert.Equal(
-            InstinctClashConfig.CharactersByChampion["Wolf"].ToHashSet(),
+            DiceKingdomConfig.CharactersByChampion["Wolf"].ToHashSet(),
             state.DiceIn("teamA", DiceFight.V2.Model.Zone.Unpurchased).Select(d => d.CardId!).ToHashSet());
 
         Assert.Equal("GreatHornedOwl", state.PlayerTwo.ChampionId);
         Assert.Equal(
-            InstinctClashConfig.CharactersByChampion["GreatHornedOwl"].ToHashSet(),
+            DiceKingdomConfig.CharactersByChampion["GreatHornedOwl"].ToHashSet(),
             state.DiceIn("teamB", DiceFight.V2.Model.Zone.Unpurchased).Select(d => d.CardId!).ToHashSet());
     }
 

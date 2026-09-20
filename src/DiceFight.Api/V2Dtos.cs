@@ -3,7 +3,7 @@ using DiceFight.V2.Model;
 
 namespace DiceFight.Api;
 
-// v3 "Instinct Clash" wire contract - Phase 3 of the mellow-sparking-comet
+// v3 "Dice Kingdom" wire contract - Phase 3 of the mellow-sparking-comet
 // plan. Mirrors Dtos.cs's SHAPE (same record-per-concept, same
 // Xyz.From(...) pattern) but only carries what DiceFight.V2 actually has:
 // no AttackSubStep/EpicBasicActionUsedThisTurn/Range/BurstStars/
@@ -96,7 +96,7 @@ public sealed record ChampionDto(string Id, string Name, string EnergySymbolId, 
         champion.Id, champion.Name, champion.EnergySymbolId, PassiveTextOf(champion));
 
     // Plain-language rendering of the closed ChampionPassiveKind enum -
-    // matches the four passives the "Instinct Clash" artifact prototype
+    // matches the four passives the "Dice Kingdom" artifact prototype
     // already established this same wording for.
     private static string PassiveTextOf(ChampionDef c) => c.PassiveKind switch
     {
@@ -149,7 +149,7 @@ public sealed record V2GameStateDto(
 // ---- Request bodies ----
 
 // No team-builder yet (v3/DESIGN_NOTES.md's own open question) - picking
-// a Champion picks the team: both of InstinctClashConfig.
+// a Champion picks the team: both of DiceKingdomConfig.
 // CharactersByChampion[championId] automatically.
 public sealed record CreateV2GameRequest(string PlayerOneChampionId, string PlayerTwoChampionId);
 public sealed record V2PurchaseRequest(string DieId, IReadOnlyList<string> EnergyDieIds);
@@ -163,7 +163,7 @@ public sealed record V2DeclareAttackersRequest(IReadOnlyList<V2AttackerDeclarati
 public sealed record V2BlockAssignment(string AttackerDieId, string BlockerDieId);
 public sealed record V2DeclareBlockersRequest(IReadOnlyList<V2BlockAssignment> Assignments);
 // No manual damage-split field, unlike v1's AssignCombatDamageRequest -
-// none of InstinctClashConfig's 8 Characters grant multi-blocker combat
+// none of DiceKingdomConfig's 8 Characters grant multi-blocker combat
 // (CombatRuleKind.BlocksN), so every attacker has at most one live
 // blocker and the controller computes the (trivial) split itself.
 // Assignments is resent here for the same reason v1's own DTOs note:

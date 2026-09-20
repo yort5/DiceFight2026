@@ -765,7 +765,7 @@ export function ArrowRightIcon({ size = 14 }: IconProps) {
 }
 
 // Three cards added to the roster after the original 32-card sheet
-// (InstinctClashConfig.cs's own Mongoose/Swift/Cuttlefish remarks -
+// (DiceKingdomConfig.cs's own Mongoose/Swift/Cuttlefish remarks -
 // extra cost-curve entries per type) with no avatar drawn for them yet -
 // real bug, direct feedback (2026-09-13): all three silently fell back
 // to TardigradeIcon (CHARACTER_ICONS had no "IC-CLAW-09"/"IC-WING-09"/

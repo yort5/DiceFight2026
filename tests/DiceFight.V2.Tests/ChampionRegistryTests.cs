@@ -2,7 +2,7 @@ using DiceFight.V2.Model;
 
 namespace DiceFight.V2.Tests;
 
-// v3 "Instinct Clash" addition (2026-09-03) - ChampionRegistry, the
+// v3 "Dice Kingdom" addition (2026-09-03) - ChampionRegistry, the
 // passive/always-on/no-die/no-cost team effect GameConfig.Champions
 // declares. Registered directly into GameState's existing modifier
 // lists (not through ContinuousRegistry, which needs a source die) -

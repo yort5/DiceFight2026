@@ -35,7 +35,7 @@ import type { CardDef, Die, GameState, PlayerState, StatModifier } from "./types
 // Two things the design handoff explicitly left unresolved, scoped down
 // for this pass (agreed with the user before implementing):
 // - The global-ability rail is a visual shell only. No card in
-//   InstinctClashConfig grants a Global ability yet and the engine has no
+//   DiceKingdomConfig grants a Global ability yet and the engine has no
 //   priority/pass-window state machine, so there is nothing real to wire
 //   a pass ping-pong to - see GlobalRail's own remarks.
 // - The step chain (StepLine/StepPopout) is derived from REAL engine
@@ -218,7 +218,7 @@ const PHASES: { key: PhaseKey; label: string }[] = [
 // damage/Infiltrate) only appear when a DECLARED ATTACKER's own card
 // actually carries that keyword (read off the real V2CardDefDto.keywords
 // the engine reports, not a fixed lookup table). No creature in
-// InstinctClashConfig carries either keyword yet (V2_PLAN.md/CardCatalog.cs's
+// DiceKingdomConfig carries either keyword yet (V2_PLAN.md/CardCatalog.cs's
 // own "not implemented" notes), so in today's game these two never
 // appear - this derivation is correct and ready, not inert set dressing,
 // it simply has nothing to react to yet.

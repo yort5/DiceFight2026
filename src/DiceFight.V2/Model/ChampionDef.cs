@@ -1,6 +1,6 @@
 namespace DiceFight.V2.Model;
 
-// v3 "Instinct Clash" addition (2026-09-03). A Champion is NOT a card: it
+// v3 "Dice Kingdom" addition (2026-09-03). A Champion is NOT a card: it
 // has no DieDefinition (CardDef.Die is non-nullable - there is genuinely
 // no way to express a die-less source through CardDef), is never fielded,
 // never purchased, never costs anything. It is a single passive that is

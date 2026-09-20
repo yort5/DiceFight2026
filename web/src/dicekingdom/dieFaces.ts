@@ -10,7 +10,7 @@ import type { CardDef, Die } from "./types";
 // so this only has to answer "which of the six faces is up" - the
 // numbers drawn on that face come straight from the die.
 //
-// MIRRORS src/DiceFight.V2/Data/InstinctClashConfig.cs's TardigradeDie/
+// MIRRORS src/DiceFight.V2/Data/DiceKingdomConfig.cs's TardigradeDie/
 // CharacterDie, which are the authority. A Tardigrade die's six faces are
 // a fixed, locked spec (v3/DESIGN_NOTES.md): two L1 (0A/1D), two L2
 // (1A/1D), one L3 "Bulwark" (1A/3D), one "Surge" (a pure Wild-energy
@@ -67,7 +67,7 @@ export type CubeFace =
 const FACE_COUNT = 6;
 
 // v3's locked Tardigrade spec, straight from TardigradeDie in
-// InstinctClashConfig.cs - not derived from a CardDef, since a Tardigrade
+// DiceKingdomConfig.cs - not derived from a CardDef, since a Tardigrade
 // die has no cardId at all (isTardigrade instead).
 const TARDIGRADE_FACES: CubeFace[] = [
   { kind: "character", level: 1, fieldingCost: 0, attack: 0, defense: 1, avatar: TardigradeIcon },

@@ -3,12 +3,12 @@ using DiceFight.V2.Model;
 
 namespace DiceFight.V2.Tests;
 
-// v3 "Instinct Clash" (2026-09-03) - config validity plus a real scripted
-// turn against the actual InstinctClashConfig/Catalog (not a tiny made-up
+// v3 "Dice Kingdom" (2026-09-03) - config validity plus a real scripted
+// turn against the actual DiceKingdomConfig/Catalog (not a tiny made-up
 // config), the same acceptance-test shape TurnCycleTests uses for the
 // engine itself: setup -> draw -> roll -> purchase a Character -> field a
 // free Tardigrade -> attack (Champion passive applied) -> cleanup.
-public class InstinctClashConfigTests
+public class DiceKingdomConfigTests
 {
     private sealed class ScriptedRoller(params int[] faceIndices) : IDiceRoller
     {
@@ -19,8 +19,8 @@ public class InstinctClashConfigTests
     [Fact]
     public void Config_And_Catalog_Are_Structurally_Valid()
     {
-        var config = InstinctClashConfig.Config;
-        var cards = InstinctClashConfig.Catalog.Values.ToList();
+        var config = DiceKingdomConfig.Config;
+        var cards = DiceKingdomConfig.Catalog.Values.ToList();
 
         Assert.Empty(config.Validate());
         Assert.Empty(config.ValidateCatalog(cards));
@@ -30,7 +30,7 @@ public class InstinctClashConfigTests
     public void Every_Champion_Has_Exactly_Eight_Characters_With_No_Duplicates()
     {
         var seenAcrossChampions = new HashSet<string>();
-        foreach (var (championId, ids) in InstinctClashConfig.CharactersByChampion)
+        foreach (var (championId, ids) in DiceKingdomConfig.CharactersByChampion)
         {
             Assert.Equal(8, ids.Count);
             Assert.Equal(8, ids.Distinct().Count()); // no repeats within one Champion's own pack
@@ -46,10 +46,10 @@ public class InstinctClashConfigTests
     [Fact]
     public void Every_Champions_Own_Energy_Characters_Cover_A_Real_Cost_Curve()
     {
-        var catalog = InstinctClashConfig.Catalog;
-        foreach (var champion in InstinctClashConfig.Champions)
+        var catalog = DiceKingdomConfig.Catalog;
+        foreach (var champion in DiceKingdomConfig.Champions)
         {
-            var ownEnergyCosts = InstinctClashConfig.CharactersByChampion[champion.Id]
+            var ownEnergyCosts = DiceKingdomConfig.CharactersByChampion[champion.Id]
                 .Select(id => catalog[id])
                 .Where(c => c.EnergySymbolIds.Contains(champion.EnergySymbolId))
                 .Select(c => c.PurchaseCost)
@@ -66,13 +66,13 @@ public class InstinctClashConfigTests
     [Fact]
     public void Full_Turn_Cycle_Runs_With_Champion_Passive_Applied()
     {
-        var config = InstinctClashConfig.Config;
-        var catalog = InstinctClashConfig.Catalog;
+        var config = DiceKingdomConfig.Config;
+        var catalog = DiceKingdomConfig.Catalog;
 
         var playerOne = new Player { Id = "p1", Name = "Wolf Player", ChampionId = "Wolf" };
-        playerOne.TeamCardIds.AddRange(InstinctClashConfig.CharactersByChampion["Wolf"]);
+        playerOne.TeamCardIds.AddRange(DiceKingdomConfig.CharactersByChampion["Wolf"]);
         var playerTwo = new Player { Id = "p2", Name = "Armadillo Player", ChampionId = "Armadillo" };
-        playerTwo.TeamCardIds.AddRange(InstinctClashConfig.CharactersByChampion["Armadillo"]);
+        playerTwo.TeamCardIds.AddRange(DiceKingdomConfig.CharactersByChampion["Armadillo"]);
 
         var state = GameSetup.NewGame(config, catalog, playerOne, playerTwo);
         var queue = new AbilityQueue();
@@ -99,7 +99,7 @@ public class InstinctClashConfigTests
         Assert.All(reserve, d => Assert.Equal(2, state.GetCurrentFace(d)!.Symbols.Single().Count));
 
         // --- Purchase Honey Badger (cost 2 Claw) using one L1 die's 2 energy ---
-        var honeyBadgerId = InstinctClashConfig.HoneyBadger.Id;
+        var honeyBadgerId = DiceKingdomConfig.HoneyBadger.Id;
         var unpurchased = state.Dice.First(d => d.CardId == honeyBadgerId && d.Zone == Zone.Unpurchased);
         var spendDie = reserve[0];
         TurnEngine.Purchase(state, queue, unpurchased.Id, [spendDie.Id]);

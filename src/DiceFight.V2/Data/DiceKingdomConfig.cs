@@ -3,7 +3,7 @@ using DiceFight.V2.Model.Effects;
 
 namespace DiceFight.V2.Data;
 
-// v3 "Instinct Clash" - the animal-themed, from-scratch game described in
+// v3 "Dice Kingdom" - the animal-themed, from-scratch game described in
 // ~/DiceFight2026/v3/DESIGN_NOTES.md, expressed as one GameConfig (the
 // same "current game is just one config" proof DiceFightClassicConfig.cs
 // is, for a genuinely different game rather than a variant ruleset).
@@ -15,7 +15,7 @@ namespace DiceFight.V2.Data;
 // Every number here is a first-pass placeholder for playtesting, not a
 // balanced value - v3/DESIGN_NOTES.md is the source of truth for which
 // numbers are actually locked vs. still moving.
-public static class InstinctClashConfig
+public static class DiceKingdomConfig
 {
     // --- Tardigrade dice (the free-to-field basic creature; one per
     // energy type, matching v3/DESIGN_NOTES.md's locked spec exactly:
@@ -72,7 +72,7 @@ public static class InstinctClashConfig
     // Claw
 
     public static readonly CardDef HoneyBadger = new(
-        Id: "IC-CLAW-01", Name: "Honey Badger", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        Id: "IC-CLAW-01", Name: "Honey Badger", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 2, EnergySymbolIds: ["Claw"],
         Die: CharacterDie("IC-CLAW-01Die", energyType: "Claw", fieldingCost: 1, (0, 2), (1, 2), (1, 3)),
         DieLimit: 4, Affiliations: [], Keywords: [],
@@ -82,7 +82,7 @@ public static class InstinctClashConfig
         Continuous: []);
 
     public static readonly CardDef Wolverine = new(
-        Id: "IC-CLAW-02", Name: "Wolverine", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        Id: "IC-CLAW-02", Name: "Wolverine", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Claw"],
         Die: CharacterDie("IC-CLAW-02Die", energyType: "Claw", fieldingCost: 2, (1, 3), (2, 4), (3, 4)),
         DieLimit: 4, Affiliations: [], Keywords: ["Fast"],
@@ -99,7 +99,7 @@ public static class InstinctClashConfig
     // records as those cards' actual printed text. "Wolf" itself was
     // skipped as a pick - it's the Claw Champion's own name now.
     public static readonly CardDef GrizzlyBear = new(
-        Id: "IC-CLAW-03", Name: "Grizzly Bear", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        Id: "IC-CLAW-03", Name: "Grizzly Bear", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 5, EnergySymbolIds: ["Claw"],
         Die: CharacterDie("IC-CLAW-03Die", energyType: "Claw", fieldingCost: 2, (2, 4), (3, 5), (4, 5)),
         DieLimit: 4, Affiliations: [], Keywords: ["Overcrush"],
@@ -108,7 +108,7 @@ public static class InstinctClashConfig
         Continuous: []);
 
     public static readonly CardDef Orca = new(
-        Id: "IC-CLAW-04", Name: "Orca", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        Id: "IC-CLAW-04", Name: "Orca", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 5, EnergySymbolIds: ["Claw"],
         Die: CharacterDie("IC-CLAW-04Die", energyType: "Claw", fieldingCost: 2, (1, 3), (2, 4), (2, 5)),
         DieLimit: 4, Affiliations: [], Keywords: [],
@@ -117,7 +117,7 @@ public static class InstinctClashConfig
         Continuous: []);
 
     public static readonly CardDef PeregrineFalcon = new(
-        Id: "IC-CLAW-05", Name: "Peregrine Falcon", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        Id: "IC-CLAW-05", Name: "Peregrine Falcon", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 6, EnergySymbolIds: ["Claw"],
         Die: CharacterDie("IC-CLAW-05Die", energyType: "Claw", fieldingCost: 2, (1, 3), (2, 4), (3, 5)),
         DieLimit: 4, Affiliations: [], Keywords: ["Fast"],
@@ -127,7 +127,7 @@ public static class InstinctClashConfig
         Continuous: []);
 
     public static readonly CardDef Tiger = new(
-        Id: "IC-CLAW-06", Name: "Tiger", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        Id: "IC-CLAW-06", Name: "Tiger", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 6, EnergySymbolIds: ["Claw"],
         Die: CharacterDie("IC-CLAW-06Die", energyType: "Claw", fieldingCost: 2, (2, 3), (3, 4), (3, 5)),
         DieLimit: 4, Affiliations: [], Keywords: ["Overcrush"],
@@ -137,7 +137,7 @@ public static class InstinctClashConfig
         Continuous: []);
 
     public static readonly CardDef Stoat = new(
-        Id: "IC-CLAW-07", Name: "Stoat", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        Id: "IC-CLAW-07", Name: "Stoat", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Claw"],
         Die: CharacterDie("IC-CLAW-07Die", energyType: "Claw", fieldingCost: 1, (0, 2), (1, 3), (2, 4)),
         DieLimit: 4, Affiliations: [], Keywords: [],
@@ -147,7 +147,7 @@ public static class InstinctClashConfig
         Continuous: []);
 
     public static readonly CardDef CapeBuffalo = new(
-        Id: "IC-CLAW-08", Name: "Cape Buffalo", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        Id: "IC-CLAW-08", Name: "Cape Buffalo", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 6, EnergySymbolIds: ["Claw"],
         Die: CharacterDie("IC-CLAW-08Die", energyType: "Claw", fieldingCost: 2, (1, 4), (1, 6), (2, 8)),
         DieLimit: 4, Affiliations: [], Keywords: [],
@@ -167,7 +167,7 @@ public static class InstinctClashConfig
     // Affiliations for gameplay yet, same latitude CARD_INSPIRATION.md's
     // other partial ports already take).
     public static readonly CardDef Mongoose = new(
-        Id: "IC-CLAW-09", Name: "Mongoose", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        Id: "IC-CLAW-09", Name: "Mongoose", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 3, EnergySymbolIds: ["Claw"],
         Die: CharacterDie("IC-CLAW-09Die", energyType: "Claw", fieldingCost: 1, (2, 1), (2, 1), (3, 2)),
         DieLimit: 4, Affiliations: [], Keywords: [],
@@ -180,7 +180,7 @@ public static class InstinctClashConfig
     // Shell
 
     public static readonly CardDef Hippopotamus = new(
-        Id: "IC-SHELL-01", Name: "Hippopotamus", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        Id: "IC-SHELL-01", Name: "Hippopotamus", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Shell"],
         Die: CharacterDie("IC-SHELL-01Die", energyType: "Shell", fieldingCost: 2, (0, 6), (1, 7), (2, 8)),
         DieLimit: 4, Affiliations: [], Keywords: [],
@@ -189,7 +189,7 @@ public static class InstinctClashConfig
         Continuous: []);
 
     public static readonly CardDef MuskOx = new(
-        Id: "IC-SHELL-02", Name: "Musk Ox", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        Id: "IC-SHELL-02", Name: "Musk Ox", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Shell"],
         Die: CharacterDie("IC-SHELL-02Die", energyType: "Shell", fieldingCost: 2, (0, 5), (1, 5), (1, 6)),
         DieLimit: 4, Affiliations: [], Keywords: [],
@@ -204,7 +204,7 @@ public static class InstinctClashConfig
     // Ox, so Box Turtle is original rather than sourced (same simple
     // template style as the rest, no new vocabulary).
     public static readonly CardDef Pangolin = new(
-        Id: "IC-SHELL-03", Name: "Pangolin", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        Id: "IC-SHELL-03", Name: "Pangolin", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 3, EnergySymbolIds: ["Shell"],
         Die: CharacterDie("IC-SHELL-03Die", energyType: "Shell", fieldingCost: 1, (0, 2), (1, 3), (2, 3)),
         DieLimit: 4, Affiliations: [], Keywords: [],
@@ -213,7 +213,7 @@ public static class InstinctClashConfig
         Continuous: []);
 
     public static readonly CardDef HermitCrab = new(
-        Id: "IC-SHELL-04", Name: "Hermit Crab", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        Id: "IC-SHELL-04", Name: "Hermit Crab", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 2, EnergySymbolIds: ["Shell"],
         Die: CharacterDie("IC-SHELL-04Die", energyType: "Shell", fieldingCost: 1, (0, 3), (1, 3), (1, 3)),
         DieLimit: 4, Affiliations: [], Keywords: [],
@@ -222,7 +222,7 @@ public static class InstinctClashConfig
         Continuous: []);
 
     public static readonly CardDef Opossum = new(
-        Id: "IC-SHELL-05", Name: "Opossum", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        Id: "IC-SHELL-05", Name: "Opossum", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 3, EnergySymbolIds: ["Shell"],
         Die: CharacterDie("IC-SHELL-05Die", energyType: "Shell", fieldingCost: 1, (0, 2), (1, 3), (2, 3)),
         DieLimit: 4, Affiliations: [], Keywords: [],
@@ -232,7 +232,7 @@ public static class InstinctClashConfig
         Continuous: []);
 
     public static readonly CardDef QueenTermite = new(
-        Id: "IC-SHELL-06", Name: "Queen Termite", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        Id: "IC-SHELL-06", Name: "Queen Termite", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Shell"],
         Die: CharacterDie("IC-SHELL-06Die", energyType: "Shell", fieldingCost: 2, (1, 3), (1, 4), (2, 5)),
         DieLimit: 4, Affiliations: [], Keywords: [],
@@ -241,7 +241,7 @@ public static class InstinctClashConfig
         Continuous: [new StatAura(OwnCreatures, AtkDelta: new Fixed(1))]);
 
     public static readonly CardDef SnappingTurtle = new(
-        Id: "IC-SHELL-07", Name: "Snapping Turtle", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        Id: "IC-SHELL-07", Name: "Snapping Turtle", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 5, EnergySymbolIds: ["Shell"],
         Die: CharacterDie("IC-SHELL-07Die", energyType: "Shell", fieldingCost: 2, (0, 4), (1, 5), (2, 6)),
         DieLimit: 4, Affiliations: [], Keywords: [],
@@ -250,7 +250,7 @@ public static class InstinctClashConfig
         Continuous: []);
 
     public static readonly CardDef BoxTurtle = new(
-        Id: "IC-SHELL-08", Name: "Box Turtle", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        Id: "IC-SHELL-08", Name: "Box Turtle", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 3, EnergySymbolIds: ["Shell"],
         Die: CharacterDie("IC-SHELL-08Die", energyType: "Shell", fieldingCost: 1, (0, 2), (1, 3), (1, 3)),
         DieLimit: 4, Affiliations: [], Keywords: [],
@@ -262,7 +262,7 @@ public static class InstinctClashConfig
     // Wing
 
     public static readonly CardDef Osprey = new(
-        Id: "IC-WING-01", Name: "Osprey", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        Id: "IC-WING-01", Name: "Osprey", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Wing"],
         Die: CharacterDie("IC-WING-01Die", energyType: "Wing", fieldingCost: 2, (0, 4), (1, 5), (2, 6)),
         DieLimit: 4, Affiliations: [], Keywords: [],
@@ -272,7 +272,7 @@ public static class InstinctClashConfig
         Continuous: []);
 
     public static readonly CardDef BarnSwallow = new(
-        Id: "IC-WING-02", Name: "Barn Swallow", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        Id: "IC-WING-02", Name: "Barn Swallow", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 3, EnergySymbolIds: ["Wing"],
         Die: CharacterDie("IC-WING-02Die", energyType: "Wing", fieldingCost: 1, (0, 2), (0, 3), (1, 4)),
         DieLimit: 4, Affiliations: [], Keywords: [],
@@ -290,7 +290,7 @@ public static class InstinctClashConfig
     // outright, same latitude the original 8 already took with Barn
     // Owl/Hyena's own printed text.
     public static readonly CardDef Hummingbird = new(
-        Id: "IC-WING-03", Name: "Hummingbird", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        Id: "IC-WING-03", Name: "Hummingbird", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Wing"],
         Die: CharacterDie("IC-WING-03Die", energyType: "Wing", fieldingCost: 1, (0, 2), (1, 2), (1, 3)),
         DieLimit: 4, Affiliations: [], Keywords: [],
@@ -299,7 +299,7 @@ public static class InstinctClashConfig
         Continuous: []);
 
     public static readonly CardDef MountainGoat = new(
-        Id: "IC-WING-04", Name: "Mountain Goat", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        Id: "IC-WING-04", Name: "Mountain Goat", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 3, EnergySymbolIds: ["Wing"],
         Die: CharacterDie("IC-WING-04Die", energyType: "Wing", fieldingCost: 1, (0, 2), (1, 2), (1, 3)),
         DieLimit: 4, Affiliations: [], Keywords: [],
@@ -308,7 +308,7 @@ public static class InstinctClashConfig
         Continuous: []);
 
     public static readonly CardDef MonarchButterfly = new(
-        Id: "IC-WING-05", Name: "Monarch Butterfly", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        Id: "IC-WING-05", Name: "Monarch Butterfly", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Wing"],
         Die: CharacterDie("IC-WING-05Die", energyType: "Wing", fieldingCost: 1, (0, 2), (1, 3), (2, 3)),
         DieLimit: 4, Affiliations: [], Keywords: [],
@@ -318,7 +318,7 @@ public static class InstinctClashConfig
             new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own, Zones: [Zone.PrepArea], Count: 0), Multiplier: 2))]);
 
     public static readonly CardDef HomingPigeon = new(
-        Id: "IC-WING-06", Name: "Homing Pigeon", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        Id: "IC-WING-06", Name: "Homing Pigeon", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Wing"],
         Die: CharacterDie("IC-WING-06Die", energyType: "Wing", fieldingCost: 2, (0, 5), (1, 6), (1, 7)),
         DieLimit: 4, Affiliations: [], Keywords: [],
@@ -327,7 +327,7 @@ public static class InstinctClashConfig
         Continuous: []);
 
     public static readonly CardDef Greyhound = new(
-        Id: "IC-WING-07", Name: "Greyhound", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        Id: "IC-WING-07", Name: "Greyhound", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Wing"],
         Die: CharacterDie("IC-WING-07Die", energyType: "Wing", fieldingCost: 2, (1, 4), (2, 5), (2, 5)),
         DieLimit: 4, Affiliations: [], Keywords: ["Fast"],
@@ -336,7 +336,7 @@ public static class InstinctClashConfig
         Continuous: []);
 
     public static readonly CardDef Albatross = new(
-        Id: "IC-WING-08", Name: "Albatross", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        Id: "IC-WING-08", Name: "Albatross", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 5, EnergySymbolIds: ["Wing"],
         Die: CharacterDie("IC-WING-08Die", energyType: "Wing", fieldingCost: 2, (1, 4), (2, 5), (3, 6)),
         DieLimit: 4, Affiliations: [], Keywords: [],
@@ -352,7 +352,7 @@ public static class InstinctClashConfig
     // Beast die you purchase each game costs 1 extra" clause (a one-time
     // meta-cost rule with nothing to hook into for a fresh pick).
     public static readonly CardDef Swift = new(
-        Id: "IC-WING-09", Name: "Swift", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        Id: "IC-WING-09", Name: "Swift", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 2, EnergySymbolIds: ["Wing"],
         Die: CharacterDie("IC-WING-09Die", energyType: "Wing", fieldingCost: 1, (1, 1), (1, 2), (2, 2)),
         DieLimit: 4, Affiliations: [], Keywords: [],
@@ -363,7 +363,7 @@ public static class InstinctClashConfig
     // Eye
 
     public static readonly CardDef BarnOwl = new(
-        Id: "IC-EYE-01", Name: "Barn Owl", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        Id: "IC-EYE-01", Name: "Barn Owl", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Eye"],
         Die: CharacterDie("IC-EYE-01Die", energyType: "Eye", fieldingCost: 2, (0, 5), (1, 5), (1, 6)),
         DieLimit: 4, Affiliations: [], Keywords: [],
@@ -373,7 +373,7 @@ public static class InstinctClashConfig
         Continuous: []);
 
     public static readonly CardDef Hyena = new(
-        Id: "IC-EYE-02", Name: "Hyena", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        Id: "IC-EYE-02", Name: "Hyena", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Eye"],
         Die: CharacterDie("IC-EYE-02Die", energyType: "Eye", fieldingCost: 2, (1, 4), (1, 5), (2, 5)),
         DieLimit: 4, Affiliations: [], Keywords: [],
@@ -387,7 +387,7 @@ public static class InstinctClashConfig
     // in the engine yet) - simplified to the closest already-buildable
     // shape, same latitude as Wing's picks above.
     public static readonly CardDef Anglerfish = new(
-        Id: "IC-EYE-03", Name: "Anglerfish", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        Id: "IC-EYE-03", Name: "Anglerfish", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 6, EnergySymbolIds: ["Eye"],
         Die: CharacterDie("IC-EYE-03Die", energyType: "Eye", fieldingCost: 2, (1, 4), (2, 5), (3, 6)),
         DieLimit: 4, Affiliations: [], Keywords: [],
@@ -397,7 +397,7 @@ public static class InstinctClashConfig
         Continuous: []);
 
     public static readonly CardDef Cowbird = new(
-        Id: "IC-EYE-04", Name: "Cowbird", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        Id: "IC-EYE-04", Name: "Cowbird", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 3, EnergySymbolIds: ["Eye"],
         Die: CharacterDie("IC-EYE-04Die", energyType: "Eye", fieldingCost: 1, (1, 2), (1, 3), (2, 2)),
         DieLimit: 4, Affiliations: [], Keywords: [],
@@ -408,7 +408,7 @@ public static class InstinctClashConfig
         Continuous: []);
 
     public static readonly CardDef Magpie = new(
-        Id: "IC-EYE-05", Name: "Magpie", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        Id: "IC-EYE-05", Name: "Magpie", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 3, EnergySymbolIds: ["Eye"],
         Die: CharacterDie("IC-EYE-05Die", energyType: "Eye", fieldingCost: 1, (1, 1), (1, 2), (2, 3)),
         DieLimit: 4, Affiliations: [], Keywords: [],
@@ -417,7 +417,7 @@ public static class InstinctClashConfig
         Continuous: []);
 
     public static readonly CardDef Raven = new(
-        Id: "IC-EYE-06", Name: "Raven", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        Id: "IC-EYE-06", Name: "Raven", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 5, EnergySymbolIds: ["Eye"],
         Die: CharacterDie("IC-EYE-06Die", energyType: "Eye", fieldingCost: 2, (0, 5), (1, 6), (1, 7)),
         DieLimit: 4, Affiliations: [], Keywords: [],
@@ -427,7 +427,7 @@ public static class InstinctClashConfig
         Continuous: []);
 
     public static readonly CardDef Elephant = new(
-        Id: "IC-EYE-07", Name: "Elephant", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        Id: "IC-EYE-07", Name: "Elephant", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 6, EnergySymbolIds: ["Eye"],
         Die: CharacterDie("IC-EYE-07Die", energyType: "Eye", fieldingCost: 2, (2, 6), (3, 7), (3, 8)),
         DieLimit: 4, Affiliations: [], Keywords: [],
@@ -436,7 +436,7 @@ public static class InstinctClashConfig
         Continuous: []);
 
     public static readonly CardDef Fox = new(
-        Id: "IC-EYE-08", Name: "Fox", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        Id: "IC-EYE-08", Name: "Fox", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 5, EnergySymbolIds: ["Eye"],
         Die: CharacterDie("IC-EYE-08Die", energyType: "Eye", fieldingCost: 2, (1, 4), (1, 5), (2, 7)),
         DieLimit: 4, Affiliations: [], Keywords: [],
@@ -452,7 +452,7 @@ public static class InstinctClashConfig
     // "cost is a starting point, not a balanced number for this game"
     // latitude CARD_INSPIRATION.md's own Method section already claims).
     public static readonly CardDef Cuttlefish = new(
-        Id: "IC-EYE-09", Name: "Cuttlefish", Subtitle: null, Set: "Instinct Clash", CardType: CardType.Character,
+        Id: "IC-EYE-09", Name: "Cuttlefish", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 2, EnergySymbolIds: ["Eye"],
         Die: CharacterDie("IC-EYE-09Die", energyType: "Eye", fieldingCost: 1, (0, 2), (1, 2), (1, 3)),
         DieLimit: 4, Affiliations: [], Keywords: [],
@@ -543,8 +543,8 @@ public static class InstinctClashConfig
     ];
 
     public static readonly GameConfig Config = new(
-        Id: "instinct-clash",
-        Name: "Instinct Clash",
+        Id: "dice-kingdom",
+        Name: "Dice Kingdom",
         EnergySymbols:
         [
             new SymbolDef("Claw"), new SymbolDef("Shell"), new SymbolDef("Wing"), new SymbolDef("Eye"),

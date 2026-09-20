@@ -55,7 +55,7 @@ const ICON_ONLY_ZONES = new Set(["UsedPile", "OutOfPlay"]);
 // v3's locked Tardigrade spec (v3/DESIGN_NOTES.md), for DieTile's own
 // info popover - a Tardigrade has no CardDef/`levels` of its own to
 // read this from the way a Character does. Matches TardigradeDie in
-// InstinctClashConfig.cs's three stat levels (each printed on 2 of its
+// DiceKingdomConfig.cs's three stat levels (each printed on 2 of its
 // 6 faces, except L3/"Bulwark" on just 1 - the 6th face, Surge, is pure
 // energy and called out in its own sentence instead of a 4th row here).
 const TARDIGRADE_SPEC: CharacterFace[] = [

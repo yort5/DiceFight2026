@@ -166,7 +166,7 @@ a real gap: `Reroll` previously only existed as a card-triggered effect),
 `ChampionDef`/`ChampionRegistry` (a Champion has no die at all -
 `CardDef.Die` is non-nullable - so it's registered directly into
 `GameState`'s existing modifier lists rather than through
-`ContinuousRegistry`'s per-die gating), `Data/InstinctClashConfig.cs`
+`ContinuousRegistry`'s per-die gating), `Data/DiceKingdomConfig.cs`
 (the whole game as one real `GameConfig`: 4 energy types, the locked
 Tardigrade die spec, 4 Champions, 8 simple-ability Characters), and a
 parallel `api/v2/games` controller mirroring `GamesController.cs`'s shape.
@@ -193,11 +193,11 @@ didn't lead with "dice" the way the reference points (Dice Masters, Dice
 Throne, Dicero) all do. New name: **Dice Kingdom**. Renamed everywhere
 user-facing: the route (`/instinct-clash` → `/dice-kingdom`), the page
 component and its directory (`web/src/instinct/` →
-`web/src/dicekingdom/`, `InstinctClashPage.tsx` → `DiceKingdomPage.tsx`),
+`web/src/dicekingdom/`, `DiceKingdomPage.tsx` → `DiceKingdomPage.tsx`),
 the CSS (`instinct.css` → `dicekingdom.css`, `.instinct` → `.dicekingdom`),
 the seat-storage key and invite-link path, and all on-page text. Left
 alone, deliberately: the C# engine's internal naming
-(`Data/InstinctClashConfig.cs`, the `InstinctClashConfig` class, card IDs
+(`Data/DiceKingdomConfig.cs`, the `DiceKingdomConfig` class, card IDs
 like `IC-CLAW-01`, the `Set: "Instinct Clash"` field on each card) - none
 of that is user-visible (the API's `CardDef` DTO doesn't even expose
 `Set`), and renaming it is pure mechanical churn across ~30 call sites for
@@ -555,7 +555,7 @@ New files, each a direct port of its `../` counterpart:
 - `dieFaces.ts` - the six-face table for the 3D cube. Genuinely simpler
   to build than v1's copy since V2 already resolves the true stats
   server-side; the one real content piece is Tardigrade's locked spec
-  from `InstinctClashConfig.cs`'s `TardigradeDie` (two L1 0A/1D, two L2
+  from `DiceKingdomConfig.cs`'s `TardigradeDie` (two L1 0A/1D, two L2
   1A/1D, one L3 "Bulwark" 1A/3D, one "Surge" - a pure Wild-energy face,
   no character stats at all), which isn't derived from a CardDef at all
   since Tardigrade dice have no cardId.
@@ -788,7 +788,7 @@ Design mockup (`design_handoff_match_table/`, a variant of `/game`'s own
 match-table redesign - same README/`.dc.html` shape, `signal`/`portrait`/
 `ribbon` variants) as the target look. Two new v3 rules confirmed at the
 same time, both already matched by the current engine/data
-(`InstinctClashConfig.cs`) with no code change needed: a Champion carries
+(`DiceKingdomConfig.cs`) with no code change needed: a Champion carries
 no die and is never fielded (already true), and a Tardigrade die's faces
 may mix a character stat with an energy symbol on the same face - not
 actually exercised by any current face (every real Tardigrade/Character
@@ -1098,7 +1098,7 @@ before.
 
 Updated 10 tests across 5 files that asserted the old (wrong) zone
 routing directly: `TurnCycleTests`, `DiceFightClassicConfigTests`,
-`InstinctClashConfigTests`, `RerollOwnTests` (4, including one genuine
+`DiceKingdomConfigTests`, `RerollOwnTests` (4, including one genuine
 behavior-shape rewrite - "rejects a reroll after FinishRoll" now throws
 via the `RequireStep` step-guard rather than a zone mismatch, since the
 die is already sitting in the Reserve Pool the whole step now),
@@ -1157,7 +1157,7 @@ already on Main.
 **Starter bag doubled to 8 Tardigrades (was 4), per Champion** - "in
 keeping with traditional deck building," per the user - 8 covers a full
 two turns of drawing `DrawCount(4)` each without an early Used-Pile
-reshuffle. `InstinctClashConfig.Champions`' `TardigradePool` `Count`
+reshuffle. `DiceKingdomConfig.Champions`' `TardigradePool` `Count`
 bumped from 4 to 8 for all four Champions.
 
 Updated tests: `RerollOwnTests` (replaced the now-impossible "call Roll
@@ -1165,7 +1165,7 @@ twice in one step" test with one asserting RerollOwn's own advance-and-
 lock behavior, plus a new test for the same-die-listed-twice-in-one-
 call case the old "twice" test accidentally stopped covering precisely;
 removed a test that became a literal duplicate of the new one),
-`InstinctClashConfigTests`/`V2GamesControllerTests` (Bag count 4 → 8).
+`DiceKingdomConfigTests`/`V2GamesControllerTests` (Bag count 4 → 8).
 Full solution suite: 908/908 passing. Verified live end-to-end with
 headless Chromium: ribbon aligns with the board column, selecting a die
 no longer opens a gap (the lane box grows instead), clicking "Reroll
@@ -1234,7 +1234,7 @@ zero console errors.
 
 The user's kid drew a pixel-art wolf; swapped in as the Claw Champion's
 avatar, and the Champion itself renamed from "Lion" to "Wolf" to match
-(`InstinctClashConfig.cs`'s `Champions` list - id and name both, plus
+(`DiceKingdomConfig.cs`'s `Champions` list - id and name both, plus
 every `"Lion"` reference across the frontend `CHAMPIONS` array and both
 test suites - `Player.Name` is set from `champion.Name`
 (`V2GamesController.BuildPlayer`), so this also fixed the match log
@@ -1255,7 +1255,7 @@ Verified live with headless Chromium: the art renders at both sizes
 **Roster expansion started, paused mid-work per the user** ("hold off...
 finish it up later tonight") - 6 new Claw Characters (Grizzly Bear,
 Orca, Peregrine Falcon, Tiger, Stoat, Cape Buffalo) are drafted in
-`InstinctClashConfig.cs`, sourced from `CARD_INSPIRATION.md`'s
+`DiceKingdomConfig.cs`, sourced from `CARD_INSPIRATION.md`'s
 remaining Claw picks (excluding "Wolf" itself, now the Champion's
 name) and simplified to the same plain templates the original 8
 Characters use. They are NOT yet wired into `Catalog` or
@@ -1265,9 +1265,9 @@ Characters use. They are NOT yet wired into `Catalog` or
 (picks scoped, not yet written - see this session's own notes for the
 per-type template mapping), wiring all 24 into `Catalog`/
 `CharactersByEnergyType`, `MaxTeamCards` 2→8 and `MaxTeamDice` 8→32 in
-`Config.Rules`, and updating `InstinctClashConfigTests`'
+`Config.Rules`, and updating `DiceKingdomConfigTests`'
 `Every_Energy_Type_Has_Exactly_Two_Characters` (→ Eight) plus both
-`Unpurchased`-count assertions (8 → 32) in `InstinctClashConfigTests`/
+`Unpurchased`-count assertions (8 → 32) in `DiceKingdomConfigTests`/
 `V2GamesControllerTests`. No frontend changes expected to be needed -
 the roster strip already renders however many Unpurchased cards exist.
 
@@ -1316,7 +1316,7 @@ all 24 new + the original 8 in:
 
 Test updates: `Every_Energy_Type_Has_Exactly_Two_Characters` →
 `_Eight_`, and the `Unpurchased`-count assertions in both
-`InstinctClashConfigTests` and `V2GamesControllerTests` (8 → 32, since
+`DiceKingdomConfigTests` and `V2GamesControllerTests` (8 → 32, since
 8 Characters x DieLimit 4 replaces 2 x DieLimit 4). Full solution
 suite: 908/908 passing, including `Config_And_Catalog_Are_Structurally_
 Valid`, which schema-validates every new card's ability/target-filter
@@ -1335,7 +1335,7 @@ width, zero console errors, `tsc -b`/`vite build`/`oxlint` clean.
 
 Asked directly: "do the abilities actually work yet?" `Config_And_
 Catalog_Are_Structurally_Valid` only schema-validates ability/target
-wiring - it never resolves one. Added `InstinctClashNewCharactersTests.
+wiring - it never resolves one. Added `DiceKingdomNewCharactersTests.
 cs`, exercising the real firing path (`TurnEngine` action -> `EventBus`
 -> `AbilityQueue` -> `EffectInterpreter.DrainQueue`, same discipline
 `DpsCardsTests.cs` uses for v1's migrated pool) for the effect shapes
@@ -1356,7 +1356,7 @@ touching anything, given 32 cards' worth of blast radius): every
 Character now has genuine odds of rolling energy instead of a body,
 same as a Tardigrade always did.
 
-`CharacterDie` (`InstinctClashConfig.cs`) took a new `energyType`
+`CharacterDie` (`DiceKingdomConfig.cs`) took a new `energyType`
 parameter and rewrote its face-building loop: one `CharacterFaceData`
 face per level (was two), plus 2 double- and 1 single-`SymbolAmount`
 energy face of that type (mirrors `TardigradeDie`'s own energy-face
@@ -1541,7 +1541,7 @@ C# suite and `tsc -b`/`oxlint`/`vite build`, all clean.
      the Bag whenever it empties mid-loop, stopping short only once both
      are genuinely empty. New test:
      `ClearAndDraw_Refills_The_Bag_From_The_Used_Pile_When_It_Runs_Short`.
-   - Six existing tests across `TurnCycleTests`, `InstinctClashConfigTests`,
+   - Six existing tests across `TurnCycleTests`, `DiceKingdomConfigTests`,
      `DiceFightClassicConfigTests`, and `V2GamesControllerTests` had their
      draw-count assertions updated to the new (correct) numbers.
 
@@ -1624,7 +1624,7 @@ already decided the whole draw's order), so simplest is fine.
 
 Six test files' draw-count assertions (and two `ScriptedRoller` face
 counts) went from the wrong DrawCount+1 numbers back down to the correct
-DrawCount ones: `TurnCycleTests`, `InstinctClashConfigTests`,
+DrawCount ones: `TurnCycleTests`, `DiceKingdomConfigTests`,
 `DiceFightClassicConfigTests` (both its base and its DrawCount=6 variant
 test), `V2GamesControllerTests`, and the dedicated bag-refill regression
 test (which also needed its "sweep to Used Pile" step scoped to exclude
@@ -1644,7 +1644,7 @@ Explicitly framed as an experiment (before touching monochromatic
 teams), not a rules-accuracy fix - unlike the last several passes.
 
 1. **Surge: 2 Wild -> 1 Wild.** One line in `TardigradeDie` -
-   `InstinctClashConfig.cs`. A second copy of the same table exists on
+   `DiceKingdomConfig.cs`. A second copy of the same table exists on
    the frontend purely for the 3D cube's other 5 (currently-hidden)
    faces during a roll/reroll animation (`TARDIGRADE_FACES` in
    `dieFaces.ts`, explicitly commented as mirroring the backend) - found
@@ -2668,7 +2668,7 @@ those three pools has exactly one card left over after the 4+2+1+1
 split - Orca, Monarch Butterfly, and Anglerfish are still real,
 findable `Catalog` entries, just not on any Champion's team yet.
 
-**`InstinctClashConfig.CharactersByEnergyType` (per-energy-type) was
+**`DiceKingdomConfig.CharactersByEnergyType` (per-energy-type) was
 replaced outright with `CharactersByChampion` (per-champion)** - the
 old shape had no way to express "borrow 2 from another pool." Only one
 real call site needed updating (`V2GamesController.BuildPlayer`, keyed
@@ -2779,7 +2779,7 @@ Known gap, not a bug: the bot only ever buys/fields dice it directly
 owns or controls - it can't purchase a shared/community Basic Action die
 even though the rules allow it, because `CardDef` (the client's card
 shape) doesn't carry a card-type/community flag to tell those apart.
-InstinctClashConfig doesn't have any Basic Actions among the launch
+DiceKingdomConfig doesn't have any Basic Actions among the launch
 Characters yet, so this doesn't currently cost the bot anything real;
 revisit if that changes. Verified end-to-end via
 `vs-computer.js`: a ~150-action scripted playthrough (computer fully

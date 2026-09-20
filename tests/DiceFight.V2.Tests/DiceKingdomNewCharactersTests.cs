@@ -13,7 +13,7 @@ namespace DiceFight.V2.Tests;
 // DrainQueue - not calling effects directly. One test per effect shape
 // genuinely new to this catalog (Ko), plus a StatAura on the new
 // AtkDelta direction and a plain damage-on-field sanity check.
-public class InstinctClashNewCharactersTests
+public class DiceKingdomNewCharactersTests
 {
     private sealed class FixedRoller(int index) : IDiceRoller
     {
@@ -37,12 +37,12 @@ public class InstinctClashNewCharactersTests
 
     private static GameState NewGame()
     {
-        var config = InstinctClashConfig.Config;
-        var catalog = InstinctClashConfig.Catalog;
+        var config = DiceKingdomConfig.Config;
+        var catalog = DiceKingdomConfig.Catalog;
         var playerOne = new Player { Id = "p1", Name = "One", ChampionId = "Wolf" };
-        playerOne.TeamCardIds.AddRange(InstinctClashConfig.CharactersByChampion["Wolf"]);
+        playerOne.TeamCardIds.AddRange(DiceKingdomConfig.CharactersByChampion["Wolf"]);
         var playerTwo = new Player { Id = "p2", Name = "Two", ChampionId = "Armadillo" };
-        playerTwo.TeamCardIds.AddRange(InstinctClashConfig.CharactersByChampion["Armadillo"]);
+        playerTwo.TeamCardIds.AddRange(DiceKingdomConfig.CharactersByChampion["Armadillo"]);
         var state = GameSetup.NewGame(config, catalog, playerOne, playerTwo);
         state.CurrentStep = TurnStep.Main;
         return state;
@@ -50,7 +50,7 @@ public class InstinctClashNewCharactersTests
 
     // A die already rolled and sitting in the Reserve Pool, ready to
     // Field - skips ClearAndDraw/Roll/Purchase entirely (already
-    // exercised by InstinctClashConfigTests' own full-cycle test), since
+    // exercised by DiceKingdomConfigTests' own full-cycle test), since
     // these tests are only about what happens once a Character IS
     // fielded. CharacterDie's later-Dice-Masters layout (2026-09-07)
     // prints each level once (indices 0-2), then 3 energy faces (3-5) -
@@ -104,8 +104,8 @@ public class InstinctClashNewCharactersTests
         var state = NewGame();
         var queue = new AbilityQueue();
 
-        var target = ActiveCharacter(state, InstinctClashConfig.Hippopotamus.Id, "p2");
-        var orca = ReadyCharacter(state, InstinctClashConfig.Orca.Id, "p1");
+        var target = ActiveCharacter(state, DiceKingdomConfig.Hippopotamus.Id, "p2");
+        var orca = ReadyCharacter(state, DiceKingdomConfig.Orca.Id, "p1");
         var energyIds = TardigradeEnergy(state, "p1", "Claw", 1); // fielding cost 2, one L1 Tardigrade die covers it
 
         TurnEngine.Field(state, queue, orca.Id, energyIds);
@@ -127,7 +127,7 @@ public class InstinctClashNewCharactersTests
         var state = NewGame();
         var queue = new AbilityQueue();
 
-        var stoat = ReadyCharacter(state, InstinctClashConfig.Stoat.Id, "p1");
+        var stoat = ReadyCharacter(state, DiceKingdomConfig.Stoat.Id, "p1");
         var energyIds = TardigradeEnergy(state, "p1", "Claw", 1); // fielding cost 1
 
         var lifeBefore = state.PlayerTwo.Life;
@@ -143,8 +143,8 @@ public class InstinctClashNewCharactersTests
         var state = NewGame();
         var queue = new AbilityQueue();
 
-        var buffalo = ReadyCharacter(state, InstinctClashConfig.CapeBuffalo.Id, "p1");
-        var honeyBadger = ReadyCharacter(state, InstinctClashConfig.HoneyBadger.Id, "p1");
+        var buffalo = ReadyCharacter(state, DiceKingdomConfig.CapeBuffalo.Id, "p1");
+        var honeyBadger = ReadyCharacter(state, DiceKingdomConfig.HoneyBadger.Id, "p1");
         var energyIds = TardigradeEnergy(state, "p1", "Claw", 2); // fielding cost 2 (Buffalo) + 1 (Honey Badger), one die each
 
         TurnEngine.Field(state, queue, buffalo.Id, [energyIds[0]]);
@@ -170,7 +170,7 @@ public class InstinctClashNewCharactersTests
 
         var honeyBadgerEnergy = new DieInstance
         {
-            Id = "p1-honeybadger-energy", CardId = InstinctClashConfig.HoneyBadger.Id, OwnerId = "p1",
+            Id = "p1-honeybadger-energy", CardId = DiceKingdomConfig.HoneyBadger.Id, OwnerId = "p1",
             ControllerId = "p1", Zone = Zone.ReservePool, CurrentFaceIndex = 3,
         };
         state.Dice.Add(honeyBadgerEnergy);
@@ -186,7 +186,7 @@ public class InstinctClashNewCharactersTests
         // specifically (not Grizzly/Orca) because its ability is
         // On-Attack, not On-Field - fielding it alone triggers nothing,
         // so this test stays about energy spending, not target choices.
-        var wolverine = ReadyCharacter(state, InstinctClashConfig.Wolverine.Id, "p1"); // fielding cost 2
+        var wolverine = ReadyCharacter(state, DiceKingdomConfig.Wolverine.Id, "p1"); // fielding cost 2
         TurnEngine.Field(state, queue, wolverine.Id, [honeyBadgerEnergy.Id]);
         Drain(state, queue);
 
@@ -210,7 +210,7 @@ public class InstinctClashNewCharactersTests
         var die = state.Dice.Single(d => d.Id == energyDie);
         Assert.Equal(0, die.CurrentFaceIndex); // L1, the first of the two double-energy faces
 
-        var stoat = ReadyCharacter(state, InstinctClashConfig.Stoat.Id, "p1"); // fielding cost 1
+        var stoat = ReadyCharacter(state, DiceKingdomConfig.Stoat.Id, "p1"); // fielding cost 1
         TurnEngine.Field(state, queue, stoat.Id, [energyDie]);
         Drain(state, queue);
 

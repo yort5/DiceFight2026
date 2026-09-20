@@ -10,7 +10,7 @@ From https://dmunited.eu/what-in-the-world-are-homash-values/ - total ATK+DEF ac
 
 The article calls ~2.0 reasonable and >2.0 strong, and notes that abilities aren't in the formula - so here the ability is *paid for out of the stat budget*. (Our dice also carry 3 energy faces, but every Character has the same 3, so it cancels out of comparisons.)
 
-## Bands (enforced by `InstinctClashCostModelTests`)
+## Bands (enforced by `DiceKingdomCostModelTests`)
 
 | Card type | Target Homash |
 |---|---|
@@ -22,7 +22,7 @@ Rough stat-point prices used when re-statting (per 3-level total): gain life 1.5
 
 ## Keywords now on cards
 
-`Fast` and `Overcrush` - both already implemented in `CombatEngine`; declared in `InstinctClashConfig.Config.Keywords`. Cards: Wolverine (Fast + 1 direct), Peregrine Falcon (Fast + 3 dmg), Greyhound (Fast), Grizzly Bear (Overcrush), Tiger (Overcrush + 2 direct). Vanilla: Elephant, Hippopotamus, Hermit Crab.
+`Fast` and `Overcrush` - both already implemented in `CombatEngine`; declared in `DiceKingdomConfig.Config.Keywords`. Cards: Wolverine (Fast + 1 direct), Peregrine Falcon (Fast + 3 dmg), Greyhound (Fast), Grizzly Bear (Overcrush), Tiger (Overcrush + 2 direct). Vanilla: Elephant, Hippopotamus, Hermit Crab.
 
 Not yet engine-supported (candidates for later): Regenerate, Retaliation, Swarm, Range/Infiltrate (UI already checks these names), Global abilities.
 

@@ -2,7 +2,7 @@ using DiceFight.V2.Model;
 
 namespace DiceFight.V2.Tests;
 
-// v3 "Instinct Clash" addition (2026-09-03) - TurnEngine.RerollOwn, the
+// v3 "Dice Kingdom" addition (2026-09-03) - TurnEngine.RerollOwn, the
 // player-voluntary reroll rule 2.6.1 describes but v2 never exposed as a
 // real action (Reroll previously existed only as a card-triggered effect).
 public class RerollOwnTests

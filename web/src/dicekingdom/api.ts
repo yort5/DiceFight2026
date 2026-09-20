@@ -6,7 +6,7 @@ import type { BlockAssignment, CardDef, Champion, CreatedGame, GameState } from 
 // separate client, not a parameterized version of the v1 one: the action
 // list itself is smaller (no Range/Tag Out/Infiltrate/Continuous-die/
 // Global-ability endpoints - see V2GamesController.cs's own remarks on
-// why none of InstinctClashConfig's 8 Characters need them).
+// why none of DiceKingdomConfig's 8 Characters need them).
 const BASE_URL = "/api/v2/games";
 
 // undefined = "look up whichever seat this browser is currently playing

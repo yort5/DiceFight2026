@@ -5,17 +5,17 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace DiceFight.Api.Controllers;
 
-// v3 "Instinct Clash" API - Phase 3 of the mellow-sparking-comet plan.
+// v3 "Dice Kingdom" API - Phase 3 of the mellow-sparking-comet plan.
 // Mirrors GamesController.cs's shape (seat tokens, RequireTurn/Result/
 // Drain helpers, one endpoint per TurnEngine/CombatEngine action) against
-// DiceFight.V2 + InstinctClashConfig instead of v1's DiceFight.Engine +
+// DiceFight.V2 + DiceKingdomConfig instead of v1's DiceFight.Engine +
 // SampleCards - a parallel controller, not a shared abstraction, matching
 // V2_PLAN.md's own Phase 9 note ("keeps v1 untouched").
 //
 // No team-builder: creating a game picks two Champions and
-// InstinctClashConfig.CharactersByChampion builds each team
+// DiceKingdomConfig.CharactersByChampion builds each team
 // automatically. No Global abilities/Range/Tag Out/Continuous-die
-// endpoints - none of InstinctClashConfig's Characters use those
+// endpoints - none of DiceKingdomConfig's Characters use those
 // mechanisms, so there is nothing for them to drive yet.
 [ApiController]
 [Route("api/v2/games")]
@@ -24,8 +24,8 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase
     [HttpPost]
     public ActionResult<V2CreatedGameDto> Create([FromBody] CreateV2GameRequest request)
     {
-        var config = InstinctClashConfig.Config;
-        var catalog = InstinctClashConfig.Catalog;
+        var config = DiceKingdomConfig.Config;
+        var catalog = DiceKingdomConfig.Catalog;
 
         var playerOne = BuildPlayer("teamA", request.PlayerOneChampionId);
         var playerTwo = BuildPlayer("teamB", request.PlayerTwoChampionId);
@@ -40,20 +40,20 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase
 
     private static Player BuildPlayer(string id, string championId)
     {
-        var champion = InstinctClashConfig.Champions.FirstOrDefault(c => c.Id == championId)
+        var champion = DiceKingdomConfig.Champions.FirstOrDefault(c => c.Id == championId)
             ?? throw new InvalidOperationException($"Unknown Champion id '{championId}'.");
         var player = new Player { Id = id, Name = champion.Name, ChampionId = champion.Id };
-        player.TeamCardIds.AddRange(InstinctClashConfig.CharactersByChampion[champion.Id]);
+        player.TeamCardIds.AddRange(DiceKingdomConfig.CharactersByChampion[champion.Id]);
         return player;
     }
 
     [HttpGet("cards")]
     public ActionResult<IReadOnlyList<V2CardDefDto>> Cards() =>
-        Ok(InstinctClashConfig.Catalog.Values.Select(V2CardDefDto.From).ToList());
+        Ok(DiceKingdomConfig.Catalog.Values.Select(V2CardDefDto.From).ToList());
 
     [HttpGet("champions")]
     public ActionResult<IReadOnlyList<ChampionDto>> Champions() =>
-        Ok(InstinctClashConfig.Champions.Select(ChampionDto.From).ToList());
+        Ok(DiceKingdomConfig.Champions.Select(ChampionDto.From).ToList());
 
     [HttpGet("{gameId}")]
     public ActionResult<V2GameStateDto> Get(string gameId)
