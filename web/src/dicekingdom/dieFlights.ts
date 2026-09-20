@@ -32,6 +32,7 @@ interface Snap {
 
 const FLIGHT_MS = 520;
 const KO_HOLD_MS = 420;
+const SPEND_MS = 380;
 const STAGGER_MS = 70;
 const MAX_FLIGHTS = 12;
 const MIN_TRAVEL_PX = 8;
@@ -56,6 +57,7 @@ const PILE_KEYS: Record<string, string> = {
   OutOfPlay: "out",
   Bag: "bag",
   ReservePool: "reserve",
+  Unpurchased: "roster",
 };
 
 function pileEl(root: HTMLElement, die: Die, zone: string, you: string): HTMLElement | null {
@@ -71,7 +73,12 @@ interface Flight {
   dest: () => DOMRect | null;
   hide?: HTMLElement;
   ko?: boolean;
+  reason?: string;
   fadeAtEnd?: boolean;
+  /** Begin shrunken (a die leaving a small pile) - 1 by default. */
+  startScale?: number;
+  /** A die spent as energy: quick, shrinks and fades out into the pile. */
+  spend?: boolean;
 }
 
 function launch(root: HTMLElement, f: Flight, index: number) {
@@ -91,13 +98,14 @@ function launch(root: HTMLElement, f: Flight, index: number) {
   ghost.appendChild(inner);
   ghost.style.width = `${f.from.width}px`;
   ghost.style.height = `${f.from.height}px`;
-  ghost.style.transform = `translate(${f.from.left}px, ${f.from.top}px)`;
   root.appendChild(ghost);
 
   const hidden = f.hide;
   const priorVisibility = hidden?.style.visibility ?? "";
   if (hidden) hidden.style.visibility = "hidden";
 
+  const startScale = f.startScale ?? 1;
+  const duration = f.spend ? SPEND_MS : FLIGHT_MS;
   const delay = index * STAGGER_MS + (f.ko ? KO_HOLD_MS : 0);
   const start = performance.now() + delay;
   let last = f.from;
@@ -105,8 +113,9 @@ function launch(root: HTMLElement, f: Flight, index: number) {
     ghost.remove();
     if (hidden && hidden.isConnected) hidden.style.visibility = priorVisibility;
   };
+  ghost.style.transform = `translate(${f.from.left}px, ${f.from.top}px) scale(${startScale})`;
   const frame = (now: number) => {
-    const raw = (now - start) / FLIGHT_MS;
+    const raw = (now - start) / duration;
     if (raw < 0) {
       requestAnimationFrame(frame);
       return;
@@ -115,18 +124,23 @@ function launch(root: HTMLElement, f: Flight, index: number) {
     const e = easeInOut(t);
     const d = f.dest() ?? last;
     last = d;
-    const x = f.from.left + (d.left - f.from.left) * e;
-    const y = f.from.top + (d.top - f.from.top) * e;
-    const sx = 1 + (d.width / Math.max(1, f.from.width) - 1) * e;
-    const sy = 1 + (d.height / Math.max(1, f.from.height) - 1) * e;
-    ghost.style.transform = `translate(${x}px, ${y}px) scale(${sx}, ${sy})`;
-    if (f.fadeAtEnd) ghost.style.opacity = String(1 - 0.75 * e);
+    // Interpolate centres and scale about the centre, so a die that starts
+    // small (or lands in a small pile) stays anchored to the right spot.
+    const fcx = f.from.left + f.from.width / 2;
+    const fcy = f.from.top + f.from.height / 2;
+    const cx = fcx + (d.left + d.width / 2 - fcx) * e;
+    const cy = fcy + (d.top + d.height / 2 - fcy) * e;
+    const endScale = f.spend ? 0.35 : d.width / Math.max(1, f.from.width);
+    const scale = startScale + (endScale - startScale) * e;
+    ghost.style.transform = `translate(${cx - f.from.width / 2}px, ${cy - f.from.height / 2}px) scale(${scale})`;
+    if (f.spend) ghost.style.opacity = String(1 - e);
+    else if (f.fadeAtEnd) ghost.style.opacity = String(1 - 0.75 * e);
     if (t >= 1) finish();
     else requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);
   // Safety net: never leave a ghost or a hidden die behind.
-  window.setTimeout(finish, delay + FLIGHT_MS + 1500);
+  window.setTimeout(finish, delay + duration + 1500);
 }
 
 export function useDieFlights(rootRef: RefObject<HTMLElement | null>, game: GameState | null, phase: string, you: string) {
@@ -169,19 +183,28 @@ export function useDieFlights(rootRef: RefObject<HTMLElement | null>, game: Game
           const now = el.getBoundingClientRect();
           const from = adjust(snap);
           const moved = Math.hypot(now.left - from.left, now.top - from.top) + Math.abs(now.width - from.width);
-          const regionChanged = snap.region !== regionOf(el);
-          if ((zoneChanged || phaseChanged || regionChanged) && moved > MIN_TRAVEL_PX && snap.el !== el) {
-            flights.push({ from, node: snap.el, dest: () => (el.isConnected ? el.getBoundingClientRect() : null), hide: el });
-          } else if ((zoneChanged || phaseChanged || regionChanged) && moved > MIN_TRAVEL_PX) {
+          const regionNow = regionOf(el);
+          // Only a real change of place counts: a different region (field <->
+          // lane <-> lane N), or the phase card swapping under a die in the
+          // stage (Tray -> Reserve row). A zone change alone does NOT - e.g.
+          // "declare attackers" makes a lane die official without it moving,
+          // and a small layout reflow must not replay the flight.
+          const relocated = snap.region !== regionNow || (phaseChanged && regionNow === "stage");
+          if (relocated && moved > MIN_TRAVEL_PX && snap.el !== el) {
+            flights.push({ reason: `move ${die.id} ${snap.region}->${regionNow} ${prev.zone}->${die.zone}`, from, node: snap.el, dest: () => (el.isConnected ? el.getBoundingClientRect() : null), hide: el });
+          } else if (relocated && moved > MIN_TRAVEL_PX) {
             // React reused the very same DOM node - it is already at its new
             // spot, so clone it as-is and fly from the remembered rect.
-            flights.push({ from, node: el, dest: () => (el.isConnected ? el.getBoundingClientRect() : null), hide: el });
+            flights.push({ reason: `move-same-node ${die.id} ${snap.region}->${regionNow} ${prev.zone}->${die.zone}`, from, node: el, dest: () => (el.isConnected ? el.getBoundingClientRect() : null), hide: el });
           }
         } else if (!el && snap && zoneChanged) {
           const target = pileEl(root, die, die.zone, you);
           if (!target) continue;
           const ko = die.zone === "PrepArea" && (prev.zone === "AttackZone" || prev.zone === "FieldZone");
+          const spend = prev.zone === "ReservePool" && die.zone === "UsedPile";
           flights.push({
+            reason: `vanish ${die.id} ${prev.zone}->${die.zone}${ko ? ' KO' : ''}`,
+            spend,
             from: adjust(snap),
             node: snap.el,
             dest: () => (target.isConnected ? target.getBoundingClientRect() : null),
@@ -195,22 +218,37 @@ export function useDieFlights(rootRef: RefObject<HTMLElement | null>, game: Game
             const tile = snaps.current.get(`card:${die.cardId}`);
             if (tile) from = adjust(tile);
           }
+          let startScale: number | undefined;
           if (!from) {
             const src = pileEl(root, die, prev.zone, you);
-            if (src) from = src.getBoundingClientRect();
+            if (src) {
+              // Full-size die centred on the pile that grows out of it (a
+              // pile-sized box would balloon the clone, then snap back).
+              const p = src.getBoundingClientRect();
+              const size = el.getBoundingClientRect();
+              from = new DOMRect(p.left + p.width / 2 - size.width / 2, p.top + p.height / 2 - size.height / 2, size.width, size.height);
+              startScale = 0.35;
+            }
           }
-          if (from) flights.push({ from, node: el, dest: () => (el.isConnected ? el.getBoundingClientRect() : null), hide: el });
+          if (from) flights.push({ reason: `appear ${die.id} ${prev.zone}->${die.zone}`, from, node: el, dest: () => (el.isConnected ? el.getBoundingClientRect() : null), hide: el, startScale });
         } else if (!el && !snap && prev.zone === "Unpurchased" && die.zone !== "Unpurchased" && die.cardId) {
           // Bought and it has no element of its own (goes straight to the Used pile).
           const tile = snaps.current.get(`card:${die.cardId}`);
           const target = pileEl(root, die, die.zone, you);
+          const roster = pileEl(root, die, "Unpurchased", you); // the opponent's Roster button
           if (tile && target) {
             flights.push({ from: adjust(tile), node: tile.el, dest: () => (target.isConnected ? target.getBoundingClientRect() : null), fadeAtEnd: true });
+          } else if (roster && target) {
+            const r = roster.getBoundingClientRect();
+            flights.push({ from: r, node: roster, dest: () => (target.isConnected ? target.getBoundingClientRect() : null), fadeAtEnd: true, startScale: 0.6 });
           }
         }
       }
     }
 
+    // Debug aid: set `window.__dkFlights = []` in the console to log why each flight launched.
+    const dbg = (window as unknown as { __dkFlights?: string[] }).__dkFlights;
+    if (dbg && flights.length) dbg.push(...flights.map((f) => f.reason ?? '?'));
     flights.slice(0, MAX_FLIGHTS).forEach((f, i) => launch(root, f, i));
 
     // Remember this commit for the next one.

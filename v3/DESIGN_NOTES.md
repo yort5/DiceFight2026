@@ -2867,3 +2867,21 @@ Direct feedback: Roll -> Main was a hard cut; dice blipped between zones.
   same code as the purchase/spent-energy path but was not exercised end-to-end
   headless (needs a real combat KO) - watch for it in play.
 - Gotcha: hooks must sit ABOVE the page's `if (!game) return` early return.
+
+## Motion pass follow-ups (2026-09-20)
+- Draw-to-Tray: a die leaving a small pile now starts as a full-size die at ~0.35
+  scale centred on the pile (was a pile-sized box holding a full-size clone ->
+  ballooned then snapped). Ghosts now scale about their centre.
+- Declare Attackers replayed the flight: `run()` committed the cleared local
+  state (pending attackers) urgently and `setGame` in a transition, so for one
+  frame the dice were back in Field (lane->Field->lane). All of that state now
+  updates inside the same `startTransition`. Also only a real change of region
+  (field/lane N) or the phase card swapping under a stage die triggers a flight
+  - a zone change alone no longer does.
+- Spent energy dice (Reserve -> Used) now use a distinct quick shrink-and-fade
+  "spend" flight so they don't read as a second die being fielded.
+- Opponent purchases fly from their Roster button into their Used pile.
+- Debug: `window.__dkFlights = []` in the console logs why each flight launched.
+- NOT verified: an opponent die's KO shake-and-fly. Code path is the same as my
+  own dice's (vanish -> `opp-prep` target); the headless harness never produced a
+  bot-die KO (bot dice leave play when unblocked; harness blocking loop stalled).

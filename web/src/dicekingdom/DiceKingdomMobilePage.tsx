@@ -639,7 +639,7 @@ function MatCard({
           <EnergyChips dice={reserve} size={mine ? 16 : 15} />
         </span>
         <span className="dkm-mat-head-actions">
-          <button type="button" className="dkm-chip-btn" onClick={onOpenRoster}>
+          <button type="button" className="dkm-chip-btn" data-pile={`${mine ? "mine" : "opp"}-roster`} onClick={onOpenRoster}>
             Roster
           </button>
           {expandable && (
@@ -1388,19 +1388,26 @@ export function DiceKingdomMobilePage() {
       // data commit has already had a frame to settle, rather than
       // stacking both into one. Confirmed with a rAF frame-timing probe
       // across several runs, not just by eye.
-      startTransition(() => setGame(next));
+      // ONE transition for the game AND the local UI state that depends on it.
+      // Split across urgent + transition updates, React committed the cleared
+      // local state (pending attackers, selection...) a frame BEFORE the new
+      // game - e.g. declared attackers briefly snapped back to Field - and the
+      // dice-flight layer animated that bounce. Same-batch = one clean commit.
+      startTransition(() => {
+        setGame(next);
+        setSelectedId(null);
+        setLaneBreakdown(null);
+        if (next.currentStepId !== "roll-and-reroll") {
+          setRerollPicked([]);
+          setRerollUsedThisStep(false);
+        }
+        if (next.currentStepId !== "select-attackers") setPendingAttackers({});
+        // Pairings must survive into action-global-window: the server doesn't
+        // persist them, and assignCombatDamage([]) treats every attacker as
+        // unblocked (so nothing is ever KO'd).
+        if (next.currentStepId !== "assign-blockers" && next.currentStepId !== "action-global-window") setBlockAssignments({});
+      });
       if (previous) requestAnimationFrame(() => animateRolledDice(previous, next, rolledDieIds));
-      setSelectedId(null);
-      setLaneBreakdown(null);
-      if (next.currentStepId !== "roll-and-reroll") {
-        setRerollPicked([]);
-        setRerollUsedThisStep(false);
-      }
-      if (next.currentStepId !== "select-attackers") setPendingAttackers({});
-      // Pairings must survive into action-global-window: the server doesn't
-      // persist them, and assignCombatDamage([]) treats every attacker as
-      // unblocked (so nothing is ever KO'd).
-      if (next.currentStepId !== "assign-blockers" && next.currentStepId !== "action-global-window") setBlockAssignments({});
       return next;
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
