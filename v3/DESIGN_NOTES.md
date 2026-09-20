@@ -2885,3 +2885,14 @@ Direct feedback: Roll -> Main was a hard cut; dice blipped between zones.
 - NOT verified: an opponent die's KO shake-and-fly. Code path is the same as my
   own dice's (vanish -> `opp-prep` target); the headless harness never produced a
   bot-die KO (bot dice leave play when unblocked; harness blocking loop stalled).
+
+## Opponent Reserve row + Prep styling (2026-09-20)
+- Opp mat now shows a "Their reserve" row of their rolled Reserve dice (was only
+  the energy total in the header, so fielded creatures appeared from nowhere).
+  Fielding/spending now flies out of/into that row via the existing flight layer;
+  flight regions are now `data-region` named (field-mine/field-opp/opp-reserve)
+  so reserve -> field inside one mat still counts as a move.
+- Prep looked odd because only that cell had padding/box; all pile cells now share
+  the same box and only Prep is tinted.
+- Observed, not fixed: during the opponent's Roll step the phase stage still
+  shows MY "Tray - tap to select for reroll" card.

@@ -44,6 +44,8 @@ function reducedMotion(): boolean {
 const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
 function regionOf(el: HTMLElement): string {
+  const named = el.closest<HTMLElement>("[data-region]");
+  if (named) return named.dataset.region!;
   const lane = el.closest<HTMLElement>("[data-lane]");
   if (lane) return `lane-${lane.dataset.lane}`;
   if (el.closest(".dkm-phase-stage")) return "stage";

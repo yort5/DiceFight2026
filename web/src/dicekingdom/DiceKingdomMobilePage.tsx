@@ -610,6 +610,7 @@ function MatCard({
   const out = zone("OutOfPlay");
   const bag = zone("Bag");
   const reserve = zone("ReservePool");
+  const rolledReserve = reserve.filter(rolled);
 
   // Fixed you=Claw-orange/opp=Eye-purple, independent of either
   // player's actual Champion type - the handoff's own deliberate
@@ -707,8 +708,23 @@ function MatCard({
         />
       )}
 
+      {/* The opponent's rolled Reserve dice, so a creature they field visibly
+          comes OUT of somewhere (it used to appear from nowhere - only their
+          energy total showed, in the header). Your own reserve lives in the
+          Buy card on your turn. */}
+      {!mine && rolledReserve.length > 0 && (
+        <>
+          <span className="dkm-field-label">Their reserve</span>
+          <div className="dkm-tile-row wrap" data-region="opp-reserve">
+            {rolledReserve.map((d) => (
+              <DTile key={d.id} die={d} cardsById={cardsById} size={40} mine={false} />
+            ))}
+          </div>
+        </>
+      )}
+
       <span className="dkm-field-label">{mine ? "Field" : "Their field · active"}</span>
-      <div className="dkm-tile-row wrap">
+      <div className="dkm-tile-row wrap" data-region={mine ? "field-mine" : "field-opp"}>
         {field.length === 0 && <span className="dkm-empty-hint">Nothing fielded.</span>}
         {field.map((d) => (
           <DTile
