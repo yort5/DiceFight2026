@@ -28,15 +28,11 @@ public static class CombatEngine
     // CantAttack for eligibility purposes - a judgment call, not specified
     // further anywhere in the frozen vocabulary (no authored card uses it
     // yet); revisit if a real migrated card needs a different reading.
-    // Mobile refresh (2026-09) - the Attack Zone is now four fixed lanes
-    // rather than one ad hoc column per attacker. attackerLanes carries
-    // each declared attacker's chosen lane (0-3); several attackers may
-    // share a lane. This is purely which lane a die is DISPLAYED in -
-    // blocking and damage resolution below are completely untouched,
-    // still per-individual-attacker via CombatAssignment, since
-    // DiceKingdomConfig grants no BlocksN/MinBlockers keyword that
-    // would need lane-pooled math (see V2GamesController.AssignCombatDamage's
-    // own remark: every attacker has at most one live blocker here).
+    // Mobile refresh (2026-09) - the Attack Zone is four fixed lanes.
+    // attackerLanes carries each declared attacker's chosen lane (0-3);
+    // several attackers may share one. A lane is the unit of combat
+    // (2026-09-21): its attackers' Attack pools against its blockers -
+    // see LaneFight and AssignCombatDamage.
     public const int LaneCount = 4;
 
     // Convenience overload for callers (tests, TurnEngine's skip-combat
@@ -114,14 +110,19 @@ public static class CombatEngine
 
         // Keyword Deadly - record who is engaged with a Deadly die NOW,
         // not at damage: it counts even if either die is removed first.
-        foreach (var attacker in state.DiceIn(state.ActivePlayerId, Zone.AttackZone))
+        // Engagement is per lane, so every blocker of a lane is engaged
+        // with every attacker in it.
+        foreach (var laneGroup in state.DiceIn(state.ActivePlayerId, Zone.AttackZone).GroupBy(a => a.Lane))
         {
-            var attackerDeadly = QueryEngine.GetKeywords(state, attacker).Contains("Deadly");
-            foreach (var blockerId in assignment.BlockersOf(attacker.Id))
+            var laneBlockers = LaneBlockerIds(assignment, laneGroup).Select(id => FindDie(state, id)).ToList();
+            foreach (var attacker in laneGroup)
             {
-                var blocker = FindDie(state, blockerId);
-                if (attackerDeadly) RecordDeadlyEngagement(state, blocker.Id, attacker.Id);
-                if (QueryEngine.GetKeywords(state, blocker).Contains("Deadly")) RecordDeadlyEngagement(state, attacker.Id, blocker.Id);
+                var attackerDeadly = QueryEngine.GetKeywords(state, attacker).Contains("Deadly");
+                foreach (var blocker in laneBlockers)
+                {
+                    if (attackerDeadly) RecordDeadlyEngagement(state, blocker.Id, attacker.Id);
+                    if (QueryEngine.GetKeywords(state, blocker).Contains("Deadly")) RecordDeadlyEngagement(state, attacker.Id, blocker.Id);
+                }
             }
         }
 
@@ -140,10 +141,13 @@ public static class CombatEngine
     // CombatFlagKind.Unblockable (Finding 14 - Falcon "Recon").
     private static void ValidateUnblockable(GameState state, CombatAssignment assignment)
     {
-        foreach (var attacker in state.DiceIn(state.ActivePlayerId, Zone.AttackZone))
+        foreach (var laneGroup in state.DiceIn(state.ActivePlayerId, Zone.AttackZone).GroupBy(a => a.Lane))
         {
-            if (attacker.CombatFlags.Contains(CombatFlagKind.Unblockable) && assignment.BlockersOf(attacker.Id).Count > 0)
-                throw new InvalidOperationException($"Die '{attacker.Id}' is unblockable this turn.");
+            var attackers = laneGroup.ToList();
+            if (LaneBlockerIds(assignment, attackers).Count == 0) continue;
+            var unblockable = attackers.FirstOrDefault(a => a.CombatFlags.Contains(CombatFlagKind.Unblockable));
+            if (unblockable is not null)
+                throw new InvalidOperationException($"Die '{unblockable.Id}' is unblockable this turn.");
         }
     }
 
@@ -155,19 +159,23 @@ public static class CombatEngine
     // minimum; only a nonzero count below it is rejected.
     private static void ValidateMinBlockers(GameState state, CombatAssignment assignment)
     {
-        foreach (var attacker in state.DiceIn(state.ActivePlayerId, Zone.AttackZone))
+        foreach (var laneGroup in state.DiceIn(state.ActivePlayerId, Zone.AttackZone).GroupBy(a => a.Lane))
         {
-            var blockerCount = assignment.BlockersOf(attacker.Id).Count;
+            var attackers = laneGroup.ToList();
+            var blockerCount = LaneBlockerIds(assignment, attackers).Count;
             if (blockerCount == 0) continue;
 
-            var required = state.CombatRules
-                .Where(r => r.Kind == CombatRuleKind.MinBlockers && r.AppliesTo(state, attacker))
-                .Select(r => r.N ?? 1)
-                .DefaultIfEmpty(0)
-                .Max();
+            foreach (var attacker in attackers)
+            {
+                var required = state.CombatRules
+                    .Where(r => r.Kind == CombatRuleKind.MinBlockers && r.AppliesTo(state, attacker))
+                    .Select(r => r.N ?? 1)
+                    .DefaultIfEmpty(0)
+                    .Max();
 
-            if (blockerCount < required)
-                throw new InvalidOperationException($"Die '{attacker.Id}' can only be blocked by {required} or more character dice.");
+                if (blockerCount < required)
+                    throw new InvalidOperationException($"Die '{attacker.Id}' can only be blocked by {required} or more character dice.");
+            }
         }
     }
 
@@ -201,10 +209,61 @@ public static class CombatEngine
         }
     }
 
+    // A lane is the unit of combat: every attacker in it fights together
+    // (their Attack pools against the lane's blockers) and every blocker
+    // assigned to ANY attacker in the lane defends the whole lane. The UI
+    // attaches a lane's blockers to its first attacker only, so nothing
+    // here trusts which attacker a blocker was assigned to.
+    private sealed class LaneFight
+    {
+        public required List<DieInstance> Attackers { get; init; }
+        public required List<string> DeclaredBlockerIds { get; init; }
+        public required int TotalAttack { get; init; }
+        public required int BlockerDefenseTotal { get; init; }
+        public required bool Overcrush { get; init; }
+        // attacker id -> blocker id -> damage, and the reverse (blocker
+        // id -> attacker id -> damage), both fixed up front.
+        public Dictionary<string, Dictionary<string, int>> AttackerSplits { get; } = [];
+        public Dictionary<string, Dictionary<string, int>> BlockerSplits { get; } = [];
+    }
+
+    private static List<string> LaneBlockerIds(CombatAssignment assignment, IEnumerable<DieInstance> laneAttackers) =>
+        laneAttackers.SelectMany(a => assignment.BlockersOf(a.Id)).Distinct().ToList();
+
+    // Pools `sources` (id, damage) against `targets` (die, remaining
+    // lethal): each source's damage goes lethal-first down the target
+    // list, and whatever is left lands on the last target. Same rule the
+    // controller's gang-block auto-split used, now shared across a lane.
+    private static Dictionary<string, Dictionary<string, int>> AutoSplit(
+        IReadOnlyList<(string Id, int Damage)> sources, IReadOnlyList<(string Id, int Lethal)> targets)
+    {
+        var lethalLeft = targets.ToDictionary(t => t.Id, t => t.Lethal);
+        var result = new Dictionary<string, Dictionary<string, int>>();
+        foreach (var (sourceId, damage) in sources)
+        {
+            var remaining = damage;
+            var split = new Dictionary<string, int>();
+            for (var i = 0; i < targets.Count; i++)
+            {
+                var id = targets[i].Id;
+                var give = i == targets.Count - 1 ? remaining : Math.Min(remaining, lethalLeft[id]);
+                split[id] = give;
+                lethalLeft[id] = Math.Max(0, lethalLeft[id] - give);
+                remaining -= give;
+            }
+            result[sourceId] = split;
+        }
+        return result;
+    }
+
     // Rule 2.7.4 (assign) and 2.7.6 (resolve KOs, return survivors).
-    // attackerDamageSplits: for each blocked attacker, how its full
-    // attack value (rule 2.7.4.3.4 - must be assigned in full) is split
-    // across its still-live blocker(s) - the active player's choice.
+    // A lane's attackers deal their combined Attack to the lane's
+    // blockers, and its blockers deal their combined Attack back across
+    // the lane's attackers (both lethal-first, remainder on the last).
+    // attackerDamageSplits is an optional override for a lane holding a
+    // single attacker (the active player's own choice of how to divide
+    // its full attack value, rule 2.7.4.3.4); anything else is split
+    // automatically.
     public static CombatResult AssignCombatDamage(
         GameState state, AbilityQueue queue, CombatAssignment assignment,
         IReadOnlyDictionary<string, IReadOnlyDictionary<string, int>> attackerDamageSplits)
@@ -213,66 +272,77 @@ public static class CombatEngine
         EnterStep(state, queue, StepIds.FastDamage);
 
         var inactivePlayer = state.GetPlayer(state.OpponentOf(state.ActivePlayerId));
-        var attackers = state.DiceIn(state.ActivePlayerId, Zone.AttackZone).ToList();
+        var fights = new List<LaneFight>();
 
-        // Overcrush needs, per Overcrush attacker, its attack value, its
-        // still-live blockers' total defense, and the ORIGINALLY declared
-        // blocker list (to check afterward whether every one of them is
-        // gone, however that happened) - captured now, before either Fast
-        // wave below mutates anything. A static fact about who was
-        // blocking at the start of this sub-step.
-        var overcrushCandidates = new Dictionary<string, (int Attack, int BlockerDefenseTotal, IReadOnlyList<string> DeclaredBlockerIds)>();
-
-        foreach (var attacker in attackers)
+        foreach (var laneGroup in state.DiceIn(state.ActivePlayerId, Zone.AttackZone).GroupBy(a => a.Lane))
         {
-            var declaredBlockerIds = assignment.BlockersOf(attacker.Id);
-            var attack = QueryEngine.GetAttack(state, attacker);
+            var laneAttackers = laneGroup.ToList();
+            var declaredBlockerIds = LaneBlockerIds(assignment, laneAttackers);
 
             if (declaredBlockerIds.Count == 0)
             {
                 // Rule 2.7.4.3.1 - unblocked: hits the player directly and
                 // leaves the Attack Zone before anything else can resolve.
-                inactivePlayer.Life -= attack;
-                attacker.Zone = Zone.OutOfPlay;
-                if (attack > 0)
+                foreach (var attacker in laneAttackers)
                 {
-                    var unblockedName = attacker.CardId is { } unblockedCardId ? state.CardCatalog[unblockedCardId].Name : "a Tardigrade";
-                    state.LogEvent(attacker.ControllerId, $"{unblockedName} hits {inactivePlayer.Name} directly for {attack}.");
+                    var attack = QueryEngine.GetAttack(state, attacker);
+                    inactivePlayer.Life -= attack;
+                    attacker.Zone = Zone.OutOfPlay;
+                    if (attack > 0)
+                    {
+                        var unblockedName = attacker.CardId is { } unblockedCardId ? state.CardCatalog[unblockedCardId].Name : "a Tardigrade";
+                        state.LogEvent(attacker.ControllerId, $"{unblockedName} hits {inactivePlayer.Name} directly for {attack}.");
+                    }
                 }
                 continue;
             }
 
-            // "Once blocked, always blocked" - an attacker with a declared
+            // "Once blocked, always blocked" - a lane with a declared
             // blocker never falls through to the unblocked branch above,
-            // even if every one of its blockers is later removed; any
-            // damage that had nowhere live to land is simply wasted
-            // (unless Overcrush redirects the leftover below).
-            var liveBlockerIds = declaredBlockerIds.Where(id => FindDie(state, id).Zone == Zone.AttackZone).ToList();
+            // even if every blocker is later removed; damage with nowhere
+            // live to land is wasted (unless Overcrush redirects it).
+            var liveBlockers = declaredBlockerIds.Select(id => FindDie(state, id)).Where(b => b.Zone == Zone.AttackZone).ToList();
+            var attacks = laneAttackers.Select(a => (a.Id, Damage: QueryEngine.GetAttack(state, a))).ToList();
 
-            if (liveBlockerIds.Count > 0 &&
-                (!attackerDamageSplits.TryGetValue(attacker.Id, out var split) || split.Values.Sum() != attack))
+            // Direct feedback (2026-09-18/21): a lane holding 2+ live
+            // attackers grants EVERY attacker in it Overcrush, and any
+            // attacker's own Overcrush counts for the whole lane. Read off
+            // the lane as it stood before either wave runs, so an
+            // attacker KO'd earlier in the Action/Global Window isn't
+            // counted. Still deliberately isolated to this one condition.
+            var overcrush = laneAttackers.Count >= 2 ||
+                laneAttackers.Any(a => QueryEngine.GetKeywords(state, a).Contains("Overcrush"));
+
+            var fight = new LaneFight
             {
-                throw new InvalidOperationException(
-                    $"Damage split for attacker '{attacker.Id}' must assign its full attack value ({attack}).");
+                Attackers = laneAttackers,
+                DeclaredBlockerIds = declaredBlockerIds,
+                TotalAttack = attacks.Sum(a => a.Damage),
+                BlockerDefenseTotal = liveBlockers.Sum(b => QueryEngine.GetDefense(state, b)),
+                Overcrush = overcrush,
+            };
+
+            if (liveBlockers.Count > 0)
+            {
+                if (laneAttackers.Count == 1 && attackerDamageSplits.TryGetValue(laneAttackers[0].Id, out var provided))
+                {
+                    if (provided.Values.Sum() != attacks[0].Damage)
+                        throw new InvalidOperationException(
+                            $"Damage split for attacker '{laneAttackers[0].Id}' must assign its full attack value ({attacks[0].Damage}).");
+                    fight.AttackerSplits[laneAttackers[0].Id] = provided.ToDictionary(kv => kv.Key, kv => kv.Value);
+                }
+                else
+                {
+                    var blockerTargets = liveBlockers.Select(b => (b.Id, Lethal: Math.Max(0, QueryEngine.GetDefense(state, b) - b.Damage))).ToList();
+                    foreach (var (id, split) in AutoSplit(attacks, blockerTargets)) fight.AttackerSplits[id] = split;
+                }
+
+                var attackerTargets = laneAttackers.Select(a => (a.Id, Lethal: Math.Max(0, QueryEngine.GetDefense(state, a) - a.Damage))).ToList();
+                var blockerAttacks = liveBlockers.Select(b => (b.Id, Damage: QueryEngine.GetAttack(state, b))).ToList();
+                foreach (var (id, split) in AutoSplit(blockerAttacks, attackerTargets)) fight.BlockerSplits[id] = split;
             }
 
-            var blockerDefenseTotal = liveBlockerIds.Sum(id => QueryEngine.GetDefense(state, FindDie(state, id)));
-            // Direct feedback (2026-09-18): a lane holding 2+ live
-            // attackers grants EVERY attacker in it Overcrush for this
-            // combat - not stat pooling, just this one condition. Read
-            // fresh off `attackers` (captured at the top of this method,
-            // before either damage wave runs), so an attacker KO'd by an
-            // ability earlier in the Action/Global Window already isn't
-            // counted, and the survivor of a once-crowded lane correctly
-            // loses this the moment it's back down to one: "if the
-            // opponent can somehow KO one of them before damage
-            // resolution, Overcrush goes away." Deliberately isolated to
-            // this one condition (not a real keyword, not touching
-            // QueryEngine.GetKeywords) - explicitly provisional, easy to
-            // delete or move to a Champion/character ability later.
-            var sharesACrowdedLane = attackers.Count(a => a.Lane == attacker.Lane) >= 2;
-            if (QueryEngine.GetKeywords(state, attacker).Contains("Overcrush") || sharesACrowdedLane)
-                overcrushCandidates[attacker.Id] = (attack, blockerDefenseTotal, declaredBlockerIds);
+            fights.Add(fight);
         }
 
         // Keyword Fast - "Characters with Fast deal combat damage before
@@ -283,16 +353,13 @@ public static class CombatEngine
         // damage back at all (the rulebook's own worked example - see
         // the test suite).
         var koIds = new List<string>();
-        koIds.AddRange(ResolveFastOrSlowDamage(state, queue, assignment, attackerDamageSplits, fast: true));
+        koIds.AddRange(ResolveFastOrSlowDamage(state, queue, fights, fast: true));
         EnterStep(state, queue, StepIds.NormalDamage);
-        koIds.AddRange(ResolveFastOrSlowDamage(state, queue, assignment, attackerDamageSplits, fast: false));
+        koIds.AddRange(ResolveFastOrSlowDamage(state, queue, fights, fast: false));
 
         // "Resolve effects that occur due to damage or KO." The DieDamaged
         // and DieKOd abilities are already queued by the waves above; this
-        // names the window they resolve in. Logged by id since the KO'd
-        // die has already moved out of Zone.AttackZone/lost its card
-        // context by the time koIds comes back - the die instance itself
-        // is still findable via FindDie, though, so its name still is.
+        // names the window they resolve in.
         foreach (var koId in koIds)
         {
             var koDie = FindDie(state, koId);
@@ -303,14 +370,16 @@ public static class CombatEngine
 
         // Glossary/FAQ - Overcrush: "if this character die KO's or removes
         // all of its blockers, it deals any leftover damage to your
-        // opponent." A blocker counts as gone if it's no longer in the
-        // Attack Zone, whether that's because it was already removed
-        // before this method ran or was just KO'd above.
-        foreach (var (_, info) in overcrushCandidates)
+        // opponent." Per lane now: the lane's combined Attack minus its
+        // blockers' combined Defense, once every declared blocker is gone.
+        foreach (var fight in fights)
         {
-            if (!info.DeclaredBlockerIds.All(id => FindDie(state, id).Zone != Zone.AttackZone)) continue;
-            var leftover = info.Attack - info.BlockerDefenseTotal;
-            if (leftover > 0) inactivePlayer.Life -= leftover;
+            if (!fight.Overcrush) continue;
+            if (!fight.DeclaredBlockerIds.All(id => FindDie(state, id).Zone != Zone.AttackZone)) continue;
+            var leftover = fight.TotalAttack - fight.BlockerDefenseTotal;
+            if (leftover <= 0) continue;
+            inactivePlayer.Life -= leftover;
+            state.LogEvent(state.ActivePlayerId, $"Overcrush: {leftover} excess damage carries through to {inactivePlayer.Name}.");
         }
 
         // Rule 2.7.6.6 - "Return remaining dice in the Attack Zone to the
@@ -323,72 +392,56 @@ public static class CombatEngine
         }
         // Unlike v1, this does NOT also advance CurrentStep to CleanUp -
         // the caller calls TurnEngine.CleanUp explicitly afterward, same
-        // as the skip-combat path already does; keeps CleanUp's own
-        // RequireStep(Attack) contract the same regardless of whether
-        // combat happened this turn.
+        // as the skip-combat path already does.
 
         return new CombatResult(koIds);
     }
 
-    // One wave of Keyword Fast's two-wave damage resolution. Two full
-    // passes, matching v1's own DieStats.ApplyDamage/TryResolveKO split
-    // exactly (rule 2.7.6.1 - "simultaneous KO... among whoever just took
-    // damage this wave"): first MarkDamage lands on BOTH directions of
-    // every still-live engagement in this wave (an attacker's split onto
-    // its blockers, and each blocker's full attack back onto the shared
-    // attacker) with nothing KO'd or moved out of the Attack Zone yet -
-    // this is what lets a lethally-outmatched blocker still land its own
-    // damage back in the SAME wave rather than being silently skipped
-    // because it "already died." Only once every hit in the wave has
-    // landed does the second pass check who actually crossed their
-    // Defense threshold and KO them - so a wave where both sides deal
-    // lethal damage really does KO both sides together, and a slower
-    // (non-Fast) die KO'd by a Fast attacker's damage in THIS wave still
-    // correctly never got to swing back, because its own damage was never
-    // marked in the first place (the live-blocker/live-attacker checks
-    // below already exclude it - it left the Attack Zone in an EARLIER
-    // wave, not mid-way through this one).
-    private static List<string> ResolveFastOrSlowDamage(
-        GameState state, AbilityQueue queue, CombatAssignment assignment,
-        IReadOnlyDictionary<string, IReadOnlyDictionary<string, int>> attackerDamageSplits, bool fast)
+    // One wave of Keyword Fast's two-wave damage resolution: first
+    // MarkDamage lands on BOTH directions of every still-live lane
+    // engagement in this wave (each attacker's split onto the lane's
+    // blockers, each blocker's split back onto the lane's attackers), with
+    // nothing KO'd yet - so a lethally-outmatched die still lands its own
+    // damage in the SAME wave. Only then does the second pass KO whoever
+    // crossed their Defense, simultaneously (rule 2.7.6.1). A slower die
+    // KO'd by a Fast one in an EARLIER wave never got its damage marked.
+    private static List<string> ResolveFastOrSlowDamage(GameState state, AbilityQueue queue, List<LaneFight> fights, bool fast)
     {
         var wavedRecipients = new List<DieInstance>();
 
-        foreach (var attacker in state.DiceIn(state.ActivePlayerId, Zone.AttackZone).ToList())
+        foreach (var fight in fights)
         {
-            var liveBlockerIds = assignment.BlockersOf(attacker.Id).Where(id => FindDie(state, id).Zone == Zone.AttackZone).ToList();
-            if (liveBlockerIds.Count == 0) continue;
+            var liveAttackers = fight.Attackers.Where(a => a.Zone == Zone.AttackZone).ToList();
+            var liveBlockers = fight.DeclaredBlockerIds.Select(id => FindDie(state, id)).Where(b => b.Zone == Zone.AttackZone).ToList();
+            if (liveBlockers.Count == 0 || liveAttackers.Count == 0) continue;
 
-            // Rule 2.7.4.3.4-ish - the attacker's own split lands on its
-            // still-live blockers, timed by the ATTACKER's own Fast.
-            if (QueryEngine.GetKeywords(state, attacker).Contains("Fast") == fast && attackerDamageSplits.TryGetValue(attacker.Id, out var split))
+            foreach (var attacker in liveAttackers)
             {
-                foreach (var blockerId in liveBlockerIds)
+                if (QueryEngine.GetKeywords(state, attacker).Contains("Fast") != fast) continue;
+                if (!fight.AttackerSplits.TryGetValue(attacker.Id, out var split)) continue;
+                foreach (var blocker in liveBlockers)
                 {
-                    if (split.TryGetValue(blockerId, out var dealt) && dealt > 0 &&
-                        EffectInterpreter.MarkDamage(state, queue, DamageSource.Combat, blockerId, dealt) is { } recipient)
+                    if (split.TryGetValue(blocker.Id, out var dealt) && dealt > 0 &&
+                        EffectInterpreter.MarkDamage(state, queue, DamageSource.Combat, blocker.Id, dealt) is { } recipient)
                         wavedRecipients.Add(recipient);
                 }
             }
 
-            // Rule 2.7.4.3.6/2.7.4.3.7 - each still-live blocker deals its
-            // full attack value back to the (shared) attacker, timed by
-            // the BLOCKER's own Fast keyword rather than the attacker's -
-            // unaffected by whether the attacker's own damage (marked
-            // just above) would be lethal, since nothing's been KO'd yet.
-            foreach (var blockerId in liveBlockerIds)
+            foreach (var blocker in liveBlockers)
             {
-                var blocker = FindDie(state, blockerId);
-                if (QueryEngine.GetKeywords(state, blocker).Contains("Fast") == fast &&
-                    EffectInterpreter.MarkDamage(state, queue, DamageSource.Combat, attacker.Id, QueryEngine.GetAttack(state, blocker)) is { } recipient)
-                    wavedRecipients.Add(recipient);
+                if (QueryEngine.GetKeywords(state, blocker).Contains("Fast") != fast) continue;
+                if (!fight.BlockerSplits.TryGetValue(blocker.Id, out var split)) continue;
+                foreach (var attacker in liveAttackers)
+                {
+                    if (split.TryGetValue(attacker.Id, out var dealt) && dealt > 0 &&
+                        EffectInterpreter.MarkDamage(state, queue, DamageSource.Combat, attacker.Id, dealt) is { } recipient)
+                        wavedRecipients.Add(recipient);
+                }
             }
         }
 
-        // Rule 2.7.6.1 - now resolve KOs, simultaneously, among everyone
-        // still in the Attack Zone plus every redirect recipient (a
-        // RedirectToSelf target isn't guaranteed to already be an
-        // attacker/blocker in this engagement).
+        // Rule 2.7.6.1 - resolve KOs simultaneously, among everyone still
+        // in the Attack Zone plus every redirect recipient.
         var koIds = new List<string>();
         foreach (var die in state.Dice.Where(d => d.Zone == Zone.AttackZone).Concat(wavedRecipients).DistinctBy(d => d.Id).ToList())
         {

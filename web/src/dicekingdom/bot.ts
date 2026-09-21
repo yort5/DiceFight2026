@@ -166,13 +166,14 @@ export function decideMainAction(
   return { kind: "enterAttackStep" };
 }
 
-// "Always attack with highest A die, etc" - attacks with every fielded
-// character showing nonzero attack. There's no defensive cost to
-// attacking with a die here (it returns to the Field Zone at Clean Up
-// either way and blocking eligibility doesn't depend on having attacked),
-// so a basic opponent has no reason to ever hold one back.
+// Attacks with every fielded character showing 2 or more Attack - direct
+// feedback (2026-09-21): a 1A die swinging in is just a free kill for the
+// defender's blocker. There's no defensive cost to attacking otherwise (it
+// returns to the Field Zone at Clean Up either way and blocking
+// eligibility doesn't depend on having attacked).
+export const BOT_MIN_ATTACK = 2;
 export function decideAttackers(game: GameState, botId: string): { dieId: string; lane: number }[] {
-  const attackers = controlledBy(game, botId, "FieldZone").filter((d) => rolled(d) && (d.effectiveAttack ?? 0) > 0);
+  const attackers = controlledBy(game, botId, "FieldZone").filter((d) => rolled(d) && (d.effectiveAttack ?? 0) >= BOT_MIN_ATTACK);
   return attackers.map((d, i) => ({ dieId: d.id, lane: i % 4 }));
 }
 

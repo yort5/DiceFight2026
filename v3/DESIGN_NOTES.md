@@ -2896,3 +2896,31 @@ Direct feedback: Roll -> Main was a hard cut; dice blipped between zones.
   the same box and only Prep is tinted.
 - Observed, not fixed: during the opponent's Roll step the phase stage still
   shows MY "Tray - tap to select for reroll" card.
+
+
+## Lane combat, log, fielding payment (2026-09-21)
+
+Direct feedback from playing a vs-Computer match:
+
+- **A lane is one fight.** Attackers declared into the same lane pool their
+  Attack against the lane's blockers, and the lane's blockers pool their
+  Attack back across its attackers (both lethal-first in lane order,
+  remainder on the last - automatic, not yet a player choice). The UI only
+  ever attached a lane's blocker to the FIRST attacker, which left the
+  second one "unblocked"; `CombatEngine.AssignCombatDamage` now groups by
+  `Lane` and ignores which attacker a blocker was assigned to. Overcrush
+  is per lane: 2+ attackers, or any attacker with the keyword, and the
+  leftover (combined Attack minus blockers' Defense) hits the player once
+  every blocker is gone. Deadly engagement, Unblockable and MinBlockers are
+  lane-aware too. Mobile lane chip/breakdown/preview mirror it.
+  Desktop still declares `i % 4` lanes, so 5+ attackers would share one.
+- **Ability effects are logged** (damage, KO, life, draw, combat flags,
+  moves, spins) via `LogAbility` in `EffectInterpreter`; each turn opens
+  with a `IsTurnStart` log entry (rendered as a divider); the cap is 5000
+  and mobile's Log header expands to the whole game.
+- **Computer opponent only attacks with 2+ Attack** (`BOT_MIN_ATTACK`).
+- **Fielding asks which energy dice to spend** (`PaymentSheet`): dice are
+  spent in tap order, the last can be partly spent. Skipped when free or
+  when every energy die is needed anyway. Purchases still auto-pay.
+- **The opponent's Roll & Reroll now shows THEIR tray** (it used to show
+  the viewer's own leftover dice).

@@ -172,29 +172,9 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase
         var state = RequireTurn(gameId, V2Actor.Active);
         var assignment = BuildAssignment(request.Assignments);
 
-        // Gang-blocking (several blockers on one attacker) is allowed by the
-        // mobile UI, so the attacker's damage is split automatically: each
-        // blocker in turn gets exactly its Defense (lethal), and whatever
-        // is left lands on the last blocker. Not a player decision yet.
+        // The engine splits each lane's combined damage itself (lethal-first,
+        // remainder on the last target) - see CombatEngine.AssignCombatDamage.
         var splits = new Dictionary<string, IReadOnlyDictionary<string, int>>();
-        foreach (var attackerId in request.Assignments.Select(a => a.AttackerDieId).Distinct())
-        {
-            var blockerIds = assignment.BlockersOf(attackerId);
-            if (blockerIds.Count == 0) continue;
-
-            var attacker = state.Dice.First(d => d.Id == attackerId);
-            var remaining = QueryEngine.GetAttack(state, attacker);
-            var split = new Dictionary<string, int>();
-            for (var i = 0; i < blockerIds.Count; i++)
-            {
-                var blocker = state.Dice.First(d => d.Id == blockerIds[i]);
-                var lethal = Math.Max(0, QueryEngine.GetDefense(state, blocker) - blocker.Damage);
-                var give = i == blockerIds.Count - 1 ? remaining : Math.Min(remaining, lethal);
-                split[blockerIds[i]] = give;
-                remaining -= give;
-            }
-            splits[attackerId] = split;
-        }
 
         var queue = new AbilityQueue();
         CombatEngine.AssignCombatDamage(state, queue, assignment, splits);

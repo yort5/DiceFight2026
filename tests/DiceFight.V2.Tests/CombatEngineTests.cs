@@ -395,6 +395,61 @@ public class CombatEngineTests
         Assert.Contains(blocker.Id, result.KOdDieIds);
     }
 
+    // --- Lane combat: a lane's attackers pool their Attack ---
+
+    // Direct feedback (2026-09-21): Tardigrade (2A/3D) + Tiger (3A/3D) in
+    // one lane vs a lone Tardigrade blocker (1A/4D). The mobile UI attaches
+    // the lane's blocker to the FIRST attacker only, yet the whole lane is
+    // blocked: 2+3 = 5 damage against 4 Defense KOs the blocker, and the
+    // lane has Overcrush (2+ attackers), so the 1 excess reaches the player.
+    [Fact]
+    public void Lane_Attackers_Pool_Their_Attack_Against_The_Lane_Blocker_And_Overcrush_The_Excess()
+    {
+        var weak = BuildCard("Weak", [new Face([], new CharacterFaceData(1, 0, 2, 3), Kind: FaceKind.CharacterFace)]);
+        var tiger = BuildCard("Tiger", [new Face([], new CharacterFaceData(1, 0, 3, 3), Kind: FaceKind.CharacterFace)]);
+        var wall = BuildCard("Wall", [new Face([], new CharacterFaceData(1, 0, 1, 4), Kind: FaceKind.CharacterFace)]);
+        var state = BuildState(weak, tiger, wall);
+        var a1 = AddDie(state, weak, "p1");
+        var a2 = AddDie(state, tiger, "p1");
+        var blocker = AddDie(state, wall, "p2");
+        var queue = new AbilityQueue();
+        var lifeBefore = state.PlayerTwo.Life;
+
+        CombatEngine.DeclareAttackers(state, queue, new Dictionary<string, int> { [a1.Id] = 0, [a2.Id] = 0 });
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(a1.Id, blocker.Id); // the second attacker has no blocker of its own
+        CombatEngine.DeclareBlockers(state, queue, assignment, [blocker.Id]);
+        var result = CombatEngine.AssignCombatDamage(state, queue, assignment, new Dictionary<string, IReadOnlyDictionary<string, int>>());
+
+        Assert.Contains(blocker.Id, result.KOdDieIds);
+        Assert.Equal(lifeBefore - 1, state.PlayerTwo.Life); // 5 attack - 4 defense
+        Assert.Equal(1, a1.Damage + a2.Damage); // the blocker's single point of damage lands on the lane
+    }
+
+    [Fact]
+    public void Lane_Without_Enough_Attack_To_KO_Its_Blocker_Deals_Nothing_To_The_Player()
+    {
+        var a = BuildCard("A", [new Face([], new CharacterFaceData(1, 0, 1, 3), Kind: FaceKind.CharacterFace)]);
+        var b = BuildCard("B", [new Face([], new CharacterFaceData(1, 0, 1, 3), Kind: FaceKind.CharacterFace)]);
+        var wall = BuildCard("Wall", [new Face([], new CharacterFaceData(1, 0, 0, 9), Kind: FaceKind.CharacterFace)]);
+        var state = BuildState(a, b, wall);
+        var a1 = AddDie(state, a, "p1");
+        var a2 = AddDie(state, b, "p1");
+        var blocker = AddDie(state, wall, "p2");
+        var queue = new AbilityQueue();
+        var lifeBefore = state.PlayerTwo.Life;
+
+        CombatEngine.DeclareAttackers(state, queue, new Dictionary<string, int> { [a1.Id] = 2, [a2.Id] = 2 });
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(a1.Id, blocker.Id);
+        CombatEngine.DeclareBlockers(state, queue, assignment, [blocker.Id]);
+        var result = CombatEngine.AssignCombatDamage(state, queue, assignment, new Dictionary<string, IReadOnlyDictionary<string, int>>());
+
+        Assert.Empty(result.KOdDieIds);
+        Assert.Equal(lifeBefore, state.PlayerTwo.Life);
+        Assert.Equal(2, blocker.Damage);
+    }
+
     // --- Deadly ---
 
     // A 0-attack Deadly die deals no damage, yet whatever it was

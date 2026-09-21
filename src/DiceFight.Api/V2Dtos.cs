@@ -124,9 +124,9 @@ public sealed record V2PendingChoiceDto(
         new(pending.ControllerId, pending.Description, pending.CandidateIds, pending.MinCount, pending.MaxCount);
 }
 
-public sealed record V2GameLogEntryDto(int Seq, string? PlayerId, string Text)
+public sealed record V2GameLogEntryDto(int Seq, string? PlayerId, string Text, bool IsTurnStart)
 {
-    public static V2GameLogEntryDto From(DiceFight.V2.Model.GameLogEntry entry) => new(entry.Seq, entry.PlayerId, entry.Text);
+    public static V2GameLogEntryDto From(DiceFight.V2.Model.GameLogEntry entry) => new(entry.Seq, entry.PlayerId, entry.Text, entry.IsTurnStart);
 }
 
 public sealed record V2CreatedGameDto(V2GameStateDto Game, IReadOnlyList<SeatDto> Seats);

@@ -22,7 +22,11 @@ export function MatchLog(props: { entries: GameLogEntry[]; nearPlayerId: string 
         <p className="empty-hint">Nothing has happened yet.</p>
       ) : (
         <ol className="match-log-list" ref={listRef}>
-          {props.entries.map((entry) => (
+          {props.entries.map((entry) => entry.isTurnStart ? (
+            <li key={entry.seq} className="log-line neutral log-turn-start">
+              <span className="log-text">— — — {entry.text} — — —</span>
+            </li>
+          ) : (
             <li
               key={entry.seq}
               className={

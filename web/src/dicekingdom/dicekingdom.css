@@ -2981,6 +2981,33 @@
 }
 
 /* ---- Log ---- */
+.dk-mobile .dkm-log-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+.dk-mobile .dkm-log-scroll {
+  max-height: 46vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+/* Turn divider - a row of dashes around whose turn it is, so a change of
+   active player reads at a glance in a long log. */
+.dk-mobile .dkm-log-turn {
+  margin: 8px 0 3px;
+  font: 600 9.5px/1.2 "Work Sans", var(--sans);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--dkm-ink-2);
+}
+.dk-mobile .dkm-log-turn span {
+  color: var(--dkm-ink-dim);
+  letter-spacing: 0.2em;
+}
+
 .dk-mobile .dkm-log {
   padding: 4px 2px 2px;
 }
@@ -3426,4 +3453,29 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .dk-mobile .dkm-ghost { display: none; }
+}
+
+.dicekingdom .log-line.log-turn-start {
+  margin-top: 6px;
+  text-align: center;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.dk-mobile .dkm-pay-sheet {
+  top: auto;
+  max-height: 70vh;
+}
+.dk-mobile .dkm-pay-status {
+  margin: 0 0 10px;
+  font: 500 12px/1.4 "Work Sans", var(--sans);
+  color: var(--dkm-ink-2);
+}
+.dk-mobile .dkm-pay-warn {
+  color: var(--wild);
+}
+.dk-mobile .dkm-pay-confirm {
+  width: 100%;
+  margin-top: 14px;
 }

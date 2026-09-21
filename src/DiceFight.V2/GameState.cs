@@ -22,16 +22,16 @@ public sealed class GameState
     // "the engine writes it, not the client" reasoning: an action that
     // resolves several abilities is still one line, and both players see
     // the same story).
-    private const int MaxLogEntries = 200;
+    private const int MaxLogEntries = 5000; // effectively the whole game - the client offers full scroll-back
 
     public List<GameLogEntry> Log { get; } = [];
 
     private int _logSeq;
 
     /// <summary>Records one line. `playerId` null means the game itself did it.</summary>
-    public void LogEvent(string? playerId, string text)
+    public void LogEvent(string? playerId, string text, bool isTurnStart = false)
     {
-        Log.Add(new GameLogEntry(++_logSeq, playerId, text));
+        Log.Add(new GameLogEntry(++_logSeq, playerId, text, isTurnStart));
         if (Log.Count > MaxLogEntries) Log.RemoveRange(0, Log.Count - MaxLogEntries);
     }
 

@@ -12,4 +12,6 @@ namespace DiceFight.V2.Model;
 /// <param name="Text">Already-written English, third person - the same
 /// state is served to both players, only the client knows which side is
 /// reading.</param>
-public sealed record GameLogEntry(int Seq, string? PlayerId, string Text);
+/// <param name="IsTurnStart">True for the marker line that opens each turn,
+/// so a client can draw a divider between turns.</param>
+public sealed record GameLogEntry(int Seq, string? PlayerId, string Text, bool IsTurnStart = false);

@@ -51,6 +51,7 @@ public static class TurnEngine
         // that forced this (an end-of-turn ability resolves after CleanUp
         // has returned, and must still be able to read the turn it is
         // ending).
+        state.LogEvent(state.ActivePlayerId, $"{state.NameOf(state.ActivePlayerId)}'s turn", isTurnStart: true);
         state.GlobalsUsedThisTurn.Clear();
         state.PurchasedThisTurn.Clear();
         state.FieldedCharacterThisTurn.Clear();

@@ -86,58 +86,83 @@ function statBreakdown(base: number | null, modifiers: StatModifier[] | null, to
   return `${base}${modText} = ${total}`;
 }
 
-// How much of THIS ONE attacker's damage reaches the opponent directly -
-// zero whenever it's blocked, UNLESS it has Overcrush and clears every
-// one of its blockers (rule/CombatEngine.AssignCombatDamage's own
-// Overcrush handling - never true for a Tardigrade, which has no cardId
-// and therefore no keywords at all). Shared by the lane chip and the
-// lane breakdown panel so they can never drift apart on this math.
-function unblockedFaceDamage(a: Die, myBlockers: Die[], laneAttackerCount: number, cardsById: Map<string, CardDef>): number {
-  const atk = a.effectiveAttack ?? 0;
-  if (myBlockers.length === 0) return atk;
-  // Direct feedback (2026-09-18): a lane with 2+ live attackers grants
-  // EVERY attacker in it Overcrush for this combat, mirroring
-  // CombatEngine.AssignCombatDamage's own (deliberately isolated,
-  // provisional) `sharesACrowdedLane` condition - not a real keyword,
-  // not stat pooling, just this one OR'd-in check.
-  const hasOvercrush =
-    (a.cardId ? (cardsById.get(a.cardId)?.keywords.includes("Overcrush") ?? false) : false) || laneAttackerCount >= 2;
-  if (!hasOvercrush) return 0;
-  const blockerDefTotal = myBlockers.reduce((n, b) => n + (b.effectiveDefense ?? 0), 0);
-  return Math.max(0, atk - blockerDefTotal);
+// Every blocker assigned to any attacker in the lane - a lane is one fight
+// (CombatEngine.LaneFight), and the UI only ever attaches a lane's blockers
+// to its first attacker, so this unions across the lane rather than
+// trusting which attacker a blocker was assigned to.
+function laneBlockersOf(attackers: Die[], blockersByAttacker: Map<string, Die[]>): Die[] {
+  const seen = new Set<string>();
+  const out: Die[] = [];
+  for (const a of attackers) {
+    for (const b of blockersByAttacker.get(a.id) ?? []) {
+      if (!seen.has(b.id)) {
+        seen.add(b.id);
+        out.push(b);
+      }
+    }
+  }
+  return out;
+}
+
+// How much of a LANE's damage reaches the opponent directly: everything if
+// nothing blocks it; otherwise nothing, UNLESS the lane has Overcrush (2+
+// attackers in it, or any attacker with the Overcrush keyword) and its
+// combined Attack clears its blockers' combined Defense - mirrors
+// CombatEngine.AssignCombatDamage's per-lane Overcrush. Shared by the lane
+// chip and the breakdown panel so they can never drift apart.
+function laneOvercrush(attackers: Die[], cardsById: Map<string, CardDef>): boolean {
+  return (
+    attackers.length >= 2 ||
+    attackers.some((a) => (a.cardId ? (cardsById.get(a.cardId)?.keywords.includes("Overcrush") ?? false) : false))
+  );
+}
+function laneFaceDamage(attackers: Die[], blockers: Die[], cardsById: Map<string, CardDef>): number {
+  const totalAtk = attackers.reduce((n, a) => n + (a.effectiveAttack ?? 0), 0);
+  if (blockers.length === 0) return totalAtk;
+  if (!laneOvercrush(attackers, cardsById)) return 0;
+  const blockerDefTotal = blockers.reduce((n, b) => n + (b.effectiveDefense ?? 0), 0);
+  return Math.max(0, totalAtk - blockerDefTotal);
 }
 
 // What combat damage would do to each die in the lanes if it resolved right
-// now - mirrors CombatEngine.AssignCombatDamage / V2GamesController's split:
-// an attacker deals its Attack to its blockers IN ORDER, lethal (remaining
-// Defense) to each and the rest on the last one; every blocker deals its own
-// full Attack back to the attacker. A die is KO'd when marked + new damage
-// reaches its Defense. Approximation: ignores Fast's two-wave ordering and
-// on-damage abilities. Only dice with a blocker relationship get an entry.
+// now - mirrors CombatEngine.AssignCombatDamage: a lane's attackers pool
+// their Attack against its blockers, and its blockers pool their Attack
+// back across its attackers (each lethal-first in order, remainder on the
+// last). A die is KO'd when marked + new damage reaches its Defense.
+// Approximation: ignores Fast's two-wave ordering and on-damage abilities.
+// Only dice in a blocked lane get an entry.
 interface DiePreview {
   defense: number;
   already: number; // damage already marked
   incoming: number; // damage this combat would add
   ko: boolean;
 }
-function combatPreview(attackers: Die[], blockersByAttacker: Map<string, Die[]>): Map<string, DiePreview> {
+function poolDamage(sources: Die[], targets: Die[]): Map<string, number> {
+  const lethalLeft = new Map(targets.map((t) => [t.id, Math.max(0, (t.effectiveDefense ?? 0) - (t.damage ?? 0))] as const));
+  const dealt = new Map<string, number>(targets.map((t) => [t.id, 0] as const));
+  for (const src of sources) {
+    let remaining = src.effectiveAttack ?? 0;
+    targets.forEach((t, i) => {
+      const give = i === targets.length - 1 ? remaining : Math.min(remaining, lethalLeft.get(t.id) ?? 0);
+      lethalLeft.set(t.id, Math.max(0, (lethalLeft.get(t.id) ?? 0) - give));
+      dealt.set(t.id, (dealt.get(t.id) ?? 0) + give);
+      remaining -= give;
+    });
+  }
+  return dealt;
+}
+function combatPreview(lanes: Die[][], blockersByAttacker: Map<string, Die[]>): Map<string, DiePreview> {
   const out = new Map<string, DiePreview>();
   const entry = (d: Die, incoming: number) => {
     const defense = d.effectiveDefense ?? 0;
     const already = d.damage ?? 0;
     out.set(d.id, { defense, already, incoming, ko: already + incoming >= defense });
   };
-  for (const a of attackers) {
-    const blockers = blockersByAttacker.get(a.id) ?? [];
-    if (blockers.length === 0) continue;
-    let remaining = a.effectiveAttack ?? 0;
-    blockers.forEach((b, i) => {
-      const lethal = Math.max(0, (b.effectiveDefense ?? 0) - (b.damage ?? 0));
-      const give = i === blockers.length - 1 ? remaining : Math.min(remaining, lethal);
-      remaining -= give;
-      entry(b, give);
-    });
-    entry(a, blockers.reduce((n, b) => n + (b.effectiveAttack ?? 0), 0));
+  for (const attackers of lanes) {
+    const blockers = laneBlockersOf(attackers, blockersByAttacker);
+    if (blockers.length === 0 || attackers.length === 0) continue;
+    for (const [id, dmg] of poolDamage(attackers, blockers)) entry(blockers.find((b) => b.id === id)!, dmg);
+    for (const [id, dmg] of poolDamage(blockers, attackers)) entry(attackers.find((a) => a.id === id)!, dmg);
   }
   return out;
 }
@@ -757,6 +782,7 @@ function TrayCard({
   onToggleReroll,
   spins,
   turnOffsets,
+  interactive = true,
 }: {
   title: string;
   hint: string;
@@ -767,6 +793,8 @@ function TrayCard({
   onToggleReroll: (id: string) => void;
   spins: Record<string, CubeSpin>;
   turnOffsets: Record<string, number>;
+  /** False when this is the OPPONENT's tray: shown face-up once rolled, but not tappable for reroll. */
+  interactive?: boolean;
 }) {
   return (
     <div className="dkm-card">
@@ -781,14 +809,15 @@ function TrayCard({
             <button
               key={d.id}
               type="button"
-              data-fly-id={`die:${d.id}`}
-              className={`dkm-tile clickable${rerollPicked.includes(d.id) ? " picked" : ""}`}
-              onClick={() => onToggleReroll(d.id)}
+              data-fly-id={interactive ? `die:${d.id}` : undefined}
+              className={`dkm-tile${interactive ? " clickable" : ""}${rerollPicked.includes(d.id) ? " picked" : ""}`}
+              onClick={interactive ? () => onToggleReroll(d.id) : undefined}
+              disabled={!interactive}
             >
               <DieCube
                 {...facesFor(d, cardsById)}
                 size={58}
-                mine
+                mine={interactive}
                 spin={spins[d.id]}
                 turnOffset={turnOffsets[d.id]}
                 energyCorner={d.energySymbolId && d.energyAmount > 0 ? { type: d.energySymbolId, amount: d.energyAmount } : undefined}
@@ -990,7 +1019,7 @@ function AttackLanesCard({
   selectedId: string | null;
 }) {
   const totalDeclared = attackersByLane.reduce((n, l) => n + l.length, 0);
-  const preview = combatPreview(attackersByLane.flat(), blockersByAttacker);
+  const preview = combatPreview(attackersByLane, blockersByAttacker);
   return (
     <div className="dkm-card">
       <div className="dkm-card-head">
@@ -1003,7 +1032,7 @@ function AttackLanesCard({
         {Array.from({ length: LANE_COUNT }, (_, lane) => {
           const attackers = attackersByLane[lane] ?? [];
           const targeted = lane === laneSel;
-          const blockers = attackers.flatMap((a) => blockersByAttacker.get(a.id) ?? []);
+          const blockers = laneBlockersOf(attackers, blockersByAttacker);
           const tileSize = attackers.length <= 1 ? 52 : attackers.length === 2 ? 42 : 34;
           // Direct feedback (2026-09-17): "get rid of '1 v 1'... it's not
           // really helpful. Knowing what will go through 'to face' is
@@ -1014,10 +1043,7 @@ function AttackLanesCard({
           // face for its full Attack. Full mutual-KO math (both
           // directions) lives in the tap-to-open breakdown now; the chip
           // itself only ever answers this one question.
-          const faceDamage = attackers.reduce(
-            (n, a) => n + unblockedFaceDamage(a, blockersByAttacker.get(a.id) ?? [], attackers.length, cardsById),
-            0,
-          );
+          const faceDamage = laneFaceDamage(attackers, blockers, cardsById);
           const chipText = attackers.length === 0 ? null : `${faceDamage} to face`;
           // Direct feedback (2026-09-17): "making me click on the attacker
           // to block doesn't make sense... tapping anywhere in the lane
@@ -1256,6 +1282,69 @@ function RosterSheet({
   );
 }
 
+// Pick which energy dice pay a fielding cost (direct feedback, 2026-09-21:
+// "there's a bit more strategy there, we shouldn't assume"). Dice are spent
+// in the order tapped, exactly like TurnEngine.SpendEnergy: it stops as
+// soon as the cost is met, and only the LAST die can be partly spent.
+function PaymentSheet({
+  title,
+  cost,
+  energyDice,
+  cardsById,
+  onConfirm,
+  onClose,
+}: {
+  title: string;
+  cost: number;
+  energyDice: Die[];
+  cardsById: Map<string, CardDef>;
+  onConfirm: (ids: string[]) => void;
+  onClose: () => void;
+}) {
+  const [picked, setPicked] = useState<string[]>([]);
+  const total = picked.reduce((n, id) => n + (energyDice.find((d) => d.id === id)?.energyAmount ?? 0), 0);
+  const met = total >= cost;
+  const toggle = (id: string) =>
+    setPicked((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : met ? prev : [...prev, id]));
+  const last = picked.length > 0 ? energyDice.find((d) => d.id === picked[picked.length - 1]) : undefined;
+  const wasted = met && last ? total - cost : 0;
+  return (
+    <div className="dkm-overlay-backdrop" onClick={onClose}>
+      <div className="dkm-sheet dkm-pay-sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="dkm-sheet-handle" />
+        <div className="dkm-popout-head">
+          <span className="dkm-popout-title">{title}</span>
+          <button type="button" className="dkm-text-btn" onClick={onClose}>
+            cancel
+          </button>
+        </div>
+        <p className="dkm-pay-status">
+          Choose energy to spend: <b>{Math.min(total, cost)}</b> / {cost}
+          {wasted > 0 && <span className="dkm-pay-warn"> · {wasted} extra on your last pick is lost</span>}
+        </p>
+        <div className="dkm-tile-row wrap">
+          {energyDice.map((d) => (
+            <DTile
+              key={d.id}
+              die={d}
+              cardsById={cardsById}
+              size={54}
+              mine
+              flyId={false}
+              clickable={picked.includes(d.id) || !met}
+              picked={picked.includes(d.id)}
+              onClick={() => toggle(d.id)}
+            />
+          ))}
+        </div>
+        <button type="button" className="dkm-primary-btn dkm-pay-confirm" disabled={!met} onClick={() => onConfirm(picked)}>
+          <span>Pay {cost} &amp; field</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ---- Main page ----
 
 export function DiceKingdomMobilePage() {
@@ -1292,6 +1381,13 @@ export function DiceKingdomMobilePage() {
   // explain where the numbers are coming from." Mutually exclusive with
   // selectedId (both use the same bottom-bar panel slot).
   const [laneBreakdown, setLaneBreakdown] = useState<number | null>(null);
+  // Whether the log is expanded to the whole game (default: last few lines).
+  const [logOpen, setLogOpen] = useState(false);
+  const logScrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = logScrollRef.current;
+    if (logOpen && el) el.scrollTop = el.scrollHeight;
+  }, [logOpen, game?.log.length]);
   const [rerollPicked, setRerollPicked] = useState<string[]>([]);
   const [rerollUsedThisStep, setRerollUsedThisStep] = useState(false);
   const [pendingAttackers, setPendingAttackers] = useState<Record<string, number>>({});
@@ -1315,6 +1411,9 @@ export function DiceKingdomMobilePage() {
   // showed YOUR OWN unpurchased cards regardless of which one was
   // tapped, so the opponent's button silently showed your roster.
   const [rosterViewFor, setRosterViewFor] = useState<string | null>(null);
+  // A fielding payment in progress: which die is being fielded (the sheet
+  // asks which energy dice pay for it).
+  const [payingFieldId, setPayingFieldId] = useState<string | null>(null);
   const [pileView, setPileView] = useState<{ mine: boolean; zone: PileZone } | null>(null);
   // A brief confirmation that startMatch's auto-copy (below) actually
   // landed - clipboard writes can silently fail (permissions, an
@@ -1771,6 +1870,13 @@ export function DiceKingdomMobilePage() {
   const yourFieldVisibleDice = yourDice.filter((d) => !pendingLocallyMovedIds.has(d.id));
 
   const drawnZone = yourDice.filter((d) => d.zone === "DiceFromBag" || d.zone === "DiceFromPrep");
+  // The tray belongs to whoever's turn it is (direct feedback, 2026-09-21:
+  // on the opponent's turn it showed YOUR leftover dice, never the ones they
+  // were rolling). The opponent's version is read-only.
+  const trayOwnerDice = isYourTurn ? yourDice : oppDice;
+  const trayDrawn = trayOwnerDice.filter((d) => d.zone === "DiceFromBag" || d.zone === "DiceFromPrep");
+  const trayReserve = trayOwnerDice.filter((d) => d.zone === "ReservePool");
+  const trayRolled = step === "roll-and-reroll" && trayDrawn.length === 0;
   const hasRolledThisStep = step === "roll-and-reroll" && drawnZone.length === 0;
   const { steps: chainSteps, index: chainIndex } = chainFor(phase, step, hasRolledThisStep || rerollUsedThisStep, game.dice, game.activePlayerId, cardsById);
 
@@ -1918,10 +2024,16 @@ export function DiceKingdomMobilePage() {
     if (selectedDie.zone === "ReservePool" && rolled(selectedDie) && selectedDie.effectiveAttack !== null && step === "main" && isYourTurn) {
       const { amount, matchType } = costFor(selectedDie);
       const ids = pickEnergyForCost(yourReserve, amount, matchType);
+      // Free (Tardigrade) or no real choice (every energy die is needed)
+      // pays itself; anything else asks which dice to spend.
+      const spendable = yourReserve.filter((d) => d.energyAmount > 0 && d.id !== selectedDie.id);
+      const noChoice = spendable.reduce((n, d) => n + d.energyAmount, 0) === amount;
       inspectActions.push({
         label: ids === null ? "Can't afford" : "Field this creature",
         run: () => {
-          if (ids !== null) run(() => api.field(game.gameId, selectedDie.id, ids));
+          if (ids === null) return;
+          if (amount === 0 || noChoice) run(() => api.field(game.gameId, selectedDie.id, amount === 0 ? [] : spendable.map((d) => d.id)));
+          else setPayingFieldId(selectedDie.id);
         },
       });
     }
@@ -2080,7 +2192,7 @@ export function DiceKingdomMobilePage() {
   }
 
   const link = inviteLink(game.gameId, "/dice-kingdom/mobile");
-  const logEntries = game.log.slice(-4);
+  const logEntries = logOpen ? game.log : game.log.slice(-4);
   function rosterRowsFor(map: Map<string, Die[]>) {
     return [...map.entries()].map(([cardId, dice]) => ({
       card: cardsById.get(cardId),
@@ -2134,8 +2246,8 @@ export function DiceKingdomMobilePage() {
         <div key={phase} className="dkm-phase-stage">
           {phase === "clear" && (
             <TrayCard
-              title="Draw"
-              hint={`${yourDice.filter((d) => d.zone === "Bag").length} in bag`}
+              title={isYourTurn ? "Draw" : `${oppPlayer.name} draws`}
+              hint={`${trayOwnerDice.filter((d) => d.zone === "Bag").length} in bag`}
               dice={[]}
               cardsById={cardsById}
               rolledYet={false}
@@ -2147,15 +2259,18 @@ export function DiceKingdomMobilePage() {
           )}
           {phase === "roll" && (
             <TrayCard
-              title={hasRolledThisStep ? "Tray · tap to select for reroll" : "Tray"}
-              hint={`${drawnZone.length || yourReserve.length} dice`}
-              dice={hasRolledThisStep ? yourReserve : drawnZone}
+              title={
+                !isYourTurn ? `${oppPlayer.name}'s tray` : hasRolledThisStep ? "Tray · tap to select for reroll" : "Tray"
+              }
+              hint={`${trayDrawn.length || trayReserve.length} dice`}
+              dice={trayRolled ? trayReserve : trayDrawn}
               cardsById={cardsById}
-              rolledYet={hasRolledThisStep}
-              rerollPicked={rerollPicked}
+              rolledYet={trayRolled}
+              rerollPicked={isYourTurn ? rerollPicked : []}
               onToggleReroll={toggleReroll}
               spins={spins}
               turnOffsets={offsets}
+              interactive={isYourTurn}
             />
           )}
           {phase === "main" && (
@@ -2224,15 +2339,27 @@ export function DiceKingdomMobilePage() {
         )}
 
         <div className="dkm-log">
-          <span className="dkm-log-label">Log</span>
+          {/* Tap "Log" for the whole game so far (direct feedback,
+              2026-09-21) - collapsed it shows just the latest few lines. */}
+          <button type="button" className="dkm-log-label dkm-log-toggle" onClick={() => setLogOpen((v) => !v)}>
+            Log {logOpen ? "▾ full history" : `▸ ${game.log.length > 4 ? "tap for all " + game.log.length : ""}`}
+          </button>
           {logEntries.length === 0 ? (
             <p className="dkm-empty-hint">Nothing has happened yet.</p>
           ) : (
-            logEntries.map((entry, i) => (
-              <p key={entry.seq} className={i === logEntries.length - 1 ? "dkm-log-line newest" : "dkm-log-line"}>
-                {entry.text}
-              </p>
-            ))
+            <div className={logOpen ? "dkm-log-scroll" : undefined} ref={logScrollRef}>
+              {logEntries.map((entry, i) =>
+                entry.isTurnStart ? (
+                  <p key={entry.seq} className="dkm-log-turn">
+                    <span>— — —</span> {entry.text} <span>— — —</span>
+                  </p>
+                ) : (
+                  <p key={entry.seq} className={i === logEntries.length - 1 ? "dkm-log-line newest" : "dkm-log-line"}>
+                    {entry.text}
+                  </p>
+                ),
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -2283,56 +2410,49 @@ export function DiceKingdomMobilePage() {
           <div className="dkm-inspect dkm-lane-inspect">
             <div className="dkm-inspect-mid">
               <span className="dkm-inspect-name">Lane {laneBreakdown + 1} breakdown</span>
-              {/* Direct feedback (2026-09-17): "it's not just the
-                  attacker's attack value and the defender's defense -
-                  if the defending die's attack is >= the attacking
-                  die's defense, the attacking die is KO'd. Both
-                  directions matter." Combat is mutual (CombatEngine.
-                  ResolveFastOrSlowDamage - every blocker deals its own
-                  full Attack back regardless of the damage split), so
-                  this shows both checks: attacker ATK vs blocker DEF,
-                  AND blocker ATK vs attacker DEF.
-                  Follow-up (same date): "the math isn't mathing - Lane 2
-                  has 3A total attacking and 2D total defending, a
-                  difference of 1, not 2" / "TO FACE seems to assume
-                  every die has Overcrush." Neither - a lane can hold
-                  MULTIPLE attackers that are each blocked (or not)
-                  completely independently (a lane is a display grouping,
-                  not a pooled fight - CombatEngine has no such thing as
-                  shared/pooled blocking). The confusing "2 to face" was
-                  really ONE attacker fully blocked (0 to face, no
-                  Overcrush) plus a SEPARATE, genuinely unblocked attacker
-                  hitting face for its own full Attack - spelled out
-                  per-attacker below instead of left to add up silently. */}
-              {laneAttackersForBreakdown.map((a) => {
-                const myBlockers = blockersByAttacker.get(a.id) ?? [];
-                const blockerAtkTotal = myBlockers.reduce((n, b) => n + (b.effectiveAttack ?? 0), 0);
-                const blockerDefTotal = myBlockers.reduce((n, b) => n + (b.effectiveDefense ?? 0), 0);
-                const attackerKOd = myBlockers.length > 0 && blockerAtkTotal >= (a.effectiveDefense ?? 0);
-                const blockerKOd = myBlockers.length > 0 && (a.effectiveAttack ?? 0) >= blockerDefTotal;
-                const faceDamage = unblockedFaceDamage(a, myBlockers, laneAttackersForBreakdown.length, cardsById);
+              {/* A lane is ONE fight (2026-09-21): its attackers' Attack adds
+                  together against its blockers' Defense, and its blockers'
+                  Attack adds together against its attackers' Defense.
+                  Overcrush (2+ attackers, or the keyword) sends the excess
+                  to the player once every blocker is down. */}
+              {(() => {
+                const laneBlockers = laneBlockersOf(laneAttackersForBreakdown, blockersByAttacker);
+                const atkTotal = laneAttackersForBreakdown.reduce((n, a) => n + (a.effectiveAttack ?? 0), 0);
+                const defTotal = laneAttackersForBreakdown.reduce((n, a) => n + (a.effectiveDefense ?? 0), 0);
+                const bAtkTotal = laneBlockers.reduce((n, b) => n + (b.effectiveAttack ?? 0), 0);
+                const bDefTotal = laneBlockers.reduce((n, b) => n + (b.effectiveDefense ?? 0), 0);
+                const faceDamage = laneFaceDamage(laneAttackersForBreakdown, laneBlockers, cardsById);
+                const overcrush = laneOvercrush(laneAttackersForBreakdown, cardsById);
                 return (
-                  <div key={a.id} className="dkm-inspect-engagement">
-                    <span className="dkm-inspect-stats">
-                      {nameOf(a, cardsById)} (attacking) — ATK {statBreakdown(a.baseAttack, a.attackModifiers, a.effectiveAttack) ?? "-"}
-                      {myBlockers.length > 0 && <>, DEF {statBreakdown(a.baseDefense, a.defenseModifiers, a.effectiveDefense) ?? "-"}</>}
-                      {attackerKOd && <b className="dkm-ko-tag"> → KO'd</b>}
-                      {myBlockers.length === 0 ? (
-                        <b className="dkm-ko-tag"> — unblocked, {faceDamage} to face</b>
-                      ) : (
-                        faceDamage > 0 && <b className="dkm-ko-tag"> — Overcrush, {faceDamage} to face</b>
-                      )}
-                    </span>
-                    {myBlockers.map((b) => (
+                  <div className="dkm-inspect-engagement">
+                    {laneAttackersForBreakdown.map((a) => (
+                      <span key={a.id} className="dkm-inspect-stats">
+                        {nameOf(a, cardsById)} (attacking) — ATK {statBreakdown(a.baseAttack, a.attackModifiers, a.effectiveAttack) ?? "-"}
+                        {laneBlockers.length > 0 && <>, DEF {statBreakdown(a.baseDefense, a.defenseModifiers, a.effectiveDefense) ?? "-"}</>}
+                      </span>
+                    ))}
+                    {laneBlockers.map((b) => (
                       <span key={b.id} className="dkm-inspect-stats">
                         {nameOf(b, cardsById)} (blocking) — DEF {statBreakdown(b.baseDefense, b.defenseModifiers, b.effectiveDefense) ?? "-"}, ATK{" "}
                         {statBreakdown(b.baseAttack, b.attackModifiers, b.effectiveAttack) ?? "-"}
-                        {blockerKOd && <b className="dkm-ko-tag"> → KO'd</b>}
                       </span>
                     ))}
+                    {laneBlockers.length === 0 ? (
+                      <span className="dkm-inspect-stats">
+                        <b className="dkm-ko-tag">Unblocked — {faceDamage} to face</b>
+                      </span>
+                    ) : (
+                      <span className="dkm-inspect-stats">
+                        Lane ATK {atkTotal} vs blockers' DEF {bDefTotal}
+                        {atkTotal >= bDefTotal ? <b className="dkm-ko-tag"> → blockers KO'd</b> : " → blockers survive"}
+                        {" · "}Blockers' ATK {bAtkTotal} vs lane DEF {defTotal}
+                        {bAtkTotal >= defTotal && <b className="dkm-ko-tag"> → attackers KO'd</b>}
+                        {overcrush && faceDamage > 0 && <b className="dkm-ko-tag"> · Overcrush: {faceDamage} to face</b>}
+                      </span>
+                    )}
                   </div>
                 );
-              })}
+              })()}
             </div>
             <button type="button" className="dkm-inspect-close" onClick={() => setLaneBreakdown(null)}>
               ×
@@ -2352,6 +2472,25 @@ export function DiceKingdomMobilePage() {
         </div>
       </div>
 
+      {payingFieldId && (() => {
+        const die = game.dice.find((d) => d.id === payingFieldId);
+        if (!die) return null;
+        const { amount } = costFor(die);
+        return (
+          <PaymentSheet
+            title={`Field ${nameOf(die, cardsById)}`}
+            cost={amount}
+            energyDice={yourReserve.filter((d) => d.energyAmount > 0 && d.id !== die.id)}
+            cardsById={cardsById}
+            onConfirm={(ids) => {
+              setPayingFieldId(null);
+              setSelectedId(null);
+              run(() => api.field(game.gameId, die.id, ids));
+            }}
+            onClose={() => setPayingFieldId(null)}
+          />
+        );
+      })()}
       {stepsOpen && <StepPopout phaseLabel={phaseLabel} steps={chainSteps} index={chainIndex} onClose={() => setStepsOpen(false)} />}
       {rosterViewFor && (
         <RosterSheet

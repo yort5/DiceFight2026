@@ -209,6 +209,23 @@ public static class EffectInterpreter
         };
     }
 
+    // --- Match-log helpers: abilities narrate what they did, so a
+    // triggered effect (Tiger's direct damage, a KO on field) is never
+    // silent in the log. ---
+
+    private static string DieName(GameState state, DieInstance die) =>
+        die.CardId is { } cardId ? state.CardCatalog[cardId].Name : "Tardigrade";
+
+    private static string SourceName(EffectContext ctx) =>
+        ctx.Bindings.GetValueOrDefault("self") is { } id && ctx.State.Dice.FirstOrDefault(d => d.Id == id) is { } die
+            ? DieName(ctx.State, die)
+            : "An ability";
+
+    private static string TargetName(GameState state, string id) =>
+        state.IsPlayerId(id) ? state.NameOf(id) : DieName(state, FindDie(state, id));
+
+    private static void LogAbility(EffectContext ctx, string text) => ctx.State.LogEvent(ctx.ControllerId, text);
+
     // --- Damage / KO ---
 
     private static void ExecuteDealDamage(DealDamage n, EffectContext ctx, Action onComplete)
@@ -226,7 +243,11 @@ public static class EffectInterpreter
             }
             else
             {
-                foreach (var id in targets) ApplyDamage(ctx.State, ctx.Queue, DamageSource.Ability, id, amount);
+                foreach (var id in targets)
+                {
+                    LogAbility(ctx, $"{SourceName(ctx)} deals {amount} damage to {TargetName(ctx.State, id)}.");
+                    ApplyDamage(ctx.State, ctx.Queue, DamageSource.Ability, id, amount);
+                }
                 onComplete();
             }
         });
@@ -334,7 +355,10 @@ public static class EffectInterpreter
         ResolveTarget(ctx, n.Target, ProtectionFor(ctx.Trigger), ids =>
         {
             foreach (var id in ids)
+            {
+                LogAbility(ctx, $"{SourceName(ctx)} knocks out {TargetName(ctx.State, id)}.");
                 KoDie(ctx.State, ctx.Queue, FindDie(ctx.State, id), n.TriggersKOAbilities);
+            }
             onComplete();
         });
     }
@@ -366,7 +390,11 @@ public static class EffectInterpreter
     {
         ResolveTarget(ctx, n.Target, ProtectionFor(ctx.Trigger), ids =>
         {
-            foreach (var id in ids) MoveToZone(ctx.State, FindDie(ctx.State, id), n.ToZone);
+            foreach (var id in ids)
+            {
+                LogAbility(ctx, $"{SourceName(ctx)} moves {TargetName(ctx.State, id)} to {n.ToZone}.");
+                MoveToZone(ctx.State, FindDie(ctx.State, id), n.ToZone);
+            }
             onComplete();
         });
     }
@@ -375,6 +403,9 @@ public static class EffectInterpreter
     {
         var pool = ctx.State.DiceIn(ctx.ControllerId, n.FromZone).ToList();
         Shuffle(pool, ctx.Random);
+        var drawnCount = Math.Min(pool.Count, Math.Max(0, n.Count));
+        if (drawnCount > 0)
+            LogAbility(ctx, $"{SourceName(ctx)}: {ctx.State.NameOf(ctx.ControllerId)} draws {drawnCount} {(drawnCount == 1 ? "die" : "dice")} into their {n.ToZone}.");
         foreach (var die in pool.Take(Math.Max(0, n.Count)))
         {
             die.Zone = n.ToZone;
@@ -548,6 +579,7 @@ public static class EffectInterpreter
 
                 var priorFace = ctx.State.GetCurrentFace(die);
                 die.CurrentFaceIndex = index;
+                LogAbility(ctx, $"{SourceName(ctx)} spins {TargetName(ctx.State, id)} to an energy face.");
 
                 var payload = new DieFaceChangedPayload(priorFace, face, FaceChangeCause.Spin);
                 EventBus.Fire(ctx.State, ctx.Queue, new GameEvent(TriggerKind.DieFaceChanged, die, die.ControllerId, ctx.State.CurrentStepId, payload));
@@ -713,6 +745,8 @@ public static class EffectInterpreter
         var amount = ResolveAmount(ctx, n.Amount); // signed - positive gains, negative loses (n.Amount's own convention)
         var playerId = n.Whose == TargetOwnership.Own ? ctx.ControllerId : ctx.State.OpponentOf(ctx.ControllerId);
         ctx.State.GetPlayer(playerId).Life += amount;
+        if (amount != 0)
+            LogAbility(ctx, $"{SourceName(ctx)}: {ctx.State.NameOf(playerId)} {(amount > 0 ? "gains" : "loses")} {Math.Abs(amount)} life.");
         onComplete();
     }
 
@@ -735,7 +769,11 @@ public static class EffectInterpreter
     {
         ResolveTarget(ctx, n.Target, ProtectionFor(ctx.Trigger), ids =>
         {
-            foreach (var id in ids) FindDie(ctx.State, id).CombatFlags.Add(n.Flag);
+            foreach (var id in ids)
+            {
+                FindDie(ctx.State, id).CombatFlags.Add(n.Flag);
+                LogAbility(ctx, $"{SourceName(ctx)}: {TargetName(ctx.State, id)} gets {n.Flag} this turn.");
+            }
             onComplete();
         });
     }

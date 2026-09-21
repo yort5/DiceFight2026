@@ -82,6 +82,8 @@ export interface GameLogEntry {
   /** Who did it, or null for something the game itself did. */
   playerId: string | null;
   text: string;
+  /** True for the marker line that opens each turn - drawn as a divider. */
+  isTurnStart: boolean;
 }
 
 export interface GameState {
