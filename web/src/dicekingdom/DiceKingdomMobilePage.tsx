@@ -1211,8 +1211,12 @@ function RosterSheet({
               <span className="dkm-roster-avatar">{Avatar ? <Avatar size={20} /> : <TardigradeIcon size={20} />}</span>
               <div className="dkm-roster-mid">
                 <span className="dkm-roster-name">{card?.name ?? cardId}</span>
-                {card && card.keywords.length > 0 && <span className="dkm-dashed-badge">{card.keywords.join(", ")}</span>}
                 <span className="dkm-roster-stats">{levelStatsLine(card)}</span>
+                {/* The ability is the primary information (direct feedback,
+                    2026-09-21) - always shown in full, never behind a tap.
+                    rawText already leads with its keywords ("Fast. On
+                    Attack: ..."), so no separate keyword badge. */}
+                {card && <span className="dkm-roster-text">{card.rawText}</span>}
               </div>
               {/* One EnergyBadge per required type - usually one, two for
                   a crossover/splash card - so the cost number is never
