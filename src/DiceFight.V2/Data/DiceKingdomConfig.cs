@@ -51,13 +51,13 @@ public static class DiceKingdomConfig
     // Tardigrades, cost real energy to field, rule 2.6.3.2) but no
     // longer written onto the energy faces, which carry no character
     // data at all.
-    private static DieDefinition CharacterDie(string dieId, string energyType, int fieldingCost, params (int Attack, int Defense)[] levels)
+    private static DieDefinition CharacterDie(string dieId, string energyType, params (int Fielding, int Attack, int Defense)[] levels)
     {
         var faces = new List<Face>();
         for (var i = 0; i < levels.Length; i++)
         {
-            var (attack, defense) = levels[i];
-            faces.Add(new Face([], new CharacterFaceData(i + 1, fieldingCost, attack, defense), Kind: FaceKind.CharacterFace));
+            var (fielding, attack, defense) = levels[i];
+            faces.Add(new Face([], new CharacterFaceData(i + 1, fielding, attack, defense), Kind: FaceKind.CharacterFace));
         }
         faces.Add(new Face([new SymbolAmount(energyType, 2)], Kind: FaceKind.EnergyFace));
         faces.Add(new Face([new SymbolAmount(energyType, 2)], Kind: FaceKind.EnergyFace));
@@ -74,7 +74,7 @@ public static class DiceKingdomConfig
     public static readonly CardDef HoneyBadger = new(
         Id: "DK-CLAW-01", Name: "Honey Badger", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 2, EnergySymbolIds: ["Claw"],
-        Die: CharacterDie("DK-CLAW-01Die", energyType: "Claw", fieldingCost: 1, (0, 2), (1, 2), (1, 3)),
+        Die: CharacterDie("DK-CLAW-01Die", energyType: "Claw", (0, 0, 2), (0, 1, 3), (1, 1, 4)),
         DieLimit: 4, Affiliations: [], Keywords: ["On Field"],
         RawText: "On Field: deal 1 damage to a target creature.",
         Abilities: [new TriggeredAbility(TriggerKind.DieFielded,
@@ -84,7 +84,7 @@ public static class DiceKingdomConfig
     public static readonly CardDef Wolverine = new(
         Id: "DK-CLAW-02", Name: "Wolverine", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Claw"],
-        Die: CharacterDie("DK-CLAW-02Die", energyType: "Claw", fieldingCost: 2, (1, 3), (2, 4), (3, 4)),
+        Die: CharacterDie("DK-CLAW-02Die", energyType: "Claw", (1, 1, 4), (1, 2, 5), (2, 3, 5)),
         DieLimit: 4, Affiliations: [], Keywords: ["Fast", "On Attack"],
         RawText: "Fast. On Attack: deal 1 damage to the opponent directly.",
         Abilities: [new TriggeredAbility(TriggerKind.DieAttacks,
@@ -101,7 +101,7 @@ public static class DiceKingdomConfig
     public static readonly CardDef GrizzlyBear = new(
         Id: "DK-CLAW-03", Name: "Grizzly Bear", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 5, EnergySymbolIds: ["Claw"],
-        Die: CharacterDie("DK-CLAW-03Die", energyType: "Claw", fieldingCost: 2, (2, 4), (3, 5), (4, 5)),
+        Die: CharacterDie("DK-CLAW-03Die", energyType: "Claw", (1, 3, 6), (2, 4, 7), (2, 5, 8)),
         DieLimit: 4, Affiliations: [], Keywords: ["Overcrush"],
         RawText: "Overcrush.",
         Abilities: [],
@@ -110,7 +110,7 @@ public static class DiceKingdomConfig
     public static readonly CardDef Orca = new(
         Id: "DK-CLAW-04", Name: "Orca", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 5, EnergySymbolIds: ["Claw"],
-        Die: CharacterDie("DK-CLAW-04Die", energyType: "Claw", fieldingCost: 2, (1, 3), (2, 4), (2, 5)),
+        Die: CharacterDie("DK-CLAW-04Die", energyType: "Claw", (1, 1, 4), (1, 3, 5), (2, 3, 7)),
         DieLimit: 4, Affiliations: [], Keywords: ["On Field"],
         RawText: "On Field: KO a target creature.",
         Abilities: [new TriggeredAbility(TriggerKind.DieFielded, new Ko(new TargetFilter(Kind: TargetKind.CharacterDie)))],
@@ -119,7 +119,7 @@ public static class DiceKingdomConfig
     public static readonly CardDef PeregrineFalcon = new(
         Id: "DK-CLAW-05", Name: "Peregrine Falcon", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 6, EnergySymbolIds: ["Claw"],
-        Die: CharacterDie("DK-CLAW-05Die", energyType: "Claw", fieldingCost: 2, (1, 3), (2, 4), (3, 5)),
+        Die: CharacterDie("DK-CLAW-05Die", energyType: "Claw", (1, 2, 4), (2, 3, 6), (3, 4, 7)),
         DieLimit: 4, Affiliations: [], Keywords: ["Fast", "On Field"],
         RawText: "Fast. On Field: deal 3 damage to a target creature.",
         Abilities: [new TriggeredAbility(TriggerKind.DieFielded,
@@ -129,7 +129,7 @@ public static class DiceKingdomConfig
     public static readonly CardDef Tiger = new(
         Id: "DK-CLAW-06", Name: "Tiger", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 6, EnergySymbolIds: ["Claw"],
-        Die: CharacterDie("DK-CLAW-06Die", energyType: "Claw", fieldingCost: 2, (2, 3), (3, 4), (3, 5)),
+        Die: CharacterDie("DK-CLAW-06Die", energyType: "Claw", (1, 3, 5), (2, 4, 6), (2, 4, 8)),
         DieLimit: 4, Affiliations: [], Keywords: ["Overcrush", "On Attack"],
         RawText: "Overcrush. On Attack: deal 2 damage to the opponent directly.",
         Abilities: [new TriggeredAbility(TriggerKind.DieAttacks,
@@ -139,7 +139,7 @@ public static class DiceKingdomConfig
     public static readonly CardDef Stoat = new(
         Id: "DK-CLAW-07", Name: "Stoat", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Claw"],
-        Die: CharacterDie("DK-CLAW-07Die", energyType: "Claw", fieldingCost: 1, (0, 2), (1, 3), (2, 4)),
+        Die: CharacterDie("DK-CLAW-07Die", energyType: "Claw", (0, 0, 4), (1, 2, 6), (2, 4, 7)),
         DieLimit: 4, Affiliations: [], Keywords: ["On Field"],
         RawText: "On Field: deal 1 damage to the opponent directly.",
         Abilities: [new TriggeredAbility(TriggerKind.DieFielded,
@@ -149,7 +149,7 @@ public static class DiceKingdomConfig
     public static readonly CardDef CapeBuffalo = new(
         Id: "DK-CLAW-08", Name: "Cape Buffalo", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 6, EnergySymbolIds: ["Claw"],
-        Die: CharacterDie("DK-CLAW-08Die", energyType: "Claw", fieldingCost: 2, (1, 4), (1, 6), (2, 8)),
+        Die: CharacterDie("DK-CLAW-08Die", energyType: "Claw", (1, 1, 6), (2, 1, 9), (2, 3, 11)),
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "While active, your creatures get +1 ATK.",
         Abilities: [],
@@ -169,7 +169,7 @@ public static class DiceKingdomConfig
     public static readonly CardDef Mongoose = new(
         Id: "DK-CLAW-09", Name: "Mongoose", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 3, EnergySymbolIds: ["Claw"],
-        Die: CharacterDie("DK-CLAW-09Die", energyType: "Claw", fieldingCost: 1, (2, 1), (2, 1), (3, 2)),
+        Die: CharacterDie("DK-CLAW-09Die", energyType: "Claw", (0, 2, 2), (1, 3, 2), (2, 4, 4)),
         DieLimit: 4, Affiliations: [], Keywords: ["Awaken"],
         RawText: "Awaken: deal 2 damage to a target creature.",
         Abilities: [new TriggeredAbility(TriggerKind.DieFaceChanged,
@@ -182,7 +182,7 @@ public static class DiceKingdomConfig
     public static readonly CardDef Hippopotamus = new(
         Id: "DK-SHELL-01", Name: "Hippopotamus", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Shell"],
-        Die: CharacterDie("DK-SHELL-01Die", energyType: "Shell", fieldingCost: 2, (0, 6), (1, 7), (2, 8)),
+        Die: CharacterDie("DK-SHELL-01Die", energyType: "Shell", (1, 0, 8), (1, 1, 9), (2, 2, 10)),
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "Vanilla - no ability.",
         Abilities: [],
@@ -191,7 +191,7 @@ public static class DiceKingdomConfig
     public static readonly CardDef MuskOx = new(
         Id: "DK-SHELL-02", Name: "Musk Ox", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Shell"],
-        Die: CharacterDie("DK-SHELL-02Die", energyType: "Shell", fieldingCost: 2, (0, 5), (1, 5), (1, 6)),
+        Die: CharacterDie("DK-SHELL-02Die", energyType: "Shell", (1, 0, 6), (1, 1, 7), (2, 1, 8)),
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "While active, your creatures get +1 DEF.",
         Abilities: [],
@@ -206,7 +206,7 @@ public static class DiceKingdomConfig
     public static readonly CardDef Pangolin = new(
         Id: "DK-SHELL-03", Name: "Pangolin", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 3, EnergySymbolIds: ["Shell"],
-        Die: CharacterDie("DK-SHELL-03Die", energyType: "Shell", fieldingCost: 1, (0, 2), (1, 3), (2, 3)),
+        Die: CharacterDie("DK-SHELL-03Die", energyType: "Shell", (1, 0, 4), (1, 1, 5), (1, 2, 7)),
         DieLimit: 4, Affiliations: [], Keywords: ["On Field"],
         RawText: "On Field: gain 1 life.",
         Abilities: [new TriggeredAbility(TriggerKind.DieFielded, new LifeChange(new Fixed(1)))],
@@ -215,7 +215,7 @@ public static class DiceKingdomConfig
     public static readonly CardDef HermitCrab = new(
         Id: "DK-SHELL-04", Name: "Hermit Crab", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 2, EnergySymbolIds: ["Shell"],
-        Die: CharacterDie("DK-SHELL-04Die", energyType: "Shell", fieldingCost: 1, (0, 3), (1, 3), (1, 3)),
+        Die: CharacterDie("DK-SHELL-04Die", energyType: "Shell", (0, 0, 4), (0, 1, 4), (1, 1, 4)),
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "Vanilla - no ability.",
         Abilities: [],
@@ -224,7 +224,7 @@ public static class DiceKingdomConfig
     public static readonly CardDef Opossum = new(
         Id: "DK-SHELL-05", Name: "Opossum", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 3, EnergySymbolIds: ["Shell"],
-        Die: CharacterDie("DK-SHELL-05Die", energyType: "Shell", fieldingCost: 1, (0, 1), (0, 2), (1, 3)),
+        Die: CharacterDie("DK-SHELL-05Die", energyType: "Shell", (0, 0, 2), (1, 0, 4), (1, 2, 5)),
         DieLimit: 4, Affiliations: [], Keywords: ["Deadly"],
         RawText: "Deadly.",
         Abilities: [],
@@ -233,7 +233,7 @@ public static class DiceKingdomConfig
     public static readonly CardDef QueenTermite = new(
         Id: "DK-SHELL-06", Name: "Queen Termite", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Shell"],
-        Die: CharacterDie("DK-SHELL-06Die", energyType: "Shell", fieldingCost: 2, (1, 3), (1, 4), (2, 5)),
+        Die: CharacterDie("DK-SHELL-06Die", energyType: "Shell", (1, 2, 4), (1, 2, 6), (2, 3, 6)),
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "While active, your creatures get +1 ATK.",
         Abilities: [],
@@ -242,7 +242,7 @@ public static class DiceKingdomConfig
     public static readonly CardDef SnappingTurtle = new(
         Id: "DK-SHELL-07", Name: "Snapping Turtle", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 5, EnergySymbolIds: ["Shell"],
-        Die: CharacterDie("DK-SHELL-07Die", energyType: "Shell", fieldingCost: 2, (0, 4), (1, 5), (2, 6)),
+        Die: CharacterDie("DK-SHELL-07Die", energyType: "Shell", (1, 0, 5), (2, 1, 7), (2, 3, 8)),
         DieLimit: 4, Affiliations: [], Keywords: ["On Field"],
         RawText: "On Field: KO a target creature.",
         Abilities: [new TriggeredAbility(TriggerKind.DieFielded, new Ko(new TargetFilter(Kind: TargetKind.CharacterDie)))],
@@ -251,7 +251,7 @@ public static class DiceKingdomConfig
     public static readonly CardDef BoxTurtle = new(
         Id: "DK-SHELL-08", Name: "Box Turtle", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 3, EnergySymbolIds: ["Shell"],
-        Die: CharacterDie("DK-SHELL-08Die", energyType: "Shell", fieldingCost: 1, (0, 2), (1, 3), (2, 3)),
+        Die: CharacterDie("DK-SHELL-08Die", energyType: "Shell", (1, 0, 3), (1, 1, 5), (1, 3, 7)),
         DieLimit: 4, Affiliations: [], Keywords: ["On Block"],
         RawText: "On Block: deal 1 damage to a target creature.",
         Abilities: [new TriggeredAbility(TriggerKind.DieBlocks,
@@ -263,7 +263,7 @@ public static class DiceKingdomConfig
     public static readonly CardDef Osprey = new(
         Id: "DK-WING-01", Name: "Osprey", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Wing"],
-        Die: CharacterDie("DK-WING-01Die", energyType: "Wing", fieldingCost: 2, (0, 4), (1, 5), (2, 6)),
+        Die: CharacterDie("DK-WING-01Die", energyType: "Wing", (1, 0, 5), (1, 1, 6), (2, 2, 8)),
         DieLimit: 4, Affiliations: [], Keywords: ["On Attack"],
         RawText: "On Attack: move a die from your discard to your Prep Area.",
         Abilities: [new TriggeredAbility(TriggerKind.DieAttacks,
@@ -273,7 +273,7 @@ public static class DiceKingdomConfig
     public static readonly CardDef BarnSwallow = new(
         Id: "DK-WING-02", Name: "Barn Swallow", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 3, EnergySymbolIds: ["Wing"],
-        Die: CharacterDie("DK-WING-02Die", energyType: "Wing", fieldingCost: 1, (0, 2), (0, 3), (1, 4)),
+        Die: CharacterDie("DK-WING-02Die", energyType: "Wing", (0, 0, 4), (1, 0, 5), (2, 2, 7)),
         DieLimit: 4, Affiliations: [], Keywords: ["Awaken"],
         RawText: "Awaken: draw a die into your Prep Area.",
         Abilities: [new TriggeredAbility(TriggerKind.DieFaceChanged, new DrawToZone(1, Zone.PrepArea, Zone.Bag),
@@ -291,7 +291,7 @@ public static class DiceKingdomConfig
     public static readonly CardDef Hummingbird = new(
         Id: "DK-WING-03", Name: "Hummingbird", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Wing"],
-        Die: CharacterDie("DK-WING-03Die", energyType: "Wing", fieldingCost: 1, (0, 2), (1, 2), (1, 3)),
+        Die: CharacterDie("DK-WING-03Die", energyType: "Wing", (0, 0, 3), (1, 2, 3), (1, 2, 5)),
         DieLimit: 4, Affiliations: [], Keywords: ["On Field"],
         RawText: "On Field: KO a target creature.",
         Abilities: [new TriggeredAbility(TriggerKind.DieFielded, new Ko(new TargetFilter(Kind: TargetKind.CharacterDie)))],
@@ -300,7 +300,7 @@ public static class DiceKingdomConfig
     public static readonly CardDef MountainGoat = new(
         Id: "DK-WING-04", Name: "Mountain Goat", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 3, EnergySymbolIds: ["Wing"],
-        Die: CharacterDie("DK-WING-04Die", energyType: "Wing", fieldingCost: 1, (0, 2), (1, 2), (1, 3)),
+        Die: CharacterDie("DK-WING-04Die", energyType: "Wing", (1, 0, 3), (1, 1, 4), (1, 2, 7)),
         DieLimit: 4, Affiliations: [], Keywords: ["On Attack"],
         RawText: "On Attack: draw a die into your Prep Area.",
         Abilities: [new TriggeredAbility(TriggerKind.DieAttacks, new DrawToZone(1, Zone.PrepArea, Zone.Bag))],
@@ -309,7 +309,7 @@ public static class DiceKingdomConfig
     public static readonly CardDef MonarchButterfly = new(
         Id: "DK-WING-05", Name: "Monarch Butterfly", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Wing"],
-        Die: CharacterDie("DK-WING-05Die", energyType: "Wing", fieldingCost: 1, (0, 2), (1, 3), (2, 3)),
+        Die: CharacterDie("DK-WING-05Die", energyType: "Wing", (0, 0, 4), (1, 2, 5), (2, 4, 5)),
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "Gets +2 ATK for each of your creatures waiting in your Prep Area.",
         Abilities: [],
@@ -319,7 +319,7 @@ public static class DiceKingdomConfig
     public static readonly CardDef HomingPigeon = new(
         Id: "DK-WING-06", Name: "Homing Pigeon", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Wing"],
-        Die: CharacterDie("DK-WING-06Die", energyType: "Wing", fieldingCost: 2, (0, 5), (1, 6), (1, 7)),
+        Die: CharacterDie("DK-WING-06Die", energyType: "Wing", (1, 0, 6), (1, 1, 8), (2, 1, 10)),
         DieLimit: 4, Affiliations: [], Keywords: ["On Field"],
         RawText: "On Field: gain 2 life.",
         Abilities: [new TriggeredAbility(TriggerKind.DieFielded, new LifeChange(new Fixed(2)))],
@@ -328,7 +328,7 @@ public static class DiceKingdomConfig
     public static readonly CardDef Greyhound = new(
         Id: "DK-WING-07", Name: "Greyhound", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Wing"],
-        Die: CharacterDie("DK-WING-07Die", energyType: "Wing", fieldingCost: 2, (1, 4), (2, 5), (2, 5)),
+        Die: CharacterDie("DK-WING-07Die", energyType: "Wing", (1, 1, 6), (1, 3, 7), (2, 3, 7)),
         DieLimit: 4, Affiliations: [], Keywords: ["Fast"],
         RawText: "Fast.",
         Abilities: [],
@@ -337,7 +337,7 @@ public static class DiceKingdomConfig
     public static readonly CardDef Albatross = new(
         Id: "DK-WING-08", Name: "Albatross", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 5, EnergySymbolIds: ["Wing"],
-        Die: CharacterDie("DK-WING-08Die", energyType: "Wing", fieldingCost: 2, (1, 4), (2, 5), (3, 6)),
+        Die: CharacterDie("DK-WING-08Die", energyType: "Wing", (1, 1, 5), (1, 3, 6), (2, 4, 7)),
         DieLimit: 4, Affiliations: [], Keywords: ["On Field"],
         RawText: "On Field: deal 2 damage to a target creature.",
         Abilities: [new TriggeredAbility(TriggerKind.DieFielded,
@@ -353,7 +353,7 @@ public static class DiceKingdomConfig
     public static readonly CardDef Swift = new(
         Id: "DK-WING-09", Name: "Swift", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 2, EnergySymbolIds: ["Wing"],
-        Die: CharacterDie("DK-WING-09Die", energyType: "Wing", fieldingCost: 1, (1, 1), (1, 2), (2, 2)),
+        Die: CharacterDie("DK-WING-09Die", energyType: "Wing", (0, 1, 2), (1, 2, 2), (1, 3, 3)),
         DieLimit: 4, Affiliations: [], Keywords: ["On Attack"],
         RawText: "On Attack: draw a die into your Prep Area.",
         Abilities: [new TriggeredAbility(TriggerKind.DieAttacks, new DrawToZone(1, Zone.PrepArea, Zone.Bag))],
@@ -364,7 +364,7 @@ public static class DiceKingdomConfig
     public static readonly CardDef BarnOwl = new(
         Id: "DK-EYE-01", Name: "Barn Owl", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Eye"],
-        Die: CharacterDie("DK-EYE-01Die", energyType: "Eye", fieldingCost: 2, (0, 5), (1, 5), (1, 6)),
+        Die: CharacterDie("DK-EYE-01Die", energyType: "Eye", (1, 0, 7), (1, 1, 7), (2, 1, 9)),
         DieLimit: 4, Affiliations: [], Keywords: ["On Field"],
         RawText: "On Field: a weak target creature (3 ATK or less) can't block this turn.",
         Abilities: [new TriggeredAbility(TriggerKind.DieFielded,
@@ -374,7 +374,7 @@ public static class DiceKingdomConfig
     public static readonly CardDef Hyena = new(
         Id: "DK-EYE-02", Name: "Hyena", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Eye"],
-        Die: CharacterDie("DK-EYE-02Die", energyType: "Eye", fieldingCost: 2, (1, 4), (1, 5), (2, 5)),
+        Die: CharacterDie("DK-EYE-02Die", energyType: "Eye", (1, 1, 5), (1, 1, 6), (2, 3, 6)),
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "Gets +1 ATK for each weak opposing creature (2 DEF or less).",
         Abilities: [],
@@ -388,7 +388,7 @@ public static class DiceKingdomConfig
     public static readonly CardDef Anglerfish = new(
         Id: "DK-EYE-03", Name: "Anglerfish", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 6, EnergySymbolIds: ["Eye"],
-        Die: CharacterDie("DK-EYE-03Die", energyType: "Eye", fieldingCost: 2, (1, 4), (2, 5), (3, 6)),
+        Die: CharacterDie("DK-EYE-03Die", energyType: "Eye", (1, 1, 6), (2, 3, 7), (3, 4, 10)),
         DieLimit: 4, Affiliations: [], Keywords: ["On Attack"],
         RawText: "On Attack: every weak opposing creature (3 DEF or less) can't block this turn.",
         Abilities: [new TriggeredAbility(TriggerKind.DieAttacks,
@@ -398,7 +398,7 @@ public static class DiceKingdomConfig
     public static readonly CardDef Cowbird = new(
         Id: "DK-EYE-04", Name: "Cowbird", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 3, EnergySymbolIds: ["Eye"],
-        Die: CharacterDie("DK-EYE-04Die", energyType: "Eye", fieldingCost: 1, (1, 2), (1, 3), (2, 2)),
+        Die: CharacterDie("DK-EYE-04Die", energyType: "Eye", (1, 2, 3), (1, 2, 5), (2, 4, 5)),
         DieLimit: 4, Affiliations: [], Keywords: ["Awaken"],
         RawText: "Awaken: move an opposing die from their Prep Area back to their Bag.",
         Abilities: [new TriggeredAbility(TriggerKind.DieFaceChanged,
@@ -409,7 +409,7 @@ public static class DiceKingdomConfig
     public static readonly CardDef Magpie = new(
         Id: "DK-EYE-05", Name: "Magpie", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 3, EnergySymbolIds: ["Eye"],
-        Die: CharacterDie("DK-EYE-05Die", energyType: "Eye", fieldingCost: 1, (1, 1), (1, 2), (2, 3)),
+        Die: CharacterDie("DK-EYE-05Die", energyType: "Eye", (1, 1, 2), (1, 1, 4), (1, 2, 7)),
         DieLimit: 4, Affiliations: [], Keywords: ["On Field"],
         RawText: "On Field: draw a die into your Prep Area.",
         Abilities: [new TriggeredAbility(TriggerKind.DieFielded, new DrawToZone(1, Zone.PrepArea, Zone.Bag))],
@@ -418,7 +418,7 @@ public static class DiceKingdomConfig
     public static readonly CardDef Raven = new(
         Id: "DK-EYE-06", Name: "Raven", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 5, EnergySymbolIds: ["Eye"],
-        Die: CharacterDie("DK-EYE-06Die", energyType: "Eye", fieldingCost: 2, (0, 5), (1, 6), (1, 7)),
+        Die: CharacterDie("DK-EYE-06Die", energyType: "Eye", (1, 0, 7), (2, 1, 8), (2, 1, 10)),
         DieLimit: 4, Affiliations: [], Keywords: ["On Field"],
         RawText: "On Field: deal 2 damage to a target creature.",
         Abilities: [new TriggeredAbility(TriggerKind.DieFielded,
@@ -428,7 +428,7 @@ public static class DiceKingdomConfig
     public static readonly CardDef Elephant = new(
         Id: "DK-EYE-07", Name: "Elephant", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 6, EnergySymbolIds: ["Eye"],
-        Die: CharacterDie("DK-EYE-07Die", energyType: "Eye", fieldingCost: 2, (2, 6), (3, 7), (3, 8)),
+        Die: CharacterDie("DK-EYE-07Die", energyType: "Eye", (1, 3, 9), (2, 4, 11), (3, 5, 12)),
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "Vanilla - no ability.",
         Abilities: [],
@@ -437,7 +437,7 @@ public static class DiceKingdomConfig
     public static readonly CardDef Fox = new(
         Id: "DK-EYE-08", Name: "Fox", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 5, EnergySymbolIds: ["Eye"],
-        Die: CharacterDie("DK-EYE-08Die", energyType: "Eye", fieldingCost: 2, (1, 4), (1, 5), (2, 7)),
+        Die: CharacterDie("DK-EYE-08Die", energyType: "Eye", (1, 1, 6), (2, 2, 7), (2, 3, 10)),
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "While active, your creatures get +1 DEF.",
         Abilities: [],
@@ -453,7 +453,7 @@ public static class DiceKingdomConfig
     public static readonly CardDef Cuttlefish = new(
         Id: "DK-EYE-09", Name: "Cuttlefish", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 2, EnergySymbolIds: ["Eye"],
-        Die: CharacterDie("DK-EYE-09Die", energyType: "Eye", fieldingCost: 1, (0, 2), (1, 2), (1, 3)),
+        Die: CharacterDie("DK-EYE-09Die", energyType: "Eye", (0, 0, 3), (1, 1, 3), (1, 1, 4)),
         DieLimit: 4, Affiliations: [], Keywords: ["On Attack"],
         RawText: "On Attack: spin a target opposing level 1 creature to an energy face.",
         Abilities: [new TriggeredAbility(TriggerKind.DieAttacks,

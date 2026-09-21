@@ -10,14 +10,16 @@ namespace DiceFight.V2.Tests;
 // for it (the Elephant-vs-Greyhound problem that prompted the model).
 public class DiceKingdomCostModelTests
 {
-    // Homash value: total ATK+DEF across the three levels, divided by
-    // what it costs to actually use the die (purchase + fielding at
-    // every level). https://dmunited.eu/what-in-the-world-are-homash-values/
+    // Homash value, as the article defines it: the average of ATK+DEF over
+    // the three levels, divided by (purchase cost + average fielding
+    // cost) - i.e. sum(ATK+DEF) / (3 x purchase + sum(fielding)).
+    // Champion passives are deliberately NOT applied: a card can end up on
+    // any Champion's team. https://dmunited.eu/what-in-the-world-are-homash-values/
     private static double Homash(CardDef card)
     {
         var levels = card.Die.Faces.Where(f => f.Character != null).Select(f => f.Character!).ToList();
         var stats = levels.Sum(l => l.Attack + l.Defense);
-        return (double)stats / (card.PurchaseCost + levels.Sum(l => l.FieldingCost));
+        return (double)stats / (3 * card.PurchaseCost + levels.Sum(l => l.FieldingCost));
     }
 
     private static bool IsVanilla(CardDef c) => c.Abilities.Count == 0 && c.Continuous.Count == 0 && c.Keywords.Count == 0;
@@ -28,7 +30,7 @@ public class DiceKingdomCostModelTests
         foreach (var card in DiceKingdomConfig.Catalog.Values)
         {
             var h = Homash(card);
-            Assert.True(h is >= 1.0 and <= 2.6, $"{card.Name} has Homash {h:0.00} (expected 1.0-2.6).");
+            Assert.True(h is >= 1.0 and <= 2.1, $"{card.Name} has Homash {h:0.00} (expected 1.0-2.1).");
         }
     }
 
@@ -38,9 +40,9 @@ public class DiceKingdomCostModelTests
         var vanilla = DiceKingdomConfig.Catalog.Values.Where(IsVanilla).ToList();
         Assert.NotEmpty(vanilla);
         foreach (var card in vanilla)
-            Assert.True(Homash(card) >= 2.2, $"Vanilla {card.Name} has Homash {Homash(card):0.00}; with no ability it should be >= 2.2.");
+            Assert.True(Homash(card) >= 1.75, $"Vanilla {card.Name} has Homash {Homash(card):0.00}; with no ability it should be >= 1.75.");
 
         foreach (var card in DiceKingdomConfig.Catalog.Values.Where(c => !IsVanilla(c)))
-            Assert.True(Homash(card) <= 2.2, $"{card.Name} has an ability but Homash {Homash(card):0.00}; expected <= 2.2 (its ability is paid for out of its stats).");
+            Assert.True(Homash(card) <= 1.75, $"{card.Name} has an ability but Homash {Homash(card):0.00}; expected <= 1.75 (its ability is paid for out of its stats).");
     }
 }

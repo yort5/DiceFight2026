@@ -179,14 +179,14 @@ public class DiceKingdomNewCharactersTests
         Assert.Null(face.Character); // an energy face, not a stat face
         Assert.Equal(2, face.Symbols.Single(s => s.SymbolId == "Claw").Count);
 
-        // Wolverine's fielding cost (2) exactly matches the die's full
+        // Wolverine's level-3 fielding cost (2) exactly matches the die's full
         // 2-energy face - spent in full, not partially (see the spin-down
         // test below for that case), so it should still leave for Out of
         // Play exactly as any fully-spent energy die does. Wolverine
         // specifically (not Grizzly/Orca) because its ability is
         // On-Attack, not On-Field - fielding it alone triggers nothing,
         // so this test stays about energy spending, not target choices.
-        var wolverine = ReadyCharacter(state, DiceKingdomConfig.Wolverine.Id, "p1"); // fielding cost 2
+        var wolverine = ReadyCharacter(state, DiceKingdomConfig.Wolverine.Id, "p1", level: 3); // fielding cost 2 at level 3 (1/1/2 per level)
         TurnEngine.Field(state, queue, wolverine.Id, [honeyBadgerEnergy.Id]);
         Drain(state, queue);
 
@@ -210,7 +210,7 @@ public class DiceKingdomNewCharactersTests
         var die = state.Dice.Single(d => d.Id == energyDie);
         Assert.Equal(0, die.CurrentFaceIndex); // L1, the first of the two double-energy faces
 
-        var stoat = ReadyCharacter(state, DiceKingdomConfig.Stoat.Id, "p1"); // fielding cost 1
+        var stoat = ReadyCharacter(state, DiceKingdomConfig.Stoat.Id, "p1", level: 2); // fielding cost 1 at level 2 (0/1/2 per level)
         TurnEngine.Field(state, queue, stoat.Id, [energyDie]);
         Drain(state, queue);
 
