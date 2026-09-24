@@ -859,8 +859,20 @@ function BuyCard({
   const rolledReserve = reserve.filter((d) => rolled(d));
   // Three at a time, same as the handoff's own spec - "FULL ROSTER"
   // opens the sheet for the rest, this card is a quick-buy strip, not
-  // the whole roster.
-  const visible = [...unpurchasedByCard.entries()].slice(0, 3);
+  // the whole roster. Ordered most-expensive-affordable first (direct
+  // feedback 2026-09-24: with 6 energy you want the 5s and 6s suggested,
+  // not the 2s and 3s); if fewer than three are affordable, the rest of
+  // the strip fills with the cheapest unaffordable ones - the closest to
+  // being buyable.
+  const costOf = (cardId: string) => cardsById.get(cardId)?.purchaseCost ?? 0;
+  const canAfford = (cardId: string) => {
+    const card = cardsById.get(cardId);
+    return pickEnergyForCost(reserve, card?.purchaseCost ?? 0, card?.energyTypes[0] ?? null) !== null;
+  };
+  const entries = [...unpurchasedByCard.entries()];
+  const affordableEntries = entries.filter(([id]) => canAfford(id)).sort(([a], [b]) => costOf(b) - costOf(a));
+  const unaffordableEntries = entries.filter(([id]) => !canAfford(id)).sort(([a], [b]) => costOf(a) - costOf(b));
+  const visible = [...affordableEntries, ...unaffordableEntries].slice(0, 3);
   return (
     <div className="dkm-card">
       <div className="dkm-card-head">
@@ -874,7 +886,7 @@ function BuyCard({
           const card = cardsById.get(cardId);
           const Avatar = CHARACTER_ICONS[cardId];
           const dieId = dice[0].id;
-          const affordable = pickEnergyForCost(reserve, card?.purchaseCost ?? 0, card?.energyTypes[0] ?? null) !== null;
+          const affordable = canAfford(cardId);
           return (
             <button
               key={cardId}

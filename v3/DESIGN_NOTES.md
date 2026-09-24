@@ -2924,3 +2924,12 @@ Direct feedback from playing a vs-Computer match:
   when every energy die is needed anyway. Purchases still auto-pay.
 - **The opponent's Roll & Reroll now shows THEIR tray** (it used to show
   the viewer's own leftover dice).
+
+## Mobile quick-buy strip: most expensive affordable first (2026-09-24)
+
+- The three-tile Buy strip used to show the first three roster cards in
+  roster order, so with 6 energy it suggested the 2- and 3-cost cards.
+  Now it shows the affordable cards by cost, highest first. If fewer than
+  three are affordable, the remaining slots go to the cheapest cards you
+  can't afford yet, i.e. the ones closest to buyable. The Full Roster sheet is
+  unchanged.
