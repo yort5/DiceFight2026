@@ -2933,3 +2933,6 @@ Direct feedback from playing a vs-Computer match:
   three are affordable, the remaining slots go to the cheapest cards you
   can't afford yet, i.e. the ones closest to buyable. The Full Roster sheet is
   unchanged.
+- (2026-09-25) The Buy strip is hidden on the opponent's Main phase too.
+  It only showed YOUR roster, which you can't act on during their turn, and their
+  Reserve row in the opponent mat already shows what they have to spend.

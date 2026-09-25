@@ -2285,7 +2285,11 @@ export function DiceKingdomMobilePage() {
               interactive={isYourTurn}
             />
           )}
-          {phase === "main" && (
+          {/* Only on your own turn - on the opponent's Main phase your
+              Buy strip was just noise (direct feedback 2026-09-25: "Not
+              necessary"); their Reserve row already shows what they
+              have to spend. */}
+          {phase === "main" && isYourTurn && (
             <BuyCard
               unpurchasedByCard={unpurchasedByCard}
               cardsById={cardsById}
