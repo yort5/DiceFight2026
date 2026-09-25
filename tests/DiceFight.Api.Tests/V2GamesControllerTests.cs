@@ -102,6 +102,48 @@ public class V2GamesControllerTests
         Assert.Equal("teamB", afterCleanUp.ActivePlayerId);
     }
 
+    // Real bug (2026-09-25): blocks only lived in the defender's client,
+    // so in two-device play the attacker saw no blockers and resolved
+    // damage with an empty assignment - every lane went unblocked. The
+    // server now keeps the declared blocks, shows them to both seats and
+    // resolves from them whatever the attacker sends.
+    [Fact]
+    public void Declared_Blocks_Are_Shown_To_Both_Seats_And_Used_For_Damage()
+    {
+        var (store, session) = CreateGame("Wolf", "Armadillo");
+        var teamA = V2SeatedController.For(store, session, "teamA");
+        var teamB = V2SeatedController.For(store, session, "teamB");
+        teamA.ClearAndDraw(session.Id);
+        teamA.Roll(session.Id);
+        teamA.FinishRoll(session.Id);
+
+        // Put one Tardigrade per side straight onto the field, showing a
+        // character face, rather than depending on this run's rolls.
+        var state = session.State;
+        DiceFight.V2.Model.DieInstance FieldOne(string player)
+        {
+            var die = state.Dice.First(d => d.ControllerId == player && d.CardId is null && d.Zone != DiceFight.V2.Model.Zone.FieldZone);
+            die.Zone = DiceFight.V2.Model.Zone.FieldZone;
+            die.CurrentFaceIndex = 0;
+            Assert.NotNull(state.GetCurrentFace(die)?.Character);
+            return die;
+        }
+        var attacker = FieldOne("teamA");
+        var blocker = FieldOne("teamB");
+
+        teamA.EnterAttackStep(session.Id);
+        teamA.DeclareAttackers(session.Id, new V2DeclareAttackersRequest([new V2AttackerDeclaration(attacker.Id, 0)]));
+        teamB.DeclareBlockers(session.Id, new V2DeclareBlockersRequest([new V2BlockAssignment(attacker.Id, blocker.Id)]));
+
+        var attackersView = V2SeatedController.Dto(teamA.Get(session.Id));
+        Assert.Equal([new V2BlockAssignment(attacker.Id, blocker.Id)], attackersView.Blocks);
+
+        // The attacker's client sends nothing - the server still knows.
+        var afterDamage = V2SeatedController.Dto(teamA.AssignCombatDamage(session.Id, new V2AssignCombatDamageRequest([])));
+        Assert.Equal(20, afterDamage.PlayerTwo.Life);
+        Assert.Empty(afterDamage.Blocks!);
+    }
+
     [Fact]
     public void Wrong_Seat_Cannot_Act_On_The_Opponents_Turn()
     {

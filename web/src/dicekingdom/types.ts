@@ -101,6 +101,10 @@ export interface GameState {
   log: GameLogEntry[];
   yourPlayerId: string | null;
   version: number;
+  /** The blocks the defender declared this combat, in assignment order -
+   *  the server's copy, so the attacker sees them too. Empty before
+   *  blockers are declared. */
+  blocks?: BlockAssignment[];
 }
 
 export interface Seat {

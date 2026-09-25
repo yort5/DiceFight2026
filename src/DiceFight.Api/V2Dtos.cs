@@ -139,7 +139,10 @@ public sealed record V2GameStateDto(
     string GameId, string ActivePlayerId, string CurrentStep, string CurrentStepId,
     V2PlayerDto PlayerOne, V2PlayerDto PlayerTwo, IReadOnlyList<V2DieDto> Dice, V2PendingChoiceDto? PendingChoice,
     IReadOnlyList<V2GameLogEntryDto> Log,
-    string? YourPlayerId = null, int Version = 0)
+    string? YourPlayerId = null, int Version = 0,
+    // The declared blocks this combat (GameState.DeclaredBlocks), in
+    // assignment order - empty before blockers are declared.
+    IReadOnlyList<V2BlockAssignment>? Blocks = null)
 {
     public static V2GameStateDto From(string gameId, GameState state, string? yourPlayerId = null, int version = 0) => new(
         gameId, state.ActivePlayerId, state.CurrentStep.ToString(), state.CurrentStepId,
@@ -147,7 +150,8 @@ public sealed record V2GameStateDto(
         state.Dice.Select(d => V2DieDto.From(state, d)).ToList(),
         state.PendingChoice is { } pending ? V2PendingChoiceDto.From(pending) : null,
         state.Log.Select(V2GameLogEntryDto.From).ToList(),
-        yourPlayerId, version);
+        yourPlayerId, version,
+        state.DeclaredBlocks?.Pairs.Select(p => new V2BlockAssignment(p.AttackerDieId, p.BlockerDieId)).ToList() ?? []);
 }
 
 // ---- Request bodies ----

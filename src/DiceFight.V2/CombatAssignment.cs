@@ -18,6 +18,10 @@ public sealed class CombatAssignment
         blockers.Add(blockerDieId);
     }
 
+    // Every (attacker, blocker) pair in assignment order.
+    public IEnumerable<(string AttackerDieId, string BlockerDieId)> Pairs =>
+        _blockersByAttacker.SelectMany(kv => kv.Value.Select(b => (kv.Key, b)));
+
     public IReadOnlyList<string> BlockersOf(string attackerDieId) =>
         _blockersByAttacker.TryGetValue(attackerDieId, out var blockers) ? blockers : [];
 }

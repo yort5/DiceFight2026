@@ -170,7 +170,10 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase
     public ActionResult<V2GameStateDto> AssignCombatDamage(string gameId, [FromBody] V2AssignCombatDamageRequest request)
     {
         var state = RequireTurn(gameId, V2Actor.Active);
-        var assignment = BuildAssignment(request.Assignments);
+        // The blocks the defender actually declared, not whatever the
+        // attacker's client sends - in two-device play the attacker's
+        // client never had them (see GameState.DeclaredBlocks).
+        var assignment = state.DeclaredBlocks ?? BuildAssignment(request.Assignments);
 
         // The engine splits each lane's combined damage itself (lethal-first,
         // remainder on the last target) - see CombatEngine.AssignCombatDamage.

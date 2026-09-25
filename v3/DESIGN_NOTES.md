@@ -2957,3 +2957,14 @@ Direct feedback from playing a vs-Computer match:
   slot 0's (level 1) cost onto whatever face was showing, so a level-3
   Mongoose read 0 while fielding it asked for payment. This was missed
   when costs became per-level.
+- **Mobile can answer pending choices now (real bug, game-breaking).**
+  Mobile had no UI for `pendingChoice`; only the bot's code path could
+  answer one. Fielding Honey Badger ("On Field: deal 1 damage to a
+  target creature") with more than one legal target left the server
+  waiting on a choice the player couldn't see. Every later action then
+  failed with "Resolve the pending choice before taking another
+  action", so the game was stuck. New `ChoiceSheet`: a bottom sheet
+  with the candidate dice split into Theirs/Yours, min/max-aware, and
+  no cancel (the ability has already triggered). Checked by fielding a
+  Honey Badger through the UI: the sheet appeared, confirming dealt
+  the damage, and play continued.

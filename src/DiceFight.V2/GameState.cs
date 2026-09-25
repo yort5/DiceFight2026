@@ -187,6 +187,14 @@ public sealed class GameState
     // and resolved and cleared by TurnEngine.CleanUp.
     public Dictionary<string, HashSet<string>> DeadlyEngagedDieIds { get; } = [];
 
+    // The blocks the Inactive player declared this combat, recorded by
+    // CombatEngine.DeclareBlockers and cleared when the Attack Zone
+    // empties. The server's copy is authoritative: damage resolves from
+    // it, and both players see it. Real bug (2026-09-25): these only
+    // lived in the defender's client, so in two-device play the attacker
+    // saw no blockers and resolved damage as if every lane were unblocked.
+    public CombatAssignment? DeclaredBlocks { get; set; }
+
     // Rule 2.6.1 - each die may be voluntarily rerolled at most once
     // during its own Roll and Reroll Step. Keyed by die id, not player,
     // since TurnEngine.RerollOwn checks a specific die; cleared at the

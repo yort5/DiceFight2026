@@ -673,7 +673,7 @@ export function DiceKingdomPage() {
       runQuiet(() => client.declareBlockers(gameId, []));
     } else if (
       game.currentStepId === "action-global-window" &&
-      Object.values(blockAssignments).filter(Boolean).length === 0
+      (game.blocks ?? []).length === 0
     ) {
       runQuiet(() => client.assignCombatDamage(gameId, []));
     }
@@ -1499,9 +1499,14 @@ export function DiceKingdomPage() {
   // die before Clean Up processes it) - never hides actual game state,
   // only the empty three-placeholder-column view nobody's using yet.
   function renderAttackZone() {
-    const assignments: BlockAssignment[] = Object.entries(blockAssignments)
-      .filter((entry): entry is [string, string] => !!entry[1])
-      .map(([attackerDieId, blockerDieId]) => ({ attackerDieId, blockerDieId }));
+    // Local picks while the defender is choosing, the server's declared
+    // blocks after - the attacker's device never has the local ones.
+    const assignments: BlockAssignment[] =
+      step === "assign-blockers"
+        ? Object.entries(blockAssignments)
+            .filter((entry): entry is [string, string] => !!entry[1])
+            .map(([attackerDieId, blockerDieId]) => ({ attackerDieId, blockerDieId }))
+        : (game!.blocks ?? []);
     const hasAttackers = game!.dice.some((d) => d.zone === "AttackZone");
     if (!ATTACK_STEPS.has(step) && !hasAttackers) {
       return <div className="combat-lane-collapsed">Attack Zone</div>;
@@ -1645,12 +1650,7 @@ export function DiceKingdomPage() {
         disabled={busy}
         onClick={() =>
           run(() =>
-            api.assignCombatDamage(
-              game.gameId,
-              Object.entries(blockAssignments)
-                .filter(([, b]) => b)
-                .map(([attackerDieId, blockerDieId]) => ({ attackerDieId, blockerDieId: blockerDieId! })),
-            ),
+            api.assignCombatDamage(game.gameId, game.blocks ?? []),
           )
         }
       >

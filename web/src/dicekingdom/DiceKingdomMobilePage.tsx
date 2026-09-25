@@ -17,7 +17,7 @@ import { facesFor } from "./dieFaces";
 import { useDieFlights, usePhaseHeight } from "./dieFlights";
 import { useDiceRoll, type RollTarget } from "./useDiceRoll";
 import { decideAttackers, decideBlockers, decideMainAction, decidePendingChoice, decisionOwner, pickEnergy } from "./bot";
-import type { CardDef, Die, GameState, PlayerState, StatModifier } from "./types";
+import type { CardDef, Die, GameState, PendingChoice, PlayerState, StatModifier } from "./types";
 
 // Dice Kingdom - mobile refresh (2026-09). A GENUINELY SEPARATE front end
 // from ../DiceKingdomPage.tsx, not a responsive breakpoint of it - the
@@ -172,6 +172,13 @@ function combatPreview(lanes: Die[][], blockersByAttacker: Map<string, Die[]>): 
 // flat {attackerDieId, blockerDieId} pairs the API/bot actually want,
 // one row per blocker, shared by every submission call site so they
 // can't drift apart on the flattening.
+// The server's flat block list back into attacker id -> blockers, in order.
+function groupBlocks(blocks: { attackerDieId: string; blockerDieId: string }[]): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  for (const b of blocks) (out[b.attackerDieId] ??= []).push(b.blockerDieId);
+  return out;
+}
+
 function blockAssignmentsToApi(assignments: Record<string, string[]>): { attackerDieId: string; blockerDieId: string }[] {
   return Object.entries(assignments).flatMap(([attackerDieId, blockerIds]) =>
     blockerIds.map((blockerDieId) => ({ attackerDieId, blockerDieId })),
@@ -1364,6 +1371,107 @@ function PaymentSheet({
   );
 }
 
+// A card ability waiting on its controller to pick targets (e.g. Honey
+// Badger's "On Field: deal 1 damage to a target creature"). Real bug,
+// direct feedback 2026-09-25: mobile had no UI for this at all - only the
+// bot could answer one - so the server sat waiting on a choice the human
+// couldn't see, and every other action bounced with "Resolve the pending
+// choice before taking another action". No cancel: the ability has
+// already triggered and has to resolve.
+function ChoiceSheet({
+  choice,
+  dice,
+  players,
+  you,
+  cardsById,
+  busy,
+  onConfirm,
+}: {
+  choice: PendingChoice;
+  dice: Die[];
+  players: PlayerState[];
+  you: string;
+  cardsById: Map<string, CardDef>;
+  busy: boolean;
+  onConfirm: (ids: string[]) => void;
+}) {
+  const [picked, setPicked] = useState<string[]>([]);
+  const max = Math.max(1, choice.maxCount);
+  const toggle = (id: string) =>
+    setPicked((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : max === 1 ? [id] : prev.length < max ? [...prev, id] : prev,
+    );
+  const ready = picked.length >= choice.minCount && picked.length <= max;
+  const candidateDice = choice.candidateIds.map((id) => dice.find((d) => d.id === id)).filter((d): d is Die => !!d);
+  const otherCandidates = choice.candidateIds.filter((id) => !dice.some((d) => d.id === id));
+  const group = (mine: boolean) => candidateDice.filter((d) => (d.controllerId === you) === mine);
+  const renderGroup = (label: string, list: Die[], mine: boolean) =>
+    list.length > 0 && (
+      <>
+        <span className="dkm-field-label">{label}</span>
+        <div className="dkm-tile-row wrap">
+          {list.map((d) => (
+            <DTile
+              key={d.id}
+              die={d}
+              cardsById={cardsById}
+              size={54}
+              mine={mine}
+              flyId={false}
+              clickable
+              picked={picked.includes(d.id)}
+              onClick={() => toggle(d.id)}
+            />
+          ))}
+        </div>
+      </>
+    );
+  return (
+    <div className="dkm-overlay-backdrop">
+      <div className="dkm-sheet dkm-pay-sheet">
+        <div className="dkm-sheet-handle" />
+        <div className="dkm-popout-head">
+          <span className="dkm-popout-title">Choose a target</span>
+        </div>
+        <p className="dkm-pay-status">
+          <b>{choice.description}</b>
+          {max > 1 && (
+            <span>
+              {" "}
+              · {picked.length} / {max}
+            </span>
+          )}
+        </p>
+        {renderGroup("Theirs", group(false), false)}
+        {renderGroup("Yours", group(true), true)}
+        {otherCandidates.length > 0 && (
+          <div className="dkm-tile-row wrap">
+            {otherCandidates.map((id) => (
+              <button
+                key={id}
+                type="button"
+                className={`dkm-secondary-btn${picked.includes(id) ? " picked" : ""}`}
+                onClick={() => toggle(id)}
+              >
+                {players.find((p) => p.id === id)?.name ?? id}
+              </button>
+            ))}
+          </div>
+        )}
+        {choice.candidateIds.length === 0 && <span className="dkm-empty-hint">No legal targets.</span>}
+        <button
+          type="button"
+          className="dkm-primary-btn dkm-pay-confirm"
+          disabled={busy || !ready}
+          onClick={() => onConfirm(picked)}
+        >
+          <span>{picked.length === 0 && choice.minCount === 0 ? "Skip" : "Confirm"}</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ---- Main page ----
 
 export function DiceKingdomMobilePage() {
@@ -1641,7 +1749,7 @@ export function DiceKingdomMobilePage() {
     const client = apiAs(gameId, owner);
     if (game.currentStepId === "assign-blockers" && assignBlockersAttackerCount === 0) {
       runQuiet(() => client.declareBlockers(gameId, []));
-    } else if (game.currentStepId === "action-global-window" && blockAssignmentsToApi(blockAssignments).length === 0) {
+    } else if (game.currentStepId === "action-global-window" && (game.blocks ?? []).length === 0) {
       // Unblocked damage used to land the instant blockers were set - pause
       // so the player can see the blocks (or lack of them) first.
       const t = window.setTimeout(() => runQuiet(() => client.assignCombatDamage(gameId, [])), BOT_MOVE_DELAY_MS);
@@ -1930,14 +2038,16 @@ export function DiceKingdomMobilePage() {
     // damage - game.dice is internal die order.
     for (const lane of attackersByLane) lane.sort((a, b) => (a.attackOrder ?? Infinity) - (b.attackOrder ?? Infinity));
   }
-  // A blocker's own attacker id isn't on the DTO directly - built here
-  // from blockAssignments instead, still held locally through Action &
-  // Globals since CombatAssignment isn't persisted server-side (same
-  // resend-it-every-call pattern ../DiceKingdomPage.tsx already uses).
-  // Nothing to show yet during Declare Attackers itself.
+  // While the defender is still choosing, their local picks; once
+  // declared, the server's copy (game.blocks) - the only one the
+  // attacker's device ever has in two-device play (real bug, 2026-09-25:
+  // the attacker saw no blockers at all). Nothing to show yet during
+  // Declare Attackers itself.
   const blockersByAttacker = new Map<string, Die[]>();
+  const shownBlocks: Record<string, string[]> =
+    step === "assign-blockers" ? blockAssignments : groupBlocks(game.blocks ?? []);
   if (step !== "select-attackers") {
-    for (const [attackerId, blockerIds] of Object.entries(blockAssignments)) {
+    for (const [attackerId, blockerIds] of Object.entries(shownBlocks)) {
       const blockers = blockerIds.map((id) => game.dice.find((d) => d.id === id)).filter((d): d is Die => !!d);
       if (blockers.length > 0) blockersByAttacker.set(attackerId, blockers);
     }
@@ -2206,7 +2316,7 @@ export function DiceKingdomMobilePage() {
     }
   } else if (step === "action-global-window") {
     primaryLabel = "Resolve Damage";
-    primaryRun = () => run(() => api.assignCombatDamage(game.gameId, blockAssignmentsToApi(blockAssignments)));
+    primaryRun = () => run(() => api.assignCombatDamage(game.gameId, game.blocks ?? []));
   } else {
     // return-to-field
     primaryLabel = "Pass Turn";
@@ -2517,6 +2627,18 @@ export function DiceKingdomMobilePage() {
           />
         );
       })()}
+      {game.pendingChoice && game.pendingChoice.controllerId === you && (
+        <ChoiceSheet
+          key={`${game.version}:${game.pendingChoice.description}`}
+          choice={game.pendingChoice}
+          dice={game.dice}
+          players={[game.playerOne, game.playerTwo]}
+          you={you}
+          cardsById={cardsById}
+          busy={busy}
+          onConfirm={(ids) => run(() => api.resolvePendingChoice(game.gameId, ids))}
+        />
+      )}
       {stepsOpen && <StepPopout phaseLabel={phaseLabel} steps={chainSteps} index={chainIndex} onClose={() => setStepsOpen(false)} />}
       {rosterViewFor && (
         <RosterSheet

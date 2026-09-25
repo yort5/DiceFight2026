@@ -114,6 +114,8 @@ public static class CombatEngine
                 ? $"{state.NameOf(inactiveId)} leaves every attacker unblocked."
                 : $"{state.NameOf(inactiveId)} assigns {blockerDieIds.Count} {(blockerDieIds.Count == 1 ? "blocker" : "blockers")}.");
 
+        state.DeclaredBlocks = assignment;
+
         // Keyword Deadly - record who is engaged with a Deadly die NOW,
         // not at damage: it counts even if either die is removed first.
         // Engagement is per lane, so every blocker of a lane is engaged
@@ -403,6 +405,7 @@ public static class CombatEngine
             die.Lane = null;
             die.AttackOrder = null;
         }
+        state.DeclaredBlocks = null;
         // Unlike v1, this does NOT also advance CurrentStep to CleanUp -
         // the caller calls TurnEngine.CleanUp explicitly afterward, same
         // as the skip-combat path already does.
