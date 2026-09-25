@@ -131,11 +131,19 @@ export function facesFor(die: Die, cardsById: Map<string, CardDef>): DieFaces {
   // three different-level Tardigrades all rendering the same static
   // level-1 default (0/1) - slot 0's un-overwritten content - while
   // `.front`'s own (unseen) text already held the right numbers.
+  //
+  // The fielding cost comes from the SHOWING level's own default face,
+  // not slot 0's - slot 0 is always level 1, so a level-3 Mongoose
+  // showed 0 on the die while fielding it asked for 1 (direct feedback,
+  // 2026-09-25; costs became per-level in 115b2dd).
   const existing = faces[0];
+  const sameLevel = showing.kind === "character"
+    ? faces.find((f) => f.kind === "character" && f.level === showing.level)
+    : undefined;
   faces[0] = {
     ...showing,
     avatar: existing.avatar,
-    ...(showing.kind === "character" && existing.kind === "character" ? { fieldingCost: existing.fieldingCost } : {}),
+    ...(showing.kind === "character" && sameLevel?.kind === "character" ? { fieldingCost: sameLevel.fieldingCost } : {}),
   };
   return { faces, index: 0 };
 }

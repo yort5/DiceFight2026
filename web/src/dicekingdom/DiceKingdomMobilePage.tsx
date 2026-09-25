@@ -1092,6 +1092,13 @@ function AttackLanesCard({
                   when you're defending (isYourTurn false, active player is
                   the opponent) the attackers belong on top near their mat
                   and your blockers belong on the bottom near yours. */}
+              {/* Whichever side sits on top renders reversed, so each
+                  side's FIRST die (the one combat damage hits first -
+                  CombatEngine.AssignCombatDamage goes in lane order) sits
+                  next to the middle where the two teams meet, and damage
+                  reads as spreading outward from there. Direct feedback
+                  (2026-09-25): top-down damage on the upper side looked
+                  backwards. */}
               {isYourTurn ? (
                 <>
                   <div className="dkm-lane-blockers">
@@ -1101,7 +1108,7 @@ function AttackLanesCard({
                         not a color/border cue, so it reads the same
                         regardless of position/orientation or color vision. */}
                     {attackers.length > 0 && <span className="dkm-lane-role def">Blocking</span>}
-                    {blockers.map((b) => (
+                    {[...blockers].reverse().map((b) => (
                       <LaneDie key={b.id} die={b} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === b.id} onTap={() => onTapBlocker(attackers[0]?.id ?? "", b.id)} preview={preview.get(b.id)} />
                     ))}
                   </div>
@@ -1128,7 +1135,7 @@ function AttackLanesCard({
                 <>
                   <div className="dkm-lane-attackers">
                     {attackers.length > 0 && <span className="dkm-lane-role atk">Attacking</span>}
-                    {attackers.map((a) => (
+                    {[...attackers].reverse().map((a) => (
                       <LaneDie key={a.id} die={a} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === a.id} onTap={() => onTapAttacker(a.id)} preview={preview.get(a.id)} />
                     ))}
                     {attackers.length === 0 && <div className="dkm-lane-tile empty attacker-empty" />}
@@ -1919,6 +1926,9 @@ export function DiceKingdomMobilePage() {
     for (const d of game.dice) {
       if (d.zone === "AttackZone" && d.lane !== null) attackersByLane[d.lane]?.push(d);
     }
+    // Declaration order, same as while declaring and as the engine deals
+    // damage - game.dice is internal die order.
+    for (const lane of attackersByLane) lane.sort((a, b) => (a.attackOrder ?? Infinity) - (b.attackOrder ?? Infinity));
   }
   // A blocker's own attacker id isn't on the DTO directly - built here
   // from blockAssignments instead, still held locally through Action &

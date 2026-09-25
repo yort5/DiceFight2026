@@ -53,6 +53,7 @@ public static class CombatEngine
         if (forcedButOmitted.Count > 0)
             throw new InvalidOperationException($"{string.Join(", ", forcedButOmitted.Select(d => d.Id))} must attack this turn.");
 
+        var order = 0;
         foreach (var (id, lane) in attackerLanes)
         {
             var die = FindDie(state, id);
@@ -65,6 +66,7 @@ public static class CombatEngine
 
             die.Zone = Zone.AttackZone;
             die.Lane = lane;
+            die.AttackOrder = order++;
             // Rule 2.7.1.2 - "when attacks" fires for each attacking die.
             EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieAttacks, die, die.ControllerId, state.CurrentStepId));
         }
@@ -104,15 +106,19 @@ public static class CombatEngine
             die.Zone = Zone.AttackZone;
             EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieBlocks, die, die.ControllerId, state.CurrentStepId));
         }
-        state.LogEvent(inactiveId, blockerDieIds.Count == 0
-            ? $"{state.NameOf(inactiveId)} leaves every attacker unblocked."
-            : $"{state.NameOf(inactiveId)} assigns {blockerDieIds.Count} {(blockerDieIds.Count == 1 ? "blocker" : "blockers")}.");
+        // No attackers means there was never a real blocking decision (the
+        // clients auto-pass this step) - "leaves every attacker unblocked"
+        // right after "declares no attackers" read as a phantom step.
+        if (state.DiceIn(state.ActivePlayerId, Zone.AttackZone).Any())
+            state.LogEvent(inactiveId, blockerDieIds.Count == 0
+                ? $"{state.NameOf(inactiveId)} leaves every attacker unblocked."
+                : $"{state.NameOf(inactiveId)} assigns {blockerDieIds.Count} {(blockerDieIds.Count == 1 ? "blocker" : "blockers")}.");
 
         // Keyword Deadly - record who is engaged with a Deadly die NOW,
         // not at damage: it counts even if either die is removed first.
         // Engagement is per lane, so every blocker of a lane is engaged
         // with every attacker in it.
-        foreach (var laneGroup in state.DiceIn(state.ActivePlayerId, Zone.AttackZone).GroupBy(a => a.Lane))
+        foreach (var laneGroup in AttackersByLane(state))
         {
             var laneBlockers = LaneBlockerIds(assignment, laneGroup).Select(id => FindDie(state, id)).ToList();
             foreach (var attacker in laneGroup)
@@ -141,7 +147,7 @@ public static class CombatEngine
     // CombatFlagKind.Unblockable (Finding 14 - Falcon "Recon").
     private static void ValidateUnblockable(GameState state, CombatAssignment assignment)
     {
-        foreach (var laneGroup in state.DiceIn(state.ActivePlayerId, Zone.AttackZone).GroupBy(a => a.Lane))
+        foreach (var laneGroup in AttackersByLane(state))
         {
             var attackers = laneGroup.ToList();
             if (LaneBlockerIds(assignment, attackers).Count == 0) continue;
@@ -159,7 +165,7 @@ public static class CombatEngine
     // minimum; only a nonzero count below it is rejected.
     private static void ValidateMinBlockers(GameState state, CombatAssignment assignment)
     {
-        foreach (var laneGroup in state.DiceIn(state.ActivePlayerId, Zone.AttackZone).GroupBy(a => a.Lane))
+        foreach (var laneGroup in AttackersByLane(state))
         {
             var attackers = laneGroup.ToList();
             var blockerCount = LaneBlockerIds(assignment, attackers).Count;
@@ -227,6 +233,12 @@ public static class CombatEngine
         public Dictionary<string, Dictionary<string, int>> BlockerSplits { get; } = [];
     }
 
+    // The active player's attackers grouped by lane, each lane in
+    // declaration order (DieInstance.AttackOrder) rather than internal
+    // die order - the order combat damage is dealt in.
+    private static IEnumerable<IGrouping<int?, DieInstance>> AttackersByLane(GameState state) =>
+        state.DiceIn(state.ActivePlayerId, Zone.AttackZone).OrderBy(a => a.AttackOrder ?? int.MaxValue).GroupBy(a => a.Lane);
+
     private static List<string> LaneBlockerIds(CombatAssignment assignment, IEnumerable<DieInstance> laneAttackers) =>
         laneAttackers.SelectMany(a => assignment.BlockersOf(a.Id)).Distinct().ToList();
 
@@ -274,7 +286,7 @@ public static class CombatEngine
         var inactivePlayer = state.GetPlayer(state.OpponentOf(state.ActivePlayerId));
         var fights = new List<LaneFight>();
 
-        foreach (var laneGroup in state.DiceIn(state.ActivePlayerId, Zone.AttackZone).GroupBy(a => a.Lane))
+        foreach (var laneGroup in AttackersByLane(state))
         {
             var laneAttackers = laneGroup.ToList();
             var declaredBlockerIds = LaneBlockerIds(assignment, laneAttackers);
@@ -389,6 +401,7 @@ public static class CombatEngine
         {
             die.Zone = Zone.FieldZone;
             die.Lane = null;
+            die.AttackOrder = null;
         }
         // Unlike v1, this does NOT also advance CurrentStep to CleanUp -
         // the caller calls TurnEngine.CleanUp explicitly afterward, same

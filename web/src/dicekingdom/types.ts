@@ -60,6 +60,9 @@ export interface Die {
   defenseModifiers: StatModifier[] | null;
   /** Damage already marked on this die (see V2DieDto.Damage). */
   damage?: number;
+  /** Declaration order among attackers - a lane stacks (and takes combat
+   *  damage) in this order. Null outside the Attack Zone. */
+  attackOrder?: number | null;
 }
 
 export interface PlayerState {

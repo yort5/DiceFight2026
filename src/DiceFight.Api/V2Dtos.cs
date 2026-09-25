@@ -63,7 +63,10 @@ public sealed record V2DieDto(
     IReadOnlyList<V2StatModifierDto>? AttackModifiers, IReadOnlyList<V2StatModifierDto>? DefenseModifiers,
     // Damage already marked on the die (e.g. from an on-field ping) - the
     // Attack Zone combat preview needs it to know how much Defense is left.
-    int Damage = 0)
+    int Damage = 0,
+    // Declaration order among attackers (DieInstance.AttackOrder) - the
+    // client stacks a lane's attackers by it.
+    int? AttackOrder = null)
 {
     private static readonly HashSet<DiceFight.V2.Model.Zone> InPlayZones =
         [DiceFight.V2.Model.Zone.FieldZone, DiceFight.V2.Model.Zone.AttackZone];
@@ -86,7 +89,8 @@ public sealed record V2DieDto(
             showBreakdown ? QueryEngine.GetBaseDefense(state, die) : null,
             showBreakdown ? QueryEngine.GetAttackBreakdown(state, die).Select(V2StatModifierDto.From).ToList() : null,
             showBreakdown ? QueryEngine.GetDefenseBreakdown(state, die).Select(V2StatModifierDto.From).ToList() : null,
-            die.Damage);
+            die.Damage,
+            die.AttackOrder);
     }
 }
 

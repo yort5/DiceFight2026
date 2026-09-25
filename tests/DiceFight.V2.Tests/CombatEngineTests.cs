@@ -426,6 +426,35 @@ public class CombatEngineTests
         Assert.Equal(1, a1.Damage + a2.Damage); // the blocker's single point of damage lands on the lane
     }
 
+    // Direct feedback (2026-09-25): a lane declared Mongoose-then-Tardigrade
+    // came back stacked in internal die order. A lane's blocker damage
+    // goes to its EARLIEST-DECLARED attacker first, not the first die in
+    // state.Dice.
+    [Fact]
+    public void Lane_Blocker_Damage_Hits_The_First_Declared_Attacker_First()
+    {
+        var soft = BuildCard("Soft", [new Face([], new CharacterFaceData(1, 0, 1, 2), Kind: FaceKind.CharacterFace)]);
+        var wall = BuildCard("Wall", [new Face([], new CharacterFaceData(1, 0, 2, 9), Kind: FaceKind.CharacterFace)]);
+        var state = BuildState(soft, wall);
+        var early = AddDie(state, soft, "p1", "early-in-dice-list");
+        var late = AddDie(state, soft, "p1", "late-in-dice-list");
+        var blocker = AddDie(state, wall, "p2");
+        var queue = new AbilityQueue();
+
+        // Declared in the reverse of their internal order.
+        CombatEngine.DeclareAttackers(state, queue, new Dictionary<string, int> { [late.Id] = 1, [early.Id] = 1 });
+        Assert.Equal(0, late.AttackOrder);
+        Assert.Equal(1, early.AttackOrder);
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(late.Id, blocker.Id);
+        CombatEngine.DeclareBlockers(state, queue, assignment, [blocker.Id]);
+        var result = CombatEngine.AssignCombatDamage(state, queue, assignment, new Dictionary<string, IReadOnlyDictionary<string, int>>());
+
+        Assert.Contains(late.Id, result.KOdDieIds); // 2 damage, lethal, to the first declared
+        Assert.DoesNotContain(early.Id, result.KOdDieIds);
+        Assert.Null(early.AttackOrder); // cleared on returning to the field
+    }
+
     [Fact]
     public void Lane_Without_Enough_Attack_To_KO_Its_Blocker_Deals_Nothing_To_The_Player()
     {

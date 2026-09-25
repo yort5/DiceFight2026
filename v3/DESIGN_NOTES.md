@@ -2936,3 +2936,24 @@ Direct feedback from playing a vs-Computer match:
 - (2026-09-25) The Buy strip is hidden on the opponent's Main phase too.
   It only showed YOUR roster, which you can't act on during their turn, and their
   Reserve row in the opponent mat already shows what they have to spend.
+
+## Lane order, phantom blocker log line, per-level cost on dice (2026-09-25)
+
+- **Lane damage goes outward from the middle.** Within a lane, combat
+  damage goes to each side's first die first. The side drawn above the
+  middle is now stacked in reverse, so that first die sits next to the
+  middle line where the teams meet. Before, the top side took damage
+  from the outer edge in.
+- **Attackers keep their declared order.** New `DieInstance.AttackOrder`
+  (set in `DeclareAttackers`, cleared on return to the field, on the DTO
+  as `attackOrder`). `CombatEngine` walks each lane in that order, and
+  mobile stacks by it. Before, confirming the declaration re-sorted a
+  lane into internal die order (Mongoose-then-Tardigrade came back as
+  Tardigrade-then-Mongoose), and the damage order followed that too.
+- **No "leaves every attacker unblocked" after "declares no attackers".**
+  The step is still entered and auto-passed by the client (see the
+  2026-09-15 notes). It just doesn't log when there was nothing to block.
+- **Die tiles show the rolled level's fielding cost.** `facesFor` copied
+  slot 0's (level 1) cost onto whatever face was showing, so a level-3
+  Mongoose read 0 while fielding it asked for payment. This was missed
+  when costs became per-level.

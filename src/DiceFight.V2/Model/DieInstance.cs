@@ -99,6 +99,13 @@ public sealed class DieInstance
     // for a blocker, or any die not currently an attacker.
     public int? Lane { get; set; }
 
+    // Declaration order among this turn's attackers - within a lane,
+    // combat damage goes to the earliest-declared attacker first, and the
+    // UI stacks them the same way (direct feedback 2026-09-25: a lane
+    // declared Mongoose-then-Tardigrade came back in internal die order
+    // after confirming). Null whenever Lane is.
+    public int? AttackOrder { get; set; }
+
     public bool IsSidekick => CardId is null;
 }
 
