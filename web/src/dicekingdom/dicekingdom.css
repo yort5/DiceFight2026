@@ -140,21 +140,20 @@
 }
 .dicekingdom .dk-rail-bottom {
   grid-area: railbottom;
-  /* The log fills whatever's left of this row's height once the
-     Champion box takes what it needs - README's "flex: 1; min-height:
-     120px" for the rail log, same idea via a flex column here instead
-     of the page's own outer flow. */
   height: 100%;
 }
 .dicekingdom .dk-rail-bottom .match-log {
-  flex: 1;
-  min-height: 120px;
+  flex: 0 0 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
 .dicekingdom .dk-rail-bottom .match-log-list {
-  flex: 1;
-  max-height: none;
+  flex: 0 0 auto;
+  /* Ten single-line entries (15.5px per line plus 3px gaps).
+     Long entries still wrap and can be read by scrolling. */
+  height: 182px;
+  max-height: 182px;
 }
 @media (max-width: 1100px) {
   .dicekingdom .dk-layout {
@@ -495,6 +494,20 @@
   justify-content: flex-end;
   gap: 8px;
   flex-wrap: wrap;
+}
+.dicekingdom:not(.dk-mobile) .screen-menu {
+  --bg: var(--panel-bg);
+  --accent-bg: var(--panel-bg-strong);
+  --accent: var(--claw);
+}
+.dicekingdom .dk-titlebar-right .screen-menu-button {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+}
+.dicekingdom .dk-titlebar-right .screen-menu-button svg {
+  width: 16px;
+  height: 16px;
 }
 .dicekingdom .theme-toggle {
   padding: 5px 12px;
@@ -1674,18 +1687,6 @@
   cursor: default;
   transition: transform 0.1s ease, border-color 0.1s ease, background-color 0.1s ease, box-shadow 0.1s ease;
 }
-.dicekingdom .dietile .chip-count {
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  background: var(--text-h);
-  color: var(--on-fill);
-  font: 700 10.5px var(--sans);
-  border-radius: 999px;
-  padding: 2px 6px;
-  line-height: 1;
-  box-shadow: var(--shadow);
-}
 .dicekingdom .dietile.clickable {
   cursor: pointer;
 }
@@ -1709,26 +1710,6 @@
    sizes - undoing the "shrink the energy icon, don't cover the stats"
    fix from the previous pass. DieCube's own icons are all explicitly
    sized already; nothing here needs a blanket override. */
-.dicekingdom .dietile .stat {
-  font: 400 18px/1 var(--display);
-  font-variant-numeric: tabular-nums;
-}
-/* A flat tinted square, not just a bare icon (2026-09-10) - direct
-   feedback: "we lost the 'die' part of the die in Out of Play... things
-   will get messy when there's multiple things in there." Reuses the
-   same `--cc` accent custom property .dietile's own style prop already
-   sets, so it reads as the same family of object as a real rolled die
-   without bringing back the 3D cube (these never roll). */
-.dicekingdom .tile-icon {
-  width: 34px;
-  height: 34px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 7px;
-  background: color-mix(in oklab, var(--cc, var(--border)) 20%, var(--panel-bg));
-  border: 1px solid color-mix(in oklab, var(--cc, var(--border)) 45%, transparent);
-}
 .dicekingdom .dietile .lbl {
   font-size: 9px;
   color: var(--text);
@@ -1939,7 +1920,7 @@
   display: flex;
   gap: 7px;
   font-size: 11.5px;
-  line-height: 1.35;
+  line-height: 15.5px;
 }
 .dicekingdom .log-seq {
   flex: none;
@@ -2384,6 +2365,36 @@
   z-index: 20;
   background: #14151c;
 }
+.dk-mobile .dkm-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.dk-mobile .dkm-header-controls .dkm-phase-rail {
+  flex: 1;
+  width: auto;
+}
+.dk-mobile .dkm-navigation-divider {
+  flex: 0 0 1px;
+  height: 30px;
+  background: var(--dkm-border);
+}
+.dk-mobile .dkm-header-controls .screen-menu-button {
+  width: 38px;
+  height: 38px;
+  border-color: var(--dkm-border);
+  background: var(--dkm-card);
+  color: var(--dkm-ink-2);
+}
+.dk-mobile .dkm-header-controls .dkm-phase-pill:not(.active) {
+  flex: 0 0 38px;
+  padding: 0;
+}
+.dk-mobile .dkm-header-controls .dkm-phase-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .dk-mobile .dkm-phase-rail {
   display: flex;
   gap: 5px;
@@ -2728,14 +2739,6 @@
     box-shadow: 0 0 0 2px var(--text-h);
   }
 }
-.dk-mobile .dkm-facedown {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  background: var(--dkm-raised);
-  border: 1px solid var(--dkm-border);
-}
 .dk-mobile .dkm-avatar-disc {
   display: inline-flex;
   align-items: center;
@@ -2744,29 +2747,8 @@
   flex: 0 0 auto;
 }
 .dk-mobile .dkm-stack-tile {
-  position: relative;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: var(--dkm-card);
-  border: 1.5px solid var(--dkm-border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.dk-mobile .dkm-badge {
-  position: absolute;
-  bottom: -4px;
-  right: -4px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 3px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font: 400 10px/1 var(--display);
-  color: var(--dkm-on-accent);
+  display: inline-flex;
+  flex: none;
 }
 
 /* ---- Global rail (visual shell) ---- */
@@ -3149,7 +3131,8 @@
   text-align: left;
 }
 .dk-mobile .dkm-log-scroll {
-  max-height: 46vh;
+  /* Expanded history shows about ten lines without growing the page. */
+  height: min(194px, 46vh);
   overflow-y: auto;
   padding-right: 4px;
 }
@@ -3486,8 +3469,8 @@
 
 
 /* Used (spent, dimmed/dashed) vs Prep (ready for next draw, lit) */
-.dk-mobile .dkm-pile-used .dkm-stack-tile {
-  border-style: dashed !important;
+.dk-mobile .dkm-pile-used .dk-die-2d {
+  border-style: dashed;
   opacity: 0.55;
 }
 .dk-mobile .dkm-pile-used .dkm-pile-label::before {
@@ -4438,7 +4421,13 @@
   font: 700 11px var(--sans);
   box-shadow: var(--shadow);
 }
-.dicekingdom .dk-tile-field-start:hover { filter: brightness(1.15); }
+.dicekingdom .dk-tile-field-start:not(:disabled):hover { filter: brightness(1.15); }
+.dicekingdom .dk-tile-field-start:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+  filter: none;
+}
 .dicekingdom .dietile-wrap:has(.dk-tile-field-start) { z-index: 22; }
 @media (max-width: 1100px) {
   .dicekingdom .dk-floating-choice {
@@ -4527,3 +4516,64 @@
 }
 .dicekingdom .dk-roll-tray .dierow { align-items: flex-start; }
 .dicekingdom .dk-roll-tray-empty { padding: 8px 0; }
+
+/* Shared dice use the mobile palette and geometry in both layouts. */
+.dicekingdom .dk-die-visual {
+  --claw: #e78a5a;
+  --shell: #6cb494;
+  --wing: #7cb8e6;
+  --eye: #c093dd;
+  --wild: #b3a892;
+  --tile-bg: #20232e;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  vertical-align: middle;
+  color: #c7cce0;
+}
+.dicekingdom .dk-die-visual > .die-cube-box {
+  margin: 0;
+}
+.dicekingdom .dk-die-2d {
+  position: relative;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  border-radius: 8px;
+  background: #20232e;
+  border: 1.5px solid;
+}
+.dicekingdom .dk-die-identity {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: #fff8ec;
+}
+.dicekingdom .dk-die-type-badge {
+  position: absolute;
+  left: 3%;
+  bottom: 3%;
+  display: inline-flex;
+  pointer-events: none;
+}
+.dicekingdom .dk-die-count {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  box-sizing: border-box;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: 400 10px/1 var(--display);
+  color: #14151c;
+  pointer-events: none;
+}

@@ -1,4 +1,5 @@
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
+import { useLogAutoFollow } from "./useLogAutoFollow";
 import type { GameLogEntry } from "./types";
 
 // Ported from ../MatchLog.tsx verbatim - what has happened, newest at
@@ -10,10 +11,7 @@ export function MatchLog(props: { entries: GameLogEntry[]; nearPlayerId: string 
   const listRef = useRef<HTMLOListElement>(null);
   const lastSeq = props.entries.at(-1)?.seq;
 
-  useEffect(() => {
-    const list = listRef.current;
-    if (list) list.scrollTop = list.scrollHeight;
-  }, [lastSeq]);
+  const logScrollHandlers = useLogAutoFollow(listRef, lastSeq);
 
   return (
     <div className="rail-panel match-log">
@@ -21,7 +19,7 @@ export function MatchLog(props: { entries: GameLogEntry[]; nearPlayerId: string 
       {props.entries.length === 0 ? (
         <p className="empty-hint">Nothing has happened yet.</p>
       ) : (
-        <ol className="match-log-list" ref={listRef}>
+        <ol className="match-log-list" ref={listRef} tabIndex={0} aria-label="Match log history" {...logScrollHandlers}>
           {props.entries.map((entry) => entry.isTurnStart ? (
             <li key={entry.seq} className="log-line neutral log-turn-start">
               <span className="log-text">— — — {entry.text} — — —</span>

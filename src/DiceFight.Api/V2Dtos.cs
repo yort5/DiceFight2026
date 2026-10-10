@@ -274,10 +274,20 @@ public sealed record V2GameStateDto(
 
 // ---- Request bodies ----
 
-// No team-builder yet (v3/DESIGN_NOTES.md's own open question) - picking
-// a Champion picks the team: both of DiceKingdomConfig.
-// CharactersByChampion[championId] automatically.
-public sealed record CreateV2GameRequest(string PlayerOneChampionId, string PlayerTwoChampionId);
+// Champion presets remain compatible with existing clients. Custom teams
+// provide exact quantities and do not grant a Champion power.
+// Either seat can use a Champion preset OR an explicitly selected custom team.
+// The builder enforces its own formats; the server only checks data validity.
+public sealed record CustomV2CardDice(string CardId, int DiceCount);
+public sealed record CustomV2TardigradeDice(string EnergyType, int DiceCount);
+public sealed record CustomV2TeamRequest(
+    IReadOnlyList<CustomV2CardDice> Cards,
+    IReadOnlyList<CustomV2TardigradeDice> Tardigrades);
+public sealed record CreateV2GameRequest(
+    string? PlayerOneChampionId = null,
+    string? PlayerTwoChampionId = null,
+    CustomV2TeamRequest? PlayerOneCustomTeam = null,
+    CustomV2TeamRequest? PlayerTwoCustomTeam = null);
 public sealed record V2PurchaseRequest(string DieId, IReadOnlyList<string> EnergyDieIds);
 public sealed record V2FieldRequest(string DieId, IReadOnlyList<string> EnergyDieIds, bool Free = false);
 public sealed record V2RerollRequest(IReadOnlyList<string> DieIds);

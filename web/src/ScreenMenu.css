@@ -1,0 +1,83 @@
+.screen-menu {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  z-index: 100;
+}
+.screen-menu .screen-menu-button {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text-h);
+  cursor: pointer;
+}
+.screen-menu .screen-menu-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(280px, calc(100vw - 24px));
+  padding: 8px;
+  box-sizing: border-box;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--text-h);
+  text-align: left;
+  font: 14px/1.4 var(--sans, sans-serif);
+  box-shadow: var(--shadow);
+}
+.screen-menu-panel a,
+.screen-menu .screen-menu-layout button {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.screen-menu-panel a:hover,
+.screen-menu-panel a[aria-current="page"],
+.screen-menu .screen-menu-layout button:hover {
+  background: var(--accent-bg);
+}
+.screen-menu .screen-menu-layout {
+  border-top: 1px solid var(--border);
+  margin-top: 6px;
+  padding-top: 8px;
+}
+.screen-menu-layout > span {
+  display: block;
+  padding: 4px 12px;
+  font-size: 12px;
+  color: var(--text);
+}
+.screen-menu button:focus-visible,
+.screen-menu a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.start-screen-navigation {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+.dk-mobile .screen-menu {
+  --bg: #20232e;
+  --text-h: #fff;
+  --text: #c7cce0;
+}
+@media print {
+  .screen-menu { display: none; }
+}

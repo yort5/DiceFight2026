@@ -13,7 +13,7 @@ const { isReservePaymentDie } = moduleObj.exports;
 const die = (id, energyAmount, zone = 'ReservePool') => ({ id, zone, energyAmount });
 
 test('character face with energy can pay for a character purchase', () => {
-  assert.equal(isReservePaymentDie(die('character-face', 1), die('roster-card', 0, 'Unpurchased'), null), true);
+  assert.equal(isReservePaymentDie(die('character-face', 1), die('roster-card', 0, 'Unpurchased'), 'roster-card'), true);
 });
 
 test('character face with energy can pay another creature fielding cost after Field clicked', () => {
@@ -39,5 +39,10 @@ test('dice outside Reserve Pool cannot be used as payment', () => {
 test('payment may be deselected by clicking the same eligible energy die again', () => {
   // The desktop click handler uses toggleDie for any such click;
   // it removes an already-selected secondary rather than replacing the primary.
-  assert.equal(isReservePaymentDie(die('character-face', 1), die('roster-card', 0, 'Unpurchased'), null), true);
+  assert.equal(isReservePaymentDie(die('character-face', 1), die('roster-card', 0, 'Unpurchased'), 'roster-card'), true);
+});
+
+test('roster card selection does not start purchasing until Purchase is clicked', () => {
+  assert.equal(isReservePaymentDie(die('energy', 2), die('roster', 0, 'Unpurchased'), null), false);
+  assert.equal(isReservePaymentDie(die('energy', 2), die('roster', 0, 'Unpurchased'), 'roster'), true);
 });

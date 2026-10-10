@@ -5,9 +5,15 @@ import { AffiliationBadge, AffiliationIcons } from "./AffiliationIcons";
 import { buildAffiliationIconIndex } from "./affiliationIndex";
 import { DieFace } from "./DieFace";
 import { EnergyTypes } from "./GameIcon";
+import { ENERGY_ICONS as KINGDOM_ENERGY_ICONS } from "./dicekingdom/icons";
 import { api } from "./api";
+import { loadTeamBuilderCards, USE_DICE_KINGDOM_CATALOG } from "./teamBuilderCatalog";
 import { stashPendingGame } from "./gameHandoff";
 import { navigate } from "./router";
+import { ScreenMenu } from "./ScreenMenu";
+import { useTeamBuilderLayout } from "./teamBuilderLayout";
+import "./TeamBuilderLayout.css";
+import { TARDIGRADE_TYPES, MAX_STARTING_TARDIGRADES, capTardigrades, changeTardigradeCount, tardigradeTotal, stageCustomTeam, type TardigradeType } from "./dicekingdom/customTeams";
 import { SET_NAMES } from "./sets";
 import { FORMATS } from "./formats";
 import {
@@ -28,6 +34,19 @@ import type { CardDef } from "./types";
 // applies is the player's choice of ruleset (see rulesets.ts).
 
 const BASIC_ACTION_TYPES = new Set(["BasicAction", "EpicBasicAction"]);
+
+// Share Dice Kingdom's existing energy glyphs rather than showing plain
+// "Claw"/"Shell" strings in a builder designed for Dice Masters symbols.
+function BuilderEnergyTypes({ types }: { types: readonly string[] }) {
+  return <>
+    {types.map((t) => {
+      const KingdomIcon = KINGDOM_ENERGY_ICONS[t];
+      return KingdomIcon
+        ? <span key={t} title={`${t} energy`} aria-label={`${t} energy`}><KingdomIcon size={16} /></span>
+        : <EnergyTypes key={t} types={[t]} />;
+    })}
+  </>;
+}
 
 // The three numbers a Custom ruleset lets you set. Minimums are 1 rather
 // than 0 - a cap of zero is a team you cannot build, which is never what
@@ -208,20 +227,10 @@ function RarityBadge({ rarity }: { rarity: string | null }) {
   );
 }
 
-// One pip per die the CARD allows, filled to the number you own - so the
-// per-card ceiling is visible without hovering or reading a fraction.
-// Above about a dozen the pips stop being countable at a glance and the
-// fraction does the job better; no real card comes close, but bulk data
-// has surprised this catalog before.
 const MAX_LEGIBLE_PIPS = 12;
 
-// At module scope, not inside the component with the other storage keys:
-// the roster-view state reads it in its lazy initialiser, which runs
-// before those declarations are reached.
-const ROSTER_VIEW_KEY = "dicefight.teamBuilder.rosterView";
-
 function DicePips({ count, limit }: { count: number; limit: number }) {
-  if (limit > MAX_LEGIBLE_PIPS) return <span className="slot-dice-count">{count}/{limit}</span>;
+  if (limit > MAX_LEGIBLE_PIPS) return null;
   return (
     <span className="slot-pips" role="img" aria-label={`${count} of ${limit} dice`}>
       {Array.from({ length: limit }, (_, i) => (
@@ -230,6 +239,41 @@ function DicePips({ count, limit }: { count: number; limit: number }) {
     </span>
   );
 }
+
+// The Slots and List views use the same controls and selected/max die squares.
+function TeamDiceControls({
+  name, count, limit, canIncrease, onDecrease, onIncrease,
+}: {
+  name: string;
+  count: number;
+  limit: number;
+  canIncrease: boolean;
+  onDecrease: () => void;
+  onIncrease: () => void;
+}) {
+  return (
+    <span className="team-dice-controls" aria-label={`${count} of ${limit} dice for ${name}`}>
+      <button type="button" disabled={count <= 1} onClick={onDecrease} aria-label={`One fewer ${name} die`}>−</button>
+      <DicePips count={count} limit={limit} />
+      <button type="button" disabled={!canIncrease} onClick={onIncrease} aria-label={`One more ${name} die`}>+</button>
+      <span className="team-dice-label">Dice</span>
+    </span>
+  );
+}
+
+function FixedDiceDisplay({ count, limit }: { count: number; limit: number }) {
+  return (
+    <span className="team-dice-controls" aria-label={`${count} of ${limit} dice`}>
+      <DicePips count={count} limit={limit} />
+      <span className="team-dice-label">Dice</span>
+    </span>
+  );
+}
+
+// At module scope, not inside the component with the other storage keys:
+// the roster-view state reads it in its lazy initialiser, which runs
+// before those declarations are reached.
+const ROSTER_VIEW_KEY = "dicefight.teamBuilder.rosterView";
 
 // Rendered before the row cap below applies, so typing narrows the
 // visible count too - keeps a huge future catalog from ever forcing a
@@ -248,6 +292,8 @@ const SORTS: { key: SortKey; label: string; title: string }[] = [
 ];
 
 export function TeamBuilderPage() {
+  const { layout } = useTeamBuilderLayout();
+  const [mobilePanel, setMobilePanel] = useState<"cards" | "filters" | "team">("cards");
   const [cards, setCards] = useState<CardDef[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -300,11 +346,15 @@ export function TeamBuilderPage() {
   });
   const [copied, setCopied] = useState(false);
   const [copiedOld, setCopiedOld] = useState<string | null>(null);
+  const [tardigrades, setTardigrades] = useState<Record<TardigradeType, number>>({
+    Claw: 8, Shell: 0, Wing: 0, Eye: 0,
+  });
+  const tardigradeCount = tardigradeTotal(tardigrades);
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.getCards().then(setCards).catch((e) => setError(String(e)));
+    loadTeamBuilderCards().then(setCards).catch((e) => setError(String(e)));
   }, []);
 
   // Teams survive a browser restart. A shared ?cards= link still wins, so
@@ -312,8 +362,26 @@ export function TeamBuilderPage() {
   // when there is no link do we fall back to what was saved here.
   // Everything is wrapped in try/catch: storage throws outright in some
   // privacy modes rather than just coming back empty.
-  const STORAGE_KEY = "dicefight.teamBuilder.team";
-  const RULESET_KEY = "dicefight.teamBuilder.ruleset";
+  const STORAGE_KEY = USE_DICE_KINGDOM_CATALOG ? "dicefight.teamBuilder.kingdom.team" : "dicefight.teamBuilder.team";
+  const RULESET_KEY = USE_DICE_KINGDOM_CATALOG ? "dicefight.teamBuilder.kingdom.ruleset" : "dicefight.teamBuilder.ruleset";
+
+  const TARDIGRADE_KEY = "dicefight.teamBuilder.kingdom.tardigrades";
+
+  function readTardigrades(): Record<TardigradeType, number> {
+    let fromUrl = new URLSearchParams(window.location.search).get("tardigrades");
+    if (fromUrl === null) {
+      try { fromUrl = window.localStorage.getItem(TARDIGRADE_KEY); } catch { /* storage blocked */ }
+    }
+    const counts: Record<TardigradeType, number> = { Claw: 8, Shell: 0, Wing: 0, Eye: 0 };
+    if (fromUrl !== null) {
+      for (const type of TARDIGRADE_TYPES) counts[type] = 0;
+      for (const part of fromUrl.split(";")) {
+        const match = /^(\d+)x(Claw|Shell|Wing|Eye)$/.exec(part);
+        if (match) counts[match[2] as TardigradeType] = Number(match[1]);
+      }
+    }
+    return capTardigrades(counts);
+  }
 
   function loadSavedTeam(): Map<string, number> {
     try {
@@ -377,8 +445,11 @@ export function TeamBuilderPage() {
   useEffect(() => {
     if (!cards) return;
     const fromUrl = decodeTeam(window.location.search);
-    const source = fromUrl.size > 0 ? fromUrl : loadSavedTeam();
+    // An explicit shared link may contain Tardigrades but no character cards.
+    const hasSharedTeam = new URLSearchParams(window.location.search).has("cards");
+    const source = hasSharedTeam ? fromUrl : loadSavedTeam();
     if (source.size === 0) {
+      if (USE_DICE_KINGDOM_CATALOG) setTardigrades(readTardigrades());
       setTeamRestored(true);
       return;
     }
@@ -388,6 +459,7 @@ export function TeamBuilderPage() {
       if (cardById.has(id)) resolved.set(id, count);
     }
     setTeam(resolved);
+    if (USE_DICE_KINGDOM_CATALOG) setTardigrades(readTardigrades());
     setTeamRestored(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cards !== null]);
@@ -403,6 +475,14 @@ export function TeamBuilderPage() {
       // still works, teams just do not survive a restart.
     }
   }, [team, teamRestored]);
+
+  useEffect(() => {
+    if (!teamRestored || !USE_DICE_KINGDOM_CATALOG) return;
+    try {
+      window.localStorage.setItem(TARDIGRADE_KEY,
+        TARDIGRADE_TYPES.map((type) => `${tardigrades[type]}x${type}`).join(";"));
+    } catch { /* no persistence in private mode */ }
+  }, [tardigrades, teamRestored]);
 
   useEffect(() => {
     try {
@@ -439,7 +519,12 @@ export function TeamBuilderPage() {
   // cap" counts as a violation - a team still being built naturally
   // passes through 0/1 Basic Actions or fewer than 8 cards on the way
   // to a complete team, that's not illegal, just incomplete.
-  const caps = useMemo(() => capsFor(ruleset, customCaps), [ruleset, customCaps]);
+  const caps = useMemo(() => {
+      const chosen = capsFor(ruleset, customCaps);
+      return USE_DICE_KINGDOM_CATALOG && ruleset === "standard"
+        ? { ...chosen, basicActions: 1 }
+        : chosen;
+    }, [ruleset, customCaps]);
 
   // How many tiles to draw. Never fewer than the team has cards, so
   // switching Standard -> Freeform (or dropping a Custom cap below the
@@ -579,7 +664,10 @@ export function TeamBuilderPage() {
   }
 
   async function copyTeamLink() {
-    const url = `${window.location.origin}${window.location.pathname}?cards=${encodeTeam(team)}`;
+    const tardigradePart = USE_DICE_KINGDOM_CATALOG
+      ? `&tardigrades=${encodeURIComponent(TARDIGRADE_TYPES.map((type) => `${tardigrades[type]}x${type}`).join(";"))}`
+      : "";
+    const url = `${window.location.origin}${window.location.pathname}?cards=${encodeTeam(team)}${tardigradePart}`;
     await navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -601,6 +689,24 @@ export function TeamBuilderPage() {
     } finally {
       setStarting(false);
     }
+  }
+
+  function playCustomTeam() {
+    if (!legality.ok || tardigradeCount !== MAX_STARTING_TARDIGRADES) return;
+    const warnings: string[] = [];
+    if (basicActionEntries.length === 0) warnings.push("No Basic Action selected.");
+    if (isCapped(caps.cards) && cardCount < caps.cards) {
+      warnings.push(`Only ${cardCount} of ${caps.cards} card slots are filled.`);
+    }
+    if (isCapped(caps.dice) && totalDice < caps.dice) {
+      warnings.push(`Only ${totalDice} of ${caps.dice} character dice are selected.`);
+    }
+    if (warnings.length > 0 && !window.confirm(`${warnings.join("\n")}\n\nPlay with this team anyway?`)) return;
+    stageCustomTeam({
+      cards: teamEntries.map(({ card, count }) => ({ cardId: card.id, diceCount: count })),
+      tardigrades: TARDIGRADE_TYPES.map((energyType) => ({ energyType, diceCount: tardigrades[energyType] })),
+    });
+    navigate(layout === "mobile" ? "/dice-kingdom/mobile" : "/dice-kingdom");
   }
 
   const allTypes = useMemo(() => [...new Set((cards ?? []).map((c) => c.type))].sort(), [cards]);
@@ -746,7 +852,7 @@ export function TeamBuilderPage() {
       chips.push({
         key: `energy:${e}`,
         name: `${e} energy`,
-        label: <><EnergyTypes types={[e]} /> {e}</>,
+        label: <><BuilderEnergyTypes types={[e]} /> {e}</>,
         remove: () => removeFrom(activeEnergyTypes, setActiveEnergyTypes, e),
       });
     }
@@ -839,13 +945,24 @@ export function TeamBuilderPage() {
   const visible = sorted.slice(0, MAX_ROWS);
 
   return (
-    <div className="app">
-      <header className="app-header">
+    <div className="app team-builder-page" data-builder-layout={layout} data-mobile-panel={mobilePanel}>
+      <header className="app-header team-builder-header">
         <h1>DiceFight2026</h1>
-        <button onClick={() => navigate("/game")}>Play Game</button>
+        <span className="builder-layout-note">{layout === "mobile" ? "Mobile" : "Desktop"} layout</span>
+        <ScreenMenu screen="builder" startRoute={USE_DICE_KINGDOM_CATALOG
+          ? layout === "mobile" ? "/dice-kingdom/mobile" : "/dice-kingdom"
+          : "/game"} />
         {error && <div className="error">{error}</div>}
       </header>
 
+      <div className="builder-panel-buttons" role="group" aria-label="Team Builder panels">
+        <button type="button" aria-pressed={mobilePanel === "cards"} aria-controls="builder-catalog"
+          onClick={() => setMobilePanel("cards")}>Browse</button>
+        <button type="button" aria-pressed={mobilePanel === "filters"} aria-controls="builder-filter-options"
+          onClick={() => setMobilePanel("filters")}>Filters{filterChips.length > 0 ? ` (${filterChips.length})` : ""}</button>
+        <button type="button" aria-pressed={mobilePanel === "team"} aria-controls="builder-team"
+          onClick={() => setMobilePanel("team")}>Your team ({team.size})</button>
+      </div>
       <div className="app-layout team-builder-layout">
         {/* The filters live in a rail of their own rather than in a band
             above the results. Stacked above, every section you opened
@@ -857,7 +974,7 @@ export function TeamBuilderPage() {
             <input
               type="text"
               className="rail-search"
-              placeholder="name, text, affiliation…"
+              placeholder={USE_DICE_KINGDOM_CATALOG ? "name or ability text…" : "name, text, affiliation…"}
               title={"Matches name, subtitle, affiliation and rules text.\n\n" +
                      "a & b   both      a | b   either\n" +
                      "~a      exclude   ^a      name starts with"}
@@ -872,7 +989,7 @@ export function TeamBuilderPage() {
             </div>
           </section>
 
-          <section className="rail-panel">
+          <section className="rail-panel" id="builder-filter-options">
             <div className="rail-section">
               <div className="rail-section-head">
                 <h3 className="rail-label">Type</h3>
@@ -905,13 +1022,13 @@ export function TeamBuilderPage() {
                     aria-pressed={activeEnergyTypes.has(t)}
                     onClick={() => toggle(activeEnergyTypes, setActiveEnergyTypes, t)}
                   >
-                    <EnergyTypes types={[t]} /> {t}
+                    <BuilderEnergyTypes types={[t]} /> {t}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="rail-section">
+            {!USE_DICE_KINGDOM_CATALOG && <div className="rail-section">
               <div className="rail-section-head">
                 <h3 className="rail-label">Rarity</h3>
                 <span className="rail-summary">letter + colour</span>
@@ -928,7 +1045,7 @@ export function TeamBuilderPage() {
                   </button>
                 ))}
               </div>
-            </div>
+            </div>}
 
             <div className="rail-section">
               <div className="rail-section-head">
@@ -971,6 +1088,7 @@ export function TeamBuilderPage() {
               <p className="rail-hint">click a cost, drag or shift-click for a range</p>
             </div>
 
+            {!USE_DICE_KINGDOM_CATALOG && <>
             <div className="rail-section">
               <div className="rail-section-head">
                 <h3 className="rail-label">Affiliation</h3>
@@ -1062,14 +1180,16 @@ export function TeamBuilderPage() {
                 <span>Include cards the engine can't run yet</span>
               </label>
             </div>
+            </>}
           </section>
         </aside>
 
-        <div className="main-column">
-          <h2>Team Builder - Card Search</h2>
+        <div className="main-column" id="builder-catalog">
+          <h2>{USE_DICE_KINGDOM_CATALOG ? "Dice Kingdom — Team Builder" : "Team Builder - Card Search"}</h2>
           <p className="hint">
-            Browse the full card catalog. Cards marked "paper only" are not yet modeled by the game engine -
-            searchable and printable here, fine on a table, just not playable in a simulated game.
+            {USE_DICE_KINGDOM_CATALOG
+              ? "All implemented Dice Kingdom cards, including characters not on the current Champion teams. Build, share, or print a custom list here."
+              : 'Browse the full card catalog. Cards marked "paper only" are not yet modeled by the game engine - searchable and printable here, fine on a table, just not playable in a simulated game.'}
           </p>
 
           {/* What is narrowing the results, shown WITH the results. A chip
@@ -1106,7 +1226,7 @@ export function TeamBuilderPage() {
             )}
             <span className="result-sorts">
               <span className="active-filter-label">Sort</span>
-              {SORTS.map((option) => (
+              {SORTS.filter((option) => !USE_DICE_KINGDOM_CATALOG || option.key !== "set").map((option) => (
                 <button
                   key={option.key}
                   className={`sort-chip${sort.key === option.key ? " on" : ""}`}
@@ -1192,7 +1312,7 @@ export function TeamBuilderPage() {
                         {c.energyTypes.length > 0 && (
                           <div className="stat">
                             <span className="stat-caption">energy</span>
-                            <span className="stat-energy"><EnergyTypes types={c.energyTypes} /></span>
+                            <span className="stat-energy"><BuilderEnergyTypes types={c.energyTypes} /></span>
                           </div>
                         )}
                         {c.levels.length > 0 && (
@@ -1233,7 +1353,7 @@ export function TeamBuilderPage() {
           )}
         </div>
 
-        <div className="team-sidebar">
+        <div className="team-sidebar" id="builder-team">
           <div className="team-sidebar-header">
             <h3>Your team</h3>
             <div className="roster-view-toggle" role="group" aria-label="Roster view">
@@ -1260,7 +1380,7 @@ export function TeamBuilderPage() {
                 onClick={() => setRuleset(option.id)}
               >
                 <span className="ruleset-label">{option.label}</span>
-                <span className="ruleset-note">{option.note}</span>
+                <span className="ruleset-note">{USE_DICE_KINGDOM_CATALOG && option.id === "standard" ? "8 cards · 20 dice · 1 BA" : option.note}</span>
               </button>
             ))}
           </div>
@@ -1306,6 +1426,25 @@ export function TeamBuilderPage() {
             <p className={`legality-note${legality.ok ? "" : " over"}`}>{legality.note}</p>
           </div>
 
+          {USE_DICE_KINGDOM_CATALOG && <details className="dk-builder-tardigrades">
+            <summary>
+              <span>Starting Tardigrades</span>
+              <span className="dk-builder-tardigrade-summary">{tardigradeCount}/{MAX_STARTING_TARDIGRADES} Dice</span>
+            </summary>
+            <p className="hint">Choose your starting energy types (up to eight dice total). To switch types when full, remove a die first.</p>
+            <div className="dk-builder-tardigrade-options">
+              {TARDIGRADE_TYPES.map((type) => <div className="dk-builder-tardigrade-option" key={type}>
+                <BuilderEnergyTypes types={[type]} />
+                <span className="dk-builder-tardigrade-name">{type}</span>
+                <button type="button" disabled={tardigrades[type] === 0} aria-label={`Remove ${type} Tardigrade`}
+                  onClick={() => setTardigrades((old) => changeTardigradeCount(old, type, -1))}>−</button>
+                <strong>{tardigrades[type]}</strong>
+                <button type="button" disabled={tardigradeCount >= MAX_STARTING_TARDIGRADES} aria-label={`Add ${type} Tardigrade`}
+                  onClick={() => setTardigrades((old) => changeTardigradeCount(old, type, 1))}>+</button>
+              </div>)}
+            </div>
+          </details>}
+
           {/* The roster drawn as its real SHAPE - one tile per slot the
               ruleset allows, dice as pips - so legality is read at a
               glance rather than parsed out of "3/8 cards, 7/20 dice".
@@ -1335,7 +1474,10 @@ export function TeamBuilderPage() {
                     >
                       <div className="slot-top">
                         <RarityBadge rarity={card.rarity} />
-                        <span className="slot-set">{card.set}</span>
+                        <div className="slot-name-line">
+                          <span className="slot-name" title={card.name}>{card.name}</span>
+                          {card.set && <span className="slot-set">({card.set})</span>}
+                        </div>
                         <button
                           className="slot-remove"
                           onClick={() => removeCard(card.id)}
@@ -1345,11 +1487,10 @@ export function TeamBuilderPage() {
                           ×
                         </button>
                       </div>
-                      <div className="slot-name" title={card.name}>{card.name}</div>
                       {card.subtitle && <div className="slot-subtitle" title={card.subtitle}>{card.subtitle}</div>}
                       <div className="slot-meta">
-                        <span className="slot-cost" title="Purchase cost">{card.purchaseCost}</span>
-                        {card.energyTypes.length > 0 && <EnergyTypes types={card.energyTypes} />}
+                        <span className="slot-cost" title="Purchase cost">Cost {card.purchaseCost}</span>
+                        {card.energyTypes.length > 0 && <BuilderEnergyTypes types={card.energyTypes} />}
                         {card.affiliations.length > 0 && (
                           <span className="slot-affiliations">
                             <AffiliationIcons
@@ -1360,22 +1501,16 @@ export function TeamBuilderPage() {
                           </span>
                         )}
                       </div>
+                      {card.rawText.trim() && <div className="slot-ability"><CardText text={card.rawText} /></div>}
                       <div className="slot-dice">
-                        <button
-                          disabled={count <= 1}
-                          onClick={() => setCount(card.id, count - 1)}
-                          aria-label={`One fewer ${card.name} die`}
-                        >
-                          −
-                        </button>
-                        <DicePips count={count} limit={card.dieLimit} />
-                        <button
-                          disabled={!canIncrement(card, count)}
-                          onClick={() => setCount(card.id, count + 1)}
-                          aria-label={`One more ${card.name} die`}
-                        >
-                          +
-                        </button>
+                        <TeamDiceControls
+                          name={card.name}
+                          count={count}
+                          limit={card.dieLimit}
+                          canIncrease={canIncrement(card, count)}
+                          onDecrease={() => setCount(card.id, count - 1)}
+                          onIncrease={() => setCount(card.id, count + 1)}
+                        />
                       </div>
                     </div>
                   );
@@ -1410,8 +1545,15 @@ export function TeamBuilderPage() {
                           ×
                         </button>
                       </div>
-                      <div className="slot-name" title={card.name}>{card.name}</div>
-                      <div className="slot-ba-dice">{count} dice · outside the dice cap</div>
+                      <div className="slot-name-line">
+                        <span className="slot-name" title={card.name}>{card.name}</span>
+                        {card.set && <span className="slot-set">({card.set})</span>}
+                      </div>
+                      <div className="slot-meta">
+                        <span className="slot-cost" title="Purchase cost">Cost {card.purchaseCost}</span>
+                      </div>
+                      {card.rawText.trim() && <div className="slot-ability"><CardText text={card.rawText} /></div>}
+                      <div className="slot-ba-dice"><FixedDiceDisplay count={count} limit={card.dieLimit} /> <span>· outside the dice cap</span></div>
                     </div>
                   );
                 })}
@@ -1426,42 +1568,31 @@ export function TeamBuilderPage() {
                   <div className="team-card-header">
                     <RarityBadge rarity={card.rarity} />
                     <div className="team-card-identity">
-                      <div className="team-card-name">{card.name}</div>
+                      <div className="team-card-name-line">
+                        <span className="team-card-name">{card.name}</span>
+                        {card.set && <span className="team-card-set">({card.set})</span>}
+                      </div>
                       {card.subtitle && <div className="hint">{card.subtitle}</div>}
                     </div>
-                  {/* "n / max" rather than a bare n: the + button stops at
-                      the die limit, but people who track dice physically
-                      never discover the limit that way. */}
                   {isBasicActionFamily(card) ? (
-                    <span className="team-dice-count" title="Dice used / max dice for this card">
-                      {count}/{card.dieLimit} dice
-                    </span>
+                    <FixedDiceDisplay count={count} limit={card.dieLimit} />
                   ) : (
-                    <span className="team-stepper" title="Dice used / max dice for this card">
-                      <button
-                        disabled={count <= 1}
-                        onClick={() => setCount(card.id, count - 1)}
-                      >
-                        −
-                      </button>
-                      <span className="team-dice-count">
-                        {count}<span className="team-dice-max">/{card.dieLimit}</span>
-                      </span>
-                      <button
-                        disabled={!canIncrement(card, count)}
-                        onClick={() => setCount(card.id, count + 1)}
-                      >
-                        +
-                      </button>
-                    </span>
+                    <TeamDiceControls
+                      name={card.name}
+                      count={count}
+                      limit={card.dieLimit}
+                      canIncrease={canIncrement(card, count)}
+                      onDecrease={() => setCount(card.id, count - 1)}
+                      onIncrease={() => setCount(card.id, count + 1)}
+                    />
                   )}
                   <button className="team-remove-button" onClick={() => removeCard(card.id)}>
                     Remove
                   </button>
                   </div>
                   <div className="team-card-meta">
-                    <span className="team-card-cost" title="Purchase cost">{card.purchaseCost}</span>
-                    <span>{card.energyTypes.length > 0 ? <EnergyTypes types={card.energyTypes} /> : "No energy type"}</span>
+                    <span className="team-card-cost" title="Purchase cost">Cost {card.purchaseCost}</span>
+                    <span>{card.energyTypes.length > 0 ? <BuilderEnergyTypes types={card.energyTypes} /> : "No energy type"}</span>
                     {card.affiliations.length > 0 && (
                       <span><AffiliationIcons codes={card.affiliationIcons} names={card.affiliations} index={affiliationIconIndex} /></span>
                     )}
@@ -1511,7 +1642,7 @@ export function TeamBuilderPage() {
                   <div className="shape-energy-legend">
                     {teamShape.energy.map(({ type, dice }) => (
                       <span key={type} className="shape-energy-item">
-                        <EnergyTypes types={[type]} /> {dice}
+                        <BuilderEnergyTypes types={[type]} /> {dice}
                       </span>
                     ))}
                   </div>
@@ -1555,14 +1686,25 @@ export function TeamBuilderPage() {
           {/* One primary action, everything else demoted to a ghost row.
               Before this, "Start Game" sat third in a stack of equals and
               read as the least important of the three. */}
-          <button
+          {USE_DICE_KINGDOM_CATALOG && tardigradeCount !== MAX_STARTING_TARDIGRADES && (
+            <p className="hint" role="status">
+              Select exactly {MAX_STARTING_TARDIGRADES} starting Tardigrades before playing
+              {` (currently ${tardigradeCount}/${MAX_STARTING_TARDIGRADES}).`}
+            </p>
+          )}
+          {!USE_DICE_KINGDOM_CATALOG ? <button
             className="team-play-button"
             disabled={team.size === 0 || !legality.ok || starting}
             title={team.size === 0 ? "Add some cards first." : !legality.ok ? legality.note : undefined}
             onClick={startGame}
           >
             {starting ? "Starting..." : "Play with this team"}
-          </button>
+          </button> : <button className="team-play-button"
+            disabled={!legality.ok || tardigradeCount !== MAX_STARTING_TARDIGRADES}
+            title={tardigradeCount !== MAX_STARTING_TARDIGRADES
+              ? `Select exactly ${MAX_STARTING_TARDIGRADES} starting Tardigrades before playing.`
+              : !legality.ok ? legality.note : undefined}
+            onClick={playCustomTeam}>Play with this team</button>}
 
           <div className="team-secondary-actions">
             <button onClick={copyTeamLink} disabled={team.size === 0}>
@@ -1575,17 +1717,22 @@ export function TeamBuilderPage() {
             >
               Print list
             </button>
-            <button
+            {!USE_DICE_KINGDOM_CATALOG && <button
               onClick={copyOldTeamLink}
               disabled={team.size === 0}
               title={`Opens the team in the old Teambuilder at ${OLD_TEAM_BUILDER_URL}, which has card images.`}
             >
               {copiedOld ?? "Old builder"}
-            </button>
+            </button>}
             <button
-              disabled={team.size === 0}
+              disabled={team.size === 0 && (!USE_DICE_KINGDOM_CATALOG || tardigradeCount === 0)}
               onClick={() => {
-                if (window.confirm("Remove all cards from this team?")) setTeam(new Map());
+                if (window.confirm(USE_DICE_KINGDOM_CATALOG
+                  ? "Remove all cards from this team and reset all Tardigrades to 0?"
+                  : "Remove all cards from this team?")) {
+                  setTeam(new Map());
+                  if (USE_DICE_KINGDOM_CATALOG) setTardigrades({ Claw: 0, Shell: 0, Wing: 0, Eye: 0 });
+                }
               }}
             >
               Clear
@@ -1599,7 +1746,7 @@ export function TeamBuilderPage() {
               A team sheet for physical play wants the opposite: the cards,
               their dice counts, and the text, in ink you can read. */}
           <div className="team-print-sheet" aria-hidden="true">
-            <h1>Dice Masters team</h1>
+            <h1>{USE_DICE_KINGDOM_CATALOG ? "Dice Kingdom team" : "Dice Masters team"}</h1>
             <p className="team-print-summary">
               {cardCount} {cardCount === 1 ? "card" : "cards"} · {totalDice} dice ·{" "}
               {basicActionEntries.length} basic {basicActionEntries.length === 1 ? "action" : "actions"} ·{" "}

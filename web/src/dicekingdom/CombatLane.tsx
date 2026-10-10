@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from "react";
-import { DieCube, type CubeSpin } from "./DieCube";
-import { facesFor } from "./dieFaces";
+import type { CubeSpin } from "./DieCube";
+import { DieVisual } from "./DieVisual";
 import { characterFaceInfo } from "./dieHelpers";
 import { CardDetailPopover } from "./CardDetailPopover";
 import type { BlockAssignment, CardDef, Die } from "./types";
@@ -67,14 +67,8 @@ function EngagementDie(props: {
         onClick={() => { if (!props.targeting || targetable) props.onGroupClick([die.id]); }}
         onContextMenu={(e) => { e.preventDefault(); setShowInfo((v) => !v); }}
         title="Right-click to inspect die">
-        <DieCube
-          {...facesFor(die, cardsById)}
-          size={props.size}
-          mine={props.mine}
-          spin={props.spins?.[die.id]}
-          turnOffset={props.turnOffsets?.[die.id]}
-          energyCorner={die.energySymbolId && die.energyAmount > 0 ? { type: die.energySymbolId, amount: die.energyAmount } : undefined}
-        />
+        <DieVisual die={die} cardsById={cardsById} size={props.size} mine={props.mine}
+          spin={props.spins?.[die.id]} turnOffset={props.turnOffsets?.[die.id]} />
       </button>
       {showInfo && <CardDetailPopover card={die.cardId ? cardsById.get(die.cardId) : undefined} die={die} placement={props.mine ? "up" : "down"} />}
     </div>

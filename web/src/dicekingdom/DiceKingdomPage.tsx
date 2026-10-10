@@ -1,5 +1,8 @@
+import { CUSTOM_TEAM_PICK, pendingCustomTeam } from "./customTeams";
+import { CustomTeamSetupChoice } from "./CustomTeamSetupChoice";
 import { startTransition, useEffect, useRef, useState } from "react";
 import "./dicekingdom.css";
+import { ScreenMenu } from "../ScreenMenu";
 import { api, apiAs } from "./api";
 import { CHAMPION_ICONS, CHARACTER_ICONS, EnergyBadge, HelpIcon, TardigradeIcon } from "./icons";
 import { describeSavedGame, forgetSeats, inviteLink, myLink, rememberSeats } from "./seats";
@@ -7,12 +10,13 @@ import { GameOverOverlay } from "./GameOverOverlay";
 import { OPPONENT_PICKS, PickYourChampion, ResumeGames, WaitingForOpponent, resolveInvite } from "./lobby";
 import { ChampionPicker } from "./ChampionPicker";
 import { CombatLane } from "./CombatLane";
-import { DieCube, type CubeSpin } from "./DieCube";
+import type { CubeSpin } from "./DieCube";
+import { DieVisual } from "./DieVisual";
+import { displayModeFor, dieIdentityKey, ROLLED_ZONES } from "./dieDisplay";
 import { facesFor } from "./dieFaces";
 import { explainRows, tileCues } from "./statusCues";
 import { CardDetailPopover } from "./CardDetailPopover";
 import { DieFramesLegend, legendSeen } from "./DieFramesLegend";
-import { SpinFlash, useSpinFlash } from "./SpinFlash";
 import { StepRibbon } from "./StepRibbon";
 import { MatchLog } from "./MatchLog";
 import { SettingsMenu, ThemeToggle, useTheme } from "./ThemeToggle";
@@ -22,6 +26,7 @@ import { classifyDieMotion, remoteRolledIds } from "./dieMotion";
 import { activeCouldAct, botDecisionCall, decisionOwner, rolled } from "./bot";
 import { basicActionStock, executeAbility, getAbilityOptions, type AbilityCommand } from "./sharedAbilities";
 import { isReservePaymentDie } from "./reservePayment";
+import { evaluateSelectedPayment } from "./selectedPayment";
 import { SharedAbilityPanel } from "./SharedAbilityPanel";
 import type { BlockAssignment, BotDecision, CardDef, Die, GameState, LobbyStatus, PlayerState } from "./types";
 
@@ -50,20 +55,6 @@ interface Selection {
 }
 const EMPTY_SELECTION: Selection = { primary: null, secondary: [] };
 
-// The only zones where a die is actually showing a rolled face (rule
-// 1.5, mirrors ../PlayerBoard.tsx's own ROLLED_ZONES) - everywhere else
-// a die is unrolled, spent, or sitting on its card, so it's shown as
-// plain and collapsible even if the DTO still carries a stale face from
-// before it left a rolled zone. Gating this by zone rather than trusting
-// effectiveAttack directly is what fixes a spent/KO'd die still showing
-// its last rolled stats in the Used Pile.
-const ROLLED_ZONES = new Set(["ReservePool", "PrepArea", "FieldZone", "AttackZone", "Intimidated"]);
-// Used Pile/Out of Play tiles show only the card/Tardigrade icon (see
-// DieTile's own remarks) - shared here so groupDice can group them by
-// that same identity alone, ignoring whatever face they happened to be
-// on when they left play (see groupDice's own comment).
-const ICON_ONLY_ZONES = new Set(["UsedPile", "OutOfPlay", "PrepArea", "DiceFromBag", "DiceFromPrep"]);
-
 // What the rail's "Now" header says for each step - ported from
 // ../TurnRail.tsx's STEP_GUIDANCE/ATTACK_SUB_STEPS. Real feedback: the
 // rail was showing a bare action button with no title or description at
@@ -86,27 +77,14 @@ interface DieGroup {
   ids: string[];
 }
 
-// Collapses dice that are truly interchangeable right now into one card
-// with a count badge - mirrors ../dieHelpers.ts's groupDice. Applied to
-// the piles (Bag/Used Pile/Out of Play) where a small pool means several
-// identical Tardigrades are common; never to a rolled zone, where each
-// die's own face is the point.
-function groupDice(dice: Die[], zone: string): DieGroup[] {
+// Stack matching identity tiles; rolled dice keep their individual faces.
+function groupDice(dice: Die[], zone: string, cardsById: Map<string, CardDef>): DieGroup[] {
   if (ROLLED_ZONES.has(zone)) {
     return dice.map((d) => ({ key: d.id, sample: d, count: 1, ids: [d.id] }));
   }
-  // Icon-only piles show identity alone, nothing else - direct feedback
-  // (2026-09-10): "they're all the same die, so... they could be
-  // grouped all together." Grouping on the rolled-face fields below
-  // (still right for Bag, whose popover shows real stats) split
-  // identical Tardigrades that happened to leave play on different
-  // faces into separate piles, even though the tile itself no longer
-  // shows any of that.
   const groups = new Map<string, DieGroup>();
   for (const d of dice) {
-    const key = ICON_ONLY_ZONES.has(zone)
-      ? (d.cardId ?? "tardigrade")
-      : [d.cardId ?? "tardigrade", d.level, d.effectiveAttack, d.effectiveDefense, d.energySymbolId, d.energyAmount].join("|");
+    const key = dieIdentityKey(d, cardsById);
     const existing = groups.get(key);
     if (existing) {
       existing.count += 1;
@@ -288,6 +266,8 @@ function DieTile({
   spin,
   turnOffset,
   fieldPrompt,
+  fieldButtonLabel,
+  fieldButtonDisabled,
   onStartField,
   actionPrompt,
   onStartAction,
@@ -315,6 +295,8 @@ function DieTile({
   turnOffset?: number;
   /** In Main, choosing a creature exposes Field below its tile before payment starts. */
   fieldPrompt?: boolean;
+  fieldButtonLabel?: string;
+  fieldButtonDisabled?: boolean;
   onStartField?: () => void;
   /** In Main or an attack action window, an action-face die can be activated here. */
   actionPrompt?: boolean;
@@ -337,42 +319,25 @@ function DieTile({
     document.addEventListener("pointerdown", handlePointerDown);
     return () => document.removeEventListener("pointerdown", handlePointerDown);
   }, [showInfo]);
-  const isRolled = ROLLED_ZONES.has(zone) && rolled(die);
+  const isRolled = displayModeFor(die, zone) === "3d";
   const inPlay = zone === "FieldZone" || zone === "AttackZone" || zone === "Intimidated";
   const cues = inPlay ? tileCues(die, cardsById, mine ?? true) : undefined;
   const cueRows = inPlay ? explainRows(die, mine ?? true) : [];
-  const spinFlash = useSpinFlash(die);
   const card = die.cardId ? cardsById.get(die.cardId) : undefined;
   const name = die.cardId ? (card?.name ?? die.cardId) : "Tardigrade";
   const cls = ["dietile", clickable ? "clickable" : "", picked ? "picked" : "", targetable ? "choice-targetable" : "", choiceActive && !targetable ? "choice-inactive" : ""].filter(Boolean).join(" ");
   const style = accent ? ({ textAlign: "center", ["--cc" as string]: accent, color: accent } as const) : { textAlign: "center" as const };
-  // Direct feedback (2026-09-08): "the Level probably isn't need-to-know
-  // information... provide that on a click." The die-cube itself already
-  // prints the real attack/defense/cost numbers on its face (see
-  // DieCube.tsx), so the level number below it was pure repetition -
-  // dropped for a stat face entirely to shrink the tile. A Tardigrade's
-  // energy face used to print "Surge" here too, but direct feedback
-  // (2026-09-10) dropped that as well - the energy corner circle already
-  // says what it is. A Character's own energy face still prints its
-  // name, since that's the only thing on that face saying whose die it is.
-  const label = labelOverride ?? (die.effectiveAttack === null && !die.isTardigrade ? name : null);
-  const Avatar = die.cardId ? CHARACTER_ICONS[die.cardId] : null;
+  const label = labelOverride;
   // During selection, left-click still selects the die. Right-click always
   // opens the same inspector used by the roster without changing selection.
   const canShowInfo = isRolled && !clickable && !choiceActive;
-  // Direct feedback (2026-09-10): "when in 'Out of Play' or 'Used Pile'
-  // rather than take up space with the word we should just put the
-  // character symbol... just the symbol, though, no stats or energy."
-  // Unlike Bag/Drawn/Carried, these two piles accumulate the most dice
-  // over a game, so they're the ones that actually benefit from
-  // dropping the text row.
-  const iconOnly = ICON_ONLY_ZONES.has(zone);
   return (
     <div ref={wrapRef} className={`dietile-wrap${showInfo ? " info-open" : ""}${targetable ? " choice-targetable" : ""}`}>
       <button
         type="button"
         className={cls}
-        data-fly-id={ROLLED_ZONES.has(zone) || zone === "DiceFromBag" || zone === "DiceFromPrep" ? `die:${die.id}` : undefined}
+        aria-label={name}
+        data-fly-id={ROLLED_ZONES.has(zone) || zone === "PrepArea" || zone === "DiceFromBag" || zone === "DiceFromPrep" ? `die:${die.id}` : undefined}
         onClick={clickable ? onClick : canShowInfo ? () => setShowInfo((v) => !v) : undefined}
         onContextMenu={(e) => {
           e.preventDefault();
@@ -381,60 +346,19 @@ function DieTile({
         title={clickable && isRolled ? "Left-click to select; right-click for card details" : "Right-click for card details"}
         style={style}
       >
-        {count && count > 1 && <span className="chip-count">×{count}</span>}
-        {!isRolled ? (
-          iconOnly ? (
-            <div className="tile-icon">{Avatar ? <Avatar size={24} /> : <TardigradeIcon size={24} />}</div>
-          ) : (
-            <>
-              <div className="lbl">{name}</div>
-              <div className="stat">—</div>
-            </>
-          )
-        ) : (
-          <>
-            {/* The same 3D cube /game's board uses (../DieCube.tsx), not a
-                flat stat badge - a rolled die is a physical object showing
-                a real face, not text about one. In the die's own lower-
-                left corner now, not a separate box below it - direct
-                feedback (2026-09-09): "the energy ended up in the wrong
-                place. It's supposed to be in the lower left hand corner
-                INSIDE the die itself." */}
-            <DieCube
-              {...facesFor(die, cardsById)}
-              size={34}
-              mine={mine ?? true}
-              spin={spin}
-              turnOffset={turnOffset}
-              energyCorner={
-                die.energySymbolId && die.energyAmount > 0
-                  ? { type: die.energySymbolId, amount: die.energyAmount }
-                  : undefined
-              }
-              cues={cues}
-            />
-            <SpinFlash flash={inPlay ? spinFlash : null} />
-            {label && <div className="lbl">{label}</div>}
-            {/* Status cues (2026-10-03): the top cue's word, in the slot
-                "Must block" used to have. Click the die for why. */}
-            {cues?.word && <div className="lbl dk-cue-word">{cues.word}</div>}
-            {/* Damage marked on a die in play - see the mobile page's
-                identical badge (2026-09-30). */}
-            {(die.damage ?? 0) > 0 && (zone === "FieldZone" || zone === "AttackZone") && (
-              <span key={die.damage} className="dk-damage-badge" title={`${die.damage} damage marked - clears at the end of the turn`}>
-                −{die.damage}
-              </span>
-            )}
-          </>
-        )}
+        <DieVisual die={die} cardsById={cardsById} zone={zone} size={34} mine={mine ?? true}
+          count={count} spin={spin} turnOffset={turnOffset} />
+        {label && <div className="lbl">{label}</div>}
+        {cues?.word && <div className="lbl dk-cue-word">{cues.word}</div>}
       </button>
       {fieldPrompt && onStartField && (
         <button
           type="button"
           className="dk-tile-field-start"
+          disabled={fieldButtonDisabled}
           onClick={(event) => { event.stopPropagation(); onStartField(); }}
         >
-          Field
+          {fieldButtonLabel ?? "Field"}
         </button>
       )}
       {actionPrompt && onStartAction && (
@@ -544,7 +468,7 @@ export function DiceKingdomPage() {
   const oppRowRef = useRef<HTMLDivElement>(null);
   const flightRootRef = useRef<HTMLDivElement>(null);
   const yourRowRef = useRef<HTMLDivElement>(null);
-  const [setupA, setSetupA] = useState<string | null>(null);
+  const [setupA, setSetupA] = useState<string | null>(() => pendingCustomTeam() ? CUSTOM_TEAM_PICK : null);
   const [setupB, setSetupB] = useState<string | null>(null);
   // Player Two becomes a basic rule-based opponent instead of a second
   // human seat - see bot.ts. Fixed to player two rather than "whichever
@@ -574,9 +498,10 @@ export function DiceKingdomPage() {
     ? `${game.gameId}|${game.pendingChoice.controllerId}|${game.pendingChoice.intent}|${game.pendingChoice.description}|${game.pendingChoice.candidateIds.join(",")}`
     : null;
   useEffect(() => setChoicePicked([]), [choiceKey]);
-  // Desktop fielding starts from the selected creature's own Field button;
-  // energy dice are not selectable until the player requests payment.
-  const [fieldPaymentDieId, setFieldPaymentDieId] = useState<string | null>(null);
+  // Both Purchase and Field have an explicit payment stage. Merely choosing
+  // a roster card or creature is not a commitment; their local button starts
+  // payment, and becomes Confirm once that stage begins.
+  const [paymentForId, setPaymentForId] = useState<string | null>(null);
   // Dice that already used their one reroll this Roll & Reroll step - the
   // server doesn't say, so this is tracked client-side (see
   // TurnEngine.RerolledThisStep) and reset whenever the step changes.
@@ -635,13 +560,16 @@ export function DiceKingdomPage() {
   useEffect(() => {
     if (!openCardId) return;
     function handlePointerDown(e: PointerEvent) {
+      // The roster's Confirm button must remain available while selecting
+      // payment dice on the board. Cancel/completion dismisses it explicitly.
+      if (paymentForId && gameRef.current?.dice.some((d) => d.id === paymentForId && d.zone === "Unpurchased")) return;
       if (!(e.target instanceof Element) || !e.target.closest(".roster-chip-wrap")) {
         setOpenCardId(null);
       }
     }
     document.addEventListener("pointerdown", handlePointerDown);
     return () => document.removeEventListener("pointerdown", handlePointerDown);
-  }, [openCardId]);
+  }, [openCardId, paymentForId]);
 
   useEffect(() => {
     api.getCards().then((cards) => setCardsById(new Map(cards.map((c) => [c.id, c]))));
@@ -764,12 +692,13 @@ export function DiceKingdomPage() {
 
   function clearSelection() {
     setSelection(EMPTY_SELECTION);
-    setFieldPaymentDieId(null);
+    setPaymentForId(null);
+    setOpenCardId(null);
   }
 
   function selectReserveDie(die: Die) {
     const selectedPrimary = game?.dice.find((candidate) => candidate.id === selection.primary) ?? null;
-    if (step === "main" && isReservePaymentDie(die, selectedPrimary, fieldPaymentDieId)) {
+    if (step === "main" && isReservePaymentDie(die, selectedPrimary, paymentForId)) {
       // Some character faces show both stats and energy. Once a purchase
       // or Field payment has begun, their energy must take priority over
       // selecting a new creature to field.
@@ -779,14 +708,16 @@ export function DiceKingdomPage() {
     if ((step === "main" || step === "action-global-window") && die.zone === "ReservePool" && die.isActionFace) {
       // Action-face dice are not creatures. Select them for their Use
       // action without entering the fielding or payment workflows.
-      setFieldPaymentDieId(null);
+      setPaymentForId(null);
+      setOpenCardId(null);
       setSelection((previous) => previous.primary === die.id ? EMPTY_SELECTION : { primary: die.id, secondary: [] });
       return;
     }
     if (step === "main" && die.zone === "ReservePool" && rolled(die) && die.effectiveAttack !== null) {
       // Outside a payment workflow, choosing another creature changes
       // the primary and exposes that creature's own Field button.
-      setFieldPaymentDieId(null);
+      setPaymentForId(null);
+      setOpenCardId(null);
       setSelection((previous) => previous.primary === die.id ? EMPTY_SELECTION : { primary: die.id, secondary: [] });
       return;
     }
@@ -1027,6 +958,10 @@ export function DiceKingdomPage() {
 
   async function startMatch() {
     if (!setupA || !setupB) return;
+    if (setupB === OPPONENT_PICKS && setupA === CUSTOM_TEAM_PICK) {
+      setError("Online invitations for custom teams are not supported yet. Choose Player 2's Champion for a local or computer match.");
+      return;
+    }
     if (setupB === OPPONENT_PICKS) {
       // Online game with only your own Champion - see lobby.tsx.
       try {
@@ -1039,7 +974,10 @@ export function DiceKingdomPage() {
       return;
     }
     await run(async () => {
-      const created = await api.createGame(setupA, setupB);
+      const custom = setupA === CUSTOM_TEAM_PICK ? pendingCustomTeam() : null;
+      const created = custom
+        ? await api.createCustomGame(custom, setupB)
+        : await api.createGame(setupA, setupB);
       rememberSeats(created.game.gameId, created.seats);
       return created.game;
     });
@@ -1085,6 +1023,7 @@ export function DiceKingdomPage() {
   if (!game) {
     return (
       <div className="dicekingdom">
+        <div className="start-screen-navigation"><ScreenMenu screen="start" startRoute="/dice-kingdom" /></div>
         <div className="dk-titlebar-right" style={{ float: "right" }}>
           <ThemeToggle theme={theme} setTheme={setTheme} />
         </div>
@@ -1133,12 +1072,12 @@ export function DiceKingdomPage() {
             ].map(({ label, value, setValue }) => (
               <div className="champ-pick-column" key={label}>
                 <h3 style={{ margin: "0 0 10px" }}>{label}</h3>
-                <ChampionPicker
-                  champions={CHAMPIONS}
-                  value={value}
-                  onPick={setValue}
-                  allowOpponentPicks={setValue === setSetupB && !vsComputer}
-                />
+                {setValue === setSetupA && pendingCustomTeam()
+                  ? <CustomTeamSetupChoice champions={CHAMPIONS} team={pendingCustomTeam()}
+                      value={value} onPick={(next) => { setValue(next); if (next === CUSTOM_TEAM_PICK && setupB === OPPONENT_PICKS) setSetupB(null); }} />
+                  : <ChampionPicker champions={CHAMPIONS} value={value} onPick={setValue}
+                      allowOpponentPicks={setValue === setSetupB && !vsComputer && setupA !== CUSTOM_TEAM_PICK} />}
+
               </div>
             ))}
           </div>
@@ -1212,24 +1151,17 @@ export function DiceKingdomPage() {
     }
     if (step === "main") {
       if (selection.primary === null) return d.zone === "ReservePool" && rolled(d) &&
-        (d.effectiveAttack !== null || !!d.isActionFace); // select creature or action die
-      if (d.id === selection.primary) return true; // toggle off
-      const primary = game!.dice.find((candidate) => candidate.id === selection.primary);
-      if (primary?.zone === "ReservePool" && primary.effectiveAttack !== null) {
-        // Another creature can replace the selection at any time; energy
-        // only becomes clickable once Field is pressed beneath the die.
-        return (d.zone === "ReservePool" && rolled(d) &&
-          (d.effectiveAttack !== null || (!!d.isActionFace && fieldPaymentDieId === null))) ||
-          isReservePaymentDie(d, primary, fieldPaymentDieId);
+        (d.effectiveAttack !== null || !!d.isActionFace);
+      const primary = game!.dice.find((candidate) => candidate.id === selection.primary) ?? null;
+      if (paymentForId === selection.primary) {
+        // Once Field/Purchase has been pressed, only payment dice can be
+        // selected; character faces that also carry energy still qualify.
+        return isReservePaymentDie(d, primary, paymentForId);
       }
-      if (primary?.zone === "ReservePool" && primary.isActionFace) {
-        // An Action die is a single selected die, not an exclusive mode.
-        // Allow the next creature or Action die to become the primary
-        // immediately; selectReserveDie already replaces that selection.
-        return d.zone === "ReservePool" && rolled(d) &&
-          (d.effectiveAttack !== null || !!d.isActionFace);
-      }
-      return d.energyAmount > 0; // purchase payment
+      // Before an action starts, selecting a different creature/action die
+      // replaces the primary, even if it was an unpurchased roster die.
+      return d.zone === "ReservePool" && rolled(d) &&
+        (d.effectiveAttack !== null || !!d.isActionFace);
     }
     return false;
   }
@@ -1289,7 +1221,7 @@ export function DiceKingdomPage() {
           {note && <span className="zone-note">{note}</span>}
           <div className="dierow">
             {dice.length === 0 && <span style={{ opacity: 0.5, fontSize: 12 }}>empty</span>}
-            {groupDice(dice, zoneName).map((g) => (
+            {groupDice(dice, zoneName, cardsById).map((g) => (
               <DieTile key={g.key} die={g.sample} zone={zoneName} count={g.count} cardsById={cardsById} accent={accent} />
             ))}
           </div>
@@ -1333,7 +1265,7 @@ export function DiceKingdomPage() {
               <h5>Contents known, order is not</h5>
               <div className="dierow">
                 {dice.length === 0 && <span style={{ opacity: 0.5, fontSize: 12 }}>empty</span>}
-                {groupDice(dice, "Bag").map((g) => (
+                {groupDice(dice, "Bag", cardsById).map((g) => (
                   <DieTile key={g.key} die={g.sample} zone="Bag" count={g.count} cardsById={cardsById} accent={accent} />
                 ))}
               </div>
@@ -1362,7 +1294,7 @@ export function DiceKingdomPage() {
             <div className="bag-popover down">
               <div className="dierow">
                 {dice.length === 0 && <span style={{ opacity: 0.5, fontSize: 12 }}>empty</span>}
-                {groupDice(dice, zoneName).map((g) => (
+                {groupDice(dice, zoneName, cardsById).map((g) => (
                   <DieTile key={g.key} die={g.sample} zone={zoneName} count={g.count} cardsById={cardsById} accent={accent} />
                 ))}
               </div>
@@ -1412,12 +1344,18 @@ export function DiceKingdomPage() {
                   targetable={inlineDieChoice && choiceCandidates.has(d.id)}
                   label={already ? "rerolled" : undefined}
                   onClick={() => inlineDieChoice ? toggleChoice(d.id) : selectReserveDie(d)}
-                  fieldPrompt={zoneName === "ReservePool" && playerId === you && step === "main" && isYourTurn && game!.priorityPlayerId === you && !game!.pendingChoice && !busy && d.id === selection.primary && d.effectiveAttack !== null && rolled(d) && fieldPaymentDieId !== d.id}
+                  fieldPrompt={zoneName === "ReservePool" && playerId === you && step === "main" && isYourTurn && game!.priorityPlayerId === you && !game!.pendingChoice && !busy && d.id === selection.primary && d.effectiveAttack !== null && rolled(d)}
+                  fieldButtonLabel={paymentForId === d.id ? "Confirm" : "Field"}
+                  fieldButtonDisabled={paymentForId === d.id && !paymentReady}
                   onStartField={() => {
-                    if (costFor(d).amount === 0) {
+                    if (paymentForId === d.id) {
+                      if (paymentReady && action) void run(action.run);
+                    } else if (costFor(d).amount === 0) {
+                      // Zero-cost creatures field immediately, as before.
                       void run(() => api.field(game!.gameId, d.id, []));
                     } else {
-                      setFieldPaymentDieId(d.id);
+                      setPaymentForId(d.id);
+                      setSelection({ primary: d.id, secondary: [] });
                     }
                   }}
                   actionPrompt={zoneName === "ReservePool" && playerId === you &&
@@ -1606,7 +1544,14 @@ export function DiceKingdomPage() {
                   className={`roster-chip${detailOpen ? " open" : ""}${picked || cardChoicePicked ? " picked" : ""}${lockers ? " dk-locked" : ""}${namedChoiceId ? " choice-targetable" : ""}`}
                   title={lockers ? `Locked out by ${lockers.join(", ")} - can't be bought or fielded while that's active.` : undefined}
                   style={!basic && accent ? ({ ["--cc" as string]: accent } as const) : undefined}
-                  onClick={() => namedChoiceId ? toggleChoice(namedChoiceId) : setOpenCardId((c) => (c === openKey ? null : openKey))}
+                  onClick={() => {
+                    if (namedChoiceId) { toggleChoice(namedChoiceId); return; }
+                    if (paymentForId !== null) return; // payment stays active until Confirm/Cancel
+                    setOpenCardId((current) => current === openKey ? null : openKey);
+                    if (canPurchaseNow) {
+                      setSelection((previous) => previous.primary === dieId ? EMPTY_SELECTION : { primary: dieId, secondary: [] });
+                    }
+                  }}
                   onContextMenu={(e) => { if (namedChoiceId) { e.preventDefault(); setOpenCardId((c) => c === openKey ? null : openKey); } }}
                 >
                   {Avatar && <Avatar size={18} />}
@@ -1623,9 +1568,19 @@ export function DiceKingdomPage() {
                     fallbackName={cardId}
                     purchaseCost={cardId ? game!.purchaseCosts?.[cardId] : undefined}
                     purchase={canPurchaseNow ? {
-                      label: picked ? "Selected" : "Purchase",
-                      disabled: busy || !!lockers || (selection.primary !== null && selection.primary !== dieId),
-                      onClick: () => { if (dieId) toggleDie(dieId); },
+                      label: picked && paymentForId === dieId ? "Confirm" : "Purchase",
+                      disabled: busy || !!lockers || !picked || (paymentForId === dieId && !paymentReady),
+                      onClick: () => {
+                        if (!dieId || !picked) return;
+                        if (paymentForId === dieId) {
+                          if (paymentReady && action) void run(action.run);
+                        } else if ((game!.purchaseCosts?.[cardId] ?? card?.purchaseCost ?? 0) === 0) {
+                          void run(() => api.purchase(game!.gameId, dieId, []));
+                        } else {
+                          setPaymentForId(dieId);
+                          setSelection({ primary: dieId, secondary: [] });
+                        }
+                      },
                     } : undefined}
                   />
                 )}
@@ -1840,10 +1795,10 @@ export function DiceKingdomPage() {
         },
       };
     }
-    if (step === "main" && primaryDie.zone === "Unpurchased") {
+    if (step === "main" && primaryDie.zone === "Unpurchased" && paymentForId === primaryDie.id) {
       return { label: "Purchase", run: () => api.purchase(game!.gameId, primaryDie.id, secondaryIds) };
     }
-    if (step === "main" && primaryDie.zone === "ReservePool" && rolled(primaryDie) && primaryDie.effectiveAttack !== null && fieldPaymentDieId === primaryDie.id) {
+    if (step === "main" && primaryDie.zone === "ReservePool" && rolled(primaryDie) && primaryDie.effectiveAttack !== null && paymentForId === primaryDie.id) {
       // Golden Eagle (2026-10-04): with no energy picked, field it free.
       const me = you === game!.playerOne.id ? game!.playerOne : game!.playerTwo; // (yourPlayer is declared further down)
       if (secondaryIds.length === 0 && me.freeFieldAvailable && costFor(primaryDie).amount > 0)
@@ -1854,9 +1809,16 @@ export function DiceKingdomPage() {
   }
   const action = selectionAction();
   const cost = primaryDie ? costFor(primaryDie) : null;
-  const spent = primaryDie
-    ? selection.secondary.reduce((sum, id) => sum + (game.dice.find((d) => d.id === id)?.energyAmount ?? 0), 0)
-    : 0;
+  const paymentDice = selection.secondary.flatMap((id) => game.dice.filter((d) => d.id === id));
+  const spent = paymentDice.reduce((sum, d) => sum + d.energyAmount, 0);
+  const virtualEnergy = (you === game.playerOne.id ? game.playerOne : game.playerTwo).virtualEnergy ?? 0;
+  const purchaseTypes = primaryDie?.zone === "Unpurchased" && primaryDie.cardId
+    ? cardsById.get(primaryDie.cardId)?.energyTypes ?? [] : [];
+  const payment = cost && primaryDie ? evaluateSelectedPayment(paymentDice, cost.amount, purchaseTypes, virtualEnergy) : null;
+  const freeField = paymentForId === primaryDie?.id && primaryDie?.zone === "ReservePool" &&
+    cost !== null && cost.amount > 0 && selection.secondary.length === 0 &&
+    !!(you === game.playerOne.id ? game.playerOne : game.playerTwo).freeFieldAvailable;
+  const paymentReady = paymentForId === primaryDie?.id && (payment?.ready === true || freeField);
 
   // Whatever the current step needs from the player - pulled out of the
   // rail's JSX into a plain value (2026-09-08) so it can be placed EITHER
@@ -1964,11 +1926,8 @@ export function DiceKingdomPage() {
 
         {step === "main" && (
           <>
-            {action && (
-              <button className="btn" disabled={busy || (!action.freeField && cost !== null && spent < cost.amount)} onClick={() => run(action.run, action.rolledIds)}>
-                {action.label}
-              </button>
-            )}
+            {/* Field/Purchase confirmation is beside the selected die/card,
+                not duplicated here in the Main-phase controls. */}
             {primaryDie && (
               <button className="btn ghost" disabled={busy} onClick={clearSelection}>
                 Cancel
@@ -2130,6 +2089,7 @@ export function DiceKingdomPage() {
         <div className="dk-titlebar-right">
           <HowToPlayMenu onOpenLegend={() => setLegendOpen(true)} />
           <SettingsMenu theme={theme} setTheme={setTheme} />
+          <ScreenMenu screen="game" startRoute="/dice-kingdom" onStartGame={() => setGame(null)} />
         </div>
       </div>
 
@@ -2150,7 +2110,7 @@ export function DiceKingdomPage() {
               onExecute={doAbility}
               nameOf={(d) => (d.cardId ? cardsById.get(d.cardId)?.name : null) ?? "Tardigrade"}
               actionTextOf={(d) => d.cardId ? cardsById.get(d.cardId)?.actionText : null}
-              renderDie={(d) => <DieCube {...facesFor(d, cardsById)} size={34} mine />}
+              renderDie={(d) => <DieVisual die={d} cardsById={cardsById} size={34} mine />}
             />
           </div>
         </div>
@@ -2192,11 +2152,17 @@ export function DiceKingdomPage() {
                 : game.pendingChoice ? (vsComputer ? "Computer is choosing…" : "Waiting for the other player's choice…")
                 : step === "select-attackers"
                 ? "Declare Attackers"
-                : step === "main" && primaryDie && primaryDie.zone === "ReservePool" && primaryDie.effectiveAttack !== null && fieldPaymentDieId !== primaryDie.id
-                  ? "Select Field beneath the die to begin payment"
-                  : step === "main" && primaryDie && action && cost
-                    ? `${action.label} ${action.freeField ? "— free" : cost.amount > 0 ? `— cost ${cost.amount}${cost.matchType ? ` ${cost.matchType}` : ""} (${spent}/${cost.amount} selected)` : "— free"}`
-                    : ""}
+                : step === "main" && primaryDie && paymentForId === primaryDie.id && cost && payment
+                  ? freeField
+                    ? "Golden Eagle: Confirm to field free, or select energy to pay normally"
+                    : paymentReady
+                      ? `${primaryDie.zone === "Unpurchased" ? "Purchase" : "Field"} ready — press Confirm beside the ${primaryDie.zone === "Unpurchased" ? "card" : "die"}`
+                      : `Select payment — cost ${cost.amount}${purchaseTypes.length ? ` ${purchaseTypes.join(" / ")}` : ""} (${spent} energy selected${virtualEnergy ? `, ${virtualEnergy} virtual available` : ""})${payment.typeMissing ? "; matching energy required" : ""}`
+                  : step === "main" && primaryDie?.zone === "Unpurchased"
+                    ? "Select Purchase on the roster card to begin payment"
+                    : step === "main" && primaryDie?.zone === "ReservePool" && primaryDie.effectiveAttack !== null
+                      ? "Select Field beneath the die to begin payment"
+                      : ""}
             </div>
             {stepContentIsPanel && <div className="now-panel-scroll">{stepContent}</div>}
           </div>
