@@ -75,6 +75,12 @@ const LANE_COUNT = 4;
 // the heartbeat timer, the identity patch) needed porting.
 const BOT_MOVE_DELAY_MS = 2000; // slow enough to follow the opponent's turn
 
+// A card's own words for the inspect panel - its rules text, else its
+// action text.
+function cardTextOf(card: CardDef | undefined): string {
+  return card?.rawText?.trim() || card?.actionText?.trim() || "No character ability.";
+}
+
 function nameOf(die: Die, cardsById: Map<string, CardDef>): string {
   if (!die.cardId) return "Tardigrade";
   return cardsById.get(die.cardId)?.name ?? die.cardId;
@@ -1724,7 +1730,7 @@ function ChoiceSheet({
                         <small>cost {card?.purchaseCost} · {copies.length - unbought} owned, {unbought} unbought</small>
                       </span>
                       <span className="dkm-name-card-ability">
-                        {card?.rawText?.trim() || card?.actionText?.trim() || "No character ability."}
+                        {cardTextOf(card)}
                       </span>
                     </span>
                     <span className="dkm-name-card-faces" aria-label="Non-energy die faces">
@@ -3182,34 +3188,16 @@ export function DiceKingdomMobilePage() {
             <button type="button" className="dkm-inspect-close" onClick={() => { setSelectedId(null); setPileInspectId(null); }}>
               ×
             </button>
-            {inspectingPileDie && selectedDie.cardId && (
-              <div className="dkm-purchase-ability">
-                {cardsById.get(selectedDie.cardId)?.rawText?.trim() || cardsById.get(selectedDie.cardId)?.actionText?.trim() || "No character ability."}
-              </div>
-            )}
-            {selectedPurchaseCard && (
-              <div className="dkm-purchase-ability">
-                {selectedPurchaseCard.rawText?.trim() || selectedPurchaseCard.actionText?.trim() || "No character ability."}
-              </div>
-            )}
-{phase === "roll" && selectedDie.zone === "ReservePool" && selectedDie.cardId && (
-  <div className="dkm-purchase-ability">
-    {cardsById.get(selectedDie.cardId)?.rawText?.trim() || cardsById.get(selectedDie.cardId)?.actionText?.trim() || "No character ability."}
-  </div>
-)}
-
-{selectedDie.zone === "FieldZone" && selectedDie.cardId && (
-  <div className="dkm-purchase-ability">
-    {cardsById.get(selectedDie.cardId)?.rawText?.trim() || cardsById.get(selectedDie.cardId)?.actionText?.trim() || "No character ability."}
-  </div>
-)}
-
-{/* Show creature abilities in the Reserve Pool even if fielding is unaffordable. */}
-{phase !== "roll" && selectedDie.zone === "ReservePool" && selectedDie.cardId && selectedDie.effectiveAttack !== null && (
-  <div className="dkm-purchase-ability">
-    {cardsById.get(selectedDie.cardId)?.rawText?.trim() || cardsById.get(selectedDie.cardId)?.actionText?.trim() || "No character ability."}
-  </div>
-)}
+            {/* The card's text, wherever the die is being looked at: a pile,
+                the buy panel, the roll tray, the Field, or a Reserve die
+                showing a body (even one you can't afford to field yet). */}
+            {selectedDie.cardId &&
+              (inspectingPileDie ||
+                selectedPurchaseCard ||
+                selectedDie.zone === "FieldZone" ||
+                (selectedDie.zone === "ReservePool" && (phase === "roll" || selectedDie.effectiveAttack !== null))) && (
+                <div className="dkm-purchase-ability">{cardTextOf(cardsById.get(selectedDie.cardId))}</div>
+              )}
             {selectedPurchaseCard ? (
               <div className="dkm-purchase-row">
                 <div className="dkm-purchase-count" aria-label={`${purchaseOwned} purchased`}>

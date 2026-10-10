@@ -62,7 +62,10 @@ export function CardDetailPopover({ card, die, purchaseCost, purchase, cueRows =
         {card
           ? card.rawText?.trim() || card.actionText?.trim() || "No ability text."
           : die && (!die.cardId || die.isTardigrade)
-            ? "Two level-2 faces also provide Wild energy, one level-3 face has Bulwark, and three energy faces provide 2, 2 and 1 energy."
+            // Not a description of its faces - they're drawn just below, from
+            // dieFaces.ts's copy of the die, and the layout keeps changing
+            // (it did on 2026-10-04); a third copy in prose would drift.
+            ? "The free basic creature - fielding it costs nothing."
             : "No ability text."}
       </p>
       <div className="roster-detail-faces" aria-label="All six printed die faces">
