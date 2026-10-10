@@ -37,6 +37,7 @@ static string FindRepoRoot()
 }
 
 var config = DiceKingdomConfig.Config;
+const string KeywordSource = "https://wizkids.com/dicemasters/keywords/";
 var catalog = DiceKingdomConfig.Catalog;
 
 var html = new StringBuilder();
@@ -57,6 +58,8 @@ html.AppendLine("""
   .cost { text-align: center; font-weight: 600; }
   h3 { margin: 1.4rem 0 0.2rem; font-size: 1.05em; }
   .note { color: #555; font-size: 0.9em; margin: 0.2rem 0 0; }
+  .label { color: #666; font-size: 0.8em; font-style: italic; white-space: nowrap; }
+  .benched { color: #888; }
 </style>
 """);
 html.AppendLine("</head><body>");
@@ -65,9 +68,12 @@ html.AppendLine($"<p class=\"generated\">Generated {DateTime.UtcNow:yyyy-MM-dd} 
     "by <code>tools/CardCatalogDocs</code> &mdash; every field below is read straight from the live CardDef/ChampionDef records, " +
     "not hand-copied. Re-run the tool after any card change; don't hand-edit this file.</p>");
 
+html.AppendLine("<p class=\"note\">Jump to: " + string.Join(" · ", config.Champions.Select(c => $"<a href=\"#{c.Id}\">{Enc(c.Name)}</a>")) +
+    " · <a href=\"#keywords\">Keywords</a></p>");
+
 foreach (var champion in config.Champions)
 {
-    html.AppendLine($"<h2>{Enc(champion.Name)} <small>({Enc(champion.EnergySymbolId)})</small></h2>");
+    html.AppendLine($"<h2 id=\"{champion.Id}\">{Enc(champion.Name)} <small>({Enc(champion.EnergySymbolId)})</small></h2>");
     html.AppendLine($"<p class=\"passive\">Power: {Enc(DescribePassive(champion))}</p>");
 
     // The starting dice: not cards, so they only live on the ChampionDef.
@@ -120,6 +126,26 @@ foreach (var (championId, cardId) in DiceKingdomConfig.ActionByChampion)
 }
 html.AppendLine("</tbody></table>");
 html.AppendLine("<p class=\"note\">Either player may buy either Basic Action; each die's energy faces show its Champion's type.</p>");
+
+// Keywords (2026-10-10, user: "where does the list of currently
+// implemented keywords live... could we make a handy reference") - the
+// declared list (DiceKingdomConfig.Keywords) with its rules text, and
+// which cards carry each one.
+html.AppendLine("<h2 id=\"keywords\">Keywords</h2>");
+html.AppendLine("<p class=\"note\">Every keyword the engine accepts on a Dice Kingdom card, from <code>DiceKingdomConfig.Keywords</code>. " +
+    "<span class=\"label\">label</span> marks a keyword that only names a timing or cost - each card writes its own ability; " +
+    "for the rest, listing the keyword is all a card needs. Grey cards are in no Champion's pack. " +
+    $"Dice Masters wording from <a href=\"{KeywordSource}\">WizKids' keyword list</a>, copied once on 2026-10-10.</p>");
+html.AppendLine("<table><thead><tr><th>Keyword</th><th>Dice Masters rules</th><th>In Dice Kingdom</th><th>Cards</th></tr></thead><tbody>");
+foreach (var keyword in config.Keywords)
+{
+    var label = keyword.WrittenOnCard ? " <span class=\"label\">label</span>" : "";
+    var cards = KeywordCards(keyword.Id).Select(c => c.Benched ? $"<span class=\"benched\">{Enc(c.Name)}</span>" : Enc(c.Name));
+    var original = keyword.Original is { } o ? Enc(o) : "<em>not a Dice Masters keyword</em>";
+    html.AppendLine($"<tr><td><b>{Enc(keyword.Id)}</b>{label}</td><td>{original}</td><td>{Enc(InDiceKingdom(keyword))}</td>" +
+        $"<td>{(cards.Any() ? string.Join(", ", cards) : "<em>none yet</em>")}</td></tr>");
+}
+html.AppendLine("</tbody></table>");
 
 html.AppendLine("</body></html>");
 
@@ -199,8 +225,38 @@ string BuildMarkdown()
     }
     md.AppendLine();
     md.AppendLine("Either player may buy either Basic Action; each die's energy faces show its Champion's type.");
+    md.AppendLine();
+    md.AppendLine("## Keywords");
+    md.AppendLine();
+    md.AppendLine("Every keyword the engine accepts on a Dice Kingdom card, from `DiceKingdomConfig.Keywords`. _(label)_ marks a keyword that " +
+        "only names a timing or cost - each card writes its own ability; for the rest, listing the keyword is all a card needs. " +
+        $"Cards in _italics_ are in no Champion's pack. Dice Masters wording from [WizKids' keyword list]({KeywordSource}), copied once on 2026-10-10.");
+    md.AppendLine();
+    md.AppendLine("| Keyword | Dice Masters rules | In Dice Kingdom | Cards |");
+    md.AppendLine("|---|---|---|---|");
+    foreach (var keyword in config.Keywords)
+    {
+        var cards = KeywordCards(keyword.Id).Select(c => c.Benched ? $"_{Md(c.Name)}_" : Md(c.Name)).ToList();
+        md.AppendLine($"| **{Md(keyword.Id)}**{(keyword.WrittenOnCard ? " _(label)_" : "")} | {(keyword.Original is { } o ? Md(o) : "_not a Dice Masters keyword_")} | " +
+            $"{Md(InDiceKingdom(keyword))} | {(cards.Count > 0 ? string.Join(", ", cards) : "_none yet_")} |");
+    }
     return md.ToString();
 }
+
+// The "In Dice Kingdom" column: how this game differs, or "As written."
+static string InDiceKingdom(KeywordDef k) => k.Description ?? "As written.";
+
+// Cards carrying a keyword (its X form too - "Range 2" for Range), by name;
+// Benched = in no Champion's pack.
+List<(string Name, bool Benched)> KeywordCards(string keywordId) =>
+    catalog.Values
+        .Select(c => (Card: c, Shown: c.Keywords.FirstOrDefault(k => KeywordAbilities.ParamOf(k, keywordId) is not null)))
+        .Where(x => x.Shown is not null)
+        .Select(x => (Name: x.Shown == keywordId ? x.Card.Name : $"{x.Card.Name} ({x.Shown})",
+            Benched: !DiceKingdomConfig.CharactersByChampion.Values.Any(team => team.Contains(x.Card.Id))
+                && !DiceKingdomConfig.ActionByChampion.Values.Contains(x.Card.Id)))
+        .OrderBy(x => x.Benched).ThenBy(x => x.Name)
+        .ToList();
 
 // Text for a Markdown table cell: pipes escaped, line breaks as <br>.
 static string Md(string s) => s.Replace("|", "\\|").Replace("\r\n", "<br>").Replace("\n", "<br>");

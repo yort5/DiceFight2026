@@ -14,11 +14,14 @@
   .cost { text-align: center; font-weight: 600; }
   h3 { margin: 1.4rem 0 0.2rem; font-size: 1.05em; }
   .note { color: #555; font-size: 0.9em; margin: 0.2rem 0 0; }
+  .label { color: #666; font-size: 0.8em; font-style: italic; white-space: nowrap; }
+  .benched { color: #888; }
 </style>
 </head><body>
 <h1>Dice Kingdom &mdash; Card Reference</h1>
-<p class="generated">Generated 2026-10-04 from <code>src/DiceFight.V2/Data/DiceKingdomConfig.cs</code> by <code>tools/CardCatalogDocs</code> &mdash; every field below is read straight from the live CardDef/ChampionDef records, not hand-copied. Re-run the tool after any card change; don't hand-edit this file.</p>
-<h2>Wolf <small>(Claw)</small></h2>
+<p class="generated">Generated 2026-10-10 from <code>src/DiceFight.V2/Data/DiceKingdomConfig.cs</code> by <code>tools/CardCatalogDocs</code> &mdash; every field below is read straight from the live CardDef/ChampionDef records, not hand-copied. Re-run the tool after any card change; don't hand-edit this file.</p>
+<p class="note">Jump to: <a href="#Wolf">Wolf</a> · <a href="#Armadillo">Armadillo</a> · <a href="#GoldenEagle">Golden Eagle</a> · <a href="#GreatHornedOwl">Great Horned Owl</a> · <a href="#keywords">Keywords</a></p>
+<h2 id="Wolf">Wolf <small>(Claw)</small></h2>
 <p class="passive">Power: Once per your turn: one of your creatures gets +3 ATK this turn</p>
 <h3>Tardigrade die &times;8 <small>(starts in the Bag; free to field)</small></h3>
 <table><thead><tr><th>Face</th><th>Count</th></tr></thead><tbody>
@@ -102,7 +105,7 @@
 <td>Vanilla - no ability.</td>
 </tr>
 </tbody></table>
-<h2>Armadillo <small>(Shell)</small></h2>
+<h2 id="Armadillo">Armadillo <small>(Shell)</small></h2>
 <p class="passive">Power: Once per turn, after blocks: prevent all combat damage to one of your creatures in combat</p>
 <h3>Tardigrade die &times;8 <small>(starts in the Bag; free to field)</small></h3>
 <table><thead><tr><th>Face</th><th>Count</th></tr></thead><tbody>
@@ -186,7 +189,7 @@
 <td>On Field: KO a target creature.</td>
 </tr>
 </tbody></table>
-<h2>Golden Eagle <small>(Wing)</small></h2>
+<h2 id="GoldenEagle">Golden Eagle <small>(Wing)</small></h2>
 <p class="passive">Power: Once per your turn: field one creature without paying its fielding cost</p>
 <h3>Tardigrade die &times;8 <small>(starts in the Bag; free to field)</small></h3>
 <table><thead><tr><th>Face</th><th>Count</th></tr></thead><tbody>
@@ -270,7 +273,7 @@
 <td>On Field: a weak target creature (3 ATK or less) can&#39;t block this turn.</td>
 </tr>
 </tbody></table>
-<h2>Great Horned Owl <small>(Eye)</small></h2>
+<h2 id="GreatHornedOwl">Great Horned Owl <small>(Eye)</small></h2>
 <p class="passive">Power: Once per your turn: spin one creature a level - yours up, theirs down</p>
 <h3>Tardigrade die &times;8 <small>(starts in the Bag; free to field)</small></h3>
 <table><thead><tr><th>Face</th><th>Count</th></tr></thead><tbody>
@@ -520,4 +523,26 @@
 </tr>
 </tbody></table>
 <p class="note">Either player may buy either Basic Action; each die's energy faces show its Champion's type.</p>
+<h2 id="keywords">Keywords</h2>
+<p class="note">Every keyword the engine accepts on a Dice Kingdom card, from <code>DiceKingdomConfig.Keywords</code>. <span class="label">label</span> marks a keyword that only names a timing or cost - each card writes its own ability; for the rest, listing the keyword is all a card needs. Grey cards are in no Champion's pack. Dice Masters wording from <a href="https://wizkids.com/dicemasters/keywords/">WizKids' keyword list</a>, copied once on 2026-10-10.</p>
+<table><thead><tr><th>Keyword</th><th>Dice Masters rules</th><th>In Dice Kingdom</th><th>Cards</th></tr></thead><tbody>
+<tr><td><b>Fast</b></td><td>Characters with Fast deal combat damage before other characters, all at the same time, instead of at the regular time for combat damage.</td><td>As written.</td><td>Greyhound, Peregrine Falcon, Wolverine</td></tr>
+<tr><td><b>Overcrush</b></td><td>When attacking, if this character KOs all of its blockers (or they are removed for other reasons), it deals any remaining damage to your opponent.</td><td>Also: any lane with two or more attackers has Overcrush, and one attacker&#39;s Overcrush covers its whole lane.</td><td>Grizzly Bear, Silverback</td></tr>
+<tr><td><b>Deadly</b></td><td>At the end of the turn, character dice that were engaged with a character die that has Deadly are KO&#39;d (even if the character with Deadly has been KO&#39;d or leaves the Field Zone).</td><td>As written.</td><td>Opossum</td></tr>
+<tr><td><b>Intimidate</b></td><td>When fielded, remove target opposing character die from the Field Zone until end of turn. Place it next to your character cards during that turn as a reminder.</td><td>As written.</td><td><span class="benched">Frilled Lizard</span></td></tr>
+<tr><td><b>Infiltrate</b></td><td>When a character die with Infiltrate attacks and is not blocked, you may choose to remove that character die from combat (immediately after blockers are declared, before Action dice or Global Abilities may be used). If you do, that character die deals 1 damage to your opponent, and the die remains in your Field Zone.</td><td>As written.</td><td><span class="benched">Flying Squirrel</span></td></tr>
+<tr><td><b>Attune</b></td><td>While a character you control with Attune is active, when you use an action die, that character deals 1 damage to target player or character die (no matter how many of that character&#39;s dice are active).</td><td>Attune X deals X; the bare keyword is 1. Only action dice count - using a Global doesn&#39;t trigger it.</td><td><span class="benched">Electric Eel</span></td></tr>
+<tr><td><b>Obscure</b></td><td>When you use an Action die, this character is unblockable until end of turn.</td><td>Only while this creature is active.</td><td><span class="benched">Chameleon</span></td></tr>
+<tr><td><b>Energy Drain</b></td><td>After blockers are assigned, spin each character engaged with a character die with Energy Drain down one level. Character dice at level 1 can&#39;t be spun down.</td><td>Energy Drain X spins down X levels; the bare keyword is 1. A creature fighting several drainers takes the biggest X, not the sum.</td><td><span class="benched">Leech</span></td></tr>
+<tr><td><b>Tag Out</b></td><td>After blockers are declared, you may Prep this die from the Field Zone to give target character die +2A and +2D until end of turn.</td><td>As written.</td><td><span class="benched">Meerkat</span></td></tr>
+<tr><td><b>Range</b></td><td>When one or more character dice with Range attack, each active character die with Range (on both sides) simultaneously deals damage equal to its Range value (X) to target opposing character die. Each character die with Range may choose a different target, and the defending player still resolves their Range damage even if the Range die was KO&#39;d by the active player&#39;s Range damage. All Range damage is dealt simultaneously; the active player chooses their targets and resolves the damage, immediately followed by the inactive player choosing their targets and resolving the damage.</td><td>The bare keyword is Range 1.</td><td><span class="benched">Archerfish</span></td></tr>
+<tr><td><b>Breath Weapon</b></td><td>When a character die with Breath Weapon X attacks, you may pay X energy. Deal X damage to your opponent and all of their character dice. You may use multiple Breath Weapons in a turn, but only one per character (no matter how many copies of that die are attacking).</td><td>The bare keyword is Breath Weapon 1.</td><td><span class="benched">Komodo Dragon</span></td></tr>
+<tr><td><b>Energize</b> <span class="label">label</span></td><td>Whenever you roll this die on one of its double energy faces, you must use its Energize effect (this isn&#39;t optional). During the Roll and Reroll Step, only check at the end of the Step. The character with Energize does not need to be active for the ability to trigger.</td><td>As written.</td><td><span class="benched">Firefly</span></td></tr>
+<tr><td><b>Sacrifice</b> <span class="label">label</span></td><td>Sacrificed characters are moved from the Field Zone to the Used Pile (often as a cost or penalty). If one of your character dice is sacrificed while you are the active player, it goes Out of Play first.</td><td>As written.</td><td><span class="benched">Army Ant</span></td></tr>
+<tr><td><b>Aftershock</b> <span class="label">label</span></td><td>When this character leaves the Field Zone because of your opponent (damage from their characters or actions, getting KO&#39;d, being removed from the game, sent to the Used Pile or Reserve Pool) you must use their Aftershock effect.</td><td>As written.</td><td><span class="benched">Bombardier Beetle</span></td></tr>
+<tr><td><b>Awaken</b> <span class="label">label</span></td><td>When a die with Awaken spins up 1 or more levels, you may use its Awaken effect. You get to use the effect for each individual die that spins up, so if you have two copies of the same die active and they both spin up, you will get two instances of the effect.</td><td>Not optional here - the Awaken ability always fires.</td><td>Barn Swallow, Cowbird, Mongoose</td></tr>
+<tr><td><b>On Field</b> <span class="label">label</span></td><td><em>not a Dice Masters keyword</em></td><td>Its ability fires when it&#39;s fielded.</td><td>Barn Owl, Hermit Crab, Homing Pigeon, Honey Badger, Hummingbird, Magpie, Pangolin, Peregrine Falcon, Phoenix, Stoat, <span class="benched">Army Ant</span>, <span class="benched">Orca</span></td></tr>
+<tr><td><b>On Attack</b> <span class="label">label</span></td><td><em>not a Dice Masters keyword</em></td><td>Its ability fires when it attacks.</td><td>Cuttlefish, Mountain Goat, Osprey, Swift, Wolverine, <span class="benched">Anglerfish</span></td></tr>
+<tr><td><b>On Block</b> <span class="label">label</span></td><td><em>not a Dice Masters keyword</em></td><td>Its ability fires when it blocks.</td><td>Box Turtle</td></tr>
+</tbody></table>
 </body></html>

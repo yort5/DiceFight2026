@@ -1,6 +1,6 @@
 # Dice Kingdom — Card Reference
 
-_Generated 2026-10-04 from `src/DiceFight.V2/Data/DiceKingdomConfig.cs` by `tools/CardCatalogDocs` — every field is read straight from the live CardDef/ChampionDef records. Re-run the tool after any card change; don't hand-edit this file._
+_Generated 2026-10-10 from `src/DiceFight.V2/Data/DiceKingdomConfig.cs` by `tools/CardCatalogDocs` — every field is read straight from the live CardDef/ChampionDef records. Re-run the tool after any card change; don't hand-edit this file._
 
 ## Wolf (Claw)
 
@@ -137,3 +137,28 @@ In the card pool but in no Champion's pack, so they don't come up in games.
 | Great Horned Owl | Mutation | 3 | 3 | Action ×3<br>2 Eye ×2<br>1 Eye | Swap one of your fielded creatures with a non-Tardigrade creature die in your Used Pile. It comes in at level 1 (no On Field). Global: Pay 1 Eye. Spin one of your creatures down a level to spin another creature up a level. |
 
 Either player may buy either Basic Action; each die's energy faces show its Champion's type.
+
+## Keywords
+
+Every keyword the engine accepts on a Dice Kingdom card, from `DiceKingdomConfig.Keywords`. _(label)_ marks a keyword that only names a timing or cost - each card writes its own ability; for the rest, listing the keyword is all a card needs. Cards in _italics_ are in no Champion's pack. Dice Masters wording from [WizKids' keyword list](https://wizkids.com/dicemasters/keywords/), copied once on 2026-10-10.
+
+| Keyword | Dice Masters rules | In Dice Kingdom | Cards |
+|---|---|---|---|
+| **Fast** | Characters with Fast deal combat damage before other characters, all at the same time, instead of at the regular time for combat damage. | As written. | Greyhound, Peregrine Falcon, Wolverine |
+| **Overcrush** | When attacking, if this character KOs all of its blockers (or they are removed for other reasons), it deals any remaining damage to your opponent. | Also: any lane with two or more attackers has Overcrush, and one attacker's Overcrush covers its whole lane. | Grizzly Bear, Silverback |
+| **Deadly** | At the end of the turn, character dice that were engaged with a character die that has Deadly are KO'd (even if the character with Deadly has been KO'd or leaves the Field Zone). | As written. | Opossum |
+| **Intimidate** | When fielded, remove target opposing character die from the Field Zone until end of turn. Place it next to your character cards during that turn as a reminder. | As written. | _Frilled Lizard_ |
+| **Infiltrate** | When a character die with Infiltrate attacks and is not blocked, you may choose to remove that character die from combat (immediately after blockers are declared, before Action dice or Global Abilities may be used). If you do, that character die deals 1 damage to your opponent, and the die remains in your Field Zone. | As written. | _Flying Squirrel_ |
+| **Attune** | While a character you control with Attune is active, when you use an action die, that character deals 1 damage to target player or character die (no matter how many of that character's dice are active). | Attune X deals X; the bare keyword is 1. Only action dice count - using a Global doesn't trigger it. | _Electric Eel_ |
+| **Obscure** | When you use an Action die, this character is unblockable until end of turn. | Only while this creature is active. | _Chameleon_ |
+| **Energy Drain** | After blockers are assigned, spin each character engaged with a character die with Energy Drain down one level. Character dice at level 1 can't be spun down. | Energy Drain X spins down X levels; the bare keyword is 1. A creature fighting several drainers takes the biggest X, not the sum. | _Leech_ |
+| **Tag Out** | After blockers are declared, you may Prep this die from the Field Zone to give target character die +2A and +2D until end of turn. | As written. | _Meerkat_ |
+| **Range** | When one or more character dice with Range attack, each active character die with Range (on both sides) simultaneously deals damage equal to its Range value (X) to target opposing character die. Each character die with Range may choose a different target, and the defending player still resolves their Range damage even if the Range die was KO'd by the active player's Range damage. All Range damage is dealt simultaneously; the active player chooses their targets and resolves the damage, immediately followed by the inactive player choosing their targets and resolving the damage. | The bare keyword is Range 1. | _Archerfish_ |
+| **Breath Weapon** | When a character die with Breath Weapon X attacks, you may pay X energy. Deal X damage to your opponent and all of their character dice. You may use multiple Breath Weapons in a turn, but only one per character (no matter how many copies of that die are attacking). | The bare keyword is Breath Weapon 1. | _Komodo Dragon_ |
+| **Energize** _(label)_ | Whenever you roll this die on one of its double energy faces, you must use its Energize effect (this isn't optional). During the Roll and Reroll Step, only check at the end of the Step. The character with Energize does not need to be active for the ability to trigger. | As written. | _Firefly_ |
+| **Sacrifice** _(label)_ | Sacrificed characters are moved from the Field Zone to the Used Pile (often as a cost or penalty). If one of your character dice is sacrificed while you are the active player, it goes Out of Play first. | As written. | _Army Ant_ |
+| **Aftershock** _(label)_ | When this character leaves the Field Zone because of your opponent (damage from their characters or actions, getting KO'd, being removed from the game, sent to the Used Pile or Reserve Pool) you must use their Aftershock effect. | As written. | _Bombardier Beetle_ |
+| **Awaken** _(label)_ | When a die with Awaken spins up 1 or more levels, you may use its Awaken effect. You get to use the effect for each individual die that spins up, so if you have two copies of the same die active and they both spin up, you will get two instances of the effect. | Not optional here - the Awaken ability always fires. | Barn Swallow, Cowbird, Mongoose |
+| **On Field** _(label)_ | _not a Dice Masters keyword_ | Its ability fires when it's fielded. | Barn Owl, Hermit Crab, Homing Pigeon, Honey Badger, Hummingbird, Magpie, Pangolin, Peregrine Falcon, Phoenix, Stoat, _Army Ant_, _Orca_ |
+| **On Attack** _(label)_ | _not a Dice Masters keyword_ | Its ability fires when it attacks. | Cuttlefish, Mountain Goat, Osprey, Swift, Wolverine, _Anglerfish_ |
+| **On Block** _(label)_ | _not a Dice Masters keyword_ | Its ability fires when it blocks. | Box Turtle |

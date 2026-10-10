@@ -4399,3 +4399,18 @@ game-records bucket, and keep a games list plus W/L.
   `GameRecords__Bucket` is set (see GAME_RECORDS.md).
 - UI check: `~/.devtools/playwright/account-check.js` (a fixture player
   file, laptop shows code, fresh phone links, resumes the laptop's game).
+
+## 2026-10-10 - Keyword reference
+
+The card reference (`tools/CardCatalogDocs`, live at
+`/dice-kingdom/cards.html`) now ends with a Keywords table: every keyword
+in `DiceKingdomConfig.Keywords`, WizKids' Dice Masters wording (copied once
+from wizkids.com/dicemasters/keywords as a fixed baseline - user: "we might
+change how they work down the line"), what Dice Kingdom does differently,
+and which cards carry it. `KeywordDef` gained `Original` and
+`WrittenOnCard` (a label like On Field or Awaken, where each card writes
+its own ability, vs. an engine-backed keyword a card only has to list).
+A test now checks every keyword on a Dice Kingdom card is declared and
+described - nothing checked Dice Kingdom's catalog against its own list
+before. Of the 11 engine-backed keywords, only Fast, Overcrush and Deadly
+are on a team today; the other 8 sit on benched cards.
