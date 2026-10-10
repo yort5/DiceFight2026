@@ -1478,6 +1478,7 @@
   flex-wrap: wrap;
   gap: 6px;
   min-height: 6px;
+  align-items: flex-start;
 }
 /* Roster strip - README's Column 2 "portrait" roster cards. Always
    visible (direct feedback logged above the old rule: a player checks
@@ -1497,6 +1498,47 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+/* Desktop: individual character chips stay together at the left; both
+   players' Basic Actions share one distinct group at the far right. */
+.dicekingdom .roster-row { align-items: flex-end; }
+.dicekingdom .roster-regular-cards,
+.dicekingdom .roster-basic-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+}
+.dicekingdom .roster-regular-cards { flex: 0 1 auto; min-width: 0; }
+.dicekingdom .roster-empty { align-self: center; opacity: 0.55; font-size: 12px; }
+.dicekingdom .roster-basic-actions {
+  margin-left: auto;
+  padding: 3px 0 0 12px;
+  border-left: 2px solid #9971d5;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+}
+.dicekingdom .roster-basic-label {
+  color: #b396e9;
+  font: 700 9px var(--sans);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.dicekingdom .roster-basic-chip .roster-chip {
+  --cc: #b18bf1;
+  border-color: #9872d7;
+  border-top-color: #b18bf1;
+  background: color-mix(in srgb, var(--panel-bg) 78%, #8964d5 22%);
+}
+.dicekingdom .roster-basic-chip .roster-chip.picked {
+  border-color: #c4a8fc;
+  box-shadow: 0 0 0 3px rgba(177, 139, 241, 0.44), var(--shadow);
+}
+.dicekingdom .roster-basic-chip .card-popover.roster-detail {
+  left: auto;
+  right: 0;
 }
 /* The opponent's collapsed roster - direct feedback (2026-09-08): "make
    the whole thing one section, and tapping anywhere in there would
@@ -1598,6 +1640,12 @@
 .dicekingdom .dietile-wrap {
   position: relative;
   display: inline-flex;
+  align-items: flex-start;
+}
+
+/* Card inspection is right-click during selection; no floating info icon. */
+.dicekingdom .dietile-wrap.info-open {
+  z-index: 8;
 }
 /* No border/background/shadow by default (2026-09-10) - direct
    feedback: "now that we've got everything on the die, we no longer
@@ -1610,6 +1658,10 @@
    actually showing (the 34px die-cube, a 30px icon, or a text label)
    instead of reserving space for the old level/name text underneath. */
 .dicekingdom .dietile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
   position: relative;
   width: auto;
   border: 1.5px solid transparent;
@@ -1846,6 +1898,12 @@
   flex-wrap: wrap;
   gap: 8px;
   margin-left: auto;
+}
+.dicekingdom .now-bar-detail {
+  min-height: 18px;
+  line-height: 18px;
+  font-size: 12px;
+  color: var(--text-dim);
 }
 .dicekingdom .now-bar-note {
   font-size: 12px;
@@ -4246,3 +4304,223 @@
 .dk-mobile .dkm-choice-minimized .dkm-choice-sheet .dkm-pay-status {
   margin-bottom: 0;
 }
+
+/* Pile dice remain visually compact; selection adds only an outline. */
+.dk-mobile .dkm-pile-strip .dkm-pile-inspect-tile {
+  appearance: none;
+  background: transparent;
+  color: inherit;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  padding: 2px;
+  margin: -3px;
+  cursor: pointer;
+}
+.dk-mobile .dkm-pile-strip .dkm-pile-inspect-tile.picked {
+  border-color: var(--dkm-ink, #b6c6df);
+  box-shadow: 0 0 0 1px currentColor;
+}
+
+
+/* Shared ability feature, desktop presentation only. Mobile retains its
+   existing .dkm-global-* skin; both are rendered by SharedAbilityPanel. */
+.dicekingdom .dk-ability-sideboard { min-width: 0; }
+.dicekingdom .dk-desktop-ability-rail { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.dicekingdom .dk-desktop-ability-rail .dkm-global-caption { display: flex; justify-content: space-between; gap: 6px; align-items: baseline; }
+.dicekingdom .dk-desktop-ability-rail .dkm-global-title { font-weight: 700; font-size: 13px; }
+.dicekingdom .dk-desktop-ability-rail .dkm-global-note { opacity: 0.65; font-size: 11px; }
+.dicekingdom .dk-desktop-ability-rail .dkm-global-list,
+.dicekingdom .dk-desktop-ability-rail .dkm-ready-actions { display: flex; flex-direction: column; gap: 8px; }
+.dicekingdom .dk-desktop-ability-rail .dkm-global-item,
+.dicekingdom .dk-desktop-ability-rail .dkm-ready-action { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.dicekingdom .dk-desktop-ability-rail .dkm-global-name { display: flex; align-items: center; gap: 5px; flex: 1 1 130px; background: transparent; color: inherit; border: 0; cursor: pointer; padding: 3px; text-align: left; font: inherit; }
+.dicekingdom .dk-desktop-ability-rail .dkm-global-cost { display: inline-flex; gap: 2px; }
+.dicekingdom .dk-desktop-ability-rail .dkm-global-use { padding: 4px 8px; cursor: pointer; }
+.dicekingdom .dk-desktop-ability-rail .dkm-global-use:disabled { cursor: default; opacity: 0.45; }
+.dicekingdom .dk-desktop-ability-rail .dkm-global-text { flex: 1 0 100%; margin: 0; font-size: 12px; }
+.dicekingdom .dk-desktop-ability-rail .dkm-ready-action-body { display: flex; flex: 1 1 100px; flex-direction: column; font-size: 12px; }
+.dicekingdom .dk-desktop-ability-rail .dkm-field-label { font-weight: 600; font-size: 12px; }
+.dicekingdom .dk-desktop-ability-rail .dkm-global-empty { opacity: 0.7; font-size: 12px; }
+.dicekingdom .dk-basic-action-item { display: flex; flex-direction: column; gap: 5px; padding: 6px 0; border-top: 1px solid var(--dk-border, rgba(128,128,128,0.25)); }
+.dicekingdom .dk-basic-action-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 5px; font-size: 12px; }
+.dicekingdom .dk-basic-action-head span { opacity: 0.75; }
+.dicekingdom .dk-basic-action-item p { font-size: 12px; margin: 0; }
+
+/* Desktop roster details only: compact six-face card preview. */
+.dicekingdom .card-popover.roster-detail {
+  width: 390px;
+  max-width: min(390px, calc(100vw - 24px));
+}
+.dicekingdom .roster-chip-wrap:nth-last-child(-n+4) .card-popover.roster-detail {
+  left: auto;
+  right: 0;
+}
+.dicekingdom .roster-detail-head {
+  align-items: center;
+}
+.dicekingdom .roster-detail-title {
+  min-width: 0;
+  flex: 1;
+}
+.dicekingdom .card-popover button.roster-detail-purchase {
+  flex: none;
+  width: auto;
+  max-width: 125px;
+  padding: 7px 10px;
+  white-space: nowrap;
+}
+.dicekingdom .roster-detail-ability {
+  margin: 4px 0 12px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid var(--border);
+}
+.dicekingdom .roster-detail-faces {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  align-items: center;
+  justify-items: center;
+  gap: 3px;
+}
+.dicekingdom .roster-detail-face {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+@media (max-width: 480px) {
+  .dicekingdom .roster-detail-faces {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    row-gap: 10px;
+  }
+}
+
+/* The pending-choice picker floats above the desktop rail instead of
+   changing the grid row's height. No backdrop: the board and rosters
+   remain clickable for inspection during a choice. */
+.dicekingdom .dk-floating-choice {
+  position: fixed;
+  z-index: 90;
+  right: max(16px, calc((100vw - 1580px) / 2 + 16px));
+  top: 100px;
+  width: min(340px, calc(100vw - 32px));
+  max-height: calc(100dvh - 128px);
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--panel-bg);
+  color: var(--text);
+  box-shadow: 0 14px 38px rgba(0, 0, 0, .45);
+}
+.dicekingdom .dk-floating-choice-description {
+  margin: 0 0 14px;
+  font: 700 13px/1.65 var(--sans);
+  color: var(--text-h);
+}
+.dicekingdom .dk-floating-choice .chiprow { margin-bottom: 12px; }
+.dicekingdom .dk-tile-field-start {
+  position: absolute;
+  z-index: 24;
+  top: calc(100% + 3px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  cursor: pointer;
+  color: var(--text-h);
+  background: var(--panel-bg-strong);
+  border: 1px solid var(--cc, var(--border));
+  border-radius: 7px;
+  padding: 3px 9px;
+  font: 700 11px var(--sans);
+  box-shadow: var(--shadow);
+}
+.dicekingdom .dk-tile-field-start:hover { filter: brightness(1.15); }
+.dicekingdom .dietile-wrap:has(.dk-tile-field-start) { z-index: 22; }
+@media (max-width: 1100px) {
+  .dicekingdom .dk-floating-choice {
+    top: 70px;
+    right: 16px;
+    max-height: calc(100dvh - 172px);
+  }
+}
+
+/* Preserve the controls' single-row height when a pending choice opens
+   and its buttons move into the independent floating picker. */
+.dicekingdom .now-bar { min-height: 36px; }
+
+/* Pending ability targets are selected on their real board tiles instead
+   of rendered as duplicate dice in a modal. Keep context-click inspection. */
+.dicekingdom .dietile.choice-targetable,
+.dicekingdom .lane-die.choice-targetable,
+.dicekingdom .roster-chip.choice-targetable {
+  outline: 2px solid #eac85c;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(234, 200, 92, .22), 0 0 14px rgba(234, 200, 92, .4);
+  cursor: pointer;
+}
+.dicekingdom .dietile.choice-targetable.picked,
+.dicekingdom .lane-die.choice-targetable.selected,
+.dicekingdom .roster-chip.choice-targetable.picked {
+  outline-color: #6ee7aa;
+  box-shadow: 0 0 0 4px rgba(110, 231, 170, .3), 0 0 16px rgba(110, 231, 170, .55);
+}
+.dicekingdom .dietile.choice-inactive,
+.dicekingdom .lane-die.choice-inactive { opacity: .52; }
+.dicekingdom .dk-choice-instructions { font-size: 12px; line-height: 1.55; margin: 0 0 12px; }
+.dicekingdom .dk-choice-actions { display: flex; gap: 8px; }
+
+/* Desktop uses the existing mobile dieFlights.ts travel layer. The clone
+   is pointer-transparent and never takes focus or alters any game action. */
+.dicekingdom:not(.dk-mobile) .dkm-ghost {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 200;
+  pointer-events: none;
+  transform-origin: 50% 50%;
+  will-change: transform, opacity;
+}
+.dicekingdom:not(.dk-mobile) .dkm-ghost-inner > * {
+  margin: 0 !important;
+}
+.dicekingdom:not(.dk-mobile) .dkm-ghost-inner.ko {
+  animation: dkKoShake 420ms ease-in-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dicekingdom:not(.dk-mobile) .dkm-ghost { display: none; }
+}
+
+/* Desktop Roll & Reroll uses the centre lane for the actual rolling tray.
+   Drawn dice appear face-down, then rolled Reserve faces occupy the same
+   positions until Main. The normal Attack Zone returns in later steps. */
+.dicekingdom .dk-roll-tray {
+  height: 100%;
+  min-height: 84px;
+  box-sizing: border-box;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel-bg);
+  padding: 9px 12px;
+}
+.dicekingdom .dk-roll-tray-heading {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.dicekingdom .dk-roll-tray-heading strong {
+  font: 700 11px var(--sans);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--text-h);
+}
+.dicekingdom .dk-roll-tray-heading span,
+.dicekingdom .dk-roll-tray-empty,
+.dicekingdom .dk-in-tray {
+  font: 400 11px var(--sans);
+  color: var(--text-dim);
+}
+.dicekingdom .dk-roll-tray .dierow { align-items: flex-start; }
+.dicekingdom .dk-roll-tray-empty { padding: 8px 0; }

@@ -1,7 +1,7 @@
 import { startTransition, useEffect, useRef, useState } from "react";
 import "./dicekingdom.css";
 import { api, apiAs } from "./api";
-import { CHAMPION_ICONS, CHARACTER_ICONS, EnergyBadge, HelpIcon, TardigradeIcon, TardigradePhotoIcon } from "./icons";
+import { CHAMPION_ICONS, CHARACTER_ICONS, EnergyBadge, HelpIcon, TardigradeIcon } from "./icons";
 import { describeSavedGame, forgetSeats, inviteLink, myLink, rememberSeats } from "./seats";
 import { GameOverOverlay } from "./GameOverOverlay";
 import { OPPONENT_PICKS, PickYourChampion, ResumeGames, WaitingForOpponent, resolveInvite } from "./lobby";
@@ -10,15 +10,20 @@ import { CombatLane } from "./CombatLane";
 import { DieCube, type CubeSpin } from "./DieCube";
 import { facesFor } from "./dieFaces";
 import { explainRows, tileCues } from "./statusCues";
-import { CueRows } from "./CueRows";
+import { CardDetailPopover } from "./CardDetailPopover";
 import { DieFramesLegend, legendSeen } from "./DieFramesLegend";
 import { SpinFlash, useSpinFlash } from "./SpinFlash";
 import { StepRibbon } from "./StepRibbon";
 import { MatchLog } from "./MatchLog";
 import { SettingsMenu, ThemeToggle, useTheme } from "./ThemeToggle";
 import { useDiceRoll, type RollTarget } from "./useDiceRoll";
+import { useDieFlights } from "./dieFlights";
+import { classifyDieMotion, remoteRolledIds } from "./dieMotion";
 import { activeCouldAct, botDecisionCall, decisionOwner, rolled } from "./bot";
-import type { BlockAssignment, BotDecision, CardDef, CharacterFace, Die, GameState, LobbyStatus, PlayerState } from "./types";
+import { basicActionStock, executeAbility, getAbilityOptions, type AbilityCommand } from "./sharedAbilities";
+import { isReservePaymentDie } from "./reservePayment";
+import { SharedAbilityPanel } from "./SharedAbilityPanel";
+import type { BlockAssignment, BotDecision, CardDef, Die, GameState, LobbyStatus, PlayerState } from "./types";
 
 const POLL_INTERVAL_MS = 2000;
 // Pause before each computer-opponent move, so a Main Step full of
@@ -57,17 +62,7 @@ const ROLLED_ZONES = new Set(["ReservePool", "PrepArea", "FieldZone", "AttackZon
 // DieTile's own remarks) - shared here so groupDice can group them by
 // that same identity alone, ignoring whatever face they happened to be
 // on when they left play (see groupDice's own comment).
-const ICON_ONLY_ZONES = new Set(["UsedPile", "OutOfPlay"]);
-
-// The Tardigrade's creature levels (v3/DESIGN_NOTES.md, 2026-10-04), for
-// DieTile's info popover - a Tardigrade has no CardDef/`levels` of its own
-// to read this from the way a Character does. Mirrors TardigradeDie in
-// DiceKingdomConfig.cs: L2 1/1 on two faces (each also a Wild), L3
-// "Bulwark" 1/2 on one; the three energy faces get their own sentence.
-const TARDIGRADE_SPEC: (CharacterFace & { level: number })[] = [
-  { level: 2, fieldingCost: 0, attack: 1, defense: 1 },
-  { level: 3, fieldingCost: 0, attack: 1, defense: 2 },
-];
+const ICON_ONLY_ZONES = new Set(["UsedPile", "OutOfPlay", "PrepArea", "DiceFromBag", "DiceFromPrep"]);
 
 // What the rail's "Now" header says for each step - ported from
 // ../TurnRail.tsx's STEP_GUIDANCE/ATTACK_SUB_STEPS. Real feedback: the
@@ -292,6 +287,12 @@ function DieTile({
   label: labelOverride,
   spin,
   turnOffset,
+  fieldPrompt,
+  onStartField,
+  actionPrompt,
+  onStartAction,
+  choiceActive,
+  targetable,
 }: {
   die: Die;
   /** Which zone this tile represents - gates whether a rolled face shows
@@ -312,6 +313,15 @@ function DieTile({
   /** Mid-roll transform and accumulated turn count - see useDiceRoll.ts. */
   spin?: CubeSpin;
   turnOffset?: number;
+  /** In Main, choosing a creature exposes Field below its tile before payment starts. */
+  fieldPrompt?: boolean;
+  onStartField?: () => void;
+  /** In Main or an attack action window, an action-face die can be activated here. */
+  actionPrompt?: boolean;
+  onStartAction?: () => void;
+  /** A pending-choice target: highlight in the die's real board position. */
+  choiceActive?: boolean;
+  targetable?: boolean;
 }) {
   const [showInfo, setShowInfo] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -334,7 +344,7 @@ function DieTile({
   const spinFlash = useSpinFlash(die);
   const card = die.cardId ? cardsById.get(die.cardId) : undefined;
   const name = die.cardId ? (card?.name ?? die.cardId) : "Tardigrade";
-  const cls = ["dietile", clickable ? "clickable" : "", picked ? "picked" : ""].filter(Boolean).join(" ");
+  const cls = ["dietile", clickable ? "clickable" : "", picked ? "picked" : "", targetable ? "choice-targetable" : "", choiceActive && !targetable ? "choice-inactive" : ""].filter(Boolean).join(" ");
   const style = accent ? ({ textAlign: "center", ["--cc" as string]: accent, color: accent } as const) : { textAlign: "center" as const };
   // Direct feedback (2026-09-08): "the Level probably isn't need-to-know
   // information... provide that on a click." The die-cube itself already
@@ -347,14 +357,9 @@ function DieTile({
   // name, since that's the only thing on that face saying whose die it is.
   const label = labelOverride ?? (die.effectiveAttack === null && !die.isTardigrade ? name : null);
   const Avatar = die.cardId ? CHARACTER_ICONS[die.cardId] : null;
-  const energyType = card?.energyTypes[0];
-  // A rolled die that ISN'T currently part of an active selection has
-  // nothing else a click would do - direct feedback (2026-09-08): "much
-  // like clicking on the character itself" (the roster's own card-
-  // popover). Deliberately NOT wired up for a clickable die: selecting
-  // it (to pay energy, attack, block, ...) stays the one thing a click
-  // there does, unchanged.
-  const canShowInfo = isRolled && !clickable;
+  // During selection, left-click still selects the die. Right-click always
+  // opens the same inspector used by the roster without changing selection.
+  const canShowInfo = isRolled && !clickable && !choiceActive;
   // Direct feedback (2026-09-10): "when in 'Out of Play' or 'Used Pile'
   // rather than take up space with the word we should just put the
   // character symbol... just the symbol, though, no stats or energy."
@@ -363,11 +368,17 @@ function DieTile({
   // dropping the text row.
   const iconOnly = ICON_ONLY_ZONES.has(zone);
   return (
-    <div ref={wrapRef} className={`dietile-wrap${showInfo ? " info-open" : ""}`}>
+    <div ref={wrapRef} className={`dietile-wrap${showInfo ? " info-open" : ""}${targetable ? " choice-targetable" : ""}`}>
       <button
         type="button"
         className={cls}
+        data-fly-id={ROLLED_ZONES.has(zone) || zone === "DiceFromBag" || zone === "DiceFromPrep" ? `die:${die.id}` : undefined}
         onClick={clickable ? onClick : canShowInfo ? () => setShowInfo((v) => !v) : undefined}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          setShowInfo((v) => !v);
+        }}
+        title={clickable && isRolled ? "Left-click to select; right-click for card details" : "Right-click for card details"}
         style={style}
       >
         {count && count > 1 && <span className="chip-count">×{count}</span>}
@@ -417,48 +428,31 @@ function DieTile({
           </>
         )}
       </button>
+      {fieldPrompt && onStartField && (
+        <button
+          type="button"
+          className="dk-tile-field-start"
+          onClick={(event) => { event.stopPropagation(); onStartField(); }}
+        >
+          Field
+        </button>
+      )}
+      {actionPrompt && onStartAction && (
+        <button
+          type="button"
+          className="dk-tile-field-start"
+          onClick={(event) => { event.stopPropagation(); onStartAction(); }}
+        >
+          Use
+        </button>
+      )}
       {showInfo && (
-        <div className="card-popover down">
-          <div className="card-popover-head">
-            {Avatar ? <Avatar size={28} /> : <TardigradePhotoIcon size={28} />}
-            <div>
-              <div className="card-popover-name">{name}</div>
-              {card && (
-                <div className="card-popover-cost">
-                  Cost {card.purchaseCost} <CostIcon energyType={card.energyTypes[0] ?? "Wild"} />
-                </div>
-              )}
-            </div>
-          </div>
-          {/* What's going on with this die, and why (status cues). */}
-          <CueRows rows={cueRows} />
-          <div className="card-popover-levels">
-            {(card ? card.levels.map((l, i) => ({ ...l, level: i + 1 })) : TARDIGRADE_SPEC).map((level, i) => (
-              <div className={`card-popover-level-row${die.level === level.level ? " current" : ""}`} key={i}>
-                <span className="lvl-label">L{level.level}</span>
-                <span className="lvl-stats">
-                  {level.attack}A / {level.defense}D
-                </span>
-                <span className="lvl-cost">
-                  {level.fieldingCost} {energyType && <CostIcon energyType={energyType} />}
-                </span>
-              </div>
-            ))}
-          </div>
-          {card ? (
-            <>
-              <p className="card-popover-energy-note">
-                Plus 2 faces of 2 <CostIcon energyType={card.energyTypes[0] ?? "Wild"} /> and 1 face of 1{" "}
-                <CostIcon energyType={card.energyTypes[0] ?? "Wild"} />
-              </p>
-              <p className="card-popover-text">{card.rawText}</p>
-            </>
-          ) : (
-            <p className="card-popover-text">
-              Two L2 faces that are also a Wild (field it or spend it), one L3 (&ldquo;Bulwark&rdquo;), and three energy faces: 2, 2 and 1.
-            </p>
-          )}
-        </div>
+        <CardDetailPopover
+          card={card}
+          die={die}
+          cueRows={cueRows}
+          placement={mine === false ? "down" : "up"}
+        />
       )}
     </div>
   );
@@ -548,6 +542,7 @@ export function DiceKingdomPage() {
   // the other early hooks (both need to run unconditionally, before
   // the `!game` early return further down).
   const oppRowRef = useRef<HTMLDivElement>(null);
+  const flightRootRef = useRef<HTMLDivElement>(null);
   const yourRowRef = useRef<HTMLDivElement>(null);
   const [setupA, setSetupA] = useState<string | null>(null);
   const [setupB, setSetupB] = useState<string | null>(null);
@@ -572,6 +567,16 @@ export function DiceKingdomPage() {
   }, [game?.activePlayerId]);
 
   const [selection, setSelection] = useState<Selection>(EMPTY_SELECTION);
+  // The server owns legal pending-choice candidates. This state holds only
+  // local selections; clicking dice on the board never changes normal game selection.
+  const [choicePicked, setChoicePicked] = useState<string[]>([]);
+  const choiceKey = game?.pendingChoice
+    ? `${game.gameId}|${game.pendingChoice.controllerId}|${game.pendingChoice.intent}|${game.pendingChoice.description}|${game.pendingChoice.candidateIds.join(",")}`
+    : null;
+  useEffect(() => setChoicePicked([]), [choiceKey]);
+  // Desktop fielding starts from the selected creature's own Field button;
+  // energy dice are not selectable until the player requests payment.
+  const [fieldPaymentDieId, setFieldPaymentDieId] = useState<string | null>(null);
   // Dice that already used their one reroll this Roll & Reroll step - the
   // server doesn't say, so this is tracked client-side (see
   // TurnEngine.RerolledThisStep) and reset whenever the step changes.
@@ -589,7 +594,7 @@ export function DiceKingdomPage() {
   // The dice-cube roll animation - ported verbatim from ../useDiceRoll.ts.
   // README calls this "the single most important piece to port
   // faithfully" - see animateRolledDice below for how a roll is detected.
-  const { spins, offsets, rolling, launch: launchRoll, spinTo: spinDie } = useDiceRoll();
+  const { spins, offsets, launch: launchRoll, spinTo: spinDie } = useDiceRoll();
   const [bagOpen, setBagOpen] = useState(false);
   const [oppBagOpen, setOppBagOpen] = useState(false);
   // Which pile's inspector popover is open in the collapsed opponent mat
@@ -759,6 +764,33 @@ export function DiceKingdomPage() {
 
   function clearSelection() {
     setSelection(EMPTY_SELECTION);
+    setFieldPaymentDieId(null);
+  }
+
+  function selectReserveDie(die: Die) {
+    const selectedPrimary = game?.dice.find((candidate) => candidate.id === selection.primary) ?? null;
+    if (step === "main" && isReservePaymentDie(die, selectedPrimary, fieldPaymentDieId)) {
+      // Some character faces show both stats and energy. Once a purchase
+      // or Field payment has begun, their energy must take priority over
+      // selecting a new creature to field.
+      toggleDie(die.id);
+      return;
+    }
+    if ((step === "main" || step === "action-global-window") && die.zone === "ReservePool" && die.isActionFace) {
+      // Action-face dice are not creatures. Select them for their Use
+      // action without entering the fielding or payment workflows.
+      setFieldPaymentDieId(null);
+      setSelection((previous) => previous.primary === die.id ? EMPTY_SELECTION : { primary: die.id, secondary: [] });
+      return;
+    }
+    if (step === "main" && die.zone === "ReservePool" && rolled(die) && die.effectiveAttack !== null) {
+      // Outside a payment workflow, choosing another creature changes
+      // the primary and exposes that creature's own Field button.
+      setFieldPaymentDieId(null);
+      setSelection((previous) => previous.primary === die.id ? EMPTY_SELECTION : { primary: die.id, secondary: [] });
+      return;
+    }
+    toggleDie(die.id);
   }
 
   function toggleDie(id: string) {
@@ -787,39 +819,24 @@ export function DiceKingdomPage() {
   // arrived from elsewhere (a poll, or the computer's own move) - they
   // tumble like your own; see ./DiceKingdomMobilePage.tsx's identical
   // helper, which also holds its tray on screen through a reroll.
-  function remoteRolledIds(previous: GameState, next: GameState): string[] {
-    const before = new Map(previous.dice.map((d) => [d.id, d]));
-    const rolling = previous.currentStepId === "roll-and-reroll";
-    return next.dice
-      .filter((d) => {
-        const was = before.get(d.id);
-        if (!was || d.zone !== "ReservePool" || !rolled(d) || d.controllerId !== next.activePlayerId) return false;
-        if (!rolled(was)) return true;
-        return rolling && (was.level !== d.level || was.energySymbolId !== d.energySymbolId || was.energyAmount !== d.energyAmount);
-      })
-      .map((d) => d.id);
-  }
+
 
   function animateRolledDice(previous: GameState, next: GameState, rolledDieIds?: string[]) {
+    const { tumbles, flips } = classifyDieMotion(previous, next, rolledDieIds);
+    const byId = new Map(next.dice.map((d) => [d.id, d]));
     const before = new Map(previous.dice.map((d) => [d.id, d]));
-    const explicit = new Set(rolledDieIds ?? []);
     const rolledTargets: RollTarget[] = [];
     const spunTargets: RollTarget[] = [];
-    for (const die of next.dice) {
-      const was = before.get(die.id);
-      if (!was) continue;
-      if (!rolled(die)) continue;
-      const changedFace =
-        was.level !== die.level || was.effectiveAttack !== die.effectiveAttack ||
-        was.energySymbolId !== die.energySymbolId || was.energyAmount !== die.energyAmount;
-      if (!explicit.has(die.id) && !changedFace) continue;
+    for (const id of [...tumbles, ...flips]) {
+      const die = byId.get(id)!;
+      const was = before.get(id)!;
       const { index } = facesFor(die, cardsById);
       // What the die showed before the roll stays up until it's in the air.
       const held = {
         face: facesFor(was, cardsById).faces[0],
         energy: was.energySymbolId && was.energyAmount > 0 ? { type: was.energySymbolId, amount: was.energyAmount } : undefined,
       };
-      (explicit.has(die.id) ? rolledTargets : spunTargets).push({ dieId: die.id, faceIndex: index, held });
+      (tumbles.includes(id) ? rolledTargets : spunTargets).push({ dieId: id, faceIndex: index, held });
     }
     launchRoll(rolledTargets);
     spinDie(spunTargets);
@@ -907,7 +924,7 @@ export function DiceKingdomPage() {
     setBusy(true);
     busyRef.current = true;
     try {
-      const previous = game;
+      const previous = gameRef.current;
       const raw = await fn();
       // apiAs(gid, botId) means the response reflects the COMPUTER's own
       // seat (V2GamesController.Result sets yourPlayerId from whichever
@@ -1028,6 +1045,10 @@ export function DiceKingdomPage() {
     });
   }
 
+  // Reuse mobile’s die-flight logic: only a change of displayed zone/region
+  // launches a travelling die, never an unchanged roll or an opponent action.
+  useDieFlights(flightRootRef, game, game?.currentStepId ?? "", game?.yourPlayerId ?? game?.playerOne.id ?? "");
+
   if (!game && (waiting || invitePick)) {
     return (
       <div className="dicekingdom">
@@ -1133,12 +1154,35 @@ export function DiceKingdomPage() {
   const isYourTurn = you === game.activePlayerId;
   const opponentId = you === game.playerOne.id ? game.playerTwo.id : game.playerOne.id;
   const step = game.currentStepId;
+  // Both Basic Action cards form a shared community pool, regardless of owner.
+  const basicActions = basicActionStock(game, cardsById);
 
   function diceFor(playerId: string, zone?: string) {
     return game!.dice.filter((d) => d.controllerId === playerId && (!zone || d.zone === zone));
   }
 
   const primaryDie = selection.primary ? game.dice.find((d) => d.id === selection.primary) ?? null : null;
+  const myPendingChoice = game.pendingChoice?.controllerId === you ? game.pendingChoice : null;
+  const choiceMax = Math.max(1, myPendingChoice?.maxCount ?? 1);
+  const choiceCandidates = new Set(myPendingChoice?.candidateIds ?? []);
+  const namedCardChoice = myPendingChoice?.intent === "NameCard";
+  // Unpurchased dice are represented by roster cards, not loose dice.
+  // The other eligible dice remain in their original Field/Reserve/Attack positions.
+  const inlineDieChoice = !!myPendingChoice && !namedCardChoice && myPendingChoice.candidateIds.length > 0 &&
+    myPendingChoice.candidateIds.every((id) => {
+      // Player targets have no die to highlight; offer them by name in
+      // the compact prompt alongside directly-selectable creature dice.
+      if (id === game.playerOne.id || id === game.playerTwo.id) return true;
+      const die = game.dice.find((d) => d.id === id);
+      return die && (die.zone === "FieldZone" || die.zone === "ReservePool" || die.zone === "PrepArea" || die.zone === "AttackZone");
+    });
+  const inlineChoice = inlineDieChoice || namedCardChoice;
+  function toggleChoice(id: string) {
+    if (!choiceCandidates.has(id)) return;
+    setChoicePicked((previous) => previous.includes(id)
+      ? previous.filter((x) => x !== id)
+      : choiceMax === 1 ? [id] : previous.length < choiceMax ? [...previous, id] : previous);
+  }
 
   // What the current selection actually costs / requires, for the cost
   // line shown next to the contextual action button. Field: any energy
@@ -1162,10 +1206,30 @@ export function DiceKingdomPage() {
   function reservePoolClickable(d: Die): boolean {
     if (d.controllerId !== you || !isYourTurn) return false;
     if (step === "roll-and-reroll") return rolled(d) && !rerolledIds.includes(d.id);
+    if (step === "action-global-window") {
+      return game?.priorityPlayerId === you && !game?.pendingChoice &&
+        d.zone === "ReservePool" && !!d.isActionFace;
+    }
     if (step === "main") {
-      if (selection.primary === null) return rolled(d) && d.effectiveAttack !== null; // start a Field
+      if (selection.primary === null) return d.zone === "ReservePool" && rolled(d) &&
+        (d.effectiveAttack !== null || !!d.isActionFace); // select creature or action die
       if (d.id === selection.primary) return true; // toggle off
-      return d.energyAmount > 0; // candidate energy payment
+      const primary = game!.dice.find((candidate) => candidate.id === selection.primary);
+      if (primary?.zone === "ReservePool" && primary.effectiveAttack !== null) {
+        // Another creature can replace the selection at any time; energy
+        // only becomes clickable once Field is pressed beneath the die.
+        return (d.zone === "ReservePool" && rolled(d) &&
+          (d.effectiveAttack !== null || (!!d.isActionFace && fieldPaymentDieId === null))) ||
+          isReservePaymentDie(d, primary, fieldPaymentDieId);
+      }
+      if (primary?.zone === "ReservePool" && primary.isActionFace) {
+        // An Action die is a single selected die, not an exclusive mode.
+        // Allow the next creature or Action die to become the primary
+        // immediately; selectReserveDie already replaces that selection.
+        return d.zone === "ReservePool" && rolled(d) &&
+          (d.effectiveAttack !== null || !!d.isActionFace);
+      }
+      return d.energyAmount > 0; // purchase payment
     }
     return false;
   }
@@ -1192,7 +1256,7 @@ export function DiceKingdomPage() {
     const bag = diceFor(playerId, "Bag");
     const drawn = diceFor(playerId, "DiceFromBag");
     const carried = diceFor(playerId, "DiceFromPrep");
-    const unpurchased = diceFor(playerId, "Unpurchased");
+    const unpurchased = diceFor(playerId, "Unpurchased").filter((d) => !d.cardId || !cardsById.get(d.cardId)?.isAction);
     const unpurchasedByCard = new Map<string, Die[]>();
     for (const d of unpurchased) {
       if (!d.cardId) continue;
@@ -1218,7 +1282,7 @@ export function DiceKingdomPage() {
     const ZONE_TINTS: Record<string, string> = { UsedPile: "used", OutOfPlay: "outofplay", PrepArea: "prep" };
     function pileZone(title: string, zoneName: string, dice: Die[], note?: string) {
       return (
-        <div className={`zone zone-${ZONE_TINTS[zoneName] ?? "plain"}`}>
+        <div className={`zone zone-${ZONE_TINTS[zoneName] ?? "plain"}`} data-region={`${playerId}-${zoneName}`} data-pile={`${playerId === you ? "mine" : "opp"}-${zoneName === "UsedPile" ? "used" : "out"}`}>
           <h4>
             {title} <span className="count">{dice.length}</span>
           </h4>
@@ -1261,7 +1325,9 @@ export function DiceKingdomPage() {
       const setOpen = mine ? setBagOpen : setOppBagOpen;
       return (
         <>
-          {trayItem("Bag", dice.length, () => setOpen((o) => !o))}
+          <span data-pile={`${playerId === you ? "mine" : "opp"}-bag`}>
+            {trayItem("Bag", dice.length, () => setOpen((o) => !o))}
+          </span>
           {open && (
             <div className={`bag-popover ${mine ? "up" : "down"}`}>
               <h5>Contents known, order is not</h5>
@@ -1289,7 +1355,9 @@ export function DiceKingdomPage() {
       const open = collapsedZoneOpen === zoneName;
       return (
         <>
-          {trayItem(label, dice.length, () => setCollapsedZoneOpen((z) => (z === zoneName ? null : zoneName)))}
+          <span data-pile={`${playerId === you ? "mine" : "opp"}-${zoneName === "UsedPile" ? "used" : zoneName === "PrepArea" ? "prep" : "out"}`} data-region={`${playerId}-${zoneName}`}>
+            {trayItem(label, dice.length, () => setCollapsedZoneOpen((z) => (z === zoneName ? null : zoneName)))}
+          </span>
           {open && (
             <div className="bag-popover down">
               <div className="dierow">
@@ -1311,14 +1379,23 @@ export function DiceKingdomPage() {
     // grouped) since a rolled zone is about each die's own face, not a
     // count - see ROLLED_ZONES.
     function rolledZone(title: string, zoneName: string, dice: Die[], compact?: boolean) {
-      const isRollingHere = rolling && dice.some((d) => spins[d.id]);
+      const isRollingHere = dice.some((d) => spins[d.id]?.kind === "tumble");
+      // During Roll & Reroll, the active player's Reserve dice appear in
+      // the central Tray instead. Do not draw the same physical dice twice.
+      const stagedInTray = zoneName === "ReservePool" && step === "roll-and-reroll" &&
+        playerId === game!.activePlayerId &&
+        !diceFor(playerId).some((d) => d.zone === "DiceFromBag" || d.zone === "DiceFromPrep");
+      const visibleDice = stagedInTray ? [] : dice;
       return (
-        <div className={`zone zone-${ZONE_TINTS[zoneName] ?? "reserve"}${isRollingHere ? " rolling" : ""}${compact ? " compact" : ""}`}>
+        <div className={`zone zone-${ZONE_TINTS[zoneName] ?? "reserve"}${isRollingHere ? " rolling" : ""}${compact ? " compact" : ""}`}
+          data-region={`${playerId}-${zoneName}`}
+          data-pile={`${playerId === you ? "mine" : "opp"}-${zoneName === "ReservePool" ? "reserve" : "prep"}`}>
           <h4>
             {title} <span className="count">{dice.length}</span>
+            {stagedInTray && dice.length > 0 && <span className="dk-in-tray">in Tray</span>}
           </h4>
           <div className="dierow">
-            {dice.map((d) => {
+            {visibleDice.map((d) => {
               const picked = d.id === selection.primary || selection.secondary.includes(d.id);
               const already = step === "roll-and-reroll" && rerolledIds.includes(d.id);
               return (
@@ -1329,10 +1406,28 @@ export function DiceKingdomPage() {
                   cardsById={cardsById}
                   accent={accent}
                   mine={playerId === you}
-                  clickable={reservePoolClickable(d)}
-                  picked={picked}
+                  clickable={inlineDieChoice ? choiceCandidates.has(d.id) : reservePoolClickable(d)}
+                  picked={inlineDieChoice ? choicePicked.includes(d.id) : picked}
+                  choiceActive={inlineDieChoice}
+                  targetable={inlineDieChoice && choiceCandidates.has(d.id)}
                   label={already ? "rerolled" : undefined}
-                  onClick={() => toggleDie(d.id)}
+                  onClick={() => inlineDieChoice ? toggleChoice(d.id) : selectReserveDie(d)}
+                  fieldPrompt={zoneName === "ReservePool" && playerId === you && step === "main" && isYourTurn && game!.priorityPlayerId === you && !game!.pendingChoice && !busy && d.id === selection.primary && d.effectiveAttack !== null && rolled(d) && fieldPaymentDieId !== d.id}
+                  onStartField={() => {
+                    if (costFor(d).amount === 0) {
+                      void run(() => api.field(game!.gameId, d.id, []));
+                    } else {
+                      setFieldPaymentDieId(d.id);
+                    }
+                  }}
+                  actionPrompt={zoneName === "ReservePool" && playerId === you &&
+                    d.id === selection.primary &&
+                    !!abilities.actionDice.find((a) => a.die.id === d.id)?.command &&
+                    !game!.pendingChoice}
+                  onStartAction={() => {
+                    const command = abilities.actionDice.find((a) => a.die.id === d.id)?.command;
+                    if (command) doAbility(command);
+                  }}
                   spin={spins[d.id]}
                   turnOffset={offsets[d.id]}
                 />
@@ -1344,7 +1439,7 @@ export function DiceKingdomPage() {
     }
 
     const fieldZone = (
-      <div className="zone zone-field">
+      <div className="zone zone-field" data-region={`${playerId}-FieldZone`}>
         <h4>
           Field <span className="count">{field.length}</span>
         </h4>
@@ -1365,16 +1460,18 @@ export function DiceKingdomPage() {
                 cardsById={cardsById}
                 accent={accent}
                 mine={playerId === you}
-                clickable={clickable}
-                picked={picked}
-                onClick={() => toggleDie(d.id)}
+                clickable={inlineDieChoice ? choiceCandidates.has(d.id) : clickable}
+                picked={inlineDieChoice ? choicePicked.includes(d.id) : picked}
+                choiceActive={inlineDieChoice}
+                targetable={inlineDieChoice && choiceCandidates.has(d.id)}
+                onClick={() => inlineDieChoice ? toggleChoice(d.id) : toggleDie(d.id)}
               />
             );
           })}
         </div>
         {/* Keyword Intimidate - back on the same face at Clean Up. */}
         {intimidated.length > 0 && (
-          <div className="dk-intimidated">
+          <div className="dk-intimidated" data-region={`${playerId}-Intimidated`}>
             <span className="zone-note">Intimidated · back at end of turn</span>
             <div className="dierow">
               {intimidated.map((d) => (
@@ -1398,8 +1495,8 @@ export function DiceKingdomPage() {
         <div className="mat-slot mat-tray">
           <div className="tray">
             {bagTray(bag)}
-            {trayItem("Drawn This Turn", drawn.length)}
-            {trayItem("Carried From Prep", carried.length)}
+            <span data-pile={`${playerId === you ? "mine" : "opp"}-drawn`}>{trayItem("Drawn This Turn", drawn.length)}</span>
+            <span data-pile={`${playerId === you ? "mine" : "opp"}-carried`}>{trayItem("Carried From Prep", carried.length)}</span>
           </div>
         </div>
       </div>
@@ -1463,19 +1560,38 @@ export function DiceKingdomPage() {
     // reference's full row). The opponent's own board collapses this
     // row behind a tap instead - see the `isOpponentBoard` branch below.
     const isOpponentBoard = playerId !== you;
-    const rosterRow = (
-      <div className="roster-row">
-          {unpurchasedByCard.size === 0 && <span style={{ opacity: 0.5, fontSize: 12 }}>nothing left to buy</span>}
-          {[...unpurchasedByCard.entries()].map(([cardId, dice]) => {
+    const regularCards = [...unpurchasedByCard.entries()];
+    if (namedCardChoice && isOpponentBoard) {
+      // Pangolin names a character CARD, not a die. Include cards even when
+      // every copy is already purchased, and offer them on the actual roster.
+      for (const id of myPendingChoice!.candidateIds) {
+        const die = game!.dice.find((d) => d.id === id);
+        if (die?.cardId && !regularCards.some(([cardId]) => cardId === die.cardId)) {
+          regularCards.push([die.cardId, []]);
+        }
+      }
+    }
+    const sharedActionCards = basicActions.map(({ card, dice }) => [card.id, dice] as [string, Die[]]);
+    // Identical roster chip/inspector/purchase workflow for characters and
+    // shared Basic Actions. Only the grouping and visual treatment differ.
+    function renderRosterChips(entries: Array<[string, Die[]]>, basic = false) {
+      return (
+        <>
+      {entries.map(([cardId, dice]) => {
             const card = cardsById.get(cardId);
             const Avatar = CHARACTER_ICONS[cardId];
-            const dieId = dice[0].id;
+            const dieId = dice[0]?.id ?? null;
             const energyType = card?.energyTypes[0] ?? "Wild";
-            const canPurchaseNow = isYourTurn && playerId === you && step === "main";
+            const canPurchaseNow = isYourTurn && playerId === you && step === "main" && !game!.pendingChoice && game!.priorityPlayerId === you && dieId !== null;
             // Pangolin's lockout on this board's owner (status cues).
             const lockers = (game?.lockedCards ?? []).find((l) => l.playerId === playerId && l.cardId === cardId)?.sources;
-            const picked = selection.primary === dieId;
-            const detailOpen = openCardId === cardId;
+            const picked = dieId !== null && selection.primary === dieId;
+            const openKey = `${playerId}:${cardId}`;
+            const detailOpen = openCardId === openKey;
+            const namedChoiceId = namedCardChoice && isOpponentBoard
+              ? myPendingChoice!.candidateIds.find((id) => game!.dice.some((d) => d.id === id && d.cardId === cardId))
+              : undefined;
+            const cardChoicePicked = !!namedChoiceId && choicePicked.includes(namedChoiceId);
             return (
               // Not a <button> disabled outside Purchase's own window -
               // direct feedback (2026-09-07): viewing a card's ability
@@ -1483,96 +1599,73 @@ export function DiceKingdomPage() {
               // Main step. The actual purchase click moved into a real
               // button inside the popover below, which IS gated on
               // canPurchaseNow.
-              <div key={cardId} className="roster-chip-wrap">
+              <div key={cardId} className={`roster-chip-wrap${basic ? " roster-basic-chip" : ""}`}>
                 <button
                   type="button"
-                  className={`roster-chip${detailOpen ? " open" : ""}${picked ? " picked" : ""}${lockers ? " dk-locked" : ""}`}
+                  data-fly-id={playerId === you && dice.length > 0 ? `card:${cardId}` : undefined}
+                  className={`roster-chip${detailOpen ? " open" : ""}${picked || cardChoicePicked ? " picked" : ""}${lockers ? " dk-locked" : ""}${namedChoiceId ? " choice-targetable" : ""}`}
                   title={lockers ? `Locked out by ${lockers.join(", ")} - can't be bought or fielded while that's active.` : undefined}
-                  style={accent ? ({ ["--cc" as string]: accent } as const) : undefined}
-                  onClick={() => setOpenCardId((c) => (c === cardId ? null : cardId))}
+                  style={!basic && accent ? ({ ["--cc" as string]: accent } as const) : undefined}
+                  onClick={() => namedChoiceId ? toggleChoice(namedChoiceId) : setOpenCardId((c) => (c === openKey ? null : openKey))}
+                  onContextMenu={(e) => { if (namedChoiceId) { e.preventDefault(); setOpenCardId((c) => c === openKey ? null : openKey); } }}
                 >
                   {Avatar && <Avatar size={18} />}
                   <span className="rc-name">{card?.name ?? cardId}</span>
                   <span className="rc-cost">
-                    {card?.purchaseCost} <CostIcon energyType={energyType} />
+                    {game!.purchaseCosts?.[cardId] ?? card?.purchaseCost} {card?.energyTypes.length ? <CostIcon energyType={energyType} /> : null}
                   </span>
                   <span className="rc-left">×{dice.length} left</span>
                   {lockers && <span className="dk-locked-hatch" aria-hidden="true" />}
                 </button>
                 {detailOpen && (
-                  // Always down, not away-from-mat - direct feedback
-                  // (2026-09-09): the opponent's roster sits at the very
-                  // TOP of the page (roster-then-mat), so the previous
-                  // "away from the mat" rule opened it upward straight
-                  // off the top of the screen, invisible. Down still
-                  // covers their Reserve Pool, same as it would have
-                  // before - "that one is probably fine to show up
-                  // underneath, since you won't be needing to click in
-                  // the opponent's Reserve Pool while reading a character
-                  // info." Your own roster (mat-then-roster, at the
-                  // bottom) still has nothing below it either way.
-                  <div className="card-popover down">
-                    <div className="card-popover-head">
-                      {Avatar && <Avatar size={28} />}
-                      <div>
-                        <div className="card-popover-name">{card?.name ?? cardId}</div>
-                        <div className="card-popover-cost">
-                          Cost {card?.purchaseCost} <CostIcon energyType={energyType} />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="card-popover-levels">
-                      {card?.levels.map((level, i) => (
-                        <div className="card-popover-level-row" key={i}>
-                          <span className="lvl-label">L{i + 1}</span>
-                          <span className="lvl-stats">{level.attack}A / {level.defense}D</span>
-                          <span className="lvl-cost">
-                            {level.fieldingCost} <CostIcon energyType={energyType} />
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                    {/* Later-Dice-Masters layout (2026-09-07): every
-                        Character's other 3 faces are always exactly this -
-                        2 double + 1 single energy of its own type - so
-                        there's nothing per-card to fetch here. */}
-                    <p className="card-popover-energy-note">
-                      Plus 2 faces of 2 <CostIcon energyType={energyType} /> and 1 face of 1 <CostIcon energyType={energyType} />
-                    </p>
-                    <p className="card-popover-text">{card?.rawText}</p>
-                    {canPurchaseNow && (
-                      <button
-                        type="button"
-                        className="btn"
-                        disabled={selection.primary !== null && selection.primary !== dieId}
-                        onClick={() => toggleDie(dieId)}
-                      >
-                        {picked ? "Selected - pay energy above" : "Select to Purchase"}
-                      </button>
-                    )}
-                  </div>
+                  <CardDetailPopover
+                    card={card}
+                    fallbackName={cardId}
+                    purchaseCost={cardId ? game!.purchaseCosts?.[cardId] : undefined}
+                    purchase={canPurchaseNow ? {
+                      label: picked ? "Selected" : "Purchase",
+                      disabled: busy || !!lockers || (selection.primary !== null && selection.primary !== dieId),
+                      onClick: () => { if (dieId) toggleDie(dieId); },
+                    } : undefined}
+                  />
                 )}
               </div>
             );
           })}
+        </>
+      );
+    }
+    const rosterRow = (
+      <div className="roster-row" data-pile={`${playerId === you ? "mine" : "opp"}-roster`}>
+        <div className="roster-regular-cards">
+          {regularCards.length === 0 && <span className="roster-empty">No character dice left</span>}
+          {renderRosterChips(regularCards)}
+        </div>
+        {sharedActionCards.length > 0 && (
+          <div className="roster-basic-actions" aria-label="Shared Basic Action cards">
+            <span className="roster-basic-label">Basic Actions · Shared</span>
+            <div className="roster-basic-chips">{renderRosterChips(sharedActionCards, true)}</div>
+          </div>
+        )}
       </div>
     );
     const roster = isOpponentBoard ? (
       <div className="roster">
         <button
           type="button"
+          data-pile="opp-roster"
           className={`roster-collapse-toggle${oppRosterOpen ? " open" : ""}`}
           onClick={() => setOppRosterOpen((o) => !o)}
         >
           <span className="roster-head">Roster</span>
           <span className="roster-collapse-icons">
-            {[...unpurchasedByCard.keys()].map((cardId) => {
+            {[...unpurchasedByCard.keys(), ...sharedActionCards.map(([id]) => id)].map((cardId) => {
               const Avatar = CHARACTER_ICONS[cardId];
               return Avatar ? <Avatar key={cardId} size={16} /> : <TardigradeIcon key={cardId} size={16} />;
             })}
           </span>
         </button>
-        {oppRosterOpen && rosterRow}
+        {(oppRosterOpen || (namedCardChoice && isOpponentBoard)) && rosterRow}
       </div>
     ) : (
       <div className="roster">
@@ -1622,7 +1715,50 @@ export function DiceKingdomPage() {
   // still a real attacker sitting in the zone (a lingering post-combat
   // die before Clean Up processes it) - never hides actual game state,
   // only the empty three-placeholder-column view nobody's using yet.
+  // The shared centre row becomes a dice Tray for Roll & Reroll, as on
+  // mobile: face-down dice drawn from Bag/Prep before Roll, and their
+  // actual faces in Reserve after Roll. It belongs to the active player,
+  // including when we're watching an opponent roll. Keep each die in a
+  // single visible position so roll and zone-flight animations work.
+  function renderRollTray() {
+    const playerId = game!.activePlayerId;
+    const player = playerId === game!.playerOne.id ? game!.playerOne : game!.playerTwo;
+    const accent = player.champion ? `var(--${player.champion.energySymbolId.toLowerCase()})` : undefined;
+    const staged = diceFor(playerId).filter((d) => d.zone === "DiceFromBag" || d.zone === "DiceFromPrep");
+    const hasRolled = staged.length === 0;
+    const dice = hasRolled ? diceFor(playerId, "ReservePool") : staged;
+    const mine = playerId === you;
+    return (
+      <div className="dk-roll-tray" data-region={`${playerId}-roll-tray`}>
+        <div className="dk-roll-tray-heading">
+          <strong>{mine ? "Tray" : `${player.name}'s Tray`}</strong>
+          <span>{dice.length} dice{!hasRolled ? " · ready to roll" : mine ? " · click to select for reroll" : " · rolled"}</span>
+        </div>
+        <div className="dierow">
+          {dice.length === 0 && <span className="dk-roll-tray-empty">No dice in Tray</span>}
+          {dice.map((d) => (
+            <DieTile
+              key={d.id}
+              die={d}
+              zone={hasRolled ? "ReservePool" : d.zone}
+              cardsById={cardsById}
+              accent={accent}
+              mine={mine}
+              clickable={hasRolled && reservePoolClickable(d)}
+              picked={selection.primary === d.id || selection.secondary.includes(d.id)}
+              label={rerolledIds.includes(d.id) ? "rerolled" : undefined}
+              onClick={() => selectReserveDie(d)}
+              spin={spins[d.id]}
+              turnOffset={offsets[d.id]}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   function renderAttackZone() {
+    if (step === "roll-and-reroll") return renderRollTray();
     // Local picks while the defender is choosing, the server's declared
     // blocks after - the attacker's device never has the local ones.
     const assignments: BlockAssignment[] =
@@ -1642,10 +1778,11 @@ export function DiceKingdomPage() {
         assignments={assignments}
         nearPlayerId={you}
         selection={selection}
-        onGroupClick={(ids) => toggleDie(ids[0])}
+        onGroupClick={(ids) => inlineDieChoice ? toggleChoice(ids[0]) : toggleDie(ids[0])}
+        targeting={inlineDieChoice ? { candidates: choiceCandidates, picked: new Set(choicePicked) } : undefined}
         spins={spins}
         turnOffsets={offsets}
-        canAssignBlockers={step === "assign-blockers" && !isYourTurn}
+        canAssignBlockers={!myPendingChoice && step === "assign-blockers" && !isYourTurn}
         onSlotClick={handleBlockerSlotClick}
       />
     );
@@ -1688,7 +1825,7 @@ export function DiceKingdomPage() {
   // computed once, the same way ../ActionTray.tsx builds its `actions`
   // list from the primary die's zone and the current step, instead of a
   // different bespoke panel per feature.
-  function selectionAction(): { label: string; run: () => Promise<GameState>; rolledIds?: string[] } | null {
+  function selectionAction(): { label: string; run: () => Promise<GameState>; rolledIds?: string[]; freeField?: boolean } | null {
     if (!primaryDie) return null;
     const secondaryIds = selection.secondary;
     if (step === "roll-and-reroll" && (primaryDie.zone === "PrepArea" || primaryDie.zone === "ReservePool")) {
@@ -1706,11 +1843,11 @@ export function DiceKingdomPage() {
     if (step === "main" && primaryDie.zone === "Unpurchased") {
       return { label: "Purchase", run: () => api.purchase(game!.gameId, primaryDie.id, secondaryIds) };
     }
-    if (step === "main" && primaryDie.zone === "ReservePool" && rolled(primaryDie) && primaryDie.effectiveAttack !== null) {
+    if (step === "main" && primaryDie.zone === "ReservePool" && rolled(primaryDie) && primaryDie.effectiveAttack !== null && fieldPaymentDieId === primaryDie.id) {
       // Golden Eagle (2026-10-04): with no energy picked, field it free.
       const me = you === game!.playerOne.id ? game!.playerOne : game!.playerTwo; // (yourPlayer is declared further down)
-      if (secondaryIds.length === 0 && me.freeFieldAvailable && (primaryDie.fieldingCost ?? 0) > 0)
-        return { label: "Field free (Golden Eagle)", run: () => api.field(game!.gameId, primaryDie.id, [], true) };
+      if (secondaryIds.length === 0 && me.freeFieldAvailable && costFor(primaryDie).amount > 0)
+        return { label: "Field free (Golden Eagle)", freeField: true, run: () => api.field(game!.gameId, primaryDie.id, [], true) };
       return { label: "Field", run: () => api.field(game!.gameId, primaryDie.id, secondaryIds) };
     }
     return null;
@@ -1730,28 +1867,9 @@ export function DiceKingdomPage() {
   // situational instructions - a pending-choice picker, or the Assign
   // Blockers paragraph - that can't honestly fit on one line and aren't
   // the generic per-step reminder text NowInfoButton now hides).
-  const stepContentIsPanel =
-    (!!game.pendingChoice && you === game.pendingChoice.controllerId) || (step === "assign-blockers" && !isYourTurn);
+  const stepContentIsPanel = !game.pendingChoice && step === "assign-blockers" && !isYourTurn;
   const stepContent =
-    game.pendingChoice && you === game.pendingChoice.controllerId ? (
-      <div className="panel">
-        <p>
-          <b>{game.pendingChoice.description}</b>
-        </p>
-        <PendingChoiceChips
-          nameCard={game.pendingChoice.intent === "NameCard"}
-          candidateIds={game.pendingChoice.candidateIds}
-          max={game.pendingChoice.maxCount}
-          min={game.pendingChoice.minCount}
-          players={[game.playerOne, game.playerTwo]}
-          dice={game.dice}
-          cardsById={cardsById}
-          onSubmit={(ids) => run(() => api.resolvePendingChoice(game.gameId, ids))}
-        />
-      </div>
-    ) : game.pendingChoice ? (
-      <span className="now-bar-note">{vsComputer ? "Computer is choosing…" : "Waiting on the other player's choice…"}</span>
-    ) : game.priorityPlayerId === you && !isYourTurn ? (
+    game.pendingChoice ? null : game.priorityPlayerId === you && !isYourTurn ? (
       // Priority (Priority.cs): the opponent passed to you. This page has
       // no Globals UI (mobile does), so passing back is the only move.
       <button className="btn" disabled={busy} onClick={() => run(() => api.pass(game.gameId))}>
@@ -1846,13 +1964,8 @@ export function DiceKingdomPage() {
 
         {step === "main" && (
           <>
-            {primaryDie && action && cost && (
-              <span style={{ alignSelf: "center", fontSize: 13 }}>
-                {action.label} {cost.amount > 0 ? `— cost ${cost.amount}${cost.matchType ? ` ${cost.matchType}` : ""} (${spent}/${cost.amount} selected)` : "— free"}
-              </span>
-            )}
             {action && (
-              <button className="btn" disabled={busy || (cost !== null && spent < cost.amount)} onClick={() => run(action.run, action.rolledIds)}>
+              <button className="btn" disabled={busy || (!action.freeField && cost !== null && spent < cost.amount)} onClick={() => run(action.run, action.rolledIds)}>
                 {action.label}
               </button>
             )}
@@ -1911,10 +2024,54 @@ export function DiceKingdomPage() {
 
   const oppPlayer = opponentId === game.playerOne.id ? game.playerOne : game.playerTwo;
   const yourPlayer = you === game.playerOne.id ? game.playerOne : game.playerTwo;
+  const abilities = getAbilityOptions(game, cardsById, you, busy);
+  function doAbility(command: AbilityCommand) {
+    clearSelection();
+    run(() => executeAbility(game!.gameId, command));
+  }
 
   return (
-    <div className="dicekingdom">
+    <div ref={flightRootRef} className="dicekingdom">
       {legendOpen && <DieFramesLegend variant="desktop" onClose={() => setLegendOpen(false)} />}
+      {myPendingChoice && (
+        <div className="dk-floating-choice" role="dialog" aria-label="Choose an ability target">
+          <div className="dk-floating-choice-description">{myPendingChoice.description}</div>
+          {inlineChoice ? (
+            <>
+              <p className="dk-choice-instructions">
+                {namedCardChoice ? "Select a highlighted card in your opponent’s roster (right-click to inspect)." : "Select highlighted dice on the board (right-click to inspect)."}
+                {choiceMax > 1 ? ` ${choicePicked.length}/${choiceMax} selected.` : ""}
+              </p>
+              {myPendingChoice.candidateIds.filter((id) => id === game.playerOne.id || id === game.playerTwo.id).map((id) => (
+                <button key={id} type="button" className={`chip${choicePicked.includes(id) ? " on" : ""}`}
+                  onClick={() => toggleChoice(id)}>
+                  {id === game.playerOne.id ? game.playerOne.name : game.playerTwo.name}
+                </button>
+              ))}
+              <div className="dk-choice-actions">
+                <button type="button" className="btn" disabled={busy || choicePicked.length < myPendingChoice.minCount || choicePicked.length > choiceMax}
+                  onClick={() => run(() => api.resolvePendingChoice(game.gameId, choicePicked))}>
+                  {choicePicked.length === 0 && myPendingChoice.minCount === 0 ? "Skip" : "Confirm Choice"}
+                </button>
+              </div>
+            </>
+          ) : (
+            // Choices with player IDs or dice in hidden/grouped piles cannot
+            // reliably be selected on the visible board; retain fallback.
+            <PendingChoiceChips
+              key={choiceKey ?? "no-choice"}
+              nameCard={namedCardChoice}
+              candidateIds={myPendingChoice.candidateIds}
+              max={myPendingChoice.maxCount}
+              min={myPendingChoice.minCount}
+              players={[game.playerOne, game.playerTwo]}
+              dice={game.dice}
+              cardsById={cardsById}
+              onSubmit={(ids) => run(() => api.resolvePendingChoice(game.gameId, ids))}
+            />
+          )}
+        </div>
+      )}
       <GameOverOverlay
         game={game}
         you={vsComputer ? game.playerOne.id : you}
@@ -1985,13 +2142,28 @@ export function DiceKingdomPage() {
         <div className="dk-sideboard">
           <div className="sideboard-panel">
             <h4>Basic Actions</h4>
-            <span className="sideboard-sub">shared pool · both may buy</span>
-            <p className="sideboard-empty">Dice Kingdom has no Basic Actions yet.</p>
+            <span className="sideboard-sub">shared pool · purchase from your roster</span>
+            {basicActions.length === 0 && <p className="sideboard-empty">No Basic Action dice remaining.</p>}
+            {basicActions.map(({ card, dice }) => {
+              const actual = game.purchaseCosts?.[card.id] ?? card.purchaseCost;
+              return <div key={card.id} className="dk-basic-action-item">
+                <div className="dk-basic-action-head">
+                  <strong>{card.name}</strong>
+                  <span>Cost {actual} · ×{dice.length} left</span>
+                </div>
+                <p>{card.actionText ?? card.rawText}</p>
+              </div>;
+            })}
           </div>
-          <div className="sideboard-panel">
-            <h4>Global Abilities</h4>
-            <span className="sideboard-sub">either player, any window</span>
-            <p className="sideboard-empty">No Globals designed yet.</p>
+          <div className="sideboard-panel dk-ability-sideboard">
+            <SharedAbilityPanel
+              variant="desktop"
+              abilities={abilities}
+              onExecute={doAbility}
+              nameOf={(d) => (d.cardId ? cardsById.get(d.cardId)?.name : null) ?? "Tardigrade"}
+              actionTextOf={(d) => d.cardId ? cardsById.get(d.cardId)?.actionText : null}
+              renderDie={(d) => <DieCube {...facesFor(d, cardsById)} size={34} mine />}
+            />
           </div>
         </div>
 
@@ -2022,10 +2194,21 @@ export function DiceKingdomPage() {
               {STEP_GUIDANCE[step] && (
                 <>
                   <NowInfoButton text={STEP_GUIDANCE[step].text} />
-                  <span className="now-bar-title">{STEP_GUIDANCE[step].title}</span>
+                  <span className="now-bar-title">{step === "select-attackers" ? "Attack" : STEP_GUIDANCE[step].title}</span>
                 </>
               )}
               {!stepContentIsPanel && <div className="now-bar-actions">{stepContent}</div>}
+            </div>
+            <div className="now-bar-detail" aria-live="polite">
+              {myPendingChoice ? (inlineChoice ? "Choose highlighted targets on the board" : "Choose a target in the floating panel")
+                : game.pendingChoice ? (vsComputer ? "Computer is choosing…" : "Waiting for the other player's choice…")
+                : step === "select-attackers"
+                ? "Declare Attackers"
+                : step === "main" && primaryDie && primaryDie.zone === "ReservePool" && primaryDie.effectiveAttack !== null && fieldPaymentDieId !== primaryDie.id
+                  ? "Select Field beneath the die to begin payment"
+                  : step === "main" && primaryDie && action && cost
+                    ? `${action.label} ${action.freeField ? "— free" : cost.amount > 0 ? `— cost ${cost.amount}${cost.matchType ? ` ${cost.matchType}` : ""} (${spent}/${cost.amount} selected)` : "— free"}`
+                    : ""}
             </div>
             {stepContentIsPanel && <div className="now-panel-scroll">{stepContent}</div>}
           </div>

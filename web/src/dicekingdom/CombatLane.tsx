@@ -1,7 +1,8 @@
-import { Fragment } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { DieCube, type CubeSpin } from "./DieCube";
 import { facesFor } from "./dieFaces";
 import { characterFaceInfo } from "./dieHelpers";
+import { CardDetailPopover } from "./CardDetailPopover";
 import type { BlockAssignment, CardDef, Die } from "./types";
 
 // Where the two mats meet - ported from ../CombatLane.tsx verbatim
@@ -34,12 +35,25 @@ function EngagementDie(props: {
   cardsById: Map<string, CardDef>;
   mine: boolean;
   selection: Selection;
+  targeting?: { candidates: Set<string>; picked: Set<string> };
   onGroupClick: (ids: string[]) => void;
   spins?: Record<string, CubeSpin>;
   turnOffsets?: Record<string, number>;
 }) {
   const { die, cardsById } = props;
-  const selected = props.selection.primary === die.id || props.selection.secondary.includes(die.id);
+  const targetable = props.targeting?.candidates.has(die.id) ?? false;
+  const selected = props.targeting ? props.targeting.picked.has(die.id)
+    : props.selection.primary === die.id || props.selection.secondary.includes(die.id);
+  const [showInfo, setShowInfo] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!showInfo) return;
+    const dismiss = (e: PointerEvent) => {
+      if (!(e.target instanceof Node) || !wrapRef.current?.contains(e.target)) setShowInfo(false);
+    };
+    document.addEventListener("pointerdown", dismiss);
+    return () => document.removeEventListener("pointerdown", dismiss);
+  }, [showInfo]);
   // Just the cube, same as a rolled Field Zone tile (DiceKingdomPage.tsx's
   // DieTile) - direct feedback (2026-09-11): "the dice in the attack zone
   // are still the old 'big' version with the name and extra information
@@ -48,16 +62,22 @@ function EngagementDie(props: {
   // attack/defense/cost numbers (see DieCube.tsx); name/level were pure
   // repetition once Field Zone dropped them for the same reason.
   return (
-    <button className={`lane-die${selected ? " selected" : ""}`} onClick={() => props.onGroupClick([die.id])}>
-      <DieCube
-        {...facesFor(die, cardsById)}
-        size={props.size}
-        mine={props.mine}
-        spin={props.spins?.[die.id]}
-        turnOffset={props.turnOffsets?.[die.id]}
-        energyCorner={die.energySymbolId && die.energyAmount > 0 ? { type: die.energySymbolId, amount: die.energyAmount } : undefined}
-      />
-    </button>
+    <div ref={wrapRef} className={`dietile-wrap${showInfo ? " info-open" : ""}`}>
+      <button type="button" data-fly-id={`die:${die.id}`} className={`lane-die${selected ? " selected" : ""}${targetable ? " choice-targetable" : ""}${props.targeting && !targetable ? " choice-inactive" : ""}`}
+        onClick={() => { if (!props.targeting || targetable) props.onGroupClick([die.id]); }}
+        onContextMenu={(e) => { e.preventDefault(); setShowInfo((v) => !v); }}
+        title="Right-click to inspect die">
+        <DieCube
+          {...facesFor(die, cardsById)}
+          size={props.size}
+          mine={props.mine}
+          spin={props.spins?.[die.id]}
+          turnOffset={props.turnOffsets?.[die.id]}
+          energyCorner={die.energySymbolId && die.energyAmount > 0 ? { type: die.energySymbolId, amount: die.energyAmount } : undefined}
+        />
+      </button>
+      {showInfo && <CardDetailPopover card={die.cardId ? cardsById.get(die.cardId) : undefined} die={die} placement={props.mine ? "up" : "down"} />}
+    </div>
   );
 }
 
@@ -68,6 +88,7 @@ export function CombatLane(props: {
   /** Whose dice belong on the bottom half of the lane. */
   nearPlayerId: string;
   selection: Selection;
+  targeting?: { candidates: Set<string>; picked: Set<string> };
   onGroupClick: (ids: string[]) => void;
   spins?: Record<string, CubeSpin>;
   turnOffsets?: Record<string, number>;
@@ -84,7 +105,9 @@ export function CombatLane(props: {
 }) {
   const { dice, cardsById, assignments, nearPlayerId } = props;
   const byId = new Map(dice.map((d) => [d.id, d]));
-  const attackers = dice.filter((d) => d.zone === "AttackZone");
+  // Both attackers and blockers occupy AttackZone once blocks are declared.
+  // Only declared attackers have a lane; blockers must not create extra columns.
+  const attackers = dice.filter((d) => d.zone === "AttackZone" && d.lane !== null);
   const engagements: Engagement[] = attackers.map((attacker) => ({
     attacker,
     blockers: assignments
@@ -96,6 +119,7 @@ export function CombatLane(props: {
   const dieProps = {
     cardsById,
     selection: props.selection,
+    targeting: props.targeting,
     onGroupClick: props.onGroupClick,
     spins: props.spins,
     turnOffsets: props.turnOffsets,
@@ -104,7 +128,7 @@ export function CombatLane(props: {
   const columns = engagements.length > 0 ? engagements : null;
 
   return (
-    <section className="combat-lane" aria-label="Combat">
+    <section className="combat-lane" data-region="combat" aria-label="Combat">
       <div
         className="lane-grid"
         style={{ gridTemplateColumns: `104px repeat(${columns?.length ?? 3}, 104px) 1fr` }}

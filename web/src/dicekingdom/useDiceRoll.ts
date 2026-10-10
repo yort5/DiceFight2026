@@ -59,23 +59,37 @@ export function useDiceRoll() {
   // timing (spinTo's own closure is stale - useCallback(..., []) - so it
   // can't just read the `offsets` state variable directly either).
   const offsetsRef = useRef<Record<string, number>>({});
-  const [rolling, setRolling] = useState(false);
-  const timers = useRef<number[]>([]);
+  // Each die owns its animation timer. A face-turn must never cancel an
+  // unrelated roll's cleanup (which previously left dice rolling forever).
+  const timers = useRef<Map<string, number>>(new Map());
   // A monotonic counter, not Date.now() - guarantees every generation is
   // unique even if two rolls somehow land in the same millisecond, which
   // wall-clock time can't promise.
   const generationRef = useRef(0);
 
-  const clearTimers = () => {
-    timers.current.forEach(clearTimeout);
-    timers.current = [];
+  useEffect(() => () => {
+    for (const timer of timers.current.values()) clearTimeout(timer);
+    timers.current.clear();
+  }, []);
+
+  const finishAfter = (dieId: string, spin: CubeSpin, delayMs: number) => {
+    const previousTimer = timers.current.get(dieId);
+    if (previousTimer !== undefined) clearTimeout(previousTimer);
+    const timer = window.setTimeout(() => {
+      timers.current.delete(dieId);
+      setSpins((current) => {
+        // A newer motion may have superseded this one.
+        if (current[dieId] !== spin) return current;
+        const next = { ...current };
+        delete next[dieId];
+        return next;
+      });
+    }, delayMs);
+    timers.current.set(dieId, timer);
   };
-  useEffect(() => clearTimers, []);
 
   const launch = useCallback((targets: RollTarget[]) => {
     if (targets.length === 0) return;
-    clearTimers();
-
     const reduced = reducedMotionPreferred();
     const duration = reduced ? TUMBLE_MS_REDUCED : TUMBLE_MS;
 
@@ -99,26 +113,13 @@ export function useDiceRoll() {
     });
 
     setSpins((current) => ({ ...current, ...next }));
-    setRolling(true);
-
-    const maxDelay = reduced ? 0 : (targets.length - 1) * STAGGER_MS;
-    const after = (ms: number, fn: () => void) => {
-      timers.current.push(setTimeout(fn, ms) as unknown as number);
-    };
-    after(duration + maxDelay, () => {
-      setRolling(false);
-      setSpins((current) => {
-        const cleared = { ...current };
-        for (const target of targets) delete cleared[target.dieId];
-        return cleared;
-      });
+    targets.forEach((target, i) => {
+      finishAfter(target.dieId, next[target.dieId], duration + (reduced ? 0 : i * STAGGER_MS));
     });
   }, []);
 
   const spinTo = useCallback((targets: RollTarget[]) => {
     if (targets.length === 0) return;
-    clearTimers();
-
     // Unlike launch(), this doesn't fall back to a shorter real spin in
     // reduced-motion mode - ANIMATIONS.md doesn't specify one for this
     // (spec-uncovered) case, and the twist is subtle enough already that
@@ -140,17 +141,9 @@ export function useDiceRoll() {
     setOffsets(offsetsRef.current);
     setSpins((current) => ({ ...current, ...nextSpins }));
 
-    const after = (ms: number, fn: () => void) => {
-      timers.current.push(setTimeout(fn, ms) as unknown as number);
-    };
-    after(SPIN_MS, () => {
-      setSpins((current) => {
-        const cleared = { ...current };
-        for (const target of targets) delete cleared[target.dieId];
-        return cleared;
-      });
-    });
+    targets.forEach((target) => finishAfter(target.dieId, nextSpins[target.dieId], SPIN_MS));
   }, []);
 
+  const rolling = Object.values(spins).some((spin) => spin.kind === "tumble");
   return { spins, offsets, rolling, launch, spinTo };
 }
