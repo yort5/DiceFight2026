@@ -41,6 +41,14 @@ nothing set, so it records nothing until a bucket is configured.
 
 Files are named `<prefix><yyyy>/<MM>/<dd>/<gameId>.json`.
 
+**Players live here too** (2026-10-10, `src/DiceFight.Api/Accounts/`): one
+file per player at `dice-kingdom/players/<playerId>.json` in the same bucket
+or folder (names, device token hashes, game history). With neither setting,
+players are kept in memory only: they work, but a redeploy forgets every
+account and history. So the bucket setup below matters for accounts as well as
+records. The steps are the same; Storage Object User already includes the reads
+that players need.
+
 ## Turning it on in GCP (one-time, in the Cloud Console)
 
 1. **Create a bucket.** Cloud Storage → Buckets → Create.
@@ -61,7 +69,8 @@ Files are named `<prefix><yyyy>/<MM>/<dd>/<gameId>.json`.
    revision → Variables & secrets → add `GameRecords__Bucket` = the bucket
    name (double underscore). Deploy.
 4. **Check it.** In the new revision's logs, look for "Recording Dice
-   Kingdom games to Cloud Storage bucket ...". Play one turn, and a file
+   Kingdom games to Cloud Storage bucket ..." and "Keeping players in
+   Cloud Storage bucket ...". Play one turn, and a file
    should appear under `dice-kingdom/games/` in the bucket. A failed write
    logs "Couldn't write game record" with the reason and never interrupts
    the game.

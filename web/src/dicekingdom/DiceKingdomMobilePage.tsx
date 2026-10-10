@@ -13,6 +13,7 @@ import {
 } from "./icons";
 import { describeSavedGame, forgetSeats, inviteLink, myLink, rememberSeats } from "./seats";
 import { GameOverOverlay } from "./GameOverOverlay";
+import { AccountLink } from "./AccountPage";
 import { OPPONENT_PICKS, PickYourChampion, ResumeGames, WaitingForOpponent, resolveInvite } from "./lobby";
 import { ChampionPicker } from "./ChampionPicker";
 import { DieCube, type CubeSpin } from "./DieCube";
@@ -2360,6 +2361,7 @@ export function DiceKingdomMobilePage() {
           their own.
         </p>
         {error && <p className="dkm-error">{error}</p>}
+        <AccountLink from="mobile" />
         <ResumeGames
           onResume={(r) => {
             setError(null);

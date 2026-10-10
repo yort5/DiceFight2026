@@ -4,6 +4,7 @@ import { api, apiAs } from "./api";
 import { CHAMPION_ICONS, CHARACTER_ICONS, EnergyBadge, HelpIcon, TardigradeIcon, TardigradePhotoIcon } from "./icons";
 import { describeSavedGame, forgetSeats, inviteLink, myLink, rememberSeats } from "./seats";
 import { GameOverOverlay } from "./GameOverOverlay";
+import { AccountLink } from "./AccountPage";
 import { OPPONENT_PICKS, PickYourChampion, ResumeGames, WaitingForOpponent, resolveInvite } from "./lobby";
 import { ChampionPicker } from "./ChampionPicker";
 import { CombatLane } from "./CombatLane";
@@ -1077,6 +1078,7 @@ export function DiceKingdomPage() {
           engine - a small pool, simple abilities, mostly for reacting to how the system feels.
         </p>
         {error && <p className="error">{error}</p>}
+        <AccountLink />
         <ResumeGames
           onResume={(r) => {
             setError(null);

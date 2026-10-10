@@ -10,11 +10,18 @@ namespace DiceFight.Api;
 //
 // `recorder` (2026-10-04): when game recording is configured, every game
 // started here gets a GameRecord (Recording/GameRecorder.cs).
-public sealed class V2GameStore(Recording.GameRecorder? recorder = null)
+//
+// `accounts` (2026-10-10): players, and who holds each seat - the controller
+// keeps each player's list of games through it.
+public sealed class V2GameStore(Recording.GameRecorder? recorder = null, Accounts.PlayerAccounts? accounts = null)
 {
     private readonly ConcurrentDictionary<string, V2GameSession> _games = new();
 
     public Recording.GameRecorder? Recorder => recorder;
+    public Accounts.PlayerAccounts? Accounts => accounts;
+
+    public IEnumerable<V2GameSession> Sessions => _games.Values;
+    public IEnumerable<V2Lobby> Lobbies => _lobbies.Values;
 
     // `id`/`seed` are given only when replaying a recorded game.
     public V2GameSession Create(GameState state, string? id = null, int? seed = null)
@@ -120,6 +127,8 @@ public sealed class V2Lobby
     public DateTime CreatedUtc { get; } = DateTime.UtcNow;
     public required string HostChampionId { get; init; }
     public required IReadOnlyList<Seat> Seats { get; init; }
+    // The host's player (Accounts), when they had one.
+    public string? HostOwnerId { get; set; }
 }
 
 // Config section "GameExpiry" - how long idle games stay in memory.

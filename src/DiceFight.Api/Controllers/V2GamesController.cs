@@ -2,6 +2,7 @@ using DiceFight.V2;
 using DiceFight.V2.Bot;
 using DiceFight.V2.Data;
 using DiceFight.V2.Model;
+using DiceFight.Api.Accounts;
 using DiceFight.Api.Recording;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
@@ -39,6 +40,7 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
 
         var state = GameSetup.NewGame(config, catalog, playerOne, playerTwo);
         var session = store.Create(state);
+        store.Accounts?.GameCreated(session, HttpContext.Player());
 
         return Ok(new V2CreatedGameDto(
             V2GameStateDto.From(session.Id, state, state.PlayerOne.Id),
@@ -55,6 +57,7 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
     {
         _ = BuildPlayer("teamA", request.ChampionId); // validates the Champion id
         var lobby = store.OpenLobby(request.ChampionId, "teamA", "teamB");
+        store.Accounts?.LobbyOpened(lobby, HttpContext.Player());
         return Ok(new V2OpenGameDto(lobby.Id, lobby.HostChampionId,
             lobby.Seats.Select(seat => new SeatDto(seat.PlayerId, seat.Token)).ToList()));
     }
@@ -92,6 +95,7 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
         var state = GameSetup.NewGame(DiceKingdomConfig.Config, DiceKingdomConfig.Catalog,
             BuildPlayer(lobby.Seats[0].PlayerId, lobby.HostChampionId), BuildPlayer(guest.PlayerId, request.ChampionId));
         var session = store.StartLobby(lobby, state);
+        store.Accounts?.LobbyJoined(lobby, session, HttpContext.Player());
         _session = session;
         _seatPlayerId = guest.PlayerId;
         session.MarkChanged();
@@ -137,6 +141,7 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
     {
         var (session, playerId) = RequireSeat(gameId);
         var skipIds = (skip ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).ToHashSet();
+        store.Accounts?.BotSeat(session, playerId);
         var decision = DiceKingdomBot.Decide(session.State, playerId, skipIds);
         return decision is null ? NoContent() : Ok(V2BotDecisionDto.From(decision));
     }
@@ -434,6 +439,7 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
             throw new InvalidOperationException("The game is over.");
         _seatPlayerId = playerId;
         _session = session;
+        store.Accounts?.SeatUsed(session, playerId, HttpContext.Player());
         return (session, playerId);
     }
 
@@ -456,7 +462,11 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
     private V2GameStateDto Result(string gameId, GameState state)
     {
         var session = store.GetSession(gameId);
-        if (HttpMethods.IsPost(Request.Method)) session.MarkChanged();
+        if (HttpMethods.IsPost(Request.Method))
+        {
+            session.MarkChanged();
+            store.Accounts?.AfterMove(session);
+        }
         Priority.Sync(state);
         return V2GameStateDto.From(gameId, state, _seatPlayerId, session.Version);
     }

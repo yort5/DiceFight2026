@@ -4363,3 +4363,39 @@ Simulator (SIM_DILUTION, 400 games/matchup):
 plan. In the one human game recorded (5607496d), only ~4 matched the
 human's buys (Wolverine over Honey Badger + Mongoose, which tie at 2).
 tools/GameRecords --dilution N compares human buys against a given value.
+
+## 2026-10-10 - Players: anonymous by default, accounts without passwords
+
+User: work without logging in, using an identifier from the device. Anyone
+who wants a record of their games, or the same account on several devices,
+can make an account with no password, using a code instead. The user's picks:
+no email yet (link devices with a short code instead), store players in the
+game-records bucket, and keep a games list plus W/L.
+
+- **Every browser is a player.** It registers on first use (`POST
+  /api/players`) and keeps the token `<playerId>.<secret>` in localStorage
+  (`web/src/dicekingdom/player.ts`). Every Dice Kingdom request sends it as
+  `X-Player-Token`. The server keeps only a SHA-256 of the secret.
+- **A name makes an account.** `/dice-kingdom/account` (AccountPage.tsx)
+  is a real route, linked from both start screens ("Playing as ...").
+- **Linking devices.** A named account shows a 6-character code (10 minutes,
+  single use, in memory). Typing it on another device merges that device's
+  player into the account: devices, games, and seats in live games. The old
+  player is left as a `MergedInto` tombstone, so the second device's token
+  keeps working unchanged. Ten wrong codes locks out linking for ten
+  minutes. Email sign-in can come later as one more way to add a Device.
+- **Game history.** `PlayerAccounts` keeps each owner's `PlayedGame` in
+  step with the game: Create gives both seats to the creator, Open/Join make
+  it an online game, and a seat played from another player's device changes
+  hands (invite links). A `bot-decision` call marks the computer's seat, and
+  the result is recorded at game over. W/L counts only when the player held
+  exactly one human seat, so pass-and-play shows the winner without counting
+  it. Seat tokens are kept so unfinished games show under "Resume a game" on
+  every device (lobby.tsx `adoptServerGames`; `?resume=<id>` resumes one
+  directly). Unfinished games the server has forgotten are pruned.
+- **Storage.** `dice-kingdom/players/<id>.json`, with background writes
+  like GameRecorder's. An anonymous player isn't written until it has a game
+  or a name. Production keeps players in memory only until
+  `GameRecords__Bucket` is set (see GAME_RECORDS.md).
+- UI check: `~/.devtools/playwright/account-check.js` (a fixture player
+  file, laptop shows code, fresh phone links, resumes the laptop's game).

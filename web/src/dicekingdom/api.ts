@@ -1,3 +1,4 @@
+import { playerHeader } from "./player";
 import { seatsFor, tokenFor } from "./seats";
 import type { BlockAssignment, BotDecision, CardDef, Champion, CreatedGame, GameState, LobbyStatus, OpenedGame } from "./types";
 
@@ -28,6 +29,8 @@ async function request<T>(path: string, options?: RequestInit, tokenOverride?: s
     ...options,
     headers: {
       "Content-Type": "application/json",
+      // Who's playing (player.ts) - so the server keeps this player's games.
+      ...(await playerHeader()),
       ...seatHeader(path, tokenOverride),
       ...(auto ? { "X-Auto-Move": "1" } : {}),
       ...(options?.headers ?? {}),
@@ -107,7 +110,7 @@ function makeClient(tokenOverride?: string | null, auto = false) {
     botDecision: async (id: string, skip: Iterable<string>): Promise<BotDecision | null> => {
       const query = [...skip].length ? `?skip=${encodeURIComponent([...skip].join(","))}` : "";
       const res = await fetch(`${BASE_URL}/${id}/bot-decision${query}`, {
-        headers: seatHeader(`/${id}`, tokenOverride),
+        headers: { ...(await playerHeader()), ...seatHeader(`/${id}`, tokenOverride) },
       });
       if (res.status === 204) return null;
       if (!res.ok) {

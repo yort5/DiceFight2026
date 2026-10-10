@@ -137,12 +137,21 @@ public sealed class GameRecorderSetup(GameRecorder? recorder) : IHostedService
 
     public static GameRecorderSetup FromConfig(IServiceProvider services)
     {
-        var options = services.GetRequiredService<IConfiguration>().GetSection("GameRecords").Get<GameRecordOptions>() ?? new GameRecordOptions();
-        IGameRecordSink? sink =
-            !string.IsNullOrWhiteSpace(options.Bucket) ? new CloudStorageSink(options.Bucket, new HttpClient())
+        var options = Options(services);
+        var sink = SinkFromConfig(services);
+        return new(sink is null ? null : new GameRecorder(sink, options, services.GetRequiredService<ILogger<GameRecorder>>()));
+    }
+
+    private static GameRecordOptions Options(IServiceProvider services) =>
+        services.GetRequiredService<IConfiguration>().GetSection("GameRecords").Get<GameRecordOptions>() ?? new GameRecordOptions();
+
+    // Where GameRecords points, or null - also where players are kept (Accounts).
+    public static IGameRecordSink? SinkFromConfig(IServiceProvider services)
+    {
+        var options = Options(services);
+        return !string.IsNullOrWhiteSpace(options.Bucket) ? new CloudStorageSink(options.Bucket, new HttpClient())
             : !string.IsNullOrWhiteSpace(options.LocalPath) ? new LocalFolderSink(options.LocalPath)
             : null;
-        return new(sink is null ? null : new GameRecorder(sink, options, services.GetRequiredService<ILogger<GameRecorder>>()));
     }
 
     public Task StartAsync(CancellationToken cancel) => recorder?.StartAsync(cancel) ?? Task.CompletedTask;

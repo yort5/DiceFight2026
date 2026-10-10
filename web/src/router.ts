@@ -6,7 +6,7 @@ import { useSyncExternalStore } from "react";
 // refresh on /teambuilder works server-side), and Vite's dev server does
 // the same by default - this only needs to read the current path and react
 // to browser back/forward.
-export type Route = "/game" | "/teambuilder" | "/dice-kingdom" | "/dice-kingdom/mobile";
+export type Route = "/game" | "/teambuilder" | "/dice-kingdom" | "/dice-kingdom/mobile" | "/dice-kingdom/account";
 
 function normalize(pathname: string): Route {
   // "/" and anything unrecognized fall back to /game - preserves today's
@@ -18,6 +18,8 @@ function normalize(pathname: string): Route {
   // engine, by design, for now).
   if (pathname === "/dice-kingdom/mobile") return "/dice-kingdom/mobile";
   if (pathname === "/dice-kingdom") return "/dice-kingdom";
+  // Your player: name, games, devices (dicekingdom/AccountPage.tsx).
+  if (pathname === "/dice-kingdom/account") return "/dice-kingdom/account";
   return "/game";
 }
 
@@ -30,9 +32,9 @@ export function useRoute(): Route {
   return useSyncExternalStore(subscribe, () => normalize(window.location.pathname));
 }
 
-export function navigate(path: Route) {
-  if (window.location.pathname === path) return;
-  window.history.pushState(null, "", path);
+export function navigate(path: Route, search = "") {
+  if (window.location.pathname === path && !search) return;
+  window.history.pushState(null, "", path + search);
   // pushState doesn't fire popstate itself - useRoute's useSyncExternalStore
   // subscription needs this nudge to notice the URL changed.
   window.dispatchEvent(new PopStateEvent("popstate"));
