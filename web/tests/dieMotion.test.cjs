@@ -59,10 +59,10 @@ test('moving an unchanged rolled die between zones does not trigger movement', (
   assert.deepEqual(motion.classifyDieMotion(prev, next), { tumbles: [], flips: [] });
 });
 
-test('non-roll actions do not get interpreted as a remote roll', () => {
-  const prev = game('main', [die('a', { zone: 'PrepArea', level: null, effectiveAttack: null })]);
+test('a die rolled into Reserve by an ability tumbles too - every way into Reserve is a roll', () => {
+  const prev = game('main', [die('a', { zone: 'UsedPile', level: null, effectiveAttack: null })]);
   const next = game('main', [die('a')]);
-  assert.deepEqual(motion.remoteRolledIds(prev, next), []);
+  assert.deepEqual(motion.remoteRolledIds(prev, next), ['a']);
 });
 
 
@@ -82,15 +82,15 @@ test('remote first roll still tumbles if the polling client missed the Roll step
   assert.deepEqual(motion.remoteRolledIds(before, after), ['a']);
 });
 
-test('remote first roll is detected from new roll log even if Draw step was missed', () => {
-  const before = { ...game('main', [die('a', { zone: 'Bag', level: null, effectiveAttack: null })]), log: [{ seq: 1, playerId: 'p1', text: 'other action' }] };
-  const after = { ...game('main', [die('a')]), log: [{ seq: 1, playerId: 'p1', text: 'other action' }, { seq: 2, playerId: 'p2', text: 'Opponent rolls.' }] };
+test('remote first roll is detected even if the poll missed Clear & Draw and Roll', () => {
+  const before = game('main', [die('a', { zone: 'Bag', level: null, effectiveAttack: null })]);
+  const after = game('main', [die('a')]);
   assert.deepEqual(motion.remoteRolledIds(before, after), ['a']);
 });
 
-test('non-roll move to reserve and opponent purchases do not tumble dice', () => {
-  const before = { ...game('main', [die('a', { zone: 'UsedPile', level: null, effectiveAttack: null })]), log: [{ seq: 10, playerId: 'p2', text: 'Opponent rolls.' }] };
-  const after = { ...game('main', [die('a')]), log: [{ seq: 10, playerId: 'p2', text: 'Opponent rolls.' }, { seq: 11, playerId: 'p2', text: 'Opponent purchases a die.' }] };
+test('a die already in Reserve whose stats change outside a reroll does not tumble', () => {
+  const before = game('main', [die('a')]);
+  const after = game('main', [die('a', { effectiveAttack: 4 })]);
   assert.deepEqual(motion.remoteRolledIds(before, after), []);
 });
 
