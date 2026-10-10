@@ -2140,21 +2140,9 @@ export function DiceKingdomPage() {
           each Champion box with its board without any JS measuring. */}
       <div className="dk-layout">
         <div className="dk-sideboard">
-          <div className="sideboard-panel">
-            <h4>Basic Actions</h4>
-            <span className="sideboard-sub">shared pool · purchase from your roster</span>
-            {basicActions.length === 0 && <p className="sideboard-empty">No Basic Action dice remaining.</p>}
-            {basicActions.map(({ card, dice }) => {
-              const actual = game.purchaseCosts?.[card.id] ?? card.purchaseCost;
-              return <div key={card.id} className="dk-basic-action-item">
-                <div className="dk-basic-action-head">
-                  <strong>{card.name}</strong>
-                  <span>Cost {actual} · ×{dice.length} left</span>
-                </div>
-                <p>{card.actionText ?? card.rawText}</p>
-              </div>;
-            })}
-          </div>
+          {/* Basic Actions are bought from the "Basic Actions · Shared" chips
+              in your roster (with the card inspector), and their Globals are
+              used here - a separate list of them repeated both. */}
           <div className="sideboard-panel dk-ability-sideboard">
             <SharedAbilityPanel
               variant="desktop"

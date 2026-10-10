@@ -4326,14 +4326,19 @@
    existing .dkm-global-* skin; both are rendered by SharedAbilityPanel. */
 .dicekingdom .dk-ability-sideboard { min-width: 0; }
 .dicekingdom .dk-desktop-ability-rail { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
-.dicekingdom .dk-desktop-ability-rail .dkm-global-caption { display: flex; justify-content: space-between; gap: 6px; align-items: baseline; }
+.dicekingdom .dk-desktop-ability-rail .dkm-global-caption { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 6px; align-items: baseline; }
+.dicekingdom .dk-desktop-ability-rail .dkm-global-title,
+.dicekingdom .dk-desktop-ability-rail .dkm-global-note { white-space: nowrap; }
+/* The sidebar's own size, not the page's - the shared panel's mobile
+   names would otherwise inherit the larger body font here. */
+.dicekingdom .dk-desktop-ability-rail { font-size: 13px; }
 .dicekingdom .dk-desktop-ability-rail .dkm-global-title { font-weight: 700; font-size: 13px; }
 .dicekingdom .dk-desktop-ability-rail .dkm-global-note { opacity: 0.65; font-size: 11px; }
 .dicekingdom .dk-desktop-ability-rail .dkm-global-list,
 .dicekingdom .dk-desktop-ability-rail .dkm-ready-actions { display: flex; flex-direction: column; gap: 8px; }
 .dicekingdom .dk-desktop-ability-rail .dkm-global-item,
 .dicekingdom .dk-desktop-ability-rail .dkm-ready-action { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.dicekingdom .dk-desktop-ability-rail .dkm-global-name { display: flex; align-items: center; gap: 5px; flex: 1 1 130px; background: transparent; color: inherit; border: 0; cursor: pointer; padding: 3px; text-align: left; font: inherit; }
+.dicekingdom .dk-desktop-ability-rail .dkm-global-name { display: flex; align-items: center; gap: 5px; flex: 1 1 130px; background: transparent; color: inherit; border: 0; cursor: pointer; padding: 3px; text-align: left; font: 600 13px var(--sans); }
 .dicekingdom .dk-desktop-ability-rail .dkm-global-cost { display: inline-flex; gap: 2px; }
 .dicekingdom .dk-desktop-ability-rail .dkm-global-use { padding: 4px 8px; cursor: pointer; }
 .dicekingdom .dk-desktop-ability-rail .dkm-global-use:disabled { cursor: default; opacity: 0.45; }
@@ -4341,10 +4346,6 @@
 .dicekingdom .dk-desktop-ability-rail .dkm-ready-action-body { display: flex; flex: 1 1 100px; flex-direction: column; font-size: 12px; }
 .dicekingdom .dk-desktop-ability-rail .dkm-field-label { font-weight: 600; font-size: 12px; }
 .dicekingdom .dk-desktop-ability-rail .dkm-global-empty { opacity: 0.7; font-size: 12px; }
-.dicekingdom .dk-basic-action-item { display: flex; flex-direction: column; gap: 5px; padding: 6px 0; border-top: 1px solid var(--dk-border, rgba(128,128,128,0.25)); }
-.dicekingdom .dk-basic-action-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 5px; font-size: 12px; }
-.dicekingdom .dk-basic-action-head span { opacity: 0.75; }
-.dicekingdom .dk-basic-action-item p { font-size: 12px; margin: 0; }
 
 /* Desktop roster details only: compact six-face card preview. */
 .dicekingdom .card-popover.roster-detail {
@@ -4396,13 +4397,15 @@
 
 /* The pending-choice picker floats above the desktop rail instead of
    changing the grid row's height. No backdrop: the board and rosters
-   remain clickable for inspection during a choice. */
+   remain clickable for inspection during a choice. Anchored to the
+   bottom of the right-hand rail, over the log - at the top it covered
+   the corner of the opponent's roster, where Pangolin's targets are. */
 .dicekingdom .dk-floating-choice {
   position: fixed;
   z-index: 90;
   right: max(16px, calc((100vw - 1580px) / 2 + 16px));
-  top: 100px;
-  width: min(340px, calc(100vw - 32px));
+  bottom: 16px;
+  width: min(300px, calc(100vw - 32px));
   max-height: calc(100dvh - 128px);
   overflow-y: auto;
   box-sizing: border-box;
@@ -4439,7 +4442,7 @@
 .dicekingdom .dietile-wrap:has(.dk-tile-field-start) { z-index: 22; }
 @media (max-width: 1100px) {
   .dicekingdom .dk-floating-choice {
-    top: 70px;
+    bottom: 16px;
     right: 16px;
     max-height: calc(100dvh - 172px);
   }
