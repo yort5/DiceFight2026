@@ -4432,3 +4432,35 @@ custom team aren't supported yet. Follow-ups on top:
   the seat carries `CardDiceCounts` and `Tardigrades` so GameReplayer
   deals the same team; the replay test now also plays a custom team.
 - The staged team survives blocked `sessionStorage` (kept in memory).
+
+## 2026-10-11 - First look at real games: purchases and rerolls
+
+48 live games from the `dice_kingdom_playlog` bucket (Oct 7-11; some are
+Stormy's quick tests, still real decisions), downloaded with a read-only
+key (`~/.devtools/gcs.py`) into `game-records/prod/`. All 48 replay
+exactly. 21 finished, all human vs bot: humans won 15-6. New
+`tools/GameRecords --dump FILE` writes every human decision as a JSON line
+in card/face names with the board around it.
+
+**Purchases.** When both bought, the human bought the pricier card in 99
+of the 124 disagreements - the bot's plan sums cost+1 per die, so two
+2-cost dice beat one 4 (Wolverine vs Honey Badger, Musk Ox vs Hermit
+Crab, Hyena vs Cuttlefish...). Against `DilutionPerDie`:
+
+| Per-die cost | Human buys matched | Same card when both buy | Human pricier / cheaper |
+|---|---|---|---|
+| 0 (live) | 20% | 55/179 | 99 / 13 |
+| 1 | 25% | 69 | 69 / 23 |
+| 2 | 31% | 84 | 43 / 30 |
+| 2.5 | - | 86 | 28 / 33 |
+| 3 | 22% | - | - |
+
+2 is where human choices balance out, and it's also the best of the
+2026-10-08 simulator runs (spread 6.3, fewer turn-cap stalls, shorter
+games). Much of what's left is order (people field first, then buy).
+
+**Rerolls.** Humans reroll weak Tardigrade creature faces the bot always
+keeps (L2 1/1: 28% vs 0%; L3: 39% vs 16%), and keep card-die energy more
+often (68-79% rerolled vs the bot's 88-94%). 26 of 211 human rerolls threw
+back a 2-energy Tardigrade face, spread over 12 games - unclear whether
+deliberate or UI confusion.
