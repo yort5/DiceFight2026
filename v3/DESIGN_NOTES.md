@@ -4455,7 +4455,7 @@ Crab, Hyena vs Cuttlefish...). Against `DilutionPerDie`:
 | 2.5 | - | 86 | 28 / 33 |
 | 3 | 22% | - | - |
 
-2 is where human choices balance out, and it's also the best of the
+**Set as the default (DilutionPerDie = 2) the same day, user call.** 2 is where human choices balance out, and it's also the best of the
 2026-10-08 simulator runs (spread 6.3, fewer turn-cap stalls, shorter
 games). Much of what's left is order (people field first, then buy).
 
