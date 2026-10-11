@@ -1,5 +1,6 @@
 using DiceFight.Api;
 using DiceFight.V2.Data;
+using Microsoft.AspNetCore.Mvc;
 
 namespace DiceFight.Api.Tests;
 
@@ -67,6 +68,37 @@ public class V2GamesControllerTests
         Assert.Equal(2, state.Dice.Count(d => d.OwnerId == "teamA" && d.PoolDieId == "TardigradeWing"));
         Assert.Equal(3, state.Dice.Count(d => d.OwnerId == "teamA" && d.PoolDieId == "TardigradeEye"));
         Assert.Equal("Armadillo", state.PlayerTwo.ChampionId);
+    }
+
+    [Theory]
+    [InlineData(101, 8)]
+    [InlineData(20, 101)]
+    [InlineData(int.MaxValue, 8)]
+    public void Create_Rejects_A_Custom_Team_Over_The_Dice_Ceiling(int cardDice, int tardigrades)
+    {
+        var store = new V2GameStore();
+        var custom = new CustomV2TeamRequest(
+            [new(DiceKingdomConfig.Mongoose.Id, cardDice)],
+            [new("Claw", tardigrades)]);
+        var result = V2SeatedController.Anonymous(store).Create(
+            new CreateV2GameRequest(PlayerTwoChampionId: "Armadillo", PlayerOneCustomTeam: custom));
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Empty(store.Sessions);
+    }
+
+    [Fact]
+    public void Create_Allows_A_Large_House_Format_Custom_Team()
+    {
+        // e.g. 12 Tardigrades and 30 dice - the builder's formats, not the server's.
+        var store = new V2GameStore();
+        var custom = new CustomV2TeamRequest(
+            [new(DiceKingdomConfig.Mongoose.Id, 15), new(DiceKingdomConfig.AngerIssues.Id, 15)],
+            [new("Claw", 6), new("Wing", 6)]);
+        var created = V2SeatedController.CreatedDto(V2SeatedController.Anonymous(store).Create(
+            new CreateV2GameRequest(PlayerTwoChampionId: "Armadillo", PlayerOneCustomTeam: custom)));
+
+        Assert.Equal(42, store.GetSession(created.Game.GameId).State.Dice.Count(d => d.OwnerId == "teamA"));
     }
 
     [Fact]

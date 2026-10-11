@@ -37,6 +37,10 @@ public static class DiceKingdomConfig
         new Face([new SymbolAmount("Wild", 1)], new CharacterFaceData(2, FieldingCost: 0, Attack: 1, Defense: 1), Kind: FaceKind.CharacterFace),
     ]);
 
+    // The reverse of TardigradeDie's id - "TardigradeEye" -> "Eye".
+    public static string TardigradeEnergyType(string dieId) =>
+        dieId.StartsWith("Tardigrade") ? dieId["Tardigrade".Length..] : throw new ArgumentException($"'{dieId}' isn't a Tardigrade die.");
+
     // Custom teams use the same printed dice as preset Champion pools.
     public static BasicDicePoolEntry CustomTardigrade(string energyType, int count)
     {

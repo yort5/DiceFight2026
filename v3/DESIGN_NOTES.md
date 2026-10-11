@@ -4414,3 +4414,21 @@ A test now checks every keyword on a Dice Kingdom card is declared and
 described - nothing checked Dice Kingdom's catalog against its own list
 before. Of the 11 engine-backed keywords, only Fast, Overcrush and Deadly
 are on a team today; the other 8 sit on benched cards.
+
+## 2026-10-11 - Custom teams (PR #4) and the follow-ups
+
+Stormy's PR #4 merged: `/teambuilder` is now the Dice Kingdom builder
+(user: fine to retire the Dice Masters builder; it can come back later),
+with a Tardigrade mix and "Play with this team", which creates a game with
+`playerOneCustomTeam` (exact dice per card, Tardigrades per energy type, no
+Champion - Champions in custom teams come later). Online invites with a
+custom team aren't supported yet. Follow-ups on top:
+- **Server ceiling, not format rules.** The builder enforces the format
+  (house formats change them, e.g. 12 Tardigrades / 30 dice / 3 Basic
+  Actions), so the server only refuses more than 100 character dice or 100
+  Tardigrades (`V2GamesController.MaxCustomDice`) - without that, one
+  request could ask for billions of dice and take the server down.
+- **Records.** `RecordedSeat.ChampionId` is null for a custom team, and
+  the seat carries `CardDiceCounts` and `Tardigrades` so GameReplayer
+  deals the same team; the replay test now also plays a custom team.
+- The staged team survives blocked `sessionStorage` (kept in memory).

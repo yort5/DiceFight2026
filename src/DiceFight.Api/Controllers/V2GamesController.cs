@@ -111,6 +111,13 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
         return Ok(V2GameStateDto.From(session.Id, state, guest.PlayerId, session.Version));
     }
 
+    // A custom team is checked for data validity only - house formats change
+    // the usual caps (12 Tardigrades, 30 dice, 3 Basic Actions, ...), so the
+    // builder enforces whichever format it was asked for. This ceiling is
+    // just far above any format: without it one request could ask for two
+    // billion dice and take the server down.
+    public const int MaxCustomDice = 100;
+
     private static Player BuildSelectedPlayer(string id, string? championId, CustomV2TeamRequest? custom)
     {
         if (custom is null)
@@ -148,6 +155,10 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
             try { pool.Add(DiceKingdomConfig.CustomTardigrade(entry.EnergyType, entry.DiceCount)); }
             catch (ArgumentException e) { throw new ArgumentException(e.Message); }
         }
+        if (custom.Cards.Sum(c => (long)c.DiceCount) > MaxCustomDice)
+            throw new ArgumentException($"A custom team can have at most {MaxCustomDice} character dice.");
+        if (custom.Tardigrades.Sum(t => (long)t.DiceCount) > MaxCustomDice)
+            throw new ArgumentException($"A custom team can have at most {MaxCustomDice} Tardigrades.");
         player.CustomBasicDicePool = pool;
         return player;
     }

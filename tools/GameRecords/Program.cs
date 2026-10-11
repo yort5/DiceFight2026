@@ -51,9 +51,9 @@ foreach (var file in files)
             disagreements.Add($"{record.GameId} turn {action.Turn} ({action.Step}): played {action.Action} {action.Request?.GetRawText()}; bot: {bot.Kind} - {bot.Reason}");
     });
 
-    string Seat(RecordedSeat s) => $"{s.ChampionId}{(s.Bot ? " (bot)" : "")}";
+    string Seat(RecordedSeat s) => $"{s.ChampionId ?? "Custom Team"}{(s.Bot ? " (bot)" : "")}";
     var winner = record.Result is { GameOver: true } r
-        ? r.WinnerId is { } w ? record.Seats.First(s => s.PlayerId == w).ChampionId : "tie"
+        ? r.WinnerId is { } w ? record.Seats.First(s => s.PlayerId == w).ChampionId ?? "Custom Team" : "tie"
         : "unfinished";
     Console.WriteLine($"{record.GameId,-10}{record.CreatedUtc:yyyy-MM-dd}  {Seat(record.Seats[0]),-24}{Seat(record.Seats[1]),-24}{winner,-16}{record.Turns,6}  " +
         (outcome.Divergence is null ? $"ok ({outcome.ActionsReplayed} moves)" : $"DRIFTED - {outcome.Divergence}"));

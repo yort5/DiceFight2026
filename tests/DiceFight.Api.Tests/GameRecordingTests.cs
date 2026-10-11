@@ -23,14 +23,27 @@ public class GameRecordingTests : IDisposable
         new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.ConfigureAppConfiguration((_, config) =>
             config.AddInMemoryCollection(new Dictionary<string, string?> { ["GameRecords:LocalPath"] = _folder, ["GameRecords:Bucket"] = "" })));
 
-    [Fact]
-    public async Task A_Played_Game_Is_Recorded_And_Replays_To_The_Same_State()
+    // A custom team (Team Builder) has no Champion: its dice counts and
+    // Tardigrade mix are recorded so the replay deals the same team.
+    private static readonly object CustomTeam = new
+    {
+        cards = DiceFight.V2.Data.DiceKingdomConfig.CharactersByChampion["Wolf"].Select(id => new { cardId = id, diceCount = 2 }).ToArray(),
+        tardigrades = new[] { new { energyType = "Claw", diceCount = 6 }, new { energyType = "Eye", diceCount = 4 } },
+    };
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_Played_Game_Is_Recorded_And_Replays_To_The_Same_State(bool customTeam)
     {
         string gameId;
         await using (var server = Server())
         {
             var http = server.CreateClient();
-            var created = await (await http.PostAsJsonAsync("/api/v2/games", new { playerOneChampionId = "Wolf", playerTwoChampionId = "Armadillo" }))
+            object body = customTeam
+                ? new { playerOneCustomTeam = CustomTeam, playerTwoChampionId = "Armadillo" }
+                : new { playerOneChampionId = "Wolf", playerTwoChampionId = "Armadillo" };
+            var created = await (await http.PostAsJsonAsync("/api/v2/games", body))
                 .Content.ReadFromJsonAsync<JsonElement>();
             gameId = created.GetProperty("game").GetProperty("gameId").GetString()!;
             var tokens = created.GetProperty("seats").EnumerateArray()
@@ -68,7 +81,12 @@ public class GameRecordingTests : IDisposable
         var file = Assert.Single(Directory.GetFiles(_folder, $"{gameId}.json", SearchOption.AllDirectories));
         var record = GameRecordJson.Deserialize(File.ReadAllText(file));
 
-        Assert.Equal(["Wolf", "Armadillo"], record.Seats.Select(s => s.ChampionId));
+        Assert.Equal([customTeam ? null : "Wolf", "Armadillo"], record.Seats.Select(s => s.ChampionId));
+        if (customTeam)
+        {
+            Assert.All(record.Seats[0].CardDiceCounts!.Values, n => Assert.Equal(2, n));
+            Assert.Equal(new Dictionary<string, int> { ["Claw"] = 6, ["Eye"] = 4 }, record.Seats[0].Tardigrades);
+        }
         Assert.All(record.Seats, s => Assert.True(s.Bot)); // both asked for the computer's move
         Assert.True(record.Turns >= 5);
         var first = record.Actions[0];

@@ -35,16 +35,23 @@ export function changeTardigradeCount(counts: TardigradeCounts, type: Tardigrade
 export const CUSTOM_TEAM_PICK = "__custom_team__";
 const KEY = "dicekingdom:pendingCustomTeam";
 
+let memoryTeam: CustomTeam | null = null; // storage blocked - lasts as long as the page
+
 export function stageCustomTeam(team: CustomTeam): void {
-  sessionStorage.setItem(KEY, JSON.stringify(team));
+  memoryTeam = team;
+  try {
+    sessionStorage.setItem(KEY, JSON.stringify(team));
+  } catch {
+    // Storage blocked (some privacy modes) - see memoryTeam.
+  }
 }
 export function pendingCustomTeam(): CustomTeam | null {
   try {
     const value = sessionStorage.getItem(KEY);
-    if (!value) return null;
+    if (!value) return memoryTeam;
     const parsed: unknown = JSON.parse(value);
     if (!parsed || typeof parsed !== "object") return null;
     const team = parsed as CustomTeam;
     return Array.isArray(team.cards) && Array.isArray(team.tardigrades) ? team : null;
-  } catch { return null; }
+  } catch { return memoryTeam; }
 }

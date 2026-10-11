@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Threading.Channels;
 using DiceFight.V2;
+using DiceFight.V2.Data;
 using DiceFight.V2.Model;
 
 namespace DiceFight.Api.Recording;
@@ -44,8 +45,14 @@ public sealed class GameRecorder(IGameRecordSink sink, GameRecordOptions options
         session.RecordedActivePlayerId = session.State.ActivePlayerId;
     }
 
-    private static RecordedSeat Seat(Player player) =>
-        new() { PlayerId = player.Id, ChampionId = player.ChampionId ?? "", TeamCardIds = [.. player.TeamCardIds] };
+    private static RecordedSeat Seat(Player player) => new()
+    {
+        PlayerId = player.Id,
+        ChampionId = player.ChampionId,
+        TeamCardIds = [.. player.TeamCardIds],
+        CardDiceCounts = player.CustomCardDiceCounts is { } counts ? new(counts) : null,
+        Tardigrades = player.CustomBasicDicePool?.ToDictionary(e => DiceKingdomConfig.TardigradeEnergyType(e.Die.Id), e => e.Count),
+    };
 
     public static void MarkBot(V2GameSession session, string playerId)
     {
