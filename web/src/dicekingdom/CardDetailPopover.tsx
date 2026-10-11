@@ -1,3 +1,4 @@
+import { KeywordText } from "../KeywordPreview";
 import { CHARACTER_ICONS, EnergyBadge, TardigradePhotoIcon } from "./icons";
 import { CueRows } from "./CueRows";
 import { DieCube } from "./DieCube";
@@ -59,14 +60,14 @@ export function CardDetailPopover({ card, die, purchaseCost, purchase, cueRows =
       </div>
       <CueRows rows={cueRows} />
       <p className="card-popover-text roster-detail-ability">
-        {card
+        <KeywordText text={card
           ? card.rawText?.trim() || card.actionText?.trim() || "No ability text."
           : die && (!die.cardId || die.isTardigrade)
             // Not a description of its faces - they're drawn just below, from
             // dieFaces.ts's copy of the die, and the layout keeps changing
             // (it did on 2026-10-04); a third copy in prose would drift.
             ? "The free basic creature - fielding it costs nothing."
-            : "No ability text."}
+            : "No ability text."} />
       </p>
       <div className="roster-detail-faces" aria-label="All six printed die faces">
         {faces.map((face, index, allFaces) => (

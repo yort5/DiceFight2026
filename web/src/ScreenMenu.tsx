@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { navigate, type Route } from "./router";
 import { useTeamBuilderLayout } from "./teamBuilderLayout";
+import { useIsDark, useTheme } from "./theme";
 import "./ScreenMenu.css";
 
 export function ScreenMenu({ screen, startRoute, onStartGame }: {
@@ -10,6 +11,8 @@ export function ScreenMenu({ screen, startRoute, onStartGame }: {
 }) {
   const [open, setOpen] = useState(false);
   const { layout, setLayout } = useTeamBuilderLayout();
+  const [theme, setTheme] = useTheme();
+  const dark = useIsDark(theme);
   const id = useId();
   const ref = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -46,6 +49,13 @@ export function ScreenMenu({ screen, startRoute, onStartGame }: {
           onClick={(e) => { if (e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) { e.preventDefault(); setOpen(false); onStartGame?.(); navigate(startRoute); } }}>Start a Game</a>
         <a href="/teambuilder" aria-current={screen === "builder" ? "page" : undefined}
           onClick={(e) => { if (e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) { e.preventDefault(); setOpen(false); navigate("/teambuilder"); } }}>Team Builder</a>
+        <div className="screen-menu-layout">
+          <button type="button" role="switch" aria-checked={dark} aria-label="Dark mode"
+            className="screen-menu-theme" onClick={() => setTheme(dark ? "light" : "dark")}>
+            <span>Dark mode</span>
+            <span className="screen-menu-switch" aria-hidden="true"><span /></span>
+          </button>
+        </div>
         <div className="screen-menu-layout">
           <span>Team Builder layout: <strong>{layout === "mobile" ? "Mobile" : "Desktop"}</strong></span>
           <button type="button" onClick={() => setLayout(layout === "mobile" ? "desktop" : "mobile")}>

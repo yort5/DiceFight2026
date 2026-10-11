@@ -1,3 +1,4 @@
+import { KeywordText } from "../KeywordPreview";
 import { useRef } from "react";
 import { useLogAutoFollow } from "./useLogAutoFollow";
 import type { GameLogEntry } from "./types";
@@ -22,7 +23,7 @@ export function MatchLog(props: { entries: GameLogEntry[]; nearPlayerId: string 
         <ol className="match-log-list" ref={listRef} tabIndex={0} aria-label="Match log history" {...logScrollHandlers}>
           {props.entries.map((entry) => entry.isTurnStart ? (
             <li key={entry.seq} className="log-line neutral log-turn-start">
-              <span className="log-text">— — — {entry.text} — — —</span>
+              <span className="log-text">— — — <KeywordText text={entry.text} /> — — —</span>
             </li>
           ) : (
             <li
@@ -36,7 +37,7 @@ export function MatchLog(props: { entries: GameLogEntry[]; nearPlayerId: string 
               }
             >
               <span className="log-seq">{entry.seq}</span>
-              <span className="log-text">{entry.text}</span>
+              <span className="log-text"><KeywordText text={entry.text} /></span>
             </li>
           ))}
         </ol>

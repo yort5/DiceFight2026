@@ -1,3 +1,4 @@
+import { KeywordText } from "../KeywordPreview";
 import { CUSTOM_TEAM_PICK, pendingCustomTeam } from "./customTeams";
 import { CustomTeamSetupChoice } from "./CustomTeamSetupChoice";
 import { startTransition, useEffect, useRef, useState } from "react";
@@ -155,7 +156,7 @@ function ScoreboardSide({ player, mine, isActivePlayer, onUsePower }: { player: 
       {open && champion && (
         <div className="scoreboard-popover">
           <div className="scoreboard-popover-name">{champion.name}</div>
-          {champion.passiveText && <p className="scoreboard-popover-note">{champion.passiveText}</p>}
+          {champion.passiveText && <p className="scoreboard-popover-note"><KeywordText text={champion.passiveText} /></p>}
         </div>
       )}
     </div>
@@ -448,7 +449,7 @@ function NowInfoButton({ text }: { text: string }) {
       <button type="button" className="icon-btn" aria-label="What this step means" onClick={() => setOpen((o) => !o)}>
         <HelpIcon size={13} />
       </button>
-      {open && <div className="icon-menu-popover up">{text}</div>}
+      {open && <div className="icon-menu-popover up"><KeywordText text={text} /></div>}
     </div>
   );
 }
@@ -1994,7 +1995,7 @@ export function DiceKingdomPage() {
       {legendOpen && <DieFramesLegend variant="desktop" onClose={() => setLegendOpen(false)} />}
       {myPendingChoice && (
         <div className="dk-floating-choice" role="dialog" aria-label="Choose an ability target">
-          <div className="dk-floating-choice-description">{myPendingChoice.description}</div>
+          <div className="dk-floating-choice-description"><KeywordText text={myPendingChoice.description} /></div>
           {inlineChoice ? (
             <>
               <p className="dk-choice-instructions">

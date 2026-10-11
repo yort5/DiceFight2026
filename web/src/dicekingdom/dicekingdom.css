@@ -2225,14 +2225,8 @@
    for the font-face/keyframe loads and so its own token values can sit
    next to the desktop palette they were read out of, per the user's own
    call ("I'm actually fine having two completely separate UIs for
-   mobile and browser"). Colors below are the handoff's literal dark-mat
-   hex values, matching this file's existing --claw/--shell/--wing/--eye/
-   --wild dark-theme values exactly (they were read out of this file) -
-   duplicated as fixed tokens rather than reused via the light/dark
-   :root switch because the handoff only ever specifies ONE surface/ink
-   palette (the dark one, in every one of its 8 screenshots) - this is
-   a phone game screen, not a themed document, so it stays dark
-   regardless of the site's own light/dark toggle for now.
+   mobile and browser"). The original dark palette remains the base;
+   the shared site preference selects the light palette below.
    ===================================================================== */
 .dk-mobile {
   --claw: #e78a5a;
@@ -2240,18 +2234,7 @@
   --wing: #7cb8e6;
   --eye: #c093dd;
   --wild: #b3a892;
-  /* This page also carries the plain .dicekingdom class (see that fix's
-     own remarks) so DieCube/EnergyBadge's shared styling applies - but
-     .dicekingdom's OWN --panel-bg/--border/--text-h/etc tokens still
-     follow the SITE's light/dark toggle by default, which would make
-     any reused desktop chrome (the champion picker's .panel/.champ-opt/
-     .btn - direct feedback 2026-09-14: "make the champion picker the
-     same as desktop") render as a jarring light card on this page's
-     always-dark background whenever the site itself is in light mode.
-     Pinned to the same fixed dark values as everything else here rather
-     than left to follow the toggle, for the same "this is a phone game
-     screen, not a themed document" reasoning as the rest of this file's
-     .dk-mobile tokens. */
+  /* Keep shared preview/desktop chrome aligned with the mobile surface. */
   --panel-bg: #2e3548;
   --panel-bg-strong: #3a4258;
   --tile-bg: #20232e;
@@ -2272,13 +2255,17 @@
   --dkm-ink-disabled: #7a8099;
   --dkm-on-accent: #14151c;
   --dkm-cream: #fff8ec;
+  --dkm-error: #ffb4a3;
+  --dkm-line: #515b75;
+  --dk-page-a: #2b3143;
+  --dk-page-b: #14151c;
 
   max-width: 480px;
   margin: 0 auto;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: radial-gradient(120% 90% at 50% 0%, #2b3143 0%, #14151c 100%);
+  background: radial-gradient(120% 90% at 50% 0%, var(--dk-page-a) 0%, var(--dk-page-b) 100%);
   color: var(--dkm-ink-2);
   font-family: "Work Sans", var(--sans);
   box-sizing: border-box;
@@ -2294,6 +2281,37 @@
      real screen edge. */
   padding: 0;
 }
+:root[data-theme="light"] .dk-mobile {
+  --claw: #b8451f;
+  --shell: #2f6b52;
+  --wing: #2f6690;
+  --eye: #6a4189;
+  --wild: #7d7565;
+  --dk-page-a: #e9ecf2;
+  --dk-page-b: #d6dbe4;
+  --panel-bg: #ffffff;
+  --panel-bg-strong: #f5f7fb;
+  --tile-bg: #ffffff;
+  --border: #c3c8d4;
+  --text: #454b5c;
+  --text-dim: #6e7488;
+  --text-h: #0f1117;
+  --on-fill: #ffffff;
+  --shadow: 0 1px 2px rgba(20, 15, 8, 0.06), 0 6px 16px -8px rgba(20, 15, 8, 0.18);
+  --dkm-card: #ffffff;
+  --dkm-raised: #f5f7fb;
+  --dkm-attacker: #e7ebf3;
+  --dkm-border: #c3c8d4;
+  --dkm-hairline: rgba(92, 100, 132, 0.3);
+  --dkm-ink: #0f1117;
+  --dkm-ink-2: #454b5c;
+  --dkm-ink-dim: #5b6274;
+  --dkm-ink-disabled: #71788a;
+  --dkm-on-accent: #ffffff;
+  --dkm-error: #9f2d20;
+  --dkm-line: #c3c8d4;
+}
+
 /* Also carries .dicekingdom itself (not just .dk-mobile) - NOT for that
    class's own page-level rules (every property it sets that matters here
    - max-width, padding, text-align, the token values - is re-declared
@@ -2349,7 +2367,7 @@
   border-radius: 8px;
   background: rgba(220, 90, 70, 0.15);
   border: 1px solid #c0553f;
-  color: #ffb4a3;
+  color: var(--dkm-error);
   font-size: 12.5px;
 }
 /* Champion picker now reuses ../DiceKingdomPage.tsx's own .champ-pick-
@@ -2363,7 +2381,7 @@
   position: sticky;
   top: 0;
   z-index: 20;
-  background: #14151c;
+  background: var(--dk-page-b);
 }
 .dk-mobile .dkm-header-controls {
   display: flex;
@@ -2802,7 +2820,7 @@
 }
 .dk-mobile .dkm-global-icon {
   display: inline-flex;
-  color: #8fd18a;
+  color: var(--shell);
 }
 .dk-mobile .dkm-global-cost {
   display: inline-flex;
@@ -3996,9 +4014,9 @@
 .dicekingdom .dk-cue-title { font: 600 11.5px/1.3 "Work Sans", var(--sans, sans-serif); color: var(--text-h, var(--text)); }
 .dicekingdom .dk-cue-dur { font-weight: 400; color: var(--text-dim); }
 .dicekingdom .dk-cue-body { font: 400 10.5px/1.4 "Work Sans", var(--sans, sans-serif); color: var(--text); text-align: left; }
-.dk-mobile .dk-cue-title { color: #fff; }
-.dk-mobile .dk-cue-dur { color: #9198b0; }
-.dk-mobile .dk-cue-body { color: #c7cce0; }
+.dk-mobile .dk-cue-title { color: var(--dkm-ink); }
+.dk-mobile .dk-cue-dur { color: var(--dkm-ink-dim); }
+.dk-mobile .dk-cue-body { color: var(--dkm-ink-2); }
 
 /* Desktop: the top cue's word under the tile. */
 .dicekingdom .dk-cue-word {
@@ -4077,8 +4095,8 @@
   letter-spacing: 0.04em;
   cursor: pointer;
 }
-.dk-mobile .dk-legend-title, .dk-mobile .dk-legend-text b { color: #fff; }
-.dk-mobile .dk-legend-text { color: #c7cce0; }
+.dk-mobile .dk-legend-title, .dk-mobile .dk-legend-text b { color: var(--dkm-ink); }
+.dk-mobile .dk-legend-text { color: var(--dkm-ink-2); }
 .dicekingdom .dk-legend-backdrop {
   position: fixed;
   inset: 0;

@@ -1,3 +1,4 @@
+import { KeywordText } from "../KeywordPreview";
 import { useState, type ReactNode } from "react";
 import { CHARACTER_ICONS, EnergyBadge } from "./icons";
 import type { Die } from "./types";
@@ -21,7 +22,7 @@ function globalTextWithEnergyIcons(text: string): ReactNode {
 
   for (const match of text.matchAll(costPattern)) {
     const index = match.index;
-    content.push(text.slice(lastIndex, index), match[1]);
+    content.push(<KeywordText key={`text-${index}`} text={text.slice(lastIndex, index)} />, match[1]);
     content.push(
       <span key={index} title={match[2]} aria-label={`${match[2]} energy`}
         style={{ display: "inline-flex", verticalAlign: "middle", margin: "0 2px" }}>
@@ -31,8 +32,8 @@ function globalTextWithEnergyIcons(text: string): ReactNode {
     lastIndex = index + match[0].length;
   }
 
-  if (content.length === 0) return text;
-  content.push(text.slice(lastIndex));
+  if (content.length === 0) return <KeywordText text={text} />;
+  content.push(<KeywordText key="text-tail" text={text.slice(lastIndex)} />);
   return content;
 }
 
@@ -77,7 +78,7 @@ export function SharedAbilityPanel({ variant, abilities, onExecute, nameOf, acti
         <span className="dkm-field-label">Your actions</span>
         {abilities.actionDice.map((a) => <div key={a.die.id} className="dkm-ready-action">
           {renderDie(a.die)}
-          <div className="dkm-ready-action-body"><b>{nameOf(a.die)}</b><span>{actionTextOf(a.die)}</span></div>
+          <div className="dkm-ready-action-body"><b>{nameOf(a.die)}</b><span><KeywordText text={actionTextOf(a.die) ?? ""} /></span></div>
           <button type="button" className="dkm-chip-btn dkm-global-use"
             disabled={a.command === null} title={a.blocked ?? undefined}
             onClick={() => a.command && onExecute(a.command)}>Use</button>

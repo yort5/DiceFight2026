@@ -1,3 +1,4 @@
+import { KeywordText } from "./KeywordPreview";
 import { dieLabel } from "./dieHelpers";
 import type { Selection } from "./PlayerBoard";
 import type { CardDef, Die, GameState } from "./types";
@@ -87,7 +88,7 @@ export function GlobalAbilitiesPanel(props: {
               <div>
                 <div className="global-card-name">{c.name}</div>
                 <div className="global-card-cost">{costLabel(c.globalAbilityCost)}</div>
-                <div className="global-card-text">{globalAbilityText(c)}</div>
+                <div className="global-card-text"><KeywordText text={globalAbilityText(c)} /></div>
               </div>
               <button
                 disabled={busy || flow !== null || !affordable}
