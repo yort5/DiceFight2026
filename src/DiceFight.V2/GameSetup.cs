@@ -5,9 +5,8 @@ namespace DiceFight.V2;
 // Rule 2.1 - Set Up. Callers build each Player with TeamCardIds already
 // populated (matching v1's TeamSetup.SetupTeamDice reading it pre-set).
 // Team-construction legality (die-limit-sum-to-20, unique-card-name
-// checks) is NOT enforced here, same deliberate scope line v1's own
-// TeamSetup drew - that belongs to a separate team-builder/validator, not
-// game setup; every card gets its full DieLimit regardless of team size.
+// checks) is NOT enforced here. The Team Builder owns its chosen limits;
+// custom games receive explicit quantities while preset games keep DieLimit.
 public static class GameSetup
 {
     public static GameState NewGame(
@@ -61,7 +60,7 @@ public static class GameSetup
         var champion = player.ChampionId is { } championId
             ? state.Config.Champions.FirstOrDefault(c => c.Id == championId)
             : null;
-        var pool = champion is { TardigradePool.Count: > 0 } ? champion.TardigradePool : state.Config.BasicDicePool;
+        var pool = player.CustomBasicDicePool ?? (champion is { TardigradePool.Count: > 0 } ? champion.TardigradePool : state.Config.BasicDicePool);
 
         foreach (var entry in pool)
         {
@@ -88,7 +87,10 @@ public static class GameSetup
         {
             if (!catalog.TryGetValue(cardId, out var card)) continue;
 
-            for (var i = 0; i < card.DieLimit; i++)
+            var count = player.CustomCardDiceCounts is { } quantities
+                ? quantities.GetValueOrDefault(cardId, 0)
+                : card.DieLimit;
+            for (var i = 0; i < count; i++)
             {
                 state.Dice.Add(new DieInstance
                 {

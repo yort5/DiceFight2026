@@ -37,6 +37,14 @@ public static class DiceKingdomConfig
         new Face([new SymbolAmount("Wild", 1)], new CharacterFaceData(2, FieldingCost: 0, Attack: 1, Defense: 1), Kind: FaceKind.CharacterFace),
     ]);
 
+    // Custom teams use the same printed dice as preset Champion pools.
+    public static BasicDicePoolEntry CustomTardigrade(string energyType, int count)
+    {
+        if (energyType is not ("Claw" or "Shell" or "Wing" or "Eye"))
+            throw new ArgumentException($"Unknown Tardigrade energy type '{energyType}'.");
+        return new BasicDicePoolEntry(TardigradeDie(energyType), count);
+    }
+
     // --- Characters: a small, simple-ability pool, reskinned from
     // v3/CARD_INSPIRATION.md's already-vetted "confirmed buildable"
     // picks. Face layout corrected 2026-09-07 (user call, after

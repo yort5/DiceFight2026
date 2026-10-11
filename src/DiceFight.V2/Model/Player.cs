@@ -12,6 +12,15 @@ public sealed class Player
     public int Life { get; set; }
     public List<string> TeamCardIds { get; } = [];
 
+    // Custom teams choose actual inventory counts, not each card's maximum.
+    // Null means preset/classic setup and preserves its original seeding.
+    public Dictionary<string, int>? CustomCardDiceCounts { get; set; }
+
+    // An explicit pool can contain any mix of the four Tardigrade types.
+    // Null means use the Champion or game's configured default pool.
+    public IReadOnlyList<BasicDicePoolEntry>? CustomBasicDicePool { get; set; }
+
+
     // v3 "Dice Kingdom" addition (2026-09-03) - which GameConfig.Champions
     // entry this player picked at team setup, if the config declares any
     // (null for the classic config, which declares none). Set alongside

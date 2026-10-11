@@ -1,5 +1,7 @@
 import { playerHeader } from "./player";
 import { seatsFor, tokenFor } from "./seats";
+import { apiErrorMessage } from "./apiErrors";
+import type { CustomTeam } from "./customTeams";
 import type { BlockAssignment, BotDecision, CardDef, Champion, CreatedGame, GameState, LobbyStatus, OpenedGame } from "./types";
 
 // v2 counterpart to ../api.ts - same relative-BASE_URL/seat-header/
@@ -37,8 +39,8 @@ async function request<T>(path: string, options?: RequestInit, tokenOverride?: s
     },
   });
   if (!res.ok) {
-    const body = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(body.error ?? `Request failed: ${res.status}`);
+    const body: unknown = await res.json().catch(() => ({ title: res.statusText }));
+    throw new Error(apiErrorMessage(res.status, body));
   }
   return res.json() as Promise<T>;
 }
@@ -55,6 +57,10 @@ function makeClient(tokenOverride?: string | null, auto = false) {
         tokenOverride,
         auto,
       ),
+    createCustomGame: (playerOneCustomTeam: CustomTeam, playerTwoChampionId: string) =>
+      request<CreatedGame>("", {
+        method: "POST", body: JSON.stringify({ playerOneCustomTeam, playerTwoChampionId }),
+      }, tokenOverride, auto),
     getGame: (id: string) => request<GameState>(`/${id}`, undefined, tokenOverride, auto),
 
     // Online game with only your own Champion picked - the invited player

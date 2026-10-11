@@ -13,7 +13,7 @@ import type { apiAs } from "./api";
 // both it and this module share one definition rather than two copies
 // drifting apart.
 export function rolled(d: Die): boolean {
-  return d.effectiveAttack !== null || d.energySymbolId !== null;
+  return d.effectiveAttack !== null || d.energySymbolId !== null || d.isActionFace === true;
 }
 
 // Whoever has to act next, or null if the current step runs on its own

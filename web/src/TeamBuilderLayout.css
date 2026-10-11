@@ -1,0 +1,213 @@
+/* Only presentation: both layouts keep the same mounted builder controls. */
+.team-builder-page .team-builder-header {
+  flex-wrap: wrap;
+}
+.team-builder-header .builder-layout-note {
+  margin-left: auto;
+  font-size: 12px;
+  opacity: 0.7;
+}
+.team-builder-header .error {
+  flex-basis: 100%;
+}
+.team-builder-page .builder-panel-buttons {
+  display: none;
+}
+
+@media screen {
+  .team-builder-page[data-builder-layout="desktop"] .team-builder-layout {
+    grid-template-columns: 272px minmax(400px, 1fr) 404px;
+    min-width: 1116px;
+  }
+  .team-builder-page[data-builder-layout="desktop"] .filter-rail {
+    position: sticky;
+    max-height: calc(100vh - 48px);
+  }
+  .app.team-builder-page[data-builder-layout="mobile"] {
+    width: 100%;
+    max-width: 720px;
+    padding: 14px;
+  }
+  .team-builder-page[data-builder-layout="mobile"] .team-builder-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .team-builder-page[data-builder-layout="mobile"] .team-builder-header {
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .team-builder-page[data-builder-layout="mobile"] .app-header h1 {
+    font-size: 19px;
+  }
+  .team-builder-page[data-builder-layout="mobile"] .builder-layout-note {
+    font-size: 11px;
+  }
+  .team-builder-page[data-builder-layout="mobile"] .builder-panel-buttons {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+    margin-bottom: 12px;
+    padding: 4px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--code-bg);
+  }
+  .builder-panel-buttons button {
+    min-height: 44px;
+    padding: 8px 4px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text);
+    font: 600 13px/1.2 var(--sans);
+    cursor: pointer;
+  }
+  .builder-panel-buttons button[aria-pressed="true"] {
+    background: var(--bg);
+    color: var(--text-h);
+    box-shadow: 0 1px 4px #0002;
+  }
+  .team-builder-page[data-builder-layout="mobile"] .filter-rail,
+  .team-builder-page[data-builder-layout="mobile"] .team-sidebar {
+    position: static;
+    max-height: none;
+    min-width: 0;
+  }
+  .team-builder-page[data-builder-layout="mobile"] .rail-search,
+  .team-builder-page[data-builder-layout="mobile"] .rail-find {
+    box-sizing: border-box;
+    min-height: 44px;
+    font-size: 16px;
+  }
+  .team-builder-page[data-builder-layout="mobile"]:not([data-mobile-panel="filters"]) #builder-filter-options,
+  .team-builder-page[data-builder-layout="mobile"]:not([data-mobile-panel="cards"]) #builder-catalog,
+  .team-builder-page[data-builder-layout="mobile"]:not([data-mobile-panel="team"]) #builder-team {
+    display: none;
+  }
+  .team-builder-page[data-builder-layout="mobile"] .rail-chip,
+  .team-builder-page[data-builder-layout="mobile"] .cost-pip,
+  .team-builder-page[data-builder-layout="mobile"] .sort-chip,
+  .team-builder-page[data-builder-layout="mobile"] .active-filter-chip,
+  .team-builder-page[data-builder-layout="mobile"] .active-filter-clear {
+    min-height: 40px;
+  }
+  .team-builder-page[data-builder-layout="mobile"] .active-filter-bar {
+    gap: 6px;
+  }
+  .team-builder-page[data-builder-layout="mobile"] .result-sorts {
+    flex-basis: 100%;
+    flex-wrap: wrap;
+    margin-left: 0;
+  }
+  .team-builder-page[data-builder-layout="mobile"] .result-row {
+    grid-template-columns: 7px minmax(0, 1fr) 44px;
+    gap: 10px;
+  }
+  .team-builder-page[data-builder-layout="mobile"] .result-row::before {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+  }
+  .team-builder-page[data-builder-layout="mobile"] .result-identity {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .team-builder-page[data-builder-layout="mobile"] .result-add {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .team-builder-page[data-builder-layout="mobile"] .result-add-button {
+    width: 44px;
+    height: 44px;
+  }
+  .team-builder-page[data-builder-layout="mobile"] .result-stats {
+    grid-column: 2 / span 2;
+    grid-row: 2;
+    flex-wrap: wrap;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+  .team-builder-page[data-builder-layout="mobile"] .result-text {
+    font-size: 14px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+  .team-builder-page[data-builder-layout="mobile"] .result-name {
+    overflow-wrap: anywhere;
+  }
+  .team-builder-page[data-builder-layout="mobile"] .team-sidebar {
+    padding: 12px;
+  }
+  .team-builder-page[data-builder-layout="mobile"] .team-list,
+  .team-builder-page[data-builder-layout="mobile"] .roster-scroll {
+    flex: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+  .team-builder-page[data-builder-layout="mobile"] .slot-tile:not(.empty) {
+    grid-column: 1 / -1;
+  }
+  .team-builder-page[data-builder-layout="mobile"] .slot-tile.empty {
+    min-height: 60px;
+  }
+  .team-builder-page[data-builder-layout="mobile"] .slot-ability,
+  .team-builder-page[data-builder-layout="mobile"] .team-card-text {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .team-builder-page[data-builder-layout="mobile"] .team-dice-controls {
+    flex-wrap: wrap;
+  }
+  .team-builder-page[data-builder-layout="mobile"] .team-dice-controls button,
+  .team-builder-page[data-builder-layout="mobile"] .slot-remove,
+  .team-builder-page[data-builder-layout="mobile"] .dk-builder-tardigrade-option button {
+    width: 40px;
+    height: 40px;
+  }
+  .team-builder-page[data-builder-layout="mobile"] .roster-view-toggle button,
+  .team-builder-page[data-builder-layout="mobile"] .ruleset-option,
+  .team-builder-page[data-builder-layout="mobile"] .team-secondary-actions button {
+    min-height: 40px;
+  }
+  .team-builder-page[data-builder-layout="mobile"] .slot-name-line,
+  .team-builder-page[data-builder-layout="mobile"] .team-card-header {
+    flex-wrap: wrap;
+  }
+  .team-builder-page[data-builder-layout="mobile"] .slot-name {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .team-builder-page[data-builder-layout="mobile"] .slot-top {
+    flex-wrap: wrap;
+  }
+  .team-builder-page[data-builder-layout="mobile"] .slot-remove {
+    flex: none;
+  }
+  .team-builder-page[data-builder-layout="mobile"] .dk-builder-tardigrade-options {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .team-builder-page[data-builder-layout="mobile"] .custom-cap-stepper button {
+    min-width: 36px;
+    min-height: 36px;
+  }
+}
+@media screen and (max-width: 1164px) {
+  .team-builder-page[data-builder-layout="desktop"] {
+    overflow-x: auto;
+  }
+  .team-builder-page[data-builder-layout="desktop"] .team-builder-header {
+    position: sticky;
+    left: 0;
+    z-index: 101;
+  }
+}
+@media screen and (max-width: 380px) {
+  .team-builder-page[data-builder-layout="mobile"] .slot-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media print {
+  .team-builder-page .builder-panel-buttons,
+  .team-builder-page .screen-menu {
+    display: none;
+  }
+}

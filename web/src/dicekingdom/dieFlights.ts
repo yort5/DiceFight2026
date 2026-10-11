@@ -59,6 +59,8 @@ const PILE_KEYS: Record<string, string> = {
   OutOfPlay: "out",
   Bag: "bag",
   ReservePool: "reserve",
+  DiceFromBag: "drawn",
+  DiceFromPrep: "carried",
   Unpurchased: "roster",
 };
 

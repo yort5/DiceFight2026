@@ -290,6 +290,13 @@ public sealed class GameState
 
         if (die.PoolDieId is { } poolDieId)
         {
+            // Custom teams have their own starting pool, independent of Champions.
+            foreach (var player in new[] { PlayerOne, PlayerTwo })
+            {
+                if (player.CustomBasicDicePool is null) continue;
+                foreach (var entry in player.CustomBasicDicePool)
+                    if (entry.Die.Id == poolDieId) return entry.Die;
+            }
             foreach (var entry in Config.BasicDicePool)
             {
                 if (entry.Die.Id == poolDieId) return entry.Die;

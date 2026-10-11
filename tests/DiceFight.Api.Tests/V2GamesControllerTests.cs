@@ -49,6 +49,27 @@ public class V2GamesControllerTests
     }
 
     [Fact]
+    public void Create_Accepts_A_Custom_Team_Without_A_Champion_And_Exact_Dice_Counts()
+    {
+        var store = new V2GameStore();
+        var custom = new CustomV2TeamRequest(
+            [new(DiceKingdomConfig.Mongoose.Id, 2), new(DiceKingdomConfig.AngerIssues.Id, 3)],
+            [new("Claw", 3), new("Shell", 0), new("Wing", 2), new("Eye", 3)]);
+        var request = new CreateV2GameRequest(
+            PlayerTwoChampionId: "Armadillo", PlayerOneCustomTeam: custom);
+        var created = V2SeatedController.CreatedDto(V2SeatedController.Anonymous(store).Create(request));
+        var state = store.GetSession(created.Game.GameId).State;
+
+        Assert.Null(state.PlayerOne.ChampionId);
+        Assert.Equal(2, state.Dice.Count(d => d.OwnerId == "teamA" && d.CardId == DiceKingdomConfig.Mongoose.Id));
+        Assert.Equal(3, state.Dice.Count(d => d.OwnerId == "teamA" && d.CardId == DiceKingdomConfig.AngerIssues.Id));
+        Assert.Equal(3, state.Dice.Count(d => d.OwnerId == "teamA" && d.PoolDieId == "TardigradeClaw"));
+        Assert.Equal(2, state.Dice.Count(d => d.OwnerId == "teamA" && d.PoolDieId == "TardigradeWing"));
+        Assert.Equal(3, state.Dice.Count(d => d.OwnerId == "teamA" && d.PoolDieId == "TardigradeEye"));
+        Assert.Equal("Armadillo", state.PlayerTwo.ChampionId);
+    }
+
+    [Fact]
     public void Full_Turn_Cycle_Works_Through_The_Controller_With_A_Champion_Power()
     {
         var (store, session) = CreateGame("Wolf", "Armadillo");

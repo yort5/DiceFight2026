@@ -16,9 +16,8 @@ namespace DiceFight.Api.Controllers;
 // SampleCards - a parallel controller, not a shared abstraction, matching
 // V2_PLAN.md's own Phase 9 note ("keeps v1 untouched").
 //
-// No team-builder: creating a game picks two Champions and
-// DiceKingdomConfig.CharactersByChampion builds each team
-// automatically. No Global abilities/Range/Tag Out/Continuous-die
+// Champion games still use their preset team definitions. Custom games can
+// instead specify the exact catalog cards and Tardigrades for either side. No Global abilities/Range/Tag Out/Continuous-die
 // endpoints - none of DiceKingdomConfig's Characters use those
 // mechanisms, so there is nothing for them to drive yet.
 [ApiController]
@@ -35,8 +34,17 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
         var config = DiceKingdomConfig.Config;
         var catalog = DiceKingdomConfig.Catalog;
 
-        var playerOne = BuildPlayer("teamA", request.PlayerOneChampionId);
-        var playerTwo = BuildPlayer("teamB", request.PlayerTwoChampionId);
+        Player playerOne;
+        Player playerTwo;
+        try
+        {
+            playerOne = BuildSelectedPlayer("teamA", request.PlayerOneChampionId, request.PlayerOneCustomTeam);
+            playerTwo = BuildSelectedPlayer("teamB", request.PlayerTwoChampionId, request.PlayerTwoCustomTeam);
+        }
+        catch (ArgumentException e)
+        {
+            return BadRequest(new { error = e.Message });
+        }
 
         var state = GameSetup.NewGame(config, catalog, playerOne, playerTwo);
         var session = store.Create(state);
@@ -101,6 +109,47 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
         session.MarkChanged();
         Priority.Sync(state);
         return Ok(V2GameStateDto.From(session.Id, state, guest.PlayerId, session.Version));
+    }
+
+    private static Player BuildSelectedPlayer(string id, string? championId, CustomV2TeamRequest? custom)
+    {
+        if (custom is null)
+        {
+            if (string.IsNullOrWhiteSpace(championId))
+                throw new ArgumentException($"Player {id} needs a Champion or a custom team.");
+            return BuildPlayer(id, championId);
+        }
+        if (!string.IsNullOrWhiteSpace(championId))
+            throw new ArgumentException($"Player {id} cannot use a Champion with a custom team.");
+        if (custom.Cards is null || custom.Tardigrades is null)
+            throw new ArgumentException("Custom teams must specify cards and Tardigrades.");
+
+        var player = new Player { Id = id, Name = "Custom Team", ChampionId = null,
+            CustomCardDiceCounts = new Dictionary<string, int>() };
+        var cardIds = new HashSet<string>();
+        foreach (var entry in custom.Cards)
+        {
+            if (entry is null || entry.DiceCount <= 0 ||
+                string.IsNullOrWhiteSpace(entry.CardId) ||
+                !DiceKingdomConfig.Catalog.ContainsKey(entry.CardId) ||
+                !cardIds.Add(entry.CardId))
+                throw new ArgumentException("Invalid or duplicate card in custom team.");
+            // No server-side team-size or printed die-limit enforcement.
+            player.TeamCardIds.Add(entry.CardId);
+            player.CustomCardDiceCounts[entry.CardId] = entry.DiceCount;
+        }
+
+        var types = new HashSet<string>();
+        var pool = new List<BasicDicePoolEntry>();
+        foreach (var entry in custom.Tardigrades)
+        {
+            if (entry is null || entry.DiceCount < 0 || !types.Add(entry.EnergyType))
+                throw new ArgumentException("Invalid or duplicate Tardigrade entry.");
+            try { pool.Add(DiceKingdomConfig.CustomTardigrade(entry.EnergyType, entry.DiceCount)); }
+            catch (ArgumentException e) { throw new ArgumentException(e.Message); }
+        }
+        player.CustomBasicDicePool = pool;
+        return player;
     }
 
     private static Player BuildPlayer(string id, string championId)
