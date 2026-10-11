@@ -1,3 +1,4 @@
+import { KeywordAction } from "./KeywordPreview";
 import { CardText } from "./CardText";
 import { DieIcon } from "./DieIcon";
 import { isCommunityCard } from "./dieHelpers";
@@ -70,7 +71,8 @@ export function CommunityCards(props: {
             );
             return (
               <li key={key}>
-                <button
+                <KeywordAction
+                  label={`Select ${card.name}`}
                   className={`community-card${selected ? " selected" : ""}`}
                   onClick={() => props.onGroupClick(dieIds)}
                   disabled={dieIds.length === 0}
@@ -99,7 +101,7 @@ export function CommunityCards(props: {
                   <span className="community-text">
                     <CardText text={card.rawText} />
                   </span>
-                </button>
+                </KeywordAction>
               </li>
             );
           })}

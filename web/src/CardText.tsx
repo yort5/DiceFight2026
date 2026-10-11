@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Icon } from "./GameIcon";
+import { KeywordText } from "./KeywordPreview";
 import {
   ENERGY_ICONS,
   GENERIC_ENERGY_ICONS,
@@ -73,7 +74,7 @@ function withIcons(text: string, keyPrefix: string): ReactNode[] {
     for (const m of chunk.matchAll(TOKEN_RE)) {
       const [emoji, splitA, splitB, word, plural, payVerb, payAmount, wildcard] = m.slice(1);
       const at = m.index ?? 0;
-      if (at > last) out.push(chunk.slice(last, at));
+      if (at > last) out.push(<KeywordText key={`${keyPrefix}-k${key++}`} text={chunk.slice(last, at)} />);
       if (emoji) {
         push(ENERGY_ICONS[emoji.toLowerCase()]);
       } else if (splitA) {
@@ -92,7 +93,7 @@ function withIcons(text: string, keyPrefix: string): ReactNode[] {
       }
       last = at + m[0].length;
     }
-    if (last < chunk.length) out.push(chunk.slice(last));
+    if (last < chunk.length) out.push(<KeywordText key={`${keyPrefix}-k${key++}`} text={chunk.slice(last)} />);
   }
   return out;
 }
@@ -115,7 +116,7 @@ export function CardText({ text }: { text: string }) {
         const rest = block.trim().replace(/^Global:\s*/, "");
         return (
           <div key={i} className="card-text-global">
-            <strong>Global:</strong> {withIcons(rest, `b${i}`)}
+            <KeywordText text="Global" />: {withIcons(rest, `b${i}`)}
           </div>
         );
       })}

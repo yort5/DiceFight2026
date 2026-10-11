@@ -1915,9 +1915,13 @@
    card. On a dark page they have to flip or they sink into it - the four
    energy types are coloured discs and stay as they are. */
 @media (prefers-color-scheme: dark) {
-  .card-icon-mono {
+  :root:not([data-theme="light"]) .card-icon-mono {
     filter: invert(1);
   }
+}
+
+:root[data-theme="dark"] .card-icon-mono {
+  filter: invert(1);
 }
 
 /* Each Global gets its own line, set apart from the card's own text by
@@ -2154,9 +2158,13 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  .legality-note.over {
+  :root:not([data-theme="light"]) .legality-note.over {
     color: oklch(0.75 0.14 25);
   }
+}
+
+:root[data-theme="dark"] .legality-note.over {
+  color: oklch(0.75 0.14 25);
 }
 
 /* Min/Max sit on one line, each select hugging its own label. */
@@ -3254,9 +3262,13 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  .result-paper {
+  :root:not([data-theme="light"]) .result-paper {
     color: oklch(0.76 0.08 60);
   }
+}
+
+:root[data-theme="dark"] .result-paper {
+  color: oklch(0.76 0.08 60);
 }
 
 .result-text {

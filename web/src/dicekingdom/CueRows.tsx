@@ -1,3 +1,4 @@
+import { KeywordText } from "../KeywordPreview";
 // The status-cue explainer's rows (Claude Design's "face frame" handoff,
 // 2026-10-03): one row per cue - its chip, what it is, how long it lasts,
 // and "From {source}. {rule}". Shared by the mobile inspect panel and the
@@ -15,10 +16,10 @@ export function CueRows({ rows }: { rows: ExplainRow[] }) {
           </span>
           <div className="dk-cue-text">
             <div className="dk-cue-title">
-              {row.title}
+              <KeywordText text={row.title} />
               {row.duration && <span className="dk-cue-dur"> · {row.duration}</span>}
             </div>
-            <div className="dk-cue-body">{row.overridden ? `${row.overridden}. ${row.body}` : row.body}</div>
+            <div className="dk-cue-body"><KeywordText text={row.overridden ? `${row.overridden}. ${row.body}` : row.body} /></div>
           </div>
         </div>
       ))}

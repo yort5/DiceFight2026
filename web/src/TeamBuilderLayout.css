@@ -27,6 +27,7 @@
     width: 100%;
     max-width: 720px;
     padding: 14px;
+    padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px));
   }
   .team-builder-page[data-builder-layout="mobile"] .team-builder-layout {
     grid-template-columns: minmax(0, 1fr);
@@ -46,11 +47,19 @@
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 4px;
-    margin-bottom: 12px;
-    padding: 4px;
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 90;
+    box-sizing: border-box;
+    width: min(720px, 100%);
+    margin: 0;
+    padding: 8px max(14px, env(safe-area-inset-right, 0px)) calc(8px + env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px));
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: 12px 12px 0 0;
     background: var(--code-bg);
+    box-shadow: 0 -4px 16px #0002;
   }
   .builder-panel-buttons button {
     min-height: 44px;

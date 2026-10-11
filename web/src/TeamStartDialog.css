@@ -1,0 +1,64 @@
+.team-start-dialog {
+  box-sizing: border-box;
+  width: min(480px, calc(100% - 28px));
+  max-height: calc(100dvh - 40px);
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.5 var(--sans);
+  text-align: left;
+  box-shadow: var(--shadow);
+  overflow: auto;
+}
+.team-start-dialog::backdrop {
+  background: rgb(0 0 0 / 55%);
+}
+.team-start-dialog-content {
+  padding: 22px;
+}
+.team-start-dialog h2 {
+  margin: 0 0 14px;
+  color: var(--text-h);
+  font: 700 21px/1.2 var(--heading);
+}
+.team-start-dialog ul {
+  margin: 0;
+  padding-left: 20px;
+}
+.team-start-dialog li + li {
+  margin-top: 8px;
+}
+.team-start-dialog p {
+  margin: 16px 0;
+}
+.team-start-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.team-start-dialog-back {
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  padding: 10px 14px;
+  background: var(--code-bg);
+  color: var(--text-h);
+  font: 600 14px/1.3 var(--sans);
+  cursor: pointer;
+}
+.team-start-dialog .team-play-button {
+  width: auto;
+  font-size: 14px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.team-start-dialog button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+@media (max-width: 440px) {
+  .team-start-dialog-actions {
+    flex-direction: column;
+  }
+}

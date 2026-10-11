@@ -11,6 +11,7 @@ import { loadTeamBuilderCards, USE_DICE_KINGDOM_CATALOG } from "./teamBuilderCat
 import { stashPendingGame } from "./gameHandoff";
 import { navigate } from "./router";
 import { ScreenMenu } from "./ScreenMenu";
+import { TeamStartDialog } from "./TeamStartDialog";
 import { useTeamBuilderLayout } from "./teamBuilderLayout";
 import "./TeamBuilderLayout.css";
 import { TARDIGRADE_TYPES, MAX_STARTING_TARDIGRADES, capTardigrades, changeTardigradeCount, tardigradeTotal, stageCustomTeam, type TardigradeType } from "./dicekingdom/customTeams";
@@ -352,6 +353,7 @@ export function TeamBuilderPage() {
   const tardigradeCount = tardigradeTotal(tardigrades);
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
+  const [startWarning, setStartWarning] = useState<{ messages: string[]; canProceed: boolean } | null>(null);
 
   useEffect(() => {
     loadTeamBuilderCards().then(setCards).catch((e) => setError(String(e)));
@@ -691,8 +693,16 @@ export function TeamBuilderPage() {
     }
   }
 
-  function playCustomTeam() {
-    if (!legality.ok || tardigradeCount !== MAX_STARTING_TARDIGRADES) return;
+  function playCustomTeam(confirmed = false) {
+    const errors: string[] = [];
+    if (!legality.ok) errors.push(legality.note);
+    if (tardigradeCount !== MAX_STARTING_TARDIGRADES) {
+      errors.push(`Select exactly ${MAX_STARTING_TARDIGRADES} starting Tardigrades (currently ${tardigradeCount}/${MAX_STARTING_TARDIGRADES}).`);
+    }
+    if (errors.length > 0) {
+      setStartWarning({ messages: errors, canProceed: false });
+      return;
+    }
     const warnings: string[] = [];
     if (basicActionEntries.length === 0) warnings.push("No Basic Action selected.");
     if (isCapped(caps.cards) && cardCount < caps.cards) {
@@ -701,7 +711,11 @@ export function TeamBuilderPage() {
     if (isCapped(caps.dice) && totalDice < caps.dice) {
       warnings.push(`Only ${totalDice} of ${caps.dice} character dice are selected.`);
     }
-    if (warnings.length > 0 && !window.confirm(`${warnings.join("\n")}\n\nPlay with this team anyway?`)) return;
+    if (!confirmed && warnings.length > 0) {
+      setStartWarning({ messages: warnings, canProceed: true });
+      return;
+    }
+    setStartWarning(null);
     stageCustomTeam({
       cards: teamEntries.map(({ card, count }) => ({ cardId: card.id, diceCount: count })),
       tardigrades: TARDIGRADE_TYPES.map((energyType) => ({ energyType, diceCount: tardigrades[energyType] })),
@@ -1186,11 +1200,9 @@ export function TeamBuilderPage() {
 
         <div className="main-column" id="builder-catalog">
           <h2>{USE_DICE_KINGDOM_CATALOG ? "Dice Kingdom — Team Builder" : "Team Builder - Card Search"}</h2>
-          <p className="hint">
-            {USE_DICE_KINGDOM_CATALOG
-              ? "All implemented Dice Kingdom cards, including characters not on the current Champion teams. Build, share, or print a custom list here."
-              : 'Browse the full card catalog. Cards marked "paper only" are not yet modeled by the game engine - searchable and printable here, fine on a table, just not playable in a simulated game.'}
-          </p>
+          {!USE_DICE_KINGDOM_CATALOG && <p className="hint">
+            Browse the full card catalog. Cards marked "paper only" are not yet modeled by the game engine - searchable and printable here, fine on a table, just not playable in a simulated game.
+          </p>}
 
           {/* What is narrowing the results, shown WITH the results. A chip
               selected three sections down a scrolled rail is otherwise
@@ -1286,7 +1298,7 @@ export function TeamBuilderPage() {
                         <div className="result-headline">
                           <RarityBadge rarity={c.rarity} />
                           <span className="result-name">{c.name}</span>
-                          {c.subtitle && <span className="result-subtitle">{c.subtitle}</span>}
+                          {c.subtitle && !isBasicActionFamily(c) && <span className="result-subtitle">{c.subtitle}</span>}
                           <span className="result-type">{typeLabel(c.type)}</span>
                           {/* Replaces the "OK" column, whose tick meant
                               the opposite of what a blank one looked
@@ -1487,7 +1499,7 @@ export function TeamBuilderPage() {
                           ×
                         </button>
                       </div>
-                      {card.subtitle && <div className="slot-subtitle" title={card.subtitle}>{card.subtitle}</div>}
+                      {card.subtitle && !isBasicActionFamily(card) && <div className="slot-subtitle" title={card.subtitle}>{card.subtitle}</div>}
                       <div className="slot-meta">
                         <span className="slot-cost" title="Purchase cost">Cost {card.purchaseCost}</span>
                         {card.energyTypes.length > 0 && <BuilderEnergyTypes types={card.energyTypes} />}
@@ -1572,7 +1584,7 @@ export function TeamBuilderPage() {
                         <span className="team-card-name">{card.name}</span>
                         {card.set && <span className="team-card-set">({card.set})</span>}
                       </div>
-                      {card.subtitle && <div className="hint">{card.subtitle}</div>}
+                      {card.subtitle && !isBasicActionFamily(card) && <div className="hint">{card.subtitle}</div>}
                     </div>
                   {isBasicActionFamily(card) ? (
                     <FixedDiceDisplay count={count} limit={card.dieLimit} />
@@ -1700,11 +1712,16 @@ export function TeamBuilderPage() {
           >
             {starting ? "Starting..." : "Play with this team"}
           </button> : <button className="team-play-button"
-            disabled={!legality.ok || tardigradeCount !== MAX_STARTING_TARDIGRADES}
             title={tardigradeCount !== MAX_STARTING_TARDIGRADES
               ? `Select exactly ${MAX_STARTING_TARDIGRADES} starting Tardigrades before playing.`
               : !legality.ok ? legality.note : undefined}
-            onClick={playCustomTeam}>Play with this team</button>}
+            onClick={() => playCustomTeam()}>Play with this team</button>}
+          {startWarning && <TeamStartDialog
+            messages={startWarning.messages}
+            canProceed={startWarning.canProceed}
+            onClose={() => setStartWarning(null)}
+            onProceed={() => playCustomTeam(true)}
+          />}
 
           <div className="team-secondary-actions">
             <button onClick={copyTeamLink} disabled={team.size === 0}>
@@ -1751,7 +1768,12 @@ export function TeamBuilderPage() {
               {cardCount} {cardCount === 1 ? "card" : "cards"} · {totalDice} dice ·{" "}
               {basicActionEntries.length} basic {basicActionEntries.length === 1 ? "action" : "actions"} ·{" "}
               {RULESETS.find((r) => r.id === ruleset)?.label ?? ruleset}
+              {USE_DICE_KINGDOM_CATALOG && <> · {tardigradeCount} starting Tardigrades</>}
             </p>
+            {USE_DICE_KINGDOM_CATALOG && <section className="team-print-tardigrades">
+              <h2>Starting Tardigrades</h2>
+              <p>{TARDIGRADE_TYPES.map(type => `${type}: ${tardigrades[type]}`).join(" · ")}</p>
+            </section>}
             <table>
               <thead>
                 <tr>
@@ -1768,7 +1790,7 @@ export function TeamBuilderPage() {
                     <td>{count}</td>
                     <td>
                       <strong>{card.name}</strong>
-                      {card.subtitle && <> — {card.subtitle}</>}
+                      {card.subtitle && !isBasicActionFamily(card) && <> — {card.subtitle}</>}
                       {/* The letter, not the colour: a rarity stripe is
                           the first thing a monochrome printer loses. */}
                       {rarityLetter(card.rarity) && <> [{rarityLetter(card.rarity)}]</>}

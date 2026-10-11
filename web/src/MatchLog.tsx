@@ -1,3 +1,4 @@
+import { KeywordText } from "./KeywordPreview";
 import { useEffect, useRef } from "react";
 import type { GameLogEntry } from "./types";
 
@@ -41,7 +42,7 @@ export function MatchLog(props: { entries: GameLogEntry[]; nearPlayerId: string 
               }
             >
               <span className="log-seq">{entry.seq}</span>
-              <span className="log-text">{entry.text}</span>
+              <span className="log-text"><KeywordText text={entry.text} /></span>
             </li>
           ))}
         </ol>

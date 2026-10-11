@@ -1,3 +1,4 @@
+import { KeywordAction, KeywordText } from "../KeywordPreview";
 import { CUSTOM_TEAM_PICK, pendingCustomTeam } from "./customTeams";
 import { CustomTeamSetupChoice } from "./CustomTeamSetupChoice";
 import { startTransition, useEffect, useRef, useState } from "react";
@@ -614,7 +615,7 @@ function StepPopout({
         {steps.map((s, i) => (
           <div key={s.label} className={`dkm-popout-row${i === index ? " current" : ""}`}>
             <span className={`dkm-popout-dot${i < index ? " done" : i === index ? " current" : ""}`} />
-            <span className="dkm-popout-label">{s.label}</span>
+            <span className="dkm-popout-label"><KeywordText text={s.label} /></span>
             {s.conditional && <span className="dkm-dashed-badge">if declared</span>}
           </div>
         ))}
@@ -734,7 +735,7 @@ function MatCard({
           passive you can't see applying (the same feedback's own
           example: a die reading a little high/low on attack or defense
           because of the OTHER player's champion, not yours). */}
-      {championOpen && player.champion && <p className="dkm-champion-passive">{player.champion.passiveText}</p>}
+      {championOpen && player.champion && <p className="dkm-champion-passive"><KeywordText text={player.champion.passiveText} /></p>}
 
       {!expandable || expanded ? (
         <div className={expandable ? "dkm-mat-expanded" : undefined}>
@@ -1454,7 +1455,7 @@ function RosterSheet({
                     2026-09-21) - always shown in full, never behind a tap.
                     rawText already leads with its keywords ("Fast. On
                     Attack: ..."), so no separate keyword badge. */}
-                {card && <span className="dkm-roster-text">{card.rawText}</span>}
+                {card && <span className="dkm-roster-text"><KeywordText text={card.rawText} /></span>}
               </div>
               {/* One EnergyBadge per required type - usually one, two for
                   a crossover/splash card - so the cost number is never
@@ -1471,9 +1472,9 @@ function RosterSheet({
             </>
           );
           return canBuy ? (
-            <button
+            <KeywordAction
               key={cardId}
-              type="button"
+              label={`Buy ${card?.name ?? cardId}`}
               className={`dkm-roster-row dkm-roster-row-btn${affordable ? "" : " unaffordable"}`}
               disabled={!affordable}
               onClick={() => {
@@ -1482,7 +1483,7 @@ function RosterSheet({
               }}
             >
               {row}
-            </button>
+            </KeywordAction>
           ) : (
             <div key={cardId} className="dkm-roster-row">
               {row}
@@ -1660,7 +1661,7 @@ function ChoiceSheet({
             <span className="dkm-popout-title">{paying ? "Pay energy" : "Choose a target"}</span>
           </div>
           <p className="dkm-pay-status">
-            <b>{choice.description}</b>
+            <b><KeywordText text={choice.description} /></b>
             {max > 1 && (
               <span>{" "}· {picked.length} / {max}</span>
             )}
@@ -1679,9 +1680,9 @@ function ChoiceSheet({
                 const unbought = copies.filter((x) => x.zone === "Unpurchased").length;
                 const isPicked = copies.some((x) => picked.includes(x.id));
                 return (
-                  <button
+                  <KeywordAction
                     key={d.cardId}
-                    type="button"
+                    label={`Choose ${card?.name ?? d.cardId}`}
                     className={`dkm-secondary-btn dkm-name-card${isPicked ? " picked" : ""}`}
                     onClick={() => setPicked(isPicked ? [] : [d.id])}
                   >
@@ -1691,7 +1692,7 @@ function ChoiceSheet({
                         <small>cost {card?.purchaseCost} · {copies.length - unbought} owned, {unbought} unbought</small>
                       </span>
                       <span className="dkm-name-card-ability">
-                        {cardTextOf(card)}
+                        <KeywordText text={cardTextOf(card)} />
                       </span>
                     </span>
                     <span className="dkm-name-card-faces" aria-label="Non-energy die faces">
@@ -1703,7 +1704,7 @@ function ChoiceSheet({
                           </span>
                         ))}
                     </span>
-                  </button>
+                  </KeywordAction>
                 );
               })}
           </div>
@@ -2897,7 +2898,7 @@ export function DiceKingdomMobilePage() {
         // own selection handlers, including tap-again-to-deselect.
         if (target.closest(
           ".dkm-inspect, .dkm-tile.clickable, .dkm-buy-tile, " +
-          ".dkm-pile-inspect-tile, .dkm-lane-die-wrap, .screen-menu"
+          ".dkm-pile-inspect-tile, .dkm-lane-die-wrap, .screen-menu, .rules-keyword"
         )) return;
         setSelectedId(null);
         setPileInspectId(null);
@@ -3100,11 +3101,11 @@ export function DiceKingdomMobilePage() {
               {logEntries.map((entry, i) =>
                 entry.isTurnStart ? (
                   <p key={entry.seq} className="dkm-log-turn">
-                    <span>— — —</span> {entry.text} <span>— — —</span>
+                    <span>— — —</span> <KeywordText text={entry.text} /> <span>— — —</span>
                   </p>
                 ) : (
                   <p key={entry.seq} className={i === logEntries.length - 1 ? "dkm-log-line newest" : "dkm-log-line"}>
-                    {entry.text}
+                    <KeywordText text={entry.text} />
                   </p>
                 ),
               )}
@@ -3167,7 +3168,7 @@ export function DiceKingdomMobilePage() {
                 selectedPurchaseCard ||
                 selectedDie.zone === "FieldZone" ||
                 (selectedDie.zone === "ReservePool" && (phase === "roll" || selectedDie.effectiveAttack !== null))) && (
-                <div className="dkm-purchase-ability">{cardTextOf(cardsById.get(selectedDie.cardId))}</div>
+                <div className="dkm-purchase-ability"><KeywordText text={cardTextOf(cardsById.get(selectedDie.cardId))} /></div>
               )}
             {selectedPurchaseCard ? (
               <div className="dkm-purchase-row">
@@ -3241,7 +3242,7 @@ export function DiceKingdomMobilePage() {
                         {atkTotal >= bDefTotal ? <b className="dkm-ko-tag"> → blockers KO'd</b> : " → blockers survive"}
                         {" · "}Blockers' ATK {bAtkTotal} vs lane DEF {defTotal}
                         {bAtkTotal >= defTotal && <b className="dkm-ko-tag"> → attackers KO'd</b>}
-                        {overcrush && faceDamage > 0 && <b className="dkm-ko-tag"> · Overcrush: {faceDamage} to face</b>}
+                        {overcrush && faceDamage > 0 && <b className="dkm-ko-tag"> · <KeywordText text="Overcrush" />: {faceDamage} to face</b>}
                       </span>
                     )}
                     {laneReflect(laneAttackersForBreakdown, laneBlockers, combatPreview(attackersByLane, blockersByAttacker), cardsById).map((r) => (
