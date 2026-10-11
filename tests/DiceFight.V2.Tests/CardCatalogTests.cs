@@ -113,16 +113,19 @@ public class CardCatalogTests
         var queue = new AbilityQueue();
 
         TurnEngine.Field(state, queue, godDie.Id, []);
-        EffectInterpreter.DrainQueue(state, queue, new FixedRoller(2), new Random(1));
+        EffectInterpreter.DrainQueue(state, queue, new FixedRoller(LevelFace(2)), new Random(1));
         // Neither DealDamage nor Reroll restricts ownership ("target character
         // die" - real card text), so each step is a real choice between the
         // target and God Emperor Doom's own die; answer both toward target.
         AnswerAnyPendingChoiceWith(state, target.Id);
-        EffectInterpreter.DrainQueue(state, queue, new FixedRoller(2), new Random(1));
+        EffectInterpreter.DrainQueue(state, queue, new FixedRoller(LevelFace(2)), new Random(1));
         AnswerAnyPendingChoiceWith(state, target.Id);
 
         Assert.Equal(3, target.Damage);
-        Assert.Equal(2, target.CurrentFaceIndex); // rerolled onto whatever FixedRoller(2) landed
+        // Rerolled onto a creature face, so it stays fielded with its damage
+        // (an energy face would send it to the Reserve Pool - rule 2.5.2).
+        Assert.Equal(LevelFace(2), target.CurrentFaceIndex);
+        Assert.Equal(Zone.FieldZone, target.Zone);
     }
 
     private static void AnswerAnyPendingChoiceWith(GameState state, string preferredId)

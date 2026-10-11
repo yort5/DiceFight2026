@@ -669,6 +669,7 @@ public static class EffectInterpreter
                         ctx.State.GetPlayer(ctx.State.OpponentOf(ctx.ControllerId)).Life -= n.DamagePerMoved;
                         ctx.State.CheckGameOver();
                 }
+                else LeaveFieldIfEnergy(ctx.State, die);
             }
             onComplete();
         });
@@ -755,6 +756,7 @@ public static class EffectInterpreter
 
                 var payload = new DieFaceChangedPayload(priorFace, face, FaceChangeCause.Spin);
                 EventBus.Fire(ctx.State, ctx.Queue, new GameEvent(TriggerKind.DieFaceChanged, die, die.ControllerId, ctx.State.CurrentStepId, payload));
+                LeaveFieldIfEnergy(ctx.State, die);
             }
             onComplete();
         });
@@ -1204,6 +1206,19 @@ public static class EffectInterpreter
             var firstCharacter = definition.Faces.Select((f, i) => (f, i)).FirstOrDefault(x => x.f.Character is not null);
             die.CurrentFaceIndex = firstCharacter.f is not null ? firstCharacter.i : 0;
         }
+    }
+
+    // Rules 2.5.1-2.5.2: a die on an energy face can't be in the Field (or
+    // Attack) Zone, so a creature spun or rerolled to energy there moves to
+    // its controller's Reserve Pool - as spendable energy, cleared at their
+    // next Clear & Draw - and loses its damage and modifiers (2.5.7). Not a
+    // KO (2.5.3). Until 2026-10-11 it stayed in the Field as an energy die:
+    // offered as a blocker, unspendable, never cleared.
+    private static void LeaveFieldIfEnergy(GameState state, DieInstance die)
+    {
+        if (die.Zone is not (Zone.FieldZone or Zone.AttackZone)) return;
+        if (state.GetCurrentFace(die) is not { Kind: FaceKind.EnergyFace }) return;
+        MoveToZone(state, die, Zone.ReservePool);
     }
 
     private static DieInstance FindDie(GameState state, string dieId) =>

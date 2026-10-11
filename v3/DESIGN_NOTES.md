@@ -4464,3 +4464,16 @@ keeps (L2 1/1: 28% vs 0%; L3: 39% vs 16%), and keep card-die energy more
 often (68-79% rerolled vs the bot's 88-94%). 26 of 211 human rerolls threw
 back a 2-energy Tardigrade face, spread over 12 games - unclear whether
 deliberate or UI confusion.
+
+## 2026-10-11 - Spun to energy leaves the Field
+
+User bug: "Spinning a die to energy leaves it in the field. It can be
+selected as a blocker (though it won't let you finish assigning it), it
+can't be spent, and it doesn't clear." Cuttlefish's On Attack spin (and any
+reroll to energy without a stated destination) only changed the face.
+Rules 2.5.1-2.5.2: an energy face can't be in the Field Zone, so the die
+goes to its controller's Reserve Pool - spendable on Globals during the
+attacker's turn, cleared at that player's Clear & Draw - dropping damage
+and modifiers (2.5.7), not a KO (2.5.3). EffectInterpreter
+`LeaveFieldIfEnergy`. It happened in 5 of the 48 live games; those
+records now drift at that move (expected - they recorded the old rule).
