@@ -11,24 +11,25 @@ export const USE_DICE_KINGDOM_CATALOG: boolean = true;
  * The V2 catalog uses a different DTO, so adapt it in one place rather than
  * create another team builder or maintain a duplicate list of cards.
  *
- * V2's /cards includes *all* registered Dice Kingdom cards, including those
- * not assigned to any premade Champion team.
+ * V2's /cards includes the Dice Kingdom pool and individually registered
+ * work-in-progress cards. Their metadata controls status and presentation.
  */
 export function adaptKingdomCard(card: KingdomCardDef): CardDef {
   return {
     id: card.id,
     name: card.name,
     subtitle: card.subtitle,
-    type: card.isAction ? "BasicAction" : "Character",
+    type: card.type ?? (card.isAction ? "BasicAction" : "Character"),
     purchaseCost: card.purchaseCost,
     energyTypes: card.energyTypes,
-    affiliations: [],
+    dieEnergyType: card.dieEnergyType,
+    affiliations: card.affiliations ?? [],
     alignment: null,
     rarity: null,
     oldTeamBuilderCode: null,
     affiliationIcons: [],
     dieLimit: card.dieLimit,
-    levels: card.levels.map((level) => ({ ...level, burstStars: null })),
+    levels: card.levels.map((level) => ({ ...level, burstStars: level.burst ?? null })),
     rawText: card.rawText || card.actionText || "",
     keywords: card.keywords,
     abilityTriggers: [],
@@ -36,9 +37,10 @@ export function adaptKingdomCard(card: KingdomCardDef): CardDef {
       ? { amount: card.global.cost, requiredType: card.global.energyType }
       : null,
     globalAbilityNeedsTarget: false,
-    isImplemented: true,
+    isImplemented: card.isImplemented ?? true,
+    hasErrata: card.hasErrata ?? false,
     whenFieldedNeedsTarget: false,
-    set: "DK",
+    set: card.set === "Dice Kingdom" ? "DK" : card.set ?? "DK",
   };
 }
 

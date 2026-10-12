@@ -1193,7 +1193,7 @@ public static class SampleCards
     // unconditional job, not something this card's own Effect tree
     // repeats. "If you have an active X-Men character, also gain 1 life"
     // reuses OwnActiveAffiliationOrKeywordCountAtLeast exactly like
-    // Mutant Research Program's own "at least 2 active Founder" check,
+    // Mutant Research Program's own "at least 2 active Elder" check,
     // just at threshold 1.
     public static readonly CardDef OrganicSteelPreventDamage = BasicAction(
         "DPS010", "Organic Steel",
@@ -1867,20 +1867,20 @@ public static class SampleCards
     // Jean Grey, "Peaceful Coexistence" - the first Loyalty card (see
     // GameState.LoyaltyCounters/DieStats.LoyaltyBonus and TriggerType.
     // EndOfYourTurn's own remarks for the new plumbing this needed).
-    // "Founder" prefixing the raw text was originally left untagged as a
+    // "Elder" prefixing the raw text was originally left untagged as a
     // non-modeled flavor label (nothing on THIS card referenced it) -
     // correction, now that Cyclops "First Class" (DPS025) needs a real
-    // Founder KeywordInstance to recognize fielded Founder dice: this is
+    // Elder KeywordInstance to recognize fielded Elder dice: this is
     // a genuine printed keyword after all, just one nothing consumed
     // until now.
     public static readonly CardDef JeanGreyPeacefulCoexistence = Character(
         "DPS035", "Jean Grey", "Peaceful Coexistence", dieLimit: 4,
-        "Founder While Jean Grey is active, at the end of each or your turns, if no character dice were " +
+        "Elder While Jean Grey is active, at the end of each or your turns, if no character dice were " +
         "KO'd that turn, put a Loyalty Counter on Jean Grey's card (Loyalty Counters give a character die " +
         "+1A and +1D.)",
         purchaseCost: 4, energyType: EnergyType.Bolt,
         affiliations: ["X-Men"],
-        keywords: [new KeywordInstance("Founder")],
+        keywords: [new KeywordInstance("Elder")],
         abilities: [new AbilityDef(TriggerType.EndOfYourTurn, Cost: null,
             Effect: new Conditional(TargetSpec.Self, EffectCondition.NoCharacterKOdThisTurn, new GrantLoyaltyCounter()))],
         levels: [
@@ -2099,21 +2099,21 @@ public static class SampleCards
         ], set: "DPS");
 
     // Cyclops, "First Class" - the first card to use TriggerType.
-    // WhenAnotherDieFielded (new this pass), filtered to Founder-keyword
-    // dice. Cyclops's own text prints "Founder" too (a real
+    // WhenAnotherDieFielded (new this pass), filtered to Elder-keyword
+    // dice. Cyclops's own text prints "Elder" too (a real
     // KeywordInstance now - see Jean Grey's own remarks for the
     // correction), though nothing currently checks Cyclops's OWN
-    // Founder-ness, only the fielded die's.
+    // Elder-ness, only the fielded die's.
     public static readonly CardDef CyclopsFirstClass = Character(
         "DPS025", "Cyclops", "First Class", dieLimit: 4,
-        "Founder While Cyclops is active, when you field a character die with Founder, deal 2 damage to " +
+        "Elder While Cyclops is active, when you field a character die with Elder, deal 2 damage to " +
         "target character die.",
         purchaseCost: 5, energyType: EnergyType.Bolt,
         affiliations: ["X-Men"],
-        keywords: [new KeywordInstance("Founder")],
+        keywords: [new KeywordInstance("Elder")],
         abilities: [new AbilityDef(TriggerType.WhenAnotherDieFielded, Cost: null,
             Effect: new DealDamage(2, TargetSpec.CharacterDie("target character die")),
-            FieldedFilter: new FieldedDieMatch(TargetOwnership.Own, RequiredKeyword: "Founder"))],
+            FieldedFilter: new FieldedDieMatch(TargetOwnership.Own, RequiredKeyword: "Elder"))],
         levels: [
             new CharacterFace(FieldingCost: 1, Attack: 4, Defense: 2),
             new CharacterFace(FieldingCost: 1, Attack: 5, Defense: 3),
@@ -2122,7 +2122,7 @@ public static class SampleCards
 
     // Jubilee, "X-Men Field Leader" - WhenAnotherDieFielded's second
     // user, this time unfiltered (any of your own dice being fielded,
-    // not just Founder ones).
+    // not just Elder ones).
     public static readonly CardDef JubileeXMenFieldLeader = Character(
         "DPS143", "Jubilee", "X-Men Field Leader", dieLimit: 5,
         "While Jubilee is active, when you field a character die she deals 1 damage to your opponent and " +
@@ -2362,10 +2362,10 @@ public static class SampleCards
     // surfaced here as a gate on a triggered effect instead.
     public static readonly CardDef IcemanFrozenFistsOfFury = Character(
         "DPS074", "Iceman", "Frozen Fists of Fury", dieLimit: 4,
-        "Founder When Iceman attacks, if Wolverine is active, deal 3 damage to target character die.",
+        "Elder When Iceman attacks, if Wolverine is active, deal 3 damage to target character die.",
         purchaseCost: 4, energyType: EnergyType.Bolt,
         affiliations: ["X-Men"],
-        keywords: [new KeywordInstance("Founder")],
+        keywords: [new KeywordInstance("Elder")],
         abilities: [new AbilityDef(TriggerType.WhenAttacks, Cost: null,
             Effect: new Conditional(TargetSpec.Self, EffectCondition.NamedCardIsActive,
                 Then: new DealDamage(3, TargetSpec.CharacterDie("target character die")),
@@ -2762,17 +2762,17 @@ public static class SampleCards
         ], set: "DPS");
 
     // Angel, "Jean Grey's School" - the first user of StaticTeamBonus.
-    // RequiredKeyword/ExcludeSelf (new this round). "Founder" is a real
+    // RequiredKeyword/ExcludeSelf (new this round). "Elder" is a real
     // KeywordInstance (see the WhenAnotherDieFielded status update), so
     // Angel carries it too, both as its own printed keyword and as the
     // filter its own static bonus checks against OTHER dice.
     public static readonly CardDef AngelJeanGreysSchool = Character(
         "DPS057", "Angel", "Jean Grey's School", dieLimit: 4,
-        "Founder When Angel is active, other character dice with Founder get +1A.",
+        "Elder When Angel is active, other character dice with Elder get +1A.",
         purchaseCost: 3, energyType: EnergyType.Shield,
         affiliations: ["X-Men"],
-        keywords: [new KeywordInstance("Founder")],
-        grantsStaticTeamBonus: new StaticTeamBonus(AttackDelta: 1, DefenseDelta: 0, RequiredKeyword: "Founder", ExcludeSelf: true),
+        keywords: [new KeywordInstance("Elder")],
+        grantsStaticTeamBonus: new StaticTeamBonus(AttackDelta: 1, DefenseDelta: 0, RequiredKeyword: "Elder", ExcludeSelf: true),
         levels: [
             new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 2),
             new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3),
@@ -2856,11 +2856,11 @@ public static class SampleCards
     // OpponentGlobalSurcharge.RequiresOwnActiveSidekick.
     public static readonly CardDef JeanGreyXaviersDream = Character(
         "DPS075", "Jean Grey", "Xavier's Dream", dieLimit: 4,
-        "Founder While Jean Grey and one of your Sidekick dice are active, your opponents must pay 1 " +
+        "Elder While Jean Grey and one of your Sidekick dice are active, your opponents must pay 1 " +
         "extra to use a Global Ability.",
         purchaseCost: 4, energyType: EnergyType.Bolt,
         affiliations: ["X-Men"],
-        keywords: [new KeywordInstance("Founder")],
+        keywords: [new KeywordInstance("Elder")],
         grantsOpponentGlobalSurcharge: new OpponentGlobalSurcharge(Amount: 1, RequiresOwnActiveSidekick: true),
         levels: [
             new CharacterFace(FieldingCost: 1, Attack: 3, Defense: 3),
@@ -2874,11 +2874,11 @@ public static class SampleCards
     // this round).
     public static readonly CardDef JeanGreyMarvelGirl = Character(
         "DPS115", "Jean Grey", "Marvel Girl", dieLimit: 3,
-        "Founder While Jean Grey is active, your opponent must pay 1 extra to use a Global Ability. While " +
+        "Elder While Jean Grey is active, your opponent must pay 1 extra to use a Global Ability. While " +
         "you have a different X-Men character die in your Field Zone, Jean Grey is free to field.",
         purchaseCost: 5, energyType: EnergyType.Bolt,
         affiliations: ["X-Men"],
-        keywords: [new KeywordInstance("Founder")],
+        keywords: [new KeywordInstance("Elder")],
         grantsOpponentGlobalSurcharge: new OpponentGlobalSurcharge(Amount: 1),
         selfFreeFieldingWhileOtherActiveAffiliation: "X-Men",
         levels: [
@@ -2910,10 +2910,10 @@ public static class SampleCards
     // card's own "Xavier's Dream" printing's Global-targeting immunity.
     public static readonly CardDef AngelAirSupport = Character(
         "DPS097", "Angel", "Air Support", dieLimit: 3,
-        "Founder While Angel is active, when an opponent targets one of your character dice, gain 1 life.",
+        "Elder While Angel is active, when an opponent targets one of your character dice, gain 1 life.",
         purchaseCost: 4, energyType: EnergyType.Shield,
         affiliations: ["X-Men"],
-        keywords: [new KeywordInstance("Founder")],
+        keywords: [new KeywordInstance("Elder")],
         grantsGainLifeWhenOpponentTargetsOwnCharacterDie: true,
         levels: [
             new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 2),
@@ -2928,12 +2928,12 @@ public static class SampleCards
     // opposing side instead of Zone.AttackZone-agnostic.
     public static readonly CardDef MoiraStrengthOfForesight = Character(
         "DPS124", "Moira", "Strength of Foresight", dieLimit: 3,
-        "Founder While Moira is active, when you field an X-Men character die with purchase cost of 3 or " +
+        "Elder While Moira is active, when you field an X-Men character die with purchase cost of 3 or " +
         "more put a Loyalty Counter on Moira. When fielded, you may send target action die from your " +
         "opponent's Field Zone in their Used Pile.",
         purchaseCost: 3, energyType: EnergyType.Shield,
         affiliations: ["X-Men"],
-        keywords: [new KeywordInstance("Founder")],
+        keywords: [new KeywordInstance("Elder")],
         abilities: [
             new AbilityDef(TriggerType.WhenAnotherDieFielded, Cost: null, Effect: new GrantLoyaltyCounter(),
                 FieldedFilter: new FieldedDieMatch(Ownership: TargetOwnership.Own, AffiliationContains: "X-Men", MinPurchaseCost: 3)),
@@ -3025,11 +3025,11 @@ public static class SampleCards
     // (new this round).
     public static readonly CardDef BeastCombatReady = Character(
         "DPS098", "Beast", "Combat Ready", dieLimit: 4,
-        "Founder When Beast attacks, Prep a die from your bag. The first Beast die you purchase each " +
+        "Elder When Beast attacks, Prep a die from your bag. The first Beast die you purchase each " +
         "game costs 1 extra.",
         purchaseCost: 2, energyType: EnergyType.Fist,
         affiliations: ["X-Men"],
-        keywords: [new KeywordInstance("Founder")],
+        keywords: [new KeywordInstance("Elder")],
         selfFirstPurchaseSurcharge: 1,
         abilities: [new AbilityDef(TriggerType.WhenAttacks, Cost: null, Effect: new PrepFromBag())],
         levels: [
@@ -3182,13 +3182,13 @@ public static class SampleCards
     // own remarks).
     public static readonly CardDef MutantResearchProgram = BasicAction(
         "DPS008", "Mutant Research Program",
-        "If you have at least 2 active Founder character dice, draw and roll 3 dice. Otherwise, draw " +
+        "If you have at least 2 active Elder character dice, draw and roll 3 dice. Otherwise, draw " +
         "and roll a die.",
         abilities: [new AbilityDef(TriggerType.WhenUsed, Cost: null,
             Effect: new Conditional(
                 TargetSpec.Self, EffectCondition.OwnActiveAffiliationOrKeywordCountAtLeast,
                 Then: new DrawDice(3), Else: new DrawDice(1),
-                AffiliationParam: "Founder", CountParam: 2))],
+                AffiliationParam: "Elder", CountParam: 2))],
         purchaseCost: 2, set: "DPS");
 
     // Living the Dream - the first user of
@@ -3480,17 +3480,17 @@ public static class SampleCards
     // round, the CombatEngine.DeclareAttackers-scanned mirror of
     // WhenAnotherDieFielded/FieldedDieMatch) - Ownership.Own matches
     // Cyclops "First Class" (DPS025)'s own WhenAnotherDieFielded
-    // precedent for the identical "a character die with Founder" shape.
+    // precedent for the identical "a character die with Elder" shape.
     public static readonly CardDef BeastFirstClass = Character(
         "DPS058", "Beast", "First Class", dieLimit: 4,
-        "Founder While Beast is active, when a character die with Founder attacks, Prep a die from " +
+        "Elder While Beast is active, when a character die with Elder attacks, Prep a die from " +
         "your bag.",
         purchaseCost: 3, energyType: EnergyType.Fist,
         affiliations: ["X-Men"],
-        keywords: [new KeywordInstance("Founder")],
+        keywords: [new KeywordInstance("Elder")],
         abilities: [new AbilityDef(TriggerType.WhenAnotherDieAttacks, Cost: null,
             Effect: new PrepFromBag(),
-            AttackedFilter: new AttackedDieMatch(TargetOwnership.Own, RequiredKeyword: "Founder"))],
+            AttackedFilter: new AttackedDieMatch(TargetOwnership.Own, RequiredKeyword: "Elder"))],
         levels: [
             new CharacterFace(FieldingCost: 0, Attack: 2, Defense: 1),
             new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 2),
@@ -3591,10 +3591,10 @@ public static class SampleCards
     // SelfAttackEqualsDefenseWhileOwnSidekickActive (new this round).
     public static readonly CardDef IcemanXaviersDream = Character(
         "DPS142", "Iceman", "Xavier's Dream", dieLimit: 3,
-        "Founder While you have a Sidekick die active, Iceman's A is equal to his D.",
+        "Elder While you have a Sidekick die active, Iceman's A is equal to his D.",
         purchaseCost: 4, energyType: EnergyType.Bolt,
         affiliations: ["X-Men"],
-        keywords: [new KeywordInstance("Founder")],
+        keywords: [new KeywordInstance("Elder")],
         selfAttackEqualsDefenseWhileOwnSidekickActive: true,
         levels: [
             new CharacterFace(FieldingCost: 1, Attack: 2, Defense: 4),
@@ -3608,11 +3608,11 @@ public static class SampleCards
     // target instead of MatchAll.
     public static readonly CardDef IcemanMrIceGuy = Character(
         "DPS114", "Iceman", "Mr Ice Guy", dieLimit: 4,
-        "Founder Energize - Double target character die's printed A until the end of turn. While " +
+        "Elder Energize - Double target character die's printed A until the end of turn. While " +
         "Iceman is active, your Sidekick dice get +1A.",
         purchaseCost: 4, energyType: EnergyType.Bolt,
         affiliations: ["X-Men"],
-        keywords: [new KeywordInstance("Founder"), new KeywordInstance("Energize")],
+        keywords: [new KeywordInstance("Elder"), new KeywordInstance("Energize")],
         grantsStaticTeamBonus: new StaticTeamBonus(AttackDelta: 1, DefenseDelta: 0, SidekicksOnly: true),
         abilities: [new AbilityDef(TriggerType.Energize, Cost: null,
             Effect: new DoublePrintedAttackOfEach(TargetSpec.CharacterDie("target character die")))],

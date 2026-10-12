@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using DiceFight.V2.Model;
 using DiceFight.V2.Model.Effects;
 
@@ -61,18 +62,18 @@ public static class DiceKingdomConfig
     // longer written onto the energy faces, which carry no character
     // data at all.
     private static DieDefinition CharacterDie(string dieId, string energyType, params (int Fielding, int Attack, int Defense)[] levels)
-    {
-        var faces = new List<Face>();
-        for (var i = 0; i < levels.Length; i++)
-        {
-            var (fielding, attack, defense) = levels[i];
-            faces.Add(new Face([], new CharacterFaceData(i + 1, fielding, attack, defense), Kind: FaceKind.CharacterFace));
-        }
-        faces.Add(new Face([new SymbolAmount(energyType, 2)], Kind: FaceKind.EnergyFace));
-        faces.Add(new Face([new SymbolAmount(energyType, 2)], Kind: FaceKind.EnergyFace));
-        faces.Add(new Face([new SymbolAmount(energyType, 1)], Kind: FaceKind.EnergyFace));
-        return new DieDefinition(dieId, faces);
-    }
+        => StandardDie(dieId, energyType, levels.Select((level, i) =>
+            new Face([], new CharacterFaceData(i + 1, level.Fielding, level.Attack, level.Defense), Kind: FaceKind.CharacterFace)));
+
+    // One Dice Kingdom pattern for native and imported dice: printed character/action
+    // faces first, then two double-energy faces and one single-energy face.
+    private static DieDefinition StandardDie(string dieId, string energyType, IEnumerable<Face> printedFaces) => new(dieId,
+    [
+        .. printedFaces,
+        new Face([new SymbolAmount(energyType, 2)], Kind: FaceKind.EnergyFace),
+        new Face([new SymbolAmount(energyType, 2)], Kind: FaceKind.EnergyFace),
+        new Face([new SymbolAmount(energyType, 1)], Kind: FaceKind.EnergyFace),
+    ]);
 
     private static TargetFilter OwnCreatures => new(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own, Count: 0);
     private static TargetFilter WeakOpposingCreatures(int maxDefense) => new(
@@ -462,7 +463,7 @@ public static class DiceKingdomConfig
     // 2026-09-12 addition - Wing had no natural 2-cost pick among the
     // original 8 (3, 3, 4, 4, 4, 4, 4, 5) - see Mongoose's own remarks
     // above for why this was ported rather than a renumbering. Source:
-    // Beast, "Combat Ready" (DPS098) - dropped its own "Founder: first
+    // Beast, "Combat Ready" (DPS098) - dropped its own "Elder: first
     // Beast die you purchase each game costs 1 extra" clause (a one-time
     // meta-cost rule with nothing to hook into for a fresh pick).
     public static readonly CardDef Swift = new(
@@ -756,14 +757,11 @@ public static class DiceKingdomConfig
     // stat faces, plus energy faces of the Champion's own type (2, 2, 1)
     // - so buying the OPPONENT'S action die is also a way to get their
     // energy, which is what that Champion's Global costs.
-    private static DieDefinition ActionDie(string dieId, string energyType) => new(dieId,
+    private static DieDefinition ActionDie(string dieId, string energyType) => StandardDie(dieId, energyType,
     [
         new Face([], Kind: FaceKind.ActionFace),
         new Face([], Kind: FaceKind.ActionFace),
         new Face([], Kind: FaceKind.ActionFace),
-        new Face([new SymbolAmount(energyType, 2)], Kind: FaceKind.EnergyFace),
-        new Face([new SymbolAmount(energyType, 2)], Kind: FaceKind.EnergyFace),
-        new Face([new SymbolAmount(energyType, 1)], Kind: FaceKind.EnergyFace),
     ]);
 
     // Purchase costs are the real Dice Masters cards' (user call,
@@ -903,7 +901,9 @@ public static class DiceKingdomConfig
         ["GreatHornedOwl"] = Mutation.Id,
     };
 
-    public static readonly IReadOnlyDictionary<string, CardDef> Catalog = new List<CardDef>
+    // One registered pool: native cards plus imports selected by their own
+    // metadata. Completing an import makes it playable without another list.
+    public static readonly IReadOnlyDictionary<string, CardDef> TeamBuilderCatalog = new List<CardDef>
     {
         HoneyBadger, Wolverine, GrizzlyBear, Orca, PeregrineFalcon, Silverback, Stoat, CapeBuffalo, Mongoose,
         Hippopotamus, MuskOx, Pangolin, HermitCrab, Opossum, QueenTermite, Rhinoceros, BoxTurtle,
@@ -912,7 +912,66 @@ public static class DiceKingdomConfig
         FrilledLizard, FlyingSquirrel, ElectricEel, Chameleon, Firefly, Leech, Meerkat, ArmyAnt,
         Archerfish, BombardierBeetle, KomodoDragon,
         AngerIssues, Distraction, Resurrection, Mutation, Archnemesis,
-    }.ToDictionary(c => c.Id);
+    }
+        .Concat(CardCatalog.BuildCatalog().Values.Where(card => card.IncludeInTeamBuilder).Select(ToKingdomCard))
+        .Concat(DpsCards.All.Where(card => card.IncludeInTeamBuilder).Select(ToKingdomCard))
+        .Concat(BonusCards.All.Where(card => card.IncludeInTeamBuilder).Select(ToKingdomCard))
+        .ToDictionary(card => card.Id);
+
+    public static readonly IReadOnlyDictionary<string, CardDef> Catalog = TeamBuilderCatalog.Values
+        .Where(card => card.IsImplemented)
+        .ToDictionary(card => card.Id);
+
+    // One conversion for every registered adaptation. IDs, affiliations, stats,
+    // printed-face bursts, and unfinished effect trees remain sourced from the card.
+    // Face order and energy faces follow the same factory as native Dice Kingdom dice.
+    // These cards stay blocked from game launch until their full rules are implemented.
+    private static CardDef ToKingdomCard(CardDef source)
+    {
+        var energy = source.KingdomEnergyType;
+        var name = source.KingdomName;
+        if (string.IsNullOrWhiteSpace(name) ||
+            energy is not ("Claw" or "Wing" or "Eye" or "Shell"))
+            throw new InvalidOperationException($"Missing Dice Kingdom identity for {source.Id}.");
+
+        var text = Regex.Replace(source.RawText, $@"\b{Regex.Escape(source.Name)}\b",
+            _ => name, RegexOptions.IgnoreCase);
+        text = Regex.Replace(text, @"\b(Fist|Bolt|Mask|Shield)\b|\[[FBMS]\]",
+            _ => energy, RegexOptions.IgnoreCase);
+        text = Regex.Replace(text, @"\bSidekick(s?)\b|\[PAWN\]",
+            match => "Tardigrade" + match.Groups[1].Value, RegexOptions.IgnoreCase);
+        text = Regex.Replace(text, @"\bSuperstar(s?)\b",
+            match => "creature" + match.Groups[1].Value, RegexOptions.IgnoreCase);
+        text = Regex.Replace(text, @"\bWhen fielded\s*,?\s*", "On Field: ", RegexOptions.IgnoreCase);
+        text = Regex.Replace(text, $@"\bWhen {Regex.Escape(name)} attacks\s*,?\s*", "On Attack: ", RegexOptions.IgnoreCase);
+        text = Regex.Replace(text, @"\b(Energize|Amplify)\s*[-–—]\s*", "$1: ", RegexOptions.IgnoreCase);
+        text = Regex.Replace(text, @"\bGlobal\s+Pay\b", "Global: Pay", RegexOptions.IgnoreCase);
+        return source with
+        {
+            Name = name,
+            Subtitle = null,
+            Set = "Dice Kingdom",
+            EnergySymbolIds = source.CardType.IsCommunity() ? [] : [energy],
+            RawText = text,
+            Keywords = source.Abilities.Any(ability => ability.Trigger == TriggerKind.DieFielded)
+                ? source.Keywords.Append("On Field").Concat(source.Abilities.Any(a => a.Trigger == TriggerKind.DieAttacks) ? ["On Attack"] : []).Distinct().ToList()
+                : source.Abilities.Any(a => a.Trigger == TriggerKind.DieAttacks) ? source.Keywords.Append("On Attack").Distinct().ToList() : source.Keywords,
+            Die = StandardDie(source.Die.Id, energy, source.Die.Faces
+                .Where(face => face.Kind != FaceKind.EnergyFace)
+                .Select(face => face with
+                {
+                    Symbols = face.Symbols.Select(symbol => symbol.SymbolId == "Wild"
+                        ? symbol : symbol with { SymbolId = energy }).ToList(),
+                })),
+            Abilities = source.Abilities.Select(ability => ability with
+            {
+                EnergyCost = ability.EnergyCost?.RequiredSymbolId is null ? ability.EnergyCost
+                    : ability.EnergyCost with { RequiredSymbolId = energy },
+                Filter = ability.Filter?.Payment?.SymbolId is null ? ability.Filter
+                    : ability.Filter with { Payment = ability.Filter.Payment with { SymbolId = energy } },
+            }).ToList(),
+        };
+    }
 
     // Which eight Characters a team gets when it picks a Champion. API
     // layer (Phase 3) reads this to build TeamCardIds from a Champion
@@ -1015,7 +1074,7 @@ public static class DiceKingdomConfig
         ],
         Keywords: [new KeywordDef("Fast"), new KeywordDef("Overcrush"), new KeywordDef("Deadly"),
             new KeywordDef("Intimidate"), new KeywordDef("Infiltrate"), new KeywordDef("Attune"), new KeywordDef("Obscure"),
-            new KeywordDef("Energize"), new KeywordDef("Energy Drain"), new KeywordDef("Tag Out"), new KeywordDef("Sacrifice"),
+            new KeywordDef("Energize"), new KeywordDef("Amplify"), new KeywordDef("Elder"), new KeywordDef("Energy Drain"), new KeywordDef("Tag Out"), new KeywordDef("Sacrifice"),
             new KeywordDef("Range"), new KeywordDef("Aftershock"), new KeywordDef("Breath Weapon"),
             new KeywordDef("On Field"), new KeywordDef("On Attack"), new KeywordDef("On Block"), new KeywordDef("Awaken")],
         Rules: new RulesConfig(

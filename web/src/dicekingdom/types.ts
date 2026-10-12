@@ -9,6 +9,7 @@ export interface CharacterFace {
   fieldingCost: number;
   attack: number;
   defense: number;
+  burst?: number;
 }
 
 export interface CardDef {
@@ -21,6 +22,12 @@ export interface CardDef {
   levels: CharacterFace[];
   rawText: string;
   keywords: string[];
+  /** Display metadata; separate from game keywords. */
+  hasErrata?: boolean;
+  isImplemented?: boolean;
+  type?: string | null;
+  set?: string | null;
+  affiliations?: string[] | null;
   /** A statless Basic Action card - one per Champion, shared by both players. */
   isAction?: boolean;
   /** The action's own text (rawText without its Global clause). */
@@ -97,7 +104,7 @@ export interface Die {
 
 export type DieStatusKind =
   | "mustBlock" | "cantBlock" | "unblockable" | "mustAttack" | "cantAttack" | "onlyBlocker"
-  | "blanked" | "granted" | "deadly" | "intimidated" | "protected";
+  | "blanked" | "granted" | "deadly" | "intimidated" | "protected" | "targetProtected";
 
 export interface DieStatus {
   kind: DieStatusKind;
@@ -106,6 +113,8 @@ export interface DieStatus {
   duration: string | null;
   /** For "granted": the keyword it was given. */
   keyword?: string | null;
+  /** The server's explanation when a status has configurable rule scope. */
+  description?: string | null;
 }
 
 export interface SpinRecord {

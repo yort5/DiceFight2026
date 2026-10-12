@@ -25,7 +25,7 @@
 // badge where even that comes up empty.
 
 import { useState } from "react";
-import { affiliationIconUrl } from "./affiliationIndex";
+import { affiliationIconUrl, SHOW_AFFILIATIONS } from "./affiliationIndex";
 
 // A stand-in for the affiliations whose logo we do not have - either the
 // old tool never drew one, or the name is a one-off misspelling of one
@@ -51,6 +51,7 @@ function hue(name: string): number {
 
 export function AffiliationBadge({ name, code, label }: { name: string; code?: string; label?: string }) {
   const [imageFailed, setImageFailed] = useState(false);
+  if (!SHOW_AFFILIATIONS) return null;
   const text = label ?? name;
   if (code && !imageFailed) {
     return (
@@ -87,6 +88,7 @@ export function AffiliationBadge({ name, code, label }: { name: string; code?: s
 export function AffiliationIcons(
   { codes, names, index }: { codes: readonly string[]; names: readonly string[]; index: Record<string, string> },
 ) {
+  if (!SHOW_AFFILIATIONS) return null;
   const label = names.join(", ");
   if (names.length === 0 && codes.length === 0) return <span>-</span>;
   if (codes.length > 0) {

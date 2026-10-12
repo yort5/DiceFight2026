@@ -39,7 +39,7 @@ public sealed record KOdDieMatch(
 // TriggerType.WhenAnotherDieFielded's own filter - same shape as
 // KOdDieMatch just above, for "when [a die matching this] is fielded"
 // instead of "is KO'd". RequiredKeyword (Cyclops "First Class"/DPS025's
-// "a character die with Founder") checks DieStats.HasKeyword rather than
+// "a character die with Elder") checks DieStats.HasKeyword rather than
 // a printed-only lookup, since keywords can be granted as well as
 // printed and this filter shouldn't care which.
 public sealed record FieldedDieMatch(
@@ -56,7 +56,7 @@ public sealed record FieldedDieMatch(
 // TriggerType.WhenAnotherDieAttacks's own filter - same shape as
 // FieldedDieMatch/KOdDieMatch, for "when [a die matching this] attacks."
 // RequiredKeyword (Beast "First Class"/DPS058's own "a character die
-// with Founder attacks") checks DieStats.HasKeyword, same as
+// with Elder attacks") checks DieStats.HasKeyword, same as
 // FieldedDieMatch's own.
 public sealed record AttackedDieMatch(
     TargetOwnership Ownership = TargetOwnership.Any,

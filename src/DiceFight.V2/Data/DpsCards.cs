@@ -140,11 +140,11 @@ public static class DpsCards
         Id: "DPS025", Name: "Cyclops", Subtitle: "First Class", Set: "DPS", CardType: CardType.Character,
         PurchaseCost: 5, EnergySymbolIds: ["Bolt"],
         Die: MigrationDice.Character("DPS025Die", "Bolt", (1, 4, 2), (1, 5, 3), (1, 6, 4)),
-        DieLimit: 4, Affiliations: ["X-Men"], Keywords: ["Founder"],
-        RawText: "Founder While Cyclops is active, when you field a character die with Founder, deal 2 damage to target character die.",
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: ["Elder"],
+        RawText: "Elder While Cyclops is active, when you field a character die with Elder, deal 2 damage to target character die.",
         Abilities: [new TriggeredAbility(TriggerKind.DieFielded,
             new DealDamage(new Fixed(2), new TargetFilter(Kind: TargetKind.CharacterDie)),
-            Filter: new EventFilter(Ownership: TargetOwnership.Own, Tags: new TagQuery(AnyOf: ["Founder"]), ExcludeSelf: true))],
+            Filter: new EventFilter(Ownership: TargetOwnership.Own, Tags: new TagQuery(AnyOf: ["Elder"]), ExcludeSelf: true))],
         Continuous: []);
 
     // Part 3 #27's worked expression.
@@ -237,16 +237,18 @@ public static class DpsCards
             new PurchaseModifier(Delta: -1, CardKind: CardType.BasicAction))],
         Continuous: []);
 
-    // Deadly isn't implemented in v2 (Phase 7 deliberately ported only
-    // Overcrush and Fast) - and Deadly is this card's entire text, so
-    // there is nothing else to express. See V2_TAIL_POLICY.md.
+    // Deadly is resolved by combat engagement tracking and cleanup.
     public static readonly CardDef DeathbirdTreacherous = new(
         Id: "DPS029", Name: "Deathbird", Subtitle: "Treacherous", Set: "DPS", CardType: CardType.Character,
         PurchaseCost: 2, EnergySymbolIds: ["Shield"],
         Die: MigrationDice.Character("DPS029Die", "Shield", (0, 1, 1), (0, 1, 2), (1, 3, 4)),
         DieLimit: 4, Affiliations: [], Keywords: ["Deadly"],
         RawText: "Deadly",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [], Continuous: [], IsImplemented: true, IncludeInTeamBuilder: true, KingdomName: "Deathstalker Scorpion", KingdomEnergyType: "Claw", HasErrata: true,
+        ErrataNotes: [
+            "Reference: rollinthunder_cards_with_dice(1).json, DPS029 (Deathbird: Treacherous).",
+            "Maximum dice: 2 -> 4.",
+        ]);
 
     // Spike B's demonstration card, and its motivating case. "Swap A" is
     // two ModifyStat sets whose amounts are StatOf(...) - and it is only
@@ -377,8 +379,8 @@ public static class DpsCards
         Id: "DPS035", Name: "Jean Grey", Subtitle: "Peaceful Coexistence", Set: "DPS", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Bolt"],
         Die: MigrationDice.Character("DPS035Die", "Bolt", (1, 3, 3), (2, 5, 5), (3, 6, 6)),
-        DieLimit: 4, Affiliations: ["X-Men"], Keywords: ["Founder", "Loyalty"],
-        RawText: "Founder. While Jean Grey is active, at the end of each of your turns, if no character dice were KO'd that turn, put a Loyalty Counter on Jean Grey's card (Loyalty Counters give a character die +1A and +1D.)",
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: ["Elder", "Loyalty"],
+        RawText: "Elder. While Jean Grey is active, at the end of each of your turns, if no character dice were KO'd that turn, put a Loyalty Counter on Jean Grey's card (Loyalty Counters give a character die +1A and +1D.)",
         Abilities: [new TriggeredAbility(TriggerKind.TurnStepEntered,
             new Conditional(new NoKOsThisTurn(KoScope.Any), new GrantCounter(new TargetFilter(Self: true), "Loyalty", 1)),
             Filter: new EventFilter(Ownership: TargetOwnership.Own, Step: StepIds.CleanUp))],
@@ -431,7 +433,12 @@ public static class DpsCards
         Continuous: [new CombatRule(CombatRuleKind.MinBlockers,
             new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own, Affiliations: new TagQuery(AnyOf: ["Brotherhood of Mutants"])),
             N: 2)],
-        IsImplemented: false);
+        IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Gelada", KingdomEnergyType: "Wing", HasErrata: true,
+        ErrataNotes: [
+            "Reference: rollinthunder_cards_with_dice(1).json, DPS081 (Magneto: Visionary).",
+            "Maximum dice: 4 -> 3.",
+            "Global text: changes the Prep Area condition from having no dice to having any dice.",
+        ]);
 
     // CombatRule.BlocksN's first real user - "your Blob dice" is a card-
     // NAME tag, which the tag-unification design gives for free. The
@@ -524,7 +531,11 @@ public static class DpsCards
         Die: MigrationDice.Character("DPS086Die", "Bolt", (1, 5, 5), (2, 7, 7), (3, 8, 8)),
         DieLimit: 3, Affiliations: ["X-Men"], Keywords: [],
         RawText: "When Phoenix attacks, deal 3 damage to target character die. If that character die is a Villains character die, you may deal 3 damage to another target character die.",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [], Continuous: [], IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Lionfish", KingdomEnergyType: "Claw", HasErrata: true,
+        ErrataNotes: [
+            "Reference: rollinthunder_cards_with_dice(1).json, DPS086 (Phoenix: Psionic Maelstrom).",
+            "Maximum dice: 4 -> 3.",
+        ]);
 
     // Confirms V2_VOCABULARY_HISTORY.md Part 2 #14's finding on a second card:
     // DamageModifier is a CONTINUOUS template, and this is a one-shot,
@@ -536,7 +547,13 @@ public static class DpsCards
         Die: MigrationDice.Character("DPS063Die", "Fist", (1, 4, 4), (1, 6, 5), (2, 8, 7)),
         DieLimit: 3, Affiliations: ["X-Men"], Keywords: [],
         RawText: "While Colossus is active, the first time one of your character dice would take damage each turn you may have Colossus take that damage instead. *Instead, prevent that damage.",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [], Continuous: [], IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Giant Tortoise", KingdomEnergyType: "Shell", HasErrata: true,
+        ErrataNotes: [
+            "Reference: rollinthunder_cards_with_dice(1).json, DPS063 (Colossus: Organic Steel).",
+            "Maximum dice: 4 -> 3.",
+            "Level 2 burst marks: 1 -> 0.",
+            "Level 3 burst marks: 1 -> 0.",
+        ]);
 
     public static IReadOnlyList<CardDef> All =>
     [
@@ -752,8 +769,8 @@ public static class DpsCards
         Id: "DPS098", Name: "Beast", Subtitle: "Combat Ready", Set: "DPS", CardType: CardType.Character,
         PurchaseCost: 2, EnergySymbolIds: ["Fist"],
         Die: MigrationDice.Character("DPS098Die", "Fist", (0, 2, 1), (1, 2, 2), (1, 3, 2)),
-        DieLimit: 4, Affiliations: ["X-Men"], Keywords: ["Founder"],
-        RawText: "Founder When Beast attacks, Prep a die from your bag. The first Beast die you purchase each " +
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: ["Elder"],
+        RawText: "Elder When Beast attacks, Prep a die from your bag. The first Beast die you purchase each " +
                  "game costs 1 extra.",
         Abilities: [new TriggeredAbility(TriggerKind.DieAttacks,
             new DrawToZone(1, Zone.PrepArea, Zone.Bag))],
@@ -960,27 +977,22 @@ public static class DpsCards
             Then: new Spin(new TargetFilter(Self: true), SetLevel: 1)))],
         Continuous: []);
 
-    // The Energize half needs "new Attack = DOUBLE a die's printed A",
-    // which nothing in the closed vocabulary expresses: ModifyStat's
-    // delta fields are plain int (no live/bound value), and SetAttack's
-    // Amount-typed StatOf would only echo the SAME value back, not double
-    // it - there is no "StatOf x2" shape. Tailed (Ask) rather than
-    // guessing a wrong approximation silently (V2_TAIL_POLICY.md house
-    // rule); the Continuous half fits cleanly and is implemented, so the
-    // card stays IsImplemented: false rather than fully vanilla.
+
+    // Energize uses printed stats; the Tardigrade aura uses the existing tag filter.
     public static readonly CardDef IcemanMrIceGuy = new(
         Id: "DPS114", Name: "Iceman", Subtitle: "Mr Ice Guy", Set: "DPS", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Bolt"],
         Die: MigrationDice.Character("DPS114Die", "Bolt", (1, 2, 4), (1, 3, 6), (1, 4, 6)),
-        DieLimit: 4, Affiliations: ["X-Men"], Keywords: ["Founder", "Energize"],
-        RawText: "Founder Energize - Double target character die's printed A until the end of turn. While " +
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: ["Elder", "Energize"],
+        RawText: "Elder Energize - Double target character die's printed A until the end of turn. While " +
                  "Iceman is active, your Sidekick dice get +1A.",
-        Abilities: [],
+        Abilities: [..Energize(new ModifyStat(new TargetFilter(),
+            AttackBonus: new StatOf("affected", StatKind.PrintedAttack)))],
         Continuous:
         [
             new StatAura(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own, Tags: new TagQuery(AnyOf: ["sidekick"])), AtkDelta: new Fixed(1)),
         ],
-        IsImplemented: false);
+        IsImplemented: true, IncludeInTeamBuilder: true, KingdomName: "Mandrill", KingdomEnergyType: "Claw");
 
     // The first clause needs the payment-source visibility the user
     // explicitly declined to build (V2_PLAN.md's F13 addendum names "2
@@ -999,7 +1011,7 @@ public static class DpsCards
             new TargetFilter(Kind: TargetKind.AnyDie, Ownership: TargetOwnership.Own, Zones: [Zone.UsedPile], Affiliations: new TagQuery(AnyOf: ["X-Men"])),
             Zone.PrepArea))],
         Continuous: [],
-        IsImplemented: false);
+        IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Nutcracker", KingdomEnergyType: "Wing");
 
     public static readonly CardDef AngelWingsOverTheWorld = new(
         Id: "DPS017", Name: "Angel", Subtitle: "Wings Over the World", Set: "DPS", CardType: CardType.Character,
@@ -1072,13 +1084,13 @@ public static class DpsCards
         PurchaseCost: 2, EnergySymbolIds: [],
         Die: MigrationDice.BasicAction("DPS008Die"),
         DieLimit: 3, Affiliations: [], Keywords: [],
-        RawText: "If you have at least 2 active Founder character dice, draw and roll 3 dice. Otherwise, " +
+        RawText: "If you have at least 2 active Elder character dice, draw and roll 3 dice. Otherwise, " +
                  "draw and roll a die.",
         // ReservePool, not PrepArea - "draw AND ROLL" lands rolled
         // (Groot's own "roll 2 dice from your bag" precedent), unlike the
         // "Prep a die from your bag" family elsewhere in this file.
         Abilities: [new TriggeredAbility(TriggerKind.DieUsed, new Conditional(
-            new CountAtLeast(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own, Tags: new TagQuery(AnyOf: ["Founder"])), 2),
+            new CountAtLeast(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own, Tags: new TagQuery(AnyOf: ["Elder"])), 2),
             Then: new DrawToZone(3, Zone.ReservePool, Zone.Bag),
             Else: new DrawToZone(1, Zone.ReservePool, Zone.Bag)))],
         Continuous: []);
@@ -1168,21 +1180,21 @@ public static class DpsCards
         RawText: "While Cable is active, your Deadpool costs 1 less to purchase (to a minimum of 1) and has +2A.",
         Abilities: [],
         Continuous: [new StatAura(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own, Tags: new TagQuery(AnyOf: ["Deadpool"])), AtkDelta: new Fixed(2))],
-        IsImplemented: false);
+        IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "African Wild Dog", KingdomEnergyType: "Claw");
 
-    // ExcludeSelf: true - "a character die with Founder attacks" reads as
+    // ExcludeSelf: true - "a character die with Elder attacks" reads as
     // ANOTHER die in v1's own trigger choice (WhenAnotherDieAttacks), the
     // exact shape Cyclops "First Class" already established for the
-    // identical Founder-attacks pattern.
+    // identical Elder-attacks pattern.
     public static readonly CardDef BeastFirstClass = new(
         Id: "DPS058", Name: "Beast", Subtitle: "First Class", Set: "DPS", CardType: CardType.Character,
         PurchaseCost: 3, EnergySymbolIds: ["Fist"],
         Die: MigrationDice.Character("DPS058Die", "Fist", (0, 2, 1), (1, 2, 2), (1, 3, 2)),
-        DieLimit: 4, Affiliations: ["X-Men"], Keywords: ["Founder"],
-        RawText: "Founder While Beast is active, when a character die with Founder attacks, Prep a die from " +
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: ["Elder"],
+        RawText: "Elder While Beast is active, when a character die with Elder attacks, Prep a die from " +
                  "your bag.",
         Abilities: [new TriggeredAbility(TriggerKind.DieAttacks, new DrawToZone(1, Zone.PrepArea, Zone.Bag),
-            Filter: new EventFilter(Ownership: TargetOwnership.Own, Tags: new TagQuery(AnyOf: ["Founder"]), ExcludeSelf: true))],
+            Filter: new EventFilter(Ownership: TargetOwnership.Own, Tags: new TagQuery(AnyOf: ["Elder"]), ExcludeSelf: true))],
         Continuous: []);
 
     // The +1A/+1D-to-Sidekicks half is StatAura (Iceman "Mr Ice Guy"'s
@@ -1215,27 +1227,23 @@ public static class DpsCards
         DieLimit: 3, Affiliations: ["X-Men"], Keywords: [],
         RawText: "Opposing effects can't cause Bishop to be rerolled, or cause you to spin a Bishop die up " +
                  "or down.",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [], Continuous: [], IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Horseshoe Crab", KingdomEnergyType: "Shell");
 
-    // The payment-source visibility gap (V2_PLAN.md's Appendix A
-    // addendum: "2 Bishop, Forge, Professor X") - this is one of the two
-    // Bishops. "If you spend THIS DIE as energy to field a character
-    // die" needs to know what an energy payment was spent ON, which no
-    // event payload carries.
+
+    // A spent-die reaction does not need an active copy of the card.
     public static readonly CardDef BishopImBack = new(
         Id: "DPS059", Name: "Bishop", Subtitle: "I'm Back", Set: "DPS", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Shield"],
         Die: MigrationDice.Character("DPS059Die", "Shield", (1, 2, 5), (1, 3, 6), (2, 5, 6)),
         DieLimit: 3, Affiliations: ["X-Men"], Keywords: [],
         RawText: "If you spend this die as energy to field a character die, add this die to your Prep Area.",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [new TriggeredAbility(TriggerKind.EnergySpent,
+            new MoveDie(new TargetFilter(Self: true), Zone.PrepArea),
+            Filter: new EventFilter(RequireSelf: true, Payment: new PaymentFilter(PaymentPurpose.Fielding)))],
+        Continuous: [], IsImplemented: true, IncludeInTeamBuilder: true, KingdomName: "Kangaroo Rat", KingdomEnergyType: "Wing");
 
-    // The surcharge is qualified by the PURCHASED CARD's own cost
-    // ("2 or less") - the same card-identity gap CableBosomBuddies hits,
-    // just via a threshold instead of a name. Dropping the threshold
-    // would silently surcharge every purchase, not just cheap ones - a
-    // real behavior change, not a stated approximation (house rule:
-    // never guess a wrong approximation silently). Tailed outright.
+
+    // A card-scoped cost filter tests printed cost before any discounts or surcharges.
     public static readonly CardDef ForgeSupportTechnician = new(
         Id: "DPS071", Name: "Forge", Subtitle: "Support Technician", Set: "DPS", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Bolt"],
@@ -1243,7 +1251,9 @@ public static class DpsCards
         DieLimit: 4, Affiliations: ["X-Men"], Keywords: [],
         RawText: "While Forge is active, your opponents must pay 1 more to purchase a die with purchase cost " +
                  "of 2 or less.",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [], Continuous: [new CostModifier(CostKind.Purchase,
+            new TargetFilter(Kind: TargetKind.Player, Ownership: TargetOwnership.Opposing), 1,
+            PurchasedCardStat: new StatThreshold(StatKind.PurchaseCost, Max: 2))], IsImplemented: true, IncludeInTeamBuilder: true, KingdomName: "Orb Weaver", KingdomEnergyType: "Eye");
 
     // "Each of your dice that spins up gets +2A" is conditioned on
     // whether THAT SPECIFIC die's own spin actually moved it (a die
@@ -1261,7 +1271,12 @@ public static class DpsCards
         DieLimit: 3, Affiliations: [], Keywords: [],
         RawText: "Spin up each character whose card has a Loyalty Counter. Each of your dice that spins up " +
                  "gets +2A.",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [], Continuous: [], IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Growth Spurt", KingdomEnergyType: "Claw", HasErrata: true,
+        ErrataNotes: [
+            "Reference: rollinthunder_cards_with_dice(1).json, DPS004 (Greetings from Krakoa: Basic Action).",
+            "Rules text: the +2A clause omits 'this turn' from 'Each of your dice that spins up this turn gets +2A.' The stored text instead says 'Each of your dice that spins up gets +2A.'",
+            "Dice Kingdom import only: energy faces Generic 2 / Generic 2 / Generic 2 -> Claw 2 / Claw 2 / Claw 1. The three action faces and their burst marks are retained.",
+        ]);
 
     // --- Batch 6 (2026-09-01) ---
     //
@@ -1277,7 +1292,7 @@ public static class DpsCards
     //    "Utopia Realized"/"Xavier's Dream" below both lean on exactly
     //    that. Where the source and its "other" targets genuinely share a
     //    zone at the same moment (Cable "High Stakes"'s attack-trigger
-    //    buff, Angel "Jean Grey's School"'s continuous Founder aura),
+    //    buff, Angel "Jean Grey's School"'s continuous Elder aura),
     //    there is no way to express "other" today.
     //
     // 2. Every continuous template requires its OWN source die to already
@@ -1408,8 +1423,8 @@ public static class DpsCards
         Id: "DPS075", Name: "Jean Grey", Subtitle: "Xavier's Dream", Set: "DPS", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Bolt"],
         Die: MigrationDice.Character("DPS075Die", "Bolt", (1, 3, 3), (2, 5, 5), (3, 6, 6)),
-        DieLimit: 4, Affiliations: ["X-Men"], Keywords: ["Founder"],
-        RawText: "Founder While Jean Grey and one of your Sidekick dice are active, your opponents must pay " +
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: ["Elder"],
+        RawText: "Elder While Jean Grey and one of your Sidekick dice are active, your opponents must pay " +
                  "1 extra to use a Global Ability.",
         // CostModifier(GlobalEnergy, Player-scoped Whose) is Part 2's own
         // worked paper example for exactly this card - never migrated as
@@ -1423,8 +1438,8 @@ public static class DpsCards
         Id: "DPS115", Name: "Jean Grey", Subtitle: "Marvel Girl", Set: "DPS", CardType: CardType.Character,
         PurchaseCost: 5, EnergySymbolIds: ["Bolt"],
         Die: MigrationDice.Character("DPS115Die", "Bolt", (1, 3, 3), (2, 5, 5), (3, 6, 6)),
-        DieLimit: 3, Affiliations: ["X-Men"], Keywords: ["Founder"],
-        RawText: "Founder While Jean Grey is active, your opponent must pay 1 extra to use a Global Ability. " +
+        DieLimit: 3, Affiliations: ["X-Men"], Keywords: ["Elder"],
+        RawText: "Elder While Jean Grey is active, your opponent must pay 1 extra to use a Global Ability. " +
                  "While you have a different X-Men character die in your Field Zone, Jean Grey is free to field.",
         // The free-fielding clause is a real gap, found trying to build
         // it: EVERY continuous template requires its own SOURCE die to
@@ -1439,46 +1454,47 @@ public static class DpsCards
         // example, same as this card's own "Xavier's Dream" printing).
         Abilities: [],
         Continuous: [new CostModifier(CostKind.GlobalEnergy, new TargetFilter(Kind: TargetKind.Player, Ownership: TargetOwnership.Opposing), Delta: 1)],
-        IsImplemented: false);
+        IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Vampire Squid", KingdomEnergyType: "Eye");
 
-    // "Other character dice with Founder" - Angel is herself Founder and
-    // herself active at the same moment as the dice she'd be buffing, so
-    // (unlike Jean Grey "Marvel Girl" above) there is no natural zone/
-    // timing exclusion. TargetFilter has no way to exclude one specific
-    // die from a pool (this batch's own header note). Tailed.
+
+    // Elder is a keyword marker; other copies remain eligible for this aura.
     public static readonly CardDef AngelJeanGreysSchool = new(
         Id: "DPS057", Name: "Angel", Subtitle: "Jean Grey's School", Set: "DPS", CardType: CardType.Character,
         PurchaseCost: 3, EnergySymbolIds: ["Shield"],
         Die: MigrationDice.Character("DPS057Die", "Shield", (0, 2, 2), (1, 3, 3), (1, 3, 4)),
-        DieLimit: 4, Affiliations: ["X-Men"], Keywords: ["Founder"],
-        RawText: "Founder When Angel is active, other character dice with Founder get +1A.",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: ["Elder"],
+        RawText: "Elder When Angel is active, other character dice with Elder get +1A.",
+        Abilities: [], Continuous: [new StatAura(
+            new TargetFilter(Ownership: TargetOwnership.Own, Tags: new TagQuery(AnyOf: ["Elder"]), ExcludeSelf: true),
+            AtkDelta: new Fixed(1))], IsImplemented: true, IncludeInTeamBuilder: true, KingdomName: "Gibbon", KingdomEnergyType: "Claw");
 
-    // Same self-exclusion gap, from a triggered ability's own ModifyStat
-    // rather than a continuous aura - Cable is himself in the Attack
-    // Zone (attacking) at the same moment as the "other" dice he'd
-    // double, same zone his own filter would otherwise match.
+
+    // One shared stat effect calculates each recipient from its own printed attack.
     public static readonly CardDef CableHighStakes = new(
         Id: "DPS102", Name: "Cable", Subtitle: "High Stakes", Set: "DPS", CardType: CardType.Character,
         PurchaseCost: 6, EnergySymbolIds: ["Bolt"],
         Die: MigrationDice.Character("DPS102Die", "Bolt", (1, 3, 2), (2, 3, 3), (2, 5, 5)),
         DieLimit: 4, Affiliations: ["X-Men"], Keywords: [],
         RawText: "When Cable attacks, double the printed A of all your other character dice.",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [new TriggeredAbility(TriggerKind.DieAttacks,
+            new ModifyStat(new TargetFilter(Ownership: TargetOwnership.Own, Count: 0, ExcludeSelf: true),
+                AttackBonus: new StatOf("affected", StatKind.PrintedAttack)))], Continuous: [], IsImplemented: true, IncludeInTeamBuilder: true, KingdomName: "Lioness", KingdomEnergyType: "Claw");
 
-    // v1's own call (isImplemented: false) - three real gaps, none a
-    // drop-in reuse: a simultaneous both-players-and-every-die hit, an
-    // arbitrary-energy-spend-for-scaling-damage cost, and a burst-
-    // conditional additional-damage clause on top of both.
+    // Still Incomplete: the simultaneous board-wide hit and optional extra-energy
+    // damage need implementation. The double-burst clause was removed as Errata.
     public static readonly CardDef Explosion = new(
         Id: "DPS003", Name: "Explosion", Subtitle: "Basic Action", Set: "DPS", CardType: CardType.BasicAction,
         PurchaseCost: 4, EnergySymbolIds: [],
         Die: MigrationDice.BasicAction("DPS003Die"),
         DieLimit: 3, Affiliations: [], Keywords: [],
         RawText: "Deal 2 damage to each player and character die. You may also spend any number of Bolt " +
-                 "energy, for each that you do you may deal 1 damage to target character die. ** Deal 1 " +
-                 "additional damage to each player and character die that Explosion deals damage to.",
-        Abilities: [], Continuous: [], IsImplemented: false);
+                 "energy, for each that you do you may deal 1 damage to target character die.",
+        Abilities: [], Continuous: [], IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Wildfire", KingdomEnergyType: "Claw", HasErrata: true,
+        ErrataNotes: [
+            "Reference: rollinthunder_cards_with_dice(1).json, DPS003 (Explosion: Basic Action).",
+            "Rules text: removed the double-burst clause, '** Deal 1 additional damage to each player and character die that Explosion deals damage to.' Base damage and optional extra-energy damage are retained.",
+            "Dice Kingdom import only: energy faces Generic 2 / Generic 2 / Generic 2 -> Claw 2 / Claw 2 / Claw 1. The three action faces and their burst marks are retained.",
+        ]);
 
     // v1's own call (isImplemented: false) - "roll an opponent's used
     // Action die and use its effect if it shows one" needs an opponent's
@@ -1491,7 +1507,7 @@ public static class DpsCards
         DieLimit: 4, Affiliations: ["X-Men"], Keywords: [],
         RawText: "While Forge is active, if an opponent uses an action die, roll it. If it shows an action " +
                  "face you may use it's effect.",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [], Continuous: [], IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Mimic Octopus", KingdomEnergyType: "Eye");
 
     // "If an opponent draws an EXTRA die" needs to know the opponent's
     // draw was above their normal Clear and Draw count - DiceDrawn is one
@@ -1506,19 +1522,19 @@ public static class DpsCards
         RawText: "While Madelyne Pryor is active, if an opponent draws an extra die during their Clear and " +
                  "Draw Step, Prep 2 dice from your bag (no matter how many extra dice your opponent draws, " +
                  "you only Prep 2 dice).",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [], Continuous: [], IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Red Squirrel", KingdomEnergyType: "Wing");
 
-    // "Iceman's A is equal to his D" is a continuous ABSOLUTE set, not a
-    // delta - StatAura only has AtkDelta/DefDelta (additive), unlike its
-    // one-shot cousin ModifyStat's SetAttack/SetDefense. No continuous
-    // absolute-set mode exists.
+
+    // The stat setter follows current defense while a Tardigrade is active.
     public static readonly CardDef IcemanXaviersDream = new(
         Id: "DPS142", Name: "Iceman", Subtitle: "Xavier's Dream", Set: "DPS", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Bolt"],
         Die: MigrationDice.Character("DPS142Die", "Bolt", (1, 2, 4), (1, 3, 6), (1, 4, 6)),
-        DieLimit: 3, Affiliations: ["X-Men"], Keywords: ["Founder"],
-        RawText: "Founder While you have a Sidekick die active, Iceman's A is equal to his D.",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        DieLimit: 3, Affiliations: ["X-Men"], Keywords: ["Elder"],
+        RawText: "Elder While you have a Sidekick die active, Iceman's A is equal to his D.",
+        Abilities: [], Continuous: [new StatAura(new TargetFilter(Self: true),
+            ActiveWhen: new CountAtLeast(new TargetFilter(Ownership: TargetOwnership.Own, Tags: new TagQuery(AnyOf: ["sidekick"])), 1),
+            SetAttack: new StatOf("self", StatKind.Defense))], IsImplemented: true, IncludeInTeamBuilder: true, KingdomName: "Wombat", KingdomEnergyType: "Claw");
 
     // --- Batch 7 (2026-09-01) ---
     //
@@ -1646,14 +1662,9 @@ public static class DpsCards
                 EnergyCost: new EnergyCost(2, "Bolt")),
         ],
         Continuous: [],
-        IsImplemented: false);
+        IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Assassin Bug", KingdomEnergyType: "Claw");
 
-    // The Global (a temporary but STILL fundamentally continuous grant -
-    // "your character dice can't be targeted... until end of turn") has
-    // no one-shot template that grants a continuous-shaped protection;
-    // GrantAbility grants a triggered ability, not immunity. Intimidate
-    // itself has no Zone (V2_PLAN.md Phase 2's own note: deferred, and
-    // still not built). Both clauses tailed.
+    // Intimidate and a live, turn-scoped targeting protection grant.
     public static readonly CardDef GladiatorPsiResistance = new(
         Id: "DPS033", Name: "Gladiator", Subtitle: "Psi Resistance", Set: "DPS", CardType: CardType.Character,
         PurchaseCost: 5, EnergySymbolIds: ["Fist"],
@@ -1662,7 +1673,15 @@ public static class DpsCards
         RawText: "Intimidate (When fielded, remove target opposing character die from the Field Zone until " +
                  "end of turn - place it next to your character cards.) Global: Pay Fist. Your character " +
                  "dice can't be the target of Action Dice or Global Abilities (until end of turn).",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [new TriggeredAbility(TriggerKind.Global,
+            new GrantTargetingProtection(new TargetingProtection(
+                new TargetFilter(Ownership: TargetOwnership.Own, Count: 0), ProtectionFrom.Both, OpponentsOnly: false)),
+            EnergyCost: new EnergyCost(1, "Fist"))],
+        Continuous: [], IsImplemented: true, IncludeInTeamBuilder: true, KingdomName: "Frigatebird", KingdomEnergyType: "Eye", HasErrata: true,
+        ErrataNotes: [
+            "Reference: rollinthunder_cards_with_dice(1).json, DPS033 (Gladiator: Psi Resistance).",
+            "Global text: removes the reference's 'when you attack' payment restriction. Intimidate also has expanded reminder text, with no intended change to that keyword.",
+        ]);
 
     // The Continuous half ("+2A while Wolverine active") fits; the
     // Global ("shares a Team Affiliation with a card on YOUR TEAM") is
@@ -1677,7 +1696,11 @@ public static class DpsCards
         Abilities: [],
         Continuous: [new StatAura(new TargetFilter(Self: true), AtkDelta: new Fixed(2),
             ActiveWhen: new CountAtLeast(new TargetFilter(Kind: TargetKind.AnyDie, Tags: new TagQuery(AnyOf: ["Wolverine"])), 1))],
-        IsImplemented: false);
+        IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Coyote", KingdomEnergyType: "Wing", HasErrata: true,
+        ErrataNotes: [
+            "Reference: rollinthunder_cards_with_dice(1).json, DPS045 (Mystique: Relentless).",
+            "Level 3 burst marks: 1 -> 0.",
+        ]);
 
     // The WhenFielded (Ko, then bonus damage if the KO'd die was X-Men -
     // Bound + Affiliations, made real by today's TargetResolver.Self/
@@ -1709,7 +1732,11 @@ public static class DpsCards
             ]), EnergyCost: new EnergyCost(1, "Bolt")),
         ],
         Continuous: [],
-        IsImplemented: false);
+        IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Tasmanian Devil", KingdomEnergyType: "Claw", HasErrata: true,
+        ErrataNotes: [
+            "Reference: rollinthunder_cards_with_dice(1).json, DPS027 (Dark Phoenix: Malevolent).",
+            "Rules text: the opponent damage after fielding and KOing an X-Men die is reduced from 4 to 1.",
+        ]);
 
     // "If this game is in the draft format" - no game-format concept
     // exists anywhere in the engine.
@@ -1720,7 +1747,7 @@ public static class DpsCards
         DieLimit: 4, Affiliations: ["X-Men", "Deadpool Affiliation"], Keywords: [],
         RawText: "If this game is in the draft format, at the start of the game pick a card on your team. " +
                  "That card costs 1 less to purchase this game (to a minimum of 1).",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [], Continuous: [], IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Aye-Aye", KingdomEnergyType: "Wing");
 
     // "If you have no Villains character dice ON YOUR TEAM" is this
     // batch's team-roster gap, AND (independently) a card granting
@@ -1732,17 +1759,24 @@ public static class DpsCards
         Die: MigrationDice.Character("DPS056Die", "Fist", (1, 5, 2), (2, 6, 3), (3, 8, 4)),
         DieLimit: 4, Affiliations: ["X-Men"], Keywords: [],
         RawText: "If you have no Villains character dice on your team, Wolverine is free to field.",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [], Continuous: [], IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Caracal", KingdomEnergyType: "Wing", HasErrata: true,
+        ErrataNotes: [
+            "Reference: rollinthunder_cards_with_dice(1).json, DPS056 (Wolverine: Pure of Heart).",
+            "Level 1 burst marks: 1 -> 0.",
+            "Level 2 burst marks: 1 -> 0.",
+        ]);
 
-    // The payment-source visibility gap (V2_PLAN.md's Appendix A
-    // addendum: "2 Bishop, Forge, Professor X") - this is "Forge."
+
+    // The fielding receipt retains actual payment symbols even after dice spin or move.
     public static readonly CardDef ForgeMoreThanFirepower = new(
         Id: "DPS031", Name: "Forge", Subtitle: "More Than Firepower", Set: "DPS", CardType: CardType.Character,
         PurchaseCost: 3, EnergySymbolIds: ["Bolt"],
         Die: MigrationDice.Character("DPS031Die", "Bolt", (1, 2, 2), (1, 4, 2), (2, 4, 4)),
         DieLimit: 4, Affiliations: ["X-Men"], Keywords: [],
         RawText: "When fielded, if you spent Bolt energy to field Forge, Prep a die from your bag.",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [new TriggeredAbility(TriggerKind.DieFielded, new DrawToZone(1, Zone.PrepArea),
+            Filter: new EventFilter(RequireSelf: true, Payment: new PaymentFilter(PaymentPurpose.Fielding, SymbolId: "Bolt")))],
+        Continuous: [], IsImplemented: true, IncludeInTeamBuilder: true, KingdomName: "Woodpecker", KingdomEnergyType: "Wing");
 
     // "A card with Kree IN ITS NAME" is a substring match; Tags carry the
     // exact printed card name only, no substring predicate exists.
@@ -1753,12 +1787,10 @@ public static class DpsCards
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "When a card with Kree in its name is KO'd, put a Loyalty Counter on Supreme Intelligence's " +
                  "card. (Loyaly Counters give a character die +1A and +1D).",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [], Continuous: [], IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Antlion", KingdomEnergyType: "Claw");
 
-    // "If you have purchased a CHARACTER die this turn" - TurnFact's own
-    // PurchasedThisTurn has no character-only variant; approximating with
-    // the general one would also fire off a Basic Action purchase, a real
-    // behavior change (house rule: never guess wrong silently).
+
+    // The creature-purchase tracker and Global limiter belong to the player using it.
     public static readonly CardDef LilandraPolitician = new(
         Id: "DPS038", Name: "Lilandra", Subtitle: "Politician", Set: "DPS", CardType: CardType.Character,
         PurchaseCost: 3, EnergySymbolIds: ["Shield"],
@@ -1766,7 +1798,10 @@ public static class DpsCards
         DieLimit: 4, Affiliations: ["Shi'ar"], Keywords: [],
         RawText: "Global: Pay Shield. Once per turn, if you have purchased a character die this turn, you " +
                  "may draw a die from your bag and add it to your Prep Area.",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [new TriggeredAbility(TriggerKind.Global,
+            new Conditional(new TurnFact(TurnFactKind.PurchasedCharacterThisTurn),
+                new MayPay(null, new DrawToZone(1, Zone.PrepArea), Prompt: "Prep a die from your bag?")),
+            EnergyCost: new EnergyCost(1, "Shield"), OncePerTurn: true)], Continuous: [], IsImplemented: true, IncludeInTeamBuilder: true, KingdomName: "Secretary Bird", KingdomEnergyType: "Wing");
 
     // The Continuous Action die mechanic (rule 1.2.3/2.6.4.2) is still
     // not modeled (V2_PLAN.md Phase 8 batch-1 note) - "reroll it [an
@@ -1778,7 +1813,11 @@ public static class DpsCards
         DieLimit: 3, Affiliations: ["X-Men"], Keywords: [],
         RawText: "While Moira is active, when an opponent fields a Continuous Action die, reroll it. If it " +
                  "lands on an action face, they may field it normally. Otherwise, send it to the Used Pile.",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [], Continuous: [], IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Mockingbird", KingdomEnergyType: "Eye", HasErrata: true,
+        ErrataNotes: [
+            "Reference: rollinthunder_cards_with_dice(1).json, DPS044 (Moira: It's Not a Dream).",
+            "Level 2 burst marks: 1 -> 0.",
+        ]);
 
     // --- Batch 8 (2026-09-01) ---
     //
@@ -1851,8 +1890,8 @@ public static class DpsCards
         Id: "DPS074", Name: "Iceman", Subtitle: "Frozen Fists of Fury", Set: "DPS", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Bolt"],
         Die: MigrationDice.Character("DPS074Die", "Bolt", (1, 2, 4), (1, 3, 6), (1, 4, 6)),
-        DieLimit: 4, Affiliations: ["X-Men"], Keywords: ["Founder"],
-        RawText: "Founder When Iceman attacks, if Wolverine is active, deal 3 damage to target character die.",
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: ["Elder"],
+        RawText: "Elder When Iceman attacks, if Wolverine is active, deal 3 damage to target character die.",
         Abilities: [new TriggeredAbility(TriggerKind.DieAttacks, new Conditional(
             new CountAtLeast(new TargetFilter(Kind: TargetKind.AnyDie, Tags: new TagQuery(AnyOf: ["Wolverine"])), 1),
             Then: new DealDamage(new Fixed(3), new TargetFilter(Kind: TargetKind.CharacterDie))))],
@@ -1876,7 +1915,13 @@ public static class DpsCards
         // named for this exact card, never actually wired to a real
         // action. Tailed rather than building a CostModifier nothing
         // reads.
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [], Continuous: [], IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Porcupine", KingdomEnergyType: "Eye", HasErrata: true,
+        ErrataNotes: [
+            "Reference: rollinthunder_cards_with_dice(1).json, DPS078 (Lilandra: Freedom Fighter).",
+            "Level 1 (fielding cost/attack/defense): 1/3/3 -> 1/2/3.",
+            "Level 2 (fielding cost/attack/defense): 1/3/5 -> 2/3/4.",
+            "Level 3 (fielding cost/attack/defense): 1/5/6 -> 2/4/5.",
+        ]);
 
     // The +1A half fits. "Can't be targeted by your opponent" is
     // unqualified - broader than TargetingProtection's own From: Global|
@@ -1892,7 +1937,7 @@ public static class DpsCards
         Abilities: [],
         Continuous: [new StatAura(new TargetFilter(Self: true), AtkDelta: new Fixed(1),
             ActiveWhen: new CountAtLeast(new TargetFilter(Kind: TargetKind.AnyDie, Tags: new TagQuery(AnyOf: ["Wolverine"])), 1))],
-        IsImplemented: false);
+        IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Leaf-Tailed Gecko", KingdomEnergyType: "Shell");
 
     // The Loyalty-Counter half (a plain card-name Tag match - "Lilandra"
     // is the exact printed name on every one of her printings, not a
@@ -1913,10 +1958,10 @@ public static class DpsCards
             new GrantCounter(new TargetFilter(Self: true), "Loyalty", 1),
             Filter: new EventFilter(Tags: new TagQuery(AnyOf: ["Lilandra"])))],
         Continuous: [],
-        IsImplemented: false);
+        IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Sable Antelope", KingdomEnergyType: "Claw");
 
-    // The life-loss half fits. Intimidate itself has no Zone still
-    // (V2_PLAN.md Phase 2's own deferral, still not built).
+    // The fielding life loss and keyword Intimidate resolve through the
+    // same ability queue; Intimidate's shared handler returns its target at cleanup.
     public static readonly CardDef BlobMGHDependent = new(
         Id: "DPS061", Name: "Blob", Subtitle: "MGH Dependent", Set: "DPS", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Shield"],
@@ -1925,7 +1970,7 @@ public static class DpsCards
         RawText: "When fielded, lose 1 life. Intimidate.",
         Abilities: [new TriggeredAbility(TriggerKind.DieFielded, new LifeChange(new Fixed(-1)))],
         Continuous: [],
-        IsImplemented: false);
+        IsImplemented: true, IncludeInTeamBuilder: true, KingdomName: "Wild Boar", KingdomEnergyType: "Eye");
 
     // "If Corsair's A or D is increased by an effect, mirror the amount
     // onto a Sidekick" needs to react to "my OWN stat was just modified
@@ -1938,7 +1983,7 @@ public static class DpsCards
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "If Corsair's A or D is increased by an effect, you may increase the A or D of a Sidekick " +
                  "die you control by the same amount.",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [], Continuous: [], IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Bonobo", KingdomEnergyType: "Claw");
 
     // "Ignore the abilities of character dice blocking or blocked by
     // Vulcan" needs a combat-ENGAGEMENT-scoped target ("currently
@@ -1951,7 +1996,11 @@ public static class DpsCards
         Die: MigrationDice.Character("DPS095Die", "Fist", (0, 3, 2), (1, 4, 4), (1, 6, 5)),
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "Ignore the abilities of character dice blocking or blocked by Vulcan.",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [], Continuous: [], IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "King Cobra", KingdomEnergyType: "Eye", HasErrata: true,
+        ErrataNotes: [
+            "Reference: rollinthunder_cards_with_dice(1).json, DPS095 (Vulcan: Power Suppression).",
+            "Rules text: omits the reference Global, Pay Fist to make target character die attack this turn.",
+        ]);
 
     // v1's own call (isImplemented: false) - "you may use an action die
     // from either player's Used Pile" needs a real "use a die you don't
@@ -1963,7 +2012,7 @@ public static class DpsCards
         DieLimit: 4, Affiliations: ["Villains", "Shi'ar"], Keywords: [],
         RawText: "While D'Ken is active, if you take combat damage this turn you may use an action die from " +
                  "either player's Used Pile.",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [], Continuous: [], IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Sea Cucumber", KingdomEnergyType: "Shell");
 
     // "Each of your X-Men character dice in the Field Zone gains
     // Infiltrate" - Blink is herself an attacking X-Men die at the same
@@ -1977,7 +2026,7 @@ public static class DpsCards
         DieLimit: 4, Affiliations: ["X-Men"], Keywords: [],
         RawText: "When Blink attacks with at least 2 other X-Men character dice, each of your X-Men " +
                  "character dice in the Field Zone gains Infiltrate.",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [], Continuous: [], IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Fruit Bat", KingdomEnergyType: "Wing");
 
     // The Reroll half fits (RerollAndMoveUnlessCharacter's own shape,
     // already established). "You may not field any more character dice
@@ -1995,20 +2044,22 @@ public static class DpsCards
         RawText: "When fielded, if you have fielded no other character dice this turn, reroll all opposing " +
                  "character dice. Move any that roll an energy face to their Used Pile. You may not field " +
                  "any more character dice this turn.",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [], Continuous: [], IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Cuckoo", KingdomEnergyType: "Eye", HasErrata: true,
+        ErrataNotes: [
+            "Reference: rollinthunder_cards_with_dice(1).json, DPS072 (Gambit: I Like Solitaire).",
+            "Level 1 burst marks: 1 -> 0.",
+            "Level 2 burst marks: 1 -> 0.",
+            "Level 3 (fielding cost/attack/defense): 2/4/4 -> 2/4/5.",
+        ]);
 
-    // Intimidate still has no Zone. The keywords themselves (Overcrush,
-    // Intimidate) are recorded even though the ability is tailed - a
-    // printed keyword is real catalog data regardless of whether this
-    // card's own trigger can act on it, and Overcrush is engine-native
-    // (keyed off GetKeywords, no AbilityDef needed) so it still works.
+    // Both keywords use the existing shared engine handling.
     public static readonly CardDef SupremeIntelligencePsionicCollective = new(
         Id: "DPS093", Name: "Supreme Intelligence", Subtitle: "Psionic Collective", Set: "DPS", CardType: CardType.Character,
         PurchaseCost: 7, EnergySymbolIds: ["Mask"],
         Die: MigrationDice.Character("DPS093Die", "Mask", (1, 4, 4), (2, 5, 6), (2, 7, 6)),
         DieLimit: 4, Affiliations: [], Keywords: ["Intimidate", "Overcrush"],
         RawText: "Intimidate Overcrush",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [], Continuous: [], IsImplemented: true, IncludeInTeamBuilder: true, KingdomName: "Giant Centipede", KingdomEnergyType: "Claw");
 
     // The vocabulary's own canonical DieKOd + EventFilter.Stat example
     // (Common.cs's remarks name this exact card) - see this batch's own
@@ -2020,7 +2071,7 @@ public static class DpsCards
         DieLimit: 3, Affiliations: ["Villains", "Shi'ar"], Keywords: [],
         RawText: "While Deathbird is active, when you KO an opposing character die with 3D or greater, deal " +
                  "3 damage to your opponent.",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [], Continuous: [], IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Harpy Eagle", KingdomEnergyType: "Claw");
 
     // --- Batch 9 (2026-09-01) - the last DPS batch. 32 cards: 14 full,
     // 5 partial, 13 tailed. Closes out Phase 8 task 4's DPS sweep at
@@ -2077,8 +2128,8 @@ public static class DpsCards
         Id: "DPS124", Name: "Moira", Subtitle: "Strength of Foresight", Set: "DPS", CardType: CardType.Character,
         PurchaseCost: 3, EnergySymbolIds: ["Shield"],
         Die: MigrationDice.Character("DPS124Die", "Shield", (1, 2, 2), (1, 3, 3), (2, 4, 4)),
-        DieLimit: 3, Affiliations: ["X-Men"], Keywords: ["Founder"],
-        RawText: "Founder While Moira is active, when you field an X-Men character die with purchase cost " +
+        DieLimit: 3, Affiliations: ["X-Men"], Keywords: ["Elder"],
+        RawText: "Elder While Moira is active, when you field an X-Men character die with purchase cost " +
                  "of 3 or more put a Loyalty Counter on Moira. When fielded, you may send target action die " +
                  "from your opponent's Field Zone in their Used Pile.",
         Abilities:
@@ -2294,12 +2345,14 @@ public static class DpsCards
             new PurchaseModifier(Delta: -2),
         ]), EnergyCost: new EnergyCost(1, "Bolt"))],
         Continuous: [],
-        IsImplemented: false);
+        IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Porbeagle", KingdomEnergyType: "Claw", HasErrata: true,
+        ErrataNotes: [
+            "Reference: rollinthunder_cards_with_dice(1).json, DPS107 (Dark Phoenix: Destructive Force).",
+            "Purchase cost: 7 -> 5.",
+        ]);
 
-    // The Overcrush-grant Global fits. "Prevent non-combat damage to
-    // your OTHER character dice" is the TargetFilter self-exclusion gap
-    // (batch 6) - Sinister shares a zone with the "other" dice he'd
-    // protect at the same moment.
+    // The shared target filter excludes the physical source die, not
+    // every copy of the card, when applying the prevention aura.
     public static readonly CardDef MisterSinisterBiologist = new(
         Id: "DPS148", Name: "Mister Sinister", Subtitle: "Biologist", Set: "DPS", CardType: CardType.Character,
         PurchaseCost: 6, EnergySymbolIds: ["Bolt"],
@@ -2310,8 +2363,9 @@ public static class DpsCards
         Abilities: [new TriggeredAbility(TriggerKind.Global,
             new GrantTag(new TargetFilter(Kind: TargetKind.CharacterDie), ["Overcrush"]),
             EnergyCost: new EnergyCost(3))],
-        Continuous: [],
-        IsImplemented: false);
+        Continuous: [new DamageModifier(DamageModifierMode.PreventNonCombat,
+            new TargetFilter(Ownership: TargetOwnership.Own, ExcludeSelf: true), Source: DamageSource.Ability)],
+        IsImplemented: true, IncludeInTeamBuilder: true, KingdomName: "Bison", KingdomEnergyType: "Shell");
 
     // The Global-energy life-surcharge half fits (CostModifier's own
     // Currency: Life mode). The Action-Die-use half is batch 8's own
@@ -2326,7 +2380,13 @@ public static class DpsCards
                  "Ability.",
         Abilities: [],
         Continuous: [new CostModifier(CostKind.GlobalEnergy, new TargetFilter(Kind: TargetKind.Player, Ownership: TargetOwnership.Opposing), Delta: 2, Currency: Currency.Life)],
-        IsImplemented: false);
+        IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Mosquito", KingdomEnergyType: "Eye", HasErrata: true,
+        ErrataNotes: [
+            "Reference: rollinthunder_cards_with_dice(1).json, DPS145 (Lilandra: Majestrix).",
+            "Level 1 (fielding cost/attack/defense): 1/3/3 -> 1/3/4.",
+            "Level 2 (fielding cost/attack/defense): 1/3/5 -> 2/4/5.",
+            "Level 3 (fielding cost/attack/defense): 1/5/6 -> 3/5/6.",
+        ]);
 
     // The Global (Prep a die, once per turn) fits. Regenerate is not
     // built; the reroll/spin-protection axis is the same gap Bishop
@@ -2344,7 +2404,12 @@ public static class DpsCards
         Abilities: [new TriggeredAbility(TriggerKind.Global, new DrawToZone(1, Zone.PrepArea, Zone.Bag),
             EnergyCost: new EnergyCost(1, "Fist"), OncePerTurn: true)],
         Continuous: [],
-        IsImplemented: false);
+        IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Starfish", KingdomEnergyType: "Shell", HasErrata: true,
+        ErrataNotes: [
+            "Reference: rollinthunder_cards_with_dice(1).json, DPS152 (Wolverine: Tough for the Kids).",
+            "Level 1 burst marks: 1 -> 0.",
+            "Level 2 burst marks: 1 -> 0.",
+        ]);
 
     // --- Tailed outright (13 cards, no buildable clause) ---
 
@@ -2372,7 +2437,11 @@ public static class DpsCards
         DieLimit: 3, Affiliations: [], Keywords: ["Continuous"],
         RawText: "Continuous: You may send this die to your Used Pile to reroll one of the character dice " +
                  "in your Reserve Pool.",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [], Continuous: [], IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Adaptation", KingdomEnergyType: "Wing", HasErrata: true,
+        ErrataNotes: [
+            "Reference: rollinthunder_cards_with_dice(1).json, DPS005 (Lab Test: Basic Action).",
+            "Dice Kingdom import only: energy faces Generic 2 / Generic 2 / Generic 2 -> Wing 2 / Wing 2 / Wing 1. The three action faces and their burst marks are retained.",
+        ]);
 
     public static readonly CardDef LivingTheDream = new(
         Id: "DPS006", Name: "Living the Dream", Subtitle: "Basic Action", Set: "DPS", CardType: CardType.BasicAction,
@@ -2381,7 +2450,11 @@ public static class DpsCards
         DieLimit: 3, Affiliations: [], Keywords: ["Continuous"],
         RawText: "Continuous: If among all character cards on your team you have at least 3 Loyalty " +
                  "Counters, your character dice get +1A and Overcrush (until the end of turn).",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [], Continuous: [], IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Pack Instinct", KingdomEnergyType: "Claw", HasErrata: true,
+        ErrataNotes: [
+            "Reference: rollinthunder_cards_with_dice(1).json, DPS006 (Living the Dream: Basic Action).",
+            "Dice Kingdom import only: energy faces Generic 2 / Generic 2 / Generic 2 -> Claw 2 / Claw 2 / Claw 1. The three action faces and their burst marks are retained.",
+        ]);
 
     public static readonly CardDef OrganicSteelPreventDamage = new(
         Id: "DPS010", Name: "Organic Steel", Subtitle: "Basic Action", Set: "DPS", CardType: CardType.BasicAction,
@@ -2389,8 +2462,13 @@ public static class DpsCards
         Die: MigrationDice.BasicAction("DPS010Die"),
         DieLimit: 3, Affiliations: [], Keywords: ["Continuous"],
         RawText: "Continuous: Prevent up to 2 damage to target character die and move this die to your " +
-                 "Used Pile. If you have an active X-Men character, also gain 1 life.",
-        Abilities: [], Continuous: [], IsImplemented: false);
+                 "Used Pile.",
+        Abilities: [], Continuous: [], IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Protective Bark", KingdomEnergyType: "Shell", HasErrata: true,
+        ErrataNotes: [
+            "Reference: rollinthunder_cards_with_dice(1).json, DPS010 (Organic Steel: Basic Action).",
+            "Rules text: removed 'If you have an active X-Men character, also gain 1 life.' The damage prevention and movement to the Used Pile are retained.",
+            "Dice Kingdom import only: energy faces Generic 2 / Generic 2 / Generic 2 -> Shell 2 / Shell 2 / Shell 1. The three action faces and their burst marks are retained.",
+        ]);
 
     // "Unblocked attacking character dice" needs a live combat-state
     // predicate ("is currently an unblocked attacker") TargetFilter has
@@ -2405,7 +2483,11 @@ public static class DpsCards
         DieLimit: 3, Affiliations: [], Keywords: [],
         RawText: "Unblocked attacking character dice gain +3A until end of turn. Global: Pay Fist. Target " +
                  "opposing character die can't block this turn unless opponent pays 1 life.",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [], Continuous: [], IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Stampede", KingdomEnergyType: "Claw", HasErrata: true,
+        ErrataNotes: [
+            "Reference: rollinthunder_cards_with_dice(1).json, DPS015 (The Front Line: Basic Action).",
+            "Dice Kingdom import only: energy faces Generic 2 / Generic 2 / Generic 2 -> Claw 2 / Claw 2 / Claw 1. The three action faces and their burst marks are retained.",
+        ]);
 
     // "When an opponent TARGETS one of your dice" needs a DieTargeted
     // event - deliberately deferred at the Phase 0 gate review
@@ -2414,14 +2496,13 @@ public static class DpsCards
         Id: "DPS097", Name: "Angel", Subtitle: "Air Support", Set: "DPS", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Shield"],
         Die: MigrationDice.Character("DPS097Die", "Shield", (0, 2, 2), (1, 3, 3), (1, 3, 4)),
-        DieLimit: 3, Affiliations: ["X-Men"], Keywords: ["Founder"],
-        RawText: "Founder While Angel is active, when an opponent targets one of your character dice, gain " +
+        DieLimit: 3, Affiliations: ["X-Men"], Keywords: ["Elder"],
+        RawText: "Elder While Angel is active, when an opponent targets one of your character dice, gain " +
                  "1 life.",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [], Continuous: [], IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Cleaner Wrasse", KingdomEnergyType: "Shell");
 
-    // Payment-source visibility - which specific dice funded a purchase
-    // is invisible, same family as the F13 group (Bishop x2, Forge,
-    // Professor X), just a new example beyond those four.
+
+    // Exclusive payment-source routing resolves once per purchase, not once per paying copy.
     public static readonly CardDef BishopTimeTraveller = new(
         Id: "DPS099", Name: "Bishop", Subtitle: "Time Traveller", Set: "DPS", CardType: CardType.Character,
         PurchaseCost: 3, EnergySymbolIds: ["Shield"],
@@ -2429,7 +2510,11 @@ public static class DpsCards
         DieLimit: 4, Affiliations: ["X-Men"], Keywords: [],
         RawText: "If you only use energy from Bishop dice to purchase a character die, Prep that die " +
                  "instead of adding it to your Used Pile",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [new TriggeredAbility(TriggerKind.PurchaseMade,
+            new MoveDie(new TargetFilter(Bound: "event"), Zone.PrepArea),
+            Filter: new EventFilter(Ownership: TargetOwnership.Own, Payment: new PaymentFilter(
+                PaymentPurpose.Purchase, OnlyListenerCard: true, PaidForCardType: CardType.Character)))],
+        Continuous: [], IsImplemented: true, IncludeInTeamBuilder: true, KingdomName: "Dung Beetle", KingdomEnergyType: "Wing");
 
     // v1's own call (isImplemented: false) - "cancel a Global Ability"
     // needs a real interrupt/cancellation primitive nothing here has.
@@ -2440,7 +2525,7 @@ public static class DpsCards
         DieLimit: 4, Affiliations: ["X-Men"], Keywords: [],
         RawText: "While Blink is active, once per turn when your opponent uses a Global Ability you may " +
                  "pay Mask and 1 life to cancel that Global Ability.",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [], Continuous: [], IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Peacock Mantis Shrimp", KingdomEnergyType: "Eye");
 
     // Payment-source visibility again - "when you spend energy FROM an
     // X-Men die" needs to know which specific dice funded the payment.
@@ -2451,11 +2536,9 @@ public static class DpsCards
         DieLimit: 4, Affiliations: ["X-Men"], Keywords: [],
         RawText: "While Jubilee is active, when you spend energy from an [X-Men] die to use a Global " +
                  "Ability or field a character, deal 1 damage to target opponent or character die.",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [], Continuous: [], IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Pistol Shrimp", KingdomEnergyType: "Claw");
 
-    // The same "one-shot activation granting temporary continuous-shaped
-    // protection" gap Gladiator's own "Psi Resistance"/"The Empire Must
-    // Stand" printings already hit.
+    // Same generic targeting protection grant as Psi Resistance.
     public static readonly CardDef GladiatorMajestorKallark = new(
         Id: "DPS113", Name: "Gladiator", Subtitle: "Majestor Kallark", Set: "DPS", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Fist"],
@@ -2463,7 +2546,15 @@ public static class DpsCards
         DieLimit: 4, Affiliations: ["Shi'ar"], Keywords: [],
         RawText: "Global: Pay Fist. Your character dice can't be the target of Action Dice or Global " +
                  "Abilities (until end of turn).",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [new TriggeredAbility(TriggerKind.Global,
+            new GrantTargetingProtection(new TargetingProtection(
+                new TargetFilter(Ownership: TargetOwnership.Own, Count: 0), ProtectionFrom.Both, OpponentsOnly: false)),
+            EnergyCost: new EnergyCost(1, "Fist"))],
+        Continuous: [], IsImplemented: true, IncludeInTeamBuilder: true, KingdomName: "Saiga", KingdomEnergyType: "Shell", HasErrata: true,
+        ErrataNotes: [
+            "Reference: rollinthunder_cards_with_dice(1).json, DPS113 (Gladiator: Majestor Kallark).",
+            "Global text: removes the reference's 'when you attack' payment restriction.",
+        ]);
 
     // Needs a specific combat-timing hook (reroll AFTER damage resolves,
     // conditioned on being an unblocked attacker) nothing here reaches -
@@ -2477,7 +2568,7 @@ public static class DpsCards
         RawText: "While Lilandra is active, if one of your character dice attacks and is unblocked, " +
                  "reroll them after damage is dealt. If they land on a character face, put them in your " +
                  "Prep Area instead of your Used Pile.",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [], Continuous: [], IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Arctic Tern", KingdomEnergyType: "Wing");
 
     // Tokens (the Sentinel die this card would place into the Field
     // Zone, from neither player's own bag/deck) are not modeled anywhere
@@ -2489,7 +2580,7 @@ public static class DpsCards
         DieLimit: 4, Affiliations: ["Villains"], Keywords: [],
         RawText: "When fielded, when Master Mold attacks, or when Master Mold is KO'd, place a Sentinel " +
                  "token with 5A and 5D into the Field Zone.",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [], Continuous: [], IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Queen Bee", KingdomEnergyType: "Shell");
 
     // "If 4 or more of your character dice were KO'd this turn" needs a
     // KO COUNT for the turn - NoKOsThisTurn only expresses the boolean
@@ -2501,5 +2592,5 @@ public static class DpsCards
         DieLimit: 4, Affiliations: [], Keywords: ["Deadly"],
         RawText: "If 4 or more of your character dice were KO'd this turn, you may Prep a Corsair die from " +
                  "this card. Deadly",
-        Abilities: [], Continuous: [], IsImplemented: false);
+        Abilities: [], Continuous: [], IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Wasp", KingdomEnergyType: "Claw");
 }

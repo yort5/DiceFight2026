@@ -13,7 +13,8 @@ namespace DiceFight.V2;
 // Duration: "turn" (cleared at Clean Up as a this-turn effect), "cleanup"
 // (resolves at Clean Up), "whileActive" (as long as its source is out), or
 // null when the engine doesn't know (a blank from no tracked source).
-public sealed record DieStatus(string Kind, string? Source, string? Duration, string? Keyword = null);
+public sealed record DieStatus(string Kind, string? Source, string? Duration, string? Keyword = null,
+    string? Description = null);
 
 public static class DieStatuses
 {
@@ -30,6 +31,10 @@ public static class DieStatuses
 
         foreach (var flag in die.CombatFlags)
             list.Add(new DieStatus(FlagKind(flag), die.CombatFlagSources.GetValueOrDefault(flag), "turn"));
+
+        foreach (var protection in state.GrantedTargetingProtections.Where(grant => grant.AppliesTo(state, die)))
+            list.Add(new DieStatus("targetProtected", protection.Source,
+                protection.Duration == Duration.EndOfTurn ? "turn" : null, Description: protection.Description));
 
         if (die.CardId is not null && !QueryEngine.AbilitiesActive(state, die))
             list.Add(new DieStatus("blanked", null, null));

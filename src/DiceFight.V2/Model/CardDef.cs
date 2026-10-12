@@ -1,4 +1,5 @@
 using DiceFight.V2.Model.Effects;
+using System.Text.Json.Serialization;
 
 namespace DiceFight.V2.Model;
 
@@ -89,4 +90,12 @@ public sealed record CardDef(
     // Usually empty. Read only through QueryEngine.AbilitiesOf /
     // ContinuousOf - never enumerate these directly.
     IReadOnlyList<TriggeredAbility>? PermanentAbilities = null,
-    IReadOnlyList<ContinuousDef>? PermanentContinuous = null);
+    IReadOnlyList<ContinuousDef>? PermanentContinuous = null,
+    // Catalog/display metadata, separate from gameplay keywords and effects.
+    bool HasErrata = false,
+    bool IncludeInTeamBuilder = false,
+    // Dice Kingdom adaptation; the classic definition remains the source reference.
+    string? KingdomName = null,
+    string? KingdomEnergyType = null,
+    // Internal comparison notes live with the card, never in public JSON or gameplay tags.
+    [property: JsonIgnore] IReadOnlyList<string>? ErrataNotes = null);

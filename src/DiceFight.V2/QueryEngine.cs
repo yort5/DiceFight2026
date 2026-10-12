@@ -28,6 +28,7 @@ public interface IDieStatModifier
     // from." Only used to build a breakdown for display; never read by
     // the engine's own combat math.
     string Label { get; }
+    bool SetsValue => false;
 }
 
 // One named contribution to a die's Attack or Defense, in the order its
@@ -152,21 +153,31 @@ public static class QueryEngine
     public static int GetBasePurchaseCost(CardDef card) => Math.Max(1, card.PurchaseCost);
 
     public static int GetAttack(GameState state, DieInstance die) =>
-        GetBaseAttack(state, die) + state.AttackModifiers.Where(m => m.AppliesTo(state, die)).Sum(m => m.GetDelta(state, die));
+        GetBaseAttack(state, die) + EffectiveStatModifiers(state, die, state.AttackModifiers).Sum(m => m.GetDelta(state, die));
 
     public static int GetDefense(GameState state, DieInstance die) =>
-        GetBaseDefense(state, die) + state.DefenseModifiers.Where(m => m.AppliesTo(state, die)).Sum(m => m.GetDelta(state, die));
+        GetBaseDefense(state, die) + EffectiveStatModifiers(state, die, state.DefenseModifiers).Sum(m => m.GetDelta(state, die));
 
     // Same modifier lists GetAttack/GetDefense sum over, just kept as
     // named line items instead of collapsed into one number - see
     // IDieStatModifier.Label's own remarks for why this exists.
     public static IReadOnlyList<StatModifierContribution> GetAttackBreakdown(GameState state, DieInstance die) =>
-        state.AttackModifiers.Where(m => m.AppliesTo(state, die))
+        EffectiveStatModifiers(state, die, state.AttackModifiers)
             .Select(m => new StatModifierContribution(m.Label, m.GetDelta(state, die))).ToList();
 
     public static IReadOnlyList<StatModifierContribution> GetDefenseBreakdown(GameState state, DieInstance die) =>
-        state.DefenseModifiers.Where(m => m.AppliesTo(state, die))
+        EffectiveStatModifiers(state, die, state.DefenseModifiers)
             .Select(m => new StatModifierContribution(m.Label, m.GetDelta(state, die))).ToList();
+
+    // Setting a stat is not additive with another setting of the same stat.
+    // The last registered applicable setter overrides ordinary modifiers while active.
+    private static IEnumerable<IDieStatModifier> EffectiveStatModifiers(GameState state,
+        DieInstance die, IEnumerable<IDieStatModifier> modifiers)
+    {
+        var applicable = modifiers.Where(m => m.AppliesTo(state, die)).ToList();
+        var setter = applicable.LastOrDefault(m => m.SetsValue);
+        return setter is null ? applicable : [setter];
+    }
 
     // Floor 1 - the game's own "to a minimum of 1" purchase-discount text
     // (Dark Phoenix "Enemy of the Shi'ar" et al.) - erratum corrected
@@ -210,7 +221,8 @@ public static class QueryEngine
     }
 
     public static bool CanBeTargeted(GameState state, DieInstance die, string byPlayerId, ProtectionFrom triggerKind) =>
-        state.TargetingInterceptors.All(i => i.CanBeTargeted(state, die, byPlayerId, triggerKind));
+        state.TargetingInterceptors.All(i => i.CanBeTargeted(state, die, byPlayerId, triggerKind)) &&
+        state.GrantedTargetingProtections.All(i => i.CanBeTargeted(state, die, byPlayerId, triggerKind));
 
     // ability.EnergyCost is only meaningful for Trigger == Global
     // (Events.cs's own remarks) - null base cost means "not a paid
@@ -431,6 +443,8 @@ public static class QueryEngine
     {
         StatKind.Attack => GetAttack(state, die),
         StatKind.Defense => GetDefense(state, die),
+        StatKind.PrintedAttack => state.GetCurrentFace(die)?.Character?.Attack ?? 0,
+        StatKind.PrintedDefense => state.GetCurrentFace(die)?.Character?.Defense ?? 0,
         StatKind.Level => state.GetCurrentFace(die)?.Character?.Level ?? 0,
         StatKind.PurchaseCost => die.CardId is { } pcId ? GetPurchaseCost(state, state.CardCatalog[pcId], die.ControllerId) : 0,
         StatKind.FieldingCost => GetFieldingCost(state, die),
@@ -459,6 +473,8 @@ public static class QueryEngine
     {
         StatKind.Attack => GetBaseAttack(state, die),
         StatKind.Defense => GetBaseDefense(state, die),
+        StatKind.PrintedAttack => state.GetCurrentFace(die)?.Character?.Attack ?? 0,
+        StatKind.PrintedDefense => state.GetCurrentFace(die)?.Character?.Defense ?? 0,
         StatKind.Level => state.GetCurrentFace(die)?.Character?.Level ?? 0,
         StatKind.PurchaseCost => die.CardId is { } pcId ? GetBasePurchaseCost(state.CardCatalog[pcId]) : 0,
         StatKind.FieldingCost => GetBaseFieldingCost(state, die),

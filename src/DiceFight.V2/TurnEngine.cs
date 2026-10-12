@@ -56,6 +56,7 @@ public static class TurnEngine
         state.ForesightUsedThisTurn.Clear();
         state.ChampionPowerUsedThisTurn.Clear();
         state.PurchasedThisTurn.Clear();
+        state.PurchasedCharacterThisTurn.Clear();
         state.FieldedCharacterThisTurn.Clear();
         state.CharacterDiceKOdThisTurn.Clear();
 
@@ -363,17 +364,19 @@ public static class TurnEngine
         // continuous registry already applies.
         var pending = QueryEngine.NextPurchaseModifier(state, card, state.ActivePlayerId);
         var cost = QueryEngine.GetPurchaseCostNow(state, card, state.ActivePlayerId);
-        SpendEnergy(state, energyDice, cost, card.EnergySymbolIds, payerId: state.ActivePlayerId);
+        var payment = SpendEnergy(state, energyDice, cost, card.EnergySymbolIds, payerId: state.ActivePlayerId);
 
         die.ControllerId = state.ActivePlayerId; // rule 1.1.4 - purchaser becomes controller
         die.Zone = pending?.GoesToZone ?? Zone.UsedPile;
         if (pending is not null) state.PendingPurchaseModifiers.Remove(pending);
 
         state.PurchasedThisTurn.Add(state.ActivePlayerId);
+        if (card.CardType == CardType.Character) state.PurchasedCharacterThisTurn.Add(state.ActivePlayerId);
         state.LogEvent(state.ActivePlayerId, pending is { Delta: < 0 }
             ? $"{state.NameOf(state.ActivePlayerId)} purchases {card.Name} for {cost} (discounted)."
             : $"{state.NameOf(state.ActivePlayerId)} purchases {card.Name}.");
-        EventBus.Fire(state, queue, new GameEvent(TriggerKind.PurchaseMade, die, state.ActivePlayerId, state.CurrentStepId));
+        EventBus.Fire(state, queue, new GameEvent(TriggerKind.PurchaseMade, die, state.ActivePlayerId, state.CurrentStepId,
+            new PaymentPayload(PaymentPurpose.Purchase, die.Id, payment)));
     }
 
     // Rule 2.6.3 - Field Character Dice. Fielding cost may be paid with
@@ -399,6 +402,7 @@ public static class TurnEngine
         if (die.CardId is { } fieldCardId && !QueryEngine.CanField(state, die.ControllerId, fieldCardId))
             throw new InvalidOperationException($"'{state.CardCatalog[fieldCardId].Name}' cannot be fielded right now.");
 
+        var payment = new EnergyPayment([], 0);
         if (free)
         {
             if (!ChampionPowers.CanFieldFree(state, die.ControllerId))
@@ -409,7 +413,7 @@ public static class TurnEngine
         {
             var energyDice = ResolveOwnReservePoolEnergy(state, energyDieIdsToSpend);
             var cost = QueryEngine.GetFieldingCost(state, die);
-            SpendEnergy(state, energyDice, cost, requiredSymbolIds: [], payerId: state.ActivePlayerId);
+            payment = SpendEnergy(state, energyDice, cost, requiredSymbolIds: [], payerId: state.ActivePlayerId);
         }
 
         die.Zone = Zone.FieldZone;
@@ -423,7 +427,11 @@ public static class TurnEngine
         // the Field Zone, which is why this die is already eligible to
         // react to its OWN fielding (Fire scans active dice, and it's
         // active as of the line above).
-        EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieFielded, die, die.ControllerId, state.CurrentStepId));
+        EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieFielded, die, die.ControllerId, state.CurrentStepId,
+            new PaymentPayload(PaymentPurpose.Fielding, die.Id, payment)));
+        foreach (var spentId in payment.Spent.Select(p => p.DieId).Distinct())
+            EventBus.Fire(state, queue, new GameEvent(TriggerKind.EnergySpent, FindDie(state, spentId),
+                die.ControllerId, state.CurrentStepId, new PaymentPayload(PaymentPurpose.Fielding, die.Id, payment)));
     }
 
     // Rule 2.6.5.2/2.6.5.4 - a paid Global ability. Addressed by CARD,
@@ -737,6 +745,10 @@ public static class TurnEngine
             s.Duration == Duration.EndOfTurn ||
             (s.Duration == Duration.UntilYourNextTurn && s.GrantedDuringPlayerId != endingPlayerId));
 
+        state.GrantedTargetingProtections.RemoveAll(protection =>
+            protection.Duration == Duration.EndOfTurn ||
+            (protection.Duration == Duration.UntilYourNextTurn && protection.ControllerId != endingPlayerId));
+
         // Turn-scoped TRACKERS are deliberately NOT reset here - they are
         // reset at the start of the next turn instead (ClearAndDraw).
         // Found via Jean Grey "Peaceful Coexistence" (DPS035), whose
@@ -775,7 +787,7 @@ public static class TurnEngine
     // preferring whichever amount wastes the fewest pips - a client that
     // doesn't know about Virtual energy and offers dice for the full cost
     // still works, the surplus dice are simply left untouched.
-    private static void SpendEnergy(
+    private static EnergyPayment SpendEnergy(
         GameState state, IReadOnlyList<DieInstance> energyDice, int amountNeeded,
         IReadOnlyList<string> requiredSymbolIds, Zone spentZone = Zone.OutOfPlay, string? payerId = null)
     {
@@ -793,8 +805,10 @@ public static class TurnEngine
             catch (InvalidOperationException ex) { lastError ??= ex; }
         }
         if (best is not { } pick) throw lastError!;
-        SpendDice(state, energyDice, amountNeeded - pick.Virtual, amountNeeded > 0, requiredSymbolIds, spentZone, dryRun: false);
+        var spent = new List<SpentEnergy>();
+        SpendDice(state, energyDice, amountNeeded - pick.Virtual, amountNeeded > 0, requiredSymbolIds, spentZone, dryRun: false, spent);
         if (pick.Virtual > 0) state.VirtualEnergy[payerId!] = state.VirtualEnergyOf(payerId!) - pick.Virtual;
+        return new EnergyPayment(spent.AsReadOnly(), pick.Virtual);
     }
 
     // Paying an energy cost in the middle of an ability (MayPayEnergy -
@@ -813,7 +827,7 @@ public static class TurnEngine
     // `dryRun` validates without moving anything.
     private static int SpendDice(
         GameState state, IReadOnlyList<DieInstance> energyDice, int amountNeeded, bool typesApply,
-        IReadOnlyList<string> requiredSymbolIds, Zone spentZone, bool dryRun)
+        IReadOnlyList<string> requiredSymbolIds, Zone spentZone, bool dryRun, List<SpentEnergy>? spent = null)
     {
         var wildIds = new HashSet<string>(state.Config.EnergySymbols.Where(s => s.IsWild).Select(s => s.Id));
         var genericIds = new HashSet<string>(state.Config.EnergySymbols.Where(s => s.IsGeneric).Select(s => s.Id));
@@ -891,7 +905,17 @@ public static class TurnEngine
         {
             var die = included[i];
             var isPartial = i == included.Count - 1 && overspend > 0;
-            if (isPartial && TrySpinDown(state, die, overspend)) continue; // stays in place, showing the reduced face
+            var symbols = state.GetCurrentFace(die)!.Symbols;
+            var keptPartial = isPartial && TrySpinDown(state, die, overspend);
+            // Retained pips were not spent. If no lower face exists, the whole die is consumed.
+            var retained = keptPartial ? overspend : 0;
+            foreach (var symbol in symbols)
+            {
+                var count = symbol.Count - Math.Min(retained, symbol.Count);
+                retained -= symbol.Count - count;
+                if (count > 0) spent?.Add(new SpentEnergy(die.Id, die.CardId, symbol.SymbolId, count));
+            }
+            if (keptPartial) continue; // stays in place, showing the reduced face
             die.Zone = spentZone;
         }
         return overspend;

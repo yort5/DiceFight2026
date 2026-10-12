@@ -68,6 +68,72 @@ public class DiceKingdomKeywordTests
         return lizard;
     }
 
+    // --- Awaken ---
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Awaken_Does_Not_Trigger_When_A_Roll_Or_Reroll_Lands_Higher(bool reroll)
+    {
+        var state = NewGame();
+        state.MoveToStep(StepIds.RollAndReroll);
+        var queue = new AbilityQueue();
+        var swallow = AddDie(state, DiceKingdomConfig.BarnSwallow.Id, "p1",
+            reroll ? Zone.ReservePool : Zone.DiceFromBag);
+
+        if (reroll) TurnEngine.RerollOwn(state, queue, new FixedRoller(1), [swallow.Id]);
+        else TurnEngine.Roll(state, queue, new FixedRoller(1));
+        Drain(state, queue);
+
+        Assert.Equal(2, state.GetCurrentFace(swallow)!.Character!.Level);
+        Assert.Empty(queue.Pending);
+        Assert.Empty(state.DiceIn("p1", Zone.PrepArea));
+    }
+
+    [Fact]
+    public void Awaken_Does_Not_Trigger_When_An_Ability_Rerolls_To_A_Higher_Level()
+    {
+        var state = NewGame();
+        var queue = new AbilityQueue();
+        var swallow = AddDie(state, DiceKingdomConfig.BarnSwallow.Id, "p1", Zone.FieldZone);
+        var context = new EffectContext
+        {
+            State = state, Queue = queue, ControllerId = "p1", Trigger = TriggerKind.Global,
+            Roller = new FixedRoller(1), Random = new Random(1),
+        };
+        context.Bind("self", swallow.Id);
+
+        EffectInterpreter.Execute(new Reroll(new TargetFilter(Self: true)), context);
+        Drain(state, queue);
+
+        Assert.Equal(2, state.GetCurrentFace(swallow)!.Character!.Level);
+        Assert.Empty(queue.Pending);
+        Assert.Empty(state.DiceIn("p1", Zone.PrepArea));
+    }
+
+    [Fact]
+    public void Mutations_Global_Still_Triggers_Awaken_When_It_Spins_A_Creature_Up()
+    {
+        var state = NewGame();
+        var queue = new AbilityQueue();
+        var down = AddDie(state, DiceKingdomConfig.Hippopotamus.Id, "p1", Zone.FieldZone, level: 2);
+        var swallow = AddDie(state, DiceKingdomConfig.BarnSwallow.Id, "p1", Zone.FieldZone);
+        var globalIndex = DiceKingdomConfig.Mutation.Abilities.ToList().FindIndex(a => a.Trigger == TriggerKind.Global);
+
+        TurnEngine.UseGlobal(state, queue, DiceKingdomConfig.Mutation.Id, "p1", globalIndex,
+            Energy(state, "p1", "Eye", 1));
+        Drain(state, queue);
+        var pending = Assert.IsType<PendingChoice>(state.PendingChoice);
+        Assert.Contains(swallow.Id, pending.CandidateIds);
+        EffectInterpreter.AnswerPendingChoice(state, [swallow.Id]);
+        Drain(state, queue);
+
+        Assert.Null(state.PendingChoice);
+        Assert.Equal(1, state.GetCurrentFace(down)!.Character!.Level);
+        Assert.Equal(2, state.GetCurrentFace(swallow)!.Character!.Level);
+        Assert.Single(state.DiceIn("p1", Zone.PrepArea)); // Barn Swallow's Awaken drew a die.
+    }
+
     // --- Intimidate ---
 
     [Fact]

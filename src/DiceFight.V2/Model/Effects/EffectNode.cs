@@ -55,6 +55,12 @@ public sealed record ResolveRangeShots : EffectNode;
 // destination zone alone decides, no separate "rolled" flag).
 public sealed record DrawToZone(int Count, Zone ToZone, Zone FromZone = Zone.Bag) : EffectNode;
 
+// A timed, live protection rule. Reuses the continuous protection definition,
+// but does not require its granting card to have a die active afterward.
+// A side-wide Target filter also covers creatures fielded after resolution.
+public sealed record GrantTargetingProtection(TargetingProtection Protection,
+    Duration Duration = Duration.EndOfTurn) : EffectNode;
+
 // A fielded die always ends up AT some level - and normally that level
 // is simply the one it rolled, since a die showing a character face
 // already has one. `Level` is therefore an OVERRIDE, not the source of
@@ -98,7 +104,8 @@ public sealed record ModifyStat(
     int? DefDelta = null,
     Amount? SetAttack = null,
     Amount? SetDefense = null,
-    Duration Duration = Duration.EndOfTurn) : EffectNode;
+    Duration Duration = Duration.EndOfTurn,
+    Amount? AttackBonus = null, Amount? DefenseBonus = null) : EffectNode;
 
 public sealed record GrantTag(TargetFilter Target, IReadOnlyList<string> Tags, Duration Duration = Duration.EndOfTurn) : EffectNode;
 
@@ -159,6 +166,8 @@ public enum CombatFlagKind
 public sealed record CombatFlag(TargetFilter Target, CombatFlagKind Flag) : EffectNode;
 
 public sealed record Sequence(IReadOnlyList<EffectNode> Steps) : EffectNode;
+
+public sealed record EmitEvent(TriggerKind Kind, string SubjectBinding = "self") : EffectNode;
 
 // Ground rule 8: EVERY "you may [X]" is modeled this way, cost-attached
 // or not - Cost: null is a genuine free yes/no choice (Shocking Grasp),

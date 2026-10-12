@@ -128,6 +128,7 @@ public sealed class GameState
     public List<ICardCostModifier> PurchaseCostModifiers { get; } = [];
     public List<ICardCostModifier> GlobalEnergyCostModifiers { get; } = [];
     public List<ITargetingInterceptor> TargetingInterceptors { get; } = [];
+    public List<GrantedTargetingProtection> GrantedTargetingProtections { get; } = [];
 
     // Phase 6 additions - the remaining three continuous-template
     // registries (StatAura/CostModifier/TargetingProtection already had a
@@ -177,6 +178,7 @@ public sealed class GameState
     // which only needs one TurnFact case); revisit once a real migrated
     // card (Phase 8) actually needs the precise "other than itself" reading.
     public HashSet<string> PurchasedThisTurn { get; } = [];
+    public HashSet<string> PurchasedCharacterThisTurn { get; } = [];
     public HashSet<string> FieldedCharacterThisTurn { get; } = [];
     public HashSet<string> CharacterDiceKOdThisTurn { get; } = [];
 
@@ -324,6 +326,30 @@ public sealed class GameState
 }
 
 public sealed record PendingPurchaseModifier(string PlayerId, int Delta, CardType? CardKind, Zone? GoesToZone);
+
+public sealed record GrantedTargetingProtection(
+    TargetingProtection Protection, string ControllerId,
+    IReadOnlyDictionary<string, string> Bindings, Duration Duration,
+    string Source) : ITargetingInterceptor
+{
+    public bool AppliesTo(GameState state, DieInstance die) =>
+        (Protection.ActiveWhen is null || ConditionEvaluator.Evaluate(state, ControllerId,
+            Protection.ActiveWhen, Bindings, includeContinuous: false)) &&
+        TargetResolver.Query(state, ControllerId, Protection.Target, Bindings,
+            includeContinuous: false).Contains(die.Id);
+
+    public bool CanBeTargeted(GameState state, DieInstance die, string byPlayerId, ProtectionFrom triggerKind) =>
+        (Protection.From != ProtectionFrom.Both && Protection.From != triggerKind) ||
+        (Protection.OpponentsOnly && byPlayerId == ControllerId) || !AppliesTo(state, die);
+
+    public string Description => $"Can't be targeted by {(Protection.OpponentsOnly ? "opposing" : "either player's")} " +
+        (Protection.From switch
+        {
+            ProtectionFrom.Action => "action dice.",
+            ProtectionFrom.Global => "Global abilities.",
+            _ => "action dice or Global abilities.",
+        });
+}
 
 /// <summary>
 /// One card's text/purchase/field turned off for one player, until

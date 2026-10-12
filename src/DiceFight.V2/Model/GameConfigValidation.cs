@@ -77,7 +77,10 @@ public static class GameConfigValidation
             // nothing declared it.
             foreach (var keyword in card.Keywords)
             {
-                if (!keywordIds.Contains(keyword))
+                // Numbered keywords use the same positive-value syntax as
+                // combat and status display (e.g. Range 2, Energy Drain 2).
+                if (!keywordIds.Contains(keyword) &&
+                    !keywordIds.Any(id => KeywordAbilities.ParamOf(keyword, id) is not null))
                     errors.Add($"Card \"{card.Id}\": keyword \"{keyword}\" is not declared in GameConfig.Keywords.");
             }
 

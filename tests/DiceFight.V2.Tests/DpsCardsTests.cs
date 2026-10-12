@@ -238,22 +238,22 @@ public class DpsCardsTests
     }
 
     [Fact]
-    public void CyclopsFirstClass_Fires_For_Another_Founder_Die_But_Not_A_Plain_One()
+    public void CyclopsFirstClass_Fires_For_Another_Elder_Die_But_Not_A_Plain_One()
     {
         var state = NewGame();
         var cyclops = Active(state, DpsCards.CyclopsFirstClass, "p1");
         var victim = Active(state, DpsCards.RonanTheAccuserTreason, "p2", id: "victim"); // 5D at level 1
         var queue = new AbilityQueue();
 
-        // A non-Founder die fielded (Deathbird is vanilla, so anything
+        // A non-Elder die fielded (Deathbird is vanilla, so anything
         // queued here could only have come from Cyclops): no reaction.
         var plain = Ready(state, DpsCards.DeathbirdTreacherous, "p1", 1, "plain");
         TurnEngine.Field(state, queue, plain.Id, []);
         Assert.Empty(queue.Pending);
 
-        // A second Founder die fielded: Cyclops reacts.
-        var founder = Ready(state, DpsCards.CyclopsFirstClass, "p1", 1, "founder");
-        TurnEngine.Field(state, queue, founder.Id, Energy(state, "p1", 1));
+        // A second Elder die fielded: Cyclops reacts.
+        var elder = Ready(state, DpsCards.CyclopsFirstClass, "p1", 1, "elder");
+        TurnEngine.Field(state, queue, elder.Id, Energy(state, "p1", 1));
         Drain(state, queue);
         Answer(state, "victim");
 
@@ -590,12 +590,13 @@ public class DpsCardsTests
         Assert.Empty(strong.CombatFlags);
     }
 
-    // The remaining batch-1 tail entry, pinned inert rather than silently
-    // half-working - see V2_TAIL_POLICY.md for its gap (Deadly).
+    // Deadly is a shared combat rule, so this keyword-only card needs no
+    // bespoke ability or continuous definition to be implemented.
     [Fact]
-    public void Tailed_Batch1_Cards_Are_Vanilla()
+    public void DeathbirdTreacherous_Is_Implemented_By_The_Shared_Deadly_Keyword()
     {
-        Assert.False(DpsCards.DeathbirdTreacherous.IsImplemented);
+        Assert.True(DpsCards.DeathbirdTreacherous.IsImplemented);
+        Assert.Contains("Deadly", DpsCards.DeathbirdTreacherous.Keywords);
         Assert.Empty(DpsCards.DeathbirdTreacherous.Abilities);
         Assert.Empty(DpsCards.DeathbirdTreacherous.Continuous);
     }
@@ -1070,13 +1071,13 @@ public class DpsCardsTests
     // --- Batch 5 (2026-09-01) ---
 
     [Fact]
-    public void MutantResearchProgram_Draws_And_Rolls_3_With_2_Active_Founders_Else_1()
+    public void MutantResearchProgram_Draws_And_Rolls_3_With_2_Active_Elders_Else_1()
     {
-        foreach (var (founderCount, expectedDraws) in new[] { (2, 3), (1, 1) })
+        foreach (var (elderCount, expectedDraws) in new[] { (2, 3), (1, 1) })
         {
             var state = NewGame();
-            for (var i = 0; i < founderCount; i++)
-                Active(state, DpsCards.BeastCombatReady, "p1", id: $"founder{i}"); // printed Founder keyword
+            for (var i = 0; i < elderCount; i++)
+                Active(state, DpsCards.BeastCombatReady, "p1", id: $"elder{i}"); // printed Elder keyword
             var card = Ready(state, DpsCards.MutantResearchProgram, "p1", 0);
             var queue = new AbilityQueue();
             // Excluding the action card's own die, which UseAction moves
@@ -1179,17 +1180,17 @@ public class DpsCardsTests
     }
 
     [Fact]
-    public void BeastFirstClass_Preps_A_Die_When_ANOTHER_Founder_Die_Attacks_Not_Its_Own()
+    public void BeastFirstClass_Preps_A_Die_When_ANOTHER_Elder_Die_Attacks_Not_Its_Own()
     {
         var state = NewGame();
         Active(state, DpsCards.BeastFirstClass, "p1", id: "beast");
         // IcemanMrIceGuy, not BeastCombatReady - the latter carries its
         // OWN "when this attacks, Prep a die" ability, which would also
         // fire from the same DieAttacks event and double the Prep count.
-        var founder = Active(state, DpsCards.IcemanMrIceGuy, "p1", id: "other-founder");
+        var elder = Active(state, DpsCards.IcemanMrIceGuy, "p1", id: "other-elder");
         var queue = new AbilityQueue();
 
-        EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieAttacks, founder, "p1", state.CurrentStepId));
+        EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieAttacks, elder, "p1", state.CurrentStepId));
         Drain(state, queue);
 
         Assert.Single(state.DiceIn("p1", Zone.PrepArea));

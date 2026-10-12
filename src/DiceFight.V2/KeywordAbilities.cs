@@ -34,19 +34,27 @@ public static class KeywordAbilities
         Then: new Sequence([
             new MoveDie(new TargetFilter(Self: true), Zone.FieldZone),
             new DealDamage(new Fixed(1), new TargetFilter(Kind: TargetKind.Player, Ownership: TargetOwnership.Opposing)),
+            new EmitEvent(TriggerKind.InfiltrateUsed),
         ]),
         Prompt: "Infiltrate - return it to the Field and deal 1 damage to the opponent (instead of its full attack)?");
 
     public static readonly EffectNode InfiltrateOffer = new Conditional(new InZone(Zone.AttackZone), InfiltrateChoice);
 
     // "While this character is active, each time you use an action die"
-    // - the shared trigger of Attune and Obscure. The DieUsed event only
+    // - the shared trigger of Amplify, Attune and Obscure. The DieUsed event only
     // fires from TurnEngine.UseAction, so a Global never counts (a
     // Global-triggered keyword would be its own keyword - user, 2026-10-03).
     // "Action die" is the broad category (CardTypes.IsActionDie), so any
     // action die qualifies, Basic or not. EventBus only offers listeners
     // that are active, which is the "while active" half.
     private static readonly EventFilter YouUseAnActionDie = new(Ownership: TargetOwnership.Own);
+
+    // Each active die with Amplify spins up when its controller uses an
+    // action die. Spin handles the printed levels and emits the same
+    // face-change event as any other spin, including for granted Awaken.
+    public static readonly TriggeredAbility Amplify = new(TriggerKind.DieUsed,
+        new Spin(new TargetFilter(Self: true), LevelDelta: 1),
+        YouUseAnActionDie);
 
     // Dice Masters' Attune: "...this character deals 1 damage to target
     // opponent or target character die." Parameterised the way Boom Boom
@@ -128,6 +136,7 @@ public static class KeywordAbilities
     public static IEnumerable<TriggeredAbility> For(IReadOnlySet<string> keywords)
     {
         if (keywords.Contains("Intimidate")) yield return Intimidate;
+        if (keywords.Contains("Amplify")) yield return Amplify;
         if (keywords.Contains("Obscure")) yield return Obscure;
         // Each Attune keyword triggers on its own, so a die with a printed
         // Attune and a granted one deals both.

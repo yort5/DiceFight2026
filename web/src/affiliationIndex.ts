@@ -1,3 +1,6 @@
+// Presentation switch only; affiliation metadata and rules are retained.
+export const SHOW_AFFILIATIONS: boolean = false;
+
 import type { CardDef } from "./types";
 
 /** Where a logo lives. They are in public/ rather than bundled - see
