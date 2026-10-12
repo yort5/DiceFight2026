@@ -2552,11 +2552,10 @@
   font-size: 14px;
   font-weight: 600;
   line-height: 1.2;
-  /* Tiles are half a 404px column: long names ellipsise rather than
-     wrapping the tile out of alignment with its neighbour. */
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  /* Keep the complete identity readable beside the avatar and status badges. */
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
   min-width: 0;
 }
 
@@ -3657,3 +3656,35 @@
 .dk-builder-tardigrade-name { flex: 1; min-width: 0; }
 .dk-builder-tardigrade-option button { min-width: 23px; padding: 2px 4px; }
 .dk-builder-tardigrade-option strong { min-width: 1.5ch; text-align: center; font-variant-numeric: tabular-nums; }
+
+/* Team Builder card status metadata. */
+.builder-card-badges { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.card-errata {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  padding: 3px 5px;
+  border: 1px solid var(--accent-border);
+  border-radius: 5px;
+  background: var(--accent-bg);
+  color: var(--text-h);
+  font: 600 10px/1.2 var(--sans);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.card-errata svg {
+  flex: none;
+}
+@media print { .builder-card-badges { display: none; } }
+
+.builder-card-avatar { display: inline-flex; align-items: center; flex: none; color: var(--text-h); }
+.builder-card-avatar svg { display: block; }
+.card-kingdom-symbol { display: inline-flex; align-items: center; vertical-align: -0.2em; color: currentColor; }
+.card-kingdom-symbol svg { display: block; }
+
+.team-builder-page .slot-name-line { flex-wrap: wrap; align-items: center; }
+.team-builder-page .slot-name-line .slot-name { flex: 1 1 calc(100% - 30px); }
+.team-builder-page .slot-name-line .slot-set { flex-basis: 100%; }
+.team-builder-page .slot-name-line .builder-card-badges { flex-basis: 100%; }
+.team-builder-page .slot-top { align-items: flex-start; }

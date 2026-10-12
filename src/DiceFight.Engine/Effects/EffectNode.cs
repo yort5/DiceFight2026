@@ -577,10 +577,10 @@ public enum EffectCondition
     // Wolverine ("Hardened by Madripoor", DPS096) - "when you have at
     // least 3 active X-Men character dice, Wolverine gains [...]."
     // Mutant Research Program (DPS008) - "if you have at least 2 active
-    // Founder character dice, [...]." AffiliationParam doubles as either
+    // Elder character dice, [...]." AffiliationParam doubles as either
     // a real affiliation (DieStats.HasAffiliation) or a keyword name
-    // (DieStats.HasKeyword) - "Founder" is modeled as a KeywordInstance,
-    // not an affiliation (see the WhenAnotherDieFielded/Cyclops "Founder
+    // (DieStats.HasKeyword) - "Elder" is modeled as a KeywordInstance,
+    // not an affiliation (see the WhenAnotherDieFielded/Cyclops "Elder
     // prefix" status update), and no card needs to distinguish the two
     // in a single count, so this checks either. CountParam is the
     // threshold, same shape as OpponentHasAtLeastNCharacterDiceInFieldZone.

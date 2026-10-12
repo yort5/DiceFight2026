@@ -51,6 +51,8 @@ public enum StatKind
     // all run 1-3 - a Tardigrade's levels are 2 and 3.
     LevelsBelow,
     LevelsAbove,
+    PrintedAttack,
+    PrintedDefense,
 }
 
 // ONE threshold (V2_VOCABULARY_HISTORY.md Part 1 - "ONE threshold" is a closed-
@@ -96,7 +98,10 @@ public sealed record TargetFilter(
     // choice ("choose one of your creatures to spin DOWN a level"). Without
     // it every pick reads "choose 1 target", so an ability with two picks
     // gave no clue which was which (Mutation's Global, 2026-09-27).
-    string? Prompt = null)
+    string? Prompt = null,
+    // "Other dice": exclude the physical source die bound as self,
+    // while still allowing other copies of its card.
+    bool ExcludeSelf = false)
 {
     // Rule 3.3.4/3.3.5 - only Field Zone (which includes Attack Zone) is
     // targetable by default.

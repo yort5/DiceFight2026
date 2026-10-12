@@ -29,6 +29,12 @@ public static class AbilityPreview
 
     private static bool IndependentlyUseful(GameState state, string controllerId, EffectNode effect, ProtectionFrom? protection)
     {
+        if (effect is Conditional conditional)
+            return ConditionEvaluator.Evaluate(state, controllerId, conditional.When, new Dictionary<string, string>())
+                ? CouldHaveResult(state, controllerId, conditional.Then, protection)
+                : conditional.Else is { } alternative && CouldHaveResult(state, controllerId, alternative, protection);
+        if (effect is MayPay offer)
+            return CouldHaveResult(state, controllerId, offer.Then, protection);
         if (effect is Sequence) return CouldHaveResult(state, controllerId, effect, protection);
         if (effect is DrawToZone draw)
             return draw.FromZone == Zone.Bag

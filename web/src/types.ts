@@ -37,6 +37,10 @@ export interface CardDef {
   globalAbilityCost: GlobalAbilityCost | null;
   globalAbilityNeedsTarget: boolean;
   isImplemented: boolean;
+  /** Display metadata for cards adjusted from their reference versions. */
+  hasErrata?: boolean;
+  /** Energy provided by the die, separate from a Basic Action purchase cost. */
+  dieEnergyType?: string | null;
   whenFieldedNeedsTarget: boolean;
   set: string | null;
 }

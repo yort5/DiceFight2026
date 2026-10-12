@@ -19,9 +19,8 @@ public static class EventBus
     // candidate (for whichever controller it belongs to), even when it
     // isn't currently "active" by that definition - self-only abilities
     // need to fire from the exact die the event is about regardless of
-    // its zone at the moment the event fires: Energize/Awaken react to a
-    // die still in the Prep Area mid-roll (v1's CheckEnergize/CheckAwaken
-    // have no zone gate at all, for exactly this reason), and a "when I
+    // its zone at the moment the event fires: Energize reacts to a
+    // die still in the Prep Area mid-roll, and a "when I
     // am KO'd" ability's own die has already left the Field/Attack Zone
     // by the time DieKOd fires. Found while testing DieFaceChanged, but
     // it's a real, general gap, not specific to that one event kind.
@@ -47,6 +46,11 @@ public static class EventBus
             if (evt.SubjectDie is { } subject && subject.ControllerId == controllerId && !candidates.Contains(subject))
                 candidates.Add(subject);
 
+            if (evt.Payload is PaymentPayload payment)
+                candidates.AddRange(payment.Payment.Spent.Select(p => p.DieId).Distinct()
+                    .Select(id => state.Dice.First(d => d.Id == id))
+                    .Where(d => d.ControllerId == controllerId && !candidates.Contains(d)));
+
             foreach (var listener in candidates)
             {
                 // No cardless-die skip here any more. A Sidekick has no
@@ -55,6 +59,11 @@ public static class EventBus
                 // nothing for a die that has neither.
                 foreach (var ability in QueryEngine.AbilitiesOf(state, listener))
                 {
+                    // Spent dice may listen off-field only to explicitly payment-aware abilities.
+                    if (listener.Zone is not (Zone.FieldZone or Zone.AttackZone) &&
+                        listener != evt.SubjectDie &&
+                        !(evt.Kind == TriggerKind.TurnStepEntered && evt.Step == StepIds.Main && listener.Zone == Zone.ReservePool) &&
+                        ability.Filter?.Payment is null) continue;
                     if (Matches(state, evt, listener, ability))
                         queue.Enqueue(listener.Id, listener.ControllerId, ability.Trigger, ability.Effect, evt.SubjectDie?.Id,
                             (evt.Payload as DamageDealtPayload)?.Amount);
@@ -98,6 +107,23 @@ public static class EventBus
             if ((filter.Ownership == TargetOwnership.Own) != isOwn) return false;
         }
 
+        if (filter.Payment is { } requirement)
+        {
+            if (evt.Payload is not PaymentPayload paid) return false;
+            if (requirement.Purpose is { } purpose && paid.Purpose != purpose) return false;
+            if (requirement.SymbolId is { } symbol && !paid.Payment.Spent.Any(p => p.SymbolId == symbol && p.Count > 0)) return false;
+            if (requirement.PaidForCardType is { } type &&
+                (state.Dice.First(d => d.Id == paid.PaidForDieId).CardId is not { } paidCard ||
+                 state.CardCatalog[paidCard].CardType != type)) return false;
+            if (requirement.OnlyListenerCard)
+            {
+                if (listener.CardId is null || paid.Payment.VirtualEnergy != 0 || paid.Payment.Spent.Count == 0 ||
+                    paid.Payment.Spent.Any(p => p.CardId != listener.CardId)) return false;
+                // An exclusive-source purchase rule resolves once, even with several copies paying.
+                if (paid.Payment.Spent[0].DieId != listener.Id) return false;
+            }
+        }
+
         if (filter.ExcludeSelf && evt.SubjectDie?.Id == listener.Id) return false;
 
         // Part 30 - the general "this reaction is about ME" gate a filter
@@ -113,6 +139,10 @@ public static class EventBus
         if (filter.LevelIncreased)
         {
             if (evt.Payload is not DieFaceChangedPayload faceChange) return false;
+            // Awaken responds to a level increase caused by a spin/effect,
+            // never a higher result from a roll or reroll (including one
+            // performed by an ability).
+            if (faceChange.Cause is FaceChangeCause.Roll or FaceChangeCause.Reroll) return false;
             // Both sides must be character faces: spinning from an energy
             // face has no "level before" to have gone up from, and rule
             // 1.6.6's spin-up is defined between levels. PriorFace is

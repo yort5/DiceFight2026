@@ -44,6 +44,7 @@ public static class TargetResolver
         Face? FaceOf(DieInstance d) => snapshot is not null && snapshot.TryGetValue(d.Id, out var s)
             ? (s.FaceIndex is { } i ? state.GetDieDefinition(d).Faces[i] : null)
             : state.GetCurrentFace(d);
+        var excludedId = filter.ExcludeSelf ? bindings.GetValueOrDefault("self") : null;
         // Self/Bound resolve to ONE already-known id rather than scanning
         // the board - that's the whole point (Finding 9). But "already
         // known" only fixes WHICH die; an author-attached Tags/
@@ -68,6 +69,7 @@ public static class TargetResolver
 
         if (fixedId is not null)
         {
+            if (fixedId == excludedId) return [];
             if (state.IsPlayerId(fixedId)) return [fixedId]; // Tags/Affiliations/Stat are die-only questions
             var fixedDie = state.Dice.First(d => d.Id == fixedId);
 
@@ -99,6 +101,7 @@ public static class TargetResolver
         IEnumerable<DieInstance> dice = filter.Kind == TargetKind.Player
             ? []
             : state.Dice.Where(d => zones.Contains(ZoneOf(d)));
+        if (excludedId is not null) dice = dice.Where(d => d.Id != excludedId);
 
         dice = filter.Ownership switch
         {
@@ -117,7 +120,9 @@ public static class TargetResolver
         else if (filter.Kind == TargetKind.BasicActionDie)
             dice = dice.Where(d => d.CardId is { } cid && state.CardCatalog[cid].CardType.IsCommunity());
 
-        if (protection is { } p)
+        // Count 0 applies to all matches without targeting individual dice.
+        // Targeting protection does not prevent these board-wide effects.
+        if (protection is { } p && filter.Count != 0)
             dice = dice.Where(d => QueryEngine.CanBeTargeted(state, d, requestingControllerId, p));
 
         if (filter.Affiliations is { } affiliations)

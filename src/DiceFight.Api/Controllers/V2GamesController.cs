@@ -138,9 +138,13 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
         {
             if (entry is null || entry.DiceCount <= 0 ||
                 string.IsNullOrWhiteSpace(entry.CardId) ||
-                !DiceKingdomConfig.Catalog.ContainsKey(entry.CardId) ||
+                !DiceKingdomConfig.TeamBuilderCatalog.TryGetValue(entry.CardId, out var card) ||
                 !cardIds.Add(entry.CardId))
                 throw new ArgumentException("Invalid or duplicate card in custom team.");
+            if (!card.IsImplemented)
+                throw new ArgumentException($"{card.Name} is Incomplete and cannot be used in a game yet.");
+            if (!DiceKingdomConfig.Catalog.ContainsKey(entry.CardId))
+                throw new ArgumentException($"{card.Name} is not available in Dice Kingdom games yet.");
             // No server-side team-size or printed die-limit enforcement.
             player.TeamCardIds.Add(entry.CardId);
             player.CustomCardDiceCounts[entry.CardId] = entry.DiceCount;
@@ -177,7 +181,7 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
 
     [HttpGet("cards")]
     public ActionResult<IReadOnlyList<V2CardDefDto>> Cards() =>
-        Ok(DiceKingdomConfig.Catalog.Values.Select(V2CardDefDto.From).ToList());
+        Ok(DiceKingdomConfig.TeamBuilderCatalog.Values.Select(V2CardDefDto.From).ToList());
 
     [HttpGet("champions")]
     public ActionResult<IReadOnlyList<ChampionDto>> Champions() =>

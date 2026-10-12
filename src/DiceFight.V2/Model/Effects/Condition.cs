@@ -24,7 +24,7 @@ public sealed record LifeComparison(LifeComparisonOperator Op = LifeComparisonOp
 public enum KoScope { Any, Own }
 public sealed record NoKOsThisTurn(KoScope Scope) : Condition;
 
-public enum TurnFactKind { PurchasedThisTurn, FieldedNoOtherCharacterThisTurn, PrepAreaEmpty }
+public enum TurnFactKind { PurchasedThisTurn, PurchasedCharacterThisTurn, FieldedNoOtherCharacterThisTurn, PrepAreaEmpty }
 public sealed record TurnFact(TurnFactKind Fact) : Condition;
 
 // Finding 8 - branch on whether the checked die is currently on a

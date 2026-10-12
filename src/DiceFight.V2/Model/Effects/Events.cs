@@ -28,6 +28,8 @@ public enum TriggerKind
     // the caller passes one. The leaving die is the subject, so its own
     // ability still hears it (EventBus's subject-die carve-out).
     DieRemovedByOpponent,
+    EnergySpent,
+    InfiltrateUsed,
 }
 
 public enum FaceChangeCause { Roll, Reroll, Spin, Effect }
@@ -86,8 +88,8 @@ public sealed record EventFilter(
     // regardless of what caused the spin". A DieFaceChanged whose payload
     // shows a higher character level than before - which is why this is a
     // predicate on the existing event rather than a trigger kind of its
-    // own. Cause is deliberately not checked: an Amplify, an ability's
-    // Spin and a reroll that lands higher all count.
+    // own. Rolls and rerolls never count, even when performed by an
+    // ability. An Amplify or an ability's Spin can trigger it.
     bool LevelIncreased = false,
     // Keyword Teamwatch: "when a character with Teamwatch is active and
     // you field a DIFFERENT character die with the SAME AFFILIATION, use
@@ -128,7 +130,8 @@ public sealed record EventFilter(
     // (Reroll) DURING Roll and Reroll, and Energize already checks every
     // die at the start of Main - so without this a die rerolled onto a
     // double face triggered twice.
-    string? ExcludeStep = null);
+    string? ExcludeStep = null,
+    PaymentFilter? Payment = null);
 
 // Rule 2.6.5.4 - a Global ability's energy price. RequiredSymbolId null
 // means any energy (including generic) satisfies it.
@@ -146,3 +149,10 @@ public sealed record TriggeredAbility(
     EventFilter? Filter = null,
     EnergyCost? EnergyCost = null,
     bool OncePerTurn = false);
+
+// Payment data survives partial spins, movement, and queued resolution.
+public enum PaymentPurpose { Purchase, Fielding }
+public sealed record PaymentPayload(PaymentPurpose Purpose, string PaidForDieId,
+    EnergyPayment Payment) : EventPayload;
+public sealed record PaymentFilter(PaymentPurpose? Purpose = null, string? SymbolId = null,
+    bool OnlyListenerCard = false, CardType? PaidForCardType = null);

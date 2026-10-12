@@ -45,6 +45,8 @@ public static class ContinuousRegistry
             case StatAura n:
                 if (n.AtkDelta is not null) state.AttackModifiers.Add(new StatAuraModifier(card, n, n.AtkDelta));
                 if (n.DefDelta is not null) state.DefenseModifiers.Add(new StatAuraModifier(card, n, n.DefDelta));
+                if (n.SetAttack is not null) state.AttackModifiers.Add(new StatSetter(card, n, n.SetAttack, StatKind.Attack));
+                if (n.SetDefense is not null) state.DefenseModifiers.Add(new StatSetter(card, n, n.SetDefense, StatKind.Defense));
                 break;
 
             case CostModifier n:
@@ -114,6 +116,21 @@ public static class ContinuousRegistry
         public string Label => card.Name;
     }
 
+    private sealed class StatSetter(CardDef card, StatAura def, Amount amount, StatKind stat) : IDieStatModifier
+    {
+        public bool SetsValue => true;
+        public string Label => card.Name;
+        public bool AppliesTo(GameState state, DieInstance die) =>
+            QualifyingSources(state, card, def.ActiveWhen, def.Target, die.Id).Any();
+        public int GetDelta(GameState state, DieInstance die)
+        {
+            var source = QualifyingSources(state, card, def.ActiveWhen, def.Target, die.Id).Last();
+            var bindings = new Dictionary<string, string>(Bindings(source)) { ["affected"] = die.Id };
+            var desired = AmountResolver.Resolve(state, source.ControllerId, amount, bindings);
+            return desired - QueryEngine.GetBaseStatValue(state, die, new StatThreshold(stat));
+        }
+    }
+
     // --- CostModifier. Purchase/GlobalEnergy are card+payer scoped, so
     // `Whose` is expected to resolve to PLAYER ids (Kind:Player - Jean
     // Grey "Xavier's Dream", V2_VOCABULARY_HISTORY.md Part 2); Fielding/
@@ -125,7 +142,11 @@ public static class ContinuousRegistry
 
     private sealed class CardCostModifierAdapter(CardDef card, CostModifier def) : ICardCostModifier
     {
-        public bool AppliesTo(GameState state, CardDef _, string payerId) =>
+        public bool AppliesTo(GameState state, CardDef purchased, string payerId) =>
+            (def.PurchasedCardStat is not { } stat ||
+             (stat.Kind == StatKind.PurchaseCost &&
+              (stat.Min is null || purchased.PurchaseCost >= stat.Min) &&
+              (stat.Max is null || purchased.PurchaseCost <= stat.Max))) &&
             QualifyingSources(state, card, def.ActiveWhen, def.Whose, payerId).Any();
 
         public int GetDelta(GameState state, CardDef _, string payerId) =>
@@ -247,17 +268,14 @@ public static class ContinuousRegistry
 
     private sealed class TargetingProtectionInterceptor(CardDef card, TargetingProtection def) : ITargetingInterceptor
     {
-        // Protection is always against the OPPONENT of the granting
-        // player (every real card text reads "your opponent can't
-        // target..." - Angel "Xavier's Dream" is the precedent, see
-        // V2_VOCABULARY_HISTORY.md Part 2) - a source never blocks its own
-        // controller's own targeting.
+        // Existing auras protect against opponents by default. A definition
+        // can explicitly forbid the source controller's targeting too.
         public bool CanBeTargeted(GameState state, DieInstance die, string byPlayerId, ProtectionFrom triggerKind)
         {
             if (def.From != ProtectionFrom.Both && def.From != triggerKind) return true;
 
             var blockedBy = ActiveSourceDice(state, card)
-                .Where(src => src.ControllerId != byPlayerId)
+                .Where(src => !def.OpponentsOnly || src.ControllerId != byPlayerId)
                 .Where(src => SourceQualifies(state, src, def.ActiveWhen, def.Target, die.Id));
 
             return !blockedBy.Any();

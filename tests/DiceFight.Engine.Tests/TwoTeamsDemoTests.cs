@@ -1356,7 +1356,7 @@ public class TwoTeamsDemoTests
         opposingTarget.Status = DieStatus.Character;
         opposingTarget.Level = 3; // PlaceholderLevels: 4D - survives 2 damage so Damage is observable
 
-        // Fielding a non-Founder die does NOT trigger Cyclops. Rule 2.4
+        // Fielding a non-Elder die does NOT trigger Cyclops. Rule 2.4
         // bypass: mark the die as already purchased and rolled onto its
         // level-1 character face, ready to field - purchase mechanics
         // aren't what this test is about.
@@ -1371,7 +1371,7 @@ public class TwoTeamsDemoTests
         queue.Drain(ability => EffectInterpreter.Execute(
             ability.Effect, new EffectContext(state, ability.ControllerId, ability.SourceDieId, _ => [opposingTarget.Id])));
 
-        // Fielding a Founder die DOES trigger Cyclops.
+        // Fielding a Elder die DOES trigger Cyclops.
         var jeanGreyDie = FindUnpurchased(state, "teamA", SampleCards.JeanGreyPeacefulCoexistence.Id);
         jeanGreyDie.Zone = Zone.ReservePool;
         jeanGreyDie.Status = DieStatus.Character;
@@ -3748,7 +3748,7 @@ public class TwoTeamsDemoTests
         angelDie.Zone = Zone.FieldZone; angelDie.Status = DieStatus.Character; angelDie.Level = 1;
         var angelBaseAttack = DieStats.EffectiveAttack(state, angelDie);
 
-        var otherFounder = FindUnpurchased(state, "teamA", SampleCards.JeanGreyMarvelGirl.Id); // also Founder
+        var otherFounder = FindUnpurchased(state, "teamA", SampleCards.JeanGreyMarvelGirl.Id); // also Elder
         otherFounder.Zone = Zone.FieldZone; otherFounder.Status = DieStatus.Character; otherFounder.Level = 1;
         var otherFounderBaseAttack = SampleCards.JeanGreyMarvelGirl.Levels[0].Attack;
 
@@ -3758,7 +3758,7 @@ public class TwoTeamsDemoTests
 
         Assert.Equal(angelBaseAttack, DieStats.EffectiveAttack(state, angelDie)); // "other" - excludes itself
         Assert.Equal(otherFounderBaseAttack + 1, DieStats.EffectiveAttack(state, otherFounder));
-        Assert.Equal(nonFounderBaseAttack, DieStats.EffectiveAttack(state, nonFounder)); // not a Founder - unaffected
+        Assert.Equal(nonFounderBaseAttack, DieStats.EffectiveAttack(state, nonFounder)); // not a Elder - unaffected
     }
 
     [Fact]
@@ -4514,8 +4514,8 @@ public class TwoTeamsDemoTests
 
         foreach (var cardId in new[] { SampleCards.AngelJeanGreysSchool.Id, SampleCards.JeanGreyXaviersDream.Id })
         {
-            var founder = FindUnpurchased(state, "teamA", cardId);
-            founder.Zone = Zone.FieldZone; founder.Status = DieStatus.Character; founder.Level = 1;
+            var elder = FindUnpurchased(state, "teamA", cardId);
+            elder.Zone = Zone.FieldZone; elder.Status = DieStatus.Character; elder.Level = 1;
         }
 
         var ability = SampleCards.MutantResearchProgram.Abilities.Single(a => a.Trigger == TriggerType.WhenUsed);
@@ -5783,7 +5783,7 @@ public class TwoTeamsDemoTests
         var beastDie = FindUnpurchased(state, "teamA", SampleCards.BeastFirstClass.Id);
         beastDie.Zone = Zone.FieldZone; beastDie.Status = DieStatus.Character; beastDie.Level = 1;
 
-        var founderAttacker = FindUnpurchased(state, "teamA", SampleCards.JeanGreyPeacefulCoexistence.Id); // printed Founder
+        var founderAttacker = FindUnpurchased(state, "teamA", SampleCards.JeanGreyPeacefulCoexistence.Id); // printed Elder
         founderAttacker.Zone = Zone.FieldZone; founderAttacker.Status = DieStatus.Character; founderAttacker.Level = 1;
 
         TurnEngine.EnterAttackStep(state);
@@ -5807,7 +5807,7 @@ public class TwoTeamsDemoTests
         var beastDie = FindUnpurchased(state, "teamA", SampleCards.BeastFirstClass.Id);
         beastDie.Zone = Zone.FieldZone; beastDie.Status = DieStatus.Character; beastDie.Level = 1;
 
-        var nonFounderAttacker = FindUnpurchased(state, "teamA", SampleCards.BlackWidow.Id); // no Founder
+        var nonFounderAttacker = FindUnpurchased(state, "teamA", SampleCards.BlackWidow.Id); // no Elder
         nonFounderAttacker.Zone = Zone.FieldZone; nonFounderAttacker.Status = DieStatus.Character; nonFounderAttacker.Level = 1;
 
         TurnEngine.EnterAttackStep(state);
@@ -5823,7 +5823,7 @@ public class TwoTeamsDemoTests
         var state = BuildTwoTeamGame(
             extraTeamACardIds: [SampleCards.BeastFirstClass.Id],
             extraTeamBCardIds: [SampleCards.JeanGreyPeacefulCoexistence.Id]);
-        state.ActivePlayerId = "teamB"; // the Founder die attacks for teamB, opposing Beast's own controller
+        state.ActivePlayerId = "teamB"; // the Elder die attacks for teamB, opposing Beast's own controller
 
         var beastDie = FindUnpurchased(state, "teamA", SampleCards.BeastFirstClass.Id);
         beastDie.Zone = Zone.FieldZone; beastDie.Status = DieStatus.Character; beastDie.Level = 1;

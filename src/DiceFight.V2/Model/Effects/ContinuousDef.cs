@@ -10,7 +10,8 @@ namespace DiceFight.V2.Model.Effects;
 // active" grants already had for free.
 public abstract record ContinuousDef(Condition? ActiveWhen = null);
 
-public sealed record StatAura(TargetFilter Target, Amount? AtkDelta = null, Amount? DefDelta = null, Condition? ActiveWhen = null)
+public sealed record StatAura(TargetFilter Target, Amount? AtkDelta = null, Amount? DefDelta = null, Condition? ActiveWhen = null,
+    Amount? SetAttack = null, Amount? SetDefense = null)
     : ContinuousDef(ActiveWhen);
 
 public enum CostKind
@@ -21,7 +22,8 @@ public enum CostKind
     ActionDieUse, // Finding 14 - Lilandra "Freedom Fighter"
 }
 public enum Currency { Energy, Life } // Finding 14 - Lilandra "Majestrix", Jinzo "Trap Destroyer"
-public sealed record CostModifier(CostKind Kind, TargetFilter Whose, int Delta, Currency Currency = Currency.Energy, Condition? ActiveWhen = null)
+public sealed record CostModifier(CostKind Kind, TargetFilter Whose, int Delta, Currency Currency = Currency.Energy, Condition? ActiveWhen = null,
+    StatThreshold? PurchasedCardStat = null)
     : ContinuousDef(ActiveWhen);
 
 public sealed record TagAura(TargetFilter Target, IReadOnlyList<string> Tags, Condition? ActiveWhen = null)
@@ -53,7 +55,8 @@ public sealed record DamageModifier(
     Condition? ActiveWhen = null) : ContinuousDef(ActiveWhen);
 
 public enum ProtectionFrom { Global, Action, Both }
-public sealed record TargetingProtection(TargetFilter Target, ProtectionFrom From, Condition? ActiveWhen = null)
+public sealed record TargetingProtection(TargetFilter Target, ProtectionFrom From, Condition? ActiveWhen = null,
+    bool OpponentsOnly = true)
     : ContinuousDef(ActiveWhen);
 
 // Conditional ability-blanking, live rather than stored (V2_VOCABULARY.md

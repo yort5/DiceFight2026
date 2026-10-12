@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Icon } from "./GameIcon";
+import { ENERGY_ICONS as KINGDOM_ENERGY_ICONS, TardigradeIcon } from "./dicekingdom/icons";
 import { KeywordText } from "./KeywordPreview";
 import {
   ENERGY_ICONS,
@@ -18,16 +19,11 @@ import {
 // cardSearch.ts), so "Pay Mask" finds cards whose text now shows an icon.
 // Nothing here touches the data.
 
-const ENERGY = "bolt|fist|mask|shield";
+const ENERGY = "bolt|fist|mask|shield|claw|shell|wing|eye";
 
-// Proper names that merely CONTAIN one of those words and must stay as
-// text. Derived from the catalog rather than guessed: scanning every
-// card's rules text for these words found exactly 18 occurrences that
-// are not energy or sidekick references, and they are all one of these
-// two names ("King Black Bolt" is covered by "Black Bolt"). Everything
-// else - including "Pay Bolt Bolt", which really is two icons - is a
-// genuine reference. Re-check this list if the catalog gains cards.
-const PROTECTED_NAMES = ["Iron Fist", "Black Bolt"];
+// These source-catalog names contain energy words but remain literal names.
+// Protect them before scanning both the classic and Dice Kingdom symbol sets.
+const PROTECTED_NAMES = ["Iron Fist", "Black Bolt", "Eye of Agamotto", "Tiger Claw", "Sky Claw", "Heroes in a Half Shell"];
 const PROTECTED_RE = new RegExp(`(${PROTECTED_NAMES.join("|")})`, "gi");
 
 // One pass over the text. In order of precedence:
@@ -50,7 +46,7 @@ const TOKEN_RE = new RegExp(
   [
     `<:(${ENERGY}):\\d+>`,
     `(?<!\\/)\\b(${ENERGY})\\s*\\/\\s*(${ENERGY})\\b(?!\\s*\\/)`,
-    `\\b(${ENERGY}|sidekick)(s?)\\b`,
+    `\\b(${ENERGY}|sidekick|tardigrade)(s?)\\b`,
     `\\b(pays?)\\s+(\\d)\\b(?!\\s*(?:life|${ENERGY}))`,
     `(\\?)(?=\\s*energy\\b)`,
   ].join("|"),
@@ -62,6 +58,13 @@ function withIcons(text: string, keyPrefix: string): ReactNode[] {
   const out: ReactNode[] = [];
   let key = 0;
   const push = (icon: GameIcon) => out.push(<Icon key={`${keyPrefix}-i${key++}`} icon={icon} />);
+
+  const pushEnergy = (kind: string) => {
+    const name = kind[0].toUpperCase() + kind.slice(1).toLowerCase();
+    const KingdomIcon = KINGDOM_ENERGY_ICONS[name];
+    if (KingdomIcon) out.push(<span key={`${keyPrefix}-i${key++}`} className="card-kingdom-symbol" role="img" aria-label={`${name} energy`} title={`${name} energy`}><KingdomIcon size={16} /></span>);
+    else push(ENERGY_ICONS[kind.toLowerCase()]);
+  };
 
   // Split on the protected names first so the token scan never sees them.
   for (const chunk of text.split(PROTECTED_RE)) {
@@ -76,12 +79,16 @@ function withIcons(text: string, keyPrefix: string): ReactNode[] {
       const at = m.index ?? 0;
       if (at > last) out.push(<KeywordText key={`${keyPrefix}-k${key++}`} text={chunk.slice(last, at)} />);
       if (emoji) {
-        push(ENERGY_ICONS[emoji.toLowerCase()]);
+        pushEnergy(emoji);
       } else if (splitA) {
-        push(SPLIT_ENERGY_ICONS[`${splitA.toLowerCase()}/${splitB.toLowerCase()}`]);
+        const split = SPLIT_ENERGY_ICONS[`${splitA.toLowerCase()}/${splitB.toLowerCase()}`];
+        if (split) push(split);
+        else { pushEnergy(splitA); out.push("/"); pushEnergy(splitB); }
       } else if (word) {
         const kind = word.toLowerCase();
-        push(kind === "sidekick" ? SIDEKICK_ICON : ENERGY_ICONS[kind]);
+        if (kind === "tardigrade") out.push(<span key={`${keyPrefix}-i${key++}`} className="card-kingdom-symbol" role="img" aria-label="Tardigrade" title="Tardigrade"><TardigradeIcon size={16} /></span>);
+        else if (kind === "sidekick") push(SIDEKICK_ICON);
+        else pushEnergy(kind);
         if (plural) out.push(plural);
       } else if (payVerb) {
         // The verb stays as written ("Pay"/"pays"); only the amount

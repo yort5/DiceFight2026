@@ -46,7 +46,7 @@ export const KEYWORD_RULES: Record<string, string> = {
   "Energy Drain": "After blockers are assigned, each opposing creature engaged with this die spins down N levels, to a minimum of level 1. Without a number, N is 1. Multiple Energy Drain values use the highest value, rather than adding together.",
   Experience: "At Clean Up, if you KO'd an opposing Monster this turn, each of your active Experience cards gains an Experience token. Each token permanently gives that card's character dice +1 attack and +1 defense.",
   Fast: "This die deals combat damage before dice without Fast. A die KO'd by that early damage does not deal its normal combat damage back. Fast dice fighting each other deal their damage simultaneously.",
-  Founder: "Founder identifies this character for abilities that refer to Founder dice. It does not add an effect by itself; follow the ability text on the cards that refer to it.",
+  Elder: "Elder identifies this character for abilities that refer to Elder dice. It does not add an effect by itself; follow the ability text on the cards that refer to it.",
   Global: "A Global ability is available to either player, even if they do not own the card or have one of its dice active. Pay its stated cost in an allowed Global window, then resolve its text.",
   Infiltrate: "When this attacking die is unblocked, you may return it to the Field Zone and deal 1 damage to the opponent instead of its normal unblocked combat damage.",
   Intimidate: "When fielded, remove a target opposing creature from the Field until the end of the turn. While removed, it is not active, cannot block, and cannot be targeted. It returns on the same face at Clean Up.",

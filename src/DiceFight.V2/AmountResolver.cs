@@ -28,6 +28,7 @@ public static class AmountResolver
             // resolution EffectContext/CapturedStats to read from - see
             // MultipleOf's own remarks for why this reads the BASE stat).
             MultipleOf m => ResolveMultipleOf(state, bindings, m),
+            StatOf s => ResolveStatOf(state, bindings, s, includeContinuous),
             _ => throw new NotSupportedException($"Unknown Amount type '{amount.GetType().Name}'."),
         };
     }
@@ -41,9 +42,22 @@ public static class AmountResolver
         {
             StatKind.Attack => QueryEngine.GetBaseAttack(state, die),
             StatKind.Defense => QueryEngine.GetBaseDefense(state, die),
+            StatKind.PrintedAttack => state.GetCurrentFace(die)?.Character?.Attack ?? 0,
+            StatKind.PrintedDefense => state.GetCurrentFace(die)?.Character?.Defense ?? 0,
             _ => throw new NotSupportedException($"MultipleOf doesn't support StatKind.{m.Stat}."),
         };
         return baseStat * m.Multiplier;
+    }
+
+    private static int ResolveStatOf(GameState state, IReadOnlyDictionary<string, string> bindings,
+        StatOf stat, bool includeContinuous)
+    {
+        if (!bindings.TryGetValue(stat.Binding, out var id))
+            throw new InvalidOperationException($"StatOf references unbound die '{stat.Binding}'.");
+        var die = FindDie(state, id);
+        var threshold = new StatThreshold(stat.Stat);
+        return includeContinuous ? QueryEngine.GetStatValue(state, die, threshold)
+            : QueryEngine.GetBaseStatValue(state, die, threshold);
     }
 
     private static int ResolvePerMatch(GameState state, string controllerId, PerMatch p, IReadOnlyDictionary<string, string> bindings, ProtectionFrom? protection, bool includeContinuous)

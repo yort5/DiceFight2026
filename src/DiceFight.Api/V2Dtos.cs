@@ -18,7 +18,7 @@ namespace DiceFight.Api;
 // CardDefDto/DieDto/PlayerDto/GameStateDto/etc. for v1. SeatDto is the one
 // exception: reused as-is from Dtos.cs, since a seat is just two strings
 // with no engine-specific type in it at all.
-public sealed record V2CharacterFaceDto(int FieldingCost, int Attack, int Defense);
+public sealed record V2CharacterFaceDto(int FieldingCost, int Attack, int Defense, int Burst = 0);
 
 public sealed record V2CardDefDto(
     string Id, string Name, string? Subtitle, int PurchaseCost,
@@ -33,7 +33,8 @@ public sealed record V2CardDefDto(
     // (Rhinoceros) - read off the ability, not the name. The client shows
     // that reflected damage as its own lane marker, apart from "to face"
     // (2026-09-30: folding the two together read as confusing).
-    bool ReflectsDamage = false,
+    bool ReflectsDamage = false, bool HasErrata = false, bool IsImplemented = true,
+    string? Type = null, string? Set = null, IReadOnlyList<string>? Affiliations = null,
     // Pack rarity (DiceKingdomPacks) - null for Basic Actions.
     string? Rarity = null)
 {
@@ -52,7 +53,7 @@ public sealed record V2CardDefDto(
         return new(
             card.Id, card.Name, card.Subtitle, card.PurchaseCost, card.EnergySymbolIds, card.DieLimit,
             card.Die.Faces.Where(f => f.Character is not null)
-                .Select(f => new V2CharacterFaceDto(f.Character!.FieldingCost, f.Character.Attack, f.Character.Defense))
+                .Select(f => new V2CharacterFaceDto(f.Character!.FieldingCost, f.Character.Attack, f.Character.Defense, f.Burst))
                 .ToList(),
             card.RawText, card.Keywords,
             card.CardType.IsActionDie(),
@@ -61,7 +62,8 @@ public sealed record V2CardDefDto(
             card.Die.Faces.SelectMany(f => f.Symbols).Select(sym => sym.SymbolId).FirstOrDefault(),
             card.Abilities.Any(a => a.Trigger == TriggerKind.DieDamaged
                 && a.Effect is DealDamage { Target: { Kind: TargetKind.Player, Ownership: TargetOwnership.Opposing } }),
-            DiceKingdomPacks.Rarities.TryGetValue(card.Id, out var rarity) ? rarity.ToString() : null);
+            card.HasErrata, card.IsImplemented, card.CardType.ToString(), card.Set, card.Affiliations,
+            Rarity: DiceKingdomPacks.Rarities.TryGetValue(card.Id, out var rarity) ? rarity.ToString() : null);
     }
 }
 
@@ -158,9 +160,10 @@ public sealed record V2DieDto(
     }
 }
 
-public sealed record V2DieStatusDto(string Kind, string? Source, string? Duration, string? Keyword)
+public sealed record V2DieStatusDto(string Kind, string? Source, string? Duration, string? Keyword,
+    string? Description = null)
 {
-    public static V2DieStatusDto From(DieStatus s) => new(s.Kind, s.Source, s.Duration, s.Keyword);
+    public static V2DieStatusDto From(DieStatus s) => new(s.Kind, s.Source, s.Duration, s.Keyword, s.Description);
 }
 
 public sealed record V2SpinDto(int Seq, int? FromLevel, int? ToLevel, string Source);

@@ -55,6 +55,8 @@ const META: Record<DieStatusKind, Meta> = {
     mine: "Has a keyword its card doesn't print.", opp: "Has a keyword its card doesn't print." },
   protected: { name: "Shielded", cat: "ability", glyph: "SH", word: "SHIELDED", fill: "solid", prio: 8,
     mine: "Combat damage to it is prevented this turn.", opp: "Combat damage to it is prevented this turn - fighting it won't hurt it." },
+  targetProtected: { name: "Targeting protected", cat: "ability", glyph: "TP", word: "TARGET PROTECTED", fill: "solid", prio: 8,
+    mine: "Protected from targeting by the listed abilities.", opp: "Protected from targeting by the listed abilities." },
   intimidated: { name: "Intimidated", cat: "away", glyph: "↩", word: "AWAY", fill: "outline", prio: 2,
     mine: "Off the Field: can't block or be targeted, while-active effects are off. Returns on the same face.",
     opp: "Off the Field: can't block or be targeted, while-active effects are off. Returns on the same face." },
@@ -160,7 +162,7 @@ export function tileCues(die: Die, cardsById: Map<string, CardDef>, mine: boolea
     tabEdge: mine ? "bottom" : "top",
     blanked: has("blanked"),
     // Armadillo's shield shares the cream side tab when no keyword needs it.
-    granted: grantedStatus?.keyword ? "+" + keywordCode(grantedStatus.keyword) : has("protected") ? "SH" : null,
+    granted: grantedStatus?.keyword ? "+" + keywordCode(grantedStatus.keyword) : has("protected") ? "SH" : has("targetProtected") ? "TP" : null,
     deadly: has("deadly"),
     intimidated: has("intimidated"),
     atk,
@@ -192,7 +194,7 @@ export function explainRows(die: Die, mine: boolean): ExplainRow[] {
   const has = (k: DieStatusKind) => statuses.some((s) => s.kind === k);
   const rows: ExplainRow[] = statuses.map((s) => {
     const meta = META[s.kind];
-    const rule = mine ? meta.mine : meta.opp;
+    const rule = s.description ?? (mine ? meta.mine : meta.opp);
     const title = s.kind === "granted" && s.keyword ? `Has ${s.keyword}` : meta.name;
     const body = s.kind === "granted" && s.keyword
       ? `${s.source ? `From ${s.source}. ` : ""}Has ${s.keyword} this turn, though its card doesn't print it.`

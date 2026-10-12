@@ -513,9 +513,9 @@ public sealed record CardDef
 // user) means every Character die, matching Captain Marvel's own
 // unqualified "your Character dice" text.
 // RequiredKeyword (Angel "Jean Grey's School"/DPS057's own "other
-// character dice with Founder get +1A") is the keyword-scoped
-// counterpart to RequiredAffiliation - "Founder" is modeled as a real
-// KeywordInstance (see the WhenAnotherDieFielded/Cyclops "Founder
+// character dice with Elder get +1A") is the keyword-scoped
+// counterpart to RequiredAffiliation - "Elder" is modeled as a real
+// KeywordInstance (see the WhenAnotherDieFielded/Cyclops "Elder
 // prefix" status update), not an affiliation, so RequiredAffiliation
 // alone can't express it. ExcludeSelf ("OTHER character dice") skips
 // the bonus for any die of the SAME CARD as the granter - a per-CARD,

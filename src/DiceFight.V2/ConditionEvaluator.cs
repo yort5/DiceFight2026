@@ -56,6 +56,7 @@ public static class ConditionEvaluator
         TurnFact c => c.Fact switch
         {
             TurnFactKind.PurchasedThisTurn => state.PurchasedThisTurn.Contains(controllerId),
+            TurnFactKind.PurchasedCharacterThisTurn => state.PurchasedCharacterThisTurn.Contains(controllerId),
             TurnFactKind.FieldedNoOtherCharacterThisTurn => !state.FieldedCharacterThisTurn.Contains(controllerId),
             TurnFactKind.PrepAreaEmpty => !state.DiceIn(controllerId, Zone.PrepArea).Any(),
             _ => false,

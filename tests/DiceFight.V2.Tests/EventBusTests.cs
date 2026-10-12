@@ -317,12 +317,19 @@ public class EventBusTests
         EventBus.Fire(state, down, new GameEvent(TriggerKind.DieFaceChanged, die, "p1", state.CurrentStepId,
             new DieFaceChangedPayload(faces[2], faces[1], FaceChangeCause.Spin)));
         Assert.Empty(down.Pending);
+
+        var unchanged = new AbilityQueue();
+        EventBus.Fire(state, unchanged, new GameEvent(TriggerKind.DieFaceChanged, die, "p1", state.CurrentStepId,
+            new DieFaceChangedPayload(faces[2], faces[2], FaceChangeCause.Spin)));
+        Assert.Empty(unchanged.Pending);
     }
 
-    // The cause is deliberately not checked - v1's own note is "regardless
-    // of what caused the spin".
-    [Fact]
-    public void LevelIncreased_Does_Not_Care_What_Caused_The_Change()
+    [Theory]
+    [InlineData(FaceChangeCause.Roll, false)]
+    [InlineData(FaceChangeCause.Reroll, false)]
+    [InlineData(FaceChangeCause.Spin, true)]
+    [InlineData(FaceChangeCause.Effect, true)]
+    public void LevelIncreased_Excludes_Rolls_And_Rerolls(FaceChangeCause cause, bool shouldTrigger)
     {
         var awakener = LeveledCard("Awakener",
             [new TriggeredAbility(TriggerKind.DieFaceChanged, StubEffect, Filter: new EventFilter(LevelIncreased: true))]);
@@ -330,13 +337,11 @@ public class EventBusTests
         var die = ActiveDie(state, awakener, "p1");
         var faces = state.GetDieDefinition(die).Faces;
 
-        foreach (var cause in new[] { FaceChangeCause.Roll, FaceChangeCause.Reroll, FaceChangeCause.Spin, FaceChangeCause.Effect })
-        {
-            var queue = new AbilityQueue();
-            EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieFaceChanged, die, "p1", state.CurrentStepId,
-                new DieFaceChangedPayload(faces[1], faces[2], cause)));
-            Assert.Single(queue.Pending);
-        }
+        var queue = new AbilityQueue();
+        EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieFaceChanged, die, "p1", state.CurrentStepId,
+            new DieFaceChangedPayload(faces[1], faces[2], cause)));
+        if (shouldTrigger) Assert.Single(queue.Pending);
+        else Assert.Empty(queue.Pending);
     }
 
     // A spin from an ENERGY face has no level to have risen from.

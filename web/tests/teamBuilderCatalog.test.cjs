@@ -58,12 +58,52 @@ test('Basic Action cards are mapped as Basic Actions and retain their die limit 
   const adapter = loadAdapter([]);
   const mapped = adapter.adaptKingdomCard(card({
     id: 'Action', name: 'Action', levels: [], isAction: true, dieLimit: 3,
-    energyTypes: [], rawText: '', actionText: 'Do something.',
+    energyTypes: [], dieEnergyType: 'Shell', rawText: '', actionText: 'Do something.',
     global: { cost: 1, energyType: 'Shell', abilityIndex: 0, text: 'Pay 1 Shell.' },
   }));
   assert.equal(mapped.type, 'BasicAction');
   assert.equal(mapped.dieLimit, 3);
+  assert.equal(mapped.dieEnergyType, 'Shell');
+  assert.deepEqual(Array.from(mapped.energyTypes), []);
   assert.equal(mapped.rawText, 'Do something.');
   assert.equal(mapped.globalAbilityCost.amount, 1);
   assert.equal(mapped.globalAbilityCost.requiredType, 'Shell');
+});
+
+test('Errata metadata survives catalog adaptation without becoming a game keyword', () => {
+  const adapter = loadAdapter([]);
+  const tagged = card({ hasErrata: true });
+  const mapped = adapter.adaptKingdomCard(tagged);
+  assert.equal(mapped.hasErrata, true);
+  assert.deepEqual(Array.from(mapped.keywords), ['Awaken']);
+  assert.equal(adapter.adaptKingdomCard(card()).hasErrata, false);
+  assert.equal(adapter.adaptKingdomCard(card({ hasErrata: false })).hasErrata, false);
+});
+
+test('Registered incomplete cards preserve implementation status and original card metadata', async () => {
+  const original = card({ id: 'MSW019', name: 'Beast', subtitle: 'Olympic Athleticism',
+    energyTypes: ['Mask'], type: 'Character', set: 'MSW', affiliations: ['X-Men'],
+    isImplemented: false, hasErrata: true,
+    levels: [{ fieldingCost: 0, attack: 1, defense: 2, burst: 1 }],
+  });
+  const adapter = loadAdapter([card(), original]);
+  const loaded = await adapter.loadTeamBuilderCards();
+  assert.equal(loaded.length, 2);
+  const mapped = loaded[1];
+  assert.equal(mapped.id, original.id);
+  assert.equal(mapped.isImplemented, false);
+  assert.equal(mapped.hasErrata, true);
+  assert.equal(mapped.set, 'MSW');
+  assert.equal(mapped.type, 'Character');
+  assert.deepEqual(Array.from(mapped.affiliations), ['X-Men']);
+  assert.deepEqual(Array.from(mapped.energyTypes), ['Mask']);
+  assert.equal(mapped.levels[0].burstStars, 1);
+});
+
+test('Action and Basic Action classifications remain distinct in the builder', () => {
+  const mapped = loadAdapter([]).adaptKingdomCard(card({ isAction: true, type: 'Action',
+    isImplemented: false, hasErrata: false, set: 'GOTG' }));
+  assert.equal(mapped.type, 'Action');
+  assert.equal(mapped.isImplemented, false);
+  assert.equal(mapped.hasErrata, false);
 });

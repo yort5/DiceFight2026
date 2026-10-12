@@ -33,6 +33,23 @@ public class GameConfigValidationTests
         Assert.Empty(ValidConfig().Validate());
     }
 
+    [Theory]
+    [InlineData("Range", true)]
+    [InlineData("Range 2", true)]
+    [InlineData("Energy Drain 2", true)]
+    [InlineData("Range 0", false)]
+    [InlineData("Range -1", false)]
+    [InlineData("Range two", false)]
+    [InlineData("Undeclared 2", false)]
+    public void Numbered_Keywords_Must_Have_A_Declared_Base_And_A_Positive_Value(string keyword, bool valid)
+    {
+        var config = ValidConfig() with { Keywords = [new KeywordDef("Range"), new KeywordDef("Energy Drain")] };
+        var card = NamedCard("C1", "Test creature") with { Keywords = [keyword] };
+        var errors = config.ValidateCatalog([card]);
+        if (valid) Assert.Empty(errors);
+        else Assert.Contains(errors, error => error.Contains("keyword") && error.Contains(keyword));
+    }
+
     [Fact]
     public void Die_With_No_Faces_Is_Reported()
     {

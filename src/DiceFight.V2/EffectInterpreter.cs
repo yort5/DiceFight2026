@@ -150,6 +150,13 @@ public static class EffectInterpreter
             case RangeShot n: ExecuteRangeShot(n, ctx, onComplete); break;
             case ResolveRangeShots: ExecuteResolveRangeShots(ctx, onComplete); break;
             case DrawToZone n: ExecuteDrawToZone(n, ctx, onComplete); break;
+            case GrantTargetingProtection n:
+                ctx.State.GrantedTargetingProtections.Add(new GrantedTargetingProtection(
+                    n.Protection, ctx.ControllerId, new Dictionary<string, string>(ctx.Bindings),
+                    n.Duration, SourceName(ctx)));
+                LogAbility(ctx, $"{SourceName(ctx)} grants targeting protection to {ctx.State.NameOf(ctx.ControllerId)}'s creatures.");
+                onComplete();
+                break;
             case FieldDie n: ExecuteFieldDie(n, ctx, onComplete); break;
             case Reroll n: ExecuteReroll(n, ctx, onComplete); break;
             case Spin n: ExecuteSpin(n, ctx, onComplete); break;
@@ -165,6 +172,13 @@ public static class EffectInterpreter
             case CombatFlag n: ExecuteCombatFlag(n, ctx, onComplete); break;
             case MayPay n: ExecuteMayPay(n, ctx, onComplete); break;
             case Conditional n: ExecuteConditional(n, ctx, onComplete); break;
+            case EmitEvent n:
+                var subject = ctx.Bindings.TryGetValue(n.SubjectBinding, out var subjectId)
+                    ? FindDie(ctx.State, subjectId) : null;
+                EventBus.Fire(ctx.State, ctx.Queue, new GameEvent(n.Kind, subject,
+                    subject?.ControllerId ?? ctx.ControllerId, ctx.State.CurrentStepId));
+                onComplete();
+                break;
             case DrawAndChooseOne n: ExecuteDrawAndChooseOne(n, ctx, onComplete); break;
             case GrantCounter n: ExecuteGrantCounter(n, ctx, onComplete); break;
             default: throw new NotSupportedException($"Unknown effect node type '{node.GetType().Name}'.");
@@ -794,8 +808,10 @@ public static class EffectInterpreter
                 // becomes 2A - 1A swapped in, plus Lois's +1A again,
                 // because it is still a SuperFriend and still attacking.
                 // Against GetAttack it would have shown 1A.
-                var atkDelta = n.SetAttack is { } setAtk ? ResolveAmount(ctx, setAtk) - QueryEngine.GetBaseAttack(ctx.State, die) : n.AtkDelta ?? 0;
-                var defDelta = n.SetDefense is { } setDef ? ResolveAmount(ctx, setDef) - QueryEngine.GetBaseDefense(ctx.State, die) : n.DefDelta ?? 0;
+                // A per-recipient binding lets one stat effect calculate each die independently.
+                ctx.Bind("affected", id);
+                var atkDelta = n.SetAttack is { } setAtk ? ResolveAmount(ctx, setAtk) - QueryEngine.GetBaseAttack(ctx.State, die) : (n.AtkDelta ?? 0) + (n.AttackBonus is { } bonusAtk ? ResolveAmount(ctx, bonusAtk) : 0);
+                var defDelta = n.SetDefense is { } setDef ? ResolveAmount(ctx, setDef) - QueryEngine.GetBaseDefense(ctx.State, die) : (n.DefDelta ?? 0) + (n.DefenseBonus is { } bonusDef ? ResolveAmount(ctx, bonusDef) : 0);
                 die.AppliedModifiers.Add(new AppliedModifier(atkDelta, defDelta, 0, source, n.Duration, grantedDuring));
                 // Said in the log (2026-10-08: a recorded game showed "Wolf
                 // uses their Champion power." and nothing about which
@@ -1188,10 +1204,10 @@ public static class EffectInterpreter
             die.AttackOrder = null;
         }
         die.Zone = toZone;
+        if (!ShowsFace(toZone)) die.CurrentFaceIndex = null;
 
         if (wasActive && !enteringActive)
         {
-            if (!ShowsFace(toZone)) die.CurrentFaceIndex = null;
             die.Damage = 0;
             die.AppliedModifiers.Clear();
             die.GrantedTags.Clear();

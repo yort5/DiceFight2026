@@ -53,3 +53,12 @@ test('every rules entry can be reached from its canonical printed name', () => {
     assert.deepEqual(splitKeywordText(keyword), [{ text: keyword, keyword, explanation }]);
   }
 });
+
+
+test('Elder is the keyword marker used by adapted cards and their popup explanations', () => {
+  assert.ok(KEYWORD_RULES.Elder.includes('Elder dice'));
+  assert.equal(KEYWORD_RULES.Founder, undefined);
+  const parts = splitKeywordText('Elder. Other creatures with Elder get +1A.');
+  assert.deepEqual(parts.filter(part => part.keyword).map(part => part.keyword), ['Elder', 'Elder']);
+  assert.equal(splitKeywordText('Founder').some(part => part.keyword), false);
+});

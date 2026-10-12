@@ -23,8 +23,8 @@ public static class DiceKingdomPacks
     // Once per UTC day, on the first visit (PlayerAccounts.ClaimDaily).
     public const int DailyCoins = 5;
 
-    // Every Character in the Catalog. Basic Actions aren't in packs - each
-    // comes with its Champion. 18 Common, 14 Uncommon, 10 Rare, 4 Super Rare.
+    // Every playable Character in the Catalog. Basic Actions aren't in packs.
+    // 26 Common, 20 Uncommon, 15 Rare, 6 Super Rare. Incomplete cards are excluded.
     public static readonly IReadOnlyDictionary<string, CardRarity> Rarities = new Dictionary<string, CardRarity>
     {
         // Claw
@@ -77,13 +77,38 @@ public static class DiceKingdomPacks
         [DiceKingdomConfig.Cuttlefish.Id] = CardRarity.Common,
         [DiceKingdomConfig.FrilledLizard.Id] = CardRarity.Uncommon,
         [DiceKingdomConfig.Chameleon.Id] = CardRarity.Rare,
+
+        // Implemented adaptations. Preserve their printed source rarities from
+        // src/DiceFight.Engine/Data/CardRarity.json ("Super" becomes SuperRare).
+        // Stable source IDs are retained when cards receive their animal names.
+        ["CW014"] = CardRarity.Common, // Pufferfish
+        ["DPS029"] = CardRarity.Common, // Deathstalker Scorpion
+        ["DPS031"] = CardRarity.Common, // Woodpecker
+        ["DPS033"] = CardRarity.Common, // Frigatebird
+        ["DPS038"] = CardRarity.Common, // Secretary Bird
+        ["DPS057"] = CardRarity.Uncommon, // Gibbon
+        ["DPS059"] = CardRarity.Uncommon, // Kangaroo Rat
+        ["DPS061"] = CardRarity.Uncommon, // Wild Boar
+        ["DPS071"] = CardRarity.Uncommon, // Orb Weaver
+        ["DPS093"] = CardRarity.Uncommon, // Giant Centipede
+        ["DPS099"] = CardRarity.Rare, // Dung Beetle
+        ["DPS102"] = CardRarity.Rare, // Lioness
+        ["DPS113"] = CardRarity.Rare, // Saiga
+        ["DPS114"] = CardRarity.Rare, // Mandrill
+        ["DPS142"] = CardRarity.SuperRare, // Wombat
+        ["DPS148"] = CardRarity.SuperRare, // Bison
+        ["GOTG105"] = CardRarity.Rare, // Sugar Glider
+        ["JLL002"] = CardRarity.Common, // Stag Beetle
+        ["MSW020"] = CardRarity.Common, // Puffin
+        ["SKC090"] = CardRarity.Uncommon, // Spitting Cobra
+        ["TAG003"] = CardRarity.Common, // Prairie Dog
     };
 
     // A pack is five dice: three Commons, an Uncommon, and a "rare slot"
     // that's an Uncommon 55%, a Rare 40% or a Super Rare 5% (one pack in
     // twenty; about 2 in 5 players see one in their first ten packs).
-    // Per card that's roughly: each Common 1 pack in 6, each Uncommon 1 in
-    // 9, each Rare 1 in 25, each Super Rare 1 in 80.
+    // Picks are uniform within the selected rarity; expanding its pool changes
+    // per-card odds, while the slot rarity probabilities stay the same.
     public static readonly IReadOnlyList<IReadOnlyList<(CardRarity Rarity, int Weight)>> Slots =
     [
         [(CardRarity.Common, 1)],

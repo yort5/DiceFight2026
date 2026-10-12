@@ -2,10 +2,10 @@ import { useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode 
 import { matchesQuery } from "./cardSearch";
 import { CardText } from "./CardText";
 import { AffiliationBadge, AffiliationIcons } from "./AffiliationIcons";
-import { buildAffiliationIconIndex } from "./affiliationIndex";
+import { buildAffiliationIconIndex, SHOW_AFFILIATIONS } from "./affiliationIndex";
 import { DieFace } from "./DieFace";
 import { EnergyTypes } from "./GameIcon";
-import { ENERGY_ICONS as KINGDOM_ENERGY_ICONS } from "./dicekingdom/icons";
+import { CHARACTER_ICONS, ENERGY_ICONS as KINGDOM_ENERGY_ICONS } from "./dicekingdom/icons";
 import { api } from "./api";
 import { loadTeamBuilderCards, USE_DICE_KINGDOM_CATALOG } from "./teamBuilderCatalog";
 import { stashPendingGame } from "./gameHandoff";
@@ -33,6 +33,29 @@ import type { CardDef } from "./types";
 // legality (house rules/alternate formats are common - see
 // TeamSetup.cs's own remarks) - only this page does, and which limits it
 // applies is the player's choice of ruleset (see rulesets.ts).
+
+function CardAvatar({ card, size = 24 }: { card: CardDef; size?: number }) {
+  const Avatar = CHARACTER_ICONS[card.id];
+  return Avatar ? <span className="builder-card-avatar" role="img" aria-label={`${card.name} icon`}>
+    <Avatar size={size} />
+  </span> : null;
+}
+
+function CardBadges({ card }: { card: CardDef }) {
+  return <span className="builder-card-badges">
+    {card.hasErrata && <span className="card-errata" role="img" aria-label="Errata: adjusted card"
+      title="Errata: this card has been adjusted from its reference version.">
+      <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" fill="none"
+        stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M13 3H5v18h14v-7M8 8h4M8 12h2" />
+        <path d="m12 15 1-4 7-7 3 3-7 7-4 1ZM18 6l3 3" />
+      </svg>
+      <span aria-hidden="true">Errata</span>
+    </span>}
+    {!card.isImplemented && <span className="result-paper"
+      title="Implementation is incomplete. Remove this card before starting a game.">Incomplete</span>}
+  </span>;
+}
 
 const BASIC_ACTION_TYPES = new Set(["BasicAction", "EpicBasicAction"]);
 
@@ -309,10 +332,6 @@ export function TeamBuilderPage() {
   // excluded by a default that was baked in today.
   const [minCost, setMinCost] = useState<number | null>(null);
   const [maxCost, setMaxCost] = useState<number | null>(null);
-  // Defaults to TRUE: the catalog is useful as a reference long before the
-  // simulator covers it, and in this phase it gets far more use than the
-  // game does, so hiding four fifths of the cards by default is backwards.
-  const [showUnimplemented, setShowUnimplemented] = useState(true);
   // Format is a single-select preset (the presets are mutually
   // exclusive release-order cutoffs), while the Orange Ban list is a
   // separate checkbox layered on top - it is normally used in
@@ -696,6 +715,10 @@ export function TeamBuilderPage() {
   function playCustomTeam(confirmed = false) {
     const errors: string[] = [];
     if (!legality.ok) errors.push(legality.note);
+    const incomplete = teamEntries.filter(({ card }) => !card.isImplemented);
+    if (incomplete.length > 0) {
+      errors.push(`Incomplete cards must be removed before playing: ${incomplete.map(({ card }) => card.name + (card.subtitle ? ` — ${card.subtitle}` : "")).join(", ")}.`);
+    }
     if (tardigradeCount !== MAX_STARTING_TARDIGRADES) {
       errors.push(`Select exactly ${MAX_STARTING_TARDIGRADES} starting Tardigrades (currently ${tardigradeCount}/${MAX_STARTING_TARDIGRADES}).`);
     }
@@ -835,7 +858,6 @@ export function TeamBuilderPage() {
     setMaxCost(null);
     setFormatId("");
     setApplyOrangeBan(false);
-    setShowUnimplemented(true);
   }
 
   function removeFrom(set: Set<string>, setSet: (s: Set<string>) => void, value: string) {
@@ -878,7 +900,7 @@ export function TeamBuilderPage() {
         remove: () => removeFrom(activeRarities, setActiveRarities, r),
       });
     }
-    for (const a of activeAffiliations) {
+    for (const a of SHOW_AFFILIATIONS ? activeAffiliations : []) {
       chips.push({
         key: `affiliation:${a}`,
         name: a,
@@ -907,29 +929,20 @@ export function TeamBuilderPage() {
     if (applyOrangeBan) {
       chips.push({ key: "ban", name: "Orange Ban list", label: "Orange Ban list", remove: () => setApplyOrangeBan(false) });
     }
-    // Only a filter when it is OFF - on, it is showing MORE cards, which
-    // is the default and narrows nothing.
-    if (!showUnimplemented) {
-      chips.push({
-        key: "implemented",
-        name: "Engine-ready only",
-        label: "Engine-ready only",
-        remove: () => setShowUnimplemented(true),
-      });
-    }
     return chips;
   }, [
     activeTypes, activeEnergyTypes, activeRarities, activeAffiliations, activeSets,
-    minCost, maxCost, activeFormat, applyOrangeBan, showUnimplemented, affiliationIconIndex,
+    minCost, maxCost, activeFormat, applyOrangeBan, affiliationIconIndex,
   ]);
 
   const filtered = useMemo(() => {
     const needle = deferredSearch.trim().toLowerCase();
     return (cards ?? []).filter((c) => {
-      if (!showUnimplemented && !c.isImplemented) return false;
+      // Keep unfinished definitions available for saved-team validation, but never offer them for selection.
+      if (!c.isImplemented) return false;
       if (activeTypes.size > 0 && !activeTypes.has(c.type)) return false;
       if (activeEnergyTypes.size > 0 && !c.energyTypes.some((e) => activeEnergyTypes.has(e))) return false;
-      if (activeAffiliations.size > 0 && !c.affiliations.some((a) => activeAffiliations.has(a))) return false;
+      if (SHOW_AFFILIATIONS && activeAffiliations.size > 0 && !c.affiliations.some((a) => activeAffiliations.has(a))) return false;
       if (activeSets.size > 0 && (!c.set || !activeSets.has(c.set))) return false;
       if (minCost !== null && c.purchaseCost < minCost) return false;
       if (maxCost !== null && c.purchaseCost > maxCost) return false;
@@ -943,7 +956,7 @@ export function TeamBuilderPage() {
       // (& | ~ ^) lives in cardSearch.ts.
       return matchesQuery(c, needle);
     });
-  }, [cards, deferredSearch, activeTypes, activeEnergyTypes, activeAffiliations, activeSets, activeRarities, minCost, maxCost, showUnimplemented, activeFormat, applyOrangeBan]);
+  }, [cards, deferredSearch, activeTypes, activeEnergyTypes, activeAffiliations, activeSets, activeRarities, minCost, maxCost, activeFormat, applyOrangeBan]);
 
   const sorted = useMemo(() => {
     const dir = sort.direction === "asc" ? 1 : -1;
@@ -988,8 +1001,8 @@ export function TeamBuilderPage() {
             <input
               type="text"
               className="rail-search"
-              placeholder={USE_DICE_KINGDOM_CATALOG ? "name or ability text…" : "name, text, affiliation…"}
-              title={"Matches name, subtitle, affiliation and rules text.\n\n" +
+              placeholder="name or ability text…"
+              title={"Matches name, subtitle and rules text.\n\n" +
                      "a & b   both      a | b   either\n" +
                      "~a      exclude   ^a      name starts with"}
               value={search}
@@ -1103,7 +1116,7 @@ export function TeamBuilderPage() {
             </div>
 
             {!USE_DICE_KINGDOM_CATALOG && <>
-            <div className="rail-section">
+            {SHOW_AFFILIATIONS && <div className="rail-section">
               <div className="rail-section-head">
                 <h3 className="rail-label">Affiliation</h3>
                 <span className="rail-summary">
@@ -1136,7 +1149,7 @@ export function TeamBuilderPage() {
                 ))}
                 {shownAffiliations.length === 0 && <p className="rail-hint">No affiliation matches that.</p>}
               </div>
-            </div>
+            </div>}
 
             <div className="rail-section">
               <div className="rail-section-head">
@@ -1184,15 +1197,7 @@ export function TeamBuilderPage() {
                 <span className="rail-toggle-track" aria-hidden="true"><span className="rail-toggle-knob" /></span>
                 <span>Apply Orange Ban list ({ORANGE_BAN_LIST.length} cards)</span>
               </label>
-              <label className="rail-toggle">
-                <input
-                  type="checkbox"
-                  checked={showUnimplemented}
-                  onChange={(e) => setShowUnimplemented(e.target.checked)}
-                />
-                <span className="rail-toggle-track" aria-hidden="true"><span className="rail-toggle-knob" /></span>
-                <span>Include cards the engine can't run yet</span>
-              </label>
+
             </div>
             </>}
           </section>
@@ -1201,7 +1206,7 @@ export function TeamBuilderPage() {
         <div className="main-column" id="builder-catalog">
           <h2>{USE_DICE_KINGDOM_CATALOG ? "Dice Kingdom — Team Builder" : "Team Builder - Card Search"}</h2>
           {!USE_DICE_KINGDOM_CATALOG && <p className="hint">
-            Browse the full card catalog. Cards marked "paper only" are not yet modeled by the game engine - searchable and printable here, fine on a table, just not playable in a simulated game.
+            Browse cards that are implemented and available to use in the game.
           </p>}
 
           {/* What is narrowing the results, shown WITH the results. A chip
@@ -1216,7 +1221,7 @@ export function TeamBuilderPage() {
                 not. */}
             {filterChips.length === 0 && (
               <span className="rail-hint">
-                {search.trim() ? "search only — no filters set" : "nothing — showing the whole catalog"}
+                {search.trim() ? "search only — playable cards" : "nothing — showing all playable cards"}
               </span>
             )}
             {filterChips.map((chip) => (
@@ -1297,21 +1302,11 @@ export function TeamBuilderPage() {
                       <div className="result-identity">
                         <div className="result-headline">
                           <RarityBadge rarity={c.rarity} />
+                          <CardAvatar card={c} />
                           <span className="result-name">{c.name}</span>
                           {c.subtitle && !isBasicActionFamily(c) && <span className="result-subtitle">{c.subtitle}</span>}
                           <span className="result-type">{typeLabel(c.type)}</span>
-                          {/* Replaces the "OK" column, whose tick meant
-                              the opposite of what a blank one looked
-                              like it meant. A card the engine cannot run
-                              is not broken - it is fine on a table. */}
-                          {!c.isImplemented && (
-                            <span
-                              className="result-paper"
-                              title="Not yet modeled by the game engine - fine for physical play."
-                            >
-                              paper only
-                            </span>
-                          )}
+                          <CardBadges card={c} />
                         </div>
                         <div className="result-text"><CardText text={c.rawText} /></div>
                       </div>
@@ -1327,6 +1322,12 @@ export function TeamBuilderPage() {
                             <span className="stat-energy"><BuilderEnergyTypes types={c.energyTypes} /></span>
                           </div>
                         )}
+                        {isBasicActionFamily(c) && c.dieEnergyType && (
+                          <div className="stat">
+                            <span className="stat-caption">die energy</span>
+                            <span className="stat-energy"><BuilderEnergyTypes types={[c.dieEnergyType]} /></span>
+                          </div>
+                        )}
                         {c.levels.length > 0 && (
                           <div className="stat">
                             <span className="stat-caption">levels · max {c.dieLimit}</span>
@@ -1340,7 +1341,7 @@ export function TeamBuilderPage() {
                             </span>
                           </div>
                         )}
-                        {c.affiliations.length > 0 && (
+                        {SHOW_AFFILIATIONS && c.affiliations.length > 0 && (
                           <div className="stat">
                             <span className="stat-caption">affil</span>
                             <span className="stat-affiliations">
@@ -1487,8 +1488,10 @@ export function TeamBuilderPage() {
                       <div className="slot-top">
                         <RarityBadge rarity={card.rarity} />
                         <div className="slot-name-line">
+                          <CardAvatar card={card} />
                           <span className="slot-name" title={card.name}>{card.name}</span>
                           {card.set && <span className="slot-set">({card.set})</span>}
+                          <CardBadges card={card} />
                         </div>
                         <button
                           className="slot-remove"
@@ -1503,7 +1506,7 @@ export function TeamBuilderPage() {
                       <div className="slot-meta">
                         <span className="slot-cost" title="Purchase cost">Cost {card.purchaseCost}</span>
                         {card.energyTypes.length > 0 && <BuilderEnergyTypes types={card.energyTypes} />}
-                        {card.affiliations.length > 0 && (
+                        {SHOW_AFFILIATIONS && card.affiliations.length > 0 && (
                           <span className="slot-affiliations">
                             <AffiliationIcons
                               codes={card.affiliationIcons}
@@ -1558,11 +1561,14 @@ export function TeamBuilderPage() {
                         </button>
                       </div>
                       <div className="slot-name-line">
-                        <span className="slot-name" title={card.name}>{card.name}</span>
+                        <CardAvatar card={card} />
+                          <span className="slot-name" title={card.name}>{card.name}</span>
                         {card.set && <span className="slot-set">({card.set})</span>}
+                        <CardBadges card={card} />
                       </div>
                       <div className="slot-meta">
                         <span className="slot-cost" title="Purchase cost">Cost {card.purchaseCost}</span>
+                        {card.dieEnergyType && <span title="Energy provided by the die">Die: <BuilderEnergyTypes types={[card.dieEnergyType]} /></span>}
                       </div>
                       {card.rawText.trim() && <div className="slot-ability"><CardText text={card.rawText} /></div>}
                       <div className="slot-ba-dice"><FixedDiceDisplay count={count} limit={card.dieLimit} /> <span>· outside the dice cap</span></div>
@@ -1581,8 +1587,10 @@ export function TeamBuilderPage() {
                     <RarityBadge rarity={card.rarity} />
                     <div className="team-card-identity">
                       <div className="team-card-name-line">
+                        <CardAvatar card={card} />
                         <span className="team-card-name">{card.name}</span>
                         {card.set && <span className="team-card-set">({card.set})</span>}
+                        <CardBadges card={card} />
                       </div>
                       {card.subtitle && !isBasicActionFamily(card) && <div className="hint">{card.subtitle}</div>}
                     </div>
@@ -1604,8 +1612,8 @@ export function TeamBuilderPage() {
                   </div>
                   <div className="team-card-meta">
                     <span className="team-card-cost" title="Purchase cost">Cost {card.purchaseCost}</span>
-                    <span>{card.energyTypes.length > 0 ? <BuilderEnergyTypes types={card.energyTypes} /> : "No energy type"}</span>
-                    {card.affiliations.length > 0 && (
+                    <span>{card.energyTypes.length > 0 ? <BuilderEnergyTypes types={card.energyTypes} /> : card.dieEnergyType ? <>Die: <BuilderEnergyTypes types={[card.dieEnergyType]} /></> : "No energy type"}</span>
+                    {SHOW_AFFILIATIONS && card.affiliations.length > 0 && (
                       <span><AffiliationIcons codes={card.affiliationIcons} names={card.affiliations} index={affiliationIconIndex} /></span>
                     )}
                   </div>
@@ -1673,16 +1681,16 @@ export function TeamBuilderPage() {
                   <span className="shape-stat-value">{teamShape.playableDice}/{totalDice}</span>
                   <span className="shape-stat-caption">playable in app</span>
                 </div>
-                <div className="shape-stat">
+                {SHOW_AFFILIATIONS && <div className="shape-stat">
                   <span className="shape-stat-value">{teamShape.affiliations.length}</span>
                   <span className="shape-stat-caption">affiliations</span>
-                </div>
+                </div>}
               </div>
 
               {/* The fastest read on whether an affiliation-dependent team
                   actually has the bodies: "X-Men · 3 dice" answers it,
                   where a list of card names does not. */}
-              {teamShape.affiliations.length > 0 && (
+              {SHOW_AFFILIATIONS && teamShape.affiliations.length > 0 && (
                 <div className="shape-affiliations">
                   {teamShape.affiliations.map(({ name, dice }) => (
                     <span className="shape-affiliation" key={name}>

@@ -276,7 +276,7 @@ public enum TriggerType
     WhenKOsOpposingCharacter,
 
     // "While active, when you field [a die matching some filter], [my
-    // card] reacts" - Cyclops "First Class"/DPS025 (filtered to Founder-
+    // card] reacts" - Cyclops "First Class"/DPS025 (filtered to Elder-
     // keyword dice), Jubilee "X-Men Field Leader"/DPS143 (unfiltered -
     // any of your own dice being fielded). Same shape as
     // WhenAnotherDieKOd just above, one trigger point earlier in a die's
@@ -298,7 +298,7 @@ public enum TriggerType
 
     // "While active, when [a die matching some filter] attacks, [my
     // card] reacts" - Beast "First Class"/DPS058 ("a character die with
-    // Founder attacks"). Same WhenAnotherDieKOd/WhenAnotherDieFielded
+    // Elder attacks"). Same WhenAnotherDieKOd/WhenAnotherDieFielded
     // shape, one trigger point later in a die's turn: AbilityDef.
     // AttackedFilter (an AttackedDieMatch) is the per-card data,
     // CombatEngine.DeclareAttackers' own attacker loop is the shared
