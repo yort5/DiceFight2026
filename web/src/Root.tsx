@@ -2,6 +2,7 @@ import App from "./App";
 import { AccountPage } from "./dicekingdom/AccountPage";
 import { DiceKingdomPage } from "./dicekingdom/DiceKingdomPage";
 import { DiceKingdomMobilePage } from "./dicekingdom/DiceKingdomMobilePage";
+import { PacksPage } from "./dicekingdom/PacksPage";
 import { useRoute } from "./router";
 import { TeamBuilderPage } from "./TeamBuilderPage";
 import { KeywordPreviewProvider } from "./KeywordPreview";
@@ -18,5 +19,6 @@ function Screen({ route }: { route: string }) {
   if (route === "/dice-kingdom/mobile") return <DiceKingdomMobilePage />;
   if (route === "/dice-kingdom") return <DiceKingdomPage />;
   if (route === "/dice-kingdom/account") return <AccountPage />;
+  if (route === "/dice-kingdom/packs") return <PacksPage />;
   return <App />;
 }

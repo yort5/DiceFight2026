@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Channels;
 using DiceFight.Api.Recording;
+using DiceFight.V2.Data;
 
 namespace DiceFight.Api.Accounts;
 
@@ -18,7 +19,7 @@ namespace DiceFight.Api.Accounts;
 // Every player read is kept in memory - one Cloud Run instance, a hobby's
 // worth of players. Writes queue and run in the background, like
 // GameRecorder's. All changes to players happen under one lock.
-public sealed class PlayerAccounts(IGameRecordSink? store, ILogger<PlayerAccounts> logger) : BackgroundService
+public sealed class PlayerAccounts(IGameRecordSink? store, ILogger<PlayerAccounts> logger, TimeProvider? clock = null) : BackgroundService
 {
     public const string TokenHeader = "X-Player-Token";
     public const string Prefix = "dice-kingdom/players/";
@@ -162,13 +163,70 @@ public sealed class PlayerAccounts(IGameRecordSink? store, ILogger<PlayerAccount
                     if (owner == caller.Id) session.SeatOwners[seat] = target.Id;
             foreach (var lobby in lobbies)
                 if (lobby.HostOwnerId == caller.Id) lobby.HostOwnerId = target.Id;
+            if (caller.Collection is { } theirs)
+            {
+                if (target.Collection is not { } mine) target.Collection = theirs;
+                else
+                {
+                    // Both got the starting coins; the account keeps one
+                    // grant's worth, or every throwaway device linked in
+                    // would bring another 100.
+                    mine.Coins = Math.Max(0, mine.Coins + theirs.Coins - DiceKingdomPacks.StartingCoins);
+                    foreach (var (card, count) in theirs.Dice) mine.Dice[card] = mine.Dice.GetValueOrDefault(card) + count;
+                    mine.PacksOpened += theirs.PacksOpened;
+                    if (string.CompareOrdinal(theirs.LastDailyDate, mine.LastDailyDate) > 0) mine.LastDailyDate = theirs.LastDailyDate;
+                }
+            }
             caller.Devices = [];
             caller.Games = [];
+            caller.Collection = null;
             caller.MergedInto = target.Id;
             Save(target);
             Save(caller, force: true);
         }
         return target;
+    }
+
+    // --- Coins and packs (DiceKingdomPacks)
+
+    // The player's collection, made with the starting coins on first use,
+    // and today's coins if they haven't had them yet (DailyCoins - how many
+    // were just given, for the client to mention).
+    public (PlayerCollection Collection, int DailyCoins) Wallet(PlayerAccount player)
+    {
+        var today = DateOnly.FromDateTime((clock ?? TimeProvider.System).GetUtcNow().UtcDateTime).ToString("yyyy-MM-dd");
+        lock (_gate)
+        {
+            var given = 0;
+            if (player.Collection is null)
+                // A new player's first day is covered by the starting coins.
+                player.Collection = new PlayerCollection { Coins = DiceKingdomPacks.StartingCoins, LastDailyDate = today };
+            else if (player.Collection.LastDailyDate != today)
+            {
+                player.Collection.Coins += given = DiceKingdomPacks.DailyCoins;
+                player.Collection.LastDailyDate = today;
+            }
+            Save(player);
+            return (player.Collection, given);
+        }
+    }
+
+    // Buys and opens one pack: the coins go and its dice join the
+    // collection in the same step. `roll(n)` picks from 0..n-1.
+    public IReadOnlyList<string> OpenPack(PlayerAccount player, Func<int, int>? roll = null)
+    {
+        var (collection, _) = Wallet(player);
+        lock (_gate)
+        {
+            if (collection.Coins < DiceKingdomPacks.PackPrice)
+                throw new InvalidOperationException($"A pack costs {DiceKingdomPacks.PackPrice} coins - you have {collection.Coins}.");
+            var cards = DiceKingdomPacks.Open(roll ?? RandomNumberGenerator.GetInt32);
+            collection.Coins -= DiceKingdomPacks.PackPrice;
+            collection.PacksOpened++;
+            foreach (var card in cards) collection.Dice[card] = collection.Dice.GetValueOrDefault(card) + 1;
+            Save(player);
+            return cards;
+        }
     }
 
     // --- Games. Each owner's PlayedGame is updated as the game goes:
@@ -316,7 +374,8 @@ public sealed class PlayerAccounts(IGameRecordSink? store, ILogger<PlayerAccount
 
     // --- Storage
 
-    private static bool ShouldKeep(PlayerAccount p) => p.Name is not null || p.Games.Count > 0 || p.Devices.Count > 1;
+    private static bool ShouldKeep(PlayerAccount p) =>
+        p.Name is not null || p.Games.Count > 0 || p.Devices.Count > 1 || p.Collection is { PacksOpened: > 0 };
 
     private void Save(PlayerAccount player, bool force = false)
     {

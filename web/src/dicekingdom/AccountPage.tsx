@@ -10,7 +10,7 @@ import { players, type Me, type PlayedGame } from "./player";
 import { ThemeToggle, useTheme } from "./ThemeToggle";
 
 /** Back to whichever Dice Kingdom page sent you here (?from=mobile). */
-function backPath(): "/dice-kingdom" | "/dice-kingdom/mobile" {
+export function backPath(): "/dice-kingdom" | "/dice-kingdom/mobile" {
   return new URLSearchParams(window.location.search).get("from") === "mobile" ? "/dice-kingdom/mobile" : "/dice-kingdom";
 }
 
@@ -41,6 +41,21 @@ export function AccountLink({ from }: { from?: "mobile" }) {
       >
         {me?.name ? "Your account" : "Make an account"}
       </a>
+      {me && (
+        <>
+          {" · "}
+          <a
+            href={`/dice-kingdom/packs${search}`}
+            onClick={(e) => {
+              e.preventDefault();
+              navigate("/dice-kingdom/packs", search);
+            }}
+          >
+            Packs
+          </a>{" "}
+          ({me.coins} coins{me.dailyCoins > 0 && <b className="dk-daily-coins"> +{me.dailyCoins} today</b>})
+        </>
+      )}
     </p>
   );
 }

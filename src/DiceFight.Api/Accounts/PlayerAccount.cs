@@ -19,9 +19,23 @@ public sealed class PlayerAccount
     public string? Name { get; set; }
     public List<PlayerDevice> Devices { get; set; } = [];
     public List<PlayedGame> Games { get; set; } = [];
+    // Coins and the dice pulled from packs (2026-10-12). Null until the
+    // player's first visit after packs arrived, which grants the starting
+    // coins (PlayerAccounts.Wallet).
+    public PlayerCollection? Collection { get; set; }
     // This player was linked into another one; its devices and games moved
     // there, and its old tokens resolve to that one.
     public string? MergedInto { get; set; }
+}
+
+public sealed class PlayerCollection
+{
+    public int Coins { get; set; }
+    // The UTC day the daily coins were last given, "2026-10-12".
+    public string? LastDailyDate { get; set; }
+    // Card id -> dice of it owned, past its DieLimit too (for trade-ins).
+    public Dictionary<string, int> Dice { get; set; } = [];
+    public int PacksOpened { get; set; }
 }
 
 // A browser holding a token "{playerId}.{secret}"; only a hash of the secret is kept.

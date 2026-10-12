@@ -6,7 +6,13 @@ import { useSyncExternalStore } from "react";
 // refresh on /teambuilder works server-side), and Vite's dev server does
 // the same by default - this only needs to read the current path and react
 // to browser back/forward.
-export type Route = "/game" | "/teambuilder" | "/dice-kingdom" | "/dice-kingdom/mobile" | "/dice-kingdom/account";
+export type Route =
+  | "/game"
+  | "/teambuilder"
+  | "/dice-kingdom"
+  | "/dice-kingdom/mobile"
+  | "/dice-kingdom/account"
+  | "/dice-kingdom/packs";
 
 function normalize(pathname: string): Route {
   // "/" and anything unrecognized fall back to /game - preserves today's
@@ -20,6 +26,8 @@ function normalize(pathname: string): Route {
   if (pathname === "/dice-kingdom") return "/dice-kingdom";
   // Your player: name, games, devices (dicekingdom/AccountPage.tsx).
   if (pathname === "/dice-kingdom/account") return "/dice-kingdom/account";
+  // Coins, random packs and your collection (dicekingdom/PacksPage.tsx).
+  if (pathname === "/dice-kingdom/packs") return "/dice-kingdom/packs";
   return "/game";
 }
 

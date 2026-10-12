@@ -1,0 +1,114 @@
+namespace DiceFight.V2.Data;
+
+public enum CardRarity { Common, Uncommon, Rare, SuperRare }
+
+// Random packs (2026-10-12, user call). The Champion teams stay as free
+// starter rosters; packs are how a player collects dice for custom teams.
+// As in Dice Masters, rarity is NOT power: "I'd want someone to be able to
+// be decently competitive with just a common/uncommon team." So strong
+// cards are spread across every tier (Hummingbird, a 4-cost On Field KO, is
+// a Common; Orca, the same text at 5, is a Rare), and every starter roster
+// is Common/Uncommon apart from one or two cards.
+//
+// What you collect is dice: each pulled card is one die of that character.
+// A team can play up to the card's DieLimit of them; copies past that are
+// kept, for trading in to a higher rarity later.
+//
+// Every number here is a first pass - the user: "we can change the numbers
+// later, but might as well pick some numbers to start."
+public static class DiceKingdomPacks
+{
+    public const int StartingCoins = 100;
+    public const int PackPrice = 10;
+    // Once per UTC day, on the first visit (PlayerAccounts.ClaimDaily).
+    public const int DailyCoins = 5;
+
+    // Every Character in the Catalog. Basic Actions aren't in packs - each
+    // comes with its Champion. 18 Common, 14 Uncommon, 10 Rare, 4 Super Rare.
+    public static readonly IReadOnlyDictionary<string, CardRarity> Rarities = new Dictionary<string, CardRarity>
+    {
+        // Claw
+        [DiceKingdomConfig.HoneyBadger.Id] = CardRarity.Common,
+        [DiceKingdomConfig.Wolverine.Id] = CardRarity.Uncommon,
+        [DiceKingdomConfig.GrizzlyBear.Id] = CardRarity.Common,
+        [DiceKingdomConfig.Orca.Id] = CardRarity.Rare,
+        [DiceKingdomConfig.PeregrineFalcon.Id] = CardRarity.Uncommon,
+        [DiceKingdomConfig.Silverback.Id] = CardRarity.SuperRare,
+        [DiceKingdomConfig.Stoat.Id] = CardRarity.Common,
+        [DiceKingdomConfig.CapeBuffalo.Id] = CardRarity.Uncommon,
+        [DiceKingdomConfig.Mongoose.Id] = CardRarity.Common,
+        [DiceKingdomConfig.ElectricEel.Id] = CardRarity.Rare,
+        [DiceKingdomConfig.ArmyAnt.Id] = CardRarity.Rare,
+        [DiceKingdomConfig.KomodoDragon.Id] = CardRarity.SuperRare,
+        // Shell
+        [DiceKingdomConfig.Hippopotamus.Id] = CardRarity.Common,
+        [DiceKingdomConfig.MuskOx.Id] = CardRarity.Uncommon,
+        [DiceKingdomConfig.Pangolin.Id] = CardRarity.Rare,
+        [DiceKingdomConfig.HermitCrab.Id] = CardRarity.Common,
+        [DiceKingdomConfig.Opossum.Id] = CardRarity.Uncommon,
+        [DiceKingdomConfig.QueenTermite.Id] = CardRarity.Uncommon,
+        [DiceKingdomConfig.Rhinoceros.Id] = CardRarity.Rare,
+        [DiceKingdomConfig.BoxTurtle.Id] = CardRarity.Common,
+        [DiceKingdomConfig.Leech.Id] = CardRarity.Rare,
+        [DiceKingdomConfig.Meerkat.Id] = CardRarity.Common,
+        [DiceKingdomConfig.BombardierBeetle.Id] = CardRarity.Uncommon,
+        // Wing
+        [DiceKingdomConfig.Osprey.Id] = CardRarity.Uncommon,
+        [DiceKingdomConfig.BarnSwallow.Id] = CardRarity.Uncommon,
+        [DiceKingdomConfig.Hummingbird.Id] = CardRarity.Common,
+        [DiceKingdomConfig.MountainGoat.Id] = CardRarity.Common,
+        [DiceKingdomConfig.MonarchButterfly.Id] = CardRarity.Rare,
+        [DiceKingdomConfig.HomingPigeon.Id] = CardRarity.Common,
+        [DiceKingdomConfig.Greyhound.Id] = CardRarity.Common,
+        [DiceKingdomConfig.Phoenix.Id] = CardRarity.SuperRare,
+        [DiceKingdomConfig.Swift.Id] = CardRarity.Common,
+        [DiceKingdomConfig.FlyingSquirrel.Id] = CardRarity.Uncommon,
+        [DiceKingdomConfig.Firefly.Id] = CardRarity.Common,
+        [DiceKingdomConfig.Archerfish.Id] = CardRarity.Rare,
+        // Eye
+        [DiceKingdomConfig.BarnOwl.Id] = CardRarity.Common,
+        [DiceKingdomConfig.Hyena.Id] = CardRarity.Uncommon,
+        [DiceKingdomConfig.Anglerfish.Id] = CardRarity.Rare,
+        [DiceKingdomConfig.Cowbird.Id] = CardRarity.Uncommon,
+        [DiceKingdomConfig.Magpie.Id] = CardRarity.Common,
+        [DiceKingdomConfig.Basilisk.Id] = CardRarity.SuperRare,
+        [DiceKingdomConfig.Elephant.Id] = CardRarity.Common,
+        [DiceKingdomConfig.Fox.Id] = CardRarity.Uncommon,
+        [DiceKingdomConfig.Cuttlefish.Id] = CardRarity.Common,
+        [DiceKingdomConfig.FrilledLizard.Id] = CardRarity.Uncommon,
+        [DiceKingdomConfig.Chameleon.Id] = CardRarity.Rare,
+    };
+
+    // A pack is five dice: three Commons, an Uncommon, and a "rare slot"
+    // that's an Uncommon 55%, a Rare 40% or a Super Rare 5% (one pack in
+    // twenty; about 2 in 5 players see one in their first ten packs).
+    // Per card that's roughly: each Common 1 pack in 6, each Uncommon 1 in
+    // 9, each Rare 1 in 25, each Super Rare 1 in 80.
+    public static readonly IReadOnlyList<IReadOnlyList<(CardRarity Rarity, int Weight)>> Slots =
+    [
+        [(CardRarity.Common, 1)],
+        [(CardRarity.Common, 1)],
+        [(CardRarity.Common, 1)],
+        [(CardRarity.Uncommon, 1)],
+        [(CardRarity.Uncommon, 55), (CardRarity.Rare, 40), (CardRarity.SuperRare, 5)],
+    ];
+
+    public static IReadOnlyList<string> CardsOf(CardRarity rarity) =>
+        Rarities.Where(kv => kv.Value == rarity).Select(kv => kv.Key).Order().ToList();
+
+    // One pack's card ids, slot by slot. `roll(n)` is a uniform pick from
+    // 0..n-1 - the server passes a cryptographic one, tests a seeded one.
+    // The three Commons are always three different cards.
+    public static IReadOnlyList<string> Open(Func<int, int> roll)
+    {
+        var pulled = new List<string>();
+        foreach (var slot in Slots)
+        {
+            var pick = roll(slot.Sum(s => s.Weight));
+            var rarity = slot.First(s => (pick -= s.Weight) < 0).Rarity;
+            var pool = CardsOf(rarity).Except(pulled).ToList();
+            pulled.Add(pool[roll(pool.Count)]);
+        }
+        return pulled;
+    }
+}

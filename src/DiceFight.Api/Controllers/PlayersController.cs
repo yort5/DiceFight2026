@@ -1,4 +1,5 @@
 using DiceFight.Api.Accounts;
+using DiceFight.V2.Data;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DiceFight.Api.Controllers;
@@ -61,6 +62,31 @@ public sealed class PlayersController(V2GameStore store) : ControllerBase
         return Ok(Describe(player));
     }
 
+    // Coins and dice from packs (V2/Data/DiceKingdomPacks.cs). Asking is
+    // also what gives the day's coins, like /me.
+    [HttpGet("me/collection")]
+    public ActionResult<CollectionDto> Collection()
+    {
+        var (collection, daily) = Accounts.Wallet(RequirePlayer());
+        return Ok(DescribeCollection(collection, daily));
+    }
+
+    [HttpPost("me/packs")]
+    public ActionResult<OpenedPackDto> OpenPack()
+    {
+        var player = RequirePlayer();
+        var cards = Accounts.OpenPack(player);
+        var collection = player.Collection!;
+        // A card is new if this pack brought every die of it the player has.
+        var pulled = cards.Select(id => new PulledCardDto(
+            id, DiceKingdomPacks.Rarities[id].ToString(), collection.Dice[id], collection.Dice[id] == cards.Count(c => c == id))).ToList();
+        return Ok(new OpenedPackDto(pulled, DescribeCollection(collection, 0)));
+    }
+
+    private static CollectionDto DescribeCollection(PlayerCollection c, int daily) => new(
+        c.Coins, daily, DiceKingdomPacks.DailyCoins, DiceKingdomPacks.PackPrice, c.PacksOpened, c.Dice,
+        DateOnly.FromDateTime(DateTime.UtcNow).AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
+
     private PlayerAccount RequirePlayer() =>
         HttpContext.Player() ?? throw new SeatRequiredException($"A valid {PlayerAccounts.TokenHeader} is required.");
 
@@ -69,6 +95,7 @@ public sealed class PlayersController(V2GameStore store) : ControllerBase
     private PlayerDto Describe(PlayerAccount player)
     {
         var thisDevice = HttpContext.PlayerDevice()?.Id;
+        var (collection, daily) = Accounts.Wallet(player);
         var games = player.Games
             .OrderByDescending(g => g.StartedUtc)
             .Select(g => new PlayedGameDto(
@@ -86,7 +113,9 @@ public sealed class PlayersController(V2GameStore store) : ControllerBase
             player.Id,
             player.Name,
             player.Devices.Select(d => new PlayerDeviceDto(d.Id, d.Label, d.AddedUtc, d.LastSeenUtc, d.Id == thisDevice)).ToList(),
-            games);
+            games,
+            collection.Coins,
+            daily);
     }
 }
 
@@ -94,7 +123,14 @@ public sealed record RegisteredPlayerDto(string PlayerId, string Token);
 public sealed record SetPlayerNameRequest(string? Name);
 public sealed record LinkDeviceRequest(string Code);
 public sealed record LinkCodeDto(string Code, DateTime ExpiresUtc);
-public sealed record PlayerDto(string Id, string? Name, IReadOnlyList<PlayerDeviceDto> Devices, IReadOnlyList<PlayedGameDto> Games);
+// DailyCoins: coins just given for today's first visit (0 if already had).
+public sealed record PlayerDto(string Id, string? Name, IReadOnlyList<PlayerDeviceDto> Devices, IReadOnlyList<PlayedGameDto> Games, int Coins, int DailyCoins);
+public sealed record CollectionDto(
+    int Coins, int DailyCoins, int DailyAmount, int PackPrice, int PacksOpened,
+    IReadOnlyDictionary<string, int> Dice, DateTime NextDailyUtc);
+// Owned: dice of it now, this pack's included. New: the first of it.
+public sealed record PulledCardDto(string CardId, string Rarity, int Owned, bool New);
+public sealed record OpenedPackDto(IReadOnlyList<PulledCardDto> Cards, CollectionDto Collection);
 public sealed record PlayerDeviceDto(string Id, string? Label, DateTime AddedUtc, DateTime LastSeenUtc, bool ThisDevice);
 public sealed record PlayedGameDto(
     string GameId,

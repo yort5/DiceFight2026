@@ -1,4 +1,5 @@
 using DiceFight.V2;
+using DiceFight.V2.Data;
 using DiceFight.V2.Model;
 using DiceFight.V2.Model.Effects;
 
@@ -32,7 +33,9 @@ public sealed record V2CardDefDto(
     // (Rhinoceros) - read off the ability, not the name. The client shows
     // that reflected damage as its own lane marker, apart from "to face"
     // (2026-09-30: folding the two together read as confusing).
-    bool ReflectsDamage = false)
+    bool ReflectsDamage = false,
+    // Pack rarity (DiceKingdomPacks) - null for Basic Actions.
+    string? Rarity = null)
 {
     public static V2CardDefDto From(CardDef card)
     {
@@ -57,7 +60,8 @@ public sealed record V2CardDefDto(
             global,
             card.Die.Faces.SelectMany(f => f.Symbols).Select(sym => sym.SymbolId).FirstOrDefault(),
             card.Abilities.Any(a => a.Trigger == TriggerKind.DieDamaged
-                && a.Effect is DealDamage { Target: { Kind: TargetKind.Player, Ownership: TargetOwnership.Opposing } }));
+                && a.Effect is DealDamage { Target: { Kind: TargetKind.Player, Ownership: TargetOwnership.Opposing } }),
+            DiceKingdomPacks.Rarities.TryGetValue(card.Id, out var rarity) ? rarity.ToString() : null);
     }
 }
 

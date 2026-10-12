@@ -4477,3 +4477,41 @@ attacker's turn, cleared at that player's Clear & Draw - dropping damage
 and modifiers (2.5.7), not a KO (2.5.3). EffectInterpreter
 `LeaveFieldIfEnergy`. It happened in 5 of the 48 live games; those
 records now drift at that move (expected - they recorded the old rule).
+
+## 2026-10-12 - Random packs and collections (first pass)
+
+User brief: the Champion teams stay as free "starter rosters"; custom-team
+builders collect through random packs. As in Dice Masters, rarity must not
+equal power ("decently competitive with just a common/uncommon team"), but
+collecting should still pay - later ideas: trade-ins (5 C -> U, 4 U -> R,
+3 R -> SR) and cosmetic badges/outfits for full sets. Starting numbers
+(user's): 100 coins for a new player, packs 10 coins, 5 coins a day.
+
+- Rarities: one table, `V2/Data/DiceKingdomPacks.cs` - 46 Characters, 18
+  Common / 14 Uncommon / 10 Rare / 4 Super Rare. Basic Actions aren't in
+  packs (they come with Champions). Strong cards at every tier on purpose:
+  Hummingbird (4-cost On Field KO) is Common while Orca (same text, 5) is
+  Rare. Super Rares are the showpieces: Silverback, Phoenix, Basilisk,
+  Komodo Dragon. Every starter roster is C/U apart from its power card
+  (Armadillo: Pangolin and Rhinoceros, both Rare) - a test holds it there.
+  My first pass, for the user to adjust.
+- What you collect is dice: each pulled card is one die of that character.
+  A team plays up to DieLimit (4); extras are kept for trade-ins.
+- A pack is 5 dice: 3 different Commons, 1 Uncommon, and a slot that's
+  Uncommon 55% / Rare 40% / Super Rare 5%. Per card: each Common ~1 pack in
+  6, Uncommon 1 in 9, Rare 1 in 25, Super Rare 1 in 80; ~40% of players
+  see a Super Rare in their first 10 packs.
+- Server-side and atomic: `PlayerAccounts.OpenPack` takes the coins and
+  adds the dice under the players lock, with a cryptographic roll. The
+  collection lives on the player file (`PlayerAccount.Collection`).
+- Daily coins: the first `/me` or `/me/collection` of each UTC day (so the
+  reset is 7-8pm US time). The start screen's "Playing as" line shows the
+  coins and "+5 today".
+- Linking a device merges collections but keeps only one starting grant
+  (coins = mine + theirs - 100, floor 0); otherwise every throwaway browser
+  linked in would bring 100 more. A brand-new anonymous browser still gets
+  its own 100 - harmless while collections gate nothing.
+- Page: `/dice-kingdom/packs` (cards flip over one by one; the collection
+  grid by rarity with die pips). Not yet: the Team Builder doesn't limit a
+  custom team to owned dice, and starter rosters don't add to the
+  collection - both open questions for the user.

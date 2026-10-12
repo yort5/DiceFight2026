@@ -40,6 +40,32 @@ export interface Me {
   name: string | null;
   devices: PlayerDevice[];
   games: PlayedGame[];
+  coins: number;
+  /** Coins just given for today's first visit (0 if already had). */
+  dailyCoins: number;
+}
+
+export type Rarity = "Common" | "Uncommon" | "Rare" | "SuperRare";
+
+/** Coins and the dice pulled from packs (PacksPage.tsx). */
+export interface Collection {
+  coins: number;
+  dailyCoins: number;
+  dailyAmount: number;
+  packPrice: number;
+  packsOpened: number;
+  /** Card id -> dice owned, past the card's die limit too. */
+  dice: Record<string, number>;
+  nextDailyUtc: string;
+}
+
+export interface PulledCard {
+  cardId: string;
+  rarity: Rarity;
+  /** Dice of it now, this pack's included. */
+  owned: number;
+  /** The first of it. */
+  new: boolean;
 }
 
 function storedToken(): string | null {
@@ -109,6 +135,8 @@ export const players = {
   setName: (name: string | null) => call<Me>("/me/name", { method: "PUT", body: JSON.stringify({ name }) }),
   linkCode: () => call<{ code: string; expiresUtc: string }>("/me/link-code", { method: "POST" }),
   link: (code: string) => call<Me>("/me/link", { method: "POST", body: JSON.stringify({ code }) }),
+  collection: () => call<Collection>("/me/collection"),
+  openPack: () => call<{ cards: PulledCard[]; collection: Collection }>("/me/packs", { method: "POST" }),
   removeDevice: (deviceId: string) => call<Me>(`/me/devices/${encodeURIComponent(deviceId)}`, { method: "DELETE" }),
   /** Signs this device out: it forgets its token and becomes a new anonymous player. */
   signOut: async (me: Me) => {
