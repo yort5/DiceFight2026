@@ -117,10 +117,39 @@ export function resumeSeats(gameId: string): SavedGame | null {
   return g;
 }
 
+/**
+ * A game the server says this player holds seats in (player.ts) - added to
+ * this browser's saved list if it isn't there, so a game started on
+ * another device can be resumed here.
+ */
+export function adoptGame(gameId: string, seats: Seat[], playAs: string, label: string, vsComputer: boolean): void {
+  const games = readSaved();
+  if (games[gameId] || seats.length === 0 || dismissed().includes(gameId)) return;
+  games[gameId] = { gameId, seats, playAs, label, vsComputer, savedAt: Date.now() };
+  writeSaved(games);
+}
+
 export function forgetSavedGame(gameId: string): void {
   const games = readSaved();
   delete games[gameId];
   writeSaved(games);
+  // ...and don't let adoptGame bring it back from the server.
+  try {
+    localStorage.setItem(DISMISSED_KEY, JSON.stringify([gameId, ...dismissed().filter((id) => id !== gameId)].slice(0, 100)));
+  } catch {
+    // Storage blocked.
+  }
+}
+
+const DISMISSED_KEY = "dicekingdom:dismissed";
+
+function dismissed(): string[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(DISMISSED_KEY) ?? "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
 }
 
 /** A link back into YOUR OWN seat - to keep, or to carry on from another device. */

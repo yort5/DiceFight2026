@@ -38,6 +38,10 @@ public static class DiceKingdomConfig
         new Face([new SymbolAmount("Wild", 1)], new CharacterFaceData(2, FieldingCost: 0, Attack: 1, Defense: 1), Kind: FaceKind.CharacterFace),
     ]);
 
+    // The reverse of TardigradeDie's id - "TardigradeEye" -> "Eye".
+    public static string TardigradeEnergyType(string dieId) =>
+        dieId.StartsWith("Tardigrade") ? dieId["Tardigrade".Length..] : throw new ArgumentException($"'{dieId}' isn't a Tardigrade die.");
+
     // Custom teams use the same printed dice as preset Champion pools.
     public static BasicDicePoolEntry CustomTardigrade(string energyType, int count)
     {
@@ -1064,6 +1068,41 @@ public static class DiceKingdomConfig
         },
     ];
 
+    // Every keyword a Dice Kingdom card may carry, for the card reference
+    // (tools/CardCatalogDocs). `Original` is WizKids' Dice Masters wording,
+    // copied once (2026-10-10) from https://wizkids.com/dicemasters/keywords/
+    // - a fixed baseline, so it's kept even where this game later changes
+    // the rule. `Description` says only what Dice Kingdom does differently
+    // (null = as written), or, for our own labels, what they mean. A
+    // keyword with an X (Range 2) is declared bare; bare = X of 1
+    // (KeywordAbilities.ParamOf).
+    public static readonly IReadOnlyList<KeywordDef> Keywords =
+    [
+        // The engine supplies these - a card just lists the word.
+        new("Fast", Description: null, Original: "Characters with Fast deal combat damage before other characters, all at the same time, instead of at the regular time for combat damage."),
+        new("Amplify", Description: "When you use an action die, spin this creature up one level."),
+        new("Overcrush", Description: "Also: any lane with two or more attackers has Overcrush, and one attacker's Overcrush covers its whole lane.", Original: "When attacking, if this character KOs all of its blockers (or they are removed for other reasons), it deals any remaining damage to your opponent."),
+        new("Deadly", Description: null, Original: "At the end of the turn, character dice that were engaged with a character die that has Deadly are KO'd (even if the character with Deadly has been KO'd or leaves the Field Zone)."),
+        new("Intimidate", Description: null, Original: "When fielded, remove target opposing character die from the Field Zone until end of turn. Place it next to your character cards during that turn as a reminder."),
+        new("Infiltrate", Description: null, Original: "When a character die with Infiltrate attacks and is not blocked, you may choose to remove that character die from combat (immediately after blockers are declared, before Action dice or Global Abilities may be used). If you do, that character die deals 1 damage to your opponent, and the die remains in your Field Zone."),
+        new("Attune", Description: "Attune X deals X; the bare keyword is 1. Only action dice count - using a Global doesn't trigger it.", Original: "While a character you control with Attune is active, when you use an action die, that character deals 1 damage to target player or character die (no matter how many of that character's dice are active)."),
+        new("Obscure", Description: "Only while this creature is active.", Original: "When you use an Action die, this character is unblockable until end of turn."),
+        new("Energy Drain", Description: "Energy Drain X spins down X levels; the bare keyword is 1. A creature fighting several drainers takes the biggest X, not the sum.", Original: "After blockers are assigned, spin each character engaged with a character die with Energy Drain down one level. Character dice at level 1 can't be spun down."),
+        new("Tag Out", Description: null, Original: "After blockers are declared, you may Prep this die from the Field Zone to give target character die +2A and +2D until end of turn."),
+        new("Range", Description: "The bare keyword is Range 1.", Original: "When one or more character dice with Range attack, each active character die with Range (on both sides) simultaneously deals damage equal to its Range value (X) to target opposing character die. Each character die with Range may choose a different target, and the defending player still resolves their Range damage even if the Range die was KO'd by the active player's Range damage. All Range damage is dealt simultaneously; the active player chooses their targets and resolves the damage, immediately followed by the inactive player choosing their targets and resolving the damage."),
+        new("Breath Weapon", Description: "The bare keyword is Breath Weapon 1.", Original: "When a character die with Breath Weapon X attacks, you may pay X energy. Deal X damage to your opponent and all of their character dice. You may use multiple Breath Weapons in a turn, but only one per character (no matter how many copies of that die are attacking)."),
+        // Labels - each card writes its own ability; the word names when it happens or what it costs.
+        new("Elder", Description: "A keyword marker for abilities that refer to Elder creatures; it has no effect by itself.", WrittenOnCard: true),
+        new("Energize", Description: null, WrittenOnCard: true, Original: "Whenever you roll this die on one of its double energy faces, you must use its Energize effect (this isn't optional). During the Roll and Reroll Step, only check at the end of the Step. The character with Energize does not need to be active for the ability to trigger."),
+        new("Sacrifice", Description: null, WrittenOnCard: true, Original: "Sacrificed characters are moved from the Field Zone to the Used Pile (often as a cost or penalty). If one of your character dice is sacrificed while you are the active player, it goes Out of Play first."),
+        new("Aftershock", Description: null, WrittenOnCard: true, Original: "When this character leaves the Field Zone because of your opponent (damage from their characters or actions, getting KO'd, being removed from the game, sent to the Used Pile or Reserve Pool) you must use their Aftershock effect."),
+        new("Awaken", Description: "Not optional here - the Awaken ability always fires.", WrittenOnCard: true, Original: "When a die with Awaken spins up 1 or more levels, you may use its Awaken effect. You get to use the effect for each individual die that spins up, so if you have two copies of the same die active and they both spin up, you will get two instances of the effect."),
+        // Dice Kingdom's own timing labels - not Dice Masters keywords.
+        new("On Field", "Its ability fires when it's fielded.", WrittenOnCard: true),
+        new("On Attack", "Its ability fires when it attacks.", WrittenOnCard: true),
+        new("On Block", "Its ability fires when it blocks.", WrittenOnCard: true),
+    ];
+
     public static readonly GameConfig Config = new(
         Id: "dice-kingdom",
         Name: "Dice Kingdom",
@@ -1072,11 +1111,7 @@ public static class DiceKingdomConfig
             new SymbolDef("Claw"), new SymbolDef("Shell"), new SymbolDef("Wing"), new SymbolDef("Eye"),
             new SymbolDef("Wild", IsWild: true),
         ],
-        Keywords: [new KeywordDef("Fast"), new KeywordDef("Overcrush"), new KeywordDef("Deadly"),
-            new KeywordDef("Intimidate"), new KeywordDef("Infiltrate"), new KeywordDef("Attune"), new KeywordDef("Obscure"),
-            new KeywordDef("Energize"), new KeywordDef("Amplify"), new KeywordDef("Elder"), new KeywordDef("Energy Drain"), new KeywordDef("Tag Out"), new KeywordDef("Sacrifice"),
-            new KeywordDef("Range"), new KeywordDef("Aftershock"), new KeywordDef("Breath Weapon"),
-            new KeywordDef("On Field"), new KeywordDef("On Attack"), new KeywordDef("On Block"), new KeywordDef("Awaken")],
+        Keywords: Keywords,
         Rules: new RulesConfig(
             StartingLife: 20,
             DrawCount: 4,

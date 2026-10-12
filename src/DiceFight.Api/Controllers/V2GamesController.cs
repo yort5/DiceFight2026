@@ -2,6 +2,7 @@ using DiceFight.V2;
 using DiceFight.V2.Bot;
 using DiceFight.V2.Data;
 using DiceFight.V2.Model;
+using DiceFight.Api.Accounts;
 using DiceFight.Api.Recording;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
@@ -47,6 +48,7 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
 
         var state = GameSetup.NewGame(config, catalog, playerOne, playerTwo);
         var session = store.Create(state);
+        store.Accounts?.GameCreated(session, HttpContext.Player());
 
         return Ok(new V2CreatedGameDto(
             V2GameStateDto.From(session.Id, state, state.PlayerOne.Id),
@@ -63,6 +65,7 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
     {
         _ = BuildPlayer("teamA", request.ChampionId); // validates the Champion id
         var lobby = store.OpenLobby(request.ChampionId, "teamA", "teamB");
+        store.Accounts?.LobbyOpened(lobby, HttpContext.Player());
         return Ok(new V2OpenGameDto(lobby.Id, lobby.HostChampionId,
             lobby.Seats.Select(seat => new SeatDto(seat.PlayerId, seat.Token)).ToList()));
     }
@@ -100,12 +103,20 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
         var state = GameSetup.NewGame(DiceKingdomConfig.Config, DiceKingdomConfig.Catalog,
             BuildPlayer(lobby.Seats[0].PlayerId, lobby.HostChampionId), BuildPlayer(guest.PlayerId, request.ChampionId));
         var session = store.StartLobby(lobby, state);
+        store.Accounts?.LobbyJoined(lobby, session, HttpContext.Player());
         _session = session;
         _seatPlayerId = guest.PlayerId;
         session.MarkChanged();
         Priority.Sync(state);
         return Ok(V2GameStateDto.From(session.Id, state, guest.PlayerId, session.Version));
     }
+
+    // A custom team is checked for data validity only - house formats change
+    // the usual caps (12 Tardigrades, 30 dice, 3 Basic Actions, ...), so the
+    // builder enforces whichever format it was asked for. This ceiling is
+    // just far above any format: without it one request could ask for two
+    // billion dice and take the server down.
+    public const int MaxCustomDice = 100;
 
     private static Player BuildSelectedPlayer(string id, string? championId, CustomV2TeamRequest? custom)
     {
@@ -148,6 +159,10 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
             try { pool.Add(DiceKingdomConfig.CustomTardigrade(entry.EnergyType, entry.DiceCount)); }
             catch (ArgumentException e) { throw new ArgumentException(e.Message); }
         }
+        if (custom.Cards.Sum(c => (long)c.DiceCount) > MaxCustomDice)
+            throw new ArgumentException($"A custom team can have at most {MaxCustomDice} character dice.");
+        if (custom.Tardigrades.Sum(t => (long)t.DiceCount) > MaxCustomDice)
+            throw new ArgumentException($"A custom team can have at most {MaxCustomDice} Tardigrades.");
         player.CustomBasicDicePool = pool;
         return player;
     }
@@ -190,6 +205,7 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
     {
         var (session, playerId) = RequireSeat(gameId);
         var skipIds = (skip ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).ToHashSet();
+        store.Accounts?.BotSeat(session, playerId);
         var decision = DiceKingdomBot.Decide(session.State, playerId, skipIds);
         return decision is null ? NoContent() : Ok(V2BotDecisionDto.From(decision));
     }
@@ -487,6 +503,7 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
             throw new InvalidOperationException("The game is over.");
         _seatPlayerId = playerId;
         _session = session;
+        store.Accounts?.SeatUsed(session, playerId, HttpContext.Player());
         return (session, playerId);
     }
 
@@ -509,7 +526,11 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
     private V2GameStateDto Result(string gameId, GameState state)
     {
         var session = store.GetSession(gameId);
-        if (HttpMethods.IsPost(Request.Method)) session.MarkChanged();
+        if (HttpMethods.IsPost(Request.Method))
+        {
+            session.MarkChanged();
+            store.Accounts?.AfterMove(session);
+        }
         Priority.Sync(state);
         return V2GameStateDto.From(gameId, state, _seatPlayerId, session.Version);
     }

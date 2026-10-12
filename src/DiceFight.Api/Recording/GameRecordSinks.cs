@@ -17,10 +17,14 @@ public sealed class GameRecordOptions
     public string Prefix { get; set; } = "dice-kingdom/games/";
 }
 
+// Also where player accounts are kept (Accounts/PlayerAccounts.cs), under
+// their own prefix - hence the read.
 public interface IGameRecordSink
 {
     string Describe();
     Task WriteAsync(string name, byte[] json, CancellationToken cancel);
+    // null when there is no such object.
+    Task<byte[]?> ReadAsync(string name, CancellationToken cancel);
 }
 
 public sealed class LocalFolderSink(string root) : IGameRecordSink
@@ -35,6 +39,12 @@ public sealed class LocalFolderSink(string root) : IGameRecordSink
         var temp = path + ".tmp";
         await File.WriteAllBytesAsync(temp, json, cancel);
         File.Move(temp, path, overwrite: true);
+    }
+
+    public async Task<byte[]?> ReadAsync(string name, CancellationToken cancel)
+    {
+        var path = Path.Combine(root, name.Replace('/', Path.DirectorySeparatorChar));
+        return File.Exists(path) ? await File.ReadAllBytesAsync(path, cancel) : null;
     }
 }
 
@@ -60,6 +70,18 @@ public sealed class CloudStorageSink(string bucket, HttpClient http) : IGameReco
         using var response = await http.SendAsync(request, cancel);
         if (!response.IsSuccessStatusCode)
             throw new HttpRequestException($"Cloud Storage write of {name} failed: {(int)response.StatusCode} {await response.Content.ReadAsStringAsync(cancel)}");
+    }
+
+    public async Task<byte[]?> ReadAsync(string name, CancellationToken cancel)
+    {
+        var url = $"https://storage.googleapis.com/storage/v1/b/{Uri.EscapeDataString(bucket)}/o/{Uri.EscapeDataString(name)}?alt=media";
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await TokenAsync(cancel));
+        using var response = await http.SendAsync(request, cancel);
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return null;
+        if (!response.IsSuccessStatusCode)
+            throw new HttpRequestException($"Cloud Storage read of {name} failed: {(int)response.StatusCode} {await response.Content.ReadAsStringAsync(cancel)}");
+        return await response.Content.ReadAsByteArrayAsync(cancel);
     }
 
     private async Task<string> TokenAsync(CancellationToken cancel)

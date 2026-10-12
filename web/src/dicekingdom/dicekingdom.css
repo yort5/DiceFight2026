@@ -4306,6 +4306,131 @@
   margin-bottom: 0;
 }
 
+/* Your player (AccountPage.tsx, 2026-10-10): the start screens' "Playing
+   as ..." line, and /dice-kingdom/account itself. */
+.dk-account-link {
+  margin: 0 0 10px;
+  font-size: 13px;
+  opacity: 0.85;
+}
+.dk-account-link a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.dk-mobile .dkm-account-link {
+  margin: -6px 16px 14px;
+  color: var(--dkm-ink-dim);
+}
+.dicekingdom.dk-account {
+  max-width: 760px;
+}
+.dicekingdom.dk-account h3 {
+  margin: 0 0 10px;
+}
+.dk-account .dk-acct-back {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+.dk-account .dk-acct-back a {
+  color: inherit;
+}
+.dk-account .dk-acct-dim {
+  opacity: 0.65;
+}
+.dk-account .dk-acct-ok {
+  color: var(--shell);
+  font-weight: 600;
+}
+.dk-account .dk-acct-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.dk-account .dk-acct-row > span {
+  flex: 1;
+  min-width: 0;
+}
+.dk-account input {
+  flex: 1;
+  min-width: 0;
+  max-width: 260px;
+  font: inherit;
+  font-size: 15px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-bg-strong);
+  color: var(--text-h);
+}
+.dk-account .dk-acct-quiet {
+  opacity: 0.8;
+}
+.dk-account .panel .dk-acct-record {
+  font-size: 22px;
+  margin: 0 0 8px;
+  color: var(--text-h);
+}
+.dk-account .dk-acct-table {
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.dk-account .dk-acct-table td {
+  padding: 3px 16px 3px 0;
+  border-top: 1px solid var(--border);
+}
+.dk-account .dk-acct-game {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 0;
+  border-top: 1px solid var(--border);
+}
+.dk-account .dk-acct-game-label {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.dk-account .dk-acct-game-label small {
+  opacity: 0.65;
+}
+.dk-account .dk-acct-result {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.dk-account .dk-acct-win {
+  color: var(--shell);
+}
+.dk-account .dk-acct-loss {
+  color: var(--claw);
+}
+.dk-account .dk-acct-link-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+@media (max-width: 600px) {
+  .dk-account .dk-acct-link-cols {
+    grid-template-columns: 1fr;
+  }
+}
+.dk-account .panel .dk-acct-code {
+  font-family: ui-monospace, monospace;
+  font-size: 30px;
+  letter-spacing: 0.12em;
+  color: var(--text-h);
+  margin: 4px 0;
+}
+.dk-account .dk-acct-code small {
+  display: block;
+  font-family: inherit;
+  font-size: 12px;
+  letter-spacing: normal;
+  opacity: 0.65;
+}
+
 /* Pile dice remain visually compact; selection adds only an outline. */
 .dk-mobile .dkm-pile-strip .dkm-pile-inspect-tile {
   appearance: none;
@@ -4594,4 +4719,238 @@
   font: 400 10px/1 var(--display);
   color: #14151c;
   pointer-events: none;
+}
+
+/* Packs and your collection (PacksPage.tsx, 2026-10-12). Rarity colours:
+   Common grey, Uncommon green, Rare blue, Super Rare gold. */
+.dicekingdom {
+  --rarity-Common: #8a8f9c;
+  --rarity-Uncommon: #3f8f5f;
+  --rarity-Rare: #2f6fb0;
+  --rarity-SuperRare: #c08a12;
+}
+.dk-daily-coins {
+  color: var(--shell);
+}
+.dk-packs .dk-pack-wallet {
+  font-size: 15px;
+  margin-bottom: 10px;
+}
+.dk-packs .dk-pack-coins {
+  font-family: var(--display);
+  font-size: 34px;
+  color: var(--text-h);
+  margin-right: 4px;
+}
+.dk-packs .dk-pack-buy {
+  font-size: 16px;
+  padding: 10px 18px;
+}
+.dk-packs .dk-pack-shop p {
+  font-size: 13px;
+  margin: 10px 0 0;
+}
+.dk-packs .dk-rarity-Common { --rarity: var(--rarity-Common); }
+.dk-packs .dk-rarity-Uncommon { --rarity: var(--rarity-Uncommon); }
+.dk-packs .dk-rarity-Rare { --rarity: var(--rarity-Rare); }
+.dk-packs .dk-rarity-SuperRare { --rarity: var(--rarity-SuperRare); }
+
+.dk-packs .dk-pack-opened {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 16px;
+  cursor: pointer;
+}
+@media (max-width: 560px) {
+  .dk-packs .dk-pack-opened {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .dk-packs .dk-pack-card {
+    aspect-ratio: 3 / 4;
+  }
+  .dk-packs .dk-pack-avatar svg,
+  .dk-packs .dk-pack-avatar img {
+    width: 32px;
+    height: 32px;
+  }
+  .dk-packs .dk-pack-name {
+    font-size: 11px;
+  }
+}
+.dk-packs .dk-pack-card {
+  perspective: 600px;
+  aspect-ratio: 5 / 7;
+}
+.dk-packs .dk-pack-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.45s ease;
+}
+.dk-packs .dk-pack-card.up .dk-pack-card-inner {
+  transform: rotateY(180deg);
+}
+.dk-packs .dk-pack-card-back,
+.dk-packs .dk-pack-card-front {
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  backface-visibility: hidden;
+}
+.dk-packs .dk-pack-card-back {
+  background: repeating-linear-gradient(45deg, var(--claw) 0 10px, var(--wing) 10px 20px);
+  border: 3px solid var(--panel-bg-strong);
+  box-shadow: var(--shadow);
+}
+.dk-packs .dk-pack-card-front {
+  transform: rotateY(180deg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 4px;
+  background: var(--tile-bg);
+  border: 3px solid var(--rarity);
+  box-shadow: var(--shadow);
+  text-align: center;
+  color: var(--text-h);
+}
+.dk-packs .dk-rarity-Rare.up .dk-pack-card-front,
+.dk-packs .dk-rarity-SuperRare.up .dk-pack-card-front {
+  box-shadow: 0 0 14px 2px var(--rarity);
+}
+.dk-packs .dk-pack-rarity {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--rarity);
+}
+.dk-packs .dk-pack-name {
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1.15;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.dk-packs .dk-pack-cost {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.dk-packs .dk-pack-owned {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.dk-packs .dk-pack-owned.new {
+  color: var(--on-fill);
+  background: var(--shell);
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-weight: 700;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dk-packs .dk-pack-card-inner {
+    transition: none;
+  }
+}
+
+.dk-packs .dk-coll-tier h4 {
+  margin: 14px 0 6px;
+  color: var(--rarity, var(--text-h));
+}
+.dk-packs .dk-coll-tier h4 small {
+  font-weight: 400;
+  color: var(--text-dim);
+}
+.dk-packs .dk-coll-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 6px;
+}
+.dk-packs .dk-coll-card {
+  appearance: none;
+  font: inherit;
+  color: var(--text-h);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 4px;
+  border: 2px solid var(--rarity);
+  border-radius: 8px;
+  background: var(--tile-bg);
+  cursor: pointer;
+}
+.dk-packs .dk-coll-card.missing {
+  border-style: dashed;
+  opacity: 0.45;
+}
+.dk-packs .dk-coll-card.missing .dk-coll-avatar {
+  filter: grayscale(1);
+}
+.dk-packs .dk-coll-card.selected {
+  outline: 2px solid var(--text-h);
+  outline-offset: 1px;
+  opacity: 1;
+}
+.dk-packs .dk-coll-name {
+  font-size: 12px;
+  line-height: 1.1;
+  text-align: center;
+}
+.dk-packs .dk-coll-pips {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.dk-packs .dk-coll-pips i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  border: 1px solid var(--rarity);
+}
+.dk-packs .dk-coll-pips i.on {
+  background: var(--rarity);
+}
+.dk-packs .dk-coll-pips small {
+  font-size: 10px;
+  color: var(--text-dim);
+}
+.dk-packs .dk-coll-detail {
+  margin-top: 12px;
+  padding: 10px;
+  border-top: 1px solid var(--border);
+  font-size: 14px;
+}
+.dk-packs .dk-coll-detail .energy-badge {
+  display: inline-flex;
+  vertical-align: middle;
+}
+.dk-packs .dk-coll-levels {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.dk-packs .dk-trade-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 0;
+  border-top: 1px solid var(--border);
+}
+.dk-packs .dk-trade-row b {
+  color: var(--rarity);
+}
+.dk-packs .dk-trade-row small {
+  opacity: 0.75;
+}
+.dk-packs .dk-trade-result .dk-pack-opened {
+  grid-template-columns: minmax(0, 130px);
 }

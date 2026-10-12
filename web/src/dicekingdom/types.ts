@@ -37,6 +37,8 @@ export interface CardDef {
   dieEnergyType?: string | null;
   /** Damage this die takes is dealt to its controller's opponent too (Rhinoceros). */
   reflectsDamage?: boolean;
+  /** Pack rarity - null for Basic Actions. */
+  rarity?: "Common" | "Uncommon" | "Rare" | "SuperRare" | null;
 }
 
 export interface GlobalAbility {

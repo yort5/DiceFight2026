@@ -4363,3 +4363,183 @@ Simulator (SIM_DILUTION, 400 games/matchup):
 plan. In the one human game recorded (5607496d), only ~4 matched the
 human's buys (Wolverine over Honey Badger + Mongoose, which tie at 2).
 tools/GameRecords --dilution N compares human buys against a given value.
+
+## 2026-10-10 - Players: anonymous by default, accounts without passwords
+
+User: work without logging in, using an identifier from the device. Anyone
+who wants a record of their games, or the same account on several devices,
+can make an account with no password, using a code instead. The user's picks:
+no email yet (link devices with a short code instead), store players in the
+game-records bucket, and keep a games list plus W/L.
+
+- **Every browser is a player.** It registers on first use (`POST
+  /api/players`) and keeps the token `<playerId>.<secret>` in localStorage
+  (`web/src/dicekingdom/player.ts`). Every Dice Kingdom request sends it as
+  `X-Player-Token`. The server keeps only a SHA-256 of the secret.
+- **A name makes an account.** `/dice-kingdom/account` (AccountPage.tsx)
+  is a real route, linked from both start screens ("Playing as ...").
+- **Linking devices.** A named account shows a 6-character code (10 minutes,
+  single use, in memory). Typing it on another device merges that device's
+  player into the account: devices, games, and seats in live games. The old
+  player is left as a `MergedInto` tombstone, so the second device's token
+  keeps working unchanged. Ten wrong codes locks out linking for ten
+  minutes. Email sign-in can come later as one more way to add a Device.
+- **Game history.** `PlayerAccounts` keeps each owner's `PlayedGame` in
+  step with the game: Create gives both seats to the creator, Open/Join make
+  it an online game, and a seat played from another player's device changes
+  hands (invite links). A `bot-decision` call marks the computer's seat, and
+  the result is recorded at game over. W/L counts only when the player held
+  exactly one human seat, so pass-and-play shows the winner without counting
+  it. Seat tokens are kept so unfinished games show under "Resume a game" on
+  every device (lobby.tsx `adoptServerGames`; `?resume=<id>` resumes one
+  directly). Unfinished games the server has forgotten are pruned.
+- **Storage.** `dice-kingdom/players/<id>.json`, with background writes
+  like GameRecorder's. An anonymous player isn't written until it has a game
+  or a name. Production keeps players in memory only until
+  `GameRecords__Bucket` is set (see GAME_RECORDS.md).
+- UI check: `~/.devtools/playwright/account-check.js` (a fixture player
+  file, laptop shows code, fresh phone links, resumes the laptop's game).
+
+## 2026-10-10 - Keyword reference
+
+The card reference (`tools/CardCatalogDocs`, live at
+`/dice-kingdom/cards.html`) now ends with a Keywords table: every keyword
+in `DiceKingdomConfig.Keywords`, WizKids' Dice Masters wording (copied once
+from wizkids.com/dicemasters/keywords as a fixed baseline - user: "we might
+change how they work down the line"), what Dice Kingdom does differently,
+and which cards carry it. `KeywordDef` gained `Original` and
+`WrittenOnCard` (a label like On Field or Awaken, where each card writes
+its own ability, vs. an engine-backed keyword a card only has to list).
+A test now checks every keyword on a Dice Kingdom card is declared and
+described - nothing checked Dice Kingdom's catalog against its own list
+before. Of the 11 engine-backed keywords, only Fast, Overcrush and Deadly
+are on a team today; the other 8 sit on benched cards.
+
+## 2026-10-11 - Custom teams (PR #4) and the follow-ups
+
+Stormy's PR #4 merged: `/teambuilder` is now the Dice Kingdom builder
+(user: fine to retire the Dice Masters builder; it can come back later),
+with a Tardigrade mix and "Play with this team", which creates a game with
+`playerOneCustomTeam` (exact dice per card, Tardigrades per energy type, no
+Champion - Champions in custom teams come later). Online invites with a
+custom team aren't supported yet. Follow-ups on top:
+- **Server ceiling, not format rules.** The builder enforces the format
+  (house formats change them, e.g. 12 Tardigrades / 30 dice / 3 Basic
+  Actions), so the server only refuses more than 100 character dice or 100
+  Tardigrades (`V2GamesController.MaxCustomDice`) - without that, one
+  request could ask for billions of dice and take the server down.
+- **Records.** `RecordedSeat.ChampionId` is null for a custom team, and
+  the seat carries `CardDiceCounts` and `Tardigrades` so GameReplayer
+  deals the same team; the replay test now also plays a custom team.
+- The staged team survives blocked `sessionStorage` (kept in memory).
+
+## 2026-10-11 - First look at real games: purchases and rerolls
+
+48 live games from the `dice_kingdom_playlog` bucket (Oct 7-11; some are
+Stormy's quick tests, still real decisions), downloaded with a read-only
+key (`~/.devtools/gcs.py`) into `game-records/prod/`. All 48 replay
+exactly. 21 finished, all human vs bot: humans won 15-6. New
+`tools/GameRecords --dump FILE` writes every human decision as a JSON line
+in card/face names with the board around it.
+
+**Purchases.** When both bought, the human bought the pricier card in 99
+of the 124 disagreements - the bot's plan sums cost+1 per die, so two
+2-cost dice beat one 4 (Wolverine vs Honey Badger, Musk Ox vs Hermit
+Crab, Hyena vs Cuttlefish...). Against `DilutionPerDie`:
+
+| Per-die cost | Human buys matched | Same card when both buy | Human pricier / cheaper |
+|---|---|---|---|
+| 0 (live) | 20% | 55/179 | 99 / 13 |
+| 1 | 25% | 69 | 69 / 23 |
+| 2 | 31% | 84 | 43 / 30 |
+| 2.5 | - | 86 | 28 / 33 |
+| 3 | 22% | - | - |
+
+**Set as the default (DilutionPerDie = 2) the same day, user call.** 2 is where human choices balance out, and it's also the best of the
+2026-10-08 simulator runs (spread 6.3, fewer turn-cap stalls, shorter
+games). Much of what's left is order (people field first, then buy).
+
+**Rerolls.** Humans reroll weak Tardigrade creature faces the bot always
+keeps (L2 1/1: 28% vs 0%; L3: 39% vs 16%), and keep card-die energy more
+often (68-79% rerolled vs the bot's 88-94%). 26 of 211 human rerolls threw
+back a 2-energy Tardigrade face, spread over 12 games - unclear whether
+deliberate or UI confusion.
+
+## 2026-10-11 - Spun to energy leaves the Field
+
+User bug: "Spinning a die to energy leaves it in the field. It can be
+selected as a blocker (though it won't let you finish assigning it), it
+can't be spent, and it doesn't clear." Cuttlefish's On Attack spin (and any
+reroll to energy without a stated destination) only changed the face.
+Rules 2.5.1-2.5.2: an energy face can't be in the Field Zone, so the die
+goes to its controller's Reserve Pool - spendable on Globals during the
+attacker's turn, cleared at that player's Clear & Draw - dropping damage
+and modifiers (2.5.7), not a KO (2.5.3). EffectInterpreter
+`LeaveFieldIfEnergy`. It happened in 5 of the 48 live games; those
+records now drift at that move (expected - they recorded the old rule).
+
+## 2026-10-12 - Random packs and collections (first pass)
+
+User brief: the Champion teams stay as free "starter rosters"; custom-team
+builders collect through random packs. As in Dice Masters, rarity must not
+equal power ("decently competitive with just a common/uncommon team"), but
+collecting should still pay - later ideas: trade-ins (5 C -> U, 4 U -> R,
+3 R -> SR) and cosmetic badges/outfits for full sets. Starting numbers
+(user's): 100 coins for a new player, packs 10 coins, 5 coins a day.
+
+- Rarities: one table, `V2/Data/DiceKingdomPacks.cs` - 46 Characters, 18
+  Common / 14 Uncommon / 10 Rare / 4 Super Rare. Basic Actions aren't in
+  packs (they come with Champions). Strong cards at every tier on purpose:
+  Hummingbird (4-cost On Field KO) is Common while Orca (same text, 5) is
+  Rare. Super Rares are the showpieces: Silverback, Phoenix, Basilisk,
+  Komodo Dragon. Every starter roster is C/U apart from its power card
+  (Armadillo: Pangolin and Rhinoceros, both Rare) - a test holds it there.
+  My first pass, for the user to adjust.
+- What you collect is dice: each pulled card is one die of that character.
+  A team plays up to DieLimit (4); extras are kept for trade-ins.
+- A pack is 5 dice: 3 different Commons, 1 Uncommon, and a slot that's
+  Uncommon 55% / Rare 40% / Super Rare 5%. Per card: each Common ~1 pack in
+  6, Uncommon 1 in 9, Rare 1 in 25, Super Rare 1 in 80; ~40% of players
+  see a Super Rare in their first 10 packs.
+- Server-side and atomic: `PlayerAccounts.OpenPack` takes the coins and
+  adds the dice under the players lock, with a cryptographic roll. The
+  collection lives on the player file (`PlayerAccount.Collection`).
+- Daily coins: the first `/me` or `/me/collection` of each UTC day (so the
+  reset is 7-8pm US time). The start screen's "Playing as" line shows the
+  coins and "+5 today".
+- Linking a device merges collections but keeps only one starting grant
+  (coins = mine + theirs - 100, floor 0); otherwise every throwaway browser
+  linked in would bring 100 more. A brand-new anonymous browser still gets
+  its own 100 - harmless while collections gate nothing.
+- Page: `/dice-kingdom/packs` (cards flip over one by one; the collection
+  grid by rarity with die pips). Not yet: the Team Builder doesn't limit a
+  custom team to owned dice, and starter rosters don't add to the
+  collection - both open questions for the user.
+
+## 2026-10-12 - Trade-ins and starter rosters in the collection
+
+User: "No limits yet. Starter roster is added to your collection. Let's do
+trade ins next." So custom teams still use any card.
+
+- Starter rosters: the first time a player finishes a game (win or lose)
+  with a Champion, its 8 cards join the collection at DieLimit (4 each -
+  the dice that team plays with); `PlayerCollection.Starters` keeps it to
+  once. At the end, not the start, because which seat the computer plays
+  is only known once it has asked for a move (`BotSeat`) - at creation
+  both seats look like the creator's. Pass-and-play games add both
+  Champions. Players from before packs get the starters of the finished
+  games in their history when their collection is first made.
+- Trade-ins (user's rates): 5 Commons -> 1 Uncommon, 4 Uncommons -> 1 Rare,
+  3 Rares -> 1 Super Rare. The die you get is random (no picking a Super
+  Rare outright) but only from that rarity's cards you don't have 4 of
+  yet, so a trade always fills a gap; once all are full, any. Server takes
+  any owned dice (`POST /api/players/me/trade-in`, one card id per die);
+  the Packs page offers spares only - dice past 4 of a card, most
+  duplicated first - so a trade never breaks up a playable set.
+
+Found on the way: `PlayerAccountsTests.Players_Survive_A_Restart...` failed
+on and off (every time when run alone). At shutdown the background writer
+cancelled the write it was in the middle of, and that write was already
+off the queue StopAsync drains - so a player file (or game record, same
+code in GameRecorder) saved just before a redeploy could be lost. The
+in-flight write now finishes; only waiting for the next one is cancelled.

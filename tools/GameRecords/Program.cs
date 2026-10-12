@@ -11,11 +11,16 @@ using DiceFight.V2.Bot;
 // --disagreements lists every human move the bot would have made differently.
 
 var showDisagreements = args.Contains("--disagreements");
+// --dump FILE: every human decision as one JSON line - what they did, what
+// the bot would have done, and the board around it, in card names rather
+// than die ids - for digging into where people and the bot differ.
+var dumpAt = Array.IndexOf(args, "--dump");
+using var dump = dumpAt >= 0 ? new StreamWriter(args[dumpAt + 1]) : null;
 // --dilution N: compare against a bot whose purchases each cost N for the
 // die they add to the Bag (BotPersona.DilutionPerDie) - for tuning it.
 var dilutionAt = Array.IndexOf(args, "--dilution");
 double? dilution = dilutionAt >= 0 ? double.Parse(args[dilutionAt + 1], System.Globalization.CultureInfo.InvariantCulture) : null;
-var paths = args.Where((a, i) => !a.StartsWith("--") && !(dilutionAt >= 0 && i == dilutionAt + 1)).ToList();
+var paths = args.Where((a, i) => !a.StartsWith("--") && !(dilutionAt >= 0 && i == dilutionAt + 1) && !(dumpAt >= 0 && i == dumpAt + 1)).ToList();
 if (paths.Count == 0)
 {
     Console.WriteLine("usage: dotnet run -c Release -- <folder or .json files> [--disagreements] [--dilution N]");
@@ -47,13 +52,15 @@ foreach (var file in files)
         var key = (seatKind[action.PlayerId], decision);
         var (moves, ok) = agreement.GetValueOrDefault(key);
         agreement[key] = (moves + 1, ok + (agreed ? 1 : 0));
+        if (dump is not null && seatKind[action.PlayerId] == "human")
+            dump.WriteLine(JsonSerializer.Serialize(DecisionDump.Describe(record, state, action, bot, decision, agreed)));
         if (!agreed && seatKind[action.PlayerId] == "human")
             disagreements.Add($"{record.GameId} turn {action.Turn} ({action.Step}): played {action.Action} {action.Request?.GetRawText()}; bot: {bot.Kind} - {bot.Reason}");
     });
 
-    string Seat(RecordedSeat s) => $"{s.ChampionId}{(s.Bot ? " (bot)" : "")}";
+    string Seat(RecordedSeat s) => $"{s.ChampionId ?? "Custom Team"}{(s.Bot ? " (bot)" : "")}";
     var winner = record.Result is { GameOver: true } r
-        ? r.WinnerId is { } w ? record.Seats.First(s => s.PlayerId == w).ChampionId : "tie"
+        ? r.WinnerId is { } w ? record.Seats.First(s => s.PlayerId == w).ChampionId ?? "Custom Team" : "tie"
         : "unfinished";
     Console.WriteLine($"{record.GameId,-10}{record.CreatedUtc:yyyy-MM-dd}  {Seat(record.Seats[0]),-24}{Seat(record.Seats[1]),-24}{winner,-16}{record.Turns,6}  " +
         (outcome.Divergence is null ? $"ok ({outcome.ActionsReplayed} moves)" : $"DRIFTED - {outcome.Divergence}"));

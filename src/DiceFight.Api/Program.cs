@@ -24,7 +24,14 @@ builder.Services.AddSingleton<GameStore>();
 // Read when the app starts, not here, so test/host overrides apply.
 builder.Services.AddSingleton(sp => DiceFight.Api.Recording.GameRecorderSetup.FromConfig(sp));
 builder.Services.AddHostedService(sp => sp.GetRequiredService<DiceFight.Api.Recording.GameRecorderSetup>());
-builder.Services.AddSingleton(sp => new V2GameStore(sp.GetRequiredService<DiceFight.Api.Recording.GameRecorderSetup>().Recorder));
+// Players (2026-10-10, Accounts/): anonymous per device, optionally a named
+// account across devices. Kept wherever game records go.
+builder.Services.AddSingleton(sp => new DiceFight.Api.Accounts.PlayerAccounts(
+    DiceFight.Api.Recording.GameRecorderSetup.SinkFromConfig(sp), sp.GetRequiredService<ILogger<DiceFight.Api.Accounts.PlayerAccounts>>()));
+builder.Services.AddHostedService(sp => sp.GetRequiredService<DiceFight.Api.Accounts.PlayerAccounts>());
+builder.Services.AddSingleton(sp => new V2GameStore(
+    sp.GetRequiredService<DiceFight.Api.Recording.GameRecorderSetup>().Recorder,
+    sp.GetRequiredService<DiceFight.Api.Accounts.PlayerAccounts>()));
 
 // Idle games are dropped from memory (V2GameStore.ForgetIdle).
 builder.Services.Configure<GameExpiryOptions>(builder.Configuration.GetSection("GameExpiry"));
@@ -102,6 +109,10 @@ app.Use(async (context, next) =>
         await context.Response.WriteAsJsonAsync(new { error = ex.Message });
     }
 });
+
+// Who's playing (X-Player-Token), for the controllers - after the handler
+// above so a storage hiccup reading a player still answers in JSON.
+app.UseMiddleware<DiceFight.Api.Accounts.PlayerTokenMiddleware>();
 
 app.MapControllers();
 app.MapFallbackToFile("index.html");

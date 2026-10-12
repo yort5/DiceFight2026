@@ -38,9 +38,14 @@ public sealed class GameRecord
 public sealed class RecordedSeat
 {
     public required string PlayerId { get; init; }
-    public required string ChampionId { get; init; }
+    // Null for a custom team (Team Builder), which has no Champion.
+    public string? ChampionId { get; init; }
     // The team as dealt - the roster changes; a replay uses this.
     public required List<string> TeamCardIds { get; init; }
+    // Custom teams only: dice per card, and Tardigrades per energy type.
+    // Null means the Champion's own pack and pool.
+    public Dictionary<string, int>? CardDiceCounts { get; init; }
+    public Dictionary<string, int>? Tardigrades { get; init; }
     public bool Bot { get; set; }
 }
 

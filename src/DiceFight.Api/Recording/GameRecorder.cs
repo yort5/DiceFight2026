@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Threading.Channels;
 using DiceFight.V2;
+using DiceFight.V2.Data;
 using DiceFight.V2.Model;
 
 namespace DiceFight.Api.Recording;
@@ -44,8 +45,14 @@ public sealed class GameRecorder(IGameRecordSink sink, GameRecordOptions options
         session.RecordedActivePlayerId = session.State.ActivePlayerId;
     }
 
-    private static RecordedSeat Seat(Player player) =>
-        new() { PlayerId = player.Id, ChampionId = player.ChampionId ?? "", TeamCardIds = [.. player.TeamCardIds] };
+    private static RecordedSeat Seat(Player player) => new()
+    {
+        PlayerId = player.Id,
+        ChampionId = player.ChampionId,
+        TeamCardIds = [.. player.TeamCardIds],
+        CardDiceCounts = player.CustomCardDiceCounts is { } counts ? new(counts) : null,
+        Tardigrades = player.CustomBasicDicePool?.ToDictionary(e => DiceKingdomConfig.TardigradeEnergyType(e.Die.Id), e => e.Count),
+    };
 
     public static void MarkBot(V2GameSession session, string playerId)
     {
@@ -103,7 +110,10 @@ public sealed class GameRecorder(IGameRecordSink sink, GameRecordOptions options
         logger.LogInformation("Recording Dice Kingdom games to {Sink}.", sink.Describe());
         try
         {
-            await foreach (var (name, json) in _writes.Reader.ReadAllAsync(stoppingToken)) await WriteOne(name, json, stoppingToken);
+            // A write already under way finishes even as shutdown begins:
+            // cancelling it would lose it, since it's already off the queue
+            // StopAsync drains.
+            await foreach (var (name, json) in _writes.Reader.ReadAllAsync(stoppingToken)) await WriteOne(name, json, CancellationToken.None);
         }
         catch (OperationCanceledException) { }
     }
@@ -137,12 +147,21 @@ public sealed class GameRecorderSetup(GameRecorder? recorder) : IHostedService
 
     public static GameRecorderSetup FromConfig(IServiceProvider services)
     {
-        var options = services.GetRequiredService<IConfiguration>().GetSection("GameRecords").Get<GameRecordOptions>() ?? new GameRecordOptions();
-        IGameRecordSink? sink =
-            !string.IsNullOrWhiteSpace(options.Bucket) ? new CloudStorageSink(options.Bucket, new HttpClient())
+        var options = Options(services);
+        var sink = SinkFromConfig(services);
+        return new(sink is null ? null : new GameRecorder(sink, options, services.GetRequiredService<ILogger<GameRecorder>>()));
+    }
+
+    private static GameRecordOptions Options(IServiceProvider services) =>
+        services.GetRequiredService<IConfiguration>().GetSection("GameRecords").Get<GameRecordOptions>() ?? new GameRecordOptions();
+
+    // Where GameRecords points, or null - also where players are kept (Accounts).
+    public static IGameRecordSink? SinkFromConfig(IServiceProvider services)
+    {
+        var options = Options(services);
+        return !string.IsNullOrWhiteSpace(options.Bucket) ? new CloudStorageSink(options.Bucket, new HttpClient())
             : !string.IsNullOrWhiteSpace(options.LocalPath) ? new LocalFolderSink(options.LocalPath)
             : null;
-        return new(sink is null ? null : new GameRecorder(sink, options, services.GetRequiredService<ILogger<GameRecorder>>()));
     }
 
     public Task StartAsync(CancellationToken cancel) => recorder?.StartAsync(cancel) ?? Task.CompletedTask;

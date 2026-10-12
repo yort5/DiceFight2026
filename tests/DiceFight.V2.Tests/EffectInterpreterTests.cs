@@ -415,6 +415,25 @@ public class EffectInterpreterTests
     }
 
     [Fact]
+    public void SpinToEnergy_Moves_A_Fielded_Creature_To_Its_Reserve_Pool_As_Energy()
+    {
+        // Rules 2.5.1-2.5.2 (Cuttlefish, 2026-10-11): an energy face can't
+        // stay in the Field - it used to, offered as a blocker and never cleared.
+        var card = BuildCard("T", [Level1Char, FistEnergy1]);
+        var state = BuildState(card);
+        var die = AddDie(state, card, "p2", Zone.FieldZone, 0);
+        die.Damage = 1;
+        var ctx = BuildContext(state, "p1");
+
+        EffectInterpreter.Execute(new SpinToEnergy(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Opposing)), ctx);
+
+        Assert.Equal(Zone.ReservePool, die.Zone);
+        Assert.Equal("p2", die.ControllerId);
+        Assert.Equal(FaceKind.EnergyFace, state.GetCurrentFace(die)!.Kind);
+        Assert.Equal(0, die.Damage);
+    }
+
+    [Fact]
     public void SpinToEnergy_On_A_Die_With_No_Energy_Face_Leaves_It_Alone()
     {
         var card = BuildCard("T", [Level1Char, Level2Char]);

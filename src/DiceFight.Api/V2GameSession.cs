@@ -46,6 +46,12 @@ public sealed class V2GameSession
     // AnswerPendingChoice/queue-resumption pattern.
     public AbilityQueue? PendingQueue { get; set; }
 
+    // Which player (Accounts/PlayerAccount) holds each seat, by seat id -
+    // and which seats the computer plays. Kept by PlayerAccounts.
+    public System.Collections.Concurrent.ConcurrentDictionary<string, string> SeatOwners { get; } = new();
+    public HashSet<string> BotSeats { get; } = [];
+    public bool ResultRecorded { get; set; }
+
     public string? PlayerIdFor(string? token) =>
         token is null ? null : Seats.FirstOrDefault(s => FixedTimeEquals(s.Token, token))?.PlayerId;
 

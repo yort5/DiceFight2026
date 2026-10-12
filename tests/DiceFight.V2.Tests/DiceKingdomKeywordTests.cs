@@ -967,4 +967,22 @@ public class DiceKingdomKeywordTests
         Assert.Equal(["Pangolin"], QueryEngine.LockoutSources(state, "p2", DiceKingdomConfig.Orca.Id));
         Assert.Empty(QueryEngine.LockoutSources(state, "p1", DiceKingdomConfig.Orca.Id));
     }
+
+    // The keyword reference (tools/CardCatalogDocs, 2026-10-10) prints
+    // DiceKingdomConfig.Keywords - so every keyword a card carries must be
+    // declared there (its X form too: "Range 2" is Range), and every
+    // declared one needs rules text: Dice Masters' wording, ours, or both.
+    [Fact]
+    public void Every_Card_Keyword_Is_Declared_And_Every_Declared_Keyword_Is_Described()
+    {
+        var declared = DiceKingdomConfig.Keywords.Select(k => k.Id).ToList();
+        var undeclared = DiceKingdomConfig.Catalog.Values
+            .SelectMany(c => c.Keywords.Select(k => (Card: c.Name, Keyword: k)))
+            .Where(x => !declared.Any(id => KeywordAbilities.ParamOf(x.Keyword, id) is not null))
+            .Select(x => $"{x.Card}: {x.Keyword}")
+            .ToList();
+        Assert.Empty(undeclared);
+        Assert.All(DiceKingdomConfig.Keywords, k =>
+            Assert.False(string.IsNullOrWhiteSpace(k.Description) && string.IsNullOrWhiteSpace(k.Original), k.Id));
+    }
 }

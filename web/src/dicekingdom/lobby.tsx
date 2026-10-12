@@ -11,7 +11,8 @@ import { api } from "./api";
 import { ChampionPicker, championLabel, type ChampionChoice } from "./ChampionPicker";
 // Shared with the pages' setup screens; they live with the picker.
 export { OPPONENT_PICKS, OpponentPicksOption, championLabel, type ChampionChoice } from "./ChampionPicker";
-import { claimSeatFromUrl, forgetSavedGame, nameClaimedSeat, resumeSeats, savedGames, type SavedGame } from "./seats";
+import { players, type Me, type PlayedGame } from "./player";
+import { adoptGame, claimSeatFromUrl, forgetSavedGame, nameClaimedSeat, resumeSeats, savedGames, type SavedGame } from "./seats";
 import type { GameState, LobbyStatus } from "./types";
 
 /** What an invite link in the URL leads to: a game to play, or a pick to make first. */
@@ -157,10 +158,64 @@ function ago(ms: number): string {
   return hours < 24 ? `${hours} h ago` : `${Math.round(hours / 24)} d ago`;
 }
 
-/** The start screen's "Resume a game" list (2026-10-08): games this browser holds a seat in (seats.ts). */
+/** "Wolf vs Armadillo", or "Wolf · waiting for an opponent". */
+export function playedGameLabel(g: PlayedGame): string {
+  const champs = g.seats.map((s) => (s.championId ? championLabel(s.championId) : null));
+  if (g.status === "waiting" || champs.some((c) => !c)) return `${champs.find((c) => c) ?? "Game"} · waiting for an opponent`;
+  return champs.join(" vs ");
+}
+
+/** Unfinished games the server has for this player, added to this browser's saved list (seats.ts). */
+export function adoptServerGames(me: Me): void {
+  for (const g of me.games) {
+    if (g.status === "finished") continue;
+    const mine = g.seats.filter((s) => s.token);
+    const human = mine.find((s) => !s.bot) ?? mine[0];
+    if (!human) continue;
+    adoptGame(
+      g.gameId,
+      mine.map((s) => ({ playerId: s.seatId, token: s.token! })),
+      human.seatId,
+      playedGameLabel(g),
+      g.mode === "computer",
+    );
+  }
+}
+
+/**
+ * The start screen's "Resume a game" list (2026-10-08): games this browser
+ * holds a seat in (seats.ts) - and, since 2026-10-10, unfinished games this
+ * player started on their other devices (player.ts). `?resume=<gameId>` in
+ * the URL (the account page's Resume) resumes that one straight away.
+ */
 export function ResumeGames({ onResume }: { onResume: (r: Resumed) => void }) {
   const [games, setGames] = useState<SavedGame[]>(() => savedGames());
   const [note, setNote] = useState<string | null>(null);
+  // Read once, before the effect strips it - StrictMode runs effects twice.
+  const [wanted] = useState(() => new URLSearchParams(window.location.search).get("resume"));
+
+  useEffect(() => {
+    let cancelled = false;
+    if (wanted) window.history.replaceState(null, "", window.location.pathname);
+    players
+      .me()
+      .then(adoptServerGames)
+      .catch(() => {
+        // Offline or no player yet - this browser's own list still works.
+      })
+      .finally(() => {
+        if (cancelled) return;
+        const all = savedGames();
+        setGames(all);
+        const g = wanted ? all.find((x) => x.gameId === wanted) : undefined;
+        if (g) void resume(g);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   if (games.length === 0 && !note) return null;
 
   async function resume(g: SavedGame) {

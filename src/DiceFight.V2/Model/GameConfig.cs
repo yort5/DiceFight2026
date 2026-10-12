@@ -47,7 +47,16 @@ public sealed record SymbolDef(string Id, bool IsWild = false, bool IsGeneric = 
 // (Phase 7 - "keyword behavior is engine code keyed to keyword ids
 // declared in GameConfig... a game config can only use declared
 // keywords"); this record is just the declaration, not the behavior.
-public sealed record KeywordDef(string Id, string? Description = null);
+//
+// `Description` / `WrittenOnCard` / `Original` (2026-10-10) feed the
+// keyword reference (tools/CardCatalogDocs). Original = the keyword's
+// source wording (Dice Masters'), Description = how this game differs
+// from it, or what it means when there's no Original. WrittenOnCard = the
+// keyword is only a label - each card authors its own ability and the
+// word names its timing or cost (On Field, Awaken, Sacrifice...);
+// otherwise listing the keyword is all a card needs and the engine
+// supplies the rest.
+public sealed record KeywordDef(string Id, string? Description = null, bool WrittenOnCard = false, string? Original = null);
 
 // One entry in the basic (Sidekick-equivalent) dice pool - a DieDefinition
 // plus how many of it are in the shared pool. This is exactly where

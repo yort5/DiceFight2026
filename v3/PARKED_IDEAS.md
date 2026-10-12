@@ -51,6 +51,19 @@ core loop (Champion / Tardigrade / Energy / Affiliation, see
    whose DEF is higher than its ATK. Also earmarked for a future
    character.
 
+10. **Several cards per animal, one per team** (2026-10-12, user, while
+    weighing the pack system's all-unique animals). Dice Masters printed
+    a character several times (common/uncommon/rare Black Widow), each a
+    unique, separately tracked card (Superman SKC133 vs SKC149) with the
+    same title and die. A team could hold only one card of a given name,
+    so you chose which Black Widow - which let two strong abilities sit on
+    one character without ever being played together. Open question,
+    pending player feedback: Dice Kingdom has all the world's animals, so
+    it isn't short of characters the way a licensed set was - all-unique
+    may be fine. If adopted: card ids stay unique (collections and
+    rarities already key on them), add a one-card-per-name team rule, and
+    decide whether a die belongs to the card or is shared by the name.
+
 ## Tension flagged alongside these
 
 If it gets easier to field chump blockers — and the Tardigrade L1/L2 faces

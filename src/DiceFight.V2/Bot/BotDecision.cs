@@ -65,8 +65,10 @@ public sealed record BotPersona(
     // What one more die in the Bag costs a purchase plan (2026-10-08,
     // user: "you don't want too many dice in your bag, or it will take
     // forever to get around to the dice you just bought") - so one big
-    // buy can beat two small ones of more total cost.
-    double DilutionPerDie = 0)
+    // buy can beat two small ones of more total cost. 2 since 2026-10-11:
+    // the value that best matched 48 real games' purchases (and the most
+    // even simulator results) - v3/DESIGN_NOTES.md.
+    double DilutionPerDie = 2)
 {
     public static readonly BotPersona Default = new();
 

@@ -70,6 +70,17 @@ public static class GameReplayer
     // The team exactly as it was dealt in the recorded game.
     private static Player BuildPlayer(RecordedSeat seat)
     {
+        if (seat.ChampionId is null)
+        {
+            var custom = new Player
+            {
+                Id = seat.PlayerId, Name = "Custom Team",
+                CustomCardDiceCounts = new(seat.CardDiceCounts ?? []),
+                CustomBasicDicePool = [.. (seat.Tardigrades ?? []).Select(t => DiceKingdomConfig.CustomTardigrade(t.Key, t.Value))],
+            };
+            custom.TeamCardIds.AddRange(seat.TeamCardIds);
+            return custom;
+        }
         var champion = DiceKingdomConfig.Champions.First(c => c.Id == seat.ChampionId);
         var player = new Player { Id = seat.PlayerId, Name = champion.Name, ChampionId = champion.Id };
         player.TeamCardIds.AddRange(seat.TeamCardIds);

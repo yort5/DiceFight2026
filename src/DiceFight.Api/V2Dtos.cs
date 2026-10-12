@@ -1,4 +1,5 @@
 using DiceFight.V2;
+using DiceFight.V2.Data;
 using DiceFight.V2.Model;
 using DiceFight.V2.Model.Effects;
 
@@ -33,7 +34,9 @@ public sealed record V2CardDefDto(
     // that reflected damage as its own lane marker, apart from "to face"
     // (2026-09-30: folding the two together read as confusing).
     bool ReflectsDamage = false, bool HasErrata = false, bool IsImplemented = true,
-    string? Type = null, string? Set = null, IReadOnlyList<string>? Affiliations = null)
+    string? Type = null, string? Set = null, IReadOnlyList<string>? Affiliations = null,
+    // Pack rarity (DiceKingdomPacks) - null for Basic Actions.
+    string? Rarity = null)
 {
     public static V2CardDefDto From(CardDef card)
     {
@@ -59,7 +62,8 @@ public sealed record V2CardDefDto(
             card.Die.Faces.SelectMany(f => f.Symbols).Select(sym => sym.SymbolId).FirstOrDefault(),
             card.Abilities.Any(a => a.Trigger == TriggerKind.DieDamaged
                 && a.Effect is DealDamage { Target: { Kind: TargetKind.Player, Ownership: TargetOwnership.Opposing } }),
-            card.HasErrata, card.IsImplemented, card.CardType.ToString(), card.Set, card.Affiliations);
+            card.HasErrata, card.IsImplemented, card.CardType.ToString(), card.Set, card.Affiliations,
+            Rarity: DiceKingdomPacks.Rarities.TryGetValue(card.Id, out var rarity) ? rarity.ToString() : null);
     }
 }
 
