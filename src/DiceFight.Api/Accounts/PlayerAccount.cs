@@ -36,6 +36,10 @@ public sealed class PlayerCollection
     // Card id -> dice of it owned, past its DieLimit too (for trade-ins).
     public Dictionary<string, int> Dice { get; set; } = [];
     public int PacksOpened { get; set; }
+    public int TradeIns { get; set; }
+    // Champions whose starter roster has been added (each card at its
+    // DieLimit), the first time the player plays one.
+    public List<string> Starters { get; set; } = [];
 }
 
 // A browser holding a token "{playerId}.{secret}"; only a hash of the secret is kept.

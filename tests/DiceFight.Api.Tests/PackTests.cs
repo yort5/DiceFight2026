@@ -152,3 +152,158 @@ public class PackTests
         Assert.Null(cards.Single(c => c.Id == DiceKingdomConfig.AngerIssues.Id).Rarity);
     }
 }
+
+// Trade-ins and starter rosters (2026-10-12).
+public class TradeInTests
+{
+    private static PlayerAccounts NewAccounts() => new(null, NullLogger<PlayerAccounts>.Instance);
+
+    private static T Ok<T>(ActionResult<T> result) => (T)((OkObjectResult)result.Result!).Value!;
+
+    private static PlayersController Players(V2GameStore store, PlayerAccount player)
+    {
+        var http = new DefaultHttpContext();
+        http.SetPlayer(player);
+        return new(store) { ControllerContext = new ControllerContext { HttpContext = http } };
+    }
+
+    private static PlayerAccount WithDice(PlayerAccounts accounts, params (string Card, int Count)[] dice)
+    {
+        var (player, _) = accounts.Register(null);
+        var collection = accounts.Wallet(player).Collection;
+        foreach (var (card, count) in dice) collection.Dice[card] = count;
+        return player;
+    }
+
+    [Fact]
+    public void Five_Commons_Become_An_Uncommon()
+    {
+        var accounts = NewAccounts();
+        var badger = DiceKingdomConfig.HoneyBadger.Id;
+        var stoat = DiceKingdomConfig.Stoat.Id;
+        var player = WithDice(accounts, (badger, 7), (stoat, 5));
+
+        var got = accounts.TradeIn(player, [badger, badger, badger, stoat, stoat]);
+
+        Assert.Equal(CardRarity.Uncommon, DiceKingdomPacks.Rarities[got]);
+        Assert.Equal(4, player.Collection!.Dice[badger]);
+        Assert.Equal(3, player.Collection.Dice[stoat]);
+        Assert.Equal(1, player.Collection.Dice[got]);
+        Assert.Equal(1, player.Collection.TradeIns);
+    }
+
+    [Fact]
+    public void Four_Uncommons_Make_A_Rare_And_Three_Rares_A_Super_Rare()
+    {
+        var accounts = NewAccounts();
+        var wolverine = DiceKingdomConfig.Wolverine.Id;
+        var orca = DiceKingdomConfig.Orca.Id;
+        var player = WithDice(accounts, (wolverine, 4), (orca, 3));
+
+        Assert.Equal(CardRarity.Rare, DiceKingdomPacks.Rarities[accounts.TradeIn(player, [wolverine, wolverine, wolverine, wolverine])]);
+        Assert.False(player.Collection!.Dice.ContainsKey(wolverine));
+        Assert.Equal(CardRarity.SuperRare, DiceKingdomPacks.Rarities[accounts.TradeIn(player, [orca, orca, orca])]);
+    }
+
+    [Theory]
+    [InlineData(4)] // too few
+    [InlineData(6)] // too many
+    public void A_Trade_Needs_Exactly_The_Rate(int count)
+    {
+        var accounts = NewAccounts();
+        var badger = DiceKingdomConfig.HoneyBadger.Id;
+        var player = WithDice(accounts, (badger, 10));
+        Assert.Throws<InvalidOperationException>(() => accounts.TradeIn(player, Enumerable.Repeat(badger, count).ToList()));
+        Assert.Equal(10, player.Collection!.Dice[badger]);
+    }
+
+    [Fact]
+    public void Mixed_Rarities_Unowned_Dice_And_Super_Rares_Are_Refused()
+    {
+        var accounts = NewAccounts();
+        var badger = DiceKingdomConfig.HoneyBadger.Id;
+        var wolverine = DiceKingdomConfig.Wolverine.Id;
+        var phoenix = DiceKingdomConfig.Phoenix.Id;
+        var player = WithDice(accounts, (badger, 4), (wolverine, 4), (phoenix, 5));
+
+        Assert.Throws<InvalidOperationException>(() => accounts.TradeIn(player, [badger, badger, badger, badger, wolverine]));
+        Assert.Throws<InvalidOperationException>(() => accounts.TradeIn(player, [badger, badger, badger, badger, badger])); // only 4
+        Assert.Throws<InvalidOperationException>(() => accounts.TradeIn(player, [phoenix, phoenix, phoenix]));
+        Assert.Throws<InvalidOperationException>(() => accounts.TradeIn(player, ["DK-ACT-01", "DK-ACT-01", "DK-ACT-01", "DK-ACT-01", "DK-ACT-01"]));
+        Assert.Equal((4, 4, 5), (player.Collection!.Dice[badger], player.Collection.Dice[wolverine], player.Collection.Dice[phoenix]));
+    }
+
+    [Fact]
+    public void A_Trade_Gives_A_Card_You_Still_Need_While_There_Is_One()
+    {
+        // Every Uncommon full but Fox.
+        var full = DiceKingdomPacks.CardsOf(CardRarity.Uncommon).Where(id => id != DiceKingdomConfig.Fox.Id).Select(id => (id, 4));
+        var owned = full.ToDictionary(x => x.id, x => x.Item2);
+        for (var roll = 0; roll < 3; roll++)
+            Assert.Equal(DiceKingdomConfig.Fox.Id, DiceKingdomPacks.TradeIn(CardRarity.Common, owned, n => roll % n));
+        // Once all are full, any of them.
+        owned[DiceKingdomConfig.Fox.Id] = 4;
+        var any = Enumerable.Range(0, 14).Select(r => DiceKingdomPacks.TradeIn(CardRarity.Common, owned, _ => r)).Distinct().Count();
+        Assert.Equal(14, any);
+    }
+
+    [Fact]
+    public void The_Trade_In_Endpoint_Returns_The_New_Die()
+    {
+        var store = new V2GameStore(accounts: NewAccounts());
+        var badger = DiceKingdomConfig.HoneyBadger.Id;
+        var player = WithDice(store.Accounts!, (badger, 9));
+
+        var traded = Ok(Players(store, player).TradeIn(new TradeInRequest([badger, badger, badger, badger, badger])));
+
+        Assert.Equal("Uncommon", traded.Card.Rarity);
+        Assert.True(traded.Card.New);
+        Assert.Equal(4, traded.Collection.Dice[badger]);
+        Assert.Equal(5, traded.Collection.TradeInCost["Common"]);
+    }
+
+    [Fact]
+    public void Finishing_A_Game_Adds_That_Champions_Starter_Roster_Once()
+    {
+        var store = new V2GameStore(accounts: NewAccounts());
+        var accounts = store.Accounts!;
+        var (player, _) = accounts.Register(null);
+        var http = new DefaultHttpContext();
+        http.SetPlayer(player);
+        var games = new V2GamesController(store) { ControllerContext = new ControllerContext { HttpContext = http } };
+
+        for (var i = 0; i < 2; i++)
+        {
+            var id = Ok(games.Create(new CreateV2GameRequest("Wolf", "GoldenEagle"))).Game.GameId;
+            var session = store.GetSession(id);
+            accounts.BotSeat(session, "teamB"); // the computer plays Golden Eagle
+            if (i == 0) Assert.Empty(player.Collection?.Starters ?? []); // not while it's being played
+            session.State.PlayerTwo.Life = 0;
+            session.State.CheckGameOver();
+            accounts.AfterMove(session);
+        }
+
+        var collection = player.Collection!;
+        Assert.Equal(["Wolf"], collection.Starters);
+        Assert.All(DiceKingdomConfig.CharactersByChampion["Wolf"], id => Assert.Equal(4, collection.Dice[id]));
+        Assert.Equal(32, collection.Dice.Values.Sum());
+    }
+
+    [Fact]
+    public void A_Player_From_Before_Packs_Gets_The_Starters_They_Played()
+    {
+        var accounts = NewAccounts();
+        var (player, _) = accounts.Register(null);
+        player.Games.Add(new PlayedGame
+        {
+            GameId = "old", EndedUtc = DateTime.UtcNow,
+            Seats = [new PlayedSeat { SeatId = "teamA", ChampionId = "GreatHornedOwl", Token = "t" }, new PlayedSeat { SeatId = "teamB", ChampionId = "Wolf", Bot = true }],
+        });
+
+        var (collection, _) = accounts.Wallet(player);
+
+        Assert.Equal(["GreatHornedOwl"], collection.Starters);
+        Assert.Equal(32, collection.Dice.Values.Sum());
+        Assert.Equal(100, collection.Coins);
+    }
+}

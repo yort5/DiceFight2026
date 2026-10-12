@@ -57,6 +57,11 @@ export interface Collection {
   /** Card id -> dice owned, past the card's die limit too. */
   dice: Record<string, number>;
   nextDailyUtc: string;
+  tradeIns: number;
+  /** Champions whose starter roster has been added. */
+  starters: string[];
+  /** "Common" -> 5: dice of that rarity for one of the next. */
+  tradeInCost: Partial<Record<Rarity, number>>;
 }
 
 export interface PulledCard {
@@ -137,6 +142,9 @@ export const players = {
   link: (code: string) => call<Me>("/me/link", { method: "POST", body: JSON.stringify({ code }) }),
   collection: () => call<Collection>("/me/collection"),
   openPack: () => call<{ cards: PulledCard[]; collection: Collection }>("/me/packs", { method: "POST" }),
+  /** One card id per die given. */
+  tradeIn: (give: string[]) =>
+    call<{ card: PulledCard; collection: Collection }>("/me/trade-in", { method: "POST", body: JSON.stringify({ give }) }),
   removeDevice: (deviceId: string) => call<Me>(`/me/devices/${encodeURIComponent(deviceId)}`, { method: "DELETE" }),
   /** Signs this device out: it forgets its token and becomes a new anonymous player. */
   signOut: async (me: Me) => {

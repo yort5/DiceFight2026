@@ -110,7 +110,10 @@ public sealed class GameRecorder(IGameRecordSink sink, GameRecordOptions options
         logger.LogInformation("Recording Dice Kingdom games to {Sink}.", sink.Describe());
         try
         {
-            await foreach (var (name, json) in _writes.Reader.ReadAllAsync(stoppingToken)) await WriteOne(name, json, stoppingToken);
+            // A write already under way finishes even as shutdown begins:
+            // cancelling it would lose it, since it's already off the queue
+            // StopAsync drains.
+            await foreach (var (name, json) in _writes.Reader.ReadAllAsync(stoppingToken)) await WriteOne(name, json, CancellationToken.None);
         }
         catch (OperationCanceledException) { }
     }

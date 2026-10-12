@@ -174,6 +174,10 @@ public sealed class PlayerAccounts(IGameRecordSink? store, ILogger<PlayerAccount
                     mine.Coins = Math.Max(0, mine.Coins + theirs.Coins - DiceKingdomPacks.StartingCoins);
                     foreach (var (card, count) in theirs.Dice) mine.Dice[card] = mine.Dice.GetValueOrDefault(card) + count;
                     mine.PacksOpened += theirs.PacksOpened;
+                    mine.TradeIns += theirs.TradeIns;
+                    // A starter both had stays counted twice - those dice
+                    // were really added to each.
+                    foreach (var champion in theirs.Starters.Except(mine.Starters)) mine.Starters.Add(champion);
                     if (string.CompareOrdinal(theirs.LastDailyDate, mine.LastDailyDate) > 0) mine.LastDailyDate = theirs.LastDailyDate;
                 }
             }
@@ -200,7 +204,7 @@ public sealed class PlayerAccounts(IGameRecordSink? store, ILogger<PlayerAccount
             var given = 0;
             if (player.Collection is null)
                 // A new player's first day is covered by the starting coins.
-                player.Collection = new PlayerCollection { Coins = DiceKingdomPacks.StartingCoins, LastDailyDate = today };
+                Collection(player, today);
             else if (player.Collection.LastDailyDate != today)
             {
                 player.Collection.Coins += given = DiceKingdomPacks.DailyCoins;
@@ -208,6 +212,60 @@ public sealed class PlayerAccounts(IGameRecordSink? store, ILogger<PlayerAccount
             }
             Save(player);
             return (player.Collection, given);
+        }
+    }
+
+    // Made on first use. A player who played before packs existed gets the
+    // starter rosters of the Champions they finished games with. Under _gate.
+    private PlayerCollection Collection(PlayerAccount player, string? today = null)
+    {
+        if (player.Collection is { } existing) return existing;
+        var collection = player.Collection = new PlayerCollection
+        {
+            Coins = DiceKingdomPacks.StartingCoins,
+            LastDailyDate = today ?? DateOnly.FromDateTime((clock ?? TimeProvider.System).GetUtcNow().UtcDateTime).ToString("yyyy-MM-dd"),
+        };
+        foreach (var seat in player.Games.Where(g => g.EndedUtc is not null).SelectMany(g => g.Seats).Where(s => s.Token is not null && !s.Bot))
+            AddStarter(player, seat.ChampionId);
+        return collection;
+    }
+
+    // A Champion's starter roster joins the collection the first time the
+    // player finishes a game with it, win or lose (user, 2026-10-12: the
+    // starter roster is added to your collection) - every card at its
+    // DieLimit, the dice that team plays with. Under _gate.
+    private void AddStarter(PlayerAccount player, string? championId)
+    {
+        if (championId is null || !DiceKingdomConfig.CharactersByChampion.TryGetValue(championId, out var cards)) return;
+        var collection = Collection(player);
+        if (collection.Starters.Contains(championId)) return;
+        collection.Starters.Add(championId);
+        foreach (var card in cards)
+            collection.Dice[card] = collection.Dice.GetValueOrDefault(card) + DiceKingdomConfig.Catalog[card].DieLimit;
+    }
+
+    // Trades dice of one rarity (TradeInCost of them) for a random die of
+    // the next. `give` names each die, repeats for several of one card.
+    public string TradeIn(PlayerAccount player, IReadOnlyList<string> give, Func<int, int>? roll = null)
+    {
+        lock (_gate)
+        {
+            var collection = Collection(player);
+            var rarities = give.Select(id => DiceKingdomPacks.Rarities.TryGetValue(id, out var r) ? r : (CardRarity?)null).Distinct().ToList();
+            if (rarities is not [{ } rarity]) throw new InvalidOperationException("Trade in dice of one rarity at a time.");
+            if (!DiceKingdomPacks.TradeInCost.TryGetValue(rarity, out var cost)) throw new InvalidOperationException("Super Rares can't be traded up.");
+            if (give.Count != cost) throw new InvalidOperationException($"Trading up takes {cost} {rarity} dice.");
+            foreach (var group in give.GroupBy(id => id))
+                if (collection.Dice.GetValueOrDefault(group.Key) < group.Count())
+                    throw new InvalidOperationException($"You don't have {group.Count()} {DiceKingdomConfig.Catalog[group.Key].Name} dice.");
+
+            foreach (var id in give)
+                if (--collection.Dice[id] == 0) collection.Dice.Remove(id);
+            var got = DiceKingdomPacks.TradeIn(rarity, collection.Dice, roll ?? RandomNumberGenerator.GetInt32);
+            collection.Dice[got] = collection.Dice.GetValueOrDefault(got) + 1;
+            collection.TradeIns++;
+            Save(player);
+            return got;
         }
     }
 
@@ -329,6 +387,7 @@ public sealed class PlayerAccounts(IGameRecordSink? store, ILogger<PlayerAccount
             seat.Bot = session.BotSeats.Contains(p.Id);
             var mine = session.SeatOwners.GetValueOrDefault(p.Id) == owner.Id;
             seat.Token = mine ? session.Seats.First(s => s.PlayerId == p.Id).Token : null;
+
         }
         var owners = session.SeatOwners.Values.Distinct().Count();
         game.Mode = session.BotSeats.Count > 0 ? "computer" : owners > 1 ? "online" : "local";
@@ -341,6 +400,9 @@ public sealed class PlayerAccounts(IGameRecordSink? store, ILogger<PlayerAccount
             game.WinnerSeatId = state.WinnerId;
             var human = game.Seats.Where(s => s.Token is not null && !s.Bot).ToList();
             game.Result = human.Count == 1 && state.WinnerId is not null ? (human[0].SeatId == state.WinnerId ? "win" : "loss") : null;
+            // Only now: which seat the computer played is known for sure
+            // once it has asked for a move (BotSeat), not at the start.
+            foreach (var seat in human) AddStarter(owner, seat.ChampionId);
         }
         Save(owner);
     }
@@ -392,7 +454,10 @@ public sealed class PlayerAccounts(IGameRecordSink? store, ILogger<PlayerAccount
             logger.LogInformation("Keeping players in {Store}.", store.Describe());
         try
         {
-            await foreach (var (name, json) in _writes.Reader.ReadAllAsync(stoppingToken)) await WriteOne(name, json, stoppingToken);
+            // A write already under way finishes even as shutdown begins:
+            // cancelling it would lose it, since it's already off the queue
+            // StopAsync drains.
+            await foreach (var (name, json) in _writes.Reader.ReadAllAsync(stoppingToken)) await WriteOne(name, json, CancellationToken.None);
         }
         catch (OperationCanceledException) { }
     }

@@ -83,9 +83,24 @@ public sealed class PlayersController(V2GameStore store) : ControllerBase
         return Ok(new OpenedPackDto(pulled, DescribeCollection(collection, 0)));
     }
 
+    // Dice of one rarity for a random die of the next (DiceKingdomPacks.TradeInCost).
+    [HttpPost("me/trade-in")]
+    public ActionResult<TradedInDto> TradeIn([FromBody] TradeInRequest request)
+    {
+        var player = RequirePlayer();
+        var got = Accounts.TradeIn(player, request.Give ?? []);
+        var collection = player.Collection!;
+        var owned = collection.Dice[got];
+        return Ok(new TradedInDto(
+            new PulledCardDto(got, DiceKingdomPacks.Rarities[got].ToString(), owned, owned == 1),
+            DescribeCollection(collection, 0)));
+    }
+
     private static CollectionDto DescribeCollection(PlayerCollection c, int daily) => new(
         c.Coins, daily, DiceKingdomPacks.DailyCoins, DiceKingdomPacks.PackPrice, c.PacksOpened, c.Dice,
-        DateOnly.FromDateTime(DateTime.UtcNow).AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
+        DateOnly.FromDateTime(DateTime.UtcNow).AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc),
+        c.TradeIns, c.Starters,
+        DiceKingdomPacks.TradeInCost.ToDictionary(kv => kv.Key.ToString(), kv => kv.Value));
 
     private PlayerAccount RequirePlayer() =>
         HttpContext.Player() ?? throw new SeatRequiredException($"A valid {PlayerAccounts.TokenHeader} is required.");
@@ -127,10 +142,16 @@ public sealed record LinkCodeDto(string Code, DateTime ExpiresUtc);
 public sealed record PlayerDto(string Id, string? Name, IReadOnlyList<PlayerDeviceDto> Devices, IReadOnlyList<PlayedGameDto> Games, int Coins, int DailyCoins);
 public sealed record CollectionDto(
     int Coins, int DailyCoins, int DailyAmount, int PackPrice, int PacksOpened,
-    IReadOnlyDictionary<string, int> Dice, DateTime NextDailyUtc);
+    IReadOnlyDictionary<string, int> Dice, DateTime NextDailyUtc,
+    // Starters: Champions whose starter roster was added. TradeInCost:
+    // "Common" -> 5 dice for an Uncommon, and so on.
+    int TradeIns, IReadOnlyList<string> Starters, IReadOnlyDictionary<string, int> TradeInCost);
 // Owned: dice of it now, this pack's included. New: the first of it.
 public sealed record PulledCardDto(string CardId, string Rarity, int Owned, bool New);
 public sealed record OpenedPackDto(IReadOnlyList<PulledCardDto> Cards, CollectionDto Collection);
+// Give: one card id per die, repeated for several of one card.
+public sealed record TradeInRequest(IReadOnlyList<string>? Give);
+public sealed record TradedInDto(PulledCardDto Card, CollectionDto Collection);
 public sealed record PlayerDeviceDto(string Id, string? Label, DateTime AddedUtc, DateTime LastSeenUtc, bool ThisDevice);
 public sealed record PlayedGameDto(
     string GameId,

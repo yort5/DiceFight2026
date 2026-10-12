@@ -4515,3 +4515,31 @@ collecting should still pay - later ideas: trade-ins (5 C -> U, 4 U -> R,
   grid by rarity with die pips). Not yet: the Team Builder doesn't limit a
   custom team to owned dice, and starter rosters don't add to the
   collection - both open questions for the user.
+
+## 2026-10-12 - Trade-ins and starter rosters in the collection
+
+User: "No limits yet. Starter roster is added to your collection. Let's do
+trade ins next." So custom teams still use any card.
+
+- Starter rosters: the first time a player finishes a game (win or lose)
+  with a Champion, its 8 cards join the collection at DieLimit (4 each -
+  the dice that team plays with); `PlayerCollection.Starters` keeps it to
+  once. At the end, not the start, because which seat the computer plays
+  is only known once it has asked for a move (`BotSeat`) - at creation
+  both seats look like the creator's. Pass-and-play games add both
+  Champions. Players from before packs get the starters of the finished
+  games in their history when their collection is first made.
+- Trade-ins (user's rates): 5 Commons -> 1 Uncommon, 4 Uncommons -> 1 Rare,
+  3 Rares -> 1 Super Rare. The die you get is random (no picking a Super
+  Rare outright) but only from that rarity's cards you don't have 4 of
+  yet, so a trade always fills a gap; once all are full, any. Server takes
+  any owned dice (`POST /api/players/me/trade-in`, one card id per die);
+  the Packs page offers spares only - dice past 4 of a card, most
+  duplicated first - so a trade never breaks up a playable set.
+
+Found on the way: `PlayerAccountsTests.Players_Survive_A_Restart...` failed
+on and off (every time when run alone). At shutdown the background writer
+cancelled the write it was in the middle of, and that write was already
+off the queue StopAsync drains - so a player file (or game record, same
+code in GameRecorder) saved just before a redeploy could be lost. The
+in-flight write now finishes; only waiting for the next one is cancelled.

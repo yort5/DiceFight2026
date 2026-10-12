@@ -93,6 +93,29 @@ public static class DiceKingdomPacks
         [(CardRarity.Uncommon, 55), (CardRarity.Rare, 40), (CardRarity.SuperRare, 5)],
     ];
 
+    // Trade-ins (2026-10-12, user's rates): 5 Commons for an Uncommon, 4
+    // Uncommons for a Rare, 3 Rares for a Super Rare. What comes back is
+    // random - you can't pick a Super Rare outright - but only from the
+    // next rarity's cards you don't have a full team's worth of yet, so
+    // trading always moves you toward a complete set.
+    public static readonly IReadOnlyDictionary<CardRarity, int> TradeInCost = new Dictionary<CardRarity, int>
+    {
+        [CardRarity.Common] = 5,
+        [CardRarity.Uncommon] = 4,
+        [CardRarity.Rare] = 3,
+    };
+
+    // `owned`: card id -> dice owned. Null once every card of the next
+    // rarity is full too - then any of them.
+    public static string TradeIn(CardRarity given, IReadOnlyDictionary<string, int> owned, Func<int, int> roll)
+    {
+        if (!TradeInCost.ContainsKey(given)) throw new InvalidOperationException("Super Rares can't be traded up.");
+        var pool = CardsOf(given + 1);
+        var missing = pool.Where(id => owned.GetValueOrDefault(id) < DiceKingdomConfig.Catalog[id].DieLimit).ToList();
+        if (missing.Count > 0) pool = missing;
+        return pool[roll(pool.Count)];
+    }
+
     public static IReadOnlyList<string> CardsOf(CardRarity rarity) =>
         Rarities.Where(kv => kv.Value == rarity).Select(kv => kv.Key).Order().ToList();
 
