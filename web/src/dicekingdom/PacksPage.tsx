@@ -128,8 +128,8 @@ function TradeIns({
     <div className="panel">
       <h3>Trade in</h3>
       <p className="dk-acct-dim">
-        Trade spare dice - past the 4 a team can play - up a rarity. You get a random card of the next rarity, picked from
-        the ones you don't have 4 of yet.
+        Trade spare dice - past the most a team can play of that card (usually 4) - up a rarity. You get a random card of
+        the next rarity, picked from the ones you don't have a full set of yet.
       </p>
       {(["Common", "Uncommon", "Rare"] as Rarity[]).map((rarity) => {
         const cost = collection.tradeInCost[rarity];
@@ -179,7 +179,7 @@ function CollectionGrid({ collection, cards }: { collection: Collection; cards: 
       <h3>Your collection</h3>
       <p className="dk-acct-dim">
         {owned} of {characters.length} characters · {dice} dice · {collection.packsOpened} {collection.packsOpened === 1 ? "pack" : "packs"} opened
-        {collection.tradeIns > 0 && <> · {collection.tradeIns} {collection.tradeIns === 1 ? "trade-in" : "trade-ins"}</>}. A team plays up to 4 dice of a character;
+        {collection.tradeIns > 0 && <> · {collection.tradeIns} {collection.tradeIns === 1 ? "trade-in" : "trade-ins"}</>}. A team plays up to a card's die limit (usually 4);
         extras can be traded in.
       </p>
       <p className="dk-acct-dim">
