@@ -4543,3 +4543,31 @@ cancelled the write it was in the middle of, and that write was already
 off the queue StopAsync drains - so a player file (or game record, same
 code in GameRecorder) saved just before a redeploy could be lost. The
 in-flight write now finishes; only waiting for the next one is cancelled.
+
+## 2026-10-14 - Card sweep: a screen for overpowered imports
+
+User call: a programmatic check for cards that are too strong, used "as
+input and not as a rule" - the bot plays simply, and the real danger is
+two or more cards together, which a one-card test can't see.
+
+`SIM_SWEEP=all` (tools/Simulator) puts each Catalog card that's on no
+starter roster into the roster of its energy's Champion, replacing the
+own-energy card nearest in cost, and plays that team 200 games against
+each of the four starter rosters (Champion powers on, same seeds as the
+unmodified roster). A Basic Action replaces each Champion's Basic Action
+in turn. Reports the win-rate change; one standard error is about 2.5
+points, so +/-5 is noise and +10 is worth a look.
+
+First run, 52 cards (34 imports, the off-roster natives, 4 Basic Actions):
+- Above +10: Fire Ant +20 (2-cost Claw, 2/1 free at L1 up to 4/3, plus
+  1 damage whenever you field a Claw creature - Wolf's team is mostly
+  Claw), Frigatebird +14 (Gladiator's printed dice: 5/5 for 0 to field
+  at L1, 7/7 for 0 at L3, plus Intimidate), Electric Ray +13 (free 2/3 at
+  L1, blanks opposing On Field), Deathstalker Scorpion +12 (2-cost, 3/4
+  at L3, Deadly). Saiga (+6) has the same Gladiator dice as Frigatebird.
+- No engine errors in about 51,000 games.
+- Basic Actions: nothing outside the noise (best Thorn Shot on Wolf +8;
+  their dice are shared, so the opponent can buy them too).
+- Big negatives mostly describe the slot, not the card: Bison -33
+  (4/1 glass cannon in for Armadillo's 1/5-3/9 Rhinoceros wall), Meerkat
+  and Planarian -16/-17 (both in for Hermit Crab).

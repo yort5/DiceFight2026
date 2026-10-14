@@ -30,6 +30,14 @@ using DiceFight.V2.Model.Effects;
 //                    powers-off only - every passive's Amount zeroed and
 //                    Foresight removed)
 //   SIM_GAMES=N      games per matchup (default 200)
+//   SIM_SWEEP=all|id,id  card sweep instead of the round robin: each card
+//                    that's in the Catalog but on no starter roster goes
+//                    into the roster of its energy's Champion, replacing
+//                    the own-energy card nearest in cost, and that team
+//                    plays all four starter rosters (powers on). Reports
+//                    the win-rate change against the unmodified roster.
+//                    A screen for outliers, not a verdict - see
+//                    v3/DESIGN_NOTES.md 2026-10-14.
 //   SIM_DUMP=N       print the full match log of game N of each matchup
 //   SIM_SWAP=Champ:oldId=newId;...  what-if roster swap, e.g.
 //                    Armadillo:DK-SHELL-02=DK-SHELL-06 (Musk Ox -> Queen Termite)
@@ -59,6 +67,12 @@ var matchups = new List<(string A, string B)>();
 for (var i = 0; i < championIds.Length; i++)
     for (var j = i + 1; j < championIds.Length; j++)
         matchups.Add((championIds[i], championIds[j]));
+
+if (Environment.GetEnvironmentVariable("SIM_SWEEP") is { Length: > 0 } sweep)
+{
+    Sweep.Run(sweep, championIds, displayName, gamesPerMatchup, BuildPlayer, StableHash);
+    return;
+}
 
 // SIM_ONLY=ChampA,ChampB - just that one matchup.
 if (Environment.GetEnvironmentVariable("SIM_ONLY") is { Length: > 0 } only)
@@ -198,14 +212,14 @@ static (string WinnerChampionIdOrSentinel, int Turns) PlayOneGame(
     return (state.PlayerOne.Life > state.PlayerTwo.Life ? championOne : championTwo, turn);
 }
 
-static Player BuildPlayer(string id, string championId)
+static Player BuildPlayer(string id, string championId, IReadOnlyDictionary<string, string>? swapOverride = null)
 {
     var player = new Player { Id = id, Name = championId, ChampionId = championId };
-    var swaps = (Environment.GetEnvironmentVariable("SIM_SWAP") ?? "").Split(';', StringSplitOptions.RemoveEmptyEntries)
+    var swaps = swapOverride ?? (Environment.GetEnvironmentVariable("SIM_SWAP") ?? "").Split(';', StringSplitOptions.RemoveEmptyEntries)
         .Select(s => s.Split(':')).Where(s => s[0] == championId)
         .Select(s => s[1].Split('=')).ToDictionary(s => s[0], s => s[1]);
     player.TeamCardIds.AddRange(DiceKingdomConfig.CharactersByChampion[championId].Select(id => swaps.GetValueOrDefault(id, id)));
-    player.TeamCardIds.Add(DiceKingdomConfig.ActionByChampion[championId]);
+    player.TeamCardIds.Add(swaps.GetValueOrDefault(DiceKingdomConfig.ActionByChampion[championId], DiceKingdomConfig.ActionByChampion[championId]));
     return player;
 }
 
@@ -299,6 +313,141 @@ static void DumpLog(GameState state, string one, string two)
     foreach (var entry in state.Log)
         Console.WriteLine($"[{entry.PlayerId ?? "-"}] {entry.Text}");
     Console.WriteLine($"Final life: p1={state.PlayerOne.Life} p2={state.PlayerTwo.Life}");
+}
+
+// SIM_SWEEP - see the header. Its own game loop: Stats is single-threaded
+// and the sweep runs candidates in parallel.
+static class Sweep
+{
+    const int MaxTurns = 50;
+
+    static Func<string, string, IReadOnlyDictionary<string, string>?, Player> BuildPlayer = null!;
+    static Func<string, int> StableHash = null!;
+
+    public static void Run(string which, string[] championIds, Dictionary<string, string> names, int games,
+        Func<string, string, IReadOnlyDictionary<string, string>?, Player> buildPlayer, Func<string, int> stableHash)
+    {
+        BuildPlayer = buildPlayer;
+        StableHash = stableHash;
+        var rosters = DiceKingdomConfig.CharactersByChampion;
+        var onRoster = rosters.Values.SelectMany(r => r).Concat(DiceKingdomConfig.ActionByChampion.Values).ToHashSet();
+        var energyChamp = DiceKingdomConfig.Champions.ToDictionary(c => c.EnergySymbolId, c => c.Id);
+        var candidates = Catalog.Cards.Values
+            .Where(c => which == "all" ? !onRoster.Contains(c.Id) : which.Split(',').Contains(c.Id))
+            .Where(c => c.CardType is CardType.Character or CardType.Action && c.EnergySymbolIds.Count == 1 || c.CardType == CardType.BasicAction)
+            .OrderBy(c => c.EnergySymbolIds.FirstOrDefault()).ThenBy(c => c.PurchaseCost).ToList();
+
+        // A Character or Action replaces the own-energy roster card nearest
+        // its cost (ties: the cheaper), so the team keeps its shape. A Basic
+        // Action has no energy: it replaces each Champion's Basic Action in
+        // turn, one row per Champion.
+        var slots = candidates.SelectMany(c => c.CardType == CardType.BasicAction
+            ? championIds.Select(h => (Card: c, Host: h, Replaced: DiceKingdomConfig.ActionByChampion[h]))
+            : [(Card: c, Host: energyChamp[c.EnergySymbolIds[0]], Replaced: rosters[energyChamp[c.EnergySymbolIds[0]]]
+                .Select(id => Catalog.Cards[id]).Where(r => r.EnergySymbolIds.Contains(c.EnergySymbolIds[0]))
+                .OrderBy(r => Math.Abs(r.PurchaseCost - c.PurchaseCost)).ThenBy(r => r.PurchaseCost).First().Id)]).ToList();
+        foreach (var (c, host, replaced) in slots)
+            Console.WriteLine($"  {c.Id} {c.Name} ({c.CardType}, {c.EnergySymbolIds.FirstOrDefault() ?? "no energy"} {c.PurchaseCost}) -> {names[host]} replacing {Catalog.Cards[replaced].Name}  {Faces(c)} vs {Faces(Catalog.Cards[replaced])}");
+        if (games == 0) return;
+        Console.WriteLine($"Sweep: {candidates.Count} cards, {games} games vs each of {championIds.Length} starter rosters, Champion powers on.");
+        var baseline = championIds.AsParallel().Select(h => (h, R: Play(h, null, championIds, games))).ToDictionary(x => x.h, x => x.R);
+        foreach (var h in championIds)
+            Console.WriteLine($"  baseline {names[h],-9} {100 * baseline[h].WinRate,5:F1}%  ({baseline[h].Errors} errors, {100.0 * baseline[h].CapHits / games / championIds.Length:F1}% hit the turn cap)");
+
+        var results = new (CardDef Card, string Host, string Replaced, Result R)[slots.Count];
+        Parallel.For(0, slots.Count, i =>
+        {
+            var (card, host, replaced) = slots[i];
+            results[i] = (card, host, replaced, Play(host, (replaced, card.Id), championIds, games));
+        });
+
+        var se = 100 * Math.Sqrt(0.25 / (games * championIds.Length)) * Math.Sqrt(2);
+        Console.WriteLine($"\nchange = swapped team's win% minus the unmodified roster's; one standard error ~ {se:F1} points.");
+        Console.WriteLine($"{"card",-22}{"rarity",-11}{"cost",5}  {"host",-10}{"replaces",-18}{"win%",7}{"change",8}{"buys/g",8}{"fielded",9}{"cap%",6}{"err",5}");
+        foreach (var (card, host, replaced, r) in results.OrderByDescending(x => x.R.WinRate - baseline[x.Host].WinRate))
+        {
+            var rarity = DiceKingdomPacks.Rarities.TryGetValue(card.Id, out var rr) ? rr.ToString() : "-";
+            Console.WriteLine($"{card.Name,-22}{rarity,-11}{card.PurchaseCost,5}  {names[host],-10}{Catalog.Cards[replaced].Name,-18}" +
+                $"{100 * r.WinRate,6:F1}%{100 * (r.WinRate - baseline[host].WinRate),+8:+0.0;-0.0}" +
+                $"{(double)r.Buys / r.Games,8:F2}{100.0 * r.GamesFielded / r.Games,8:F0}%{100.0 * r.CapHits / r.Games,5:F0}%{r.Errors,5}");
+        }
+    }
+
+    // Character levels as fielding cost:ATK/DEF, e.g. "L1 1:2/2 L2 2:3/3".
+    static string Faces(CardDef c) => string.Join(" ", c.Die.Faces.Where(f => f.Character is not null)
+        .Select(f => f.Character!).DistinctBy(f => f.Level).OrderBy(f => f.Level)
+        .Select(f => $"L{f.Level} {f.FieldingCost}:{f.Attack}/{f.Defense}"));
+
+    public sealed record Result(double WinRate, int Games, int Buys, int GamesFielded, int CapHits, int Errors);
+
+    // The host roster (with the swap, if any) against every starter roster,
+    // seats alternated; the same seeds for every candidate, so the baseline
+    // and each swap see the same opening dice.
+    static Result Play(string host, (string Old, string New)? swap, string[] opponents, int games)
+    {
+        int wins = 0, decided = 0, played = 0, buys = 0, fielded = 0, caps = 0, errors = 0;
+        var swaps = swap is { } s ? new Dictionary<string, string> { [s.Old] = s.New } : new Dictionary<string, string>();
+        foreach (var opp in opponents)
+            for (var g = 0; g < games; g++)
+            {
+                var hostFirst = g % 2 == 0;
+                var rng = new Random(unchecked(StableHash(host) * 397 ^ StableHash(opp) * 31 ^ g ^ 0x5EED));
+                try
+                {
+                    var hostPlayer = BuildPlayer(hostFirst ? "p1" : "p2", host, swaps);
+                    var oppPlayer = BuildPlayer(hostFirst ? "p2" : "p1", opp, new Dictionary<string, string>());
+                    var (hostWon, oppWon, b, f, cap) = Game(hostFirst ? hostPlayer : oppPlayer, hostFirst ? oppPlayer : hostPlayer,
+                        hostPlayer.Id, swap?.New, rng);
+                    played++; buys += b; fielded += f ? 1 : 0; caps += cap ? 1 : 0;
+                    if (hostWon || oppWon) decided++;
+                    if (hostWon) wins++;
+                }
+                catch (Exception)
+                {
+                    errors++;
+                }
+            }
+        return new((double)wins / Math.Max(1, decided), played, buys, fielded, caps, errors);
+    }
+
+    static (bool HostWon, bool OppWon, int Buys, bool Fielded, bool Cap) Game(Player one, Player two, string hostId, string? watch, Random rng)
+    {
+        var state = GameSetup.NewGame(DiceKingdomConfig.Config, Catalog.Cards, one, two);
+        var driver = new BotDriver(state, rng);
+        Priority.Sync(state);
+        var skip = new HashSet<string>();
+        int turn = 1, buys = 0;
+        var fielded = false;
+        var lastActive = state.ActivePlayerId;
+        for (var guard = 0; guard < 20_000; guard++)
+        {
+            if (state.PlayerOne.Life <= 0 || state.PlayerTwo.Life <= 0) break;
+            if (state.ActivePlayerId != lastActive)
+            {
+                lastActive = state.ActivePlayerId;
+                skip.Clear();
+                if (++turn > MaxTurns) break;
+            }
+            var owner = driver.DecisionOwner();
+            var decision = DiceKingdomBot.Decide(state, owner, skip, BotPersona.ForChampion(state.GetPlayer(owner).ChampionId))
+                ?? throw new InvalidOperationException($"Bot had no decision for {owner} at step {state.CurrentStepId}.");
+            if (owner == hostId && watch is not null && decision.DieId is { } dieId &&
+                decision.Kind is BotActionKind.Purchase or BotActionKind.Field or BotActionKind.UseAction &&
+                state.Dice.First(d => d.Id == dieId).CardId == watch)
+            {
+                if (decision.Kind == BotActionKind.Purchase) buys++;
+                else fielded = true;
+            }
+            try { driver.Apply(owner, decision); }
+            catch (InvalidOperationException) when (decision.DieId is not null) { skip.Add(decision.DieId); }
+        }
+        var host = state.GetPlayer(hostId);
+        var opp = hostId == "p1" ? state.PlayerTwo : state.PlayerOne;
+        var cap = host.Life > 0 && opp.Life > 0;
+        bool hostWon = opp.Life <= 0 && host.Life > 0 || cap && host.Life > opp.Life;
+        bool oppWon = host.Life <= 0 && opp.Life > 0 || cap && opp.Life > host.Life;
+        return (hostWon, oppWon, buys, fielded, cap);
+    }
 }
 
 static class Catalog
