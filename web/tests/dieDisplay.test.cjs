@@ -19,6 +19,22 @@ function loadTs(name, imports = {}) {
 
 const bot = loadTs('bot.ts');
 const display = loadTs('dieDisplay.ts', { './bot': bot });
+const faceModels = loadTs('dieFaces.ts', { './icons': {
+  CHARACTER_ICONS: { Action: () => null }, TardigradeIcon: () => null,
+} });
+
+test('action previews retain all three printed burst values from card data', () => {
+  const card = { id: 'Action', isAction: true, energyTypes: [], dieEnergyType: 'Claw', levels: [], actionFaceBursts: [0, 1, 2] };
+  const faces = faceModels.printedFacesFor({ cardId: 'Action', isTardigrade: false }, new Map([['Action', card]]));
+  assert.deepEqual(faces.filter(f => f.kind === 'action').map(f => f.burst), [0, 1, 2]);
+  assert.deepEqual(faces.filter(f => f.kind === 'energy').map(f => f.amount), [2, 2, 1]);
+});
+
+test('the live action face displays its server-provided burst rather than the first printed face', () => {
+  const card = { id: 'Action', isAction: true, energyTypes: [], dieEnergyType: 'Claw', levels: [], actionFaceBursts: [0, 1, 2] };
+  const { faces, index } = faceModels.facesFor({ cardId: 'Action', isTardigrade: false, isActionFace: true, burst: 2, level: null }, new Map([['Action', card]]));
+  assert.equal(index, 0); assert.equal(faces[0].kind, 'action'); assert.equal(faces[0].burst, 2);
+});
 const cards = new Map([
   ['Pangolin', { energyTypes: ['Shell'] }],
   ['Action', { isAction: true, energyTypes: [], dieEnergyType: 'Eye' }],

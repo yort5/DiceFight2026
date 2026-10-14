@@ -3,7 +3,7 @@
 // Keep effects that belong to a particular card in that card's ability text.
 export const KEYWORD_RULES: Record<string, string> = {
   "Back for More": "Use this die's listed Back for More ability when you roll it from the Prep Area. The card states the effect and any cost.",
-  Boomerang: "After using this action die, roll it. If it lands on an action face, add it to your Prep Area.",
+  Rebound: "After using this action die, roll it. If it lands on an action face, add it to your Prep Area.",
   Cleave: "If this attacking character KOs a blocker, deal half its attack damage, rounded down, to another target opposing character die.",
   "Common Ground": "Use the listed ability when this die attacks together with the kind of character stated on its card. The card specifies its partner requirement and the bonus.",
   Crossover: "A Crossover character requires more than one energy type to purchase. Pay its printed requirements. Abilities referring to Crossover affect characters of this kind.",
@@ -33,7 +33,7 @@ export const KEYWORD_RULES: Record<string, string> = {
   Underdog: "Use the listed Underdog effect while your opponent has more character dice in their Field Zone than you do. Follow the card's timing and effect.",
   Vengeance: "Use the card's Vengeance ability when you take damage. The card describes the resulting effect and any required KO or other cost.",
   Aftershock: "Use the card's Aftershock ability when an opponent causes this creature to leave the Field, including by KO, damage, or removal. The card states the effect.",
-  Ally: "This character die also counts as a Sidekick while in the Field or Attack Zone. It keeps its other attributes.",
+  Kinfolk: "This creature also counts as a Tardigrade while in the Field or Attack Zone. It keeps its other attributes.",
   Amplify: "While this character is active, each time you use an action die, spin its dice up one level if possible. Using a Global does not count as using an action die.",
   Attune: "While active, each time you use an action die, this creature deals 1 damage to the opponent or a target character die. Attune N deals N damage instead. A Global does not trigger Attune.",
   Awaken: "Use the card's Awaken ability each time this die spins up one or more levels. Each die triggers separately. Rolling a higher level is not spinning up.",
@@ -67,6 +67,8 @@ export const KEYWORD_RULES: Record<string, string> = {
 };
 
 const ALIASES: Record<string, string> = {
+  ally: "Kinfolk",
+  boomerang: "Rebound",
   continous: "Continuous", // A spelling used by a printed catalog entry.
   "when fielded": "On Field",
   "when attacking": "On Attack",

@@ -26,7 +26,7 @@ import { useDiceRoll, type RollTarget } from "./useDiceRoll";
 import { useDieFlights } from "./dieFlights";
 import { classifyDieMotion, remoteRolledIds } from "./dieMotion";
 import { activeCouldAct, botDecisionCall, decisionOwner, rolled } from "./bot";
-import { basicActionStock, executeAbility, getAbilityOptions, type AbilityCommand } from "./sharedAbilities";
+import { basicActionStock, isCommunityBasicAction, executeAbility, getAbilityOptions, type AbilityCommand } from "./sharedAbilities";
 import { isReservePaymentDie } from "./reservePayment";
 import { evaluateSelectedPayment } from "./selectedPayment";
 import { SharedAbilityPanel } from "./SharedAbilityPanel";
@@ -1110,7 +1110,7 @@ export function DiceKingdomPage() {
   const namedCardChoice = myPendingChoice?.intent === "NameCard";
   // Unpurchased dice are represented by roster cards, not loose dice.
   // The other eligible dice remain in their original Field/Reserve/Attack positions.
-  const inlineDieChoice = !!myPendingChoice && !namedCardChoice && myPendingChoice.candidateIds.length > 0 &&
+  const inlineDieChoice = !!myPendingChoice && !myPendingChoice.isConfirmation && !namedCardChoice && myPendingChoice.candidateIds.length > 0 &&
     myPendingChoice.candidateIds.every((id) => {
       // Player targets have no die to highlight; offer them by name in
       // the compact prompt alongside directly-selectable creature dice.
@@ -1191,7 +1191,7 @@ export function DiceKingdomPage() {
     const bag = diceFor(playerId, "Bag");
     const drawn = diceFor(playerId, "DiceFromBag");
     const carried = diceFor(playerId, "DiceFromPrep");
-    const unpurchased = diceFor(playerId, "Unpurchased").filter((d) => !d.cardId || !cardsById.get(d.cardId)?.isAction);
+    const unpurchased = diceFor(playerId, "Unpurchased").filter((d) => !d.cardId || !isCommunityBasicAction(cardsById.get(d.cardId)));
     const unpurchasedByCard = new Map<string, Die[]>();
     for (const d of unpurchased) {
       if (!d.cardId) continue;
@@ -1596,7 +1596,7 @@ export function DiceKingdomPage() {
     const rosterRow = (
       <div className="roster-row" data-pile={`${playerId === you ? "mine" : "opp"}-roster`}>
         <div className="roster-regular-cards">
-          {regularCards.length === 0 && <span className="roster-empty">No character dice left</span>}
+          {regularCards.length === 0 && <span className="roster-empty">No team dice left</span>}
           {renderRosterChips(regularCards)}
         </div>
         {sharedActionCards.length > 0 && (
@@ -1996,9 +1996,16 @@ export function DiceKingdomPage() {
     <div ref={flightRootRef} className="dicekingdom">
       {legendOpen && <DieFramesLegend variant="desktop" onClose={() => setLegendOpen(false)} />}
       {myPendingChoice && (
-        <div className="dk-floating-choice" role="dialog" aria-label="Choose an ability target">
+        <div className="dk-floating-choice" role="dialog" aria-label={myPendingChoice.isConfirmation ? "Optional ability" : "Choose an ability target"}>
           <div className="dk-floating-choice-description"><KeywordText text={myPendingChoice.description} /></div>
-          {inlineChoice ? (
+          {myPendingChoice.isConfirmation ? (
+            <div className="dk-choice-actions">
+              <button type="button" className="btn" disabled={busy}
+                onClick={() => run(() => api.resolvePendingChoice(game.gameId, myPendingChoice.candidateIds))}>Accept</button>
+              <button type="button" className="btn" disabled={busy}
+                onClick={() => run(() => api.resolvePendingChoice(game.gameId, []))}>Decline</button>
+            </div>
+          ) : inlineChoice ? (
             <>
               <p className="dk-choice-instructions">
                 {namedCardChoice ? "Select a highlighted card in your opponent’s roster (right-click to inspect)." : "Select highlighted dice on the board (right-click to inspect)."}
@@ -2267,9 +2274,11 @@ function PendingChoiceChips({
               {name}
               {/* Paying energy (Breath Weapon) offers Reserve dice - what
                   matters there is the energy, not the body. */}
-              {die && (die.zone === "ReservePool" && die.energyAmount > 0
+              {die && displayModeFor(die) === "3d" && (die.energyAmount > 0
                 ? ` · ${die.energyAmount} ${die.energySymbolId}`
-                : ` ${die.effectiveAttack}/${die.effectiveDefense}`)}
+                : die.isActionFace ? " · Action"
+                  : die.effectiveAttack !== null && die.effectiveDefense !== null
+                    ? ` ${die.effectiveAttack}/${die.effectiveDefense}` : "")}
             </span>
           );
         })}

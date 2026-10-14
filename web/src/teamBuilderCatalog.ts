@@ -23,6 +23,7 @@ export function adaptKingdomCard(card: KingdomCardDef): CardDef {
     purchaseCost: card.purchaseCost,
     energyTypes: card.energyTypes,
     dieEnergyType: card.dieEnergyType,
+    actionFaceBursts: card.actionFaceBursts,
     affiliations: card.affiliations ?? [],
     alignment: null,
     rarity: null,

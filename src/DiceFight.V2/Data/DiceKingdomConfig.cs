@@ -950,6 +950,8 @@ public static class DiceKingdomConfig
         text = Regex.Replace(text, $@"\bWhen {Regex.Escape(name)} attacks\s*,?\s*", "On Attack: ", RegexOptions.IgnoreCase);
         text = Regex.Replace(text, @"\b(Energize|Amplify)\s*[-–—]\s*", "$1: ", RegexOptions.IgnoreCase);
         text = Regex.Replace(text, @"\bGlobal\s+Pay\b", "Global: Pay", RegexOptions.IgnoreCase);
+        text = Regex.Replace(text, @"\bAlly\b", "Kinfolk", RegexOptions.IgnoreCase);
+        text = Regex.Replace(text, @"\bBoomerang\b", "Rebound", RegexOptions.IgnoreCase);
         return source with
         {
             Name = name,
@@ -957,9 +959,11 @@ public static class DiceKingdomConfig
             Set = "Dice Kingdom",
             EnergySymbolIds = source.CardType.IsCommunity() ? [] : [energy],
             RawText = text,
-            Keywords = source.Abilities.Any(ability => ability.Trigger == TriggerKind.DieFielded)
-                ? source.Keywords.Append("On Field").Concat(source.Abilities.Any(a => a.Trigger == TriggerKind.DieAttacks) ? ["On Attack"] : []).Distinct().ToList()
-                : source.Abilities.Any(a => a.Trigger == TriggerKind.DieAttacks) ? source.Keywords.Append("On Attack").Distinct().ToList() : source.Keywords,
+            Keywords = source.Keywords
+                .Concat(source.Abilities.Any(a => a.Trigger == TriggerKind.DieFielded) ? ["On Field"] : [])
+                .Concat(source.Abilities.Any(a => a.Trigger == TriggerKind.DieAttacks) ? ["On Attack"] : [])
+                .Concat(source.Abilities.Any(a => a.Trigger == TriggerKind.DieBlocks) ? ["On Block"] : [])
+                .Distinct().ToList(),
             Die = StandardDie(source.Die.Id, energy, source.Die.Faces
                 .Where(face => face.Kind != FaceKind.EnergyFace)
                 .Select(face => face with
@@ -971,8 +975,14 @@ public static class DiceKingdomConfig
             {
                 EnergyCost = ability.EnergyCost?.RequiredSymbolId is null ? ability.EnergyCost
                     : ability.EnergyCost with { RequiredSymbolId = energy },
-                Filter = ability.Filter?.Payment?.SymbolId is null ? ability.Filter
-                    : ability.Filter with { Payment = ability.Filter.Payment with { SymbolId = energy } },
+                Filter = ability.Filter is null ? null : ability.Filter with
+                {
+                    Tags = ability.Filter.Tags is null ? null : new TagQuery(
+                        ability.Filter.Tags.AnyOf?.Select(tag => tag is "Fist" or "Bolt" or "Mask" or "Shield" ? energy : tag).ToList(),
+                        ability.Filter.Tags.NoneOf?.Select(tag => tag is "Fist" or "Bolt" or "Mask" or "Shield" ? energy : tag).ToList()),
+                    Payment = ability.Filter.Payment?.SymbolId is null ? ability.Filter.Payment
+                        : ability.Filter.Payment with { SymbolId = energy },
+                },
             }).ToList(),
         };
     }
@@ -1078,6 +1088,9 @@ public static class DiceKingdomConfig
     // (KeywordAbilities.ParamOf).
     public static readonly IReadOnlyList<KeywordDef> Keywords =
     [
+        new("Kinfolk", Description: "This creature also counts as a Tardigrade while in the Field or Attack Zone; it keeps its other attributes."),
+        new("Rebound", Description: "After using this action die, roll it. An action result goes to Prep; an energy result goes to Used."),
+        new("Impulse", Description: "Use the listed Impulse ability when purchasing this die.", WrittenOnCard: true),
         // The engine supplies these - a card just lists the word.
         new("Fast", Description: null, Original: "Characters with Fast deal combat damage before other characters, all at the same time, instead of at the regular time for combat damage."),
         new("Amplify", Description: "When you use an action die, spin this creature up one level."),

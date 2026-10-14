@@ -26,6 +26,7 @@ public static class EventBus
     // it's a real, general gap, not specific to that one event kind.
     public static void Fire(GameState state, AbilityQueue queue, GameEvent evt)
     {
+        var firedCards = new HashSet<(string Controller, string Card, TriggeredAbility Ability)>();
         foreach (var controllerId in new[] { state.ActivePlayerId, state.OpponentOf(state.ActivePlayerId) })
         {
             var candidates = ActiveDice(state, controllerId).ToList();
@@ -64,10 +65,21 @@ public static class EventBus
                         listener != evt.SubjectDie &&
                         !(evt.Kind == TriggerKind.TurnStepEntered && evt.Step == StepIds.Main && listener.Zone == Zone.ReservePool) &&
                         ability.Filter?.Payment is null) continue;
-                    if (Matches(state, evt, listener, ability))
+                    if (Matches(state, evt, listener, ability) &&
+                        (!ability.OncePerCard || firedCards.Add((listener.ControllerId, listener.CardId ?? listener.Id, ability))))
                         queue.Enqueue(listener.Id, listener.ControllerId, ability.Trigger, ability.Effect, evt.SubjectDie?.Id,
                             (evt.Payload as DamageDealtPayload)?.Amount);
                 }
+            }
+            foreach (var grant in state.GrantedTriggeredAbilities.Where(g => g.ControllerId == controllerId))
+            {
+                var source = state.Dice.FirstOrDefault(d => d.Id == grant.SourceDieId);
+                if (grant.Ability.Trigger == evt.Kind && (grant.Ability.Filter is { } filter
+                    ? MatchesFilter(state, evt, source, grant.ControllerId, filter)
+                    : source is null || evt.SubjectDie is null || evt.SubjectDie.Id == source.Id) &&
+                    (!grant.Ability.OncePerCard || firedCards.Add((grant.ControllerId, source?.CardId ?? grant.SourceName, grant.Ability))))
+                    queue.Enqueue(grant.SourceDieId, grant.ControllerId, grant.Ability.Trigger, grant.Ability.Effect,
+                        evt.SubjectDie?.Id, (evt.Payload as DamageDealtPayload)?.Amount, grant.SourceName, isGranted: true);
             }
         }
     }
@@ -91,11 +103,12 @@ public static class EventBus
             return evt.SubjectDie is null || evt.SubjectDie.Id == listener.Id;
         }
 
-        return MatchesFilter(state, evt, listener, ability.Filter);
+        return MatchesFilter(state, evt, listener, listener.ControllerId, ability.Filter);
     }
 
-    private static bool MatchesFilter(GameState state, GameEvent evt, DieInstance listener, EventFilter filter)
+    private static bool MatchesFilter(GameState state, GameEvent evt, DieInstance? listener, string controllerId, EventFilter filter)
     {
+        if (filter.RequireActive && listener?.Zone is not (Zone.FieldZone or Zone.AttackZone)) return false;
         // Spike C - which timing window this listener wants. Checked
         // first: it's the cheapest test and the most likely to exclude.
         if (filter.Step is { } step && evt.Step != step) return false;
@@ -103,7 +116,7 @@ public static class EventBus
 
         if (filter.Ownership != TargetOwnership.Any)
         {
-            var isOwn = evt.SubjectControllerId == listener.ControllerId;
+            var isOwn = evt.SubjectControllerId == controllerId;
             if ((filter.Ownership == TargetOwnership.Own) != isOwn) return false;
         }
 
@@ -117,19 +130,21 @@ public static class EventBus
                  state.CardCatalog[paidCard].CardType != type)) return false;
             if (requirement.OnlyListenerCard)
             {
-                if (listener.CardId is null || paid.Payment.VirtualEnergy != 0 || paid.Payment.Spent.Count == 0 ||
-                    paid.Payment.Spent.Any(p => p.CardId != listener.CardId)) return false;
+                if (listener?.CardId is null || paid.Payment.VirtualEnergy != 0 || paid.Payment.Spent.Count == 0 ||
+                    paid.Payment.Spent.Any(p => p.CardId != listener?.CardId)) return false;
                 // An exclusive-source purchase rule resolves once, even with several copies paying.
-                if (paid.Payment.Spent[0].DieId != listener.Id) return false;
+                if (paid.Payment.Spent[0].DieId != listener?.Id) return false;
             }
         }
 
-        if (filter.ExcludeSelf && evt.SubjectDie?.Id == listener.Id) return false;
+        if (filter.SameCardAsListener && (listener is null || evt.SubjectDie?.CardId is null || evt.SubjectDie.CardId != listener?.CardId)) return false;
+
+        if (filter.ExcludeSelf && evt.SubjectDie?.Id == listener?.Id) return false;
 
         // Part 30 - the general "this reaction is about ME" gate a filter
         // with other predicates set doesn't get for free (unlike a null
         // Filter's own shortcut in Matches, above).
-        if (filter.RequireSelf && evt.SubjectDie?.Id != listener.Id) return false;
+        if (filter.RequireSelf && (listener is null || evt.SubjectDie?.Id != listener.Id)) return false;
 
         if (filter.ExcludeCause is { } excludeCause)
         {
@@ -156,7 +171,7 @@ public static class EventBus
 
         if (filter.SharesAffiliationWithListener)
         {
-            if (evt.SubjectDie is not { } subjectForAffiliation) return false;
+            if (listener is null || evt.SubjectDie is not { } subjectForAffiliation) return false;
             var listenerAffiliations = QueryEngine.GetAffiliations(state, listener);
             var subjectAffiliations = QueryEngine.GetAffiliations(state, subjectForAffiliation);
             if (!listenerAffiliations.Any(subjectAffiliations.Contains)) return false;

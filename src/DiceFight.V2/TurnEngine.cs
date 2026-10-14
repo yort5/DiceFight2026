@@ -363,12 +363,14 @@ public static class TurnEngine
         // (null = matches any), on top of whatever QueryEngine's own
         // continuous registry already applies.
         var pending = QueryEngine.NextPurchaseModifier(state, card, state.ActivePlayerId);
+        var destinationRules = state.PendingPurchaseModifiers.Where(m => m.PlayerId == state.ActivePlayerId
+            && card.CardType.Matches(m.CardKind) && m.GoesToZone is not null && (m.EveryPurchase || m == pending)).ToList();
         var cost = QueryEngine.GetPurchaseCostNow(state, card, state.ActivePlayerId);
         var payment = SpendEnergy(state, energyDice, cost, card.EnergySymbolIds, payerId: state.ActivePlayerId);
 
         die.ControllerId = state.ActivePlayerId; // rule 1.1.4 - purchaser becomes controller
-        die.Zone = pending?.GoesToZone ?? Zone.UsedPile;
-        if (pending is not null) state.PendingPurchaseModifiers.Remove(pending);
+        die.Zone = destinationRules.LastOrDefault(m => !m.OptionalDestination)?.GoesToZone ?? Zone.UsedPile;
+        if (pending is { EveryPurchase: false }) state.PendingPurchaseModifiers.Remove(pending);
 
         state.PurchasedThisTurn.Add(state.ActivePlayerId);
         if (card.CardType == CardType.Character) state.PurchasedCharacterThisTurn.Add(state.ActivePlayerId);
@@ -377,6 +379,12 @@ public static class TurnEngine
             : $"{state.NameOf(state.ActivePlayerId)} purchases {card.Name}.");
         EventBus.Fire(state, queue, new GameEvent(TriggerKind.PurchaseMade, die, state.ActivePlayerId, state.CurrentStepId,
             new PaymentPayload(PaymentPurpose.Purchase, die.Id, payment)));
+        foreach (var route in destinationRules.Where(m => m.OptionalDestination))
+            queue.Enqueue(null, state.ActivePlayerId, TriggerKind.PurchaseMade,
+                new Conditional(new InZone(Zone.UsedPile, "event"),
+                    new MayPay(null, new MoveDie(new TargetFilter(Bound: "event"), route.GoesToZone!.Value),
+                        Prompt: $"put {card.Name} directly into your {route.GoesToZone}?")),
+                die.Id, sourceName: route.SourceName, isGranted: true);
     }
 
     // Rule 2.6.3 - Field Character Dice. Fielding cost may be paid with
@@ -764,7 +772,9 @@ public static class TurnEngine
         // Grants still expire HERE, not at turn start - the rulebook's
         // Cleanup Step is "end all effects", and a "this turn" grant must
         // not survive into the opponent's turn.
-        state.PendingPurchaseModifiers.RemoveAll(m => m.PlayerId == endingPlayerId);
+        state.PendingPurchaseModifiers.RemoveAll(m => (m.GrantedDuringPlayerId ?? m.PlayerId) == endingPlayerId);
+        state.GrantedTriggeredAbilities.RemoveAll(g => g.Duration == Duration.EndOfTurn ||
+            (g.Duration == Duration.UntilYourNextTurn && g.GrantedDuringPlayerId != endingPlayerId));
         state.LogEvent(endingPlayerId, $"{state.NameOf(endingPlayerId)} ends their turn.");
         state.ActivePlayerId = state.OpponentOf(state.ActivePlayerId);
         state.MoveToStep(StepIds.StartOfTurn);

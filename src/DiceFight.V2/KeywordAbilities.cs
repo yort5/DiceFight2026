@@ -114,10 +114,14 @@ public static class KeywordAbilities
         return
         [
             new TriggeredAbility(TriggerKind.TurnStepEntered, checkAndRun, Filter: new EventFilter(Step: StepIds.Main)),
-            new TriggeredAbility(TriggerKind.DieFaceChanged, checkAndRun,
-                Filter: new EventFilter(RequireSelf: true, ExcludeCause: FaceChangeCause.Roll, ExcludeStep: StepIds.RollAndReroll)),
+            new TriggeredAbility(TriggerKind.DieFaceChanged, effect,
+                Filter: new EventFilter(RequireSelf: true, ExcludeCause: FaceChangeCause.Roll, ExcludeStep: StepIds.RollAndReroll,
+                    Stat: new StatThreshold(StatKind.SymbolCount, Min: 2))),
         ];
     }
+
+    public static readonly TriggeredAbility Rebound = new(TriggerKind.DieUsed,
+        new Reroll(new TargetFilter(Self: true), NonCharacterMoveTo: Zone.UsedPile, ActionResultTo: Zone.PrepArea));
 
     // "Energy Drain 2" -> 2 for name "Energy Drain"; the bare keyword is 1.
     public static int? ParamOf(string keyword, string name) =>
@@ -135,6 +139,7 @@ public static class KeywordAbilities
 
     public static IEnumerable<TriggeredAbility> For(IReadOnlySet<string> keywords)
     {
+        if (keywords.Contains("Rebound")) yield return Rebound;
         if (keywords.Contains("Intimidate")) yield return Intimidate;
         if (keywords.Contains("Amplify")) yield return Amplify;
         if (keywords.Contains("Obscure")) yield return Obscure;

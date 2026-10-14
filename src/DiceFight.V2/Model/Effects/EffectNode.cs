@@ -81,7 +81,8 @@ public sealed record FieldDie(TargetFilter Target, bool Free, int? Level = null)
 // RerollAndMoveUnlessCharacter per-die multi-target pattern (5 real
 // users) into Reroll itself, since Sequence+Conditional cannot express
 // a per-die branch across a multi-die reroll.
-public sealed record Reroll(TargetFilter Target, Zone? NonCharacterMoveTo = null, int DamagePerMoved = 0) : EffectNode;
+public sealed record Reroll(TargetFilter Target, Zone? NonCharacterMoveTo = null, int DamagePerMoved = 0,
+    bool RestoreOtherFaces = false, Zone? ActionResultTo = null, FaceKind? ResultKindForMove = null, bool DamageToRolledController = false) : EffectNode;
 
 // LevelDelta and SetLevel are mutually exclusive (Finding 12) - exactly
 // one should be set by an authored card. Not enforced here (Phase 1 is
@@ -148,7 +149,11 @@ public sealed record BlankCardText(
 // it (v1's separate GainLife/LoseLife collapsed into one shape).
 public sealed record LifeChange(Amount Amount, TargetOwnership Whose = TargetOwnership.Own) : EffectNode;
 
-public sealed record PurchaseModifier(int Delta, CardType? CardKind = null, Zone? GoesToZone = null) : EffectNode;
+public sealed record PurchaseModifier(int Delta, CardType? CardKind = null, Zone? GoesToZone = null,
+    bool EveryPurchase = false, bool OptionalDestination = false, bool NonStacking = false) : EffectNode;
+
+// A resolved effect can watch later events without keeping its action die active.
+public sealed record GrantTriggeredAbility(TriggeredAbility Ability, Duration Duration = Duration.EndOfTurn) : EffectNode;
 
 public enum CombatFlagKind
 {

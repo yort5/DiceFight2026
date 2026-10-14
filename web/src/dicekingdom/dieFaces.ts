@@ -61,10 +61,10 @@ export const FACE_TRANSFORMS = [
 type Avatar = (p: { size?: number }) => ReactElement;
 
 export type CubeFace =
-  | { kind: "character"; level: number; fieldingCost: number; attack: number; defense: number; avatar?: Avatar; printedCost?: number }
-  | { kind: "energy"; icon: string; amount: number; avatar?: Avatar }
+  | { kind: "character"; level: number; fieldingCost: number; attack: number; defense: number; avatar?: Avatar; printedCost?: number; burst?: number }
+  | { kind: "energy"; icon: string; amount: number; avatar?: Avatar; burst?: number }
   // A Basic Action's action face - no stats, just its plant emblem.
-  | { kind: "action"; avatar?: Avatar };
+  | { kind: "action"; avatar?: Avatar; burst?: number };
 
 const FACE_COUNT = 6;
 
@@ -94,9 +94,9 @@ function defaultFaces(die: Die, card: CardDef | undefined): CubeFace[] {
     const avatar = CHARACTER_ICONS[die.cardId];
     const type = card.dieEnergyType ?? "Wild";
     return [
-      { kind: "action", avatar },
-      { kind: "action", avatar },
-      { kind: "action", avatar },
+      { kind: "action", avatar, burst: card.actionFaceBursts?.[0] ?? 0 },
+      { kind: "action", avatar, burst: card.actionFaceBursts?.[1] ?? 0 },
+      { kind: "action", avatar, burst: card.actionFaceBursts?.[2] ?? 0 },
       { kind: "energy", icon: type, amount: 2, avatar },
       { kind: "energy", icon: type, amount: 2, avatar },
       { kind: "energy", icon: type, amount: 1, avatar },
@@ -107,7 +107,7 @@ function defaultFaces(die: Die, card: CardDef | undefined): CubeFace[] {
   const energyType = card?.energyTypes[0] ?? "Wild";
   const avatar = CHARACTER_ICONS[die.cardId];
   const faces: CubeFace[] = levels.map((level, i) => ({
-    kind: "character", level: i + 1, fieldingCost: level.fieldingCost, attack: level.attack, defense: level.defense, avatar,
+    kind: "character", level: i + 1, fieldingCost: level.fieldingCost, attack: level.attack, defense: level.defense, avatar, burst: level.burst ?? 0,
   }));
   faces.push({ kind: "energy", icon: energyType, amount: 2, avatar });
   faces.push({ kind: "energy", icon: energyType, amount: 2, avatar });
@@ -134,12 +134,12 @@ export function printedStats(die: Die, cardsById: Map<string, CardDef>): { attac
 
 /** The face the server says this die is showing, or null if it shows none. */
 function currentFace(die: Die): CubeFace | null {
-  if (die.isActionFace) return { kind: "action" };
+  if (die.isActionFace) return { kind: "action", burst: die.burst ?? 0 };
   if (die.level !== null && die.effectiveAttack !== null && die.effectiveDefense !== null) {
-    return { kind: "character", level: die.level, fieldingCost: 0, attack: die.effectiveAttack, defense: die.effectiveDefense };
+    return { kind: "character", level: die.level, fieldingCost: 0, attack: die.effectiveAttack, defense: die.effectiveDefense, burst: die.burst ?? 0 };
   }
   if (die.energySymbolId) {
-    return { kind: "energy", icon: die.energySymbolId, amount: Math.max(1, die.energyAmount) };
+    return { kind: "energy", icon: die.energySymbolId, amount: Math.max(1, die.energyAmount), burst: die.burst ?? 0 };
   }
   return null;
 }
@@ -207,7 +207,7 @@ export function printedFacesForCard(card: CardDef): CubeFace[] {
   if (card.isAction) {
     const energyType = card.dieEnergyType ?? "Wild";
     return orderPrintedFaces([
-      { kind: "action", avatar }, { kind: "action", avatar }, { kind: "action", avatar },
+      { kind: "action", avatar, burst: card.actionFaceBursts?.[0] ?? 0 }, { kind: "action", avatar, burst: card.actionFaceBursts?.[1] ?? 0 }, { kind: "action", avatar, burst: card.actionFaceBursts?.[2] ?? 0 },
       { kind: "energy", icon: energyType, amount: 2, avatar },
       { kind: "energy", icon: energyType, amount: 2, avatar },
       { kind: "energy", icon: energyType, amount: 1, avatar },
@@ -217,7 +217,7 @@ export function printedFacesForCard(card: CardDef): CubeFace[] {
   return orderPrintedFaces([
     ...card.levels.map((level, i): CubeFace => ({
       kind: "character", level: i + 1, fieldingCost: level.fieldingCost,
-      attack: level.attack, defense: level.defense, avatar,
+      attack: level.attack, defense: level.defense, avatar, burst: level.burst ?? 0,
     })),
     { kind: "energy", icon: energyType, amount: 2, avatar },
     { kind: "energy", icon: energyType, amount: 2, avatar },

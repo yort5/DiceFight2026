@@ -15,6 +15,8 @@ public enum TriggerKind
     DieDamaged,
     DieAttacks,
     DieBlocks,
+    DieBlocked,
+    PlayerDamaged,
     DiceDrawn,
     PurchaseMade,
     TurnStepEntered,
@@ -131,7 +133,9 @@ public sealed record EventFilter(
     // die at the start of Main - so without this a die rerolled onto a
     // double face triggered twice.
     string? ExcludeStep = null,
-    PaymentFilter? Payment = null);
+    PaymentFilter? Payment = null,
+    bool SameCardAsListener = false,
+    bool RequireActive = false);
 
 // Rule 2.6.5.4 - a Global ability's energy price. RequiredSymbolId null
 // means any energy (including generic) satisfies it.
@@ -148,7 +152,8 @@ public sealed record TriggeredAbility(
     EffectNode Effect,
     EventFilter? Filter = null,
     EnergyCost? EnergyCost = null,
-    bool OncePerTurn = false);
+    bool OncePerTurn = false,
+    bool OncePerCard = false);
 
 // Payment data survives partial spins, movement, and queued resolution.
 public enum PaymentPurpose { Purchase, Fielding }

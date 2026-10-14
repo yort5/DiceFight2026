@@ -224,6 +224,7 @@ export function DieCube(props: {
                 ) : (
                   <face.avatar size={Math.round(size * (face.kind === "action" ? 0.66 : 0.48))} />
                 ))}
+              {(face.burst ?? 0) > 0 && <span className="die-cube-burst" title={`${face.burst} burst`}>{"✦".repeat(face.burst ?? 0)}</span>}
               {isFront && cues?.blanked && <span className="dk-cue-strike" />}
               {isFront && cues?.deadly && (
                 <span

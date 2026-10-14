@@ -43,7 +43,7 @@ public static class DiceFightClassicConfig
     // behavior, same as v1's own keyword rollout was incremental.
     public static readonly IReadOnlyList<KeywordDef> Keywords =
     [
-        new("Ally"), new("Amplify"), new("Attune"), new("Awaken"), new("Call Out"),
+        new("Kinfolk"), new("Rebound"), new("Impulse"), new("Amplify"), new("Attune"), new("Awaken"), new("Call Out"),
         new("Continuous"), new("Corrupt"), new("Deadly"), new("Energize"), new("Energy Drain"),
         new("Fast"), new("Elder"), new("Infiltrate"), new("Intimidate"), new("Loyalty"),
         new("Obscure"), new("Overcrush"), new("Range"), new("Regenerate"), new("Retaliation"),

@@ -39,9 +39,9 @@ function fixture() {
     dice: [
       { id: 'energy', cardId: 'creature', controllerId: 'p1', zone: 'ReservePool', energyAmount: 1, energySymbolId: 'Claw' },
       { id: 'ready', cardId: 'act', controllerId: 'p1', zone: 'ReservePool', energyAmount: 0, energySymbolId: null, isActionFace: true },
-      { id: 'community', cardId: 'act', controllerId: 'p2', zone: 'Unpurchased' },
-      { id: 'own', cardId: 'creature', controllerId: 'p1', zone: 'Unpurchased' },
-      { id: 'opponent', cardId: 'creature', controllerId: 'p2', zone: 'Unpurchased' },
+      { id: 'community', cardId: 'act', ownerId: 'p2', controllerId: 'p2', zone: 'Unpurchased' },
+      { id: 'own', cardId: 'creature', ownerId: 'p1', controllerId: 'p1', zone: 'Unpurchased' },
+      { id: 'opponent', cardId: 'creature', ownerId: 'p2', controllerId: 'p2', zone: 'Unpurchased' },
     ],
   };
   return { game, cards };
@@ -90,7 +90,7 @@ test('Globals can use virtual energy and dispatch same API calls regardless of l
 test('shared Basic Action stock includes opponent cards and sold-out cards', () => {
   const { game, cards } = fixture();
   cards.set('second', { id: 'second', isAction: true, name: 'Second', purchaseCost: 4, energyTypes: [] });
-  game.dice.push({ id: 'other', cardId: 'second', controllerId: 'p2', zone: 'Unpurchased' });
+  game.dice.push({ id: 'other', cardId: 'second', ownerId: 'p2', controllerId: 'p2', zone: 'Unpurchased' });
   assert.deepEqual(abilities.basicActionStock(game, cards).map(c => [c.card.id, c.dice.length]), [['act', 1], ['second', 1]]);
   game.dice.find(d => d.id === 'community').zone = 'UsedPile';
   assert.deepEqual(abilities.basicActionStock(game, cards).map(c => [c.card.id, c.dice.length]), [['act', 0], ['second', 1]]);
@@ -99,9 +99,35 @@ test('shared Basic Action stock includes opponent cards and sold-out cards', () 
 test('either player can purchase either community Basic Action stock', () => {
   const { game, cards } = fixture();
   cards.set('second', { id: 'second', name: 'Second', isAction: true, purchaseCost: 4, energyTypes: [] });
-  game.dice.push({ id: 'other-community', cardId: 'second', controllerId: 'p1', zone: 'Unpurchased' });
+  game.dice.push({ id: 'other-community', cardId: 'second', ownerId: 'p1', controllerId: 'p1', zone: 'Unpurchased' });
   assert.deepEqual(abilities.purchasableDiceFor(game, cards, 'p1').map(d => d.id), ['community', 'own', 'other-community']);
   assert.deepEqual(abilities.purchasableDiceFor(game, cards, 'p2').map(d => d.id), ['community', 'opponent', 'other-community']);
+});
+
+test('personal Actions stay out of shared stock and are purchasable only by their owner', () => {
+  const { game, cards } = fixture();
+  cards.get('act').type = 'BasicAction';
+  cards.set('MYST002', { id: 'MYST002', name: 'Abundant Waters', type: 'Action', isAction: true,
+    purchaseCost: 2, energyTypes: ['Wing'] });
+  game.dice.push(
+    { id: 'own-action', cardId: 'MYST002', ownerId: 'p1', controllerId: 'p1', zone: 'Unpurchased' },
+    { id: 'their-action', cardId: 'MYST002', ownerId: 'p2', controllerId: 'p2', zone: 'Unpurchased' },
+    { id: 'personal-ready', cardId: 'MYST002', ownerId: 'p1', controllerId: 'p1', zone: 'ReservePool', isActionFace: true },
+  );
+  assert.deepEqual(abilities.basicActionStock(game, cards).map(c => c.card.id), ['act']);
+  assert.deepEqual(abilities.purchasableDiceFor(game, cards, 'p1').map(d => d.id), ['community', 'own', 'own-action']);
+  assert.deepEqual(abilities.purchasableDiceFor(game, cards, 'p2').map(d => d.id), ['community', 'opponent', 'their-action']);
+  assert.ok(abilities.getAbilityOptions(game, cards, 'p1', false).actionDice.some(option => option.command?.dieId === 'personal-ready'));
+  game.dice.find(d => d.id === 'their-action').controllerId = 'p1';
+  assert.ok(!abilities.purchasableDiceFor(game, cards, 'p1').some(d => d.id === 'their-action'));
+});
+
+test('community classification uses the explicit type and preserves older Basic Action responses', () => {
+  assert.equal(abilities.isCommunityBasicAction({ type: 'BasicAction', isAction: true }), true);
+  assert.equal(abilities.isCommunityBasicAction({ type: 'Action', isAction: true }), false);
+  assert.equal(abilities.isCommunityBasicAction({ type: 'Character', isAction: false }), false);
+  assert.equal(abilities.isCommunityBasicAction({ isAction: true }), true);
+  assert.equal(abilities.isCommunityBasicAction(undefined), false);
 });
 
 

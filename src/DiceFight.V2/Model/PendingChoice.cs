@@ -19,6 +19,8 @@ public sealed class PendingChoice
     public required int MinCount { get; init; }
     public required int MaxCount { get; init; }
     public required Action<IReadOnlyList<string>> Resolve { get; init; }
+    // The candidate is an answer token, rather than a selectable target.
+    public bool IsConfirmation { get; init; }
     // Whether the effect waiting on this choice helps or hurts whatever
     // gets picked - a hint for the computer opponent (Bot/), which
     // otherwise can't tell "deal 1 damage to a target" from "+3A to a

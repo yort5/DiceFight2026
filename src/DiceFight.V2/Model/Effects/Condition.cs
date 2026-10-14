@@ -14,7 +14,7 @@ public sealed record CountAtLeast(TargetFilter Filter, int N) : Condition;
 public sealed record TargetWasKOd(string CheckBinding = "event") : Condition;
 
 public enum BurstLevel { Single, Double }
-public sealed record OnBurstFace(BurstLevel Level, string CheckBinding = "self") : Condition;
+public sealed record OnBurstFace(BurstLevel Level, string CheckBinding = "self", bool AtLeast = false) : Condition;
 
 // Deliberately a single fixed comparator for now (V2_PLAN.md Appendix A's
 // own note, carried forward: "extend comparators only w/ sign-off").

@@ -101,7 +101,9 @@ public sealed record TargetFilter(
     string? Prompt = null,
     // "Other dice": exclude the physical source die bound as self,
     // while still allowing other copies of its card.
-    bool ExcludeSelf = false)
+    bool ExcludeSelf = false,
+    // Only opposing dice engaged with the die named by this binding.
+    string? EngagedWith = null)
 {
     // Rule 3.3.4/3.3.5 - only Field Zone (which includes Attack Zone) is
     // targetable by default.

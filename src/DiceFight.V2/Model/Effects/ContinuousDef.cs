@@ -68,7 +68,8 @@ public sealed record TargetingProtection(TargetFilter Target, ProtectionFrom Fro
 // `Target` is evaluated from BASE state like every other continuous
 // template's, and the blank check on the SOURCE die is the base one too -
 // see QueryEngine.AbilitiesActiveBase for why that has to be so.
-public sealed record AbilityBlank(TargetFilter Target, Condition? ActiveWhen = null) : ContinuousDef;
+public sealed record AbilityBlank(TargetFilter Target, Condition? ActiveWhen = null,
+    TriggerKind? Trigger = null) : ContinuousDef(ActiveWhen);
 
 // A named card the source's opponent may not purchase and/or field, for
 // as long as the source is active. Blob (XFC087) and Drax (IG107) choose

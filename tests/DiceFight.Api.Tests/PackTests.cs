@@ -237,14 +237,15 @@ public class TradeInTests
     public void A_Trade_Gives_A_Card_You_Still_Need_While_There_Is_One()
     {
         // Every Uncommon full but Fox.
-        var full = DiceKingdomPacks.CardsOf(CardRarity.Uncommon).Where(id => id != DiceKingdomConfig.Fox.Id).Select(id => (id, 4));
+        var pool = DiceKingdomPacks.CardsOf(CardRarity.Uncommon);
+        var full = pool.Where(id => id != DiceKingdomConfig.Fox.Id).Select(id => (id, DiceKingdomConfig.Catalog[id].DieLimit));
         var owned = full.ToDictionary(x => x.id, x => x.Item2);
         for (var roll = 0; roll < 3; roll++)
             Assert.Equal(DiceKingdomConfig.Fox.Id, DiceKingdomPacks.TradeIn(CardRarity.Common, owned, n => roll % n));
         // Once all are full, any of them.
-        owned[DiceKingdomConfig.Fox.Id] = 4;
-        var any = Enumerable.Range(0, 14).Select(r => DiceKingdomPacks.TradeIn(CardRarity.Common, owned, _ => r)).Distinct().Count();
-        Assert.Equal(14, any);
+        owned[DiceKingdomConfig.Fox.Id] = DiceKingdomConfig.Fox.DieLimit;
+        var any = Enumerable.Range(0, pool.Count).Select(r => DiceKingdomPacks.TradeIn(CardRarity.Common, owned, _ => r)).Distinct().Count();
+        Assert.Equal(pool.Count, any);
     }
 
     [Fact]

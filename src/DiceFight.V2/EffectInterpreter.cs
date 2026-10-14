@@ -85,10 +85,12 @@ public static class EffectInterpreter
         //
         // A granted ability is exempt: it did not come from the blanked
         // card, so nothing severs it (Part 16).
-        if (ability.SourceDieId is { } blankCheckId
+        if (!ability.IsGranted && ability.SourceDieId is { } blankCheckId
             && state.Dice.FirstOrDefault(d => d.Id == blankCheckId) is { } source
-            && !QueryEngine.AbilitiesActive(state, source)
-            && !source.GrantedAbilities.Any(g => g.Ability.Effect == ability.Effect))
+            && (!QueryEngine.AbilitiesActive(state, source) || !QueryEngine.TriggerActive(state, source, ability.Trigger))
+            && !source.GrantedAbilities.Any(g => g.Ability.Effect == ability.Effect)
+            && !(source.CardId is { } permanentCard && state.CardCatalog[permanentCard].PermanentAbilities?.Any(
+                a => a.Trigger == ability.Trigger && a.Effect == ability.Effect) == true))
         {
             return;
         }
@@ -169,6 +171,10 @@ public static class EffectInterpreter
             case RememberCard n: ExecuteRememberCard(n, ctx, onComplete); break;
             case LifeChange n: ExecuteLifeChange(n, ctx, onComplete); break;
             case PurchaseModifier n: ExecutePurchaseModifier(n, ctx, onComplete); break;
+            case GrantTriggeredAbility n:
+                ctx.State.GrantedTriggeredAbilities.Add(new GrantedTriggeredAbility(ctx.ControllerId,
+                    ctx.Bindings.GetValueOrDefault("self"), SourceName(ctx), n.Ability, n.Duration, ctx.State.ActivePlayerId));
+                onComplete(); break;
             case CombatFlag n: ExecuteCombatFlag(n, ctx, onComplete); break;
             case MayPay n: ExecuteMayPay(n, ctx, onComplete); break;
             case Conditional n: ExecuteConditional(n, ctx, onComplete); break;
@@ -223,6 +229,7 @@ public static class EffectInterpreter
             ControllerId = answeredBy,
             Description = n.Prompt is { } prompt ? $"{SourceName(ctx)}: {prompt}" : "You may.",
             CandidateIds = [standInId],
+            IsConfirmation = true,
             Intent = ChoiceIntent.Beneficial,
             Effect = n,
             MinCount = 0,
@@ -278,11 +285,17 @@ public static class EffectInterpreter
             }
             else
             {
+                var recipients = new List<DieInstance>();
                 foreach (var id in targets)
                 {
                     LogAbility(ctx, $"{SourceName(ctx)} deals {amount} damage to {TargetName(ctx.State, id)}.");
-                    ApplyDamage(ctx.State, ctx.Queue, DamageSource.Ability, id, amount, ctx.ControllerId);
+                    if (MarkDamage(ctx.State, ctx.Queue, DamageSource.Ability, id, amount) is { } recipient)
+                        recipients.Add(recipient);
                 }
+                // One multi-target hit is simultaneous: an aura KO'd by this hit
+                // still applies while the other recipients' damage is marked.
+                foreach (var recipient in recipients.Distinct())
+                    TryResolveKO(ctx.State, ctx.Queue, recipient, ctx.ControllerId);
                 onComplete();
             }
         });
@@ -339,7 +352,12 @@ public static class EffectInterpreter
     public static DieInstance? MarkDamage(GameState state, AbilityQueue queue, DamageSource source, string id, int amount)
     {
         if (amount <= 0) return null;
-        if (state.IsPlayerId(id)) { state.GetPlayer(id).Life -= amount; state.CheckGameOver(); return null; }
+        if (state.IsPlayerId(id))
+        {
+            state.GetPlayer(id).Life -= amount;
+            EventBus.Fire(state, queue, new GameEvent(TriggerKind.PlayerDamaged, null, id, state.CurrentStepId, new DamageDealtPayload(amount)));
+            state.CheckGameOver(); return null;
+        }
 
         var die = FindDie(state, id);
         // Armadillo's Champion power.
@@ -676,13 +694,16 @@ public static class EffectInterpreter
 
                 // Finding 8 - the per-die multi-target Reroll pattern
                 // (5 v1 users) folded into the node itself.
-                if (newFace.Character is null && n.NonCharacterMoveTo is { } moveTo)
+                if (newFace.Kind == FaceKind.ActionFace && n.ActionResultTo is { } actionDestination)
+                    MoveToZone(ctx.State, die, actionDestination);
+                else if ((n.ResultKindForMove is { } kind ? newFace.Kind == kind : newFace.Character is null) && n.NonCharacterMoveTo is { } moveTo)
                 {
                     MoveToZone(ctx.State, die, moveTo);
                     if (n.DamagePerMoved > 0)
-                        ctx.State.GetPlayer(ctx.State.OpponentOf(ctx.ControllerId)).Life -= n.DamagePerMoved;
-                        ctx.State.CheckGameOver();
+                        MarkDamage(ctx.State, ctx.Queue, DamageSource.Ability, n.DamageToRolledController ? die.ControllerId : ctx.State.OpponentOf(ctx.ControllerId), n.DamagePerMoved);
                 }
+                else if (n.RestoreOtherFaces && priorFace is not null)
+                    die.CurrentFaceIndex = definition.Faces.ToList().IndexOf(priorFace);
                 else LeaveFieldIfEnergy(ctx.State, die);
             }
             onComplete();
@@ -953,7 +974,11 @@ public static class EffectInterpreter
     // CleanUp) - see GameState.PendingPurchaseModifiers' own remarks.
     private static void ExecutePurchaseModifier(PurchaseModifier n, EffectContext ctx, Action onComplete)
     {
-        ctx.State.PendingPurchaseModifiers.Add(new PendingPurchaseModifier(ctx.ControllerId, n.Delta, n.CardKind, n.GoesToZone));
+        var sourceCard = ctx.Bindings.TryGetValue("self", out var self) ? FindDie(ctx.State, self).CardId : null;
+        if (!n.NonStacking || !ctx.State.PendingPurchaseModifiers.Any(m => m.PlayerId == ctx.ControllerId
+            && m.SourceCardId == sourceCard && m.EveryPurchase == n.EveryPurchase && m.CardKind == n.CardKind))
+            ctx.State.PendingPurchaseModifiers.Add(new PendingPurchaseModifier(ctx.ControllerId, n.Delta, n.CardKind,
+                n.GoesToZone, n.EveryPurchase, n.OptionalDestination, sourceCard, SourceName(ctx), ctx.State.ActivePlayerId));
         if (n.Delta < 0)
             LogAbility(ctx, $"{SourceName(ctx)}: the next {(n.CardKind == CardType.Character ? "creature" : "die")} {ctx.State.NameOf(ctx.ControllerId)} purchases this turn costs {-n.Delta} less (minimum 1).");
         onComplete();
