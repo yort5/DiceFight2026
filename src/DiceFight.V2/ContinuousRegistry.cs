@@ -178,6 +178,7 @@ public static class ContinuousRegistry
 
     private sealed class AbilityBlankModifier(CardDef card, AbilityBlank def) : IAbilityBlankModifier
     {
+        public TriggerKind? Trigger => def.Trigger;
         public bool AppliesTo(GameState state, DieInstance die) =>
             // BlankSafeSources, not QualifyingSources: asking whether this
             // blank's own source is itself blanked must not consult

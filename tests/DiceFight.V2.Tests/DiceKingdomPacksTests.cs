@@ -7,10 +7,10 @@ namespace DiceFight.V2.Tests;
 public class DiceKingdomPacksTests
 {
     [Fact]
-    public void Every_Character_Has_A_Rarity_And_No_Basic_Action_Does()
+    public void Every_Collectible_Team_Card_Has_A_Rarity_And_No_Basic_Action_Does()
     {
         foreach (var card in DiceKingdomConfig.Catalog.Values)
-            Assert.Equal(card.CardType == Model.CardType.Character, DiceKingdomPacks.Rarities.ContainsKey(card.Id));
+            Assert.Equal(card.CardType is Model.CardType.Character or Model.CardType.Action, DiceKingdomPacks.Rarities.ContainsKey(card.Id));
         Assert.All(DiceKingdomPacks.Rarities.Keys, id => Assert.True(DiceKingdomConfig.Catalog.ContainsKey(id), id));
     }
 

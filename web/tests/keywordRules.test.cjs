@@ -11,6 +11,14 @@ const mod = { exports: {} };
 new Function('module', 'exports', output)(mod, mod.exports);
 const { KEYWORD_RULES, splitKeywordText } = mod.exports;
 
+test('Kinfolk and Rebound are canonical, while source wording still opens the matching explanation', () => {
+  assert.equal(KEYWORD_RULES.Ally, undefined);
+  assert.equal(KEYWORD_RULES.Boomerang, undefined);
+  assert.ok(KEYWORD_RULES.Kinfolk.includes('Tardigrade'));
+  assert.deepEqual(splitKeywordText('Kinfolk. Rebound.').filter(p => p.keyword).map(p => p.keyword), ['Kinfolk', 'Rebound']);
+  assert.deepEqual(splitKeywordText('Ally. Boomerang.').filter(p => p.keyword).map(p => p.keyword), ['Kinfolk', 'Rebound']);
+});
+
 test('every keyword declared in both catalogs has a rules explanation', () => {
   const repo = path.join(__dirname, '../..');
   const bulk = JSON.parse(fs.readFileSync(path.join(repo, 'src/DiceFight.Engine/Data/BulkCards.json'), 'utf8'));

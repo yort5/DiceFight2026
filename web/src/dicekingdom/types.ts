@@ -28,13 +28,14 @@ export interface CardDef {
   type?: string | null;
   set?: string | null;
   affiliations?: string[] | null;
-  /** A statless Basic Action card - one per Champion, shared by both players. */
+  /** A statless action card, either a shared Basic Action or a personal Action. */
   isAction?: boolean;
   /** The action's own text (rawText without its Global clause). */
   actionText?: string | null;
   global?: GlobalAbility | null;
   /** The energy its die's energy faces show (a Basic Action's purchase has no type). */
   dieEnergyType?: string | null;
+  actionFaceBursts?: number[] | null;
   /** Damage this die takes is dealt to its controller's opponent too (Rhinoceros). */
   reflectsDamage?: boolean;
   /** Pack rarity - null for Basic Actions. */
@@ -62,6 +63,7 @@ export interface StatModifier {
 }
 
 export interface Die {
+  burst?: number;
   id: string;
   cardId: string | null;
   ownerId: string;
@@ -150,6 +152,7 @@ export interface PlayerState {
 }
 
 export interface PendingChoice {
+  isConfirmation?: boolean;
   controllerId: string;
   description: string;
   candidateIds: string[];

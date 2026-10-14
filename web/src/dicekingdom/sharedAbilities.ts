@@ -77,15 +77,21 @@ export function getAbilityOptions(
 
 // Community Basic Action dice can be purchased by either player even when
 // the physical unpurchased dice belong to the other Champion's pool.
+export function isCommunityBasicAction(card: CardDef | undefined): boolean {
+  if (!card) return false;
+  // Older API responses omitted type when every action was a Basic Action.
+  return card.type != null ? card.type === "BasicAction" : card.isAction === true;
+}
+
 export function purchasableDiceFor(game: GameState, cardsById: Map<string, CardDef>, viewerId: string): Die[] {
   return game.dice.filter((d) => d.zone === "Unpurchased" &&
-    (d.controllerId === viewerId || (!!d.cardId && !!cardsById.get(d.cardId)?.isAction)));
+    (d.ownerId === viewerId || (!!d.cardId && isCommunityBasicAction(cardsById.get(d.cardId)))));
 }
 
 export function basicActionStock(game: GameState, cardsById: Map<string, CardDef>): Array<{ card: CardDef; dice: Die[] }> {
   const grouped = new Map<string, Die[]>();
   for (const die of game.dice) {
-    if (!die.cardId || !cardsById.get(die.cardId)?.isAction) continue;
+    if (!die.cardId || !isCommunityBasicAction(cardsById.get(die.cardId))) continue;
     if (!grouped.has(die.cardId)) grouped.set(die.cardId, []);
     if (die.zone === "Unpurchased") grouped.get(die.cardId)!.push(die);
   }

@@ -102,6 +102,12 @@ public static class TargetResolver
             ? []
             : state.Dice.Where(d => zones.Contains(ZoneOf(d)));
         if (excludedId is not null) dice = dice.Where(d => d.Id != excludedId);
+        if (filter.EngagedWith is { } combatBinding)
+        {
+            IReadOnlySet<string> opponents = bindings.TryGetValue(combatBinding, out var combatDieId) && state.DeclaredBlocks is { } combat
+                ? combat.OpponentsOf(state, combatDieId) : new HashSet<string>();
+            dice = dice.Where(d => opponents.Contains(d.Id));
+        }
 
         dice = filter.Ownership switch
         {

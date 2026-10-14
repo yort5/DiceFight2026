@@ -41,6 +41,7 @@ export interface CardDef {
   hasErrata?: boolean;
   /** Energy provided by the die, separate from a Basic Action purchase cost. */
   dieEnergyType?: string | null;
+  actionFaceBursts?: number[] | null;
   whenFieldedNeedsTarget: boolean;
   set: string | null;
 }

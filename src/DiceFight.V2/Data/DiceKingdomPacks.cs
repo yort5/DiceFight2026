@@ -23,8 +23,8 @@ public static class DiceKingdomPacks
     // Once per UTC day, on the first visit (PlayerAccounts.ClaimDaily).
     public const int DailyCoins = 5;
 
-    // Every playable Character in the Catalog. Basic Actions aren't in packs.
-    // 26 Common, 20 Uncommon, 15 Rare, 6 Super Rare. Incomplete cards are excluded.
+    // Every playable Character and personal Action in the Catalog. Basic Actions aren't in packs.
+    // 34 Common, 24 Uncommon, 16 Rare, 6 Super Rare. Incomplete cards are excluded.
     public static readonly IReadOnlyDictionary<string, CardRarity> Rarities = new Dictionary<string, CardRarity>
     {
         // Claw
@@ -102,6 +102,20 @@ public static class DiceKingdomPacks
         ["MSW020"] = CardRarity.Common, // Puffin
         ["SKC090"] = CardRarity.Uncommon, // Spitting Cobra
         ["TAG003"] = CardRarity.Common, // Prairie Dog
+
+        ["WF075"] = CardRarity.Uncommon, // Planarian
+        ["MYST002"] = CardRarity.Common, // Abundant Waters
+        ["AVX077"] = CardRarity.Uncommon, // Hercules Beetle
+        ["DRS022"] = CardRarity.Common, // Marmoset
+        ["XMF028"] = CardRarity.Common, // Fire Ant
+        ["IG058"] = CardRarity.Uncommon, // Electric Ray
+        ["AVX066"] = CardRarity.Uncommon, // Velvet Worm
+        ["AVX019"] = CardRarity.Common, // Leaf Insect
+        ["XFO004"] = CardRarity.Common, // Orchid Mantis
+        ["XFO016"] = CardRarity.Common, // Bowerbird
+        ["XFC017"] = CardRarity.Common, // Fire Salamander
+        ["XFC110"] = CardRarity.Rare, // Mimic Filefish
+        ["SW018"] = CardRarity.Common, // Harris’s Hawk
     };
 
     // A pack is five dice: three Commons, an Uncommon, and a "rare slot"

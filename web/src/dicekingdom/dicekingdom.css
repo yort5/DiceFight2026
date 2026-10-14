@@ -4954,3 +4954,17 @@
 .dk-packs .dk-trade-result .dk-pack-opened {
   grid-template-columns: minmax(0, 130px);
 }
+
+/* Printed burst marks share the renderer for character and action faces. */
+.die-cube-burst {
+  position: absolute;
+  left: 50%;
+  right: auto;
+  top: 5%;
+  transform: translateX(-50%);
+  font-size: 0.65em;
+  font-weight: 800;
+  line-height: 1;
+  color: currentColor;
+  pointer-events: none;
+}

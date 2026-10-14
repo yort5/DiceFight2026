@@ -32,7 +32,8 @@ public static class ConditionEvaluator
         OnBurstFace c => bindings.TryGetValue(c.CheckBinding, out var burstId) &&
             state.Dice.FirstOrDefault(d => d.Id == burstId) is { } burstDie &&
             state.GetCurrentFace(burstDie) is { } burstFace &&
-            burstFace.Burst == (c.Level == BurstLevel.Double ? 2 : 1),
+            (c.AtLeast ? burstFace.Burst >= (c.Level == BurstLevel.Double ? 2 : 1)
+                : burstFace.Burst == (c.Level == BurstLevel.Double ? 2 : 1)),
 
         LifeComparison c => c.Op switch
         {

@@ -152,6 +152,10 @@ public static class CombatEngine
                 : $"{state.NameOf(inactiveId)} assigns {blockerDieIds.Count} {(blockerDieIds.Count == 1 ? "blocker" : "blockers")}.");
 
         state.DeclaredBlocks = assignment;
+        assignment.CaptureLanes(state);
+        foreach (var attacker in state.DiceIn(state.ActivePlayerId, Zone.AttackZone))
+            if (assignment.OpponentsOf(state, attacker.Id).Count > 0)
+                EventBus.Fire(state, queue, new GameEvent(TriggerKind.DieBlocked, attacker, attacker.ControllerId, state.CurrentStepId));
 
         // Keyword Deadly - record who is engaged with a Deadly die NOW,
         // not at damage: it counts even if either die is removed first.
@@ -390,7 +394,7 @@ public static class CombatEngine
                 foreach (var attacker in laneAttackers)
                 {
                     var attack = QueryEngine.GetAttack(state, attacker);
-                    inactivePlayer.Life -= attack;
+                    EffectInterpreter.MarkDamage(state, queue, DamageSource.Combat, inactivePlayer.Id, attack);
                     attacker.Zone = Zone.OutOfPlay;
                     if (attack > 0)
                     {
@@ -487,7 +491,7 @@ public static class CombatEngine
             if (!fight.DeclaredBlockerIds.All(id => FindDie(state, id).Zone != Zone.AttackZone)) continue;
             var leftover = fight.TotalAttack - fight.BlockerDefenseTotal;
             if (leftover <= 0) continue;
-            inactivePlayer.Life -= leftover;
+            EffectInterpreter.MarkDamage(state, queue, DamageSource.Combat, inactivePlayer.Id, leftover);
             state.LogEvent(state.ActivePlayerId, $"Overcrush: {leftover} excess damage carries through to {inactivePlayer.Name}.");
             state.CheckGameOver();
         }

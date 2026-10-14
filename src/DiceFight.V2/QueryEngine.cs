@@ -64,6 +64,7 @@ public interface ITagAuraModifier
 // because the answer changes with the board, not with a clock.
 public interface IAbilityBlankModifier
 {
+    TriggerKind? Trigger => null;
     bool AppliesTo(GameState state, DieInstance die);
 }
 
@@ -195,11 +196,17 @@ public static class QueryEngine
     public static int GetPurchaseCostNow(GameState state, CardDef card, string payerId)
     {
         var cost = GetPurchaseCost(state, card, payerId);
-        return NextPurchaseModifier(state, card, payerId) is { } pending ? Math.Max(1, cost + pending.Delta) : cost;
+        var repeated = MatchingPurchaseModifiers(state, card, payerId).Where(m => m.EveryPurchase).Sum(m => m.Delta);
+        var next = MatchingPurchaseModifiers(state, card, payerId).FirstOrDefault(m => !m.EveryPurchase);
+        return Math.Max(1, cost + repeated + (next?.Delta ?? 0));
     }
 
     public static PendingPurchaseModifier? NextPurchaseModifier(GameState state, CardDef card, string payerId) =>
-        state.PendingPurchaseModifiers.FirstOrDefault(m => m.PlayerId == payerId && (m.CardKind is null || m.CardKind == card.CardType));
+        MatchingPurchaseModifiers(state, card, payerId).FirstOrDefault(m => !m.EveryPurchase)
+            ?? MatchingPurchaseModifiers(state, card, payerId).FirstOrDefault(m => m.EveryPurchase);
+
+    private static IEnumerable<PendingPurchaseModifier> MatchingPurchaseModifiers(GameState state, CardDef card, string payerId) =>
+        state.PendingPurchaseModifiers.Where(m => m.PlayerId == payerId && card.CardType.Matches(m.CardKind));
 
     // Floor 0, unlike purchase - printed-0 fielding-cost faces and
     // free-to-field grants are both real (a 0 fielding cost is a normal
@@ -213,7 +220,7 @@ public static class QueryEngine
     // whatever's active in alongside the printed set.
     public static IReadOnlySet<string> GetKeywords(GameState state, DieInstance die)
     {
-        var keywords = die.CardId is { } cardId ? new HashSet<string>(state.CardCatalog[cardId].Keywords) : [];
+        var keywords = die.CardId is { } cardId ? new HashSet<string>(PrintedKeywords(state, die, state.CardCatalog[cardId])) : [];
         foreach (var granted in die.GrantedTags) keywords.Add(granted.Tag);
         foreach (var aura in state.TagAuras.Where(a => a.AppliesTo(state, die)))
             foreach (var tag in aura.GetTags(state, die)) keywords.Add(tag);
@@ -250,6 +257,8 @@ public static class QueryEngine
         foreach (var aura in state.TagAuras.Where(a => a.AppliesTo(state, die)))
             foreach (var tag in aura.GetTags(state, die)) tags.Add(tag);
 
+        if (die.Zone is Zone.FieldZone or Zone.AttackZone && AbilitiesActive(state, die) && tags.Contains("Kinfolk"))
+            tags.Add("sidekick");
         return tags;
     }
 
@@ -278,12 +287,14 @@ public static class QueryEngine
             // sources merged here that blanking touches (rule 3.4.7.2;
             // V2_VOCABULARY_HISTORY.md Part 16's correction).
             if (AbilitiesActive(state, die))
-                foreach (var keyword in card.Keywords) tags.Add(keyword);
+                foreach (var keyword in PrintedKeywords(state, die, card)) tags.Add(keyword);
             tags.Add(card.Name);
             foreach (var symbolId in card.EnergySymbolIds) tags.Add(symbolId);
         }
 
         foreach (var granted in die.GrantedTags) tags.Add(granted.Tag);
+        if (die.Zone is Zone.FieldZone or Zone.AttackZone && AbilitiesActiveBase(state, die) && tags.Contains("Kinfolk"))
+            tags.Add("sidekick");
         return tags;
     }
 
@@ -308,7 +319,7 @@ public static class QueryEngine
     /// </remarks>
     public static bool AbilitiesActive(GameState state, DieInstance die) =>
         AbilitiesActiveBase(state, die)
-        && !state.AbilityBlanks.Any(b => b.AppliesTo(state, die));
+        && !state.AbilityBlanks.Any(b => b.Trigger is null && b.AppliesTo(state, die));
 
     /// <summary>
     /// Blanking from STORED suppression only - the one-shot die-scoped and
@@ -381,6 +392,13 @@ public static class QueryEngine
     /// card's-own-text one below. Permanent and granted are unconditional
     /// by construction (V2_VOCABULARY_HISTORY.md Parts 16 and 21).
     /// </remarks>
+    private static IEnumerable<string> PrintedKeywords(GameState state, DieInstance die, CardDef card) =>
+        card.Keywords.Where(keyword => card.KeywordConditions is null || !card.KeywordConditions.TryGetValue(keyword, out var condition)
+            || ConditionEvaluator.Evaluate(state, die.ControllerId, condition, new Dictionary<string, string> { ["self"] = die.Id }, includeContinuous: false));
+
+    public static bool TriggerActive(GameState state, DieInstance die, TriggerKind trigger) =>
+        !state.AbilityBlanks.Any(b => b.Trigger == trigger && b.AppliesTo(state, die));
+
     public static IEnumerable<TriggeredAbility> AbilitiesOf(GameState state, DieInstance die)
     {
         if (die.CardId is { } cardId && state.CardCatalog.TryGetValue(cardId, out var card))
@@ -389,15 +407,15 @@ public static class QueryEngine
             // THE line. Permanent and granted are unconditional by
             // construction; this is the only one blanking touches.
             if (AbilitiesActive(state, die))
-                foreach (var ability in card.Abilities) yield return ability;
+                foreach (var ability in card.Abilities.Where(a => TriggerActive(state, die, a.Trigger))) yield return ability;
         }
 
-        foreach (var granted in die.GrantedAbilities) yield return granted.Ability;
+        foreach (var granted in die.GrantedAbilities.Where(g => TriggerActive(state, die, g.Ability.Trigger))) yield return granted.Ability;
 
         // A keyword's built-in ability (KeywordAbilities) - printed or
         // granted keyword alike. Blanked with the rest of the card text.
         if (AbilitiesActive(state, die))
-            foreach (var ability in KeywordAbilities.For(GetKeywords(state, die))) yield return ability;
+            foreach (var ability in KeywordAbilities.For(GetKeywords(state, die)).Where(a => TriggerActive(state, die, a.Trigger))) yield return ability;
     }
 
     /// <summary>

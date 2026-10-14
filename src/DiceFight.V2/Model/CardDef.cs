@@ -44,6 +44,10 @@ public static class CardTypes
     /// a team slot and is its owner's alone.
     /// </summary>
     public static bool IsCommunity(this CardType type) => type is CardType.BasicAction;
+
+    // Action is the broad category; BasicAction is its shared subset.
+    public static bool Matches(this CardType type, CardType? kind) =>
+        kind is null || (kind == CardType.Action ? type.IsActionDie() : type == kind);
 }
 
 // Appendix B. Affiliations/Keywords contribute to the die's tag set
@@ -98,4 +102,6 @@ public sealed record CardDef(
     string? KingdomName = null,
     string? KingdomEnergyType = null,
     // Internal comparison notes live with the card, never in public JSON or gameplay tags.
-    [property: JsonIgnore] IReadOnlyList<string>? ErrataNotes = null);
+    [property: JsonIgnore] IReadOnlyList<string>? ErrataNotes = null,
+    // Printed conditional keywords (for example, Rebound only on burst faces).
+    IReadOnlyDictionary<string, Condition>? KeywordConditions = null);

@@ -15,6 +15,22 @@ namespace DiceFight.Api.Tests;
 // pinning exact numbers combat math already covers at the engine layer.
 public class V2GamesControllerTests
 {
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Pending_Choice_Dto_Preserves_Confirmation_Kind(bool confirmation)
+    {
+        var choice = new DiceFight.V2.Model.PendingChoice
+        {
+            ControllerId = "teamA", Description = "Optional ability", CandidateIds = ["teamA"],
+            MinCount = 0, MaxCount = 1, Resolve = _ => { }, IsConfirmation = confirmation,
+        };
+        var dto = V2PendingChoiceDto.From(choice);
+        Assert.Equal(confirmation, dto.IsConfirmation);
+        using var json = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(dto,
+            new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web)));
+        Assert.Equal(confirmation, json.RootElement.GetProperty("isConfirmation").GetBoolean());
+    }
     private static (V2GameStore Store, V2GameSession Session) CreateGame(string p1Champion = "Wolf", string p2Champion = "Armadillo")
     {
         var store = new V2GameStore();
@@ -364,9 +380,9 @@ public class V2GamesControllerTests
         var controller = V2SeatedController.Anonymous(new V2GameStore());
         var result = Assert.IsType<Microsoft.AspNetCore.Mvc.OkObjectResult>(controller.Cards().Result);
         var cards = Assert.IsAssignableFrom<IReadOnlyList<V2CardDefDto>>(result.Value);
-        Assert.Equal(116, cards.Count);
+        Assert.Equal(132, cards.Count);
         Assert.Equal(44, cards.Count(card => !card.IsImplemented));
-        Assert.Equal(28, cards.Count(card => card.HasErrata));
+        Assert.Equal(34, cards.Count(card => card.HasErrata));
         Assert.DoesNotContain(cards, card => card.Id == CardCatalog.CosmicCube.Id);
         Assert.DoesNotContain(cards, card => card.Id == DpsCards.TightRanks.Id);
         Assert.DoesNotContain(cards, card => card.Id == DpsCards.Radicalization.Id);

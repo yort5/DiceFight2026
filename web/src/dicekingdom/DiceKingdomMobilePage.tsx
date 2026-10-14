@@ -32,7 +32,7 @@ import { useDiceRoll, type RollTarget } from "./useDiceRoll";
 import { useLogAutoFollow } from "./useLogAutoFollow";
 import { classifyDieMotion, remoteRolledIds } from "./dieMotion";
 import { activeCouldAct, botDecisionCall, decisionOwner, pickEnergy, rolled } from "./bot";
-import { getAbilityOptions, purchasableDiceFor, executeAbility, type AbilityCommand } from "./sharedAbilities";
+import { getAbilityOptions, isCommunityBasicAction, purchasableDiceFor, executeAbility, type AbilityCommand } from "./sharedAbilities";
 import { SharedAbilityPanel } from "./SharedAbilityPanel";
 import type { BotDecision, CardDef, Die, GameState, LobbyStatus, PendingChoice, PlayerState, StatModifier } from "./types";
 
@@ -1658,7 +1658,7 @@ function ChoiceSheet({
         >
           <div className="dkm-choice-collapse"><span className="dkm-sheet-handle" /></div>
           <div className="dkm-popout-head">
-            <span className="dkm-popout-title">{paying ? "Pay energy" : "Choose a target"}</span>
+            <span className="dkm-popout-title">{choice.isConfirmation ? "Optional ability" : paying ? "Pay energy" : "Choose a target"}</span>
           </div>
           <p className="dkm-pay-status">
             <b><KeywordText text={choice.description} /></b>
@@ -1667,6 +1667,14 @@ function ChoiceSheet({
             )}
           </p>
         </div>
+        {choice.isConfirmation ? (
+          <div className="dkm-tile-row wrap">
+            <button type="button" className="dkm-primary-btn" disabled={busy}
+              onClick={() => onConfirm(choice.candidateIds)}>Accept</button>
+            <button type="button" className="dkm-secondary-btn" disabled={busy}
+              onClick={() => onConfirm([])}>Decline</button>
+          </div>
+        ) : <>
         {choice.intent === "NameCard" ? (
           // Naming a card, not a die (Pangolin's lockout): one option per
           // card, by name - every die of it is an equivalent answer, and 32
@@ -1737,6 +1745,7 @@ function ChoiceSheet({
         >
           <span>{picked.length === 0 && choice.minCount === 0 ? "Skip" : "Confirm"}</span>
         </button>
+        </>}
       </div>
     </div>
   );
@@ -2559,7 +2568,7 @@ export function DiceKingdomMobilePage() {
   const purchaseUnowned = purchaseCopies.filter((d) => d.zone === "Unpurchased").length;
   // Bought by whom: a creature only by its owner, but a Basic Action by
   // either player - count the copies the viewer controls.
-  const purchaseOwned = selectedPurchaseCard?.isAction
+  const purchaseOwned = isCommunityBasicAction(selectedPurchaseCard)
     ? purchaseCopies.filter((d) => d.zone !== "Unpurchased" && d.controllerId === you).length
     : purchaseCopies.length - purchaseUnowned;
 
@@ -2670,6 +2679,7 @@ export function DiceKingdomMobilePage() {
   const myChoice = game.pendingChoice && game.pendingChoice.controllerId === you ? game.pendingChoice : null;
   const choiceOnBoard =
     !!myChoice &&
+    !myChoice.isConfirmation &&
     myChoice.candidateIds.length > 0 &&
     myChoice.candidateIds.every((id) => game.dice.some((d) => d.id === id && (d.zone === "FieldZone" || d.zone === "AttackZone")));
   const targeting: Targeting | null = choiceOnBoard
@@ -2777,6 +2787,13 @@ export function DiceKingdomMobilePage() {
   if (game.gameOver) {
     primaryLabel = "Game over";
     primaryDisabled = true;
+  } else if (myChoice?.isConfirmation) {
+    primaryLabel = "Accept";
+    primaryNote = myChoice.description;
+    primaryDisabled = busy;
+    primaryRun = () => run(() => api.resolvePendingChoice(game.gameId, myChoice.candidateIds));
+    secondaryLabel = "Decline";
+    secondaryRun = () => run(() => api.resolvePendingChoice(game.gameId, []));
   } else if (myChoice) {
     const ready = choicePicked.length >= myChoice.minCount && choicePicked.length <= choiceMax;
     primaryLabel =

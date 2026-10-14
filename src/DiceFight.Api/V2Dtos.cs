@@ -36,7 +36,7 @@ public sealed record V2CardDefDto(
     bool ReflectsDamage = false, bool HasErrata = false, bool IsImplemented = true,
     string? Type = null, string? Set = null, IReadOnlyList<string>? Affiliations = null,
     // Pack rarity (DiceKingdomPacks) - null for Basic Actions.
-    string? Rarity = null)
+    string? Rarity = null, IReadOnlyList<int>? ActionFaceBursts = null)
 {
     public static V2CardDefDto From(CardDef card)
     {
@@ -63,7 +63,8 @@ public sealed record V2CardDefDto(
             card.Abilities.Any(a => a.Trigger == TriggerKind.DieDamaged
                 && a.Effect is DealDamage { Target: { Kind: TargetKind.Player, Ownership: TargetOwnership.Opposing } }),
             card.HasErrata, card.IsImplemented, card.CardType.ToString(), card.Set, card.Affiliations,
-            Rarity: DiceKingdomPacks.Rarities.TryGetValue(card.Id, out var rarity) ? rarity.ToString() : null);
+            Rarity: DiceKingdomPacks.Rarities.TryGetValue(card.Id, out var rarity) ? rarity.ToString() : null,
+            ActionFaceBursts: card.CardType.IsActionDie() ? card.Die.Faces.Where(f => f.Kind == FaceKind.ActionFace).Select(f => f.Burst).ToList() : null);
     }
 }
 
@@ -126,7 +127,7 @@ public sealed record V2DieDto(
     // for older clients.
     IReadOnlyList<V2DieStatusDto>? Statuses = null,
     // The latest effect-caused spin, for a one-off flash (DieInstance.LastSpin).
-    V2SpinDto? LastSpin = null)
+    V2SpinDto? LastSpin = null, int Burst = 0)
 {
     private static readonly HashSet<DiceFight.V2.Model.Zone> InPlayZones =
         [DiceFight.V2.Model.Zone.FieldZone, DiceFight.V2.Model.Zone.AttackZone];
@@ -156,7 +157,7 @@ public sealed record V2DieDto(
             die.CombatFlags.Contains(CombatFlagKind.MustBlock),
             die.CombatFlags.Contains(CombatFlagKind.Unblockable),
             DieStatuses.For(state, die).Select(V2DieStatusDto.From).ToList(),
-            die.LastSpin is { } spin ? new V2SpinDto(spin.Seq, spin.FromLevel, spin.ToLevel, spin.Source) : null);
+            die.LastSpin is { } spin ? new V2SpinDto(spin.Seq, spin.FromLevel, spin.ToLevel, spin.Source) : null, face?.Burst ?? 0);
     }
 }
 
@@ -210,10 +211,10 @@ public sealed record V2PlayerDto(string Id, string Name, int Life, ChampionDto? 
 // option per card instead of every die of it (Pangolin's lockout).
 public sealed record V2PendingChoiceDto(
     string ControllerId, string Description, IReadOnlyList<string> CandidateIds, int MinCount, int MaxCount,
-    ChoiceIntent Intent = ChoiceIntent.Unknown)
+    ChoiceIntent Intent = ChoiceIntent.Unknown, bool IsConfirmation = false)
 {
     public static V2PendingChoiceDto From(PendingChoice pending) =>
-        new(pending.ControllerId, pending.Description, pending.CandidateIds, pending.MinCount, pending.MaxCount, pending.Intent);
+        new(pending.ControllerId, pending.Description, pending.CandidateIds, pending.MinCount, pending.MaxCount, pending.Intent, pending.IsConfirmation);
 }
 
 public sealed record V2GameLogEntryDto(int Seq, string? PlayerId, string Text, bool IsTurnStart)

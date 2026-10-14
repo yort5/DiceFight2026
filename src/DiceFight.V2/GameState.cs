@@ -169,6 +169,7 @@ public sealed class GameState
     // at CleanUp (rule text is always "this turn"; nothing in the closed
     // vocabulary asks for a longer-lived version).
     public List<PendingPurchaseModifier> PendingPurchaseModifiers { get; } = [];
+    public List<GrantedTriggeredAbility> GrantedTriggeredAbilities { get; } = [];
 
     // Turn-scoped trackers TurnFact/NoKOsThisTurn read (Phase 5) - reset
     // in CleanUp alongside GlobalsUsedThisTurn, same "ThisTurn" lifetime.
@@ -325,7 +326,11 @@ public sealed class GameState
         die.CurrentFaceIndex is { } index ? GetDieDefinition(die).Faces[index] : null;
 }
 
-public sealed record PendingPurchaseModifier(string PlayerId, int Delta, CardType? CardKind, Zone? GoesToZone);
+public sealed record PendingPurchaseModifier(string PlayerId, int Delta, CardType? CardKind, Zone? GoesToZone,
+    bool EveryPurchase = false, bool OptionalDestination = false, string? SourceCardId = null, string? SourceName = null, string? GrantedDuringPlayerId = null);
+
+public sealed record GrantedTriggeredAbility(string ControllerId, string? SourceDieId, string SourceName,
+    TriggeredAbility Ability, Duration Duration, string GrantedDuringPlayerId);
 
 public sealed record GrantedTargetingProtection(
     TargetingProtection Protection, string ControllerId,
