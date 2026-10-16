@@ -461,14 +461,15 @@ public class DiceKingdomKeywordTests
         var queue = new AbilityQueue();
         var chameleon = AddDie(state, DiceKingdomConfig.Chameleon.Id, "p1", Zone.FieldZone);
         var badger = AddDie(state, DiceKingdomConfig.HoneyBadger.Id, "p1", Zone.FieldZone);
+        var escort = AddDie(state, DiceKingdomConfig.HoneyBadger.Id, "p1", Zone.FieldZone, tag: "escort"); // the stacking rule
         AddDie(state, DiceKingdomConfig.Hippopotamus.Id, "p2", Zone.FieldZone, level: 3); // blocks anything for free
         chameleon.CombatFlags.Add(CombatFlagKind.Unblockable);
         state.MoveToStep(StepIds.SelectAttackers);
-        CombatEngine.DeclareAttackers(state, queue, new Dictionary<string, int> { [chameleon.Id] = 0, [badger.Id] = 0 });
+        CombatEngine.DeclareAttackers(state, queue, new Dictionary<string, int> { [chameleon.Id] = 0, [badger.Id] = 0, [escort.Id] = 1 });
 
         var decision = DiceKingdomBot.Decide(state, "p2")!;
         Assert.Equal(BotActionKind.DeclareBlockers, decision.Kind);
-        Assert.Empty(decision.Blocks);
+        Assert.DoesNotContain(decision.Blocks, b => b.AttackerId == chameleon.Id || b.AttackerId == badger.Id);
     }
 
     // --- Energize / Energy Drain / Tag Out / Sacrifice ---
@@ -537,9 +538,10 @@ public class DiceKingdomKeywordTests
         var queue = new AbilityQueue();
         var big = AddDie(state, DiceKingdomConfig.Hippopotamus.Id, "p1", Zone.FieldZone, level: 3);
         var small = AddDie(state, DiceKingdomConfig.HoneyBadger.Id, "p1", Zone.FieldZone, level: 1);
+        var escort = AddDie(state, DiceKingdomConfig.HoneyBadger.Id, "p1", Zone.FieldZone, tag: "escort"); // the stacking rule
         var leech = AddDie(state, DiceKingdomConfig.Leech.Id, "p2", Zone.FieldZone);
         state.MoveToStep(StepIds.SelectAttackers);
-        CombatEngine.DeclareAttackers(state, queue, new Dictionary<string, int> { [big.Id] = 0, [small.Id] = 0 }); // one lane
+        CombatEngine.DeclareAttackers(state, queue, new Dictionary<string, int> { [big.Id] = 0, [small.Id] = 0, [escort.Id] = 1 }); // one lane
 
         var assignment = new CombatAssignment();
         assignment.AssignBlocker(big.Id, leech.Id);

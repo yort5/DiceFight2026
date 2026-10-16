@@ -26,6 +26,10 @@ public class CombatEngineTests
         DieLimit: 4, Affiliations: [], Keywords: keywords ?? [], RawText: "",
         Abilities: abilities ?? [], Continuous: continuous ?? []);
 
+    // A 0-ATK attacker for another lane, so a test can stack two in one
+    // (the stacking rule) without changing any life total.
+    private static readonly CardDef Escort = BuildCard("Escort", [new Face([], new CharacterFaceData(1, 0, 0, 1), Kind: FaceKind.CharacterFace)]);
+
     private static GameState BuildState(params CardDef[] cards)
     {
         var state = new GameState
@@ -136,11 +140,43 @@ public class CombatEngineTests
         var state = BuildState(bruiser);
         var a1 = AddDie(state, bruiser, "p1", "a1");
         var a2 = AddDie(state, bruiser, "p1", "a2");
+        var a3 = AddDie(state, bruiser, "p1", "a3");
 
-        CombatEngine.DeclareAttackers(state, new AbilityQueue(), new Dictionary<string, int> { [a1.Id] = 2, [a2.Id] = 2 });
+        CombatEngine.DeclareAttackers(state, new AbilityQueue(), new Dictionary<string, int> { [a1.Id] = 2, [a2.Id] = 2, [a3.Id] = 0 });
 
         Assert.Equal(2, a1.Lane);
         Assert.Equal(2, a2.Lane);
+    }
+
+    // Stacking rule (2026-10-16): a lane takes another attacker only when
+    // another lane has as many - the fullest lane at most one ahead of the
+    // next-fullest.
+    [Theory]
+    [InlineData(new[] { 0, 0 }, false)]          // 2 in one lane, nothing else
+    [InlineData(new[] { 0, 0, 1 }, true)]        // 2 + an escort
+    [InlineData(new[] { 0, 0, 0, 1 }, false)]    // 3 needs another lane with 2
+    [InlineData(new[] { 0, 0, 0, 1, 1 }, true)]
+    [InlineData(new[] { 0, 0, 1, 1 }, true)]
+    [InlineData(new[] { 0, 1, 2, 3 }, true)]
+    public void DeclareAttackers_Lets_A_Lane_Stack_Only_With_Another_Lane_As_Full(int[] lanes, bool allowed)
+    {
+        var bruiser = BuildCard("Bruiser", [Level1Char]);
+        var state = BuildState(bruiser);
+        var declared = lanes.Select((lane, i) => (AddDie(state, bruiser, "p1", $"a{i}").Id, lane)).ToDictionary(x => x.Id, x => x.lane);
+
+        Assert.Equal(allowed, CombatEngine.LanesAllowed(lanes));
+        if (allowed) CombatEngine.DeclareAttackers(state, new AbilityQueue(), declared);
+        else Assert.Throws<InvalidOperationException>(() => CombatEngine.DeclareAttackers(state, new AbilityQueue(), declared));
+    }
+
+    [Fact]
+    public void CanAddToLane_Needs_Another_Lane_With_As_Many()
+    {
+        Assert.True(CombatEngine.CanAddToLane([0, 0, 0, 0], 2));  // an empty lane is always open
+        Assert.False(CombatEngine.CanAddToLane([1, 0, 0, 0], 0));
+        Assert.True(CombatEngine.CanAddToLane([1, 1, 0, 0], 0));
+        Assert.False(CombatEngine.CanAddToLane([2, 1, 0, 0], 0));
+        Assert.True(CombatEngine.CanAddToLane([2, 1, 0, 0], 1));
     }
 
     [Fact]
@@ -279,13 +315,14 @@ public class CombatEngineTests
         var bruiser = BuildCard("Bruiser", [new Face([], new CharacterFaceData(1, 1, 5, 2), Kind: FaceKind.CharacterFace)]); // 5A, NO Overcrush keyword
         var laneMate = BuildCard("LaneMate", [new Face([], new CharacterFaceData(1, 1, 1, 1), Kind: FaceKind.CharacterFace)]); // just crowds the lane
         var sidekickCard = BuildCard("Sidekick", [new Face([], new CharacterFaceData(1, 0, 1, 1), Kind: FaceKind.CharacterFace)]); // 1D
-        var state = BuildState(bruiser, laneMate, sidekickCard);
+        var state = BuildState(bruiser, laneMate, sidekickCard, Escort);
+        var escort = AddDie(state, Escort, "p1", "escort"); // the stacking rule: another lane as full
         var attacker = AddDie(state, bruiser, "p1");
         var laneMateDie = AddDie(state, laneMate, "p1");
         var blocker = AddDie(state, sidekickCard, "p2");
         var queue = new AbilityQueue();
 
-        CombatEngine.DeclareAttackers(state, queue, new Dictionary<string, int> { [attacker.Id] = 0, [laneMateDie.Id] = 0 });
+        CombatEngine.DeclareAttackers(state, queue, new Dictionary<string, int> { [attacker.Id] = 0, [laneMateDie.Id] = 0, [escort.Id] = 1 });
         var assignment = new CombatAssignment();
         assignment.AssignBlocker(attacker.Id, blocker.Id); // laneMateDie stays unblocked
         CombatEngine.DeclareBlockers(state, queue, assignment, [blocker.Id]);
@@ -303,13 +340,14 @@ public class CombatEngineTests
         var bruiser = BuildCard("Bruiser", [new Face([], new CharacterFaceData(1, 1, 5, 2), Kind: FaceKind.CharacterFace)]);
         var laneMate = BuildCard("LaneMate", [new Face([], new CharacterFaceData(1, 1, 1, 1), Kind: FaceKind.CharacterFace)]);
         var sidekickCard = BuildCard("Sidekick", [new Face([], new CharacterFaceData(1, 0, 1, 1), Kind: FaceKind.CharacterFace)]);
-        var state = BuildState(bruiser, laneMate, sidekickCard);
+        var state = BuildState(bruiser, laneMate, sidekickCard, Escort);
+        var escort = AddDie(state, Escort, "p1", "escort"); // the stacking rule: another lane as full
         var attacker = AddDie(state, bruiser, "p1");
         var laneMateDie = AddDie(state, laneMate, "p1");
         var blocker = AddDie(state, sidekickCard, "p2");
         var queue = new AbilityQueue();
 
-        CombatEngine.DeclareAttackers(state, queue, new Dictionary<string, int> { [attacker.Id] = 0, [laneMateDie.Id] = 0 });
+        CombatEngine.DeclareAttackers(state, queue, new Dictionary<string, int> { [attacker.Id] = 0, [laneMateDie.Id] = 0, [escort.Id] = 1 });
         var assignment = new CombatAssignment();
         assignment.AssignBlocker(attacker.Id, blocker.Id);
         CombatEngine.DeclareBlockers(state, queue, assignment, [blocker.Id]);
@@ -408,14 +446,15 @@ public class CombatEngineTests
         var weak = BuildCard("Weak", [new Face([], new CharacterFaceData(1, 0, 2, 3), Kind: FaceKind.CharacterFace)]);
         var tiger = BuildCard("Tiger", [new Face([], new CharacterFaceData(1, 0, 3, 3), Kind: FaceKind.CharacterFace)]);
         var wall = BuildCard("Wall", [new Face([], new CharacterFaceData(1, 0, 1, 4), Kind: FaceKind.CharacterFace)]);
-        var state = BuildState(weak, tiger, wall);
+        var state = BuildState(weak, tiger, wall, Escort);
+        var escort = AddDie(state, Escort, "p1", "escort"); // the stacking rule: another lane as full
         var a1 = AddDie(state, weak, "p1");
         var a2 = AddDie(state, tiger, "p1");
         var blocker = AddDie(state, wall, "p2");
         var queue = new AbilityQueue();
         var lifeBefore = state.PlayerTwo.Life;
 
-        CombatEngine.DeclareAttackers(state, queue, new Dictionary<string, int> { [a1.Id] = 0, [a2.Id] = 0 });
+        CombatEngine.DeclareAttackers(state, queue, new Dictionary<string, int> { [a1.Id] = 0, [a2.Id] = 0, [escort.Id] = 1 });
         var assignment = new CombatAssignment();
         assignment.AssignBlocker(a1.Id, blocker.Id); // the second attacker has no blocker of its own
         CombatEngine.DeclareBlockers(state, queue, assignment, [blocker.Id]);
@@ -435,14 +474,15 @@ public class CombatEngineTests
     {
         var soft = BuildCard("Soft", [new Face([], new CharacterFaceData(1, 0, 1, 2), Kind: FaceKind.CharacterFace)]);
         var wall = BuildCard("Wall", [new Face([], new CharacterFaceData(1, 0, 2, 9), Kind: FaceKind.CharacterFace)]);
-        var state = BuildState(soft, wall);
+        var state = BuildState(soft, wall, Escort);
+        var escort = AddDie(state, Escort, "p1", "escort"); // the stacking rule: another lane as full
         var early = AddDie(state, soft, "p1", "early-in-dice-list");
         var late = AddDie(state, soft, "p1", "late-in-dice-list");
         var blocker = AddDie(state, wall, "p2");
         var queue = new AbilityQueue();
 
         // Declared in the reverse of their internal order.
-        CombatEngine.DeclareAttackers(state, queue, new Dictionary<string, int> { [late.Id] = 1, [early.Id] = 1 });
+        CombatEngine.DeclareAttackers(state, queue, new Dictionary<string, int> { [late.Id] = 1, [early.Id] = 1, [escort.Id] = 0 });
         Assert.Equal(0, late.AttackOrder);
         Assert.Equal(1, early.AttackOrder);
         var assignment = new CombatAssignment();
@@ -461,14 +501,15 @@ public class CombatEngineTests
         var a = BuildCard("A", [new Face([], new CharacterFaceData(1, 0, 1, 3), Kind: FaceKind.CharacterFace)]);
         var b = BuildCard("B", [new Face([], new CharacterFaceData(1, 0, 1, 3), Kind: FaceKind.CharacterFace)]);
         var wall = BuildCard("Wall", [new Face([], new CharacterFaceData(1, 0, 0, 9), Kind: FaceKind.CharacterFace)]);
-        var state = BuildState(a, b, wall);
+        var state = BuildState(a, b, wall, Escort);
+        var escort = AddDie(state, Escort, "p1", "escort"); // the stacking rule: another lane as full
         var a1 = AddDie(state, a, "p1");
         var a2 = AddDie(state, b, "p1");
         var blocker = AddDie(state, wall, "p2");
         var queue = new AbilityQueue();
         var lifeBefore = state.PlayerTwo.Life;
 
-        CombatEngine.DeclareAttackers(state, queue, new Dictionary<string, int> { [a1.Id] = 2, [a2.Id] = 2 });
+        CombatEngine.DeclareAttackers(state, queue, new Dictionary<string, int> { [a1.Id] = 2, [a2.Id] = 2, [escort.Id] = 0 });
         var assignment = new CombatAssignment();
         assignment.AssignBlocker(a1.Id, blocker.Id);
         CombatEngine.DeclareBlockers(state, queue, assignment, [blocker.Id]);

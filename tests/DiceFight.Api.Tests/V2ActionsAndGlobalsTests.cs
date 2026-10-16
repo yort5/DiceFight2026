@@ -335,15 +335,32 @@ public class V2ActionsAndGlobalsTests
         var twoA = Tardigrade(state, "teamA", Zone.FieldZone, 3); // L2 1/1, +1A below = 2A
         twoA.AppliedModifiers.Add(new AppliedModifier(1, 0, 0, "test", Duration.EndOfTurn));
         var oneA = Tardigrade(state, "teamA", Zone.FieldZone, 3); // L2 1/1 = 1A
+        var escort = Tardigrade(state, "teamA", Zone.FieldZone, 3); // the stacking rule: another lane as full
         var wall = Tardigrade(state, "teamB", Zone.FieldZone, 4); // Bulwark 1/2, +1D below = 3D
         wall.AppliedModifiers.Add(new AppliedModifier(0, 1, 0, "test", Duration.EndOfTurn));
 
         a.EnterAttackStep(session.Id);
-        a.DeclareAttackers(session.Id, new V2DeclareAttackersRequest([new V2AttackerDeclaration(twoA.Id, 0), new V2AttackerDeclaration(oneA.Id, 0)]));
+        a.DeclareAttackers(session.Id, new V2DeclareAttackersRequest([new V2AttackerDeclaration(twoA.Id, 0), new V2AttackerDeclaration(oneA.Id, 0), new V2AttackerDeclaration(escort.Id, 1)]));
         b.DeclareBlockers(session.Id, new V2DeclareBlockersRequest([new V2BlockAssignment(twoA.Id, wall.Id)]));
         a.AssignCombatDamage(session.Id, new V2AssignCombatDamageRequest([]));
 
         Assert.Equal(Zone.PrepArea, wall.Zone);
+    }
+
+    // The stacking rule (2026-10-16): two in one lane with no other lane as
+    // full is refused.
+    [Fact]
+    public void Two_Attackers_In_One_Lane_Need_An_Attacker_In_Another()
+    {
+        var (session, a, _) = StartInMainAs("Wolf", "GreatHornedOwl");
+        var state = session.State;
+        var one = Tardigrade(state, "teamA", Zone.FieldZone, 3);
+        var two = Tardigrade(state, "teamA", Zone.FieldZone, 3);
+
+        a.EnterAttackStep(session.Id);
+        Assert.Throws<InvalidOperationException>(() =>
+            a.DeclareAttackers(session.Id, new V2DeclareAttackersRequest([new V2AttackerDeclaration(one.Id, 0), new V2AttackerDeclaration(two.Id, 0)])));
+        Assert.Equal(StepIds.SelectAttackers, state.CurrentStepId);
     }
 
     // Same report: Distraction's Global ("move one attacker back to its

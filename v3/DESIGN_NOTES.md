@@ -4571,3 +4571,44 @@ First run, 52 cards (34 imports, the off-roster natives, 4 Basic Actions):
 - Big negatives mostly describe the slot, not the card: Bison -33
   (4/1 glass cannon in for Armadillo's 1/5-3/9 Rhinoceros wall), Meerkat
   and Planarian -16/-17 (both in for Hermit Crab).
+
+## 2026-10-16 - Lane stacking rule
+
+User call (from a suggestion, then simplified for intuitiveness): **a lane
+takes another attacker only if some other lane already has as many.** A
+second attacker needs another lane with one, a third another lane with
+two; an empty lane is always open. Whatever order they're added in, that
+comes to: the fullest lane is at most one ahead of the next-fullest. The
+point: pairing two big attackers costs at least one more sent alone,
+which gets through unblocked (or soaks a blocker) and cycles back into
+the bag. Considered first: "every other lane as full" - with four lanes
+that kept stacking out of anything under 5 attackers (13 of 156 real
+declarations), so lane fights and 2+ Overcrush would all but vanish.
+
+- Engine: `CombatEngine.CanAddToLane` / `LanesAllowed`; `DeclareAttackers`
+  refuses a declaration that breaks it.
+- Bot: spreads one per lane first anyway; only Armadillo's Rhinoceros +
+  forced-blocker stack changed - an attacker joins Rhinoceros's lane only
+  when the rule allows, else the emptiest lane.
+- Mobile: with one of your creatures selected, lanes it can't join grey
+  out (dashed, tapping does nothing) and the Attack Zone hint says why;
+  "Declare into lane N" picks an open lane (was always the targeted
+  lane - lane 1 by default); Declare Attackers is disabled with
+  a note if pulling one back leaves a stack with no lane as full.
+  `web/src/dicekingdom/laneRule.ts` mirrors the engine check. Desktop
+  already declares round-robin (`i % 4`), which always satisfies it.
+- Found on the way: since 2026-10-08 tapping a lane didn't work at all on
+  mobile - the root's tap-outside-to-close handler (onClickCapture)
+  cleared the selected die before the lane's own handler could use it, so
+  "Declare into lane 1" was the only way to attack (and blocking had to
+  go through the die tiles). `.dkm-lane` now counts as inside.
+- Real games before the rule: 24 of 156 human declarations (17 games)
+  would have been refused - all of them every attacker in one lane, up to
+  11. Given the bug above, most of that was likely the lane 1 default, not
+  a choice. Replaying those records now disagrees at that step, as
+  expected.
+- Simulator (1,200 games per Champion, powers on, same seeds before and
+  after): Armadillo 52.6% -> 47.3% (its Overcrush carry-through drops
+  3.8 -> 3.0 a game), Eagle 52.2 -> 55.2, Wolf 46.2 -> 48.2, Owl 48.1
+  unchanged. Armadillo is the one that stacks; worth watching.
+- Belongs in the upcoming Help/Instructions screen.

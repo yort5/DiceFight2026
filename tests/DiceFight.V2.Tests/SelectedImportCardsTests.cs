@@ -225,7 +225,8 @@ public class SelectedImportCardsTests
     {
         var s = Game(); var q = new AbilityQueue(); var a = Add(s, DiceKingdomConfig.Hippopotamus.Id);
         var other = Add(s, DiceKingdomConfig.Hippopotamus.Id, level: 3); var worm = Add(s, "AVX066", "p2");
-        s.MoveToStep(StepIds.SelectAttackers); CombatEngine.DeclareAttackers(s, q, new Dictionary<string, int> { [a.Id] = 0, [other.Id] = 0 });
+        var escort = Add(s, DiceKingdomConfig.HoneyBadger.Id); // the stacking rule: another lane as full
+        s.MoveToStep(StepIds.SelectAttackers); CombatEngine.DeclareAttackers(s, q, new Dictionary<string, int> { [a.Id] = 0, [other.Id] = 0, [escort.Id] = 1 });
         var b = new CombatAssignment(); b.AssignBlocker(a.Id, worm.Id); CombatEngine.DeclareBlockers(s, q, b, [worm.Id]); Drain(s, q);
         Assert.Equal(Zone.PrepArea, a.Zone); Assert.Equal(2, s.GetCurrentFace(other)?.Character?.Level);
     }

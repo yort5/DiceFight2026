@@ -521,7 +521,7 @@ public static class DiceKingdomBot
         // Hermit Crab's forced block + a retaliator (Rhinoceros): Rhinoceros
         // leads ONE lane, so the forced blocker has nothing else to block and
         // every point it hits for comes back at its controller. Whatever else
-        // attacks joins that lane (user, 2026-10-04): blockers' damage lands
+        // attacks joins that lane as far as the stacking rule allows (user, 2026-10-04): blockers' damage lands
         // lethal-first in declaration order, so Rhinoceros soaks it ahead of
         // the others, and a 2+ attacker lane has Overcrush.
         var forced = blockers.Where(b => b.CombatFlags.Contains(CombatFlagKind.MustBlock)).ToList();
@@ -583,10 +583,20 @@ public static class DiceKingdomBot
         }
         if (forcedCombo)
         {
+            // Each joins Rhinoceros's lane when the stacking rule allows it
+            // (another lane as full), else the emptiest other lane.
             var stack = new Dictionary<string, int> { [retaliator!.Id] = 0 }; // declared first
-            foreach (var d in attackers) stack[d.Id] = 0;
+            var counts = new int[MaxLanes];
+            counts[0] = 1;
+            foreach (var d in attackers)
+            {
+                var lane = CombatEngine.CanAddToLane(counts, 0) ? 0
+                    : Enumerable.Range(1, MaxLanes - 1).OrderBy(l => counts[l]).First();
+                counts[lane]++;
+                stack[d.Id] = lane;
+            }
             return new(BotActionKind.DeclareAttackers, stack.Count == 1 ? "Rhinoceros into a forced blocker."
-                : $"Rhinoceros into a forced blocker, {stack.Count - 1} more behind it.") { AttackerLanes = stack };
+                : $"Rhinoceros into a forced blocker, {counts[0] - 1} more behind it.") { AttackerLanes = stack };
         }
         return Declare(attackers, attackers.Count == 0 ? "Hold back - no good attacks." : $"Attack with {attackers.Count}.");
     }

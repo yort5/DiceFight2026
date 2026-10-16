@@ -212,9 +212,11 @@ public class ChampionPowersTests
             var queue = new AbilityQueue();
             var a1 = AddDie(state, DiceKingdomConfig.Hippopotamus.Id, "p1", Zone.FieldZone, level: 1, tag: "a"); // 3 ATK
             var a2 = AddDie(state, DiceKingdomConfig.Hippopotamus.Id, "p1", Zone.FieldZone, level: 1, tag: "b"); // 3 ATK
+            var escort = AddDie(state, DiceKingdomConfig.HoneyBadger.Id, "p1", Zone.FieldZone, level: 1, tag: "c"); // 1 ATK, unblocked
             var crab = AddDie(state, DiceKingdomConfig.HermitCrab.Id, "p2", Zone.FieldZone); // 2 DEF
             state.MoveToStep(StepIds.SelectAttackers);
-            CombatEngine.DeclareAttackers(state, queue, new Dictionary<string, int> { [a1.Id] = 0, [a2.Id] = 0 }); // one lane: auto-Overcrush
+            // One lane: auto-Overcrush. The stacking rule needs another lane as full: the escort.
+            CombatEngine.DeclareAttackers(state, queue, new Dictionary<string, int> { [a1.Id] = 0, [a2.Id] = 0, [escort.Id] = 1 });
             var assignment = new CombatAssignment();
             assignment.AssignBlocker(a1.Id, crab.Id);
             CombatEngine.DeclareBlockers(state, queue, assignment, [crab.Id]);
@@ -231,8 +233,9 @@ public class ChampionPowersTests
             else Priority.Pass(state, queue, "p2");
             Drain(state, queue);
 
-            // 6 lane ATK into 2 DEF: 4 carries through only when the blocker is gone.
-            Assert.Equal(shield ? 20 : 16, state.PlayerTwo.Life);
+            // 6 lane ATK into 2 DEF: 4 carries through only when the blocker is gone
+            // (and the escort's 1 either way).
+            Assert.Equal(shield ? 19 : 15, state.PlayerTwo.Life);
             Assert.Equal(shield ? Zone.FieldZone : Zone.PrepArea, crab.Zone);
         }
     }

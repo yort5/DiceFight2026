@@ -2956,6 +2956,12 @@
   border-color: var(--claw);
   background: rgba(231, 138, 90, 0.09);
 }
+/* The stacking rule: this lane can't take the selected die yet. */
+.dk-mobile .dkm-lane.closed {
+  opacity: 0.4;
+  border-style: dashed;
+  cursor: not-allowed;
+}
 .dk-mobile .dkm-lane-blockers,
 .dk-mobile .dkm-lane-attackers {
   display: flex;

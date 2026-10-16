@@ -36,6 +36,23 @@ public static class CombatEngine
     // see LaneFight and AssignCombatDamage.
     public const int LaneCount = 4;
 
+    // Stacking rule (user, 2026-10-16): a lane takes another attacker only
+    // if some other lane already has as many - a second needs another lane
+    // with one, a third another lane with two. An empty lane is always
+    // open. Whatever order they're added in, that comes to: the fullest
+    // lane is at most one ahead of the next-fullest. So stacking two big
+    // attackers costs at least one more sent alone somewhere else.
+    public static bool CanAddToLane(IReadOnlyList<int> laneCounts, int lane) =>
+        laneCounts[lane] == 0 || laneCounts.Where((_, i) => i != lane).Any(c => c >= laneCounts[lane]);
+
+    public static bool LanesAllowed(IEnumerable<int> attackerLanes)
+    {
+        var counts = new int[LaneCount];
+        foreach (var lane in attackerLanes) counts[lane]++;
+        var sorted = counts.OrderByDescending(c => c).ToList();
+        return sorted[0] <= sorted[1] + 1;
+    }
+
     // Convenience overload for callers (tests, TurnEngine's skip-combat
     // path) that don't care which lane an attacker lands in - spreads
     // them round-robin across the four lanes so nothing has to reason
@@ -53,6 +70,11 @@ public static class CombatEngine
             .ToList();
         if (forcedButOmitted.Count > 0)
             throw new InvalidOperationException($"{string.Join(", ", forcedButOmitted.Select(d => d.Id))} must attack this turn.");
+
+        if (attackerLanes.Values.Any(l => l < 0 || l >= LaneCount))
+            throw new InvalidOperationException($"Lane {attackerLanes.Values.First(l => l < 0 || l >= LaneCount)} is out of range.");
+        if (!LanesAllowed(attackerLanes.Values))
+            throw new InvalidOperationException("A lane can only take another attacker when another lane has as many - the fullest lane can be at most one ahead of the next.");
 
         var order = 0;
         foreach (var (id, lane) in attackerLanes)

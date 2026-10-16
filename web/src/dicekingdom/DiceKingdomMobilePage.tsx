@@ -34,6 +34,7 @@ import { classifyDieMotion, remoteRolledIds } from "./dieMotion";
 import { activeCouldAct, botDecisionCall, decisionOwner, pickEnergy, rolled } from "./bot";
 import { getAbilityOptions, isCommunityBasicAction, purchasableDiceFor, executeAbility, type AbilityCommand } from "./sharedAbilities";
 import { SharedAbilityPanel } from "./SharedAbilityPanel";
+import { LANE_COUNT, canAddToLane, declareLane, laneCounts, lanesAllowed } from "./laneRule";
 import type { BotDecision, CardDef, Die, GameState, LobbyStatus, PendingChoice, PlayerState, StatModifier } from "./types";
 
 // Dice Kingdom - mobile refresh (2026-09). A GENUINELY SEPARATE front end
@@ -73,7 +74,6 @@ const CHAMPIONS = [
   { id: "GoldenEagle", energy: "Wing" },
   { id: "GreatHornedOwl", energy: "Eye" },
 ];
-const LANE_COUNT = 4;
 // Same pacing as ../DiceKingdomPage.tsx's identical "Play vs Computer"
 // feature (2026-09-17 port - direct feedback: "how do I actually use the
 // automated opponent?" - it only ever existed on desktop). bot.ts's
@@ -1179,6 +1179,7 @@ function AttackLanesCard({
   cardsById,
   you,
   laneSel,
+  closedLanes,
   onTapLane,
   onTapAttacker,
   onTapBlocker,
@@ -1193,6 +1194,8 @@ function AttackLanesCard({
   cardsById: Map<string, CardDef>;
   you: string;
   laneSel: number;
+  // Lanes the selected die can't join yet (the stacking rule, laneRule.ts).
+  closedLanes: boolean[];
   onTapLane: (lane: number) => void;
   onTapAttacker: (id: string) => void;
   onTapBlocker: (attackerId: string, blockerId: string) => void;
@@ -1207,13 +1210,16 @@ function AttackLanesCard({
       <div className="dkm-card-head">
         <span className="dkm-card-title accent">Attack Zone</span>
         <span className="dkm-card-hint">
-          {totalDeclared > 0 ? `lane ${laneSel + 1} targeted` : "tap a lane to target it"}
+          {closedLanes.some(Boolean)
+            ? "a lane stacks only when another has as many"
+            : totalDeclared > 0 ? `lane ${laneSel + 1} targeted` : "tap a lane to target it"}
         </span>
       </div>
       <div className="dkm-lanes">
         {Array.from({ length: LANE_COUNT }, (_, lane) => {
           const attackers = attackersByLane[lane] ?? [];
-          const targeted = lane === laneSel;
+          const closed = closedLanes[lane] ?? false;
+          const targeted = lane === laneSel && !closed;
           const blockers = laneBlockersOf(attackers, blockersByAttacker);
           const tileSize = attackers.length <= 1 ? 52 : attackers.length === 2 ? 42 : 34;
           // Direct feedback (2026-09-17): "get rid of '1 v 1'... it's not
@@ -1251,7 +1257,9 @@ function AttackLanesCard({
               role="button"
               tabIndex={0}
               data-lane={lane}
-              className={`dkm-lane${targeted ? " targeted" : ""}${laneUnblockable ? " unblockable" : ""}`}
+              aria-disabled={closed || undefined}
+              title={closed ? `Needs another lane with ${attackers.length} attacker${attackers.length === 1 ? "" : "s"} first` : undefined}
+              className={`dkm-lane${targeted ? " targeted" : ""}${closed ? " closed" : ""}${laneUnblockable ? " unblockable" : ""}`}
               onClick={tapLane}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") tapLane();
@@ -2504,7 +2512,7 @@ export function DiceKingdomMobilePage() {
     setPendingAttackers((prev) => {
       const next = { ...prev };
       if (dieId in next) delete next[dieId];
-      else next[dieId] = laneSel;
+      else next[dieId] = declareLane(laneCounts(prev, dieId), laneSel);
       return next;
     });
   }
@@ -2518,11 +2526,16 @@ export function DiceKingdomMobilePage() {
   // pending elsewhere) - the "Declare into lane N"/"Pull back" inspect
   // action still exists for pulling an attacker back out.
   function declareIntoLane(lane: number) {
-    setLaneSel(lane);
     if (selectedDie && selectedDie.zone === "FieldZone" && selectedDie.controllerId === you) {
+      // The stacking rule (laneRule.ts): a closed lane is greyed out and
+      // tapping it does nothing.
+      if (!canAddToLane(laneCounts(pendingAttackers, selectedDie.id), lane)) return;
+      setLaneSel(lane);
       setPendingAttackers((prev) => ({ ...prev, [selectedDie.id]: lane }));
       setSelectedId(null);
+      return;
     }
+    setLaneSel(lane);
   }
 
   // Direct feedback (2026-09-18): "tapping for the second blocker
@@ -2639,7 +2652,7 @@ export function DiceKingdomMobilePage() {
     if (selectedDie.zone === "FieldZone" && selectedDie.controllerId === you && step === "select-attackers" && isYourTurn) {
       const already = selectedDie.id in pendingAttackers;
       inspectActions.push({
-        label: already ? "Pull back" : `Declare into lane ${laneSel + 1}`,
+        label: already ? "Pull back" : `Declare into lane ${declareLane(laneCounts(pendingAttackers, selectedDie.id), laneSel) + 1}`,
         // Deselect after, same as tapping the lane - leaving it selected
         // flipped this same button to "Pull back" under your finger, so
         // it read as not having worked (direct feedback, 2026-09-30).
@@ -2732,6 +2745,7 @@ export function DiceKingdomMobilePage() {
     ) {
       const selected = game.dice.find((d) => d.id === selectedId);
       if (selected && selected.zone === "FieldZone" && selected.controllerId === you) {
+        if (!canAddToLane(laneCounts(pendingAttackers, selectedId), pendingAttackers[attackerId])) return; // closed lane
         setPendingAttackers((prev) => ({ ...prev, [selectedId]: pendingAttackers[attackerId] }));
         setSelectedId(null);
         return;
@@ -2854,6 +2868,11 @@ export function DiceKingdomMobilePage() {
   } else if (step === "select-attackers") {
     const n = Object.keys(pendingAttackers).length;
     primaryLabel = `Declare Attackers (${n})`;
+    // Pulling an attacker back can leave a stack without a lane as full.
+    if (!lanesAllowed(pendingAttackers)) {
+      primaryDisabled = true;
+      primaryNote = "A lane can only hold 2 when another lane has 1 (3 when another has 2, and so on).";
+    }
     primaryRun = () =>
       run(() => api.declareAttackers(game.gameId, Object.entries(pendingAttackers).map(([dieId, lane]) => ({ dieId, lane }))));
   } else if (step === "assign-blockers") {
@@ -2912,10 +2931,13 @@ export function DiceKingdomMobilePage() {
         const target = event.target;
         if (!(target instanceof Element)) return;
         // Keep the panel open for interactions inside it. Die clicks use their
-        // own selection handlers, including tap-again-to-deselect.
+        // own selection handlers, including tap-again-to-deselect. A lane
+        // tap uses the selected die (declare into it, block it), so it
+        // can't clear the selection first - it did from 2026-10-08 to
+        // 10-16, leaving "Declare into lane 1" the only way to attack.
         if (target.closest(
           ".dkm-inspect, .dkm-tile.clickable, .dkm-buy-tile, " +
-          ".dkm-pile-inspect-tile, .dkm-lane-die-wrap, .screen-menu, .rules-keyword"
+          ".dkm-pile-inspect-tile, .dkm-lane, .screen-menu, .rules-keyword"
         )) return;
         setSelectedId(null);
         setPileInspectId(null);
@@ -3039,6 +3061,11 @@ export function DiceKingdomMobilePage() {
               cardsById={cardsById}
               you={you}
               laneSel={laneSel}
+              closedLanes={
+                step === "select-attackers" && isYourTurn && selectedDie?.zone === "FieldZone" && selectedDie.controllerId === you
+                  ? Array.from({ length: LANE_COUNT }, (_, lane) => !canAddToLane(laneCounts(pendingAttackers, selectedDie.id), lane))
+                  : []
+              }
               onTapLane={declareIntoLane}
               onTapAttacker={onTapAttacker}
               onTapBlocker={onTapBlocker}

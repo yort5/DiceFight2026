@@ -194,15 +194,19 @@ public class ArmadilloRosterTests
         state.MoveToStep(StepIds.SelectAttackers);
         var rhino = Place(state, "p1", d => d.CardId == DiceKingdomConfig.Rhinoceros.Id, Zone.FieldZone, 1); // L2 2/7
         Place(state, "p1", d => d.CardId == DiceKingdomConfig.CapeBuffalo.Id, Zone.FieldZone, 2); // L3 7/7
+        Place(state, "p1", d => d.CardId == DiceKingdomConfig.CapeBuffalo.Id, Zone.FieldZone, 2);
         var forced = Place(state, "p2", d => d.CardId is not null && state.CardCatalog[d.CardId].CardType == CardType.Character, Zone.FieldZone, 0);
         forced.CombatFlags.Add(CombatFlagKind.MustBlock);
 
         var decision = Bot.DiceKingdomBot.Decide(state, "p1")!;
 
+        // Three attackers: the stacking rule lets one join Rhinoceros's lane
+        // only with the other in a lane of its own.
         Assert.Equal(Bot.BotActionKind.DeclareAttackers, decision.Kind);
         Assert.Equal(rhino.Id, decision.AttackerLanes.Keys.First()); // declared first: takes blocker damage first
-        Assert.True(decision.AttackerLanes.Count >= 2);
-        Assert.All(decision.AttackerLanes.Values, lane => Assert.Equal(decision.AttackerLanes[rhino.Id], lane));
+        Assert.Equal(3, decision.AttackerLanes.Count);
+        Assert.Equal(2, decision.AttackerLanes.Values.Count(lane => lane == decision.AttackerLanes[rhino.Id]));
+        Assert.True(CombatEngine.LanesAllowed(decision.AttackerLanes.Values));
     }
 
     // Armadillo's shield prevents the damage Rhinoceros would send back, so
