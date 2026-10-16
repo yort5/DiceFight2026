@@ -56,6 +56,16 @@ export function AccountLink({ from }: { from?: "mobile" }) {
           ({me.coins} coins{me.dailyCoins > 0 && <b className="dk-daily-coins"> +{me.dailyCoins} today</b>})
         </>
       )}
+      {" · "}
+      <a
+        href={`/dice-kingdom/how-to-play${search}`}
+        onClick={(e) => {
+          e.preventDefault();
+          navigate("/dice-kingdom/how-to-play", search);
+        }}
+      >
+        How to play
+      </a>
     </p>
   );
 }

@@ -12,7 +12,8 @@ export type Route =
   | "/dice-kingdom"
   | "/dice-kingdom/mobile"
   | "/dice-kingdom/account"
-  | "/dice-kingdom/packs";
+  | "/dice-kingdom/packs"
+  | "/dice-kingdom/how-to-play";
 
 function normalize(pathname: string): Route {
   // "/" and anything unrecognized fall back to /game - preserves today's
@@ -28,6 +29,8 @@ function normalize(pathname: string): Route {
   if (pathname === "/dice-kingdom/account") return "/dice-kingdom/account";
   // Coins, random packs and your collection (dicekingdom/PacksPage.tsx).
   if (pathname === "/dice-kingdom/packs") return "/dice-kingdom/packs";
+  // The basic rules (dicekingdom/HowToPlayPage.tsx).
+  if (pathname === "/dice-kingdom/how-to-play") return "/dice-kingdom/how-to-play";
   return "/game";
 }
 

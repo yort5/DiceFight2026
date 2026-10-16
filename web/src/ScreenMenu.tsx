@@ -10,6 +10,9 @@ export function ScreenMenu({ screen, startRoute, onStartGame }: {
   onStartGame?: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  // Back from How to Play returns to the mobile page if that's where you were.
+  const howToPlaySearch = startRoute === "/dice-kingdom/mobile" ? "?from=mobile" : "";
+  const howToPlay = "/dice-kingdom/how-to-play" + howToPlaySearch;
   const { layout, setLayout } = useTeamBuilderLayout();
   const [theme, setTheme] = useTheme();
   const dark = useIsDark(theme);
@@ -49,6 +52,11 @@ export function ScreenMenu({ screen, startRoute, onStartGame }: {
           onClick={(e) => { if (e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) { e.preventDefault(); setOpen(false); onStartGame?.(); navigate(startRoute); } }}>Start a Game</a>
         <a href="/teambuilder" aria-current={screen === "builder" ? "page" : undefined}
           onClick={(e) => { if (e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) { e.preventDefault(); setOpen(false); navigate("/teambuilder"); } }}>Team Builder</a>
+        {/* Mid-game it opens in a new tab, so the game stays where it is. */}
+        {screen === "game"
+          ? <a href="/dice-kingdom/how-to-play" target="_blank" rel="noopener" onClick={() => setOpen(false)}>How to Play ↗</a>
+          : <a href={howToPlay}
+            onClick={(e) => { if (e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) { e.preventDefault(); setOpen(false); navigate("/dice-kingdom/how-to-play", howToPlaySearch); } }}>How to Play</a>}
         <div className="screen-menu-layout">
           <button type="button" role="switch" aria-checked={dark} aria-label="Dark mode"
             className="screen-menu-theme" onClick={() => setTheme(dark ? "light" : "dark")}>

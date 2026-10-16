@@ -4974,3 +4974,117 @@
   color: currentColor;
   pointer-events: none;
 }
+
+/* ---- How to Play (/dice-kingdom/how-to-play) ---- */
+.dk-howto .dk-howto-lede {
+  font-size: 16px;
+  line-height: 1.5;
+  margin: 0 0 12px;
+}
+.dk-howto .dk-howto-toc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 16px;
+}
+.dk-howto .dk-howto-toc a {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel-bg);
+  color: var(--text-h);
+  font-size: 13px;
+  text-decoration: none;
+}
+.dk-howto .dk-howto-section {
+  margin-bottom: 14px;
+  line-height: 1.55;
+  scroll-margin-top: 12px;
+}
+.dk-howto .dk-howto-section h2 {
+  margin: 0 0 8px;
+  font-size: 20px;
+  color: var(--text-h);
+}
+.dk-howto .dk-howto-section ul,
+.dk-howto .dk-howto-section ol {
+  margin: 6px 0;
+  padding-left: 22px;
+}
+.dk-howto .dk-howto-section li {
+  margin: 4px 0;
+}
+.dk-howto .dk-howto-steps > li {
+  margin-bottom: 10px;
+}
+.dk-howto svg {
+  vertical-align: -2px;
+}
+.dk-howto .dk-howto-rule {
+  margin: 8px 0 2px;
+  padding: 8px 10px;
+  border-left: 3px solid var(--claw);
+  background: var(--panel-bg-strong);
+  border-radius: 6px;
+}
+.dk-howto .dk-howto-champs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+}
+.dk-howto .dk-howto-champ {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-bg-strong);
+}
+.dk-howto .dk-howto-champ-icon {
+  flex: none;
+}
+.dk-howto .dk-howto-zones {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 14px;
+  margin: 0;
+}
+.dk-howto .dk-howto-zones dt,
+.dk-howto .dk-howto-keywords dt {
+  font-weight: 700;
+  color: var(--text-h);
+}
+.dk-howto .dk-howto-zones dd {
+  margin: 0;
+}
+.dk-howto .dk-howto-keywords {
+  margin: 0;
+}
+.dk-howto .dk-howto-keywords > div {
+  padding: 6px 0;
+  border-top: 1px solid var(--border);
+}
+.dk-howto .dk-howto-keywords dd {
+  margin: 2px 0 0;
+}
+@media (max-width: 480px) {
+  .dk-howto .dk-howto-zones {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+  .dk-howto .dk-howto-zones dd {
+    margin-bottom: 6px;
+  }
+}
+/* .dicekingdom .panel p is sized for game panels; prose here reads at one size. */
+.dk-howto .dk-howto-section p,
+.dk-howto .dk-howto-section li,
+.dk-howto .dk-howto-section dd {
+  font-size: 15px;
+  line-height: 1.55;
+}
+.dk-howto .dk-howto-section a {
+  color: inherit;
+  text-underline-offset: 2px;
+}

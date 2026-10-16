@@ -4612,3 +4612,20 @@ declarations), so lane fights and 2+ Overcrush would all but vanish.
   3.8 -> 3.0 a game), Eagle 52.2 -> 55.2, Wolf 46.2 -> 48.2, Owl 48.1
   unchanged. Armadillo is the one that stacks; worth watching.
 - Belongs in the upcoming Help/Instructions screen.
+
+## 2026-10-16 - How to Play page
+
+`/dice-kingdom/how-to-play` (`web/src/dicekingdom/HowToPlayPage.tsx`): the
+basic rules on one page - its own route, so it works for a first game, a
+table game with physical dice, or a link sent to someone. Sections: goal,
+team, dice (incl. the Tardigrade's faces), a turn step by step, attacking
+and blocking (lanes, the stacking rule, Overcrush, where dice go after a
+fight), the four Champion powers, the zones, keywords, packs.
+
+- The keyword list is every `KEYWORD_RULES` entry that some card in
+  `/cards` actually carries, so it grows with the catalog.
+- Linked from the start screens' "Playing as ..." line and the screen
+  menu; mid-game the menu opens it in a new tab so the game stays put.
+  `?from=mobile` sends "← Dice Kingdom" back to the mobile page.
+- Written against the engine as of today. A rule change in TurnEngine,
+  CombatEngine, ChampionPowers or laneRule.ts needs this page updated too.
