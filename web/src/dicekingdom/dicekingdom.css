@@ -5088,3 +5088,244 @@
   color: inherit;
   text-underline-offset: 2px;
 }
+/* How to Play figures (HowToPlayFigures.tsx) */
+.dk-howto .dk-howto-figure {
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-bg-strong);
+}
+.dk-howto .dk-howto-figure figcaption {
+  margin-top: 10px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+.dk-howto .dk-howto-anatomy {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 18px 28px;
+}
+.dk-howto .dk-howto-anatomy-die {
+  position: relative;
+  padding: 20px 40px 22px 64px;
+}
+.dk-howto .dk-howto-callout {
+  position: absolute;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-h);
+  white-space: nowrap;
+}
+.dk-howto .dk-howto-callout.tl { left: 0; top: 22px; width: 56px; text-align: right; line-height: 1.15; }
+.dk-howto .dk-howto-callout.tr { right: 40px; top: 2px; }
+.dk-howto .dk-howto-callout.br { left: 152px; bottom: 26px; }
+.dk-howto .dk-howto-anatomy-others {
+  display: flex;
+  gap: 28px;
+}
+.dk-howto .dk-howto-anatomy-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 22px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-h);
+}
+.dk-howto .dk-howto-faces-row {
+  margin-top: 12px;
+}
+.dk-howto .dk-howto-faces-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-h);
+}
+.dk-howto .dk-howto-faces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-bottom: 6px;
+}
+.dk-howto .dk-howto-turnstrip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 12px;
+  padding: 0;
+  list-style: none;
+}
+.dk-howto .dk-howto-turnstrip li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+.dk-howto .dk-howto-turnstrip-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--panel-bg-strong);
+  border: 1px solid var(--border);
+  color: var(--text-h);
+  font-size: 13px;
+  font-weight: 600;
+}
+.dk-howto .dk-howto-turnstrip-arrow {
+  color: var(--text-dim);
+}
+.dk-howto .dk-howto-stacks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+  margin: 10px 0 4px;
+}
+.dk-howto .dk-howto-stack {
+  margin: 0;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel-bg);
+}
+.dk-howto .dk-howto-stack.no { border-style: dashed; }
+.dk-howto .dk-howto-stack-lanes {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  height: 52px;
+}
+.dk-howto .dk-howto-stack-lane {
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 0;
+  border-radius: 4px;
+  background: var(--panel-bg-strong);
+}
+.dk-howto .dk-howto-stack-die {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--claw);
+}
+.dk-howto .dk-howto-stack.no .dk-howto-stack-lane:first-child .dk-howto-stack-die:last-child {
+  background: transparent;
+  outline: 2px dashed var(--claw);
+  outline-offset: -2px;
+}
+.dk-howto .dk-howto-stack figcaption {
+  display: flex;
+  flex-direction: column;
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--text-dim);
+}
+.dk-howto .dk-howto-stack figcaption b { color: var(--text-h); }
+.dk-howto .dk-howto-stack.ok figcaption b { color: var(--shell); }
+.dk-howto .dk-howto-stack.no figcaption b { color: var(--claw); }
+.dk-howto .dk-howto-fight {
+  display: grid;
+  grid-template-columns: max-content repeat(4, minmax(0, 1fr));
+  grid-template-rows: auto auto auto auto;
+  grid-auto-flow: column;
+  gap: 6px;
+}
+.dk-howto .dk-howto-fight-side {
+  align-self: center;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--text-dim);
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+.dk-howto .dk-howto-fight-side:first-child { grid-row: 2; }
+.dk-howto .dk-howto-fight-side:nth-child(2) { grid-row: 3; }
+.dk-howto .dk-howto-fight-lane {
+  display: grid;
+  grid-row: 1 / span 4;
+  grid-template-rows: subgrid;
+  justify-items: center;
+  padding: 4px 2px;
+  border-radius: 8px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+}
+.dk-howto .dk-howto-fight-num {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+.dk-howto .dk-howto-fight-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  min-height: 52px;
+  padding: 3px 0;
+}
+.dk-howto .dk-howto-fight-die {
+  position: relative;
+  display: inline-flex;
+}
+.dk-howto .dk-howto-fight-die.ko {
+  margin-bottom: 14px;
+}
+.dk-howto .dk-howto-fight-die.ko > .die-cube-box { opacity: .5; }
+.dk-howto .dk-howto-ko {
+  position: absolute;
+  left: 50%;
+  top: auto;
+  bottom: -17px;
+  transform: translateX(-50%);
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--claw);
+  color: var(--on-fill);
+  font-size: 12px;
+  font-weight: 800;
+}
+.dk-howto .dk-howto-fight-hit {
+  align-self: start;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--claw);
+}
+.dk-howto .dk-howto-zonemap {
+  display: block;
+  width: 100%;
+  max-width: 460px;
+  margin: 0 auto;
+}
+.dk-howto .dk-howto-zonemap-box {
+  fill: var(--panel-bg);
+  stroke: var(--border);
+  stroke-width: 1.5;
+}
+.dk-howto .dk-howto-zonemap-name {
+  font-size: 13px;
+  font-weight: 700;
+  fill: var(--text-h);
+}
+.dk-howto .dk-howto-zonemap-edge {
+  font-size: 11px;
+  fill: var(--text-dim);
+}
+/* .die-cube-box centers itself with auto margins; the figures lay dice out themselves. */
+.dk-howto .dk-howto-faces .die-cube-box {
+  margin-left: 0;
+  margin-right: 0;
+}

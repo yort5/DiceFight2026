@@ -4629,3 +4629,7 @@ fight), the four Champion powers, the zones, keywords, packs.
   `?from=mobile` sends "← Dice Kingdom" back to the mobile page.
 - Written against the engine as of today. A rule change in TurnEngine,
   CombatEngine, ChampionPowers or laneRule.ts needs this page updated too.
+
+## 2026-10-17 - How to Play pictures
+
+Six figures on the How to Play page (`web/src/dicekingdom/HowToPlayFigures.tsx`): a labelled creature face plus an energy and an action face, a card's and a Tardigrade's six faces, the turn steps, four stacking-rule examples, a worked lane fight, and a map of where dice go. The dice are real DieCubes drawn from `cardDieFaces`/`tardigradeFacesOf` (now exported from dieFaces.ts), so they follow the board's look and the printed faces. The example creature is picked from the live catalog (the first card with an icon and a face with a cost and unequal ATK/DEF - Honey Badger today). The lane fight's numbers are fixed and worked by hand against CombatEngine (pooled ATK, lethal-first onto the first-declared attacker, Overcrush leftover); recheck it if lane combat changes.

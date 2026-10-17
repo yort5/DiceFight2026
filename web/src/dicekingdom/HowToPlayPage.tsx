@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { KEYWORD_RULES } from "../keywordRules";
 import { navigate } from "../router";
 import { backPath } from "./AccountPage";
+import { DieAnatomy, LaneFightExample, StackingExamples, TardigradeFaces, TurnStrip, ZoneMap } from "./HowToPlayFigures";
 import { api } from "./api";
 import { CHAMPION_ICONS, EnergyBadge, TardigradeIcon } from "./icons";
 import { ThemeToggle, useTheme } from "./ThemeToggle";
@@ -130,17 +131,20 @@ export function HowToPlayPage() {
             <b>Action</b> - a one-time effect, written on the action's card.
           </li>
         </ul>
+        <DieAnatomy cards={cards} />
         <p>
           <b>Tardigrade faces:</b> two faces of 2 energy, one of 1 energy, two creature faces worth a Wild energy
           (spend them as energy, or field them as a level 2 1/1), and a level 3 1/2. Tardigrade creatures are free to
           field.
         </p>
+        <TardigradeFaces type="Claw" />
         <p>
           <b>Spinning</b> turns a die to another level without rolling it.
         </p>
       </Section>
 
       <Section id="turn" title="A turn">
+        <TurnStrip />
         <ol className="dk-howto-steps">
           <li>
             <b>Clear and Draw.</b> Leftover dice in your Reserve Pool go to your Used Pile. Draw 4 dice from your bag.
@@ -188,6 +192,7 @@ export function HowToPlayPage() {
               second attacker in a lane needs another lane with one, a third needs another lane with two. Empty lanes
               are always open.
             </div>
+            <StackingExamples />
           </li>
           <li>
             <b>Your opponent blocks</b> with their fielded creatures. Each blocker goes into one lane; several can
@@ -204,6 +209,7 @@ export function HowToPlayPage() {
             more attackers has Overcrush.
           </li>
         </ol>
+        <LaneFightExample />
         <p>
           After the fight, attackers that went unblocked leave the Field (they're back in your Used Pile at the end of
           the turn). Attackers that were blocked and survived go back to the Field. Knocked-out dice go to their
@@ -234,6 +240,7 @@ export function HowToPlayPage() {
       </Section>
 
       <Section id="zones" title="Where dice go">
+        <ZoneMap />
         <dl className="dk-howto-zones">
           <dt>Bag</dt>
           <dd>Dice waiting to be drawn.</dd>

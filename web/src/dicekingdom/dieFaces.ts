@@ -75,7 +75,12 @@ const FACE_COUNT = 6;
 // overwrites it with the live face anyway). The energy type is the die's
 // own, read off its id ("p1-TardigradeClaw-3").
 function tardigradeFaces(die: Die): CubeFace[] {
-  const type = /Tardigrade([A-Za-z]+)/.exec(die.id)?.[1] ?? "Wild";
+  return tardigradeFacesOf(/Tardigrade([A-Za-z]+)/.exec(die.id)?.[1] ?? "Wild");
+}
+
+/** A Tardigrade die's six printed faces for an energy type - also drawn
+ *  on the How to Play page. */
+export function tardigradeFacesOf(type: string): CubeFace[] {
   return [
     { kind: "character", level: 2, fieldingCost: 0, attack: 1, defense: 1, avatar: TardigradeIcon }, // + a Wild
     { kind: "energy", icon: type, amount: 2, avatar: TardigradeIcon },
@@ -88,10 +93,15 @@ function tardigradeFaces(die: Die): CubeFace[] {
 
 function defaultFaces(die: Die, card: CardDef | undefined): CubeFace[] {
   if (die.isTardigrade || !die.cardId) return tardigradeFaces(die);
+  return cardDieFaces(die.cardId, card) ?? tardigradeFaces(die);
+}
+
+/** A card's six printed die faces, or null for a card with none. */
+export function cardDieFaces(cardId: string, card: CardDef | undefined): CubeFace[] | null {
   if (card?.isAction) {
     // Mirrors DiceKingdomConfig.ActionDie: 3 action faces, then 2/2/1 of
     // the Champion's energy.
-    const avatar = CHARACTER_ICONS[die.cardId];
+    const avatar = CHARACTER_ICONS[cardId];
     const type = card.dieEnergyType ?? "Wild";
     return [
       { kind: "action", avatar, burst: card.actionFaceBursts?.[0] ?? 0 },
@@ -103,9 +113,9 @@ function defaultFaces(die: Die, card: CardDef | undefined): CubeFace[] {
     ];
   }
   const levels = card?.levels ?? [];
-  if (levels.length === 0) return tardigradeFaces(die);
+  if (levels.length === 0) return null;
   const energyType = card?.energyTypes[0] ?? "Wild";
-  const avatar = CHARACTER_ICONS[die.cardId];
+  const avatar = CHARACTER_ICONS[cardId];
   const faces: CubeFace[] = levels.map((level, i) => ({
     kind: "character", level: i + 1, fieldingCost: level.fieldingCost, attack: level.attack, defense: level.defense, avatar, burst: level.burst ?? 0,
   }));
