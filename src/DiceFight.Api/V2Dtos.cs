@@ -283,14 +283,16 @@ public sealed record V2GameStateDto(
 // ---- Request bodies ----
 
 // Champion presets remain compatible with existing clients. Custom teams
-// provide exact quantities and do not grant a Champion power.
+// provide exact quantities, and may name a Champion of their own (2026-10-19)
+// for its power - its Basic Action(s) must then share the Champion's energy.
 // Either seat can use a Champion preset OR an explicitly selected custom team.
 // The builder enforces its own formats; the server only checks data validity.
 public sealed record CustomV2CardDice(string CardId, int DiceCount);
 public sealed record CustomV2TardigradeDice(string EnergyType, int DiceCount);
 public sealed record CustomV2TeamRequest(
     IReadOnlyList<CustomV2CardDice> Cards,
-    IReadOnlyList<CustomV2TardigradeDice> Tardigrades);
+    IReadOnlyList<CustomV2TardigradeDice> Tardigrades,
+    string? ChampionId = null);
 public sealed record CreateV2GameRequest(
     string? PlayerOneChampionId = null,
     string? PlayerTwoChampionId = null,
@@ -352,13 +354,16 @@ public sealed record V2BotDecisionDto(
 
 // ---- Open games: host picks only their own Champion (2026-09-30) ----
 
-public sealed record OpenV2GameRequest(string ChampionId);
-public sealed record JoinV2GameRequest(string ChampionId);
+// Either a Champion preset or a custom team (2026-10-19), for each side.
+public sealed record OpenV2GameRequest(string? ChampionId = null, CustomV2TeamRequest? CustomTeam = null);
+public sealed record JoinV2GameRequest(string? ChampionId = null, CustomV2TeamRequest? CustomTeam = null);
 
 // Seats: both, like V2CreatedGameDto - the host keeps theirs and turns
 // the other into the invite link (web seats.ts inviteLink).
-public sealed record V2OpenGameDto(string GameId, string HostChampionId, IReadOnlyList<SeatDto> Seats);
+// HostChampionId is "" for a custom team without a Champion; HostLabel is
+// what to call the host's team ("Wolf", "Wolf - custom team", "a custom team").
+public sealed record V2OpenGameDto(string GameId, string HostChampionId, IReadOnlyList<SeatDto> Seats, string HostLabel);
 
 // Started: the invited player has picked and the real game exists (GET
 // .../{id} works from then on). YourPlayerId: which seat the caller holds.
-public sealed record V2LobbyDto(string GameId, string HostChampionId, bool Started, string? YourPlayerId);
+public sealed record V2LobbyDto(string GameId, string HostChampionId, bool Started, string? YourPlayerId, string HostLabel);

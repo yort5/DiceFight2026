@@ -63,12 +63,29 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
     [HttpPost("open")]
     public ActionResult<V2OpenGameDto> Open([FromBody] OpenV2GameRequest request)
     {
-        _ = BuildPlayer("teamA", request.ChampionId); // validates the Champion id
-        var lobby = store.OpenLobby(request.ChampionId, "teamA", "teamB");
+        string label;
+        try
+        {
+            // Builds the host's team only to validate it; Join builds it for real.
+            label = TeamLabel(BuildSelectedPlayer("teamA", request.ChampionId, request.CustomTeam), request.CustomTeam);
+        }
+        catch (ArgumentException e)
+        {
+            return BadRequest(new { error = e.Message });
+        }
+        var hostChampionId = request.CustomTeam is { } team ? team.ChampionId : request.ChampionId;
+        var lobby = store.OpenLobby(hostChampionId, request.CustomTeam, label, "teamA", "teamB");
         store.Accounts?.LobbyOpened(lobby, HttpContext.Player());
-        return Ok(new V2OpenGameDto(lobby.Id, lobby.HostChampionId,
-            lobby.Seats.Select(seat => new SeatDto(seat.PlayerId, seat.Token)).ToList()));
+        return Ok(new V2OpenGameDto(lobby.Id, lobby.HostChampionId ?? "",
+            lobby.Seats.Select(seat => new SeatDto(seat.PlayerId, seat.Token)).ToList(), lobby.HostLabel));
     }
+
+    // "Wolf", "Wolf - custom team", or "a custom team" - what the other
+    // player is told they're up against.
+    private static string TeamLabel(Player player, CustomV2TeamRequest? custom) =>
+        custom is null ? player.Name
+        : player.ChampionId is null ? "a custom team"
+        : $"{player.Name} - custom team";
 
     // Waiting or started? Either seat's token works; the host polls this
     // while waiting, and the invited player reads the host's pick from it.
@@ -80,13 +97,13 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
         {
             var seat = lobby.Seats.FirstOrDefault(s => s.Token == token)
                 ?? throw new SeatRequiredException($"A valid {SeatTokenHeader} is required for this game.");
-            return Ok(new V2LobbyDto(lobby.Id, lobby.HostChampionId, Started: false, seat.PlayerId));
+            return Ok(new V2LobbyDto(lobby.Id, lobby.HostChampionId ?? "", Started: false, seat.PlayerId, lobby.HostLabel));
         }
         var (session, playerId) = RequireSeat(gameId); // started (or never a lobby) - a normal game
-        return Ok(new V2LobbyDto(session.Id, session.State.PlayerOne.ChampionId ?? "", Started: true, playerId));
+        return Ok(new V2LobbyDto(session.Id, session.State.PlayerOne.ChampionId ?? "", Started: true, playerId, session.State.PlayerOne.Name));
     }
 
-    // The invited player picks their Champion; the real game starts now,
+    // The invited player picks their Champion (or custom team); the real game starts now,
     // under the lobby's own id and seat tokens.
     [HttpPost("{gameId}/join")]
     public ActionResult<V2GameStateDto> Join(string gameId, [FromBody] JoinV2GameRequest request)
@@ -100,8 +117,17 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
         if (guest.Token != token)
             throw new SeatRequiredException("Only the invited player can pick the other Champion.");
 
-        var state = GameSetup.NewGame(DiceKingdomConfig.Config, DiceKingdomConfig.Catalog,
-            BuildPlayer(lobby.Seats[0].PlayerId, lobby.HostChampionId), BuildPlayer(guest.PlayerId, request.ChampionId));
+        Player host, guestPlayer;
+        try
+        {
+            host = BuildSelectedPlayer(lobby.Seats[0].PlayerId, lobby.HostTeam is null ? lobby.HostChampionId : null, lobby.HostTeam);
+            guestPlayer = BuildSelectedPlayer(guest.PlayerId, request.ChampionId, request.CustomTeam);
+        }
+        catch (ArgumentException e)
+        {
+            return BadRequest(new { error = e.Message });
+        }
+        var state = GameSetup.NewGame(DiceKingdomConfig.Config, DiceKingdomConfig.Catalog, host, guestPlayer);
         var session = store.StartLobby(lobby, state);
         store.Accounts?.LobbyJoined(lobby, session, HttpContext.Player());
         _session = session;
@@ -131,7 +157,12 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
         if (custom.Cards is null || custom.Tardigrades is null)
             throw new ArgumentException("Custom teams must specify cards and Tardigrades.");
 
-        var player = new Player { Id = id, Name = "Custom Team", ChampionId = null,
+        ChampionDef? champion = null;
+        if (!string.IsNullOrWhiteSpace(custom.ChampionId))
+            champion = DiceKingdomConfig.Champions.FirstOrDefault(c => c.Id == custom.ChampionId)
+                ?? throw new ArgumentException($"Unknown Champion id '{custom.ChampionId}'.");
+
+        var player = new Player { Id = id, Name = champion?.Name ?? "Custom Team", ChampionId = champion?.Id,
             CustomCardDiceCounts = new Dictionary<string, int>() };
         var cardIds = new HashSet<string>();
         foreach (var entry in custom.Cards)
@@ -145,6 +176,11 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
                 throw new ArgumentException($"{card.Name} is Incomplete and cannot be used in a game yet.");
             if (!DiceKingdomConfig.Catalog.ContainsKey(entry.CardId))
                 throw new ArgumentException($"{card.Name} is not available in Dice Kingdom games yet.");
+            // A Champion's team plays only Basic Actions of its own energy
+            // (user, 2026-10-19).
+            if (champion is not null && card.CardType == CardType.BasicAction &&
+                BasicActionEnergy(card) != champion.EnergySymbolId)
+                throw new ArgumentException($"{card.Name} is a {BasicActionEnergy(card)} Basic Action - {champion.Name} can only take {champion.EnergySymbolId} ones.");
             // No server-side team-size or printed die-limit enforcement.
             player.TeamCardIds.Add(entry.CardId);
             player.CustomCardDiceCounts[entry.CardId] = entry.DiceCount;
@@ -166,6 +202,11 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
         player.CustomBasicDicePool = pool;
         return player;
     }
+
+    // The energy a Basic Action's die shows on its energy faces - the same
+    // reading V2CardDefDto.DieEnergyType gives the client.
+    public static string? BasicActionEnergy(CardDef card) =>
+        card.Die.Faces.SelectMany(f => f.Symbols).Select(sym => sym.SymbolId).FirstOrDefault();
 
     private static Player BuildPlayer(string id, string championId)
     {

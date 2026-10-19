@@ -4,6 +4,10 @@ import { apiErrorMessage } from "./apiErrors";
 import type { CustomTeam } from "./customTeams";
 import type { BlockAssignment, BotDecision, CardDef, Champion, CreatedGame, GameState, LobbyStatus, OpenedGame } from "./types";
 
+/** One side's team for an online game: a Champion preset's id, or a custom team. */
+export type TeamPick = string | CustomTeam;
+const teamBody = (team: TeamPick) => (typeof team === "string" ? { championId: team } : { customTeam: team });
+
 // v2 counterpart to ../api.ts - same relative-BASE_URL/seat-header/
 // request<T> shape, pointed at api/v2/games instead of api/games. A
 // separate client, not a parameterized version of the v1 one: the action
@@ -65,11 +69,11 @@ function makeClient(tokenOverride?: string | null, auto = false) {
 
     // Online game with only your own Champion picked - the invited player
     // picks theirs from the invite link (lobby.tsx).
-    openGame: (championId: string) =>
-      request<OpenedGame>("/open", { method: "POST", body: JSON.stringify({ championId }) }, tokenOverride, auto),
+    openGame: (team: TeamPick) =>
+      request<OpenedGame>("/open", { method: "POST", body: JSON.stringify(teamBody(team)) }, tokenOverride, auto),
     getLobby: (id: string) => request<LobbyStatus>(`/${id}/lobby`, undefined, tokenOverride, auto),
-    joinGame: (id: string, championId: string) =>
-      request<GameState>(`/${id}/join`, { method: "POST", body: JSON.stringify({ championId }) }, tokenOverride, auto),
+    joinGame: (id: string, team: TeamPick) =>
+      request<GameState>(`/${id}/join`, { method: "POST", body: JSON.stringify(teamBody(team)) }, tokenOverride, auto),
 
     clearAndDraw: (id: string) => request<GameState>(`/${id}/clear-and-draw`, { method: "POST" }, tokenOverride, auto),
     roll: (id: string) => request<GameState>(`/${id}/roll`, { method: "POST" }, tokenOverride, auto),

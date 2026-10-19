@@ -4633,3 +4633,13 @@ fight), the four Champion powers, the zones, keywords, packs.
 ## 2026-10-17 - How to Play pictures
 
 Six figures on the How to Play page (`web/src/dicekingdom/HowToPlayFigures.tsx`): a labelled creature face plus an energy and an action face, a card's and a Tardigrade's six faces, the turn steps, four stacking-rule examples, a worked lane fight, and a map of where dice go. The dice are real DieCubes drawn from `cardDieFaces`/`tardigradeFacesOf` (now exported from dieFaces.ts), so they follow the board's look and the printed faces. The example creature is picked from the live catalog (the first card with an icon and a face with a cost and unequal ATK/DEF - Honey Badger today). The lane fight's numbers are fixed and worked by hand against CombatEngine (pooled ATK, lethal-first onto the first-declared attacker, Overcrush leftover); recheck it if lane combat changes.
+
+## 2026-10-19 - Champions in custom teams, custom teams online
+
+User: build a team from a Champion, and start an online game with a custom team. "For now, we can let them build any champion they want, except that the Basic Action they pick must be the same energy as the Champion."
+
+- `CustomV2TeamRequest.ChampionId` (optional). The engine already handled a Champion with custom dice (GameSetup reads CustomCardDiceCounts/CustomBasicDicePool before the Champion's own pool), so the server change is validation: an unknown Champion, or a Basic Action whose die energy (`V2GamesController.BasicActionEnergy`, the same reading as the DTO's DieEnergyType) isn't the Champion's, is a 400. No other limits - any cards, any Tardigrade mix.
+- Online: `POST open` and `POST {id}/join` take `{championId}` or `{customTeam}`. The lobby keeps the host's team and a `HostLabel` ("Wolf", "Wolf - custom team", "a custom team") for the waiting and invite screens. A bad team on Join is refused and the lobby stays open. The invited player can use the custom team they staged from the Team Builder.
+- Team Builder: a Champion row (None + the four) above the Tardigrades, saved and in the share link (`&champion=`). With a Champion, off-energy Basic Actions can't be added, and one already on the team is flagged and blocks Play. Picking a Champion moves an all-one-type Tardigrade mix to its energy; a hand-made mix is left alone.
+- Records/replay: a seat with CardDiceCounts is a custom team whether or not it has a ChampionId.
+- Starter rosters: finishing a game with a Champion custom team still adds that Champion's starter cards (the seat has the Champion). Left as is - it's no different from playing the preset once.

@@ -8,7 +8,9 @@
 // waiting screen, and the invited player's Champion pick.
 import { useEffect, useState } from "react";
 import { api } from "./api";
-import { ChampionPicker, championLabel, type ChampionChoice } from "./ChampionPicker";
+import { championLabel, type ChampionChoice } from "./ChampionPicker";
+import { CustomTeamSetupChoice } from "./CustomTeamSetupChoice";
+import { CUSTOM_TEAM_PICK, pendingCustomTeam } from "./customTeams";
 // Shared with the pages' setup screens; they live with the picker.
 export { OPPONENT_PICKS, OpponentPicksOption, championLabel, type ChampionChoice } from "./ChampionPicker";
 import { players, type Me, type PlayedGame } from "./player";
@@ -29,24 +31,16 @@ export async function resolveInvite(): Promise<InviteResolution | null> {
   return { kind: "game", game: await api.getGame(claim.gameId) };
 }
 
-function ChampionGrid({ champions, value, onPick }: {
-  champions: ChampionChoice[];
-  value: string | null;
-  onPick: (id: string) => void;
-}) {
-  return <ChampionPicker champions={champions} value={value} onPick={onPick} />;
-}
-
 /** The host, after opening: the invite link, and a wait for the other player to pick. */
 export function WaitingForOpponent({
   gameId,
-  hostChampionId,
+  hostLabel,
   link,
   onStarted,
   onCancel,
 }: {
   gameId: string;
-  hostChampionId: string;
+  hostLabel: string;
   link: string | null;
   onStarted: (game: GameState) => void;
   onCancel: () => void;
@@ -77,8 +71,8 @@ export function WaitingForOpponent({
     <div className="panel dk-lobby">
       <h3 style={{ margin: "0 0 6px" }}>Waiting for your opponent</h3>
       <p style={{ margin: "0 0 12px" }}>
-        You're playing <b>{championLabel(hostChampionId)}</b>. Send this link - your opponent picks their own Champion,
-        and the match starts as soon as they do.
+        You're playing <b>{hostLabel}</b>. Send this link - your opponent picks their own Champion or custom team, and
+        the match starts as soon as they do.
       </p>
       {link && (
         <div className="dk-lobby-link">
@@ -104,7 +98,7 @@ export function WaitingForOpponent({
   );
 }
 
-/** The invited player, before the game exists: see the host's pick, choose yours. */
+/** The invited player, before the game exists: see the host's pick, choose yours - a Champion, or the custom team they staged from the Team Builder. */
 export function PickYourChampion({
   lobby,
   champions,
@@ -114,7 +108,8 @@ export function PickYourChampion({
   champions: ChampionChoice[];
   onJoined: (game: GameState) => void;
 }) {
-  const [pick, setPick] = useState<string | null>(null);
+  const [pick, setPick] = useState<string | null>(() => (pendingCustomTeam() ? CUSTOM_TEAM_PICK : null));
+  const custom = pendingCustomTeam();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -123,7 +118,7 @@ export function PickYourChampion({
     setBusy(true);
     setError(null);
     try {
-      onJoined(await api.joinGame(lobby.gameId, pick));
+      onJoined(await api.joinGame(lobby.gameId, pick === CUSTOM_TEAM_PICK && custom ? custom : pick));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setBusy(false);
@@ -134,10 +129,11 @@ export function PickYourChampion({
     <div className="panel dk-lobby">
       <h3 style={{ margin: "0 0 6px" }}>You've been invited</h3>
       <p style={{ margin: "0 0 12px" }}>
-        Your opponent is playing <b>{championLabel(lobby.hostChampionId)}</b>. Pick your Champion to start the match.
+        Your opponent is playing <b>{lobby.hostLabel}</b>. Pick your Champion{custom ? " or use your custom team" : ""} to
+        start the match.
       </p>
       {error && <p className="error">{error}</p>}
-      <ChampionGrid champions={champions} value={pick} onPick={setPick} />
+      <CustomTeamSetupChoice champions={champions} team={custom} value={pick} onPick={setPick} />
       <button type="button" className="btn" disabled={!pick || busy} onClick={join} style={{ marginTop: 14 }}>
         Start Match
       </button>
@@ -148,7 +144,7 @@ export function PickYourChampion({
 /** Where resuming a saved game leads: back into play, or back to waiting for the opponent to pick. */
 export type Resumed =
   | { kind: "game"; game: GameState; vsComputer: boolean }
-  | { kind: "waiting"; gameId: string; hostChampionId: string };
+  | { kind: "waiting"; gameId: string; hostLabel: string };
 
 function ago(ms: number): string {
   const minutes = Math.round((Date.now() - ms) / 60000);
@@ -160,9 +156,11 @@ function ago(ms: number): string {
 
 /** "Wolf vs Armadillo", or "Wolf · waiting for an opponent". */
 export function playedGameLabel(g: PlayedGame): string {
-  const champs = g.seats.map((s) => (s.championId ? championLabel(s.championId) : null));
-  if (g.status === "waiting" || champs.some((c) => !c)) return `${champs.find((c) => c) ?? "Game"} · waiting for an opponent`;
-  return champs.join(" vs ");
+  if (g.status === "waiting") {
+    const host = g.seats.find((s) => s.championId);
+    return `${host?.championId ? championLabel(host.championId) : "Game"} · waiting for an opponent`;
+  }
+  return g.seats.map((s) => (s.championId ? championLabel(s.championId) : "Custom team")).join(" vs ");
 }
 
 /** Unfinished games the server has for this player, added to this browser's saved list (seats.ts). */
@@ -224,7 +222,7 @@ export function ResumeGames({ onResume }: { onResume: (r: Resumed) => void }) {
     try {
       const lobby = await api.getLobby(g.gameId);
       if (!lobby.started) {
-        onResume({ kind: "waiting", gameId: g.gameId, hostChampionId: lobby.hostChampionId });
+        onResume({ kind: "waiting", gameId: g.gameId, hostLabel: lobby.hostLabel });
         return;
       }
       onResume({ kind: "game", game: await api.getGame(g.gameId), vsComputer: g.vsComputer ?? false });

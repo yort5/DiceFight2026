@@ -92,12 +92,14 @@ public sealed class V2GameStore(Recording.GameRecorder? recorder = null, Account
 
     private readonly ConcurrentDictionary<string, V2Lobby> _lobbies = new();
 
-    public V2Lobby OpenLobby(string hostChampionId, string hostSeatId, string guestSeatId)
+    public V2Lobby OpenLobby(string? hostChampionId, CustomV2TeamRequest? hostTeam, string hostLabel, string hostSeatId, string guestSeatId)
     {
         var lobby = new V2Lobby
         {
             Id = Guid.NewGuid().ToString("N")[..8],
             HostChampionId = hostChampionId,
+            HostTeam = hostTeam,
+            HostLabel = hostLabel,
             Seats = [new Seat(hostSeatId, GameSession.NewToken()), new Seat(guestSeatId, GameSession.NewToken())],
         };
         _lobbies[lobby.Id] = lobby;
@@ -125,7 +127,12 @@ public sealed class V2Lobby
 {
     public required string Id { get; init; }
     public DateTime CreatedUtc { get; } = DateTime.UtcNow;
-    public required string HostChampionId { get; init; }
+    // The host's Champion - a preset's, or a custom team's own (null when
+    // the custom team has none).
+    public string? HostChampionId { get; init; }
+    // The host's custom team, or null for a Champion preset.
+    public CustomV2TeamRequest? HostTeam { get; init; }
+    public required string HostLabel { get; init; }
     public required IReadOnlyList<Seat> Seats { get; init; }
     // The host's player (Accounts), when they had one.
     public string? HostOwnerId { get; set; }

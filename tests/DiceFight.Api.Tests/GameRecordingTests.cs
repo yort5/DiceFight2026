@@ -31,17 +31,28 @@ public class GameRecordingTests : IDisposable
         tardigrades = new[] { new { energyType = "Claw", diceCount = 6 }, new { energyType = "Eye", diceCount = 4 } },
     };
 
+    // ...and one that names a Champion (2026-10-19) keeps its power and its
+    // custom dice through the replay.
+    private static readonly object CustomWolfTeam = new
+    {
+        cards = DiceFight.V2.Data.DiceKingdomConfig.CharactersByChampion["Wolf"].Select(id => new { cardId = id, diceCount = 2 })
+            .Append(new { cardId = DiceFight.V2.Data.DiceKingdomConfig.AngerIssues.Id, diceCount = 3 }).ToArray(),
+        tardigrades = new[] { new { energyType = "Claw", diceCount = 6 }, new { energyType = "Eye", diceCount = 4 } },
+        championId = "Wolf",
+    };
+
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task A_Played_Game_Is_Recorded_And_Replays_To_The_Same_State(bool customTeam)
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task A_Played_Game_Is_Recorded_And_Replays_To_The_Same_State(bool customTeam, bool withChampion)
     {
         string gameId;
         await using (var server = Server())
         {
             var http = server.CreateClient();
             object body = customTeam
-                ? new { playerOneCustomTeam = CustomTeam, playerTwoChampionId = "Armadillo" }
+                ? new { playerOneCustomTeam = withChampion ? CustomWolfTeam : CustomTeam, playerTwoChampionId = "Armadillo" }
                 : new { playerOneChampionId = "Wolf", playerTwoChampionId = "Armadillo" };
             var created = await (await http.PostAsJsonAsync("/api/v2/games", body))
                 .Content.ReadFromJsonAsync<JsonElement>();
@@ -81,10 +92,10 @@ public class GameRecordingTests : IDisposable
         var file = Assert.Single(Directory.GetFiles(_folder, $"{gameId}.json", SearchOption.AllDirectories));
         var record = GameRecordJson.Deserialize(File.ReadAllText(file));
 
-        Assert.Equal([customTeam ? null : "Wolf", "Armadillo"], record.Seats.Select(s => s.ChampionId));
+        Assert.Equal([customTeam && !withChampion ? null : "Wolf", "Armadillo"], record.Seats.Select(s => s.ChampionId));
         if (customTeam)
         {
-            Assert.All(record.Seats[0].CardDiceCounts!.Values, n => Assert.Equal(2, n));
+            Assert.All(record.Seats[0].CardDiceCounts!.Where(kv => kv.Key != DiceFight.V2.Data.DiceKingdomConfig.AngerIssues.Id).Select(kv => kv.Value), n => Assert.Equal(2, n));
             Assert.Equal(new Dictionary<string, int> { ["Claw"] = 6, ["Eye"] = 4 }, record.Seats[0].Tardigrades);
         }
         Assert.All(record.Seats, s => Assert.True(s.Bot)); // both asked for the computer's move

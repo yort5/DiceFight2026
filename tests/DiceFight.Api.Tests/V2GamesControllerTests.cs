@@ -86,6 +86,52 @@ public class V2GamesControllerTests
         Assert.Equal("Armadillo", state.PlayerTwo.ChampionId);
     }
 
+    [Fact]
+    public void Create_Accepts_A_Custom_Team_With_Its_Own_Champion()
+    {
+        var store = new V2GameStore();
+        var custom = new CustomV2TeamRequest(
+            [new(DiceKingdomConfig.Mongoose.Id, 2), new(DiceKingdomConfig.AngerIssues.Id, 3)],
+            [new("Claw", 5), new("Eye", 3)], ChampionId: "Wolf");
+        var created = V2SeatedController.CreatedDto(V2SeatedController.Anonymous(store).Create(
+            new CreateV2GameRequest(PlayerTwoChampionId: "Armadillo", PlayerOneCustomTeam: custom)));
+        var state = store.GetSession(created.Game.GameId).State;
+
+        Assert.Equal("Wolf", state.PlayerOne.ChampionId);
+        Assert.Equal("Wolf", state.PlayerOne.Name);
+        Assert.Equal("Wolf", created.Game.PlayerOne.Champion!.Id);
+        // The custom dice, not the Wolf preset's.
+        Assert.Equal(2, state.Dice.Count(d => d.OwnerId == "teamA" && d.CardId == DiceKingdomConfig.Mongoose.Id));
+        Assert.Equal(5, state.Dice.Count(d => d.OwnerId == "teamA" && d.PoolDieId == "TardigradeClaw"));
+        Assert.Equal(3, state.Dice.Count(d => d.OwnerId == "teamA" && d.PoolDieId == "TardigradeEye"));
+        Assert.Equal(5, state.Dice.Count(d => d.OwnerId == "teamA" && d.CardId is not null));
+    }
+
+    [Theory]
+    [InlineData("Wolf", "DK-ACT-02")] // Distraction is Shell
+    [InlineData("GreatHornedOwl", "DK-ACT-01")] // Anger Issues is Claw
+    public void Create_Rejects_A_Champion_Team_With_A_Basic_Action_Of_Another_Energy(string championId, string actionId)
+    {
+        var store = new V2GameStore();
+        var custom = new CustomV2TeamRequest([new(DiceKingdomConfig.Mongoose.Id, 2), new(actionId, 3)],
+            [new("Claw", 8)], ChampionId: championId);
+        var result = V2SeatedController.Anonymous(store).Create(
+            new CreateV2GameRequest(PlayerTwoChampionId: "Armadillo", PlayerOneCustomTeam: custom));
+
+        var error = Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Contains("Basic Action", System.Text.Json.JsonSerializer.Serialize(error.Value));
+        Assert.Empty(store.Sessions);
+    }
+
+    [Fact]
+    public void Create_Rejects_A_Custom_Team_With_An_Unknown_Champion()
+    {
+        var custom = new CustomV2TeamRequest([new(DiceKingdomConfig.Mongoose.Id, 2)], [new("Claw", 8)], ChampionId: "Dragon");
+        var result = V2SeatedController.Anonymous(new V2GameStore()).Create(
+            new CreateV2GameRequest(PlayerTwoChampionId: "Armadillo", PlayerOneCustomTeam: custom));
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
     [Theory]
     [InlineData(101, 8)]
     [InlineData(20, 101)]

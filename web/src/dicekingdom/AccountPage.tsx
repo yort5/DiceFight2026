@@ -359,7 +359,7 @@ export function AccountPage() {
                 ) : (
                   <span className="dk-acct-result">
                     {g.winnerSeatId
-                      ? `${championLabel(g.seats.find((s) => s.seatId === g.winnerSeatId)?.championId ?? "")} won`
+                      ? `${championLabel(g.seats.find((s) => s.seatId === g.winnerSeatId)?.championId ?? "") || "Custom team"} won`
                       : "Over"}
                   </span>
                 )}

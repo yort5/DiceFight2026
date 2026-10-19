@@ -111,7 +111,8 @@ export function HowToPlayPage() {
           </li>
         </ul>
         <p className="dk-acct-dim">
-          Custom teams from the Team Builder pick their own cards and Tardigrades and play without a Champion.
+          Custom teams from the Team Builder pick their own cards and Tardigrades, and may pick a Champion too - its
+          Basic Action must then be of the Champion's energy.
         </p>
       </Section>
 

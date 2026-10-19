@@ -3644,6 +3644,13 @@
 
 /* The selector starts collapsed so its controls never squeeze the roster out
    of the height-limited Team Builder sidebar. Open it only to edit dice. */
+.dk-builder-champion { flex: none; margin: 0; padding: 8px 10px; border: 1px solid var(--border, #7775); border-radius: 10px; }
+.dk-builder-champion-head { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+.dk-builder-champion-options { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.dk-builder-champion-options button { display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; border: 1px solid var(--border, #7775); border-radius: 999px; background: transparent; color: inherit; font: inherit; font-size: 13px; cursor: pointer; }
+.dk-builder-champion-options button.selected { border-color: currentColor; box-shadow: inset 0 0 0 1px currentColor; font-weight: 700; }
+.dk-builder-champion .hint { margin: 8px 0 0; }
+.slot-mismatch { margin: 4px 0; font-size: 12px; font-weight: 600; color: #c0392b; }
 .dk-builder-tardigrades { flex: none; margin: 0; padding: 8px 10px; border: 1px solid var(--border, #7775); border-radius: 10px; }
 .dk-builder-tardigrades summary { display: flex; align-items: center; gap: 6px; font-weight: 600; cursor: pointer; list-style: none; }
 .dk-builder-tardigrades summary::-webkit-details-marker { display: none; }

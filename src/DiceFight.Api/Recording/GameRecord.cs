@@ -38,7 +38,7 @@ public sealed class GameRecord
 public sealed class RecordedSeat
 {
     public required string PlayerId { get; init; }
-    // Null for a custom team (Team Builder), which has no Champion.
+    // Null for a custom team (Team Builder) without a Champion.
     public string? ChampionId { get; init; }
     // The team as dealt - the roster changes; a replay uses this.
     public required List<string> TeamCardIds { get; init; }

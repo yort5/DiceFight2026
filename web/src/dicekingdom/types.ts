@@ -216,8 +216,11 @@ export interface CreatedGame {
 /** An online game opened with only the host's Champion (V2OpenGameDto). */
 export interface OpenedGame {
   gameId: string;
+  /** "" for a custom team without a Champion. */
   hostChampionId: string;
   seats: Seat[];
+  /** What to call the host's team: "Wolf", "Wolf - custom team", "a custom team". */
+  hostLabel: string;
 }
 
 /** Waiting for the invited player to pick, or started (V2LobbyDto). */
@@ -226,6 +229,7 @@ export interface LobbyStatus {
   hostChampionId: string;
   started: boolean;
   yourPlayerId: string | null;
+  hostLabel: string;
 }
 
 export interface BlockAssignment {

@@ -1890,7 +1890,7 @@ export function DiceKingdomMobilePage() {
 
   // An invite link in the URL: straight into the game, or - if the host
   // opened it with only their own Champion - a pick first (lobby.tsx).
-  const [waiting, setWaiting] = useState<{ gameId: string; hostChampionId: string } | null>(null);
+  const [waiting, setWaiting] = useState<{ gameId: string; hostLabel: string } | null>(null);
   const [invitePick, setInvitePick] = useState<LobbyStatus | null>(null);
   useEffect(() => {
     resolveInvite()
@@ -2237,17 +2237,14 @@ export function DiceKingdomMobilePage() {
 
   async function startMatch() {
     if (!setupA || !setupB) return;
-    if (setupB === OPPONENT_PICKS && setupA === CUSTOM_TEAM_PICK) {
-      setError("Online invitations for custom teams are not supported yet. Choose Player 2's Champion for a local or computer match.");
-      return;
-    }
     if (setupB === OPPONENT_PICKS) {
       // Online game with only your own Champion: open it, keep both seats
       // (yours plays, the other becomes the invite link), and wait.
       try {
-        const opened = await api.openGame(setupA);
+        const hostTeam = setupA === CUSTOM_TEAM_PICK ? pendingCustomTeam() : null;
+        const opened = await api.openGame(hostTeam ?? setupA);
         rememberSeats(opened.gameId, opened.seats);
-        setWaiting({ gameId: opened.gameId, hostChampionId: opened.hostChampionId });
+        setWaiting({ gameId: opened.gameId, hostLabel: opened.hostLabel });
         const link = inviteLink(opened.gameId, "/dice-kingdom/mobile");
         if (link) navigator.clipboard?.writeText(link).catch(() => {});
       } catch (e) {
@@ -2299,7 +2296,7 @@ export function DiceKingdomMobilePage() {
         {waiting ? (
           <WaitingForOpponent
             gameId={waiting.gameId}
-            hostChampionId={waiting.hostChampionId}
+            hostLabel={waiting.hostLabel}
             link={inviteLink(waiting.gameId, "/dice-kingdom/mobile")}
             onStarted={(g) => {
               setWaiting(null);
@@ -2340,7 +2337,7 @@ export function DiceKingdomMobilePage() {
             if (r.kind === "game") {
               setVsComputer(r.vsComputer);
               setGame(r.game);
-            } else setWaiting({ gameId: r.gameId, hostChampionId: r.hostChampionId });
+            } else setWaiting({ gameId: r.gameId, hostLabel: r.hostLabel });
           }}
         />
         {/* Same two-column layout as ../DiceKingdomPage.tsx's own picker
@@ -2372,9 +2369,9 @@ export function DiceKingdomMobilePage() {
                 <h3 style={{ margin: "0 0 10px" }}>{label}</h3>
                 {setValue === setSetupA && pendingCustomTeam()
                   ? <CustomTeamSetupChoice champions={CHAMPIONS} team={pendingCustomTeam()}
-                      value={value} onPick={(next) => { setValue(next); if (next === CUSTOM_TEAM_PICK && setupB === OPPONENT_PICKS) setSetupB(null); }} />
+                      value={value} onPick={setValue} />
                   : <ChampionPicker champions={CHAMPIONS} value={value} onPick={setValue}
-                      allowOpponentPicks={setValue === setSetupB && !vsComputer && setupA !== CUSTOM_TEAM_PICK} />}
+                      allowOpponentPicks={setValue === setSetupB && !vsComputer} />}
 
               </div>
             ))}

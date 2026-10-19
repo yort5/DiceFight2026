@@ -66,7 +66,7 @@ public class GameExpiryTests
     public void An_Invite_Nobody_Joined_Goes_After_A_Day()
     {
         var store = new V2GameStore();
-        var lobby = store.OpenLobby("Wolf", "teamA", "teamB");
+        var lobby = store.OpenLobby("Wolf", null, "Wolf", "teamA", "teamB");
 
         Assert.Equal(0, store.ForgetIdle(lobby.CreatedUtc.AddHours(23), Expiry));
         Assert.Equal(1, store.ForgetIdle(lobby.CreatedUtc.AddHours(25), Expiry));

@@ -579,7 +579,7 @@ export function DiceKingdomPage() {
 
   // Invite-link join: straight into the game, or - if the host opened it
   // with only their own Champion - a pick first (lobby.tsx).
-  const [waiting, setWaiting] = useState<{ gameId: string; hostChampionId: string } | null>(null);
+  const [waiting, setWaiting] = useState<{ gameId: string; hostLabel: string } | null>(null);
   const [invitePick, setInvitePick] = useState<LobbyStatus | null>(null);
   useEffect(() => {
     resolveInvite()
@@ -960,16 +960,13 @@ export function DiceKingdomPage() {
 
   async function startMatch() {
     if (!setupA || !setupB) return;
-    if (setupB === OPPONENT_PICKS && setupA === CUSTOM_TEAM_PICK) {
-      setError("Online invitations for custom teams are not supported yet. Choose Player 2's Champion for a local or computer match.");
-      return;
-    }
     if (setupB === OPPONENT_PICKS) {
       // Online game with only your own Champion - see lobby.tsx.
       try {
-        const opened = await api.openGame(setupA);
+        const hostTeam = setupA === CUSTOM_TEAM_PICK ? pendingCustomTeam() : null;
+        const opened = await api.openGame(hostTeam ?? setupA);
         rememberSeats(opened.gameId, opened.seats);
-        setWaiting({ gameId: opened.gameId, hostChampionId: opened.hostChampionId });
+        setWaiting({ gameId: opened.gameId, hostLabel: opened.hostLabel });
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
       }
@@ -1000,7 +997,7 @@ export function DiceKingdomPage() {
         {waiting ? (
           <WaitingForOpponent
             gameId={waiting.gameId}
-            hostChampionId={waiting.hostChampionId}
+            hostLabel={waiting.hostLabel}
             link={inviteLink(waiting.gameId)}
             onStarted={(g) => {
               setWaiting(null);
@@ -1046,7 +1043,7 @@ export function DiceKingdomPage() {
             if (r.kind === "game") {
               setVsComputer(r.vsComputer);
               setGame(r.game);
-            } else setWaiting({ gameId: r.gameId, hostChampionId: r.hostChampionId });
+            } else setWaiting({ gameId: r.gameId, hostLabel: r.hostLabel });
           }}
         />
         <div className="panel">
@@ -1077,9 +1074,9 @@ export function DiceKingdomPage() {
                 <h3 style={{ margin: "0 0 10px" }}>{label}</h3>
                 {setValue === setSetupA && pendingCustomTeam()
                   ? <CustomTeamSetupChoice champions={CHAMPIONS} team={pendingCustomTeam()}
-                      value={value} onPick={(next) => { setValue(next); if (next === CUSTOM_TEAM_PICK && setupB === OPPONENT_PICKS) setSetupB(null); }} />
+                      value={value} onPick={setValue} />
                   : <ChampionPicker champions={CHAMPIONS} value={value} onPick={setValue}
-                      allowOpponentPicks={setValue === setSetupB && !vsComputer && setupA !== CUSTOM_TEAM_PICK} />}
+                      allowOpponentPicks={setValue === setSetupB && !vsComputer} />}
 
               </div>
             ))}

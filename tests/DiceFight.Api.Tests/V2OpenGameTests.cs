@@ -62,4 +62,58 @@ public class V2OpenGameTests
     {
         Assert.Throws<InvalidOperationException>(() => As(new V2GameStore(), null).Open(new OpenV2GameRequest("Dragon")));
     }
+
+    private static readonly CustomV2TeamRequest WolfCustom = new(
+        [new(DiceFight.V2.Data.DiceKingdomConfig.Mongoose.Id, 2), new(DiceFight.V2.Data.DiceKingdomConfig.AngerIssues.Id, 3)],
+        [new("Claw", 8)], ChampionId: "Wolf");
+
+    [Fact]
+    public void A_Custom_Team_Can_Host_And_Another_Can_Join()
+    {
+        var store = new V2GameStore();
+        var opened = Ok(As(store, null).Open(new OpenV2GameRequest(CustomTeam: WolfCustom)));
+        Assert.Equal("Wolf", opened.HostChampionId);
+        Assert.Equal("Wolf - custom team", opened.HostLabel);
+        var guest = opened.Seats.Single(s => s.PlayerId == "teamB");
+        Assert.Equal("Wolf - custom team", Ok(As(store, guest.Token, "GET").Lobby(opened.GameId)).HostLabel);
+
+        var guestTeam = new CustomV2TeamRequest([new(DiceFight.V2.Data.DiceKingdomConfig.Mongoose.Id, 4)], [new("Eye", 8)]);
+        Ok(As(store, guest.Token).Join(opened.GameId, new JoinV2GameRequest(CustomTeam: guestTeam)));
+        var state = store.GetSession(opened.GameId).State;
+
+        Assert.Equal("Wolf", state.PlayerOne.ChampionId);
+        Assert.Equal(2, state.Dice.Count(d => d.OwnerId == "teamA" && d.CardId == DiceFight.V2.Data.DiceKingdomConfig.Mongoose.Id));
+        Assert.Null(state.PlayerTwo.ChampionId);
+        Assert.Equal(4, state.Dice.Count(d => d.OwnerId == "teamB" && d.CardId == DiceFight.V2.Data.DiceKingdomConfig.Mongoose.Id));
+        Assert.Equal(8, state.Dice.Count(d => d.OwnerId == "teamB" && d.PoolDieId == "TardigradeEye"));
+    }
+
+    [Fact]
+    public void A_Preset_Host_Gets_The_Champion_Name_And_A_Teamless_Custom_Host_A_Plain_Label()
+    {
+        var store = new V2GameStore();
+        Assert.Equal("Armadillo", Ok(As(store, null).Open(new OpenV2GameRequest("Armadillo"))).HostLabel);
+        var plain = Ok(As(store, null).Open(new OpenV2GameRequest(CustomTeam: WolfCustom with { ChampionId = null })));
+        Assert.Equal("a custom team", plain.HostLabel);
+        Assert.Equal("", plain.HostChampionId);
+    }
+
+    [Fact]
+    public void Opening_With_An_Off_Energy_Basic_Action_Is_Refused()
+    {
+        var store = new V2GameStore();
+        var result = As(store, null).Open(new OpenV2GameRequest(CustomTeam: WolfCustom with { ChampionId = "Armadillo" }));
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public void A_Bad_Custom_Team_On_Join_Is_Refused_And_The_Lobby_Stays_Open()
+    {
+        var store = new V2GameStore();
+        var opened = Ok(As(store, null).Open(new OpenV2GameRequest("Wolf")));
+        var guest = opened.Seats.Single(s => s.PlayerId == "teamB");
+        var bad = WolfCustom with { ChampionId = "GoldenEagle" };
+        Assert.IsType<BadRequestObjectResult>(As(store, guest.Token).Join(opened.GameId, new JoinV2GameRequest(CustomTeam: bad)).Result);
+        Ok(As(store, guest.Token).Join(opened.GameId, new JoinV2GameRequest("Armadillo")));
+    }
 }

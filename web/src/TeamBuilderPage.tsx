@@ -5,7 +5,9 @@ import { AffiliationBadge, AffiliationIcons } from "./AffiliationIcons";
 import { buildAffiliationIconIndex, SHOW_AFFILIATIONS } from "./affiliationIndex";
 import { DieFace } from "./DieFace";
 import { EnergyTypes } from "./GameIcon";
-import { CHARACTER_ICONS, ENERGY_ICONS as KINGDOM_ENERGY_ICONS } from "./dicekingdom/icons";
+import { CHAMPION_ICONS, CHARACTER_ICONS, ENERGY_ICONS as KINGDOM_ENERGY_ICONS } from "./dicekingdom/icons";
+import { api as kingdomApi } from "./dicekingdom/api";
+import type { Champion } from "./dicekingdom/types";
 import { api } from "./api";
 import { loadTeamBuilderCards, USE_DICE_KINGDOM_CATALOG } from "./teamBuilderCatalog";
 import { stashPendingGame } from "./gameHandoff";
@@ -14,7 +16,7 @@ import { ScreenMenu } from "./ScreenMenu";
 import { TeamStartDialog } from "./TeamStartDialog";
 import { useTeamBuilderLayout } from "./teamBuilderLayout";
 import "./TeamBuilderLayout.css";
-import { TARDIGRADE_TYPES, MAX_STARTING_TARDIGRADES, capTardigrades, changeTardigradeCount, tardigradeTotal, stageCustomTeam, type TardigradeType } from "./dicekingdom/customTeams";
+import { TARDIGRADE_TYPES, MAX_STARTING_TARDIGRADES, basicActionFits, capTardigrades, changeTardigradeCount, tardigradeTotal, tardigradesForChampion, stageCustomTeam, type TardigradeType } from "./dicekingdom/customTeams";
 import { SET_NAMES } from "./sets";
 import { FORMATS } from "./formats";
 import {
@@ -370,12 +372,18 @@ export function TeamBuilderPage() {
     Claw: 8, Shell: 0, Wing: 0, Eye: 0,
   });
   const tardigradeCount = tardigradeTotal(tardigrades);
+  // The team's Champion (2026-10-19): its power in the game, and the energy
+  // its Basic Action must match. None is a team without a Champion.
+  const [championId, setChampionId] = useState<string | null>(null);
+  const [champions, setChampions] = useState<Champion[]>([]);
+  const champion = champions.find((c) => c.id === championId) ?? null;
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
   const [startWarning, setStartWarning] = useState<{ messages: string[]; canProceed: boolean } | null>(null);
 
   useEffect(() => {
     loadTeamBuilderCards().then(setCards).catch((e) => setError(String(e)));
+    if (USE_DICE_KINGDOM_CATALOG) kingdomApi.getChampions().then(setChampions).catch(() => setChampions([]));
   }, []);
 
   // Teams survive a browser restart. A shared ?cards= link still wins, so
@@ -387,6 +395,14 @@ export function TeamBuilderPage() {
   const RULESET_KEY = USE_DICE_KINGDOM_CATALOG ? "dicefight.teamBuilder.kingdom.ruleset" : "dicefight.teamBuilder.ruleset";
 
   const TARDIGRADE_KEY = "dicefight.teamBuilder.kingdom.tardigrades";
+  const CHAMPION_KEY = "dicefight.teamBuilder.kingdom.champion";
+
+  // Same precedence as the Tardigrades: a shared link, else what was saved here.
+  function readChampion(): string | null {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("cards")) return params.get("champion") || null;
+    try { return window.localStorage.getItem(CHAMPION_KEY) || null; } catch { return null; }
+  }
 
   function readTardigrades(): Record<TardigradeType, number> {
     let fromUrl = new URLSearchParams(window.location.search).get("tardigrades");
@@ -470,7 +486,7 @@ export function TeamBuilderPage() {
     const hasSharedTeam = new URLSearchParams(window.location.search).has("cards");
     const source = hasSharedTeam ? fromUrl : loadSavedTeam();
     if (source.size === 0) {
-      if (USE_DICE_KINGDOM_CATALOG) setTardigrades(readTardigrades());
+      if (USE_DICE_KINGDOM_CATALOG) { setTardigrades(readTardigrades()); setChampionId(readChampion()); }
       setTeamRestored(true);
       return;
     }
@@ -480,7 +496,7 @@ export function TeamBuilderPage() {
       if (cardById.has(id)) resolved.set(id, count);
     }
     setTeam(resolved);
-    if (USE_DICE_KINGDOM_CATALOG) setTardigrades(readTardigrades());
+    if (USE_DICE_KINGDOM_CATALOG) { setTardigrades(readTardigrades()); setChampionId(readChampion()); }
     setTeamRestored(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cards !== null]);
@@ -506,6 +522,20 @@ export function TeamBuilderPage() {
   }, [tardigrades, teamRestored]);
 
   useEffect(() => {
+    if (!teamRestored || !USE_DICE_KINGDOM_CATALOG) return;
+    try {
+      if (championId) window.localStorage.setItem(CHAMPION_KEY, championId);
+      else window.localStorage.removeItem(CHAMPION_KEY);
+    } catch { /* no persistence in private mode */ }
+  }, [championId, teamRestored]);
+
+  function pickChampion(id: string | null) {
+    setChampionId(id);
+    const energy = champions.find((c) => c.id === id)?.energySymbolId;
+    if (energy) setTardigrades((old) => tardigradesForChampion(old, energy));
+  }
+
+  useEffect(() => {
     try {
       window.localStorage.setItem(ROSTER_VIEW_KEY, rosterView);
     } catch {
@@ -525,6 +555,8 @@ export function TeamBuilderPage() {
   );
   const characterEntries = useMemo(() => teamEntries.filter((e) => !isBasicActionFamily(e.card)), [teamEntries]);
   const basicActionEntries = useMemo(() => teamEntries.filter((e) => isBasicActionFamily(e.card)), [teamEntries]);
+  const mismatchedBasicActions = basicActionEntries.filter(({ card }) =>
+    !basicActionFits(card.dieEnergyType, champion?.energySymbolId));
   const uniqueNames = useMemo(() => new Set(characterEntries.map((e) => e.card.name)), [characterEntries]);
 
   // The cap counts CARDS, not distinct names. Under Standard the two are
@@ -609,6 +641,9 @@ export function TeamBuilderPage() {
   function canAddCard(card: CardDef): { ok: boolean; reason?: string } {
     if (team.has(card.id)) return { ok: false, reason: "Already on the team." };
     if (isBasicActionFamily(card)) {
+      if (champion && !basicActionFits(card.dieEnergyType, champion.energySymbolId)) {
+        return { ok: false, reason: `${champion.name} takes only ${champion.energySymbolId} Basic Actions.` };
+      }
       if (basicActionEntries.length >= caps.basicActions) {
         return { ok: false, reason: `Already have ${caps.basicActions} Basic Actions.` };
       }
@@ -688,7 +723,8 @@ export function TeamBuilderPage() {
     const tardigradePart = USE_DICE_KINGDOM_CATALOG
       ? `&tardigrades=${encodeURIComponent(TARDIGRADE_TYPES.map((type) => `${tardigrades[type]}x${type}`).join(";"))}`
       : "";
-    const url = `${window.location.origin}${window.location.pathname}?cards=${encodeTeam(team)}${tardigradePart}`;
+    const championPart = USE_DICE_KINGDOM_CATALOG && championId ? `&champion=${encodeURIComponent(championId)}` : "";
+    const url = `${window.location.origin}${window.location.pathname}?cards=${encodeTeam(team)}${tardigradePart}${championPart}`;
     await navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -722,6 +758,10 @@ export function TeamBuilderPage() {
     if (tardigradeCount !== MAX_STARTING_TARDIGRADES) {
       errors.push(`Select exactly ${MAX_STARTING_TARDIGRADES} starting Tardigrades (currently ${tardigradeCount}/${MAX_STARTING_TARDIGRADES}).`);
     }
+    const offEnergy = mismatchedBasicActions.map(({ card }) => card.name);
+    if (champion && offEnergy.length > 0) {
+      errors.push(`${champion.name} takes only ${champion.energySymbolId} Basic Actions - remove ${offEnergy.join(", ")}.`);
+    }
     if (errors.length > 0) {
       setStartWarning({ messages: errors, canProceed: false });
       return;
@@ -742,6 +782,7 @@ export function TeamBuilderPage() {
     stageCustomTeam({
       cards: teamEntries.map(({ card, count }) => ({ cardId: card.id, diceCount: count })),
       tardigrades: TARDIGRADE_TYPES.map((energyType) => ({ energyType, diceCount: tardigrades[energyType] })),
+      championId,
     });
     navigate(layout === "mobile" ? "/dice-kingdom/mobile" : "/dice-kingdom");
   }
@@ -1439,6 +1480,32 @@ export function TeamBuilderPage() {
             <p className={`legality-note${legality.ok ? "" : " over"}`}>{legality.note}</p>
           </div>
 
+          {USE_DICE_KINGDOM_CATALOG && champions.length > 0 && <div className="dk-builder-champion">
+            <div className="dk-builder-champion-head">
+              <span>Champion</span>
+              <span className="dk-builder-tardigrade-summary">{champion ? champion.name : "None"}</span>
+            </div>
+            <div className="dk-builder-champion-options" role="radiogroup" aria-label="Champion">
+              <button type="button" role="radio" aria-checked={!champion} className={!champion ? "selected" : ""}
+                onClick={() => pickChampion(null)}>None</button>
+              {champions.map((c) => {
+                const Icon = CHAMPION_ICONS[c.id];
+                return <button key={c.id} type="button" role="radio" aria-checked={championId === c.id}
+                  className={championId === c.id ? "selected" : ""} title={c.passiveText}
+                  onClick={() => pickChampion(c.id)}>
+                  {Icon && <Icon size={20} />}
+                  <span>{c.name}</span>
+                  <BuilderEnergyTypes types={[c.energySymbolId]} />
+                </button>;
+              })}
+            </div>
+            <p className="hint">
+              {champion
+                ? <>{champion.passiveText.replace(/\.?$/, ".")} Its Basic Action must be {champion.energySymbolId}.</>
+                : "No Champion power. Pick one to play with its power - its Basic Action then has to share its energy."}
+            </p>
+          </div>}
+
           {USE_DICE_KINGDOM_CATALOG && <details className="dk-builder-tardigrades">
             <summary>
               <span>Starting Tardigrades</span>
@@ -1542,7 +1609,7 @@ export function TeamBuilderPage() {
                   if (!entry) {
                     return (
                       <div className="slot-tile basic-action empty" key={`ba-empty-${i}`}>
-                        <span className="slot-empty-label">Basic Action — empty</span>
+                        <span className="slot-empty-label">Basic Action — empty{champion ? ` (${champion.energySymbolId})` : ""}</span>
                       </div>
                     );
                   }
@@ -1571,6 +1638,8 @@ export function TeamBuilderPage() {
                         {card.dieEnergyType && <span title="Energy provided by the die">Die: <BuilderEnergyTypes types={[card.dieEnergyType]} /></span>}
                       </div>
                       {card.rawText.trim() && <div className="slot-ability"><CardText text={card.rawText} /></div>}
+                      {champion && !basicActionFits(card.dieEnergyType, champion.energySymbolId) &&
+                        <div className="slot-mismatch">Not {champion.energySymbolId} - {champion.name} can't use this one.</div>}
                       <div className="slot-ba-dice"><FixedDiceDisplay count={count} limit={card.dieLimit} /> <span>· outside the dice cap</span></div>
                     </div>
                   );
