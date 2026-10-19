@@ -89,6 +89,16 @@ export function WaitingForOpponent({
           >
             {copied === "copied" ? "Copied ✓" : copied === "failed" ? "Couldn't copy" : "Copy link"}
           </button>
+          {/* Phones (and the installed app, which has no address bar) get the system share sheet. */}
+          {typeof navigator.share === "function" && (
+            <button
+              type="button"
+              className="btn"
+              onClick={() => navigator.share({ title: "Dice Kingdom", text: "Play Dice Kingdom with me", url: link }).catch(() => {})}
+            >
+              Share
+            </button>
+          )}
         </div>
       )}
       <button type="button" className="btn dk-lobby-cancel" onClick={onCancel}>

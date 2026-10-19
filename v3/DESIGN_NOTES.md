@@ -4643,3 +4643,13 @@ User: build a team from a Champion, and start an online game with a custom team.
 - Team Builder: a Champion row (None + the four) above the Tardigrades, saved and in the share link (`&champion=`). With a Champion, off-energy Basic Actions can't be added, and one already on the team is flagged and blocks Play. Picking a Champion moves an all-one-type Tardigrade mix to its energy; a hand-made mix is left alone.
 - Records/replay: a seat with CardDiceCounts is a custom team whether or not it has a ChampionId.
 - Starter rosters: finishing a game with a Champion custom team still adds that Champion's starter cards (the seat has the Champion). Left as is - it's no different from playing the preset once.
+
+## 2026-10-19 - Installable as an app (PWA)
+
+User: make a true mobile version - start with a PWA, so it can at least be installed on their own iPhone and tested from there (the App Store's $99/year can wait).
+
+- `web/public/manifest.webmanifest`: "Dice Kingdom", opens `/dice-kingdom/mobile` full-screen (standalone, portrait), scope `/` so the Team Builder, How to Play and Account pages stay inside the app. `index.html` links it and adds the iOS bits (apple-touch-icon, apple-mobile-web-app-title) and a light/dark theme-color.
+- Icon: `web/icons/app-icon.svg` (a die under a crown on Claw orange, full-bleed so it doubles as Android's maskable icon); `web/icons/render-icons.cjs` renders the three PNGs in `web/public`. Re-run it after editing the SVG.
+- No service worker on purpose: every launch loads the live site, so a deploy is never stuck behind a cached copy, and nothing works offline anyway (every move is an API call). iOS doesn't need one to install, and Chrome reports the manifest installable without one.
+- The invite screen gets a Share button wherever the browser has `navigator.share` (phones) - the installed app has no address bar to copy from.
+- An installed iOS app has its own storage, separate from Safari: it starts as a new anonymous player. Use a link code from the Account page to move it onto your account. Invite links tapped in Messages open in Safari, not the app (iOS doesn't hand links to installed web apps).

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Dice Kingdom's app icon (2026-10-19). Full-bleed so it also works as a
+       maskable icon: everything that matters sits inside the centre circle
+       of radius 205. PNGs in web/public are rendered from this file by
+       web/icons/render-icons.cjs. -->
+  <rect width="512" height="512" fill="#b8451f"/>
+  <g transform="rotate(-9 256 290)">
+    <rect x="146" y="180" width="220" height="220" rx="44" fill="#1f1a17" opacity=".28" transform="translate(10 12)"/>
+    <rect x="146" y="180" width="220" height="220" rx="44" fill="#fbf6ee"/>
+    <g fill="#1f1a17">
+      <circle cx="204" cy="238" r="21"/>
+      <circle cx="308" cy="238" r="21"/>
+      <circle cx="256" cy="290" r="21"/>
+      <circle cx="204" cy="342" r="21"/>
+      <circle cx="308" cy="342" r="21"/>
+    </g>
+  </g>
+  <path d="M172 168 L160 92 L208 126 L256 74 L304 126 L352 92 L340 168 Z" fill="#f2c14e" stroke="#1f1a17" stroke-width="8" stroke-linejoin="round"/>
+  <g fill="#1f1a17">
+    <circle cx="160" cy="92" r="11"/>
+    <circle cx="256" cy="74" r="11"/>
+    <circle cx="352" cy="92" r="11"/>
+  </g>
+</svg>
