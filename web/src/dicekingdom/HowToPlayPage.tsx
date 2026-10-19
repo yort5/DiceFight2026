@@ -59,10 +59,9 @@ export function HowToPlayPage() {
 
   return (
     <div className="dicekingdom dk-account dk-howto">
-      <div className="dk-titlebar-right" style={{ float: "right" }}>
-        <ThemeToggle theme={theme} setTheme={setTheme} />
-      </div>
-      <p className="dk-acct-back">
+      {/* Stays on screen while you scroll (2026-10-19): the installed app has
+          no browser back button or address bar, so this is the only way out. */}
+      <header className="dk-howto-bar">
         <a
           href={back}
           onClick={(e) => {
@@ -72,7 +71,27 @@ export function HowToPlayPage() {
         >
           ← Dice Kingdom
         </a>
-      </p>
+        <select
+          aria-label="Jump to a section"
+          value=""
+          onChange={(e) => {
+            const id = e.currentTarget.value;
+            if (id === "top") window.scrollTo({ top: 0, behavior: "smooth" });
+            else document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+          }}
+        >
+          <option value="" disabled>
+            Contents
+          </option>
+          <option value="top">Top</option>
+          {SECTIONS.map(([id, title]) => (
+            <option key={id} value={id}>
+              {title}
+            </option>
+          ))}
+        </select>
+        <ThemeToggle theme={theme} setTheme={setTheme} />
+      </header>
       <h1>How to Play</h1>
       <p className="dk-howto-lede">
         Dice Kingdom is a dice-building game for two players. You start with a bag of small dice, buy stronger

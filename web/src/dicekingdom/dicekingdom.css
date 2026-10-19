@@ -4976,6 +4976,47 @@
 }
 
 /* ---- How to Play (/dice-kingdom/how-to-play) ---- */
+/* The way back and a section jump, pinned while the page scrolls. Runs
+   edge to edge over the page's own 16px padding. */
+.dk-howto .dk-howto-bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: -24px -16px 12px;
+  padding: 10px 16px;
+  background: color-mix(in srgb, var(--dk-page-a) 90%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+.dk-howto .dk-howto-bar a {
+  color: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.dk-howto .dk-howto-bar select {
+  margin-left: auto;
+  min-width: 0;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-bg);
+  color: var(--text-h);
+  font: 600 13px var(--sans);
+}
+.dk-howto .dk-howto-bar .theme-toggle {
+  flex: none;
+  white-space: nowrap;
+}
+/* A section jumped to lands below the bar, not under it. */
+.dk-howto .dk-howto-section {
+  scroll-margin-top: 60px;
+}
 .dk-howto .dk-howto-lede {
   font-size: 16px;
   line-height: 1.5;

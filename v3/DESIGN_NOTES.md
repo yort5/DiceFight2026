@@ -4653,3 +4653,9 @@ User: make a true mobile version - start with a PWA, so it can at least be insta
 - No service worker on purpose: every launch loads the live site, so a deploy is never stuck behind a cached copy, and nothing works offline anyway (every move is an API call). iOS doesn't need one to install, and Chrome reports the manifest installable without one.
 - The invite screen gets a Share button wherever the browser has `navigator.share` (phones) - the installed app has no address bar to copy from.
 - An installed iOS app has its own storage, separate from Safari: it starts as a new anonymous player. Use a link code from the Account page to move it onto your account. Invite links tapped in Messages open in Safari, not the app (iOS doesn't hand links to installed web apps).
+
+## 2026-10-19 - How to Play: a bar that stays put
+
+User, from the installed app: on How to Play "it's easy to get lost. You have to scroll all the way to the top for any navigations or to get back to the main menu." The app has no browser back button, so the page's own top line was the only way out.
+
+- The top line is now a sticky bar: "← Dice Kingdom" (same `backPath()`), a Contents select (Top + every section; a native picker on phones) and the theme toggle. Sections have `scroll-margin-top` so a jump lands below the bar. The chip contents list at the top stays.
