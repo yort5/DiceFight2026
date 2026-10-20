@@ -676,7 +676,8 @@ public static class DiceKingdomBot
             .Select(g => new Lane(g.ToList(),
                 g.Sum(a => QueryEngine.GetAttack(state, a)),
                 g.Count() >= 2 || g.Any(a => QueryEngine.GetKeywords(state, a).Contains("Overcrush")),
-                g.Any(a => QueryEngine.GetKeywords(state, a).Contains("Deadly"))))
+                g.Any(a => QueryEngine.GetKeywords(state, a).Contains("Deadly")),
+                g.Max(a => CombatEngine.MinBlockers(state, a))))
             .OrderByDescending(l => l.Attack)
             .ToList();
         var unblockable = attacking.Where(d => !openLanes.Contains(d.Lane ?? -1)).Sum(d => QueryEngine.GetAttack(state, d));
@@ -704,6 +705,22 @@ public static class DiceKingdomBot
         {
             if (available.Count == 0) break;
             var mustBlock = incoming >= myLife;
+            // Snow Leopard's "two or more blockers" (CombatRuleKind.MinBlockers):
+            // send that many of the best blockers, or leave the lane alone.
+            if (lane.Need > 1)
+            {
+                if (available.Count < lane.Need) continue;
+                var team = available.Select(b => (Blocker: b, Score: BlockScore(state, b, lane, DamageWeight(), pump: pump)))
+                    .OrderByDescending(x => x.Score).Take(lane.Need).ToList();
+                if (team.Sum(x => x.Score) <= 0 && !mustBlock) continue;
+                foreach (var (blocker, _) in team)
+                {
+                    blocks.Add((lane.Attackers[0].Id, blocker.Id));
+                    available.Remove(blocker);
+                }
+                incoming -= lane.Overcrush ? Math.Min(lane.Attack, team.Sum(x => QueryEngine.GetDefense(state, x.Blocker))) : lane.Attack;
+                continue;
+            }
             (DieInstance Blocker, double Score)? best = null;
             foreach (var b in available)
             {
@@ -735,7 +752,10 @@ public static class DiceKingdomBot
         {
             foreach (var b in available.Where(d => d.CombatFlags.Contains(CombatFlagKind.MustBlock)).ToList())
             {
-                var lane = lanes.OrderByDescending(l => BlockScore(state, b, l, DamageWeight())).First();
+                // A lane that needs more blockers than it would then have is no place for one.
+                var legal = lanes.Where(l => l.Need <= 1 || blocks.Count(x => l.Attackers.Any(a => a.Id == x.Item1)) + 1 >= l.Need).ToList();
+                if (legal.Count == 0) continue;
+                var lane = legal.OrderByDescending(l => BlockScore(state, b, l, DamageWeight())).First();
                 blocks.Add((lane.Attackers[0].Id, b.Id));
                 available.Remove(b);
             }
@@ -744,7 +764,7 @@ public static class DiceKingdomBot
         return new(BotActionKind.DeclareBlockers, blocks.Count == 0 ? "No blocks." : $"Block {blocks.Count}.") { Blocks = blocks };
     }
 
-    private sealed record Lane(IReadOnlyList<DieInstance> Attackers, int Attack, bool Overcrush, bool Deadly);
+    private sealed record Lane(IReadOnlyList<DieInstance> Attackers, int Attack, bool Overcrush, bool Deadly, int Need = 1);
 
     // Outcome of putting `b` in front of a lane: its attackers' value if
     // it kills one, minus its own if it dies, plus the damage it keeps off

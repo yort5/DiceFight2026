@@ -112,6 +112,37 @@ public class KingdomImportsTests
         if (legal) block(); else Assert.Throws<InvalidOperationException>(block);
     }
 
+    // The bot used to send one blocker at it, which the engine refuses
+    // (116 errors in the 2026-10-20 card sweep).
+    [Theory]
+    [InlineData(1, 20, 0)]  // one blocker: can't block it, so it doesn't
+    [InlineData(2, 5, 2)]   // two and the hit is lethal: both block
+    public void Bot_Blocks_Snow_Leopard_With_Two_Or_Not_At_All(int walls, int life, int expectedBlocks)
+    {
+        var s = Game(); var q = new AbilityQueue();
+        var leopard = Add(s, "BFF033", level: 3); // 8/5
+        for (var i = 0; i < walls; i++) Add(s, DiceKingdomConfig.Hippopotamus.Id, "p2");
+        s.PlayerTwo.Life = life;
+        Attack(s, q, leopard);
+        var decision = Bot.DiceKingdomBot.Decide(s, "p2")!;
+        Assert.Equal(Bot.BotActionKind.DeclareBlockers, decision.Kind);
+        Assert.Equal(expectedBlocks, decision.Blocks.Count);
+        var assignment = new CombatAssignment();
+        foreach (var (attacker, blocker) in decision.Blocks) assignment.AssignBlocker(attacker, blocker);
+        CombatEngine.DeclareBlockers(s, q, assignment, decision.Blocks.Select(b => b.BlockerId).ToList()); // legal
+    }
+
+    [Fact]
+    public void A_Lone_Forced_Blocker_Is_Excused_From_Snow_Leopard()
+    {
+        var s = Game(); var q = new AbilityQueue();
+        var leopard = Add(s, "BFF033");
+        var crab = Add(s, DiceKingdomConfig.Hippopotamus.Id, "p2");
+        crab.CombatFlags.Add(CombatFlagKind.MustBlock);
+        Attack(s, q, leopard);
+        CombatEngine.DeclareBlockers(s, q, new CombatAssignment(), []); // no throw
+    }
+
     [Fact]
     public void Red_Panda_Takes_2_ATK_Off_An_Attacker_When_It_Blocks()
     {

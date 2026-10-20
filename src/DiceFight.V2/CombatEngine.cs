@@ -135,8 +135,11 @@ public static class CombatEngine
         // "Must block" means must block IF ABLE (Hermit Crab, 2026-09-29):
         // with no blockable attacker there is nothing to block, and the
         // empty declaration has to stay legal.
-        var anyBlockable = state.DiceIn(state.ActivePlayerId, Zone.AttackZone)
-            .Any(a => !a.CombatFlags.Contains(CombatFlagKind.Unblockable));
+        // Nor is a lane it couldn't join on its own: one that needs more
+        // blockers (Snow Leopard, MinBlockers) than it would then have.
+        var anyBlockable = AttackersByLane(state).Select(g => g.ToList())
+            .Any(lane => !lane.Any(a => a.CombatFlags.Contains(CombatFlagKind.Unblockable))
+                && LaneBlockerIds(assignment, lane).Count + 1 >= lane.Max(a => MinBlockers(state, a)));
         var forcedButOmitted = state.DiceIn(inactiveId, Zone.FieldZone)
             .Where(d => anyBlockable && d.CombatFlags.Contains(CombatFlagKind.MustBlock) && !blockerDieIds.Contains(d.Id))
             .Where(d => state.GetCurrentFace(d)?.Character is not null && !d.CombatFlags.Contains(CombatFlagKind.CantBlock))
@@ -291,17 +294,22 @@ public static class CombatEngine
 
             foreach (var attacker in attackers)
             {
-                var required = state.CombatRules
-                    .Where(r => r.Kind == CombatRuleKind.MinBlockers && r.AppliesTo(state, attacker))
-                    .Select(r => r.N ?? 1)
-                    .DefaultIfEmpty(0)
-                    .Max();
-
+                var required = MinBlockers(state, attacker);
                 if (blockerCount < required)
-                    throw new InvalidOperationException($"Die '{attacker.Id}' can only be blocked by {required} or more character dice.");
+                    throw new InvalidOperationException(
+                        $"{(attacker.CardId is { } c ? state.CardCatalog[c].Name : "That Tardigrade")} can only be blocked by {required} or more creatures - put more in its lane, or none.");
             }
         }
     }
+
+    // The fewest blockers a lane holding this attacker may have (1 = no
+    // rule). For the bot and the board, so neither offers an illegal block.
+    public static int MinBlockers(GameState state, DieInstance attacker) =>
+        state.CombatRules
+            .Where(r => r.Kind == CombatRuleKind.MinBlockers && r.AppliesTo(state, attacker))
+            .Select(r => r.N ?? 1)
+            .DefaultIfEmpty(1)
+            .Max();
 
     // Rule 2.7.2.4 - "each Character die may block only one attacking
     // Character die, unless a card effect states otherwise"
