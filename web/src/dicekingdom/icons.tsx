@@ -1,4 +1,4 @@
-import type { ReactElement, ReactNode } from "react";
+import { useId, type ReactElement, type ReactNode } from "react";
 import wolfChampionArt from "./assets/wolf-champion.jpg";
 import tardigradeSketch from "./assets/tardigrade-sketch.jpg";
 import barnSwallowDuck from "./assets/barn-swallow-duck.jpg";
@@ -1084,9 +1084,18 @@ function MushroomIcon(props: IconProps) {
 
 // Flat, transparent silhouette marks for the individually registered new cards.
 // Even-odd cutouts keep their eyes and gaps transparent in both site themes.
-function silhouette(path: string): (props: IconProps) => ReactElement {
+// `holes`, when given, is cut out through a mask instead - for a shape
+// whose own parts overlap, which even-odd would punch holes through.
+function silhouette(path: string, holes?: string): (props: IconProps) => ReactElement {
   return function CardSilhouette(props: IconProps) {
-    return <Svg {...props}><path d={path} fill="currentColor" fillRule="evenodd" /></Svg>;
+    const maskId = "sil" + useId().replace(/[^A-Za-z0-9_-]/g, "");
+    if (!holes) return <Svg {...props}><path d={path} fill="currentColor" fillRule="evenodd" /></Svg>;
+    return (
+      <Svg {...props}>
+        <mask id={maskId}><rect width="64" height="64" fill="#fff" /><path d={holes} fill="#000" /></mask>
+        <path d={path} fill="currentColor" mask={`url(#${maskId})`} />
+      </Svg>
+    );
   };
 }
 
@@ -1175,6 +1184,30 @@ const SpringEmergenceIcon = silhouette("M29 44V32Q14 35 9 16Q27 14 32 26Q37 14 5
 const ThornShotIcon = silhouette("M10 54L47 17L49 4L56 8L60 15L47 20L10 57ZM20 43L18 27L28 35L35 29L35 15L44 21L40 32L53 31L44 42L35 39L27 46L28 59L18 55ZM43 14L49 14L51 10L47 8Z");
 const ForagingIcon = silhouette("M30 34L26 20Q12 24 8 9Q22 5 29 14L32 23Q35 12 49 10Q55 24 38 29L36 36L42 37Q49 30 55 37Q63 46 52 52Q45 55 40 49Q37 61 27 57Q20 54 22 46Q11 48 7 39Q4 30 14 27Q22 25 26 34ZM14 32a2 2 0 1 0 4 0a2 2 0 1 0-4 0M46 39a2 2 0 1 0 4 0a2 2 0 1 0-4 0M28 47a2 2 0 1 0 4 0a2 2 0 1 0-4 0");
 
+// KingdomImports.cs (2026-10-20).
+const SnowLeopardIcon = silhouette("M45 23L47 16L51 21Q57 20 59 26Q60 32 54 34L51 35L49 43L51 52H46L44 42H29L26 52H21L21 41Q14 38 12 31Q11 25 7 27Q3 30 7 36Q10 41 7 45Q1 42 1 35Q1 21 13 22Q17 24 18 29Q25 26 37 27ZM53 25a1.6 1.6 0 1 0 3.2 0a1.6 1.6 0 1 0-3.2 0M24 32a2 2 0 1 0 4 0a2 2 0 1 0-4 0M32 34a2 2 0 1 0 4 0a2 2 0 1 0-4 0M38 30a2 2 0 1 0 4 0a2 2 0 1 0-4 0M30 30a1.4 1.4 0 1 0 2.8 0a1.4 1.4 0 1 0-2.8 0");
+const RedPandaIcon = silhouette("M22 12L20 4L27 8Q32 6 37 8L44 4L42 12Q46 18 42 23L50 13L55 16L45 32L44 44L48 58H38L34 48H30L26 58H16L20 44L19 32L9 16L14 13L22 23Q18 18 22 12ZM24 15Q27 13 29 17Q26 19 24 15M35 17Q37 13 40 15Q38 19 35 17M30 20L34 20L32 22ZM45 42Q62 38 62 50Q62 62 50 60Q58 54 54 50Q50 46 44 50ZM52 42L54 48L57 46L55 41ZM58 50L62 52L61 55L57 53Z");
+const KoalaIcon = silhouette("M15 10Q4 12 5 23Q6 32 15 31Q14 44 22 52Q32 58 42 52Q50 44 49 31Q58 32 59 23Q60 12 49 10Q41 9 39 17Q32 14 25 17Q23 9 15 10ZM22 30a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0M37 30a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0M28 35Q32 32 36 35L37 43Q32 47 27 43ZM11 17Q14 14 18 17Q15 22 11 21ZM46 17Q50 14 53 17Q53 21 49 22Z");
+const ManateeIcon = silhouette("M4 33Q4 24 14 22Q28 18 42 24Q48 27 50 31Q56 26 61 30Q64 37 58 41Q53 44 49 39Q44 44 34 45Q30 52 24 52Q26 48 26 45Q14 44 8 40Q4 37 4 33ZM11 29a1.6 1.6 0 1 0 3.2 0a1.6 1.6 0 1 0-3.2 0M4 33Q7 36 11 35");
+const PlatypusIcon = silhouette("M2 32Q2 26 8 26L16 28Q20 20 30 20Q40 20 44 26L58 26Q63 26 63 32Q63 38 58 38L44 38Q40 44 30 44Q20 44 16 36L8 38Q2 38 2 32ZM18 27a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0M18 37a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0M22 22L16 14L22 13L26 20ZM22 42L16 50L22 51L26 44ZM38 21L42 13L47 16L42 23ZM38 43L42 51L47 48L42 41Z");
+const BeardedDragonIcon = silhouette("M4 28L14 22L22 23L28 28L38 27L48 29L58 24L63 26L52 36L40 38L38 44L43 48L39 50L33 44L24 44L20 50L16 48L18 42L14 40L12 44L9 40L10 36L7 35L9 32L4 31ZM13 26a1.4 1.4 0 1 0 2.8 0a1.4 1.4 0 1 0-2.8 0M26 27L25 24L29 26L31 22L33 26L36 22L38 26L41 23L42 27Z");
+const BoxJellyfishIcon = silhouette("M14 30Q14 10 32 10Q50 10 50 30L50 32H14ZM16 32V58L19 54V32M25 32V60L28 56V32M36 32V60L39 56V32M45 32V58L48 54V32M22 22a2 2 0 1 0 4 0a2 2 0 1 0-4 0");
+const RaccoonIcon = silhouette("M8 8Q16 8 20 16Q26 14 32 14Q38 14 44 16Q48 8 56 8Q58 18 54 24Q62 32 56 42Q48 54 32 56Q16 54 8 42Q2 32 10 24Q6 18 8 8ZM11 30Q20 22 28 30Q30 35 26 37Q18 38 11 34ZM53 30Q44 22 36 30Q34 35 38 37Q46 38 53 34ZM18 31a2 2 0 1 0 4 0a2 2 0 1 0-4 0M42 31a2 2 0 1 0 4 0a2 2 0 1 0-4 0M28 44Q32 41 36 44L32 48Z");
+const PrayingMantisIcon = silhouette("M4 47Q12 36 33 37L36 44Q16 51 4 47ZM32 39L42 13L46 14L37 42ZM39 7L55 7L46 16ZM42 19L55 22L53 35L49 34L50 26L41 24ZM29 42L23 57L20 56L25 42ZM34 43L39 58L36 59L31 44ZM18 44L10 56L7 55L15 44Z", "M44 9a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0");
+const PolarBearIcon = silhouette("M50 24L52 20L56 22Q62 25 62 30L58 32L52 32L46 36L46 50H40L38 40L26 42L26 52H20L18 42Q10 40 8 32Q8 22 22 20Q36 18 46 22ZM55 25a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0");
+const CassowaryIcon = silhouette("M27 13Q25 2 31 1Q35 1 36 6L38 12L46 15L38 17L38 26Q52 28 54 40Q54 50 44 54L40 54L42 62H37L35 54H29L28 62H23L25 54Q12 50 12 40Q14 28 28 26L28 16Z", "M32 12a1.4 1.4 0 1 0 2.8 0a1.4 1.4 0 1 0-2.8 0M27 10L35 9L35 10L27 11Z");
+const SkunkIcon = silhouette("M8 44Q6 34 16 32Q24 30 30 36Q34 20 44 12Q56 6 60 18Q62 30 52 38Q46 44 40 46L40 52H35L34 47L20 48L20 54H15L14 47Q9 47 8 44ZM12 36a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0M33 36Q38 24 48 18Q55 16 56 22Q50 22 44 26Q39 32 37 38Z");
+const EmperorPenguinIcon = silhouette("M28 6Q36 4 39 12L40 18L44 20L40 22Q48 30 48 44Q48 54 42 58H22Q16 54 16 44Q16 28 24 20Q22 10 28 6ZM33 11a1.6 1.6 0 1 0 3.2 0a1.6 1.6 0 1 0-3.2 0M28 24Q22 34 23 46Q24 54 30 55Q38 54 39 46Q40 34 34 24ZM16 38L8 50L16 46ZM22 58L18 62H28L26 58ZM38 58L36 62H46L42 58Z");
+const RavenSilhouetteIcon = silhouette("M14 18Q20 10 28 12L36 16Q46 20 50 30L60 44L54 46L58 52L48 50L42 46L36 48L34 56L30 56L31 47L26 48L25 56L21 56L23 46Q18 40 20 30L14 26L4 26L12 21ZM20 18a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0");
+const ChipmunkIcon = silhouette("M30 10Q38 8 42 14L46 18L42 20Q46 26 44 32Q50 38 48 46L52 56H24L26 48Q18 44 18 34Q18 24 26 22Q24 14 30 10ZM34 13a1.6 1.6 0 1 0 3.2 0a1.6 1.6 0 1 0-3.2 0M36 21Q44 24 40 29Q34 30 34 24ZM24 30Q26 40 32 46L30 47Q24 42 22 32ZM18 46Q6 44 6 30Q6 20 14 18Q10 26 12 34Q14 42 22 44Z");
+const HareIcon = silhouette("M40 16L36 2L41 2L44 14L48 2L52 4L48 17Q54 22 52 28L58 30L54 33L46 34L48 50L56 54L54 58L42 56L40 46L28 50L20 58H10L18 50Q8 46 8 36Q10 26 24 26Q34 26 40 22ZM46 23a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0M8 34Q2 32 4 28Q8 28 10 31Z");
+const SwordfishIcon = silhouette("M2 31L24 29Q30 24 38 24L42 14L46 25Q52 27 54 30L60 20L62 22L58 32L62 42L60 44L54 34Q50 38 42 39L38 44L36 39Q28 38 24 34L2 32ZM29 30a1.4 1.4 0 1 0 2.8 0a1.4 1.4 0 1 0-2.8 0M36 37L40 46L34 40Z");
+const ConeSnailIcon = silhouette("M8 57L38 13Q48 4 58 12Q63 22 53 30ZM22 42L29 34L32 38L26 45ZM33 28L40 21L43 25L36 32ZM47 13Q54 11 56 17Q51 15 47 17ZM16 50L19 47L21 49L18 52Z");
+const CrocodileIcon = silhouette("M2 33L14 30L20 31L24 27L28 30L32 26L36 30L40 26L44 30L48 28L56 32L62 36L56 37L48 38L46 44L40 44L40 39L30 39L28 45L22 45L22 39L14 38L2 36ZM12 31a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0M3 34L13 34L13 35L3 35Z");
+const BullSharkIcon = silhouette("M4 34Q10 26 24 26L30 16L36 26Q46 27 52 31L60 22L62 24L58 34L62 44L60 46L52 37Q46 42 34 42L30 48L26 42Q12 42 4 34ZM12 31a1.6 1.6 0 1 0 3.2 0a1.6 1.6 0 1 0-3.2 0M12 37Q16 38 20 36");
+const DolphinIcon = silhouette("M8 40Q10 24 26 18L28 10L34 17Q46 18 54 26L60 22L58 30L62 36L56 34Q50 30 42 30L38 38L34 30Q24 32 18 42L22 46L14 46L10 50ZM12 42Q8 42 6 44L10 38ZM22 25a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0");
+const FireflySquidIcon = silhouette("M32 2Q42 10 40 26L40 34L46 52L42 52L38 40L36 58L33 58L33 40L31 40L31 58L28 58L26 40L22 52L18 52L24 34L24 26Q22 10 32 2ZM29 14a1.6 1.6 0 1 0 3.2 0a1.6 1.6 0 1 0-3.2 0M33 20a1.6 1.6 0 1 0 3.2 0a1.6 1.6 0 1 0-3.2 0M28 24a1.6 1.6 0 1 0 3.2 0a1.6 1.6 0 1 0-3.2 0M33 29a1.6 1.6 0 1 0 3.2 0a1.6 1.6 0 1 0-3.2 0M27 31a1.6 1.6 0 1 0 3.2 0a1.6 1.6 0 1 0-3.2 0");
+
 export const CHARACTER_ICONS: Record<string, (p: IconProps) => ReactElement> = {
   "WF075": PlanarianIcon,
   "MYST002": AbundantWatersIcon,
@@ -1252,7 +1285,7 @@ export const CHARACTER_ICONS: Record<string, (p: IconProps) => ReactElement> = {
   "DPS097": CleanerWrasseIcon,
   "DPS099": DungBeetleIcon,
   "DPS100": PeacockMantisShrimpIcon,
-  "DPS116": PistolShrimpIcon,
+  "DPS116": FireflySquidIcon,
   "DPS113": SaigaIcon,
   "DPS118": ArcticTernIcon,
   "DPS147": QueenBeeIcon,
@@ -1308,4 +1341,26 @@ export const CHARACTER_ICONS: Record<string, (p: IconProps) => ReactElement> = {
   "DK-EYE-09": CuttlefishIcon,
   "DK-EYE-10": FrilledLizardIcon,
   "DK-EYE-11": ChameleonIcon,
+  "XFC003": PistolShrimpIcon,
+  "BFF033": SnowLeopardIcon,
+  "CW054": RedPandaIcon,
+  "AI013": KoalaIcon,
+  "HQ019": ManateeIcon,
+  "DOOM017": PlatypusIcon,
+  "SWW020": BeardedDragonIcon,
+  "SW001": BoxJellyfishIcon,
+  "GOTG032": RaccoonIcon,
+  "WWE037": PrayingMantisIcon,
+  "WOL071": PolarBearIcon,
+  "DOOM013": CassowaryIcon,
+  "SKC113": SkunkIcon,
+  "WWE033": EmperorPenguinIcon,
+  "AI031": RavenSilhouetteIcon,
+  "GOTG021": ChipmunkIcon,
+  "IG068": HareIcon,
+  "ASM110": SwordfishIcon,
+  "FUS004": ConeSnailIcon,
+  "TOA086": CrocodileIcon,
+  "THOR021": BullSharkIcon,
+  "CW042": DolphinIcon,
 };

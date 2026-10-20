@@ -4659,3 +4659,23 @@ User: make a true mobile version - start with a PWA, so it can at least be insta
 User, from the installed app: on How to Play "it's easy to get lost. You have to scroll all the way to the top for any navigations or to get back to the main menu." The app has no browser back button, so the page's own top line was the only way out.
 
 - The top line is now a sticky bar: "← Dice Kingdom" (same `backPath()`), a Contents select (Top + every section; a native picker on phones) and the theme toggle. Sections have `scroll-margin-top` so a jump lands below the bar. The chip contents list at the top stays.
+
+## 2026-10-20 - Dice Masters imports, batch 1: 22 cards
+
+User: "make our way through the Dice Masters cards and pull in the ones that can most easily be implemented. That doesn't mean they have to match exactly ... if we simplify many of them, they can likely fit within the existing engine." Must-haves, "probably at higher rarities because my family thinks they are cooler": Koala, Platypus, Manatee, Red Panda, Pistol Shrimp, Snow Leopard, Bearded Dragon. One printing per Dice Masters character for now.
+
+Where we were: 132 cards in the builder, 88 playable (51 native, 37 imports) and 44 imports registered but not finished (mostly DPS). Now 154 / 110.
+
+- `scripts/dk_import_candidates.py` ranks every Dice Masters character not yet used (697 of 741) by its easiest printing: no text, keywords the engine runs, short common patterns; mechanics Dice Kingdom has no equivalent for (affiliations, other named characters, counters, tokens, Regenerate/Swarm/Call Out/Corrupt/Retaliation...) push it down. A screen for choosing, not a decision. Roughly 250 vanilla and 30 keyword-only printings are left - plenty, but vanilla is dull, so batches should mix in short abilities.
+- `V2/Data/KingdomImports.cs`, one file per batch's worth of cards, registered in `TeamBuilderCatalog`. Stats, costs and die limits are the printing's; rarity is the printed one except the user's seven.
+- The seven (energy from what the ability does, as with the natives):
+  - Pistol Shrimp (Claw, Rare) - Banshee XFC003: On Field, 1 damage to each opposing creature. The snap's shockwave, Banshee's scream.
+  - Snow Leopard (Claw, Super Rare) - Frost Giant BFF033: can only be blocked by two or more (CombatRule MinBlockers, already lane-aware).
+  - Red Panda (Eye, Rare) - Namorita CW054: On Block, an attacker gets -2 ATK (rearing up to look bigger). Dropped "non-Shield".
+  - Koala (Shell, Rare) - Captain America AI013: your Tardigrades get +2 DEF (the joeys).
+  - Manatee (Shell, Rare) - Power Girl HQ019: On Field, gain 1 life per opposing non-Tardigrade creature.
+  - Platypus (Eye, Super Rare) - Negative Man DOOM017: Deadly and Fast. The printing's Fast is burst-only and the sheet doesn't say which faces burst, so it's always on - watch it.
+  - Bearded Dragon (Wing, Rare) - Superman SWW020: +1/+1 for each different energy type in your Reserve Pool (basking). New `CountUnit.EnergyTypes`; Wild doesn't count.
+- The other fifteen: Box Jellyfish (Deadly), Raccoon (Infiltrate), Praying Mantis (Fast), Polar Bear (Overcrush), Cassowary (Intimidate), Skunk (Range), Emperor Penguin (Tag Out - the huddle), Raven (Attune), Chipmunk (draw to Prep), Hare (draw and roll), Swordfish (On Attack -2 ATK to an opposing creature, +2 to itself; source could target any creature), Cone Snail (On Field KO cost 4 or less), Crocodile (On Field KO a level 1), Bull Shark (On Attack +2 ATK; dropped "must attack each turn" - no continuous must-attack rule exists), Bottlenose Dolphin (On Attack other attackers +1 ATK).
+- Pistol Shrimp was already the name on DPS116 (Jubilee "Fireworks", unfinished). It's Firefly Squid now - glowing spots for fireworks.
+- Icons: 22 new silhouettes. `silhouette()` takes an optional second path cut out through a mask, for shapes whose parts overlap (Praying Mantis, Cassowary) - even-odd punched holes where they crossed.

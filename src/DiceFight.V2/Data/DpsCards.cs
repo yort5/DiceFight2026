@@ -2536,7 +2536,7 @@ public static class DpsCards
         DieLimit: 4, Affiliations: ["X-Men"], Keywords: [],
         RawText: "While Jubilee is active, when you spend energy from an [X-Men] die to use a Global " +
                  "Ability or field a character, deal 1 damage to target opponent or character die.",
-        Abilities: [], Continuous: [], IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Pistol Shrimp", KingdomEnergyType: "Claw");
+        Abilities: [], Continuous: [], IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Firefly Squid", KingdomEnergyType: "Claw"); // was Pistol Shrimp - that name went to Banshee (KingdomImports.cs, 2026-10-20)
 
     // Same generic targeting protection grant as Psi Resistance.
     public static readonly CardDef GladiatorMajestorKallark = new(

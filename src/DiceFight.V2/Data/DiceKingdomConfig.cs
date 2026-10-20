@@ -920,6 +920,7 @@ public static class DiceKingdomConfig
         .Concat(CardCatalog.BuildCatalog().Values.Where(card => card.IncludeInTeamBuilder).Select(ToKingdomCard))
         .Concat(DpsCards.All.Where(card => card.IncludeInTeamBuilder).Select(ToKingdomCard))
         .Concat(BonusCards.All.Where(card => card.IncludeInTeamBuilder).Select(ToKingdomCard))
+        .Concat(KingdomImports.All.Select(ToKingdomCard))
         .ToDictionary(card => card.Id);
 
     public static readonly IReadOnlyDictionary<string, CardDef> Catalog = TeamBuilderCatalog.Values

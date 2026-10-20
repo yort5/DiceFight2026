@@ -14,7 +14,7 @@ namespace DiceFight.V2.Tests;
 public class CatalogInvariantTests
 {
     private static readonly IReadOnlyList<CardDef> AllCards =
-        [.. CardCatalog.BuildCatalog().Values, .. DpsCards.All, .. BonusCards.All];
+        [.. CardCatalog.BuildCatalog().Values, .. DpsCards.All, .. BonusCards.All, .. KingdomImports.All];
 
     [Fact]
     public void No_Card_Id_Is_Reused_Across_The_Curated_DPS_And_Bonus_Sources()
@@ -49,18 +49,19 @@ public class CatalogInvariantTests
     [Fact]
     public void Every_Cards_Set_Is_One_Of_The_Known_Migration_Sources()
     {
-        var knownSets = new HashSet<string> { "MSW", "DPS", "GOTG", "SKC", "TAG", "JLL", "CW", "XFO", "WF", "MYST", "AVX", "DRS", "XMF", "IG", "XFC", "SW", "JUS" };
+        var knownSets = new HashSet<string> { "MSW", "DPS", "GOTG", "SKC", "TAG", "JLL", "CW", "XFO", "WF", "MYST", "AVX", "DRS", "XMF", "IG", "XFC", "SW", "JUS",
+            "BFF", "AI", "HQ", "DOOM", "SWW", "WWE", "WOL", "ASM", "FUS", "TOA", "THOR" };
         Assert.All(AllCards, c => Assert.Contains(c.Set, knownSets));
     }
 
     [Fact]
-    public void Builder_Contains_88_Playable_And_44_Incomplete_Cards()
+    public void Builder_Contains_110_Playable_And_44_Incomplete_Cards()
     {
         var builder = DiceKingdomConfig.TeamBuilderCatalog;
-        Assert.Equal(132, builder.Count);
-        Assert.Equal(88, DiceKingdomConfig.Catalog.Count);
+        Assert.Equal(154, builder.Count);
+        Assert.Equal(110, DiceKingdomConfig.Catalog.Count);
         Assert.Equal(44, builder.Values.Count(card => !card.IsImplemented));
-        Assert.Equal(81, builder.Values.Count(card => card.IncludeInTeamBuilder));
+        Assert.Equal(103, builder.Values.Count(card => card.IncludeInTeamBuilder));
         Assert.All(DiceKingdomConfig.Catalog.Values, card => Assert.Same(card, builder[card.Id]));
         Assert.All(AllCards.Where(card => card.IncludeInTeamBuilder), source =>
         {
@@ -83,7 +84,7 @@ public class CatalogInvariantTests
                 new[] { source.KingdomEnergyType, "Wild" }));
             Assert.All(card.EnergySymbolIds, energy => Assert.Equal(source.KingdomEnergyType, energy));
         });
-        Assert.Equal(132, builder.Values.Select(card => card.Name).Distinct(StringComparer.OrdinalIgnoreCase).Count());
+        Assert.Equal(154, builder.Values.Select(card => card.Name).Distinct(StringComparer.OrdinalIgnoreCase).Count());
         Assert.DoesNotContain(CardCatalog.CosmicCube.Id, builder.Keys);
         Assert.DoesNotContain(DpsCards.TightRanks.Id, builder.Keys);
         Assert.DoesNotContain(DpsCards.Radicalization.Id, builder.Keys);

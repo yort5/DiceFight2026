@@ -162,6 +162,9 @@ public enum CountUnit
 {
     Dice,
     EnergySymbols,
+    // Different energy types showing (Claw/Shell/Wing/Eye) - Wild and
+    // generic energy don't count as a type. Bearded Dragon (2026-10-20).
+    EnergyTypes,
 }
 
 // Effect/grant lifetime. UntilYourNextTurn is Finding 14 (Swords of

@@ -71,6 +71,9 @@ public static class AmountResolver
         // default (plain count of matching dice).
         var count = p.Unit == CountUnit.EnergySymbols
             ? dieMatches.Sum(id => state.GetCurrentFace(FindDie(state, id))?.Symbols.Sum(s => s.Count) ?? 0)
+            : p.Unit == CountUnit.EnergyTypes
+            ? dieMatches.SelectMany(id => state.GetCurrentFace(FindDie(state, id))?.Symbols ?? [])
+                .Select(s => s.SymbolId).Where(id => id is "Claw" or "Shell" or "Wing" or "Eye").Distinct().Count()
             : p.Distinct
                 ? dieMatches.Select(id => FindDie(state, id).CardId).Where(cardId => cardId is not null).Distinct().Count()
                 : dieMatches.Count;

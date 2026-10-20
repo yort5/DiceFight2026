@@ -24,7 +24,7 @@ public static class DiceKingdomPacks
     public const int DailyCoins = 5;
 
     // Every playable Character and personal Action in the Catalog. Basic Actions aren't in packs.
-    // 34 Common, 24 Uncommon, 16 Rare, 6 Super Rare. Incomplete cards are excluded.
+    // 45 Common, 26 Uncommon, 23 Rare, 8 Super Rare. Incomplete cards are excluded.
     public static readonly IReadOnlyDictionary<string, CardRarity> Rarities = new Dictionary<string, CardRarity>
     {
         // Claw
@@ -116,6 +116,32 @@ public static class DiceKingdomPacks
         ["XFC017"] = CardRarity.Common, // Fire Salamander
         ["XFC110"] = CardRarity.Rare, // Mimic Filefish
         ["SW018"] = CardRarity.Common, // Harris’s Hawk
+
+        // KingdomImports.cs (2026-10-20). The user's seven ("probably at
+        // higher rarities because my family thinks they are cooler") are
+        // Rare or Super Rare whatever the printing says; the rest keep it.
+        ["XFC003"] = CardRarity.Rare, // Pistol Shrimp
+        ["BFF033"] = CardRarity.SuperRare, // Snow Leopard
+        ["CW054"] = CardRarity.Rare, // Red Panda
+        ["AI013"] = CardRarity.Rare, // Koala
+        ["HQ019"] = CardRarity.Rare, // Manatee
+        ["DOOM017"] = CardRarity.SuperRare, // Platypus
+        ["SWW020"] = CardRarity.Rare, // Bearded Dragon
+        ["SW001"] = CardRarity.Common, // Box Jellyfish
+        ["GOTG032"] = CardRarity.Common, // Raccoon
+        ["WWE037"] = CardRarity.Common, // Praying Mantis
+        ["WOL071"] = CardRarity.Common, // Polar Bear
+        ["DOOM013"] = CardRarity.Common, // Cassowary
+        ["SKC113"] = CardRarity.Rare, // Skunk
+        ["WWE033"] = CardRarity.Common, // Emperor Penguin
+        ["AI031"] = CardRarity.Common, // Raven
+        ["GOTG021"] = CardRarity.Common, // Chipmunk
+        ["IG068"] = CardRarity.Uncommon, // Hare
+        ["ASM110"] = CardRarity.Rare, // Swordfish
+        ["FUS004"] = CardRarity.Common, // Cone Snail
+        ["TOA086"] = CardRarity.Uncommon, // Crocodile
+        ["THOR021"] = CardRarity.Common, // Bull Shark
+        ["CW042"] = CardRarity.Common, // Bottlenose Dolphin
     };
 
     // A pack is five dice: three Commons, an Uncommon, and a "rare slot"
