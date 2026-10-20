@@ -79,7 +79,7 @@ public sealed class PlayersController(V2GameStore store) : ControllerBase
         var collection = player.Collection!;
         // A card is new if this pack brought every die of it the player has.
         var pulled = cards.Select(id => new PulledCardDto(
-            id, DiceKingdomPacks.Rarities[id].ToString(), collection.Dice[id], collection.Dice[id] == cards.Count(c => c == id))).ToList();
+            id, DiceKingdomPacks.RarityLabel(id), collection.Dice[id], collection.Dice[id] == cards.Count(c => c == id))).ToList();
         return Ok(new OpenedPackDto(pulled, DescribeCollection(collection, 0)));
     }
 

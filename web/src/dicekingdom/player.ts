@@ -66,7 +66,8 @@ export interface Collection {
 
 export interface PulledCard {
   cardId: string;
-  rarity: Rarity;
+  /** "Basic" for a Basic Action, which has no rarity. */
+  rarity: Rarity | "Basic";
   /** Dice of it now, this pack's included. */
   owned: number;
   /** The first of it. */

@@ -4684,7 +4684,7 @@ Where we were: 132 cards in the builder, 88 playable (51 native, 37 imports) and
 
 ## 2026-10-20 - Thirteen more Basic Actions
 
-User: "Can we add another bunch of Basic Action cards?" Before: the four Champions' own plus Thorn Shot (Claw), Spring Emergence and Foraging (Wing), and Distraction (Shell, no longer a Champion's) - Eye had only Mutation. Now three or four more per energy, so a Champion custom team has a real choice. Same rules as the character imports: a Dice Masters Basic Action name not used yet, text the engine already runs, simplified where noted (errata notes on the card, the other contributor's convention). Shared dice, so not in packs. Named for an animal behaviour; plant icons like the other Basic Actions.
+User: "Can we add another bunch of Basic Action cards?" Before: the four Champions' own plus Thorn Shot (Claw), Spring Emergence and Foraging (Wing), and Distraction (Shell, no longer a Champion's) - Eye had only Mutation. Now three or four more per energy, so a Champion custom team has a real choice. Same rules as the character imports: a Dice Masters Basic Action name not used yet, text the engine already runs, simplified where noted (errata notes on the card, the other contributor's convention). Shared dice, so not in packs (since changed: one per pack, below). Named for an animal behaviour; plant icons like the other Basic Actions.
 
 | Energy | Name | From | Does |
 |---|---|---|---|
@@ -4705,3 +4705,11 @@ User: "Can we add another bunch of Basic Action cards?" Before: the four Champio
 Also: errata notes on the simplified character imports (Red Panda, Platypus, Swordfish, Bull Shark), and the card reference has an "Other Basic Actions" table - the ones no Champion brings weren't listed anywhere.
 
 Sweep (100 games per matchup, SE ~3.5; each card swapped in for one host Champion's own Basic Action): 0 errors, nothing at +10. Best: Frenzy +8.4, Pounce +8.0, Gore +6.9 (all replacing Wolf's Anger Issues - cheap Claw removal/pump on an aggro team), Gore +5.9 on Armadillo. Worst: Gore on Owl -11.9, and most cards replacing Eagle's Resurrection lose 6-10 (Resurrection is strong there). The 4-cost cards (Snare, Take Flight, Stare Down, Dazzle, Nest Egg) get bought rarely by the bot (~0.2/game) and land within +-7; that is the bot under-valuing them as much as weakness. No changes.
+
+## 2026-10-20 - A Basic Action in every pack
+
+User: "We should include a Basic Action in each pack. They won't have any rarities, they'd just be more like Energy cards in Pokemon."
+
+- Packs are now six dice: the five rarity slots as before, then one Basic Action picked uniformly from every playable one (`DiceKingdomPacks.BasicActions`, 21 today - the Champions' own included). Price unchanged at 10 coins. Basic Actions stay out of `Rarities`, so they can't be traded in; the API labels them `"Basic"` (`DiceKingdomPacks.RarityLabel`).
+- Packs page: the sixth card reads "Basic Action" in a bark-brown frame (the plant icons), the pack row is six wide on desktop (two rows of three on a phone), and the collection has a "Basic Action" tier with pips up to its 3-die limit.
+- Owning Basic Actions doesn't gate anything yet, same as Characters - team building still allows any card. A starter roster still adds only its Characters, not the Champion's Basic Action; easy to add if wanted (would need a backfill for existing starters).

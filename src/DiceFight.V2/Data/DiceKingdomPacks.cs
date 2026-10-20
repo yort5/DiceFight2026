@@ -23,7 +23,8 @@ public static class DiceKingdomPacks
     // Once per UTC day, on the first visit (PlayerAccounts.ClaimDaily).
     public const int DailyCoins = 5;
 
-    // Every playable Character and personal Action in the Catalog. Basic Actions aren't in packs.
+    // Every playable Character and personal Action in the Catalog. Basic
+    // Actions have no rarity - see BasicActions.
     // 45 Common, 26 Uncommon, 23 Rare, 8 Super Rare. Incomplete cards are excluded.
     public static readonly IReadOnlyDictionary<string, CardRarity> Rarities = new Dictionary<string, CardRarity>
     {
@@ -144,9 +145,10 @@ public static class DiceKingdomPacks
         ["CW042"] = CardRarity.Common, // Bottlenose Dolphin
     };
 
-    // A pack is five dice: three Commons, an Uncommon, and a "rare slot"
-    // that's an Uncommon 55%, a Rare 40% or a Super Rare 5% (one pack in
-    // twenty; about 2 in 5 players see one in their first ten packs).
+    // A pack is six dice: three Commons, an Uncommon, a "rare slot" that's
+    // an Uncommon 55%, a Rare 40% or a Super Rare 5% (one pack in twenty;
+    // about 2 in 5 players see one in their first ten packs), and a Basic
+    // Action.
     // Picks are uniform within the selected rarity; expanding its pool changes
     // per-card odds, while the slot rarity probabilities stay the same.
     public static readonly IReadOnlyList<IReadOnlyList<(CardRarity Rarity, int Weight)>> Slots =
@@ -157,6 +159,15 @@ public static class DiceKingdomPacks
         [(CardRarity.Uncommon, 1)],
         [(CardRarity.Uncommon, 55), (CardRarity.Rare, 40), (CardRarity.SuperRare, 5)],
     ];
+
+    // Basic Actions (2026-10-20, user): one in every pack, with no rarity -
+    // "more like Energy cards in Pokemon". Uniform over every playable one,
+    // the Champions' own included. Not traded in.
+    public static readonly IReadOnlyList<string> BasicActions = DiceKingdomConfig.Catalog.Values
+        .Where(card => card.CardType == Model.CardType.BasicAction).Select(card => card.Id).Order().ToList();
+
+    // "Basic" for a Basic Action, which has no CardRarity.
+    public static string RarityLabel(string id) => Rarities.TryGetValue(id, out var rarity) ? rarity.ToString() : "Basic";
 
     // Trade-ins (2026-10-12, user's rates): 5 Commons for an Uncommon, 4
     // Uncommons for a Rare, 3 Rares for a Super Rare. What comes back is
@@ -186,7 +197,8 @@ public static class DiceKingdomPacks
 
     // One pack's card ids, slot by slot. `roll(n)` is a uniform pick from
     // 0..n-1 - the server passes a cryptographic one, tests a seeded one.
-    // The three Commons are always three different cards.
+    // The three Commons are always three different cards; the Basic Action
+    // comes last.
     public static IReadOnlyList<string> Open(Func<int, int> roll)
     {
         var pulled = new List<string>();
@@ -197,6 +209,7 @@ public static class DiceKingdomPacks
             var pool = CardsOf(rarity).Except(pulled).ToList();
             pulled.Add(pool[roll(pool.Count)]);
         }
+        pulled.Add(BasicActions[roll(BasicActions.Count)]);
         return pulled;
     }
 }

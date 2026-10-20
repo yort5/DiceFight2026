@@ -24,17 +24,31 @@ public class DiceKingdomPacksTests
     }
 
     [Fact]
-    public void A_Pack_Is_Three_Different_Commons_An_Uncommon_And_A_Rare_Slot()
+    public void A_Pack_Is_Three_Different_Commons_An_Uncommon_A_Rare_Slot_And_A_Basic_Action()
     {
         var random = new Random(7);
         for (var i = 0; i < 200; i++)
         {
             var pack = DiceKingdomPacks.Open(random.Next);
-            var rarities = pack.Select(id => DiceKingdomPacks.Rarities[id]).ToList();
+            Assert.Equal(6, pack.Count);
+            var rarities = pack.Take(5).Select(id => DiceKingdomPacks.Rarities[id]).ToList();
             Assert.Equal([CardRarity.Common, CardRarity.Common, CardRarity.Common, CardRarity.Uncommon], rarities.Take(4));
             Assert.NotEqual(CardRarity.Common, rarities[4]);
-            Assert.Equal(5, pack.Distinct().Count());
+            Assert.Equal(6, pack.Distinct().Count());
+            Assert.Equal(Model.CardType.BasicAction, DiceKingdomConfig.Catalog[pack[5]].CardType);
+            Assert.Equal("Basic", DiceKingdomPacks.RarityLabel(pack[5]));
         }
+    }
+
+    [Fact]
+    public void Every_Basic_Action_Can_Come_In_A_Pack()
+    {
+        Assert.Equal(
+            DiceKingdomConfig.Catalog.Values.Count(c => c.CardType == Model.CardType.BasicAction),
+            DiceKingdomPacks.BasicActions.Count);
+        var random = new Random(3);
+        var seen = Enumerable.Range(0, 2000).Select(_ => DiceKingdomPacks.Open(random.Next)[5]).ToHashSet();
+        Assert.Equal(DiceKingdomPacks.BasicActions.Count, seen.Count);
     }
 
     [Fact]

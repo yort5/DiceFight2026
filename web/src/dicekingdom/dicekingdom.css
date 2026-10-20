@@ -4728,12 +4728,14 @@
 }
 
 /* Packs and your collection (PacksPage.tsx, 2026-10-12). Rarity colours:
-   Common grey, Uncommon green, Rare blue, Super Rare gold. */
+   Common grey, Uncommon green, Rare blue, Super Rare gold; a Basic Action
+   (no rarity, one per pack) is bark brown, for its plant icon. */
 .dicekingdom {
   --rarity-Common: #8a8f9c;
   --rarity-Uncommon: #3f8f5f;
   --rarity-Rare: #2f6fb0;
   --rarity-SuperRare: #c08a12;
+  --rarity-Basic: #8a6a45;
 }
 .dk-daily-coins {
   color: var(--shell);
@@ -4760,10 +4762,11 @@
 .dk-packs .dk-rarity-Uncommon { --rarity: var(--rarity-Uncommon); }
 .dk-packs .dk-rarity-Rare { --rarity: var(--rarity-Rare); }
 .dk-packs .dk-rarity-SuperRare { --rarity: var(--rarity-SuperRare); }
+.dk-packs .dk-rarity-Basic { --rarity: var(--rarity-Basic); }
 
 .dk-packs .dk-pack-opened {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 8px;
   margin-top: 16px;
   cursor: pointer;

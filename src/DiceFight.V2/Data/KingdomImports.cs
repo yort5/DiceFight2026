@@ -290,7 +290,7 @@ public static class KingdomImports
 
     // ---- Basic Actions (2026-10-20, user: "another bunch of Basic Action
     // cards"). Three or four per energy, named for an animal behaviour.
-    // Shared dice, so not in packs. Burst marks (*/**) are the printed
+    // One per pack, no rarity (DiceKingdomPacks.BasicActions). Burst marks (*/**) are the printed
     // ones on MigrationDice.BasicAction's 0/1/2 faces. ----
 
     private static CardDef BasicAction(string id, string name, string set, int cost, string rawText,

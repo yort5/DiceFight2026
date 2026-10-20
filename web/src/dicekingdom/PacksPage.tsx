@@ -1,7 +1,7 @@
 // /dice-kingdom/packs (2026-10-12): coins, random packs, and the dice
 // you've pulled. Packs are the server's (V2/Data/DiceKingdomPacks.cs):
-// five dice - three Commons, an Uncommon, and an Uncommon/Rare/Super Rare -
-// for coins from the starting grant and one visit a day. The Champion
+// six dice - three Commons, an Uncommon, an Uncommon/Rare/Super Rare, and a
+// rarity-less Basic Action (2026-10-20) - for coins from the starting grant and one visit a day. The Champion
 // teams stay free starter rosters, and each joins the collection once a
 // game with it is finished. Spare dice trade up a rarity (TradeIns).
 import { useEffect, useMemo, useState } from "react";
@@ -16,17 +16,22 @@ import type { CardDef } from "./types";
 
 const RARITIES: Rarity[] = ["SuperRare", "Rare", "Uncommon", "Common"];
 
-function rarityLabel(rarity: Rarity): string {
-  return rarity === "SuperRare" ? "Super Rare" : rarity;
+function rarityLabel(rarity: Rarity | "Basic"): string {
+  return rarity === "SuperRare" ? "Super Rare" : rarity === "Basic" ? "Basic Action" : rarity;
+}
+
+// A Basic Action's purchase has no energy type; its die's faces do.
+function energyOf(card: CardDef): string | undefined {
+  return card.energyTypes[0] ?? card.dieEnergyType ?? undefined;
 }
 
 function nextDaily(iso: string): string {
   return new Date(iso).toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit" });
 }
 
-function CardFace({ card, rarity }: { card: CardDef | undefined; rarity: Rarity }) {
+function CardFace({ card, rarity }: { card: CardDef | undefined; rarity: Rarity | "Basic" }) {
   const Avatar = card ? CHARACTER_ICONS[card.id] : null;
-  const energy = card?.energyTypes[0];
+  const energy = card && energyOf(card);
   return (
     <>
       <span className="dk-pack-rarity">{rarityLabel(rarity)}</span>
@@ -170,9 +175,10 @@ function TradeIns({
 function CollectionGrid({ collection, cards }: { collection: Collection; cards: CardDef[] }) {
   const [selected, setSelected] = useState<string | null>(null);
   const characters = cards.filter((c) => c.rarity);
+  const basics = cards.filter((c) => c.type === "BasicAction" && c.isImplemented !== false);
   const owned = characters.filter((c) => (collection.dice[c.id] ?? 0) > 0).length;
   const dice = Object.values(collection.dice).reduce((a, b) => a + b, 0);
-  const pick = selected ? characters.find((c) => c.id === selected) : undefined;
+  const pick = selected ? characters.concat(basics).find((c) => c.id === selected) : undefined;
 
   return (
     <div className="panel">
@@ -188,10 +194,9 @@ function CollectionGrid({ collection, cards }: { collection: Collection; cards: 
           : ""}
         Finish a game with a Champion to add its starter roster.
       </p>
-      {RARITIES.map((rarity) => {
-        const tier = characters
-          .filter((c) => c.rarity === rarity)
-          .sort((a, b) => a.energyTypes[0].localeCompare(b.energyTypes[0]) || a.purchaseCost - b.purchaseCost);
+      {[...RARITIES, "Basic" as const].map((rarity) => {
+        const tier = (rarity === "Basic" ? basics : characters.filter((c) => c.rarity === rarity))
+          .sort((a, b) => (energyOf(a) ?? "").localeCompare(energyOf(b) ?? "") || a.purchaseCost - b.purchaseCost);
         const have = tier.filter((c) => (collection.dice[c.id] ?? 0) > 0).length;
         return (
           <section key={rarity} className={`dk-coll-tier dk-rarity-${rarity}`}>
@@ -230,8 +235,8 @@ function CollectionGrid({ collection, cards }: { collection: Collection; cards: 
       })}
       {pick && (
         <div className="dk-coll-detail">
-          <b>{pick.name}</b> · {rarityLabel(pick.rarity!)} · cost {pick.purchaseCost}{" "}
-          <EnergyBadge type={pick.energyTypes[0]} size={14} /> · {collection.dice[pick.id] ?? 0} dice
+          <b>{pick.name}</b> · {rarityLabel(pick.rarity ?? "Basic")} · cost {pick.purchaseCost}{" "}
+          {energyOf(pick) && <EnergyBadge type={energyOf(pick)!} size={14} />} · {collection.dice[pick.id] ?? 0} dice
           <div>{pick.rawText}</div>
           <div className="dk-coll-levels">
             {pick.levels.map((l, i) => (
@@ -314,7 +319,8 @@ export function PacksPage() {
               Open a pack · {collection.packPrice} coins
             </button>
             <p className="dk-acct-dim">
-              Each pack holds 5 dice: 3 Common, 1 Uncommon, and 1 more that's Uncommon, Rare or (1 in 20) Super Rare.
+              Each pack holds 6 dice: 3 Common, 1 Uncommon, 1 more that's Uncommon, Rare or (1 in 20) Super Rare, and a
+              Basic Action.
               Rarer isn't stronger - plenty of the best cards are Common. {collection.dailyAmount} more coins each day
               you visit; next from {nextDaily(collection.nextDailyUtc)}.
             </p>
