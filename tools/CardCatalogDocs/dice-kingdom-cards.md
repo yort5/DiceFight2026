@@ -195,6 +195,30 @@ In the card pool but in no Champion's pack, so they don't come up in games.
 
 Either player may buy either Basic Action; each die's energy faces show its Champion's type.
 
+## Other Basic Actions
+
+For custom teams: with a Champion, the Basic Action must share its energy.
+
+| Energy | Name | Cost | Die Limit | Die faces | Ability text | Dice Masters source |
+|---|---|:-:|:-:|---|---|---|
+| Claw | Frenzy | 2 | 3 | Action ×3<br>2 Claw ×2<br>1 Claw | Target character die gains Overcrush until end of turn. */** That character die also gets +1A. | Hulk Out (AOU029) |
+| Claw | Gore | 2 | 3 | Action ×3<br>2 Claw ×2<br>1 Claw | Deal 6 damage to target character die. Global: Pay Claw. Target character die gets +1A. | Excessive Force (JUS067) |
+| Claw | Pounce | 2 | 3 | Action ×3<br>2 Claw ×2<br>1 Claw | Deal 1 damage to target character die. */** Instead, deal 2 damage. | Surprise Attack (IG014) |
+| Claw | Thorn Shot | 2 | 3 | Action ×3<br>2 Claw ×2<br>1 Claw | Deal 1 damage to the opponent. */** Rebound. | Ping (JUS069) |
+| Eye | Scatter | 2 | 3 | Action ×3<br>2 Eye ×2<br>1 Eye | Put target die from your opponent's Prep Area into their Used Pile. | Banishment (FUS025) |
+| Eye | Dazzle | 4 | 3 | Action ×3<br>2 Eye ×2<br>1 Eye | Reroll up to 2 target opposing character dice. Gain 1 life. | The Beyonder (MSW012) |
+| Eye | Snare | 4 | 3 | Action ×3<br>2 Eye ×2<br>1 Eye | KO target character die with 5A or more. Global: Pay Eye. Target character die gets +1A. | Too Big to Fly (SKC014) |
+| Eye | Stare Down | 4 | 3 | Action ×3<br>2 Eye ×2<br>1 Eye | Target character die can't block this turn. */** Also, draw a die into your Prep Area. | Kryptonite Threat (WF029) |
+| Shell | Hibernation | 2 | 3 | Action ×3<br>2 Shell ×2<br>1 Shell | Prep a die from your Used Pile. | Released from the Ice (THOR009) |
+| Shell | Circle Up | 3 | 3 | Action ×3<br>2 Shell ×2<br>1 Shell | Your character dice get +2D until end of turn. */** Also, target character die gets +3D. Global: Pay Shell. Target character die gets +1D. | Tactical Cover (TMNT057) |
+| Shell | Grooming | 3 | 3 | Action ×3<br>2 Shell ×2<br>1 Shell | Your character dice get +1A and +1D until end of turn. ** Two of your character dice get another +1A and +1D. | Blessing (BFF129) |
+| Shell | Distraction | 4 | 3 | Action ×3<br>2 Shell ×2<br>1 Shell | Your opponent chooses two of their creatures. Those creatures can't block this turn. Global: Pay 1 Shell. Move one attacker from the Attack Zone back to its Field Zone. | Distraction (Basic Action, AVX025) |
+| Wing | Dive | 2 | 3 | Action ×3<br>2 Wing ×2<br>1 Wing | Target character die you control gets +2A until end of turn. If it is a Wing character die, it also gains Fast. | Upgrade - Unibeam (IMW034) |
+| Wing | Foraging | 3 | 3 | Action ×3<br>2 Wing ×2<br>1 Wing | Draw and roll 2 dice into your Reserve Pool. | Investigation (JUS068) |
+| Wing | Spring Emergence | 3 | 3 | Action ×3<br>2 Wing ×2<br>1 Wing | Impulse: you may add this die to your Bag when purchased. When used, dice purchased this turn cost 1 less (minimum 1) and may be put directly into your Bag instead of Used. Multiple uses do not stack. | Big Entrance (IG003) |
+| Wing | Nest Egg | 4 | 3 | Action ×3<br>2 Wing ×2<br>1 Wing | Draw 2 dice and put them into your Prep Area. | Nasty Plot (AOU031) |
+| Wing | Take Flight | 4 | 3 | Action ×3<br>2 Wing ×2<br>1 Wing | Target character die you control can't be blocked this turn. | Dimension Door (SWW025) |
+
 ## Keywords
 
 Every keyword the engine accepts on a Dice Kingdom card, from `DiceKingdomConfig.Keywords`. _(label)_ marks a keyword that only names a timing or cost - each card writes its own ability; for the rest, listing the keyword is all a card needs. Cards in _italics_ are in no Champion's pack. Dice Masters wording from [WizKids' keyword list](https://wizkids.com/dicemasters/keywords/), copied once on 2026-10-10.

@@ -162,6 +162,28 @@ foreach (var (championId, cardId) in DiceKingdomConfig.ActionByChampion)
 html.AppendLine("</tbody></table>");
 html.AppendLine("<p class=\"note\">Either player may buy either Basic Action; each die's energy faces show its Champion's type.</p>");
 
+// Basic Actions no Champion brings (2026-10-20) - a custom team can take
+// one whose energy matches its Champion.
+var otherActions = catalog.Values
+    .Where(c => c.CardType == CardType.BasicAction && !DiceKingdomConfig.ActionByChampion.Values.Contains(c.Id))
+    .OrderBy(ActionEnergy).ThenBy(c => c.PurchaseCost).ThenBy(c => c.Name).ToList();
+html.AppendLine("<h2>Other Basic Actions</h2>");
+html.AppendLine("<p class=\"note\">For custom teams: with a Champion, the Basic Action must share its energy.</p>");
+html.AppendLine("<table><thead><tr><th>Energy</th><th>Name</th><th>Cost</th><th>Die&nbsp;Limit</th><th>Die faces</th><th>Ability text</th><th>Dice Masters source</th></tr></thead><tbody>");
+foreach (var card in otherActions)
+{
+    html.AppendLine("<tr>");
+    html.AppendLine($"<td>{Enc(ActionEnergy(card))}</td>");
+    html.AppendLine($"<td>{Enc(card.Name)}</td>");
+    html.AppendLine($"<td class=\"cost\">{card.PurchaseCost}</td>");
+    html.AppendLine($"<td class=\"cost\">{card.DieLimit}</td>");
+    html.AppendLine($"<td class=\"stats\">{string.Join("<br>", GroupFaces(card.Die).Select(g => g.Count > 1 ? $"{g.Face} &times;{g.Count}" : g.Face))}</td>");
+    html.AppendLine($"<td>{Enc(card.RawText)}</td>");
+    html.AppendLine($"<td class=\"source\">{Enc(Source(card))}</td>");
+    html.AppendLine("</tr>");
+}
+html.AppendLine("</tbody></table>");
+
 // Keywords (2026-10-10, user: "where does the list of currently
 // implemented keywords live... could we make a handy reference") - the
 // declared list (DiceKingdomConfig.Keywords) with its rules text, and
@@ -263,6 +285,18 @@ string BuildMarkdown()
     md.AppendLine();
     md.AppendLine("Either player may buy either Basic Action; each die's energy faces show its Champion's type.");
     md.AppendLine();
+    md.AppendLine("## Other Basic Actions");
+    md.AppendLine();
+    md.AppendLine("For custom teams: with a Champion, the Basic Action must share its energy.");
+    md.AppendLine();
+    md.AppendLine("| Energy | Name | Cost | Die Limit | Die faces | Ability text | Dice Masters source |");
+    md.AppendLine("|---|---|:-:|:-:|---|---|---|");
+    foreach (var card in otherActions)
+    {
+        var faces = string.Join("<br>", GroupFaces(card.Die).Select(g => g.Count > 1 ? $"{g.Face} ×{g.Count}" : g.Face));
+        md.AppendLine($"| {ActionEnergy(card)} | {Md(card.Name)} | {card.PurchaseCost} | {card.DieLimit} | {faces} | {Md(card.RawText)} | {Md(Source(card))} |");
+    }
+    md.AppendLine();
     md.AppendLine("## Keywords");
     md.AppendLine();
     md.AppendLine("Every keyword the engine accepts on a Dice Kingdom card, from `DiceKingdomConfig.Keywords`. _(label)_ marks a keyword that " +
@@ -334,6 +368,9 @@ string Source(CardDef card)
             : $"{source.Name} ({source.Id})";
     return NativeSources.GetValueOrDefault(card.Id, "Original");
 }
+
+// A Basic Action's energy: the first energy printed on its die (V2GamesController.BasicActionEnergy).
+static string ActionEnergy(CardDef card) => card.Die.Faces.SelectMany(f => f.Symbols).Select(sym => sym.SymbolId).FirstOrDefault() ?? "";
 
 static string DescribeLevels(CardDef card)
 {

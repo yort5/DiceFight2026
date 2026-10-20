@@ -4681,3 +4681,25 @@ Where we were: 132 cards in the builder, 88 playable (51 native, 37 imports) and
 - Icons: 22 new silhouettes. `silhouette()` takes an optional second path cut out through a mask, for shapes whose parts overlap (Praying Mantis, Cassowary) - even-odd punched holes where they crossed.
 - Card sweep (100 games a matchup, one standard error ~3.5 points): nothing overpowered. Top: Polar Bear +7.4 (replacing Silverback), Raccoon +4.0; Platypus -1.8. Bottom, mostly the slot: Swordfish -22.9 and Bearded Dragon -17.6 (both in for Phoenix), Crocodile -13.5 (for Wolverine) - worth a look if they feel weak in play.
 - The sweep found Snow Leopard games erroring (116): neither the bot nor the must-block rule knew about MinBlockers, which no Dice Kingdom card had used. `CombatEngine.MinBlockers(die)` now says how many a lane needs; the bot sends that many of its best blockers or leaves the lane alone; a forced blocker (Hermit Crab) is excused from a lane it can't legally join by itself; and the refusal names the card ("Snow Leopard can only be blocked by 2 or more creatures - put more in its lane, or none.") instead of a die id. Re-sweep: 0 errors.
+
+## 2026-10-20 - Thirteen more Basic Actions
+
+User: "Can we add another bunch of Basic Action cards?" Before: the four Champions' own plus Thorn Shot (Claw), Spring Emergence and Foraging (Wing), and Distraction (Shell, no longer a Champion's) - Eye had only Mutation. Now three or four more per energy, so a Champion custom team has a real choice. Same rules as the character imports: a Dice Masters Basic Action name not used yet, text the engine already runs, simplified where noted (errata notes on the card, the other contributor's convention). Shared dice, so not in packs. Named for an animal behaviour; plant icons like the other Basic Actions.
+
+| Energy | Name | From | Does |
+|---|---|---|---|
+| Claw | Pounce | Surprise Attack IG014 | 1 damage to a creature; 2 on a burst face |
+| Claw | Gore | Excessive Force JUS067 | 6 damage to a creature. Global: Claw, +1 ATK |
+| Claw | Frenzy | Hulk Out AOU029 | A creature gains Overcrush; burst: +1 ATK too |
+| Shell | Circle Up | Tactical Cover TMNT057 | Your creatures +2 DEF; burst: one gets +3 more. Global: Shell, +1 DEF |
+| Shell | Grooming | Blessing BFF129 | Your creatures +1/+1; double burst: two get another +1/+1 |
+| Shell | Hibernation | Released from the Ice THOR009 | Prep a die from your Used Pile |
+| Wing | Nest Egg | Nasty Plot AOU031 | Draw 2 dice into your Prep Area |
+| Wing | Take Flight | Dimension Door SWW025 | One of your creatures can't be blocked this turn |
+| Wing | Dive | Upgrade - Unibeam IMW034 | One of yours +2 ATK; a Wing creature also gains Fast |
+| Eye | Snare | Too Big to Fly SKC014 | KO a creature with 5+ ATK. Global: Eye, +1 ATK |
+| Eye | Stare Down | Kryptonite Threat WF029 | An opposing creature can't block; burst: draw a die into Prep |
+| Eye | Dazzle | The Beyonder MSW012 | Reroll up to 2 opposing creatures, gain 1 life (source: any two) |
+| Eye | Scatter | Banishment FUS025 | Move a die from their Prep Area to their Used Pile |
+
+Also: errata notes on the simplified character imports (Red Panda, Platypus, Swordfish, Bull Shark), and the card reference has an "Other Basic Actions" table - the ones no Champion brings weren't listed anywhere.

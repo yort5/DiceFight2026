@@ -278,4 +278,194 @@ public class KingdomImportsTests
         Assert.Equal(bag - 1, s.DiceIn("p1", Zone.Bag).Count());
         Assert.Equal(there + 1, s.DiceIn("p1", to).Count());
     }
+
+    // ---- Basic Actions ----
+
+    // The action die on its action face with `burst` marks (0, 1 or 2), in the Reserve Pool, then used.
+    private static void Use(GameState s, AbilityQueue q, string cardId, int burst = 0, string owner = "p1",
+        Func<PendingChoice, string>? pick = null)
+    {
+        var card = s.CardCatalog[cardId];
+        var die = new DieInstance { Id = "test-" + s.Dice.Count, CardId = cardId, OwnerId = owner, ControllerId = owner, Zone = Zone.ReservePool,
+            CurrentFaceIndex = card.Die.Faces.Select((f, i) => (f, i)).First(x => x.f.Kind == FaceKind.ActionFace && x.f.Burst == burst).i };
+        s.Dice.Add(die);
+        TurnEngine.UseAction(s, q, die.Id);
+        Drain(s, q, pick);
+    }
+
+    [Fact]
+    public void The_New_Basic_Actions_Are_Shared_Dice_In_Their_Energy()
+    {
+        var expected = new Dictionary<string, (string Name, string Energy)>
+        {
+            ["IG014"] = ("Pounce", "Claw"), ["JUS067"] = ("Gore", "Claw"), ["AOU029"] = ("Frenzy", "Claw"),
+            ["TMNT057"] = ("Circle Up", "Shell"), ["BFF129"] = ("Grooming", "Shell"), ["THOR009"] = ("Hibernation", "Shell"),
+            ["AOU031"] = ("Nest Egg", "Wing"), ["SWW025"] = ("Take Flight", "Wing"), ["IMW034"] = ("Dive", "Wing"),
+            ["SKC014"] = ("Snare", "Eye"), ["WF029"] = ("Stare Down", "Eye"), ["MSW012"] = ("Dazzle", "Eye"), ["FUS025"] = ("Scatter", "Eye"),
+        };
+        foreach (var (id, (name, energy)) in expected)
+        {
+            var card = DiceKingdomConfig.Catalog[id];
+            Assert.Equal(name, card.Name);
+            Assert.Equal(CardType.BasicAction, card.CardType);
+            Assert.Equal(energy, Api.BasicActionEnergy(card));
+            Assert.DoesNotContain(id, DiceKingdomPacks.Rarities.Keys);
+        }
+        Assert.Equal("Gore", DiceKingdomConfig.Catalog["JUS067"].Name);
+        Assert.Contains("Global: Pay Claw", DiceKingdomConfig.Catalog["JUS067"].RawText);
+        Assert.Equal("Claw", DiceKingdomConfig.Catalog["JUS067"].Abilities[1].EnergyCost!.RequiredSymbolId);
+    }
+
+    private static class Api
+    {
+        // Same reading as V2GamesController.BasicActionEnergy: the die's first printed energy.
+        public static string? BasicActionEnergy(CardDef card) =>
+            card.Die.Faces.SelectMany(f => f.Symbols).Select(sym => sym.SymbolId).FirstOrDefault();
+    }
+
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(1, 2)]
+    [InlineData(2, 2)]
+    public void Pounce_Deals_2_On_A_Burst_Face_Else_1(int burst, int damage)
+    {
+        var s = Game(); var q = new AbilityQueue();
+        var target = Add(s, DiceKingdomConfig.Elephant.Id, "p2");
+        Use(s, q, "IG014", burst);
+        Assert.Equal(damage, target.Damage);
+    }
+
+    [Fact]
+    public void Gore_KOs_With_6_Damage()
+    {
+        var s = Game(); var q = new AbilityQueue();
+        var target = Add(s, DiceKingdomConfig.HoneyBadger.Id, "p2", level: 3);
+        Assert.True(QueryEngine.GetDefense(s, target) <= 6);
+        Use(s, q, "JUS067");
+        Assert.Equal(Zone.PrepArea, target.Zone);
+    }
+
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(1, 1)]
+    public void Frenzy_Grants_Overcrush_And_A_Burst_Adds_1_ATK(int burst, int bonus)
+    {
+        var s = Game(); var q = new AbilityQueue();
+        var mine = Add(s, DiceKingdomConfig.Elephant.Id);
+        var atk = QueryEngine.GetAttack(s, mine);
+        Use(s, q, "AOU029", burst);
+        Assert.Contains("Overcrush", QueryEngine.GetKeywords(s, mine));
+        Assert.Equal(atk + bonus, QueryEngine.GetAttack(s, mine));
+    }
+
+    [Fact]
+    public void Circle_Up_Gives_Your_Creatures_2_DEF_And_A_Burst_3_More_To_One()
+    {
+        var s = Game(); var q = new AbilityQueue();
+        var a = Add(s, DiceKingdomConfig.Elephant.Id);
+        var theirs = Add(s, DiceKingdomConfig.Hippopotamus.Id, "p2");
+        var (defA, defTheirs) = (QueryEngine.GetDefense(s, a), QueryEngine.GetDefense(s, theirs));
+        Use(s, q, "TMNT057", 1, pick: c => c.CandidateIds.Contains(a.Id) ? a.Id : c.CandidateIds[0]);
+        Assert.Equal(defA + 5, QueryEngine.GetDefense(s, a));
+        Assert.Equal(defTheirs, QueryEngine.GetDefense(s, theirs));
+    }
+
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(2, 2)]
+    public void Grooming_Gives_Your_Creatures_1_1_And_A_Double_Burst_Another_To_Two(int burst, int bonus)
+    {
+        var s = Game(); var q = new AbilityQueue();
+        var a = Add(s, DiceKingdomConfig.Elephant.Id);
+        var b = Add(s, DiceKingdomConfig.Hippopotamus.Id);
+        var (atkA, atkB) = (QueryEngine.GetAttack(s, a), QueryEngine.GetAttack(s, b));
+        Use(s, q, "BFF129", burst);
+        Assert.Equal(atkA + bonus, QueryEngine.GetAttack(s, a));
+        Assert.Equal(atkB + bonus, QueryEngine.GetAttack(s, b));
+    }
+
+    [Fact]
+    public void Hibernation_Preps_A_Die_From_Your_Used_Pile()
+    {
+        var s = Game(); var q = new AbilityQueue();
+        var sleeper = Add(s, DiceKingdomConfig.Elephant.Id, zone: Zone.UsedPile);
+        Use(s, q, "THOR009");
+        Assert.Equal(Zone.PrepArea, sleeper.Zone);
+    }
+
+    [Fact]
+    public void Nest_Egg_Draws_Two_Dice_Into_Prep()
+    {
+        var s = Game(); var q = new AbilityQueue();
+        var prep = s.DiceIn("p1", Zone.PrepArea).Count();
+        Use(s, q, "AOU031");
+        Assert.Equal(prep + 2, s.DiceIn("p1", Zone.PrepArea).Count());
+    }
+
+    [Fact]
+    public void Take_Flight_Makes_One_Of_Your_Creatures_Unblockable()
+    {
+        var s = Game(); var q = new AbilityQueue();
+        var mine = Add(s, DiceKingdomConfig.Elephant.Id);
+        Use(s, q, "SWW025");
+        Assert.Contains(CombatFlagKind.Unblockable, mine.CombatFlags);
+    }
+
+    [Theory]
+    [InlineData("DK-WING-07", true)]   // Greyhound, Wing
+    [InlineData("DK-EYE-07", false)]   // Elephant, Eye
+    public void Dive_Gives_2_ATK_And_Fast_Only_To_A_Wing_Creature(string cardId, bool fast)
+    {
+        var s = Game(); var q = new AbilityQueue();
+        var mine = Add(s, cardId);
+        var atk = QueryEngine.GetAttack(s, mine);
+        Use(s, q, "IMW034");
+        Assert.Equal(atk + 2, QueryEngine.GetAttack(s, mine));
+        Assert.Equal(fast, QueryEngine.GetKeywords(s, mine).Contains("Fast"));
+    }
+
+    [Fact]
+    public void Snare_Only_KOs_A_Creature_With_5_ATK_Or_More()
+    {
+        var s = Game(); var q = new AbilityQueue();
+        var big = Add(s, DiceKingdomConfig.Elephant.Id, "p2", level: 3);  // 7 ATK
+        var small = Add(s, DiceKingdomConfig.HoneyBadger.Id, "p2");
+        IReadOnlyList<string>? offered = null;
+        Use(s, q, "SKC014", pick: c => { offered = c.CandidateIds; return big.Id; });
+        Assert.DoesNotContain(small.Id, offered ?? [big.Id]);
+        Assert.Equal(Zone.PrepArea, big.Zone);
+    }
+
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(1, 1)]
+    public void Stare_Down_Stops_A_Blocker_And_A_Burst_Draws_Into_Prep(int burst, int drawn)
+    {
+        var s = Game(); var q = new AbilityQueue();
+        var theirs = Add(s, DiceKingdomConfig.Elephant.Id, "p2");
+        var prep = s.DiceIn("p1", Zone.PrepArea).Count();
+        Use(s, q, "WF029", burst);
+        Assert.Contains(CombatFlagKind.CantBlock, theirs.CombatFlags);
+        Assert.Equal(prep + drawn, s.DiceIn("p1", Zone.PrepArea).Count());
+    }
+
+    [Fact]
+    public void Dazzle_Rerolls_Opposing_Creatures_And_Gains_1_Life()
+    {
+        var s = Game(); var q = new AbilityQueue();
+        var theirs = Add(s, DiceKingdomConfig.Elephant.Id, "p2", level: 3);
+        var life = s.PlayerOne.Life;
+        Use(s, q, "MSW012");
+        Assert.Equal(life + 1, s.PlayerOne.Life);
+        Assert.NotEqual(Zone.FieldZone, theirs.Zone); // the test roller lands on face 5, an energy face
+    }
+
+    [Fact]
+    public void Scatter_Sends_A_Die_From_Their_Prep_Area_To_Their_Used_Pile()
+    {
+        var s = Game(); var q = new AbilityQueue();
+        var waiting = Add(s, DiceKingdomConfig.Elephant.Id, "p2", zone: Zone.PrepArea);
+        Use(s, q, "FUS025");
+        Assert.Equal(Zone.UsedPile, waiting.Zone);
+    }
 }

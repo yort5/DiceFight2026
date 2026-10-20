@@ -50,18 +50,18 @@ public class CatalogInvariantTests
     public void Every_Cards_Set_Is_One_Of_The_Known_Migration_Sources()
     {
         var knownSets = new HashSet<string> { "MSW", "DPS", "GOTG", "SKC", "TAG", "JLL", "CW", "XFO", "WF", "MYST", "AVX", "DRS", "XMF", "IG", "XFC", "SW", "JUS",
-            "BFF", "AI", "HQ", "DOOM", "SWW", "WWE", "WOL", "ASM", "FUS", "TOA", "THOR" };
+            "BFF", "AI", "HQ", "DOOM", "SWW", "WWE", "WOL", "ASM", "FUS", "TOA", "THOR", "AOU", "TMNT", "IMW" };
         Assert.All(AllCards, c => Assert.Contains(c.Set, knownSets));
     }
 
     [Fact]
-    public void Builder_Contains_110_Playable_And_44_Incomplete_Cards()
+    public void Builder_Contains_123_Playable_And_44_Incomplete_Cards()
     {
         var builder = DiceKingdomConfig.TeamBuilderCatalog;
-        Assert.Equal(154, builder.Count);
-        Assert.Equal(110, DiceKingdomConfig.Catalog.Count);
+        Assert.Equal(167, builder.Count);
+        Assert.Equal(123, DiceKingdomConfig.Catalog.Count);
         Assert.Equal(44, builder.Values.Count(card => !card.IsImplemented));
-        Assert.Equal(103, builder.Values.Count(card => card.IncludeInTeamBuilder));
+        Assert.Equal(116, builder.Values.Count(card => card.IncludeInTeamBuilder));
         Assert.All(DiceKingdomConfig.Catalog.Values, card => Assert.Same(card, builder[card.Id]));
         Assert.All(AllCards.Where(card => card.IncludeInTeamBuilder), source =>
         {
@@ -84,7 +84,7 @@ public class CatalogInvariantTests
                 new[] { source.KingdomEnergyType, "Wild" }));
             Assert.All(card.EnergySymbolIds, energy => Assert.Equal(source.KingdomEnergyType, energy));
         });
-        Assert.Equal(154, builder.Values.Select(card => card.Name).Distinct(StringComparer.OrdinalIgnoreCase).Count());
+        Assert.Equal(167, builder.Values.Select(card => card.Name).Distinct(StringComparer.OrdinalIgnoreCase).Count());
         Assert.DoesNotContain(CardCatalog.CosmicCube.Id, builder.Keys);
         Assert.DoesNotContain(DpsCards.TightRanks.Id, builder.Keys);
         Assert.DoesNotContain(DpsCards.Radicalization.Id, builder.Keys);
@@ -102,10 +102,12 @@ public class CatalogInvariantTests
     {
         string[] expected =
         [
-            "AVX066", "AVX077", "DPS003", "DPS004", "DPS005", "DPS006", "DPS010", "DPS015",
-            "DPS027", "DPS029", "DPS033", "DPS044", "DPS045", "DPS056", "DPS063",
-            "DPS072", "DPS078", "DPS081", "DPS086", "DPS095", "DPS107", "DPS113",
-            "DPS145", "DPS152", "GOTG008", "GOTG105", "IG003", "JUS068", "JUS069", "MSW019", "MSW020", "MSW027", "TAG003", "WF075",
+            "AOU029", "AOU031", "ASM110", "AVX066", "AVX077", "BFF129", "CW054", "DOOM017", "DPS003",
+            "DPS004", "DPS005", "DPS006", "DPS010", "DPS015", "DPS027", "DPS029", "DPS033", "DPS044",
+            "DPS045", "DPS056", "DPS063", "DPS072", "DPS078", "DPS081", "DPS086", "DPS095", "DPS107",
+            "DPS113", "DPS145", "DPS152", "FUS025", "GOTG008", "GOTG105", "IG003", "IG014", "IMW034",
+            "JUS067", "JUS068", "JUS069", "MSW012", "MSW019", "MSW020", "MSW027", "SKC014", "SWW025",
+            "TAG003", "THOR009", "THOR021", "TMNT057", "WF029", "WF075",
         ];
         Assert.Equal(expected, AllCards.Where(card => card.HasErrata).Select(card => card.Id).OrderBy(id => id).ToArray());
         Assert.All(AllCards, card => Assert.DoesNotContain("Errata", card.Keywords));
@@ -130,7 +132,7 @@ public class CatalogInvariantTests
     public void Imported_Actions_Change_Only_Their_Adapted_Dice_And_Document_The_Change()
     {
         var sources = AllCards.Where(card => card.IncludeInTeamBuilder && card.CardType.IsCommunity()).ToArray();
-        Assert.Equal(10, sources.Length);
+        Assert.Equal(23, sources.Length);
         foreach (var source in sources)
         {
             var imported = DiceKingdomConfig.TeamBuilderCatalog[source.Id];

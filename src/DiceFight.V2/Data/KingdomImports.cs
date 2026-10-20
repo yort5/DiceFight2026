@@ -56,7 +56,8 @@ public static class KingdomImports
             new ModifyStat(new TargetFilter(Ownership: TargetOwnership.Opposing, AttackersOnly: true,
                 Prompt: "choose an attacker to get -2 ATK."), AtkDelta: -2))],
         Continuous: [], IncludeInTeamBuilder: true,
-        KingdomName: "Red Panda", KingdomEnergyType: "Eye");
+        KingdomName: "Red Panda", KingdomEnergyType: "Eye", HasErrata: true,
+        ErrataNotes: ["Reference: BulkCards.json.", "Removed \"non-Shield\" from the attacker it can target."]);
 
     // Koala: carries its joey on its back - the Tardigrades are the joeys.
     public static readonly CardDef CaptainAmericaLivingLegend = new(
@@ -94,7 +95,8 @@ public static class KingdomImports
         RawText: "Deadly. Fast.",
         Abilities: [],
         Continuous: [], IncludeInTeamBuilder: true,
-        KingdomName: "Platypus", KingdomEnergyType: "Eye");
+        KingdomName: "Platypus", KingdomEnergyType: "Eye", HasErrata: true,
+        ErrataNotes: ["Reference: BulkCards.json.", "Fast on every face; the source has it only on its burst faces, which the reference data doesn't identify."]);
 
     // Bearded Dragon: basks to warm up before it does anything - and
     // Superman is the other one powered by the sun.
@@ -233,7 +235,8 @@ public static class KingdomImports
             new ModifyStat(new TargetFilter(Self: true), AtkDelta: 2),
         ]))],
         Continuous: [], IncludeInTeamBuilder: true,
-        KingdomName: "Swordfish", KingdomEnergyType: "Wing");
+        KingdomName: "Swordfish", KingdomEnergyType: "Wing", HasErrata: true,
+        ErrataNotes: ["Reference: BulkCards.json.", "Targets an opposing character die only; the source could target any."]);
 
     // Cone Snail: its harpoon stops small prey cold.
     public static readonly CardDef CockatriceMinionMonstrosity = new(
@@ -270,7 +273,8 @@ public static class KingdomImports
         RawText: "When Destroyer attacks, Destroyer gets +2A until end of turn.",
         Abilities: [new TriggeredAbility(TriggerKind.DieAttacks, new ModifyStat(new TargetFilter(Self: true), AtkDelta: 2))],
         Continuous: [], IncludeInTeamBuilder: true,
-        KingdomName: "Bull Shark", KingdomEnergyType: "Claw");
+        KingdomName: "Bull Shark", KingdomEnergyType: "Claw", HasErrata: true,
+        ErrataNotes: ["Reference: BulkCards.json.", "Removed \"must attack each turn (if able)\" - no continuous must-attack rule exists."]);
 
     // Bottlenose Dolphin: hunts as a pod, herding fish for the others.
     public static readonly CardDef HerculesTheIncredibleHerc = new(
@@ -284,6 +288,132 @@ public static class KingdomImports
         Continuous: [], IncludeInTeamBuilder: true,
         KingdomName: "Bottlenose Dolphin", KingdomEnergyType: "Wing");
 
+    // ---- Basic Actions (2026-10-20, user: "another bunch of Basic Action
+    // cards"). Three or four per energy, named for an animal behaviour.
+    // Shared dice, so not in packs. Burst marks (*/**) are the printed
+    // ones on MigrationDice.BasicAction's 0/1/2 faces. ----
+
+    private static CardDef BasicAction(string id, string name, string set, int cost, string rawText,
+        IReadOnlyList<TriggeredAbility> abilities, string kingdomName, string energy, string? simplified = null) => new(
+        Id: id, Name: name, Subtitle: "Basic Action", Set: set, CardType: CardType.BasicAction,
+        PurchaseCost: cost, EnergySymbolIds: [],
+        Die: MigrationDice.BasicAction(id + "Die", 0, 1, 2),
+        DieLimit: 3, Affiliations: [], Keywords: [],
+        RawText: rawText, Abilities: abilities, Continuous: [], IncludeInTeamBuilder: true,
+        KingdomName: kingdomName, KingdomEnergyType: energy, HasErrata: true,
+        ErrataNotes: [$"Reference: BulkCards.json, {id} ({name}).",
+            $"Energy faces: Generic 2 / Generic 2 / Generic 2 -> {energy} 2 / {energy} 2 / {energy} 1; standardized to the Dice Kingdom action-die pattern.",
+            .. simplified is null ? Array.Empty<string>() : [simplified]]);
+
+    private static TriggeredAbility Used(EffectNode effect) => new(TriggerKind.DieUsed, effect);
+    private static Condition Burst => new OnBurstFace(BurstLevel.Single, AtLeast: true);
+    private static TargetFilter Creature(string prompt, TargetOwnership owner = TargetOwnership.Any, string? bind = null) =>
+        new(Ownership: owner, BindAs: bind, Prompt: prompt);
+
+    // Claw
+    public static readonly CardDef SurpriseAttack = BasicAction("IG014", "Surprise Attack", "IG", 2,
+        "Deal 1 damage to target character die. */** Instead, deal 2 damage.",
+        [Used(new Conditional(Burst,
+            Then: new DealDamage(new Fixed(2), Creature("choose a creature to take 2 damage.")),
+            Else: new DealDamage(new Fixed(1), Creature("choose a creature to take 1 damage."))))],
+        "Pounce", "Claw");
+
+    public static readonly CardDef ExcessiveForce = BasicAction("JUS067", "Excessive Force", "JUS", 2,
+        "Deal 6 damage to target character die. Global: Pay Bolt. Target character die gets +1A.",
+        [Used(new DealDamage(new Fixed(6), Creature("choose a creature to take 6 damage."))),
+         new TriggeredAbility(TriggerKind.Global, new ModifyStat(Creature("choose a creature to get +1A this turn."), AtkDelta: 1),
+            EnergyCost: new EnergyCost(1, "Bolt"))],
+        "Gore", "Claw");
+
+    public static readonly CardDef HulkOut = BasicAction("AOU029", "Hulk Out", "AOU", 2,
+        "Target character die gains Overcrush until end of turn. */** That character die also gets +1A.",
+        [Used(new Sequence([
+            new GrantTag(Creature("choose a creature to gain Overcrush this turn.", bind: "frenzied"), ["Overcrush"]),
+            new Conditional(Burst, new ModifyStat(new TargetFilter(Bound: "frenzied"), AtkDelta: 1)),
+        ]))],
+        "Frenzy", "Claw");
+
+    // Shell
+    public static readonly CardDef TacticalCover = BasicAction("TMNT057", "Tactical Cover", "TMNT", 3,
+        "Your character dice get +2D until end of turn. */** Also, target character die gets +3D. Global: Pay Shield. Target character die gets +1D.",
+        [Used(new Sequence([
+            new ModifyStat(new TargetFilter(Ownership: TargetOwnership.Own, Count: 0), DefDelta: 2),
+            new Conditional(Burst, new ModifyStat(Creature("choose a creature to get +3D more."), DefDelta: 3)),
+         ])),
+         new TriggeredAbility(TriggerKind.Global, new ModifyStat(Creature("choose a creature to get +1D this turn."), DefDelta: 1),
+            EnergyCost: new EnergyCost(1, "Shield"))],
+        "Circle Up", "Shell");
+
+    public static readonly CardDef Blessing = BasicAction("BFF129", "Blessing", "BFF", 3,
+        "Your character dice get +1A and +1D until end of turn. ** Two of your character dice get another +1A and +1D.",
+        [Used(new Sequence([
+            new ModifyStat(new TargetFilter(Ownership: TargetOwnership.Own, Count: 0), AtkDelta: 1, DefDelta: 1),
+            new Conditional(new OnBurstFace(BurstLevel.Double),
+                new ModifyStat(new TargetFilter(Ownership: TargetOwnership.Own, Count: 2,
+                    Prompt: "choose two of your creatures to get another +1A and +1D."), AtkDelta: 1, DefDelta: 1)),
+        ]))],
+        "Grooming", "Shell");
+
+    public static readonly CardDef ReleasedFromTheIce = BasicAction("THOR009", "Released from the Ice", "THOR", 2,
+        "Prep a die from your Used Pile.",
+        [Used(new MoveDie(new TargetFilter(Kind: TargetKind.AnyDie, Ownership: TargetOwnership.Own, Zones: [Zone.UsedPile],
+            Prompt: "choose a die in your Used Pile to wake up into your Prep Area."), Zone.PrepArea))],
+        "Hibernation", "Shell");
+
+    // Wing
+    public static readonly CardDef NastyPlot = BasicAction("AOU031", "Nasty Plot", "AOU", 4,
+        "Draw 2 dice and put them into your Prep Area.",
+        [Used(new DrawToZone(2, Zone.PrepArea))],
+        "Nest Egg", "Wing");
+
+    public static readonly CardDef DimensionDoor = BasicAction("SWW025", "Dimension Door", "SWW", 4,
+        "Target character die you control can't be blocked this turn.",
+        [Used(new CombatFlag(Creature("choose one of your creatures - it can't be blocked this turn.", TargetOwnership.Own),
+            CombatFlagKind.Unblockable))],
+        "Take Flight", "Wing");
+
+    // Source: "If it is a Bolt character die" - Wing is Bolt's Dice Kingdom
+    // energy, written here directly because effect filters aren't renamed.
+    public static readonly CardDef UpgradeUnibeam = BasicAction("IMW034", "Upgrade - Unibeam", "IMW", 2,
+        "Target character die you control gets +2A until end of turn. If it is a Wing character die, it also gains Fast.",
+        [Used(new Sequence([
+            new ModifyStat(Creature("choose one of your creatures to get +2A this turn.", TargetOwnership.Own, "diver"), AtkDelta: 2),
+            new GrantTag(new TargetFilter(Bound: "diver", Tags: new TagQuery(AnyOf: ["Wing"])), ["Fast"]),
+        ]))],
+        "Dive", "Wing");
+
+    // Eye
+    public static readonly CardDef TooBigToFly = BasicAction("SKC014", "Too Big to Fly", "SKC", 4,
+        "KO target character die with 5A or more. Global: Pay Fist. Target character die gets +1A.",
+        [Used(new Ko(new TargetFilter(Stat: new StatThreshold(StatKind.Attack, Min: 5), Prompt: "choose a creature with 5 ATK or more to KO."))),
+         new TriggeredAbility(TriggerKind.Global, new ModifyStat(Creature("choose a creature to get +1A this turn."), AtkDelta: 1),
+            EnergyCost: new EnergyCost(1, "Fist"))],
+        "Snare", "Eye");
+
+    public static readonly CardDef KryptoniteThreat = BasicAction("WF029", "Kryptonite Threat", "WF", 4,
+        "Target character die can't block this turn. */** Also, draw a die into your Prep Area.",
+        [Used(new Sequence([
+            new CombatFlag(Creature("choose a creature that can't block this turn.", TargetOwnership.Opposing), CombatFlagKind.CantBlock),
+            new Conditional(Burst, new DrawToZone(1, Zone.PrepArea)),
+        ]))],
+        "Stare Down", "Eye");
+
+    // Simplified: only opposing creatures (the source could reroll any two).
+    public static readonly CardDef TheBeyonder = BasicAction("MSW012", "The Beyonder", "MSW", 4,
+        "Reroll up to 2 target opposing character dice. Gain 1 life.",
+        [Used(new Sequence([
+            new Reroll(new TargetFilter(Ownership: TargetOwnership.Opposing, Count: 2, Optional: true,
+                Prompt: "choose up to two opposing creatures to reroll.")),
+            new LifeChange(new Fixed(1)),
+        ]))],
+        "Dazzle", "Eye", simplified: "Rerolls only opposing character dice; the source could reroll any two.");
+
+    public static readonly CardDef Banishment = BasicAction("FUS025", "Banishment", "FUS", 2,
+        "Put target die from your opponent's Prep Area into their Used Pile.",
+        [Used(new MoveDie(new TargetFilter(Kind: TargetKind.AnyDie, Ownership: TargetOwnership.Opposing, Zones: [Zone.PrepArea],
+            Prompt: "choose a die in your opponent's Prep Area to scatter to their Used Pile."), Zone.UsedPile))],
+        "Scatter", "Eye");
+
     public static IReadOnlyList<CardDef> All =>
     [
         BansheeWailOfTheBanshee, FrostGiantLesserElemental, NamoritaTauntingVillains, CaptainAmericaLivingLegend,
@@ -292,5 +422,7 @@ public static class KingdomImports
         HawkgirlMedievalWeaponsExpert, MankindMrsFoleysBabyBoy, LokiThroneOfContention,
         MantisCelestialMadonna, EbonyMawTwistedBrilliance, BladeVengeful, CockatriceMinionMonstrosity,
         TriceratopsGreaterBeast, DestroyerSkyfathersDesign, HerculesTheIncredibleHerc,
+        SurpriseAttack, ExcessiveForce, HulkOut, TacticalCover, Blessing, ReleasedFromTheIce,
+        NastyPlot, DimensionDoor, UpgradeUnibeam, TooBigToFly, KryptoniteThreat, TheBeyonder, Banishment,
     ];
 }
