@@ -4703,3 +4703,5 @@ User: "Can we add another bunch of Basic Action cards?" Before: the four Champio
 | Eye | Scatter | Banishment FUS025 | Move a die from their Prep Area to their Used Pile |
 
 Also: errata notes on the simplified character imports (Red Panda, Platypus, Swordfish, Bull Shark), and the card reference has an "Other Basic Actions" table - the ones no Champion brings weren't listed anywhere.
+
+Sweep (100 games per matchup, SE ~3.5; each card swapped in for one host Champion's own Basic Action): 0 errors, nothing at +10. Best: Frenzy +8.4, Pounce +8.0, Gore +6.9 (all replacing Wolf's Anger Issues - cheap Claw removal/pump on an aggro team), Gore +5.9 on Armadillo. Worst: Gore on Owl -11.9, and most cards replacing Eagle's Resurrection lose 6-10 (Resurrection is strong there). The 4-cost cards (Snare, Take Flight, Stare Down, Dazzle, Nest Egg) get bought rarely by the bot (~0.2/game) and land within +-7; that is the bot under-valuing them as much as weakness. No changes.
