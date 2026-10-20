@@ -2,6 +2,8 @@
 
 _Generated 2026-10-20 from `src/DiceFight.V2/Data/DiceKingdomConfig.cs` by `tools/CardCatalogDocs` — every field is read straight from the live CardDef/ChampionDef records. Re-run the tool after any card change; don't hand-edit this file._
 
+Dice Masters source: the printing a card was imported from, or the card an original animal was first adapted from; Original means it was designed for Dice Kingdom (or reworked past recognition).
+
 ## Wolf (Claw)
 
 _Power: Once per your turn: one of your creatures gets +3 ATK this turn_
@@ -17,16 +19,16 @@ _Power: Once per your turn: one of your creatures gets +3 ATK this turn_
 
 ### Characters
 
-| Name | Cost | Die Limit | Keywords | Stats (fielding / ATK / DEF per level) | Energy faces | Ability text |
-|---|:-:|:-:|---|---|---|---|
-| Honey Badger | 2 | 4 | On Field | L1: 0&#9889; / 1A / 1D<br>L2: 0&#9889; / 2A / 2D<br>L3: 1&#9889; / 2A / 3D | 2 Claw<br>2 Claw<br>1 Claw | On Field: deal 1 damage to a target creature. |
-| Mongoose | 3 | 4 | Awaken | L1: 0&#9889; / 2A / 2D<br>L2: 1&#9889; / 2A / 3D<br>L3: 2&#9889; / 4A / 4D | 2 Claw<br>2 Claw<br>1 Claw | Awaken: deal 2 damage to a target creature. |
-| Wolverine | 4 | 4 | Fast, On Attack | L1: 1&#9889; / 2A / 3D<br>L2: 1&#9889; / 3A / 4D<br>L3: 2&#9889; / 4A / 4D | 2 Claw<br>2 Claw<br>1 Claw | Fast. On Attack: deal 1 damage to the opponent directly. |
-| Silverback | 7 | 4 | Overcrush | L1: 2&#9889; / 6A / 4D<br>L2: 3&#9889; / 7A / 5D<br>L3: 3&#9889; / 9A / 6D | 2 Claw<br>2 Claw<br>1 Claw | Overcrush. While active, whenever 2 or more creatures block Silverback, its ATK doubles for that combat. |
-| Mountain Goat | 3 | 4 | On Attack | L1: 1&#9889; / 1A / 2D<br>L2: 1&#9889; / 2A / 3D<br>L3: 1&#9889; / 4A / 5D | 2 Wing<br>2 Wing<br>1 Wing | On Attack: draw a die into your Prep Area. |
-| Greyhound | 4 | 4 | Fast | L1: 1&#9889; / 3A / 4D<br>L2: 1&#9889; / 5A / 5D<br>L3: 2&#9889; / 5A / 5D | 2 Wing<br>2 Wing<br>1 Wing | Fast. |
-| Hippopotamus | 4 | 4 |  | L1: 1&#9889; / 3A / 5D<br>L2: 1&#9889; / 4A / 6D<br>L3: 2&#9889; / 5A / 7D | 2 Shell<br>2 Shell<br>1 Shell | Vanilla - no ability. |
-| Elephant | 6 | 4 |  | L1: 1&#9889; / 5A / 7D<br>L2: 2&#9889; / 6A / 9D<br>L3: 3&#9889; / 7A / 10D | 2 Eye<br>2 Eye<br>1 Eye | Vanilla - no ability. |
+| Name | Cost | Die Limit | Keywords | Stats (fielding / ATK / DEF per level) | Energy faces | Ability text | Dice Masters source |
+|---|:-:|:-:|---|---|---|---|---|
+| Honey Badger | 2 | 4 | On Field | L1: 0&#9889; / 1A / 1D<br>L2: 0&#9889; / 2A / 2D<br>L3: 1&#9889; / 2A / 3D | 2 Claw<br>2 Claw<br>1 Claw | On Field: deal 1 damage to a target creature. | Storm, "Extreme Weather" (DPS052) |
+| Mongoose | 3 | 4 | Awaken | L1: 0&#9889; / 2A / 2D<br>L2: 1&#9889; / 2A / 3D<br>L3: 2&#9889; / 4A / 4D | 2 Claw<br>2 Claw<br>1 Claw | Awaken: deal 2 damage to a target creature. | Toad, "Secondary Mutation" (DPS054) |
+| Wolverine | 4 | 4 | Fast, On Attack | L1: 1&#9889; / 2A / 3D<br>L2: 1&#9889; / 3A / 4D<br>L3: 2&#9889; / 4A / 4D | 2 Claw<br>2 Claw<br>1 Claw | Fast. On Attack: deal 1 damage to the opponent directly. | Deadpool, "More Than a Chump Blocker" (DPS068) |
+| Silverback | 7 | 4 | Overcrush | L1: 2&#9889; / 6A / 4D<br>L2: 3&#9889; / 7A / 5D<br>L3: 3&#9889; / 9A / 6D | 2 Claw<br>2 Claw<br>1 Claw | Overcrush. While active, whenever 2 or more creatures block Silverback, its ATK doubles for that combat. | Original |
+| Mountain Goat | 3 | 4 | On Attack | L1: 1&#9889; / 1A / 2D<br>L2: 1&#9889; / 2A / 3D<br>L3: 1&#9889; / 4A / 5D | 2 Wing<br>2 Wing<br>1 Wing | On Attack: draw a die into your Prep Area. | Beast, "First Class" (DPS058) |
+| Greyhound | 4 | 4 | Fast | L1: 1&#9889; / 3A / 4D<br>L2: 1&#9889; / 5A / 5D<br>L3: 2&#9889; / 5A / 5D | 2 Wing<br>2 Wing<br>1 Wing | Fast. | Original |
+| Hippopotamus | 4 | 4 |  | L1: 1&#9889; / 3A / 5D<br>L2: 1&#9889; / 4A / 6D<br>L3: 2&#9889; / 5A / 7D | 2 Shell<br>2 Shell<br>1 Shell | Vanilla - no ability. | Original |
+| Elephant | 6 | 4 |  | L1: 1&#9889; / 5A / 7D<br>L2: 2&#9889; / 6A / 9D<br>L3: 3&#9889; / 7A / 10D | 2 Eye<br>2 Eye<br>1 Eye | Vanilla - no ability. | Original |
 
 ## Armadillo (Shell)
 
@@ -43,16 +45,16 @@ _Power: Once per turn, after blocks: prevent all combat damage to one of your cr
 
 ### Characters
 
-| Name | Cost | Die Limit | Keywords | Stats (fielding / ATK / DEF per level) | Energy faces | Ability text |
-|---|:-:|:-:|---|---|---|---|
-| Hermit Crab | 2 | 4 | On Field | L1: 0&#9889; / 1A / 2D<br>L2: 0&#9889; / 1A / 3D<br>L3: 1&#9889; / 1A / 3D | 2 Shell<br>2 Shell<br>1 Shell | On Field: target character die must block this turn. |
-| Pangolin | 3 | 4 | On Field | L1: 1&#9889; / 1A / 3D<br>L2: 1&#9889; / 2A / 4D<br>L3: 1&#9889; / 3A / 6D | 2 Shell<br>2 Shell<br>1 Shell | On Field: name an opposing character. While Pangolin is active, your opponent can't purchase or field it. |
-| Musk Ox | 4 | 4 |  | L1: 1&#9889; / 2A / 4D<br>L2: 1&#9889; / 3A / 5D<br>L3: 2&#9889; / 3A / 6D | 2 Shell<br>2 Shell<br>1 Shell | While active, your creatures get +1 DEF. |
-| Rhinoceros | 6 | 4 |  | L1: 1&#9889; / 1A / 5D<br>L2: 2&#9889; / 2A / 7D<br>L3: 2&#9889; / 3A / 9D | 2 Shell<br>2 Shell<br>1 Shell | While active, whenever Rhinoceros takes damage, it deals that much damage to the opponent. |
-| Fox | 5 | 4 |  | L1: 1&#9889; / 2A / 5D<br>L2: 2&#9889; / 3A / 6D<br>L3: 2&#9889; / 5A / 8D | 2 Eye<br>2 Eye<br>1 Eye | While active, your creatures get +1 DEF. |
-| Cowbird | 3 | 4 | Awaken | L1: 1&#9889; / 1A / 4D<br>L2: 1&#9889; / 2A / 5D<br>L3: 2&#9889; / 3A / 6D | 2 Eye<br>2 Eye<br>1 Eye | Awaken: move an opposing die from their Prep Area back to their Bag. |
-| Cape Buffalo | 6 | 4 |  | L1: 1&#9889; / 3A / 4D<br>L2: 2&#9889; / 5A / 5D<br>L3: 2&#9889; / 7A / 7D | 2 Claw<br>2 Claw<br>1 Claw | While active, your creatures get +1 ATK. |
-| Hummingbird | 4 | 4 | On Field | L1: 0&#9889; / 1A / 2D<br>L2: 1&#9889; / 2A / 3D<br>L3: 1&#9889; / 3A / 4D | 2 Wing<br>2 Wing<br>1 Wing | On Field: KO a target creature. |
+| Name | Cost | Die Limit | Keywords | Stats (fielding / ATK / DEF per level) | Energy faces | Ability text | Dice Masters source |
+|---|:-:|:-:|---|---|---|---|---|
+| Hermit Crab | 2 | 4 | On Field | L1: 0&#9889; / 1A / 2D<br>L2: 0&#9889; / 1A / 3D<br>L3: 1&#9889; / 1A / 3D | 2 Shell<br>2 Shell<br>1 Shell | On Field: target character die must block this turn. | Original |
+| Pangolin | 3 | 4 | On Field | L1: 1&#9889; / 1A / 3D<br>L2: 1&#9889; / 2A / 4D<br>L3: 1&#9889; / 3A / 6D | 2 Shell<br>2 Shell<br>1 Shell | On Field: name an opposing character. While Pangolin is active, your opponent can't purchase or field it. | Original |
+| Musk Ox | 4 | 4 |  | L1: 1&#9889; / 2A / 4D<br>L2: 1&#9889; / 3A / 5D<br>L3: 2&#9889; / 3A / 6D | 2 Shell<br>2 Shell<br>1 Shell | While active, your creatures get +1 DEF. | Kitty Pryde, "Experienced Leader" (DPS144) |
+| Rhinoceros | 6 | 4 |  | L1: 1&#9889; / 1A / 5D<br>L2: 2&#9889; / 2A / 7D<br>L3: 2&#9889; / 3A / 9D | 2 Shell<br>2 Shell<br>1 Shell | While active, whenever Rhinoceros takes damage, it deals that much damage to the opponent. | Original |
+| Fox | 5 | 4 |  | L1: 1&#9889; / 2A / 5D<br>L2: 2&#9889; / 3A / 6D<br>L3: 2&#9889; / 5A / 8D | 2 Eye<br>2 Eye<br>1 Eye | While active, your creatures get +1 DEF. | Original |
+| Cowbird | 3 | 4 | Awaken | L1: 1&#9889; / 1A / 4D<br>L2: 1&#9889; / 2A / 5D<br>L3: 2&#9889; / 3A / 6D | 2 Eye<br>2 Eye<br>1 Eye | Awaken: move an opposing die from their Prep Area back to their Bag. | Toad, "Journey Into Misery" (DPS134) |
+| Cape Buffalo | 6 | 4 |  | L1: 1&#9889; / 3A / 4D<br>L2: 2&#9889; / 5A / 5D<br>L3: 2&#9889; / 7A / 7D | 2 Claw<br>2 Claw<br>1 Claw | While active, your creatures get +1 ATK. | Original |
+| Hummingbird | 4 | 4 | On Field | L1: 0&#9889; / 1A / 2D<br>L2: 1&#9889; / 2A / 3D<br>L3: 1&#9889; / 3A / 4D | 2 Wing<br>2 Wing<br>1 Wing | On Field: KO a target creature. | Original |
 
 ## Golden Eagle (Wing)
 
@@ -69,16 +71,16 @@ _Power: Once per your turn: field one creature without paying its fielding cost_
 
 ### Characters
 
-| Name | Cost | Die Limit | Keywords | Stats (fielding / ATK / DEF per level) | Energy faces | Ability text |
-|---|:-:|:-:|---|---|---|---|
-| Swift | 2 | 4 | On Attack | L1: 0&#9889; / 1A / 2D<br>L2: 1&#9889; / 2A / 2D<br>L3: 1&#9889; / 3A / 3D | 2 Wing<br>2 Wing<br>1 Wing | On Attack: draw a die into your Prep Area. |
-| Barn Swallow | 3 | 4 | Awaken | L1: 0&#9889; / 2A / 2D<br>L2: 1&#9889; / 2A / 3D<br>L3: 2&#9889; / 4A / 5D | 2 Wing<br>2 Wing<br>1 Wing | Awaken: draw a die into your Prep Area. |
-| Osprey | 4 | 4 | On Attack | L1: 1&#9889; / 2A / 3D<br>L2: 1&#9889; / 3A / 4D<br>L3: 2&#9889; / 5A / 5D | 2 Wing<br>2 Wing<br>1 Wing | On Attack: move a die from your discard to your Prep Area. |
-| Phoenix | 6 | 4 | On Field | L1: 1&#9889; / 3A / 4D<br>L2: 2&#9889; / 4A / 5D<br>L3: 2&#9889; / 6A / 6D | 2 Wing<br>2 Wing<br>1 Wing | On Field: deal 1 damage to the opponent for each energy symbol in your Reserve Pool. |
-| Grizzly Bear | 5 | 4 | Overcrush | L1: 1&#9889; / 4A / 5D<br>L2: 2&#9889; / 5A / 6D<br>L3: 2&#9889; / 6A / 7D | 2 Claw<br>2 Claw<br>1 Claw | Overcrush. |
-| Peregrine Falcon | 6 | 4 | Fast, On Field | L1: 1&#9889; / 3A / 3D<br>L2: 2&#9889; / 4A / 5D<br>L3: 3&#9889; / 5A / 6D | 2 Claw<br>2 Claw<br>1 Claw | Fast. On Field: deal 3 damage to a target creature. |
-| Box Turtle | 3 | 4 | On Block | L1: 1&#9889; / 0A / 3D<br>L2: 1&#9889; / 2A / 4D<br>L3: 1&#9889; / 4A / 6D | 2 Shell<br>2 Shell<br>1 Shell | On Block: deal 1 damage to a target creature. |
-| Barn Owl | 4 | 4 | On Field | L1: 1&#9889; / 2A / 5D<br>L2: 1&#9889; / 3A / 5D<br>L3: 2&#9889; / 4A / 6D | 2 Eye<br>2 Eye<br>1 Eye | On Field: a weak target creature (3 ATK or less) can't block this turn. |
+| Name | Cost | Die Limit | Keywords | Stats (fielding / ATK / DEF per level) | Energy faces | Ability text | Dice Masters source |
+|---|:-:|:-:|---|---|---|---|---|
+| Swift | 2 | 4 | On Attack | L1: 0&#9889; / 1A / 2D<br>L2: 1&#9889; / 2A / 2D<br>L3: 1&#9889; / 3A / 3D | 2 Wing<br>2 Wing<br>1 Wing | On Attack: draw a die into your Prep Area. | Beast, "Combat Ready" (DPS098) |
+| Barn Swallow | 3 | 4 | Awaken | L1: 0&#9889; / 2A / 2D<br>L2: 1&#9889; / 2A / 3D<br>L3: 2&#9889; / 4A / 5D | 2 Wing<br>2 Wing<br>1 Wing | Awaken: draw a die into your Prep Area. | Kitty Pryde, "Right of Passage" (DPS037) |
+| Osprey | 4 | 4 | On Attack | L1: 1&#9889; / 2A / 3D<br>L2: 1&#9889; / 3A / 4D<br>L3: 2&#9889; / 5A / 5D | 2 Wing<br>2 Wing<br>1 Wing | On Attack: move a die from your discard to your Prep Area. | D'Ken, "Emperor" (DPS026) |
+| Phoenix | 6 | 4 | On Field | L1: 1&#9889; / 3A / 4D<br>L2: 2&#9889; / 4A / 5D<br>L3: 2&#9889; / 6A / 6D | 2 Wing<br>2 Wing<br>1 Wing | On Field: deal 1 damage to the opponent for each energy symbol in your Reserve Pool. | Original |
+| Grizzly Bear | 5 | 4 | Overcrush | L1: 1&#9889; / 4A / 5D<br>L2: 2&#9889; / 5A / 6D<br>L3: 2&#9889; / 6A / 7D | 2 Claw<br>2 Claw<br>1 Claw | Overcrush. | Original |
+| Peregrine Falcon | 6 | 4 | Fast, On Field | L1: 1&#9889; / 3A / 3D<br>L2: 2&#9889; / 4A / 5D<br>L3: 3&#9889; / 5A / 6D | 2 Claw<br>2 Claw<br>1 Claw | Fast. On Field: deal 3 damage to a target creature. | Phoenix, "Firepower" (DPS046) |
+| Box Turtle | 3 | 4 | On Block | L1: 1&#9889; / 0A / 3D<br>L2: 1&#9889; / 2A / 4D<br>L3: 1&#9889; / 4A / 6D | 2 Shell<br>2 Shell<br>1 Shell | On Block: deal 1 damage to a target creature. | Original |
+| Barn Owl | 4 | 4 | On Field | L1: 1&#9889; / 2A / 5D<br>L2: 1&#9889; / 3A / 5D<br>L3: 2&#9889; / 4A / 6D | 2 Eye<br>2 Eye<br>1 Eye | On Field: a weak target creature (3 ATK or less) can't block this turn. | Storm, "Cloud Cover" (DPS092) |
 
 ## Great Horned Owl (Eye)
 
@@ -95,101 +97,101 @@ _Power: Once per your turn: spin one creature a level - yours up, theirs down_
 
 ### Characters
 
-| Name | Cost | Die Limit | Keywords | Stats (fielding / ATK / DEF per level) | Energy faces | Ability text |
-|---|:-:|:-:|---|---|---|---|
-| Cuttlefish | 2 | 4 | On Attack | L1: 0&#9889; / 0A / 3D<br>L2: 1&#9889; / 1A / 3D<br>L3: 1&#9889; / 1A / 4D | 2 Eye<br>2 Eye<br>1 Eye | On Attack: spin a target opposing level 1 creature to an energy face. |
-| Magpie | 3 | 4 | On Field | L1: 1&#9889; / 0A / 3D<br>L2: 1&#9889; / 1A / 4D<br>L3: 1&#9889; / 3A / 6D | 2 Eye<br>2 Eye<br>1 Eye | On Field: draw a die into your Prep Area. |
-| Hyena | 4 | 4 |  | L1: 1&#9889; / 2A / 4D<br>L2: 1&#9889; / 2A / 5D<br>L3: 2&#9889; / 3A / 6D | 2 Eye<br>2 Eye<br>1 Eye | Gets +1 ATK for each weak opposing creature (2 DEF or less). |
-| Basilisk | 7 | 4 |  | L1: 1&#9889; / 3A / 6D<br>L2: 2&#9889; / 4A / 8D<br>L3: 2&#9889; / 5A / 10D | 2 Eye<br>2 Eye<br>1 Eye | While active, at the end of your turn, each of your non-Tardigrade level 2+ creatures deals 2 damage to the opponent. |
-| Opossum | 3 | 4 | Deadly | L1: 0&#9889; / 0A / 2D<br>L2: 1&#9889; / 1A / 3D<br>L3: 1&#9889; / 2A / 5D | 2 Shell<br>2 Shell<br>1 Shell | Deadly. |
-| Queen Termite | 4 | 4 |  | L1: 1&#9889; / 2A / 4D<br>L2: 1&#9889; / 3A / 5D<br>L3: 2&#9889; / 3A / 6D | 2 Shell<br>2 Shell<br>1 Shell | While active, your creatures get +1 ATK. |
-| Stoat | 4 | 4 | On Field | L1: 0&#9889; / 2A / 2D<br>L2: 1&#9889; / 4A / 4D<br>L3: 2&#9889; / 5A / 6D | 2 Claw<br>2 Claw<br>1 Claw | On Field: deal 1 damage to the opponent directly. |
-| Homing Pigeon | 4 | 4 | On Field | L1: 1&#9889; / 3A / 3D<br>L2: 1&#9889; / 4A / 5D<br>L3: 2&#9889; / 5A / 6D | 2 Wing<br>2 Wing<br>1 Wing | On Field: gain 2 life. |
+| Name | Cost | Die Limit | Keywords | Stats (fielding / ATK / DEF per level) | Energy faces | Ability text | Dice Masters source |
+|---|:-:|:-:|---|---|---|---|---|
+| Cuttlefish | 2 | 4 | On Attack | L1: 0&#9889; / 0A / 3D<br>L2: 1&#9889; / 1A / 3D<br>L3: 1&#9889; / 1A / 4D | 2 Eye<br>2 Eye<br>1 Eye | On Attack: spin a target opposing level 1 creature to an energy face. | Iceman, "Icy Interference" (DPS034) |
+| Magpie | 3 | 4 | On Field | L1: 1&#9889; / 0A / 3D<br>L2: 1&#9889; / 1A / 4D<br>L3: 1&#9889; / 3A / 6D | 2 Eye<br>2 Eye<br>1 Eye | On Field: draw a die into your Prep Area. | Gambit, "Ace in the Hole" (DPS032) |
+| Hyena | 4 | 4 |  | L1: 1&#9889; / 2A / 4D<br>L2: 1&#9889; / 2A / 5D<br>L3: 2&#9889; / 3A / 6D | 2 Eye<br>2 Eye<br>1 Eye | Gets +1 ATK for each weak opposing creature (2 DEF or less). | Sabretooth, "Do I Smell Weakness?" (DPS091) |
+| Basilisk | 7 | 4 |  | L1: 1&#9889; / 3A / 6D<br>L2: 2&#9889; / 4A / 8D<br>L3: 2&#9889; / 5A / 10D | 2 Eye<br>2 Eye<br>1 Eye | While active, at the end of your turn, each of your non-Tardigrade level 2+ creatures deals 2 damage to the opponent. | Colossus, "Piotr" (DPS103) |
+| Opossum | 3 | 4 | Deadly | L1: 0&#9889; / 0A / 2D<br>L2: 1&#9889; / 1A / 3D<br>L3: 1&#9889; / 2A / 5D | 2 Shell<br>2 Shell<br>1 Shell | Deadly. | Original |
+| Queen Termite | 4 | 4 |  | L1: 1&#9889; / 2A / 4D<br>L2: 1&#9889; / 3A / 5D<br>L3: 2&#9889; / 3A / 6D | 2 Shell<br>2 Shell<br>1 Shell | While active, your creatures get +1 ATK. | Emma Frost, "Influential" (DPS030) |
+| Stoat | 4 | 4 | On Field | L1: 0&#9889; / 2A / 2D<br>L2: 1&#9889; / 4A / 4D<br>L3: 2&#9889; / 5A / 6D | 2 Claw<br>2 Claw<br>1 Claw | On Field: deal 1 damage to the opponent directly. | Jubilee, "X-Men Field Leader" (DPS143) |
+| Homing Pigeon | 4 | 4 | On Field | L1: 1&#9889; / 3A / 3D<br>L2: 1&#9889; / 4A / 5D<br>L3: 2&#9889; / 5A / 6D | 2 Wing<br>2 Wing<br>1 Wing | On Field: gain 2 life. | Original |
 
 ## Not on a team yet
 
 In the card pool but in no Champion's pack, so they don't come up in games.
 
-| Name | Cost | Die Limit | Keywords | Stats (fielding / ATK / DEF per level) | Energy faces | Ability text |
-|---|:-:|:-:|---|---|---|---|
-| Deathstalker Scorpion | 2 | 4 | Deadly | L1: 0&#9889; / 1A / 1D<br>L2: 0&#9889; / 1A / 2D<br>L3: 1&#9889; / 3A / 4D | 2 Claw<br>2 Claw<br>1 Claw | Deadly |
-| Fire Ant | 2 | 5 | On Field | L1: 0&#9889; / 2A / 1D<br>L2: 1&#9889; / 3A / 3D<br>L3: 2&#9889; / 4A / 3D | 2 Claw<br>2 Claw<br>1 Claw | While Fire Ant is active, On Field: when you field a Claw character die, deal 1 damage to the opponent. |
-| Fire Salamander | 2 | 4 | Awaken | L1: 0&#9889; / 2A / 1D<br>L2: 1&#9889; / 3A / 3D<br>L3: 2&#9889; / 4A / 3D | 2 Claw<br>2 Claw<br>1 Claw | Awaken: you may deal 1 damage to all opposing character dice. |
-| Electric Eel | 3 | 4 | Attune | L1: 0&#9889; / 2A / 1D<br>L2: 1&#9889; / 3A / 3D<br>L3: 1&#9889; / 4A / 4D | 2 Claw<br>2 Claw<br>1 Claw | Attune (while active, each time you use an action die, deal 1 damage to the opponent or a target character die). |
-| Gibbon | 3 | 4 | Elder | L1: 0&#9889; / 2A / 2D<br>L2: 1&#9889; / 3A / 3D<br>L3: 1&#9889; / 3A / 4D | 2 Claw<br>2 Claw<br>1 Claw | Elder When Gibbon is active, other character dice with Elder get +1A. |
-| Pistol Shrimp | 3 | 4 | On Field | L1: 1&#9889; / 2A / 1D<br>L2: 2&#9889; / 3A / 2D<br>L3: 2&#9889; / 5A / 2D | 2 Claw<br>2 Claw<br>1 Claw | On Field: deal 1 damage to each opposing character die. |
-| Stag Beetle | 3 | 4 | Amplify | L1: 0&#9889; / 2A / 1D<br>L2: 0&#9889; / 3A / 1D<br>L3: 1&#9889; / 5A / 2D | 2 Claw<br>2 Claw<br>1 Claw | Amplify: When you use an action die, spin this character up 1 level. |
-| Army Ant | 4 | 4 | On Field, Sacrifice | L1: 1&#9889; / 3A / 2D<br>L2: 1&#9889; / 4A / 2D<br>L3: 2&#9889; / 5A / 4D | 2 Claw<br>2 Claw<br>1 Claw | On Field: you may Sacrifice one of your creatures (it goes Out of Play, not KO'd). If you do, deal damage equal to its ATK to a target creature. |
-| Bull Shark | 4 | 4 | On Attack | L1: 1&#9889; / 3A / 3D<br>L2: 1&#9889; / 3A / 4D<br>L3: 2&#9889; / 5A / 4D | 2 Claw<br>2 Claw<br>1 Claw | On Attack: Bull Shark gets +2A until end of turn. |
-| Harris’s Hawk | 4 | 2 |  | L1: 1&#9889; / 3A / 4D<br>L2: 1&#9889; / 4A / 6D<br>L3: 2&#9889; / 5A / 7D | 2 Claw<br>2 Claw<br>1 Claw | While Harris’s Hawk is active, your active character dice have Range 1. |
-| Mandrill | 4 | 4 | Elder, Energize | L1: 1&#9889; / 2A / 4D<br>L2: 1&#9889; / 3A / 6D<br>L3: 1&#9889; / 4A / 6D | 2 Claw<br>2 Claw<br>1 Claw | Elder Energize: Double target character die's printed A until the end of turn. While Mandrill is active, your Tardigrade dice get +1A. |
-| Praying Mantis | 4 | 4 | Fast | L1: 0&#9889; / 2A / 3D<br>L2: 1&#9889; / 3A / 3D<br>L3: 1&#9889; / 4A / 4D | 2 Claw<br>2 Claw<br>1 Claw | Fast. |
-| Spitting Cobra | 4 | 4 | Range 2 | L1: 1&#9889; / 3A / 3D<br>L2: 2&#9889; / 4A / 4D<br>L3: 2&#9889; / 5A / 5D | 2 Claw<br>2 Claw<br>1 Claw | Range 2 (When this character attacks, all active characters with Range deal damage equal to their Range value to target opposing character die.) |
-| Wombat | 4 | 3 | Elder | L1: 1&#9889; / 2A / 4D<br>L2: 1&#9889; / 3A / 6D<br>L3: 1&#9889; / 4A / 6D | 2 Claw<br>2 Claw<br>1 Claw | Elder While you have a Tardigrade die active, Wombat's A is equal to his D. |
-| Crocodile | 5 | 4 | On Field | L1: 1&#9889; / 3A / 1D<br>L2: 1&#9889; / 4A / 2D<br>L3: 2&#9889; / 6A / 3D | 2 Claw<br>2 Claw<br>1 Claw | On Field: KO target level 1 character die. |
-| Komodo Dragon | 5 | 4 | Breath Weapon | L1: 1&#9889; / 4A / 3D<br>L2: 2&#9889; / 5A / 4D<br>L3: 2&#9889; / 6A / 3D | 2 Claw<br>2 Claw<br>1 Claw | Breath Weapon (when this attacks, you may pay 1 energy to deal 1 damage to the opponent and every one of their creatures; once per turn however many Komodo Dragons attack). |
-| Orca | 5 | 4 | On Field | L1: 1&#9889; / 2A / 3D<br>L2: 1&#9889; / 4A / 4D<br>L3: 2&#9889; / 5A / 5D | 2 Claw<br>2 Claw<br>1 Claw | On Field: KO a target creature. |
-| Hercules Beetle | 6 | 5 |  | L1: 1&#9889; / 6A / 5D<br>L2: 2&#9889; / 7A / 7D<br>L3: 3&#9889; / 8A / 8D | 2 Claw<br>2 Claw<br>1 Claw | While Hercules Beetle is active, whenever you or a Hercules Beetle die takes damage, deal 2 damage to each opposing character die (no matter how many Hercules Beetle dice are active). |
-| Lioness | 6 | 4 | On Attack | L1: 1&#9889; / 3A / 2D<br>L2: 2&#9889; / 3A / 3D<br>L3: 2&#9889; / 5A / 5D | 2 Claw<br>2 Claw<br>1 Claw | On Attack: double the printed A of all your other character dice. |
-| Polar Bear | 6 | 4 | Overcrush | L1: 1&#9889; / 5A / 4D<br>L2: 2&#9889; / 7A / 6D<br>L3: 3&#9889; / 8A / 7D | 2 Claw<br>2 Claw<br>1 Claw | Overcrush. |
-| Snow Leopard | 6 | 4 |  | L1: 1&#9889; / 5A / 2D<br>L2: 2&#9889; / 6A / 4D<br>L3: 3&#9889; / 8A / 5D | 2 Claw<br>2 Claw<br>1 Claw | Snow Leopard can only be blocked by two or more character dice. |
-| Giant Centipede | 7 | 4 | Intimidate, Overcrush | L1: 1&#9889; / 4A / 4D<br>L2: 2&#9889; / 5A / 6D<br>L3: 2&#9889; / 7A / 6D | 2 Claw<br>2 Claw<br>1 Claw | Intimidate Overcrush |
-| Orchid Mantis | 2 | 4 |  | L1: 0&#9889; / 1A / 1D<br>L2: 0&#9889; / 2A / 1D<br>L3: 1&#9889; / 2A / 2D | 2 Eye<br>2 Eye<br>1 Eye | When Orchid Mantis is blocked, reroll the blocking character dice. Each energy result goes to its controller's Used Pile and deals 2 damage to that controller. Character results remain blocking on their rolled levels. |
-| Leaf Insect | 3 | 4 | On Field | L1: 0&#9889; / 2A / 1D<br>L2: 1&#9889; / 2A / 2D<br>L3: 1&#9889; / 3A / 2D | 2 Eye<br>2 Eye<br>1 Eye | On Field: reroll a target opposing character die. If the result is not a character face, place it in your opponent's Used Pile. |
-| Mimic Filefish | 3 | 4 | Awaken | L1: 0&#9889; / 2A / 1D<br>L2: 0&#9889; / 3A / 1D<br>L3: 1&#9889; / 3A / 3D | 2 Eye<br>2 Eye<br>1 Eye | Awaken: you may reroll a target opposing die. Energy results go to its controller's Used Pile; otherwise restore its original face. |
-| Red Panda | 3 | 4 | On Block | L1: 1&#9889; / 3A / 2D<br>L2: 2&#9889; / 4A / 3D<br>L3: 2&#9889; / 5A / 4D | 2 Eye<br>2 Eye<br>1 Eye | On Block: target attacking character die gets -2A until end of turn. |
-| Velvet Worm | 3 | 5 | On Block | L1: 0&#9889; / 1A / 2D<br>L2: 0&#9889; / 2A / 3D<br>L3: 1&#9889; / 2A / 4D | 2 Eye<br>2 Eye<br>1 Eye | On Block: spin each blocked character die down 1 level. If it is already level 1, KO it. |
-| Cassowary | 4 | 4 | Intimidate | L1: 0&#9889; / 2A / 2D<br>L2: 1&#9889; / 3A / 3D<br>L3: 1&#9889; / 3A / 4D | 2 Eye<br>2 Eye<br>1 Eye | Intimidate. |
-| Chameleon | 4 | 4 | Obscure | L1: 1&#9889; / 2A / 4D<br>L2: 1&#9889; / 3A / 5D<br>L3: 2&#9889; / 5A / 6D | 2 Eye<br>2 Eye<br>1 Eye | Obscure (while active, each time you use an action die, this creature can't be blocked this turn). |
-| Cone Snail | 4 | 4 | On Field | L1: 0&#9889; / 1A / 3D<br>L2: 1&#9889; / 2A / 4D<br>L3: 2&#9889; / 3A / 5D | 2 Eye<br>2 Eye<br>1 Eye | On Field: KO target character die with purchase cost 4 or less. |
-| Electric Ray | 4 | 4 |  | L1: 0&#9889; / 2A / 3D<br>L2: 1&#9889; / 4A / 3D<br>L3: 1&#9889; / 4A / 4D | 2 Eye<br>2 Eye<br>1 Eye | While Electric Ray is active, ignore your opponent's On Field abilities. |
-| Frilled Lizard | 4 | 4 | Intimidate | L1: 1&#9889; / 2A / 4D<br>L2: 1&#9889; / 3A / 4D<br>L3: 2&#9889; / 4A / 5D | 2 Eye<br>2 Eye<br>1 Eye | Intimidate (when fielded, remove a target opposing creature from the Field until end of turn). |
-| Orb Weaver | 4 | 4 |  | L1: 1&#9889; / 2A / 2D<br>L2: 1&#9889; / 4A / 2D<br>L3: 2&#9889; / 4A / 4D | 2 Eye<br>2 Eye<br>1 Eye | While Orb Weaver is active, your opponents must pay 1 more to purchase a die with purchase cost of 2 or less. |
-| Platypus | 4 | 4 | Deadly, Fast | L1: 1&#9889; / 2A / 4D<br>L2: 1&#9889; / 2A / 5D<br>L3: 1&#9889; / 2A / 7D | 2 Eye<br>2 Eye<br>1 Eye | Deadly. Fast. |
-| Pufferfish | 4 | 4 | Intimidate | L1: 1&#9889; / 3A / 3D<br>L2: 1&#9889; / 4A / 3D<br>L3: 2&#9889; / 6A / 3D | 2 Eye<br>2 Eye<br>1 Eye | Intimidate (On Field: remove target opposing character die from the Field Zone until end of turn - place it next to your character cards.) |
-| Raccoon | 4 | 4 | Infiltrate | L1: 0&#9889; / 3A / 3D<br>L2: 1&#9889; / 4A / 3D<br>L3: 1&#9889; / 4A / 4D | 2 Eye<br>2 Eye<br>1 Eye | Infiltrate. |
-| Wild Boar | 4 | 4 | Intimidate, On Field | L1: 0&#9889; / 1A / 5D<br>L2: 1&#9889; / 1A / 6D<br>L3: 2&#9889; / 1A / 8D | 2 Eye<br>2 Eye<br>1 Eye | On Field: lose 1 life. Intimidate. |
-| Frigatebird | 5 | 4 | Intimidate | L1: 0&#9889; / 5A / 5D<br>L2: 1&#9889; / 6A / 6D<br>L3: 0&#9889; / 7A / 7D | 2 Eye<br>2 Eye<br>1 Eye | Intimidate (On Field: remove target opposing character die from the Field Zone until end of turn - place it next to your character cards.) Global: Pay Eye. Your character dice can't be the target of Action Dice or Global Abilities (until end of turn). |
-| Raven | 5 | 4 | Attune | L1: 1&#9889; / 1A / 5D<br>L2: 1&#9889; / 1A / 7D<br>L3: 2&#9889; / 2A / 8D | 2 Eye<br>2 Eye<br>1 Eye | Attune. |
-| Anglerfish | 6 | 4 | On Attack | L1: 1&#9889; / 2A / 5D<br>L2: 2&#9889; / 4A / 6D<br>L3: 3&#9889; / 6A / 8D | 2 Eye<br>2 Eye<br>1 Eye | On Attack: every weak opposing creature (3 DEF or less) can't block this turn. |
-| Box Jellyfish | 2 | 5 | Deadly | L1: 0&#9889; / 2A / 2D<br>L2: 1&#9889; / 3A / 2D<br>L3: 2&#9889; / 4A / 2D | 2 Shell<br>2 Shell<br>1 Shell | Deadly. |
-| Meerkat | 2 | 4 | Tag Out | L1: 0&#9889; / 1A / 2D<br>L2: 0&#9889; / 1A / 3D<br>L3: 1&#9889; / 2A / 2D | 2 Shell<br>2 Shell<br>1 Shell | Tag Out (after blockers are declared, you may move this die from the Field to your Prep Area to give a target creature +2A and +2D this turn). |
-| Planarian | 2 | 4 | Kinfolk | L1: 0&#9889; / 1A / 1D<br>L2: 0&#9889; / 1A / 2D<br>L3: 0&#9889; / 2A / 2D | 2 Shell<br>2 Shell<br>1 Shell | Kinfolk. When KO'd, you may roll a Tardigrade die from your Used Pile. If you roll an energy result, return Planarian to the Field Zone at level 1. Either way, return the rolled die to the Used Pile. |
-| Bombardier Beetle | 3 | 4 | Aftershock | L1: 0&#9889; / 1A / 3D<br>L2: 1&#9889; / 2A / 3D<br>L3: 1&#9889; / 3A / 4D | 2 Shell<br>2 Shell<br>1 Shell | Aftershock: deal 2 damage to a target character die. (Aftershock: when your opponent makes this creature leave the Field - KO, damage, removal.) |
-| Emperor Penguin | 3 | 4 | Tag Out | L1: 0&#9889; / 1A / 4D<br>L2: 0&#9889; / 2A / 5D<br>L3: 1&#9889; / 2A / 7D | 2 Shell<br>2 Shell<br>1 Shell | Tag Out. |
-| Leech | 3 | 4 | Energy Drain | L1: 0&#9889; / 1A / 3D<br>L2: 1&#9889; / 2A / 3D<br>L3: 1&#9889; / 2A / 5D | 2 Shell<br>2 Shell<br>1 Shell | Energy Drain (after blockers are assigned, every creature fighting this one spins down a level). |
-| Skunk | 3 | 4 | Range | L1: 0&#9889; / 2A / 2D<br>L2: 1&#9889; / 3A / 3D<br>L3: 1&#9889; / 4A / 4D | 2 Shell<br>2 Shell<br>1 Shell | Range. |
-| Prairie Dog | 4 | 4 | Tag Out | L1: 0&#9889; / 1A / 4D<br>L2: 1&#9889; / 2A / 5D<br>L3: 1&#9889; / 2A / 7D | 2 Shell<br>2 Shell<br>1 Shell | Tag Out (After blockers are declared, you may Prep this die from the Field Zone to give target creature die +2A and +2D until end of turn.) |
-| Saiga | 4 | 4 |  | L1: 0&#9889; / 5A / 5D<br>L2: 1&#9889; / 6A / 6D<br>L3: 0&#9889; / 7A / 7D | 2 Shell<br>2 Shell<br>1 Shell | Global: Pay Shell. Your character dice can't be the target of Action Dice or Global Abilities (until end of turn). |
-| Koala | 5 | 4 |  | L1: 1&#9889; / 3A / 3D<br>L2: 2&#9889; / 5A / 4D<br>L3: 2&#9889; / 5A / 5D | 2 Shell<br>2 Shell<br>1 Shell | While Koala is active, your Tardigrade character dice get +2D. |
-| Bison | 6 | 4 | Overcrush | L1: 1&#9889; / 4A / 1D<br>L2: 2&#9889; / 5A / 2D<br>L3: 2&#9889; / 6A / 3D | 2 Shell<br>2 Shell<br>1 Shell | While Bison is active, prevent non-combat damage dealt to your other character dice. Global: Pay 3. Target character die gains Overcrush. |
-| Manatee | 6 | 4 | On Field | L1: 1&#9889; / 4A / 5D<br>L2: 1&#9889; / 5A / 5D<br>L3: 2&#9889; / 6A / 6D | 2 Shell<br>2 Shell<br>1 Shell | On Field: gain 1 life for each opposing non-Tardigrade character die. |
-| Marmoset | 2 | 4 | Kinfolk, Fast | L1: 0&#9889; / 2A / 2D<br>L2: 1&#9889; / 3A / 3D<br>L3: 1&#9889; / 4A / 3D | 2 Wing<br>2 Wing<br>1 Wing | Kinfolk. Fast. |
-| Archerfish | 3 | 4 | Range | L1: 0&#9889; / 2A / 2D<br>L2: 1&#9889; / 3A / 2D<br>L3: 1&#9889; / 4A / 3D | 2 Wing<br>2 Wing<br>1 Wing | Range (when any creature with Range attacks, every active Range creature on both sides deals 1 damage to a target opposing creature, all at once). |
-| Bowerbird | 3 | 4 | Energize | L1: 1&#9889; / 2A / 2D<br>L2: 1&#9889; / 4A / 2D<br>L3: 2&#9889; / 4A / 4D | 2 Wing<br>2 Wing<br>1 Wing | Energize: Action dice, including Basic Action dice, cost you 2 less to purchase until end of turn (minimum 1). |
-| Chipmunk | 3 | 4 | On Field | L1: 0&#9889; / 1A / 3D<br>L2: 0&#9889; / 2A / 4D<br>L3: 1&#9889; / 3A / 4D | 2 Wing<br>2 Wing<br>1 Wing | On Field: draw a die into your Prep Area. |
-| Dung Beetle | 3 | 4 |  | L1: 1&#9889; / 2A / 5D<br>L2: 1&#9889; / 3A / 6D<br>L3: 2&#9889; / 5A / 6D | 2 Wing<br>2 Wing<br>1 Wing | If you only use energy from Dung Beetle dice to purchase a character die, Prep that die instead of adding it to your Used Pile |
-| Firefly | 3 | 4 | Energize | L1: 0&#9889; / 2A / 2D<br>L2: 1&#9889; / 3A / 2D<br>L3: 1&#9889; / 3A / 3D | 2 Wing<br>2 Wing<br>1 Wing | Energize: deal 2 damage to a target character die or the opponent. |
-| Flying Squirrel | 3 | 4 | Infiltrate | L1: 0&#9889; / 2A / 2D<br>L2: 1&#9889; / 3A / 3D<br>L3: 1&#9889; / 4A / 2D | 2 Wing<br>2 Wing<br>1 Wing | Infiltrate (when unblocked, you may return it to the Field and deal 1 damage to the opponent instead). |
-| Puffin | 3 | 4 | Energize, On Field | L1: 0&#9889; / 1A / 2D<br>L2: 1&#9889; / 2A / 3D<br>L3: 2&#9889; / 4A / 4D | 2 Wing<br>2 Wing<br>1 Wing | Energize: Roll 2 dice from your bag. On Field: roll a die from your bag. |
-| Secretary Bird | 3 | 4 |  | L1: 1&#9889; / 3A / 3D<br>L2: 1&#9889; / 3A / 5D<br>L3: 1&#9889; / 5A / 6D | 2 Wing<br>2 Wing<br>1 Wing | Global: Pay Wing. Once per turn, if you have purchased a character die this turn, you may draw a die from your bag and add it to your Prep Area. |
-| Sugar Glider | 3 | 2 | Infiltrate | L1: 0&#9889; / 2A / 1D<br>L2: 1&#9889; / 3A / 2D<br>L3: 2&#9889; / 4A / 3D | 2 Wing<br>2 Wing<br>1 Wing | Infiltrate. While Sugar Glider is active, each time one of your character dice uses Infiltrate, draw a die from your bag and add it to your Prep Area. |
-| Woodpecker | 3 | 4 | On Field | L1: 1&#9889; / 2A / 2D<br>L2: 1&#9889; / 4A / 2D<br>L3: 2&#9889; / 4A / 4D | 2 Wing<br>2 Wing<br>1 Wing | On Field: if you spent Wing energy to field Woodpecker, Prep a die from your bag. |
-| Hare | 4 | 4 | On Field | L1: 0&#9889; / 1A / 2D<br>L2: 0&#9889; / 2A / 2D<br>L3: 1&#9889; / 3A / 3D | 2 Wing<br>2 Wing<br>1 Wing | On Field: draw and roll a die into your Reserve Pool. |
-| Kangaroo Rat | 4 | 3 |  | L1: 1&#9889; / 2A / 5D<br>L2: 1&#9889; / 3A / 6D<br>L3: 2&#9889; / 5A / 6D | 2 Wing<br>2 Wing<br>1 Wing | If you spend this die as energy to field a character die, add this die to your Prep Area. |
-| Monarch Butterfly | 4 | 4 |  | L1: 0&#9889; / 2A / 2D<br>L2: 1&#9889; / 3A / 4D<br>L3: 2&#9889; / 4A / 5D | 2 Wing<br>2 Wing<br>1 Wing | Gets +2 ATK for each of your creatures waiting in your Prep Area. |
-| Bottlenose Dolphin | 5 | 4 | On Attack | L1: 1&#9889; / 4A / 4D<br>L2: 1&#9889; / 5A / 5D<br>L3: 2&#9889; / 5A / 7D | 2 Wing<br>2 Wing<br>1 Wing | On Attack: other attacking character dice get +1A until end of turn. |
-| Bearded Dragon | 6 | 4 |  | L1: 1&#9889; / 4A / 6D<br>L2: 2&#9889; / 6A / 7D<br>L3: 2&#9889; / 7A / 8D | 2 Wing<br>2 Wing<br>1 Wing | Bearded Dragon gets +1A and +1D for each different energy type in your Reserve Pool (Wild doesn't count). |
-| Swordfish | 6 | 4 | On Attack | L1: 1&#9889; / 4A / 5D<br>L2: 1&#9889; / 4A / 4D<br>L3: 2&#9889; / 5A / 5D | 2 Wing<br>2 Wing<br>1 Wing | On Attack: target opposing character die gets -2A and Swordfish gets +2A until end of turn. |
+| Name | Cost | Die Limit | Keywords | Stats (fielding / ATK / DEF per level) | Energy faces | Ability text | Dice Masters source |
+|---|:-:|:-:|---|---|---|---|---|
+| Deathstalker Scorpion | 2 | 4 | Deadly | L1: 0&#9889; / 1A / 1D<br>L2: 0&#9889; / 1A / 2D<br>L3: 1&#9889; / 3A / 4D | 2 Claw<br>2 Claw<br>1 Claw | Deadly | Deathbird, "Treacherous" (DPS029) |
+| Fire Ant | 2 | 5 | On Field | L1: 0&#9889; / 2A / 1D<br>L2: 1&#9889; / 3A / 3D<br>L3: 2&#9889; / 4A / 3D | 2 Claw<br>2 Claw<br>1 Claw | While Fire Ant is active, On Field: when you field a Claw character die, deal 1 damage to the opponent. | Jubilee, "Olympic Gymnast" (XMF028) |
+| Fire Salamander | 2 | 4 | Awaken | L1: 0&#9889; / 2A / 1D<br>L2: 1&#9889; / 3A / 3D<br>L3: 2&#9889; / 4A / 3D | 2 Claw<br>2 Claw<br>1 Claw | Awaken: you may deal 1 damage to all opposing character dice. | Jubilee, "Life on the Streets" (XFC017) |
+| Electric Eel | 3 | 4 | Attune | L1: 0&#9889; / 2A / 1D<br>L2: 1&#9889; / 3A / 3D<br>L3: 1&#9889; / 4A / 4D | 2 Claw<br>2 Claw<br>1 Claw | Attune (while active, each time you use an action die, deal 1 damage to the opponent or a target character die). | Original |
+| Gibbon | 3 | 4 | Elder | L1: 0&#9889; / 2A / 2D<br>L2: 1&#9889; / 3A / 3D<br>L3: 1&#9889; / 3A / 4D | 2 Claw<br>2 Claw<br>1 Claw | Elder When Gibbon is active, other character dice with Elder get +1A. | Angel, "Jean Grey's School" (DPS057) |
+| Pistol Shrimp | 3 | 4 | On Field | L1: 1&#9889; / 2A / 1D<br>L2: 2&#9889; / 3A / 2D<br>L3: 2&#9889; / 5A / 2D | 2 Claw<br>2 Claw<br>1 Claw | On Field: deal 1 damage to each opposing character die. | Banshee, "The Wail of the Banshee" (XFC003) |
+| Stag Beetle | 3 | 4 | Amplify | L1: 0&#9889; / 2A / 1D<br>L2: 0&#9889; / 3A / 1D<br>L3: 1&#9889; / 5A / 2D | 2 Claw<br>2 Claw<br>1 Claw | Amplify: When you use an action die, spin this character up 1 level. | Ant-Man, "Through The Cracks" (JLL002) |
+| Army Ant | 4 | 4 | On Field, Sacrifice | L1: 1&#9889; / 3A / 2D<br>L2: 1&#9889; / 4A / 2D<br>L3: 2&#9889; / 5A / 4D | 2 Claw<br>2 Claw<br>1 Claw | On Field: you may Sacrifice one of your creatures (it goes Out of Play, not KO'd). If you do, deal damage equal to its ATK to a target creature. | Original |
+| Bull Shark | 4 | 4 | On Attack | L1: 1&#9889; / 3A / 3D<br>L2: 1&#9889; / 3A / 4D<br>L3: 2&#9889; / 5A / 4D | 2 Claw<br>2 Claw<br>1 Claw | On Attack: Bull Shark gets +2A until end of turn. | Destroyer, "Skyfathers' Design" (THOR021) |
+| Harris’s Hawk | 4 | 2 |  | L1: 1&#9889; / 3A / 4D<br>L2: 1&#9889; / 4A / 6D<br>L3: 2&#9889; / 5A / 7D | 2 Claw<br>2 Claw<br>1 Claw | While Harris’s Hawk is active, your active character dice have Range 1. | Venerable Dreadnaught, "Custodian of Knowledge" (SW018) |
+| Mandrill | 4 | 4 | Elder, Energize | L1: 1&#9889; / 2A / 4D<br>L2: 1&#9889; / 3A / 6D<br>L3: 1&#9889; / 4A / 6D | 2 Claw<br>2 Claw<br>1 Claw | Elder Energize: Double target character die's printed A until the end of turn. While Mandrill is active, your Tardigrade dice get +1A. | Iceman, "Mr Ice Guy" (DPS114) |
+| Praying Mantis | 4 | 4 | Fast | L1: 0&#9889; / 2A / 3D<br>L2: 1&#9889; / 3A / 3D<br>L3: 1&#9889; / 4A / 4D | 2 Claw<br>2 Claw<br>1 Claw | Fast. | Ronda Rousey, "Rowdy" (WWE037) |
+| Spitting Cobra | 4 | 4 | Range 2 | L1: 1&#9889; / 3A / 3D<br>L2: 2&#9889; / 4A / 4D<br>L3: 2&#9889; / 5A / 5D | 2 Claw<br>2 Claw<br>1 Claw | Range 2 (When this character attacks, all active characters with Range deal damage equal to their Range value to target opposing character die.) | Starfire, "Starbolts" (SKC090) |
+| Wombat | 4 | 3 | Elder | L1: 1&#9889; / 2A / 4D<br>L2: 1&#9889; / 3A / 6D<br>L3: 1&#9889; / 4A / 6D | 2 Claw<br>2 Claw<br>1 Claw | Elder While you have a Tardigrade die active, Wombat's A is equal to his D. | Iceman, "Xavier's Dream" (DPS142) |
+| Crocodile | 5 | 4 | On Field | L1: 1&#9889; / 3A / 1D<br>L2: 1&#9889; / 4A / 2D<br>L3: 2&#9889; / 6A / 3D | 2 Claw<br>2 Claw<br>1 Claw | On Field: KO target level 1 character die. | Triceratops, "Greater Beast" (TOA086) |
+| Komodo Dragon | 5 | 4 | Breath Weapon | L1: 1&#9889; / 4A / 3D<br>L2: 2&#9889; / 5A / 4D<br>L3: 2&#9889; / 6A / 3D | 2 Claw<br>2 Claw<br>1 Claw | Breath Weapon (when this attacks, you may pay 1 energy to deal 1 damage to the opponent and every one of their creatures; once per turn however many Komodo Dragons attack). | Original |
+| Orca | 5 | 4 | On Field | L1: 1&#9889; / 2A / 3D<br>L2: 1&#9889; / 4A / 4D<br>L3: 2&#9889; / 5A / 5D | 2 Claw<br>2 Claw<br>1 Claw | On Field: KO a target creature. | Corsair, "Criminal Record" (DPS104) |
+| Hercules Beetle | 6 | 5 |  | L1: 1&#9889; / 6A / 5D<br>L2: 2&#9889; / 7A / 7D<br>L3: 3&#9889; / 8A / 8D | 2 Claw<br>2 Claw<br>1 Claw | While Hercules Beetle is active, whenever you or a Hercules Beetle die takes damage, deal 2 damage to each opposing character die (no matter how many Hercules Beetle dice are active). | Hulk, "Green Goliath" (AVX077) |
+| Lioness | 6 | 4 | On Attack | L1: 1&#9889; / 3A / 2D<br>L2: 2&#9889; / 3A / 3D<br>L3: 2&#9889; / 5A / 5D | 2 Claw<br>2 Claw<br>1 Claw | On Attack: double the printed A of all your other character dice. | Cable, "High Stakes" (DPS102) |
+| Polar Bear | 6 | 4 | Overcrush | L1: 1&#9889; / 5A / 4D<br>L2: 2&#9889; / 7A / 6D<br>L3: 3&#9889; / 8A / 7D | 2 Claw<br>2 Claw<br>1 Claw | Overcrush. | Supergirl, "Angry Alien" (WOL071) |
+| Snow Leopard | 6 | 4 |  | L1: 1&#9889; / 5A / 2D<br>L2: 2&#9889; / 6A / 4D<br>L3: 3&#9889; / 8A / 5D | 2 Claw<br>2 Claw<br>1 Claw | Snow Leopard can only be blocked by two or more character dice. | Frost Giant, "Lesser Elemental" (BFF033) |
+| Giant Centipede | 7 | 4 | Intimidate, Overcrush | L1: 1&#9889; / 4A / 4D<br>L2: 2&#9889; / 5A / 6D<br>L3: 2&#9889; / 7A / 6D | 2 Claw<br>2 Claw<br>1 Claw | Intimidate Overcrush | Supreme Intelligence, "Psionic Collective" (DPS093) |
+| Orchid Mantis | 2 | 4 |  | L1: 0&#9889; / 1A / 1D<br>L2: 0&#9889; / 2A / 1D<br>L3: 1&#9889; / 2A / 2D | 2 Eye<br>2 Eye<br>1 Eye | When Orchid Mantis is blocked, reroll the blocking character dice. Each energy result goes to its controller's Used Pile and deals 2 damage to that controller. Character results remain blocking on their rolled levels. | Dani Moonstar, "Empathic Illusion Casting" (XFO004) |
+| Leaf Insect | 3 | 4 | On Field | L1: 0&#9889; / 2A / 1D<br>L2: 1&#9889; / 2A / 2D<br>L3: 1&#9889; / 3A / 2D | 2 Eye<br>2 Eye<br>1 Eye | On Field: reroll a target opposing character die. If the result is not a character face, place it in your opponent's Used Pile. | Storm, "African Priestess" (AVX019) |
+| Mimic Filefish | 3 | 4 | Awaken | L1: 0&#9889; / 2A / 1D<br>L2: 0&#9889; / 3A / 1D<br>L3: 1&#9889; / 3A / 3D | 2 Eye<br>2 Eye<br>1 Eye | Awaken: you may reroll a target opposing die. Energy results go to its controller's Used Pile; otherwise restore its original face. | Storm, "Morlock Champion" (XFC110) |
+| Red Panda | 3 | 4 | On Block | L1: 1&#9889; / 3A / 2D<br>L2: 2&#9889; / 4A / 3D<br>L3: 2&#9889; / 5A / 4D | 2 Eye<br>2 Eye<br>1 Eye | On Block: target attacking character die gets -2A until end of turn. | Namorita, "Taunting Villains" (CW054) |
+| Velvet Worm | 3 | 5 | On Block | L1: 0&#9889; / 1A / 2D<br>L2: 0&#9889; / 2A / 3D<br>L3: 1&#9889; / 2A / 4D | 2 Eye<br>2 Eye<br>1 Eye | On Block: spin each blocked character die down 1 level. If it is already level 1, KO it. | Beast, "Kreature" (AVX066) |
+| Cassowary | 4 | 4 | Intimidate | L1: 0&#9889; / 2A / 2D<br>L2: 1&#9889; / 3A / 3D<br>L3: 1&#9889; / 3A / 4D | 2 Eye<br>2 Eye<br>1 Eye | Intimidate. | Hawkman, "Crime is a Disease" (DOOM013) |
+| Chameleon | 4 | 4 | Obscure | L1: 1&#9889; / 2A / 4D<br>L2: 1&#9889; / 3A / 5D<br>L3: 2&#9889; / 5A / 6D | 2 Eye<br>2 Eye<br>1 Eye | Obscure (while active, each time you use an action die, this creature can't be blocked this turn). | Original |
+| Cone Snail | 4 | 4 | On Field | L1: 0&#9889; / 1A / 3D<br>L2: 1&#9889; / 2A / 4D<br>L3: 2&#9889; / 3A / 5D | 2 Eye<br>2 Eye<br>1 Eye | On Field: KO target character die with purchase cost 4 or less. | Cockatrice, "Minion Monstrosity" (FUS004) |
+| Electric Ray | 4 | 4 |  | L1: 0&#9889; / 2A / 3D<br>L2: 1&#9889; / 4A / 3D<br>L3: 1&#9889; / 4A / 4D | 2 Eye<br>2 Eye<br>1 Eye | While Electric Ray is active, ignore your opponent's On Field abilities. | Angela, "Odinsdottir" (IG058) |
+| Frilled Lizard | 4 | 4 | Intimidate | L1: 1&#9889; / 2A / 4D<br>L2: 1&#9889; / 3A / 4D<br>L3: 2&#9889; / 4A / 5D | 2 Eye<br>2 Eye<br>1 Eye | Intimidate (when fielded, remove a target opposing creature from the Field until end of turn). | Original |
+| Orb Weaver | 4 | 4 |  | L1: 1&#9889; / 2A / 2D<br>L2: 1&#9889; / 4A / 2D<br>L3: 2&#9889; / 4A / 4D | 2 Eye<br>2 Eye<br>1 Eye | While Orb Weaver is active, your opponents must pay 1 more to purchase a die with purchase cost of 2 or less. | Forge, "Support Technician" (DPS071) |
+| Platypus | 4 | 4 | Deadly, Fast | L1: 1&#9889; / 2A / 4D<br>L2: 1&#9889; / 2A / 5D<br>L3: 1&#9889; / 2A / 7D | 2 Eye<br>2 Eye<br>1 Eye | Deadly. Fast. | Negative Man, "Phasing" (DOOM017) |
+| Pufferfish | 4 | 4 | Intimidate | L1: 1&#9889; / 3A / 3D<br>L2: 1&#9889; / 4A / 3D<br>L3: 2&#9889; / 6A / 3D | 2 Eye<br>2 Eye<br>1 Eye | Intimidate (On Field: remove target opposing character die from the Field Zone until end of turn - place it next to your character cards.) | Scarlet Spider, "Former Villain" (CW014) |
+| Raccoon | 4 | 4 | Infiltrate | L1: 0&#9889; / 3A / 3D<br>L2: 1&#9889; / 4A / 3D<br>L3: 1&#9889; / 4A / 4D | 2 Eye<br>2 Eye<br>1 Eye | Infiltrate. | Squirrel Girl, "Unbeatable" (GOTG032) |
+| Wild Boar | 4 | 4 | Intimidate, On Field | L1: 0&#9889; / 1A / 5D<br>L2: 1&#9889; / 1A / 6D<br>L3: 2&#9889; / 1A / 8D | 2 Eye<br>2 Eye<br>1 Eye | On Field: lose 1 life. Intimidate. | Blob, "MGH Dependent" (DPS061) |
+| Frigatebird | 5 | 4 | Intimidate | L1: 0&#9889; / 5A / 5D<br>L2: 1&#9889; / 6A / 6D<br>L3: 0&#9889; / 7A / 7D | 2 Eye<br>2 Eye<br>1 Eye | Intimidate (On Field: remove target opposing character die from the Field Zone until end of turn - place it next to your character cards.) Global: Pay Eye. Your character dice can't be the target of Action Dice or Global Abilities (until end of turn). | Gladiator, "Psi Resistance" (DPS033) |
+| Raven | 5 | 4 | Attune | L1: 1&#9889; / 1A / 5D<br>L2: 1&#9889; / 1A / 7D<br>L3: 2&#9889; / 2A / 8D | 2 Eye<br>2 Eye<br>1 Eye | Attune. | Loki, "Throne of Contention" (AI031) |
+| Anglerfish | 6 | 4 | On Attack | L1: 1&#9889; / 2A / 5D<br>L2: 2&#9889; / 4A / 6D<br>L3: 3&#9889; / 6A / 8D | 2 Eye<br>2 Eye<br>1 Eye | On Attack: every weak opposing creature (3 DEF or less) can't block this turn. | Phoenix, "Eternal Flame" (DPS126) |
+| Box Jellyfish | 2 | 5 | Deadly | L1: 0&#9889; / 2A / 2D<br>L2: 1&#9889; / 3A / 2D<br>L3: 2&#9889; / 4A / 2D | 2 Shell<br>2 Shell<br>1 Shell | Deadly. | Grey Hunter, "Sone of Russ" (SW001) |
+| Meerkat | 2 | 4 | Tag Out | L1: 0&#9889; / 1A / 2D<br>L2: 0&#9889; / 1A / 3D<br>L3: 1&#9889; / 2A / 2D | 2 Shell<br>2 Shell<br>1 Shell | Tag Out (after blockers are declared, you may move this die from the Field to your Prep Area to give a target creature +2A and +2D this turn). | Original |
+| Planarian | 2 | 4 | Kinfolk | L1: 0&#9889; / 1A / 1D<br>L2: 0&#9889; / 1A / 2D<br>L3: 0&#9889; / 2A / 2D | 2 Shell<br>2 Shell<br>1 Shell | Kinfolk. When KO'd, you may roll a Tardigrade die from your Used Pile. If you roll an energy result, return Planarian to the Field Zone at level 1. Either way, return the rolled die to the Used Pile. | Alfred Pennyworth, "MI-5" (WF075) |
+| Bombardier Beetle | 3 | 4 | Aftershock | L1: 0&#9889; / 1A / 3D<br>L2: 1&#9889; / 2A / 3D<br>L3: 1&#9889; / 3A / 4D | 2 Shell<br>2 Shell<br>1 Shell | Aftershock: deal 2 damage to a target character die. (Aftershock: when your opponent makes this creature leave the Field - KO, damage, removal.) | Original |
+| Emperor Penguin | 3 | 4 | Tag Out | L1: 0&#9889; / 1A / 4D<br>L2: 0&#9889; / 2A / 5D<br>L3: 1&#9889; / 2A / 7D | 2 Shell<br>2 Shell<br>1 Shell | Tag Out. | Mankind, "Mrs. Foley's Baby Boy" (WWE033) |
+| Leech | 3 | 4 | Energy Drain | L1: 0&#9889; / 1A / 3D<br>L2: 1&#9889; / 2A / 3D<br>L3: 1&#9889; / 2A / 5D | 2 Shell<br>2 Shell<br>1 Shell | Energy Drain (after blockers are assigned, every creature fighting this one spins down a level). | Original |
+| Skunk | 3 | 4 | Range | L1: 0&#9889; / 2A / 2D<br>L2: 1&#9889; / 3A / 3D<br>L3: 1&#9889; / 4A / 4D | 2 Shell<br>2 Shell<br>1 Shell | Range. | Hawkgirl, "Medieval Weapons Expert" (SKC113) |
+| Prairie Dog | 4 | 4 | Tag Out | L1: 0&#9889; / 1A / 4D<br>L2: 1&#9889; / 2A / 5D<br>L3: 1&#9889; / 2A / 7D | 2 Shell<br>2 Shell<br>1 Shell | Tag Out (After blockers are declared, you may Prep this die from the Field Zone to give target creature die +2A and +2D until end of turn.) | Big E, "Tag Team Champion" (TAG003) |
+| Saiga | 4 | 4 |  | L1: 0&#9889; / 5A / 5D<br>L2: 1&#9889; / 6A / 6D<br>L3: 0&#9889; / 7A / 7D | 2 Shell<br>2 Shell<br>1 Shell | Global: Pay Shell. Your character dice can't be the target of Action Dice or Global Abilities (until end of turn). | Gladiator, "Majestor Kallark" (DPS113) |
+| Koala | 5 | 4 |  | L1: 1&#9889; / 3A / 3D<br>L2: 2&#9889; / 5A / 4D<br>L3: 2&#9889; / 5A / 5D | 2 Shell<br>2 Shell<br>1 Shell | While Koala is active, your Tardigrade character dice get +2D. | Captain America, "Living Legend" (AI013) |
+| Bison | 6 | 4 | Overcrush | L1: 1&#9889; / 4A / 1D<br>L2: 2&#9889; / 5A / 2D<br>L3: 2&#9889; / 6A / 3D | 2 Shell<br>2 Shell<br>1 Shell | While Bison is active, prevent non-combat damage dealt to your other character dice. Global: Pay 3. Target character die gains Overcrush. | Mister Sinister, "Biologist" (DPS148) |
+| Manatee | 6 | 4 | On Field | L1: 1&#9889; / 4A / 5D<br>L2: 1&#9889; / 5A / 5D<br>L3: 2&#9889; / 6A / 6D | 2 Shell<br>2 Shell<br>1 Shell | On Field: gain 1 life for each opposing non-Tardigrade character die. | Power Girl, "Kryptonian" (HQ019) |
+| Marmoset | 2 | 4 | Kinfolk, Fast | L1: 0&#9889; / 2A / 2D<br>L2: 1&#9889; / 3A / 3D<br>L3: 1&#9889; / 4A / 3D | 2 Wing<br>2 Wing<br>1 Wing | Kinfolk. Fast. | Wong, "Expert of Kamar-Taj" (DRS022) |
+| Archerfish | 3 | 4 | Range | L1: 0&#9889; / 2A / 2D<br>L2: 1&#9889; / 3A / 2D<br>L3: 1&#9889; / 4A / 3D | 2 Wing<br>2 Wing<br>1 Wing | Range (when any creature with Range attacks, every active Range creature on both sides deals 1 damage to a target opposing creature, all at once). | Original |
+| Bowerbird | 3 | 4 | Energize | L1: 1&#9889; / 2A / 2D<br>L2: 1&#9889; / 4A / 2D<br>L3: 2&#9889; / 4A / 4D | 2 Wing<br>2 Wing<br>1 Wing | Energize: Action dice, including Basic Action dice, cost you 2 less to purchase until end of turn (minimum 1). | Forge, "Intuitive Genius" (XFO016) |
+| Chipmunk | 3 | 4 | On Field | L1: 0&#9889; / 1A / 3D<br>L2: 0&#9889; / 2A / 4D<br>L3: 1&#9889; / 3A / 4D | 2 Wing<br>2 Wing<br>1 Wing | On Field: draw a die into your Prep Area. | Mantis, "Celestial Madonna" (GOTG021) |
+| Dung Beetle | 3 | 4 |  | L1: 1&#9889; / 2A / 5D<br>L2: 1&#9889; / 3A / 6D<br>L3: 2&#9889; / 5A / 6D | 2 Wing<br>2 Wing<br>1 Wing | If you only use energy from Dung Beetle dice to purchase a character die, Prep that die instead of adding it to your Used Pile | Bishop, "Time Traveller" (DPS099) |
+| Firefly | 3 | 4 | Energize | L1: 0&#9889; / 2A / 2D<br>L2: 1&#9889; / 3A / 2D<br>L3: 1&#9889; / 3A / 3D | 2 Wing<br>2 Wing<br>1 Wing | Energize: deal 2 damage to a target character die or the opponent. | Original |
+| Flying Squirrel | 3 | 4 | Infiltrate | L1: 0&#9889; / 2A / 2D<br>L2: 1&#9889; / 3A / 3D<br>L3: 1&#9889; / 4A / 2D | 2 Wing<br>2 Wing<br>1 Wing | Infiltrate (when unblocked, you may return it to the Field and deal 1 damage to the opponent instead). | Original |
+| Puffin | 3 | 4 | Energize, On Field | L1: 0&#9889; / 1A / 2D<br>L2: 1&#9889; / 2A / 3D<br>L3: 2&#9889; / 4A / 4D | 2 Wing<br>2 Wing<br>1 Wing | Energize: Roll 2 dice from your bag. On Field: roll a die from your bag. | Black Panther, "Clutching Reality" (MSW020) |
+| Secretary Bird | 3 | 4 |  | L1: 1&#9889; / 3A / 3D<br>L2: 1&#9889; / 3A / 5D<br>L3: 1&#9889; / 5A / 6D | 2 Wing<br>2 Wing<br>1 Wing | Global: Pay Wing. Once per turn, if you have purchased a character die this turn, you may draw a die from your bag and add it to your Prep Area. | Lilandra, "Politician" (DPS038) |
+| Sugar Glider | 3 | 2 | Infiltrate | L1: 0&#9889; / 2A / 1D<br>L2: 1&#9889; / 3A / 2D<br>L3: 2&#9889; / 4A / 3D | 2 Wing<br>2 Wing<br>1 Wing | Infiltrate. While Sugar Glider is active, each time one of your character dice uses Infiltrate, draw a die from your bag and add it to your Prep Area. | Ricochet, "Slinger" (GOTG105) |
+| Woodpecker | 3 | 4 | On Field | L1: 1&#9889; / 2A / 2D<br>L2: 1&#9889; / 4A / 2D<br>L3: 2&#9889; / 4A / 4D | 2 Wing<br>2 Wing<br>1 Wing | On Field: if you spent Wing energy to field Woodpecker, Prep a die from your bag. | Forge, "More Than Firepower" (DPS031) |
+| Hare | 4 | 4 | On Field | L1: 0&#9889; / 1A / 2D<br>L2: 0&#9889; / 2A / 2D<br>L3: 1&#9889; / 3A / 3D | 2 Wing<br>2 Wing<br>1 Wing | On Field: draw and roll a die into your Reserve Pool. | Ebony Maw, "Twisted Brilliance" (IG068) |
+| Kangaroo Rat | 4 | 3 |  | L1: 1&#9889; / 2A / 5D<br>L2: 1&#9889; / 3A / 6D<br>L3: 2&#9889; / 5A / 6D | 2 Wing<br>2 Wing<br>1 Wing | If you spend this die as energy to field a character die, add this die to your Prep Area. | Bishop, "I'm Back" (DPS059) |
+| Monarch Butterfly | 4 | 4 |  | L1: 0&#9889; / 2A / 2D<br>L2: 1&#9889; / 3A / 4D<br>L3: 2&#9889; / 4A / 5D | 2 Wing<br>2 Wing<br>1 Wing | Gets +2 ATK for each of your creatures waiting in your Prep Area. | Psylocke, "Heiress" (DPS128) |
+| Bottlenose Dolphin | 5 | 4 | On Attack | L1: 1&#9889; / 4A / 4D<br>L2: 1&#9889; / 5A / 5D<br>L3: 2&#9889; / 5A / 7D | 2 Wing<br>2 Wing<br>1 Wing | On Attack: other attacking character dice get +1A until end of turn. | Hercules, "The Incredible Herc" (CW042) |
+| Bearded Dragon | 6 | 4 |  | L1: 1&#9889; / 4A / 6D<br>L2: 2&#9889; / 6A / 7D<br>L3: 2&#9889; / 7A / 8D | 2 Wing<br>2 Wing<br>1 Wing | Bearded Dragon gets +1A and +1D for each different energy type in your Reserve Pool (Wild doesn't count). | Superman, "Living in a world of Cardboard" (SWW020) |
+| Swordfish | 6 | 4 | On Attack | L1: 1&#9889; / 4A / 5D<br>L2: 1&#9889; / 4A / 4D<br>L3: 2&#9889; / 5A / 5D | 2 Wing<br>2 Wing<br>1 Wing | On Attack: target opposing character die gets -2A and Swordfish gets +2A until end of turn. | Blade, "Vengeful" (ASM110) |
 
 ## Champion Basic Actions (Global abilities, one per Champion)
 
-| Champion | Name | Cost | Die Limit | Die faces | Ability text |
-|---|---|:-:|:-:|---|---|
-| Wolf | Anger Issues | 4 | 3 | Action ×3<br>2 Claw ×2<br>1 Claw | Target creature gets +3A and Overcrush this turn. Global: Pay 1 Claw. Target creature gets +1A this turn. |
-| Armadillo | Archnemesis | 4 | 3 | Action ×3<br>2 Shell ×2<br>1 Shell | Target character die you control and target opposing character die deal damage to each other equal to their A. Global: Pay 1 Shell. Target character die has D equal to its A this turn. |
-| Golden Eagle | Resurrection | 4 | 3 | Action ×3<br>2 Wing ×2<br>1 Wing | Choose a die in your Used Pile. Roll it into your Reserve Pool. Global: Pay 1 Wing, once per turn. Draw a die from your bag into your Prep Area. |
-| Great Horned Owl | Mutation | 3 | 3 | Action ×3<br>2 Eye ×2<br>1 Eye | Swap one of your fielded creatures with a non-Tardigrade creature die in your Used Pile. It comes in at level 1 (no On Field). Global: Pay 1 Eye. Spin one of your creatures down a level to spin another creature up a level. |
+| Champion | Name | Cost | Die Limit | Die faces | Ability text | Dice Masters source |
+|---|---|:-:|:-:|---|---|---|
+| Wolf | Anger Issues | 4 | 3 | Action ×3<br>2 Claw ×2<br>1 Claw | Target creature gets +3A and Overcrush this turn. Global: Pay 1 Claw. Target creature gets +1A this turn. | Anger Issues (Basic Action, IG001) |
+| Armadillo | Archnemesis | 4 | 3 | Action ×3<br>2 Shell ×2<br>1 Shell | Target character die you control and target opposing character die deal damage to each other equal to their A. Global: Pay 1 Shell. Target character die has D equal to its A this turn. | Archnemesis (Basic Action, DPS001) |
+| Golden Eagle | Resurrection | 4 | 3 | Action ×3<br>2 Wing ×2<br>1 Wing | Choose a die in your Used Pile. Roll it into your Reserve Pool. Global: Pay 1 Wing, once per turn. Draw a die from your bag into your Prep Area. | Resurrection (Basic Action, BFF137) |
+| Great Horned Owl | Mutation | 3 | 3 | Action ×3<br>2 Eye ×2<br>1 Eye | Swap one of your fielded creatures with a non-Tardigrade creature die in your Used Pile. It comes in at level 1 (no On Field). Global: Pay 1 Eye. Spin one of your creatures down a level to spin another creature up a level. | Mutation (Basic Action, DPS009) |
 
 Either player may buy either Basic Action; each die's energy faces show its Champion's type.
 

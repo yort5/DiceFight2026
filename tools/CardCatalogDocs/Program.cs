@@ -40,6 +40,39 @@ var config = DiceKingdomConfig.Config;
 const string KeywordSource = "https://wizkids.com/dicemasters/keywords/";
 var catalog = DiceKingdomConfig.Catalog;
 
+// Source printings for the imports, by id (the Dice Kingdom copy has its animal's name).
+var ImportSources = new[] { CardCatalog.BuildCatalog().Values.AsEnumerable(), DpsCards.All, BonusCards.All, KingdomImports.All }
+    .SelectMany(cards => cards).GroupBy(c => c.Id).ToDictionary(g => g.Key, g => g.First());
+var NativeSources = new Dictionary<string, string>
+{
+    ["DK-CLAW-01"] = "Storm, \"Extreme Weather\" (DPS052)",
+    ["DK-CLAW-02"] = "Deadpool, \"More Than a Chump Blocker\" (DPS068)",
+    ["DK-CLAW-04"] = "Corsair, \"Criminal Record\" (DPS104)",
+    ["DK-CLAW-05"] = "Phoenix, \"Firepower\" (DPS046)",
+    ["DK-CLAW-07"] = "Jubilee, \"X-Men Field Leader\" (DPS143)",
+    ["DK-CLAW-09"] = "Toad, \"Secondary Mutation\" (DPS054)",
+    ["DK-SHELL-02"] = "Kitty Pryde, \"Experienced Leader\" (DPS144)",
+    ["DK-SHELL-06"] = "Emma Frost, \"Influential\" (DPS030)",
+    ["DK-WING-01"] = "D'Ken, \"Emperor\" (DPS026)",
+    ["DK-WING-02"] = "Kitty Pryde, \"Right of Passage\" (DPS037)",
+    ["DK-WING-04"] = "Beast, \"First Class\" (DPS058)",
+    ["DK-WING-05"] = "Psylocke, \"Heiress\" (DPS128)",
+    ["DK-WING-09"] = "Beast, \"Combat Ready\" (DPS098)",
+    ["DK-EYE-01"] = "Storm, \"Cloud Cover\" (DPS092)",
+    ["DK-EYE-02"] = "Sabretooth, \"Do I Smell Weakness?\" (DPS091)",
+    ["DK-EYE-03"] = "Phoenix, \"Eternal Flame\" (DPS126)",
+    ["DK-EYE-04"] = "Toad, \"Journey Into Misery\" (DPS134)",
+    ["DK-EYE-05"] = "Gambit, \"Ace in the Hole\" (DPS032)",
+    ["DK-EYE-06"] = "Colossus, \"Piotr\" (DPS103)",
+    ["DK-EYE-09"] = "Iceman, \"Icy Interference\" (DPS034)",
+    // Basic Actions keep their Dice Masters names.
+    ["DK-ACT-01"] = "Anger Issues (Basic Action, IG001)",
+    ["DK-ACT-02"] = "Distraction (Basic Action, AVX025)",
+    ["DK-ACT-03"] = "Resurrection (Basic Action, BFF137)",
+    ["DK-ACT-04"] = "Mutation (Basic Action, DPS009)",
+    ["DK-ACT-05"] = "Archnemesis (Basic Action, DPS001)",
+};
+
 var html = new StringBuilder();
 html.AppendLine("<!doctype html><html><head><meta charset=\"utf-8\"><title>Dice Kingdom - Card Reference</title>");
 html.AppendLine("""
@@ -68,6 +101,7 @@ html.AppendLine($"<p class=\"generated\">Generated {DateTime.UtcNow:yyyy-MM-dd} 
     "by <code>tools/CardCatalogDocs</code> &mdash; every field below is read straight from the live CardDef/ChampionDef records, " +
     "not hand-copied. Re-run the tool after any card change; don't hand-edit this file.</p>");
 
+html.AppendLine("<p class=\"note\">Dice Masters source: the printing a card was imported from, or the card an original animal was first adapted from; Original means it was designed for Dice Kingdom (or reworked past recognition).</p>");
 html.AppendLine("<p class=\"note\">Jump to: " + string.Join(" · ", config.Champions.Select(c => $"<a href=\"#{c.Id}\">{Enc(c.Name)}</a>")) +
     " · <a href=\"#keywords\">Keywords</a></p>");
 
@@ -87,7 +121,7 @@ foreach (var champion in config.Champions)
     }
 
     html.AppendLine("<h3>Characters</h3>");
-    html.AppendLine("<table><thead><tr><th>Name</th><th>Cost</th><th>Die&nbsp;Limit</th><th>Keywords</th><th>Stats (fielding&nbsp;/&nbsp;ATK&nbsp;/&nbsp;DEF per level)</th><th>Energy faces</th><th>Ability text</th></tr></thead><tbody>");
+    html.AppendLine("<table><thead><tr><th>Name</th><th>Cost</th><th>Die&nbsp;Limit</th><th>Keywords</th><th>Stats (fielding&nbsp;/&nbsp;ATK&nbsp;/&nbsp;DEF per level)</th><th>Energy faces</th><th>Ability text</th><th>Dice Masters source</th></tr></thead><tbody>");
     foreach (var cardId in DiceKingdomConfig.CharactersByChampion[champion.Id])
         AppendCardRow(html, catalog[cardId]);
     html.AppendLine("</tbody></table>");
@@ -105,13 +139,13 @@ if (benched.Count > 0)
 {
     html.AppendLine("<h2>Not on a team yet</h2>");
     html.AppendLine("<p class=\"note\">In the card pool but in no Champion's pack, so they don't come up in games.</p>");
-    html.AppendLine("<table><thead><tr><th>Name</th><th>Cost</th><th>Die&nbsp;Limit</th><th>Keywords</th><th>Stats (fielding&nbsp;/&nbsp;ATK&nbsp;/&nbsp;DEF per level)</th><th>Energy faces</th><th>Ability text</th></tr></thead><tbody>");
+    html.AppendLine("<table><thead><tr><th>Name</th><th>Cost</th><th>Die&nbsp;Limit</th><th>Keywords</th><th>Stats (fielding&nbsp;/&nbsp;ATK&nbsp;/&nbsp;DEF per level)</th><th>Energy faces</th><th>Ability text</th><th>Dice Masters source</th></tr></thead><tbody>");
     foreach (var card in benched) AppendCardRow(html, card);
     html.AppendLine("</tbody></table>");
 }
 
 html.AppendLine("<h2>Champion Basic Actions <small>(Global abilities, one per Champion)</small></h2>");
-html.AppendLine("<table><thead><tr><th>Champion</th><th>Name</th><th>Cost</th><th>Die&nbsp;Limit</th><th>Die faces</th><th>Ability text</th></tr></thead><tbody>");
+html.AppendLine("<table><thead><tr><th>Champion</th><th>Name</th><th>Cost</th><th>Die&nbsp;Limit</th><th>Die faces</th><th>Ability text</th><th>Dice Masters source</th></tr></thead><tbody>");
 foreach (var (championId, cardId) in DiceKingdomConfig.ActionByChampion)
 {
     var card = catalog[cardId];
@@ -122,6 +156,7 @@ foreach (var (championId, cardId) in DiceKingdomConfig.ActionByChampion)
     html.AppendLine($"<td class=\"cost\">{card.DieLimit}</td>");
     html.AppendLine($"<td class=\"stats\">{string.Join("<br>", GroupFaces(card.Die).Select(g => g.Count > 1 ? $"{g.Face} &times;{g.Count}" : g.Face))}</td>");
     html.AppendLine($"<td>{Enc(card.RawText)}</td>");
+    html.AppendLine($"<td class=\"source\">{Enc(Source(card))}</td>");
     html.AppendLine("</tr>");
 }
 html.AppendLine("</tbody></table>");
@@ -177,6 +212,8 @@ string BuildMarkdown()
     md.AppendLine();
     md.AppendLine($"_Generated {DateTime.UtcNow:yyyy-MM-dd} from `src/DiceFight.V2/Data/DiceKingdomConfig.cs` by `tools/CardCatalogDocs` — " +
         "every field is read straight from the live CardDef/ChampionDef records. Re-run the tool after any card change; don't hand-edit this file._");
+    md.AppendLine();
+    md.AppendLine("Dice Masters source: the printing a card was imported from, or the card an original animal was first adapted from; Original means it was designed for Dice Kingdom (or reworked past recognition).");
     foreach (var champion in config.Champions)
     {
         md.AppendLine();
@@ -196,8 +233,8 @@ string BuildMarkdown()
         md.AppendLine();
         md.AppendLine("### Characters");
         md.AppendLine();
-        md.AppendLine("| Name | Cost | Die Limit | Keywords | Stats (fielding / ATK / DEF per level) | Energy faces | Ability text |");
-        md.AppendLine("|---|:-:|:-:|---|---|---|---|");
+        md.AppendLine("| Name | Cost | Die Limit | Keywords | Stats (fielding / ATK / DEF per level) | Energy faces | Ability text | Dice Masters source |");
+        md.AppendLine("|---|:-:|:-:|---|---|---|---|---|");
         foreach (var cardId in DiceKingdomConfig.CharactersByChampion[champion.Id])
             AppendMdRow(md, catalog[cardId]);
     }
@@ -208,20 +245,20 @@ string BuildMarkdown()
         md.AppendLine();
         md.AppendLine("In the card pool but in no Champion's pack, so they don't come up in games.");
         md.AppendLine();
-        md.AppendLine("| Name | Cost | Die Limit | Keywords | Stats (fielding / ATK / DEF per level) | Energy faces | Ability text |");
-        md.AppendLine("|---|:-:|:-:|---|---|---|---|");
+        md.AppendLine("| Name | Cost | Die Limit | Keywords | Stats (fielding / ATK / DEF per level) | Energy faces | Ability text | Dice Masters source |");
+        md.AppendLine("|---|:-:|:-:|---|---|---|---|---|");
         foreach (var card in benched) AppendMdRow(md, card);
     }
     md.AppendLine();
     md.AppendLine("## Champion Basic Actions (Global abilities, one per Champion)");
     md.AppendLine();
-    md.AppendLine("| Champion | Name | Cost | Die Limit | Die faces | Ability text |");
-    md.AppendLine("|---|---|:-:|:-:|---|---|");
+    md.AppendLine("| Champion | Name | Cost | Die Limit | Die faces | Ability text | Dice Masters source |");
+    md.AppendLine("|---|---|:-:|:-:|---|---|---|");
     foreach (var (championId, cardId) in DiceKingdomConfig.ActionByChampion)
     {
         var card = catalog[cardId];
         var faces = string.Join("<br>", GroupFaces(card.Die).Select(g => g.Count > 1 ? $"{g.Face} ×{g.Count}" : g.Face));
-        md.AppendLine($"| {Md(config.Champions.First(c => c.Id == championId).Name)} | {Md(card.Name)} | {card.PurchaseCost} | {card.DieLimit} | {faces} | {Md(card.RawText)} |");
+        md.AppendLine($"| {Md(config.Champions.First(c => c.Id == championId).Name)} | {Md(card.Name)} | {card.PurchaseCost} | {card.DieLimit} | {faces} | {Md(card.RawText)} | {Md(Source(card))} |");
     }
     md.AppendLine();
     md.AppendLine("Either player may buy either Basic Action; each die's energy faces show its Champion's type.");
@@ -265,7 +302,7 @@ void AppendMdRow(StringBuilder md, CardDef card)
 {
     var name = card.Subtitle is { } sub ? $"{Md(card.Name)} _({Md(sub)})_" : Md(card.Name);
     var energy = string.Join("<br>", card.Die.Faces.Where(f => f.Kind == FaceKind.EnergyFace).Select(DescribeEnergy));
-    md.AppendLine($"| {name} | {card.PurchaseCost} | {card.DieLimit} | {string.Join(", ", card.Keywords.Select(Md))} | {DescribeLevels(card)} | {energy} | {Md(card.RawText)} |");
+    md.AppendLine($"| {name} | {card.PurchaseCost} | {card.DieLimit} | {string.Join(", ", card.Keywords.Select(Md))} | {DescribeLevels(card)} | {energy} | {Md(card.RawText)} | {Md(Source(card))} |");
 }
 
 void AppendCardRow(StringBuilder sb, CardDef card)
@@ -279,7 +316,23 @@ void AppendCardRow(StringBuilder sb, CardDef card)
     sb.AppendLine($"<td class=\"stats\">{DescribeLevels(card)}</td>");
     sb.AppendLine($"<td class=\"stats\">{string.Join("<br>", card.Die.Faces.Where(f => f.Kind == FaceKind.EnergyFace).Select(DescribeEnergy))}</td>");
     sb.AppendLine($"<td>{Enc(card.RawText)}</td>");
+    sb.AppendLine($"<td class=\"source\">{Enc(Source(card))}</td>");
     sb.AppendLine("</tr>");
+}
+
+// "Dice Masters source" (2026-10-20, user: "include the Dice Masters card
+// that inspired it, if there was one"). An import keeps its printing's id,
+// so its source is exact. A native animal was reskinned from a Dice Masters
+// card in v3/CARD_INSPIRATION.md, but many were reworked since - only the
+// ones whose ability still plainly comes from that card are listed below;
+// the rest read "Original".
+string Source(CardDef card)
+{
+    if (ImportSources.TryGetValue(card.Id, out var source))
+        return source.Subtitle is { Length: > 0 } sub && source.CardType == CardType.Character
+            ? $"{source.Name}, \"{sub}\" ({source.Id})"
+            : $"{source.Name} ({source.Id})";
+    return NativeSources.GetValueOrDefault(card.Id, "Original");
 }
 
 static string DescribeLevels(CardDef card)
