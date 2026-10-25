@@ -161,7 +161,7 @@ public static class DiceKingdomPacks
     ];
 
     // Basic Actions (2026-10-20, user): one in every pack, with no rarity -
-    // "more like Energy cards in Pokemon". Uniform over every playable one,
+    // "more like Energy cards in Pokemon". Uniform over the pack's set,
     // the Champions' own included. Not traded in.
     public static readonly IReadOnlyList<string> BasicActions = DiceKingdomConfig.Catalog.Values
         .Where(card => card.CardType == Model.CardType.BasicAction).Select(card => card.Id).Order().ToList();
@@ -195,21 +195,23 @@ public static class DiceKingdomPacks
     public static IReadOnlyList<string> CardsOf(CardRarity rarity) =>
         Rarities.Where(kv => kv.Value == rarity).Select(kv => kv.Key).Order().ToList();
 
-    // One pack's card ids, slot by slot. `roll(n)` is a uniform pick from
+    // One pack's card ids, slot by slot, all from one set (DiceKingdomSets). `roll(n)` is a uniform pick from
     // 0..n-1 - the server passes a cryptographic one, tests a seeded one.
     // The three Commons are always three different cards; the Basic Action
     // comes last.
-    public static IReadOnlyList<string> Open(Func<int, int> roll)
+    public static IReadOnlyList<string> Open(Func<int, int> roll, string set = DiceKingdomSets.Current)
     {
+        var inSet = DiceKingdomSets.Sets[set];
         var pulled = new List<string>();
         foreach (var slot in Slots)
         {
             var pick = roll(slot.Sum(s => s.Weight));
             var rarity = slot.First(s => (pick -= s.Weight) < 0).Rarity;
-            var pool = CardsOf(rarity).Except(pulled).ToList();
+            var pool = CardsOf(rarity).Where(inSet.Contains).Except(pulled).ToList();
             pulled.Add(pool[roll(pool.Count)]);
         }
-        pulled.Add(BasicActions[roll(BasicActions.Count)]);
+        var basics = BasicActions.Where(inSet.Contains).ToList();
+        pulled.Add(basics[roll(basics.Count)]);
         return pulled;
     }
 }

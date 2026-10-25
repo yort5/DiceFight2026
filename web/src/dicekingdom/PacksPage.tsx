@@ -174,19 +174,24 @@ function TradeIns({
 
 function CollectionGrid({ collection, cards }: { collection: Collection; cards: CardDef[] }) {
   const [selected, setSelected] = useState<string | null>(null);
-  const characters = cards.filter((c) => c.rarity);
-  const basics = cards.filter((c) => c.type === "BasicAction" && c.isImplemented !== false);
-  const owned = characters.filter((c) => (collection.dice[c.id] ?? 0) > 0).length;
+  // Every collectible card is in a set (DiceKingdomSets); each set gets its rarity tiers.
+  const collectible = cards.filter((c) => c.kingdomSet);
+  const sets = [...new Set(collectible.map((c) => c.kingdomSet!))].sort();
   const dice = Object.values(collection.dice).reduce((a, b) => a + b, 0);
-  const pick = selected ? characters.concat(basics).find((c) => c.id === selected) : undefined;
+  const pick = selected ? collectible.find((c) => c.id === selected) : undefined;
 
   return (
     <div className="panel">
       <h3>Your collection</h3>
       <p className="dk-acct-dim">
-        {owned} of {characters.length} characters · {dice} dice · {collection.packsOpened} {collection.packsOpened === 1 ? "pack" : "packs"} opened
-        {collection.tradeIns > 0 && <> · {collection.tradeIns} {collection.tradeIns === 1 ? "trade-in" : "trade-ins"}</>}. A team plays up to a card's die limit (usually 4);
-        extras can be traded in.
+        {dice} dice · {collection.packsOpened} {collection.packsOpened === 1 ? "pack" : "packs"} opened
+        {collection.tradeIns > 0 && (
+          <>
+            {" "}
+            · {collection.tradeIns} {collection.tradeIns === 1 ? "trade-in" : "trade-ins"}
+          </>
+        )}
+        . A team plays up to a card's die limit (usually 4); extras can be traded in.
       </p>
       <p className="dk-acct-dim">
         {collection.starters.length
@@ -194,48 +199,65 @@ function CollectionGrid({ collection, cards }: { collection: Collection; cards: 
           : ""}
         Finish a game with a Champion to add its starter roster.
       </p>
-      {[...RARITIES, "Basic" as const].map((rarity) => {
-        const tier = (rarity === "Basic" ? basics : characters.filter((c) => c.rarity === rarity))
-          .sort((a, b) => (energyOf(a) ?? "").localeCompare(energyOf(b) ?? "") || a.purchaseCost - b.purchaseCost);
-        const have = tier.filter((c) => (collection.dice[c.id] ?? 0) > 0).length;
+      {sets.map((set) => {
+        const inSet = collectible.filter((c) => c.kingdomSet === set);
+        const characters = inSet.filter((c) => c.type === "Character");
+        const ownedCharacters = characters.filter((c) => (collection.dice[c.id] ?? 0) > 0).length;
+        const owned = inSet.filter((c) => (collection.dice[c.id] ?? 0) > 0).length;
         return (
-          <section key={rarity} className={`dk-coll-tier dk-rarity-${rarity}`}>
-            <h4>
-              {rarityLabel(rarity)}{" "}
+          <section key={set} className="dk-coll-set">
+            <h4 className="dk-coll-set-name">
+              {set}{" "}
               <small>
-                {have}/{tier.length}
+                {ownedCharacters}/{characters.length} characters · {owned}/{inSet.length} cards
               </small>
             </h4>
-            <div className="dk-coll-grid">
-              {tier.map((card) => {
-                const count = collection.dice[card.id] ?? 0;
-                const Avatar = CHARACTER_ICONS[card.id];
-                return (
-                  <button
-                    key={card.id}
-                    type="button"
-                    className={`dk-coll-card dk-rarity-${rarity}${count ? "" : " missing"}${selected === card.id ? " selected" : ""}`}
-                    onClick={() => setSelected(selected === card.id ? null : card.id)}
-                    aria-label={`${card.name}: ${count} dice`}
-                  >
-                    <span className="dk-coll-avatar">{Avatar && <Avatar size={32} />}</span>
-                    <span className="dk-coll-name">{card.name}</span>
-                    <span className="dk-coll-pips" aria-hidden>
-                      {Array.from({ length: card.dieLimit }, (_, i) => (
-                        <i key={i} className={i < count ? "on" : ""} />
-                      ))}
-                      {count > card.dieLimit && <small>+{count - card.dieLimit}</small>}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+            {[...RARITIES, "Basic" as const].map((rarity) => {
+              const tier = (
+                rarity === "Basic" ? inSet.filter((c) => !c.rarity) : inSet.filter((c) => c.rarity === rarity)
+              ).sort((a, b) => (energyOf(a) ?? "").localeCompare(energyOf(b) ?? "") || a.purchaseCost - b.purchaseCost);
+              const have = tier.filter((c) => (collection.dice[c.id] ?? 0) > 0).length;
+              return (
+                <section key={rarity} className={`dk-coll-tier dk-rarity-${rarity}`}>
+                  <h4>
+                    {rarityLabel(rarity)}{" "}
+                    <small>
+                      {have}/{tier.length}
+                    </small>
+                  </h4>
+                  <div className="dk-coll-grid">
+                    {tier.map((card) => {
+                      const count = collection.dice[card.id] ?? 0;
+                      const Avatar = CHARACTER_ICONS[card.id];
+                      return (
+                        <button
+                          key={card.id}
+                          type="button"
+                          className={`dk-coll-card dk-rarity-${rarity}${count ? "" : " missing"}${selected === card.id ? " selected" : ""}`}
+                          onClick={() => setSelected(selected === card.id ? null : card.id)}
+                          aria-label={`${card.name}: ${count} dice`}
+                        >
+                          <span className="dk-coll-avatar">{Avatar && <Avatar size={32} />}</span>
+                          <span className="dk-coll-name">{card.name}</span>
+                          <span className="dk-coll-pips" aria-hidden>
+                            {Array.from({ length: card.dieLimit }, (_, i) => (
+                              <i key={i} className={i < count ? "on" : ""} />
+                            ))}
+                            {count > card.dieLimit && <small>+{count - card.dieLimit}</small>}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+              );
+            })}
           </section>
         );
       })}
       {pick && (
         <div className="dk-coll-detail">
-          <b>{pick.name}</b> · {rarityLabel(pick.rarity ?? "Basic")} · cost {pick.purchaseCost}{" "}
+          <b>{pick.name}</b> · {pick.kingdomSet} {rarityLabel(pick.rarity ?? "Basic")} · cost {pick.purchaseCost}{" "}
           {energyOf(pick) && <EnergyBadge type={energyOf(pick)!} size={14} />} · {collection.dice[pick.id] ?? 0} dice
           <div>{pick.rawText}</div>
           <div className="dk-coll-levels">
@@ -316,13 +338,12 @@ export function PacksPage() {
               {daily > 0 && <b className="dk-daily-coins"> +{daily} for today's visit</b>}
             </div>
             <button type="button" className="btn dk-pack-buy" disabled={!canBuy || busy} onClick={() => void open()}>
-              Open a pack · {collection.packPrice} coins
+              Open a {collection.packSet} pack · {collection.packPrice} coins
             </button>
             <p className="dk-acct-dim">
-              Each pack holds 6 dice: 3 Common, 1 Uncommon, 1 more that's Uncommon, Rare or (1 in 20) Super Rare, and a
-              Basic Action.
-              Rarer isn't stronger - plenty of the best cards are Common. {collection.dailyAmount} more coins each day
-              you visit; next from {nextDaily(collection.nextDailyUtc)}.
+              Each {collection.packSet} pack holds 6 dice: 3 Common, 1 Uncommon, 1 more that's Uncommon, Rare or (1 in
+              20) Super Rare, and a Basic Action. Rarer isn't stronger - plenty of the best cards are Common.{" "}
+              {collection.dailyAmount} more coins each day you visit; next from {nextDaily(collection.nextDailyUtc)}.
             </p>
             {pulled && <OpenedPack key={pulled.n} pulled={pulled.cards} cards={byId} />}
           </div>

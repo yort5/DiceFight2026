@@ -40,6 +40,8 @@ export interface CardDef {
   reflectsDamage?: boolean;
   /** Pack rarity - null for Basic Actions. */
   rarity?: "Common" | "Uncommon" | "Rare" | "SuperRare" | null;
+  /** "Set 1" etc. (DiceKingdomSets) - null for Champions, Tardigrades and unfinished cards. */
+  kingdomSet?: string | null;
 }
 
 export interface GlobalAbility {

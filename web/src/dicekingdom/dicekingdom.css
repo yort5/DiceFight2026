@@ -4868,6 +4868,21 @@
   }
 }
 
+/* A set (DiceKingdomSets) heads its rarity tiers. */
+.dk-packs .dk-coll-set-name {
+  font-family: var(--display);
+  font-size: 20px;
+  margin: 18px 0 2px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border, rgba(127, 127, 127, 0.3));
+  color: var(--text-h);
+}
+.dk-packs .dk-coll-set-name small {
+  font-family: var(--heading);
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-dim);
+}
 .dk-packs .dk-coll-tier h4 {
   margin: 14px 0 6px;
   color: var(--rarity, var(--text-h));

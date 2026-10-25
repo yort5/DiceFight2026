@@ -62,6 +62,8 @@ export interface Collection {
   starters: string[];
   /** "Common" -> 5: dice of that rarity for one of the next. */
   tradeInCost: Partial<Record<Rarity, number>>;
+  /** The set packs open from ("Set 1"). */
+  packSet: string;
 }
 
 export interface PulledCard {

@@ -4713,3 +4713,12 @@ User: "We should include a Basic Action in each pack. They won't have any rariti
 - Packs are now six dice: the five rarity slots as before, then one Basic Action picked uniformly from every playable one (`DiceKingdomPacks.BasicActions`, 21 today - the Champions' own included). Price unchanged at 10 coins. Basic Actions stay out of `Rarities`, so they can't be traded in; the API labels them `"Basic"` (`DiceKingdomPacks.RarityLabel`).
 - Packs page: the sixth card reads "Basic Action" in a bark-brown frame (the plant icons), the pack row is six wide on desktop (two rows of three on a phone), and the collection has a "Basic Action" tier with pips up to its 3-die limit.
 - Owning Basic Actions doesn't gate anything yet, same as Characters - team building still allows any card. A starter roster still adds only its Characters, not the Champion's Basic Action; easy to add if wanted (would need a backfill for existing starters).
+
+## 2026-10-25 - Set 1
+
+User: "Maybe this is a good spot to group these all together as 'Set 1'?" Chose a **locked** set named plainly "Set 1".
+
+- `V2/Data/DiceKingdomSets.cs`: Set 1 is the 123 cards playable today - 101 Characters (the four starter rosters included), Abundant Waters, 21 Basic Actions - listed by id, not derived, so a new card can't drift in. `SetOf(id)` is null for Champions, Tardigrades and unfinished cards.
+- New cards go in the next set. `DiceKingdomSetsTests` fails on any collectible card (in `Rarities` or a Basic Action) that's in no set, with a message saying to add it to the next set, not Set 1 - so the first new import after today is the moment to add "Set 2" there.
+- Packs open from `DiceKingdomSets.Current` (Set 1): every slot, Basic Action included, draws only from that set. Trade-ins still draw from every set - revisit once Set 2 exists (likely: trade within a set).
+- API: cards carry `KingdomSet` (not `Set`, which is the Dice Masters source set); the collection carries `PackSet`. Packs page: "Open a Set 1 pack", and the collection is grouped by set, each with its rarity tiers and an owned count.

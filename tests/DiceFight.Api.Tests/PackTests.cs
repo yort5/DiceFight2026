@@ -58,6 +58,7 @@ public class PackTests
         Assert.All(pack.Cards, c => Assert.True(c.New));
         Assert.Equal(90, pack.Collection.Coins);
         Assert.Equal(1, pack.Collection.PacksOpened);
+        Assert.Equal("Set 1", pack.Collection.PackSet);
         Assert.Equal(6, pack.Collection.Dice.Values.Sum());
     }
 

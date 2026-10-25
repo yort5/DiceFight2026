@@ -35,8 +35,9 @@ public sealed record V2CardDefDto(
     // (2026-09-30: folding the two together read as confusing).
     bool ReflectsDamage = false, bool HasErrata = false, bool IsImplemented = true,
     string? Type = null, string? Set = null, IReadOnlyList<string>? Affiliations = null,
-    // Pack rarity (DiceKingdomPacks) - null for Basic Actions.
-    string? Rarity = null, IReadOnlyList<int>? ActionFaceBursts = null)
+    // Pack rarity (DiceKingdomPacks) - null for Basic Actions. KingdomSet:
+    // "Set 1" etc. (DiceKingdomSets), not Set - that's the Dice Masters source.
+    string? Rarity = null, IReadOnlyList<int>? ActionFaceBursts = null, string? KingdomSet = null)
 {
     public static V2CardDefDto From(CardDef card)
     {
@@ -64,7 +65,8 @@ public sealed record V2CardDefDto(
                 && a.Effect is DealDamage { Target: { Kind: TargetKind.Player, Ownership: TargetOwnership.Opposing } }),
             card.HasErrata, card.IsImplemented, card.CardType.ToString(), card.Set, card.Affiliations,
             Rarity: DiceKingdomPacks.Rarities.TryGetValue(card.Id, out var rarity) ? rarity.ToString() : null,
-            ActionFaceBursts: card.CardType.IsActionDie() ? card.Die.Faces.Where(f => f.Kind == FaceKind.ActionFace).Select(f => f.Burst).ToList() : null);
+            ActionFaceBursts: card.CardType.IsActionDie() ? card.Die.Faces.Where(f => f.Kind == FaceKind.ActionFace).Select(f => f.Burst).ToList() : null,
+            KingdomSet: DiceKingdomSets.SetOf(card.Id));
     }
 }
 
