@@ -11,6 +11,7 @@ import barnSwallowDuck from "./assets/barn-swallow-duck.jpg";
 // `.pip`/`.avatar` classes for the accent tokens.
 
 type IconProps = { size?: number };
+export type IconComponent = (p: IconProps) => ReactElement;
 
 function Svg({ size = 24, children }: IconProps & { children: ReactNode }) {
   return (

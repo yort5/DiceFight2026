@@ -1,16 +1,18 @@
-import { CHARACTER_ICONS, EnergyBadge, TardigradeIcon } from "./icons";
+import { CHARACTER_ICONS, EnergyBadge, TardigradeIcon, type IconComponent } from "./icons";
 import { dieEnergyType } from "./dieDisplay";
 import type { CardDef, Die } from "./types";
 
 /** Mobile's colored identity tile, shared by both layouts and every flat zone. */
-export function Die2DTile({ die, cardsById, size, count = 1, showEnergyBadge = false }: {
+export function Die2DTile({ die, cardsById, size, count = 1, showEnergyBadge = false, avatar }: {
   die: Die;
   cardsById: Map<string, CardDef>;
   size: number;
   count?: number;
   showEnergyBadge?: boolean;
+  /** Swaps the art (ArtTestPage.tsx's style comparison). */
+  avatar?: IconComponent;
 }) {
-  const Avatar = (die.cardId ? CHARACTER_ICONS[die.cardId] : undefined) ?? TardigradeIcon;
+  const Avatar = avatar ?? (die.cardId ? CHARACTER_ICONS[die.cardId] : undefined) ?? TardigradeIcon;
   const type = dieEnergyType(die, cardsById);
   const color = `var(--${type.toLowerCase()}, var(--wild))`;
   const discSize = Math.round(size * 0.5);

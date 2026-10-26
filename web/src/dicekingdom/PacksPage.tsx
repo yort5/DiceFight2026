@@ -9,7 +9,7 @@ import { navigate } from "../router";
 import { backPath } from "./AccountPage";
 import { championLabel } from "./ChampionPicker";
 import { api } from "./api";
-import { CHARACTER_ICONS, EnergyBadge } from "./icons";
+import { CHARACTER_ICONS, EnergyBadge, type IconComponent } from "./icons";
 import { players, type Collection, type PulledCard, type Rarity } from "./player";
 import { playSound, setSoundMuted, useSoundMuted } from "./sound";
 import { ThemeToggle, useTheme } from "./ThemeToggle";
@@ -22,12 +22,12 @@ function rarityLabel(rarity: Rarity | "Basic"): string {
 }
 
 // A Basic Action's purchase has no energy type; its die's faces do.
-function energyOf(card: CardDef): string | undefined {
+export function energyOf(card: CardDef): string | undefined {
   return card.energyTypes[0] ?? card.dieEnergyType ?? undefined;
 }
 
 // The art sits on a plate of its energy's colour (2026-10-26 polish pass).
-function energyPlate(energy: string | undefined): CSSProperties | undefined {
+export function energyPlate(energy: string | undefined): CSSProperties | undefined {
   return energy ? ({ "--energy": `var(--${energy.toLowerCase()})` } as CSSProperties) : undefined;
 }
 
@@ -35,8 +35,9 @@ function nextDaily(iso: string): string {
   return new Date(iso).toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit" });
 }
 
-function CardFace({ card, rarity }: { card: CardDef | undefined; rarity: Rarity | "Basic" }) {
-  const Avatar = card ? CHARACTER_ICONS[card.id] : null;
+// `avatar` swaps the art (ArtTestPage.tsx's style comparison).
+export function CardFace({ card, rarity, avatar }: { card: CardDef | undefined; rarity: Rarity | "Basic"; avatar?: IconComponent }) {
+  const Avatar = avatar ?? (card ? CHARACTER_ICONS[card.id] : null);
   const energy = card && energyOf(card);
   return (
     <>

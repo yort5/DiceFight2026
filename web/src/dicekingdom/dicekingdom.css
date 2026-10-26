@@ -5473,3 +5473,90 @@
   .dk-packs .dk-coll-card::after { animation: none; }
   .dk-packs .dk-pack-opened.sealed .dk-pack-card-back { animation: none; }
 }
+
+/* /dice-kingdom/art-test (ArtTestPage.tsx) - delete with the page. */
+.dk-art-test .dk-art-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+}
+.dk-art-test .dk-art-frames {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.dk-art-test .dk-art-frames .dk-pack-card {
+  width: 118px;
+}
+.dk-art-test .dk-art-side {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 104px;
+}
+.dk-art-test .dk-art-dice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.dk-art-test .dk-art-champion {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.dk-art-test .dk-art-full {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  width: 150px;
+  aspect-ratio: 5 / 7;
+  border: 3px solid var(--rarity);
+  border-radius: 10px;
+  background: var(--tile-bg);
+  box-shadow: var(--shadow);
+}
+.dk-art-test .dk-art-full-art {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 45%,
+    color-mix(in oklab, var(--energy) 35%, var(--tile-bg)),
+    color-mix(in oklab, var(--energy) 70%, black) 120%);
+}
+.dk-art-test .dk-art-full-art > * {
+  width: 92%;
+  height: auto;
+}
+.dk-art-test .dk-art-full-art svg {
+  color: var(--on-fill, #fff);
+}
+.dk-art-test .dk-art-full-name {
+  padding: 4px 6px 0;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text-h);
+}
+.dk-art-test .dk-art-full-cost {
+  padding: 0 6px 6px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.dk-art-test .dk-rarity-Rare.dk-art-full::after,
+.dk-art-test .dk-rarity-SuperRare.dk-art-full::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.4) 45%, transparent 60%);
+  background-size: 250% 100%;
+  mix-blend-mode: overlay;
+  animation: dkFoil 2.6s ease-in-out infinite;
+}
+@media (max-width: 560px) {
+  .dk-art-test .dk-art-frames { flex-wrap: wrap; }
+}

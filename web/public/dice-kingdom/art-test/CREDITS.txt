@@ -1,0 +1,9 @@
+Art test images (2026-10-26) - cut out and outlined by tools/art/stylize.py.
+All sources are from Wikimedia Commons and public domain or CC0.
+
+koala-photo / koala-flat: "A koala photographed in daytime or am, in a tree.jpg" (CC0)
+koala-plate: John Lewin, koala watercolour, State Library of NSW ("Koala Lewin SLNSW V1-FL3208280.jpg", public domain)
+hummingbird-photo / hummingbird-flat: "Hummingbird reaching out to nectar.jpg" (CC0)
+hummingbird-plate: Ernst Haeckel, Kunstformen der Natur, Trochilidae ("Haeckel Trochilidae.jpg", public domain)
+snow-leopard-photo / snow-leopard-flat: "Doué 21 06 2010 02 Uncia uncia 1.jpg" (public domain)
+snow-leopard-plate: Meyers Konversations-Lexikon, Pantherkatzen plate ("Meyers b12 s0658a.jpg", public domain)
