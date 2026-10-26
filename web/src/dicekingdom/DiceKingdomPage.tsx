@@ -24,6 +24,7 @@ import { MatchLog } from "./MatchLog";
 import { SettingsMenu, ThemeToggle, useTheme } from "./ThemeToggle";
 import { useDiceRoll, type RollTarget } from "./useDiceRoll";
 import { useDieFlights } from "./dieFlights";
+import { useGameSounds } from "./sound";
 import { classifyDieMotion, remoteRolledIds } from "./dieMotion";
 import { activeCouldAct, botDecisionCall, decisionOwner, rolled } from "./bot";
 import { basicActionStock, isCommunityBasicAction, executeAbility, getAbilityOptions, type AbilityCommand } from "./sharedAbilities";
@@ -985,6 +986,7 @@ export function DiceKingdomPage() {
   // Reuse mobile’s die-flight logic: only a change of displayed zone/region
   // launches a travelling die, never an unchanged roll or an opponent action.
   useDieFlights(flightRootRef, game, game?.currentStepId ?? "", game?.yourPlayerId ?? game?.playerOne.id ?? "");
+  useGameSounds(game);
 
   if (!game && (waiting || invitePick)) {
     return (

@@ -4,13 +4,14 @@
 // rarity-less Basic Action (2026-10-20) - for coins from the starting grant and one visit a day. The Champion
 // teams stay free starter rosters, and each joins the collection once a
 // game with it is finished. Spare dice trade up a rarity (TradeIns).
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { navigate } from "../router";
 import { backPath } from "./AccountPage";
 import { championLabel } from "./ChampionPicker";
 import { api } from "./api";
 import { CHARACTER_ICONS, EnergyBadge } from "./icons";
 import { players, type Collection, type PulledCard, type Rarity } from "./player";
+import { playSound, setSoundMuted, useSoundMuted } from "./sound";
 import { ThemeToggle, useTheme } from "./ThemeToggle";
 import type { CardDef } from "./types";
 
@@ -25,6 +26,11 @@ function energyOf(card: CardDef): string | undefined {
   return card.energyTypes[0] ?? card.dieEnergyType ?? undefined;
 }
 
+// The art sits on a plate of its energy's colour (2026-10-26 polish pass).
+function energyPlate(energy: string | undefined): CSSProperties | undefined {
+  return energy ? ({ "--energy": `var(--${energy.toLowerCase()})` } as CSSProperties) : undefined;
+}
+
 function nextDaily(iso: string): string {
   return new Date(iso).toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit" });
 }
@@ -35,7 +41,9 @@ function CardFace({ card, rarity }: { card: CardDef | undefined; rarity: Rarity 
   return (
     <>
       <span className="dk-pack-rarity">{rarityLabel(rarity)}</span>
-      <span className="dk-pack-avatar">{Avatar && <Avatar size={44} />}</span>
+      <span className="dk-pack-avatar" style={energyPlate(energy)}>
+        {Avatar && <Avatar size={44} />}
+      </span>
       <span className="dk-pack-name">{card?.name ?? "?"}</span>
       {card && (
         <span className="dk-pack-cost">
@@ -46,18 +54,43 @@ function CardFace({ card, rarity }: { card: CardDef | undefined; rarity: Rarity 
   );
 }
 
+// The rare slot (5th from the server) turns over last, after the Basic Action.
+function revealOrder(pulled: PulledCard[]): PulledCard[] {
+  return pulled.length === 6 ? [...pulled.slice(0, 4), pulled[5], pulled[4]] : pulled;
+}
+
+const SEALED_MS = 450;
+
 function OpenedPack({ pulled, cards }: { pulled: PulledCard[]; cards: Map<string, CardDef> }) {
-  // Turned over one at a time; a tap turns the rest.
+  // A short sealed beat, then turned over one at a time; a tap turns the rest.
+  const order = useMemo(() => revealOrder(pulled), [pulled]);
   const [shown, setShown] = useState(0);
+  const [sealed, setSealed] = useState(order.length > 1);
   useEffect(() => {
-    if (shown >= pulled.length) return;
-    const timer = window.setTimeout(() => setShown((n) => n + 1), shown === pulled.length - 1 ? 700 : 350);
+    if (!sealed) return;
+    const timer = window.setTimeout(() => setSealed(false), SEALED_MS);
     return () => window.clearTimeout(timer);
-  }, [shown, pulled.length]);
+  }, [sealed]);
+  useEffect(() => {
+    if (sealed || shown >= order.length) return;
+    const timer = window.setTimeout(() => setShown((n) => n + 1), shown === order.length - 1 ? 700 : 350);
+    return () => window.clearTimeout(timer);
+  }, [sealed, shown, order.length]);
+  useEffect(() => {
+    if (shown === 0) return;
+    const rarity = order[shown - 1].rarity;
+    playSound(rarity === "SuperRare" ? "superRare" : rarity === "Rare" ? "rare" : "cardFlip");
+  }, [shown, order]);
 
   return (
-    <div className="dk-pack-opened" onClick={() => setShown(pulled.length)}>
-      {pulled.map((p, i) => {
+    <div
+      className={`dk-pack-opened${sealed ? " sealed" : ""}`}
+      onClick={() => {
+        setSealed(false);
+        setShown(order.length);
+      }}
+    >
+      {order.map((p, i) => {
         const card = cards.get(p.cardId);
         const up = i < shown;
         return (
@@ -237,7 +270,9 @@ function CollectionGrid({ collection, cards }: { collection: Collection; cards: 
                           onClick={() => setSelected(selected === card.id ? null : card.id)}
                           aria-label={`${card.name}: ${count} dice`}
                         >
-                          <span className="dk-coll-avatar">{Avatar && <Avatar size={32} />}</span>
+                          <span className="dk-coll-avatar" style={energyPlate(energyOf(card))}>
+                            {Avatar && <Avatar size={32} />}
+                          </span>
                           <span className="dk-coll-name">{card.name}</span>
                           <span className="dk-coll-pips" aria-hidden>
                             {Array.from({ length: card.dieLimit }, (_, i) => (
@@ -273,6 +308,16 @@ function CollectionGrid({ collection, cards }: { collection: Collection; cards: 
   );
 }
 
+// This page has no ☰ menu, so the sound switch sits by the theme one.
+function SoundToggle() {
+  const muted = useSoundMuted();
+  return (
+    <button type="button" className="theme-toggle" aria-pressed={!muted} onClick={() => setSoundMuted(!muted)}>
+      {muted ? "Sound off" : "Sound on"}
+    </button>
+  );
+}
+
 export function PacksPage() {
   const [theme, setTheme] = useTheme();
   const [collection, setCollection] = useState<Collection | null>(null);
@@ -298,6 +343,7 @@ export function PacksPage() {
     setBusy(true);
     setError(null);
     try {
+      playSound("packOpen");
       const res = await players.openPack();
       setCollection(res.collection);
       setPulled((p) => ({ n: (p?.n ?? 0) + 1, cards: res.cards }));
@@ -314,7 +360,7 @@ export function PacksPage() {
   return (
     <div className="dicekingdom dk-account dk-packs">
       <div className="dk-titlebar-right" style={{ float: "right" }}>
-        <ThemeToggle theme={theme} setTheme={setTheme} />
+        <SoundToggle /> <ThemeToggle theme={theme} setTheme={setTheme} />
       </div>
       <p className="dk-acct-back">
         <a

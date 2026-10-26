@@ -4722,3 +4722,11 @@ User: "Maybe this is a good spot to group these all together as 'Set 1'?" Chose 
 - New cards go in the next set. `DiceKingdomSetsTests` fails on any collectible card (in `Rarities` or a Basic Action) that's in no set, with a message saying to add it to the next set, not Set 1 - so the first new import after today is the moment to add "Set 2" there.
 - Packs open from `DiceKingdomSets.Current` (Set 1): every slot, Basic Action included, draws only from that set. Trade-ins still draw from every set - revisit once Set 2 exists (likely: trade within a set).
 - API: cards carry `KingdomSet` (not `Set`, which is the Dice Masters source set); the collection carries `PackSet`. Packs page: "Open a Set 1 pack", and the collection is grouped by set, each with its rarity tiers and an owned count.
+
+## 2026-10-26 - Sound, and a packs polish pass
+
+User asked how to give the game more of a "game" feel; agreed plan: sound first, card frames/foil, then an art-style test, 3D dice later. On sound: "I typically play muted, but it's good to have the option - as long as it can be readily muted."
+
+- `web/src/dicekingdom/sound.ts`: Web Audio, files in `public/dice-kingdom/sounds` (Kenney CC0 packs, 33 small MP3s, ~216 KB; CREDITS.txt). Events: roll / single re-roll (played by `useDiceRoll.launch`, with the tumble), and from state diffs (`gameSounds`, both boards via `useGameSounds`): buy, spend, field, attack, block, KO, life loss, your turn (online seat only), win/lose. Each sound at most once per change; variants picked at random. Picked by name and length without listening - swap files in the `SOUNDS` table if any sound wrong.
+- Mute: a "Sound" switch in the ☰ menu (both boards) and a Sound on/off pill on the Packs page; remembered per device (`localStorage dk-sound`). On by default; nothing plays before a first tap anyway.
+- Packs: open sound, a short sealed wobble, card-flip per card, a jingle for a Rare or Super Rare; the rare slot now turns over last (after the Basic Action). Art sits on an energy-coloured plate (pack cards and collection), Rares get a light foil sweep, Super Rares a rainbow one (also on owned Super Rares in the collection). Pack cards a touch taller so two-line names fit.

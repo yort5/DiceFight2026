@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { navigate, type Route } from "./router";
 import { useTeamBuilderLayout } from "./teamBuilderLayout";
 import { useIsDark, useTheme } from "./theme";
+import { setSoundMuted, useSoundMuted } from "./dicekingdom/sound";
 import "./ScreenMenu.css";
 
 export function ScreenMenu({ screen, startRoute, onStartGame }: {
@@ -16,6 +17,7 @@ export function ScreenMenu({ screen, startRoute, onStartGame }: {
   const { layout, setLayout } = useTeamBuilderLayout();
   const [theme, setTheme] = useTheme();
   const dark = useIsDark(theme);
+  const muted = useSoundMuted();
   const id = useId();
   const ref = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -61,6 +63,11 @@ export function ScreenMenu({ screen, startRoute, onStartGame }: {
           <button type="button" role="switch" aria-checked={dark} aria-label="Dark mode"
             className="screen-menu-theme" onClick={() => setTheme(dark ? "light" : "dark")}>
             <span>Dark mode</span>
+            <span className="screen-menu-switch" aria-hidden="true"><span /></span>
+          </button>
+          <button type="button" role="switch" aria-checked={!muted} aria-label="Sound"
+            className="screen-menu-theme" onClick={() => setSoundMuted(!muted)}>
+            <span>Sound</span>
             <span className="screen-menu-switch" aria-hidden="true"><span /></span>
           </button>
         </div>

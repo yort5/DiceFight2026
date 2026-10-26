@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CubeSpin, HeldFace, TumbleTrack } from "./DieCube";
+import { playSound } from "./sound";
 
 // The roll: real CSS keyframe tumbles, not transitions between computed
 // poses. Motion refresh (2026-09-16), ported from design_handoff_dice_
@@ -90,6 +91,7 @@ export function useDiceRoll() {
 
   const launch = useCallback((targets: RollTarget[]) => {
     if (targets.length === 0) return;
+    playSound(targets.length > 1 ? "roll" : "reroll");
     const reduced = reducedMotionPreferred();
     const duration = reduced ? TUMBLE_MS_REDUCED : TUMBLE_MS;
 

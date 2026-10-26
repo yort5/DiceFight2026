@@ -28,6 +28,7 @@ import { explainRows, tileCues, whereText } from "./statusCues";
 import { CueRows } from "./CueRows";
 import { DieFramesLegend, legendSeen } from "./DieFramesLegend";
 import { useDieFlights, usePhaseHeight } from "./dieFlights";
+import { useGameSounds } from "./sound";
 import { useDiceRoll, type RollTarget } from "./useDiceRoll";
 import { useLogAutoFollow } from "./useLogAutoFollow";
 import { classifyDieMotion, remoteRolledIds } from "./dieMotion";
@@ -2285,6 +2286,7 @@ export function DiceKingdomMobilePage() {
   const flightPhase = game ? phaseForStep(game.currentStepId) : "";
   usePhaseHeight(stageShellRef, flightPhase);
   useDieFlights(rootRef, game, flightPhase, game ? (game.yourPlayerId ?? game.playerOne.id) : "");
+  useGameSounds(game);
 
   if (!game && (waiting || invitePick)) {
     return (

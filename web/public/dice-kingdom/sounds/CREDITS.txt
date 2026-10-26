@@ -1,0 +1,11 @@
+Dice Kingdom sound effects (2026-10-26)
+
+All from Kenney (www.kenney.nl), CC0 1.0 - public domain, no attribution
+required, credited anyway. Converted to mono 64 kbps MP3.
+
+- Casino Audio 1.1: roll-*, reroll-*, buy-*, spend-*, pack-open-*, card-flip-*
+- Impact Sounds: field-*, attack-*, block-*, ko-*, hit-*
+- Interface Sounds: your-turn
+- Music Jingles (Hit jingles): rare, super-rare, win, lose
+
+The mapping from game events to files is web/src/dicekingdom/sound.ts.
