@@ -54,20 +54,34 @@ def mix(a, b, t):
 
 
 def fit(im, frame, size):
-    """Crop to `frame`, widened to the target's aspect ratio, and scale."""
+    """Crop to `frame`, widened to the target's aspect ratio (or, where the
+    picture isn't big enough for that, narrowed), and scale."""
     x0, y0, x1, y1 = frame
-    w, h = x1 - x0, y1 - y0
     want = size[0] / size[1]
-    if w / h > want:
-        grow = w / want - h
-        y0, y1 = y0 - grow / 2, y1 + grow / 2
-    else:
-        grow = h * want - w
-        x0, x1 = x0 - grow / 2, x1 + grow / 2
-    # Slide back inside the picture where it can.
-    dx = max(0, -x0) - max(0, x1 - im.width)
-    dy = max(0, -y0) - max(0, y1 - im.height)
-    return im.crop((round(x0 + dx), round(y0 + dy), round(x1 + dx), round(y1 + dy))).resize(size, Image.LANCZOS)
+    w, h = x1 - x0, y1 - y0
+    w, h = (h * want, h) if w / h < want else (w, w / want)
+    if h > im.height:
+        w, h = im.height * want, im.height
+    if w > im.width:
+        w, h = im.width, im.width / want
+    # Centred on the frame, slid back inside the picture.
+    cx = min(max((x0 + x1) / 2, w / 2), im.width - w / 2)
+    cy = min(max((y0 + y1) / 2, h / 2), im.height - h / 2)
+    box = (round(cx - w / 2), round(cy - h / 2), round(cx + w / 2), round(cy + h / 2))
+    return im.crop(box).resize(size, Image.LANCZOS)
+
+
+def contain(im, frame, size):
+    """The whole frame, on its own paper colour (the median of its edge)
+    where it doesn't fill the target's shape - for a long fish or snake."""
+    part = im.crop(frame)
+    edge = np.concatenate([np.array(part)[[0, -1]].reshape(-1, 3), np.array(part)[:, [0, -1]].reshape(-1, 3)])
+    paper = tuple(int(v) for v in np.median(edge, axis=0))
+    scale = min(size[0] / part.width, size[1] / part.height)
+    part = part.resize((round(part.width * scale), round(part.height * scale)), Image.LANCZOS)
+    out = Image.new("RGB", size, paper)
+    out.paste(part, ((size[0] - part.width) // 2, (size[1] - part.height) // 2))
+    return out
 
 
 def vibrance(bgr, amount):
@@ -126,6 +140,31 @@ def cut_out(im, erase=()):
         alpha = Image.fromarray((keep * 255).astype(np.uint8))
     cut.putalpha(alpha)
     return cut.crop(alpha.getbbox())
+
+
+def auto_frame(im):
+    """--frame and --face found by the cut-out model: the biggest subject,
+    with room around it for the scene, and a square just around it."""
+    from rembg import new_session, remove
+
+    small = im.copy()
+    small.thumbnail((640, 640))
+    mask = np.array(remove(small, session=new_session("isnet-general-use"), only_mask=True)) > 128
+    n, labels, stats, _ = cv2.connectedComponentsWithStats(mask.astype(np.uint8), connectivity=8)
+    if n < 2:
+        return (0, 0, im.width, im.height), None
+    biggest = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
+    x, y, w, h = stats[biggest, :4]
+    k = im.width / small.width
+    x, y, w, h = x * k, y * k, w * k, h * k
+    pad = 0.18 * max(w, h)
+    frame = (max(0, x - pad), max(0, y - pad), min(im.width, x + w + pad), min(im.height, y + h + pad))
+    # The whole animal, snug: reads better in a small round plate than a
+    # guessed head crop (heads are anywhere in a plate).
+    side = 1.04 * max(w, h)
+    cx, cy = x + w / 2, y + h / 2
+    face = (cx - side / 2, cy - side / 2, cx + side / 2, cy + side / 2)
+    return tuple(round(v) for v in frame), tuple(round(v) for v in face)
 
 
 def rays(size, energy):
@@ -193,12 +232,13 @@ def main():
     parser.add_argument("mode", choices=["paint", "plate", "backdrop"])
     parser.add_argument("source")
     parser.add_argument("out_prefix")
-    parser.add_argument("--frame", type=box, help="the scene to keep (x0,y0,x1,y1); widened to fit")
+    parser.add_argument("--frame", type=box, help="the scene to keep (x0,y0,x1,y1); widened to fit. Left out: found automatically")
     parser.add_argument("--face", type=box, help="the tighter crop for the small icon")
     parser.add_argument("--crop", type=box, help="backdrop: the part of the plate holding the animal")
     parser.add_argument("--erase", action="append", default=[], type=points,
                         help="backdrop: a polygon to drop from the cut-out, 'x,y x,y ...' within --crop (repeatable)")
     parser.add_argument("--hand-colour", action="store_true")
+    parser.add_argument("--contain", action="store_true", help="plate/paint: fit the whole frame, padding with its paper colour")
     parser.add_argument("--energy", choices=ENERGY)
     parser.add_argument("--style", choices=["rays", "wash"], default="rays")
     args = parser.parse_args()
@@ -210,7 +250,11 @@ def main():
         icon = on_backdrop(cut, make((ICON, ICON), args.energy), scale=0.95)
     else:
         look = painted if args.mode == "paint" else hand_coloured if args.hand_colour else (lambda x: x)
-        full = look(fit(im, args.frame, FULL))
+        if not args.frame:
+            args.frame, found_face = auto_frame(im)
+            args.face = args.face or found_face
+            print(f"--frame {','.join(map(str, args.frame))} --face {','.join(map(str, args.face or args.frame))}")
+        full = look((contain if args.contain else fit)(im, args.frame, FULL))
         icon = look(fit(im, args.face or args.frame, (ICON, ICON)))
     full.save(f"{args.out_prefix}-full.webp", quality=85)
     icon.save(f"{args.out_prefix}-icon.webp", quality=85)
