@@ -7,3 +7,8 @@ hummingbird-photo / hummingbird-flat: "Hummingbird reaching out to nectar.jpg" (
 hummingbird-plate: Ernst Haeckel, Kunstformen der Natur, Trochilidae ("Haeckel Trochilidae.jpg", public domain)
 snow-leopard-photo / snow-leopard-flat: "Doué 21 06 2010 02 Uncia uncia 1.jpg" (public domain)
 snow-leopard-plate: Meyers Konversations-Lexikon, Pantherkatzen plate ("Meyers b12 s0658a.jpg", public domain)
+
+Round 2 (2026-10-27) - whole pictures, made by tools/art/scene.py from the same sources:
+*-painted-*: the photos above (koala, hummingbird, snow leopard), painted by filter
+*-scene-*: koala - Lewin (above); hummingbird - Haeckel (above); snow leopard - the Meyers plate (above), hand-coloured by script
+*-rays-* / *-wash-*: animals cut out of the same three paintings, on generated backgrounds
