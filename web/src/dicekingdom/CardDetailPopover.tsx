@@ -1,5 +1,6 @@
 import { KeywordText } from "../KeywordPreview";
 import { CHARACTER_ICONS, EnergyBadge, TardigradePhotoIcon } from "./icons";
+import { Painting } from "./cardArt";
 import { CueRows } from "./CueRows";
 import { DieCube } from "./DieCube";
 import { printedFacesFor, printedFacesForCard, type CubeFace } from "./dieFaces";
@@ -36,6 +37,7 @@ export function CardDetailPopover({ card, die, purchaseCost, purchase, cueRows =
 
   return (
     <div className={`card-popover ${placement} roster-detail`}>
+      <Painting cardId={card?.id} alt={name} className="card-popover-painting" />
       <div className="card-popover-head roster-detail-head">
         {Avatar ? <Avatar size={28} /> : !card && die && <TardigradePhotoIcon size={28} />}
         <div className="roster-detail-title">

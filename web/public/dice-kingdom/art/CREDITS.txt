@@ -1,0 +1,5 @@
+Card paintings - public domain or CC0, from Wikimedia Commons. Framed by tools/art/scene.py.
+
+koala: John Lewin, koala watercolour, State Library of NSW ("Koala Lewin SLNSW V1-FL3208280.jpg", public domain)
+hummingbird: Ernst Haeckel, Kunstformen der Natur (1904), plate 99 Trochilidae ("Haeckel Trochilidae.jpg", public domain)
+snow-leopard: Meyers Konversations-Lexikon (4th ed.), "Pantherkatzen" plate, Irbis ("Meyers b12 s0658a.jpg", public domain); hand-coloured by script

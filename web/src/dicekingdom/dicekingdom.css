@@ -5576,3 +5576,62 @@
 @media (max-width: 560px) {
   .dk-art-test .dk-art-frames { flex-wrap: wrap; }
 }
+
+/* Card paintings (cardArt.tsx): the bigger views only - dice, roster chips
+   and lists keep the silhouettes. */
+.dicekingdom img.dk-painting {
+  display: block;
+  object-fit: cover;
+}
+.dicekingdom .card-popover img.card-popover-painting {
+  width: calc(100% + 24px);
+  height: 150px;
+  margin: -10px -12px 10px;
+  border-radius: 10px 10px 0 0;
+  border-bottom: 3px solid var(--border);
+}
+.dk-mobile .dkm-inspect:has(> .dkm-inspect-painting) {
+  grid-template-columns: 58px 1fr auto;
+}
+.dk-mobile img.dkm-inspect-painting {
+  width: 58px;
+  height: 58px;
+  border-radius: 10px;
+  border: 2px solid var(--cc);
+  align-self: start;
+}
+.dk-packs .dk-pack-avatar.painted img,
+.dk-packs .dk-coll-avatar.painted img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+}
+.dk-packs .dk-pack-avatar.painted,
+.dk-packs .dk-coll-avatar.painted {
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--energy, var(--rarity)) 70%, transparent);
+}
+.dk-packs img.dk-coll-painting {
+  float: right;
+  width: 130px;
+  aspect-ratio: 480 / 544;
+  margin: 0 0 8px 12px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+.dk-packs .dk-coll-detail::after {
+  content: "";
+  display: block;
+  clear: both;
+}
+/* The mobile Full Roster sheet: once any card has a painting, the avatar
+   column widens for every row so the names still line up. */
+.dk-mobile .dkm-sheet:has(.dkm-roster-avatar.painted) .dkm-roster-avatar {
+  width: 40px;
+  display: flex;
+  justify-content: center;
+}
+.dk-mobile .dkm-roster-avatar.painted img {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+}

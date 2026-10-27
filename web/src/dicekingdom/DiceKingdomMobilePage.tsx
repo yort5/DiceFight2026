@@ -15,6 +15,7 @@ import {
   TardigradeIcon,
   type PhaseKey,
 } from "./icons";
+import { Painting, hasPainting } from "./cardArt";
 import { describeSavedGame, forgetSeats, inviteLink, myLink, rememberSeats } from "./seats";
 import { GameOverOverlay } from "./GameOverOverlay";
 import { AccountLink } from "./AccountPage";
@@ -1456,7 +1457,11 @@ function RosterSheet({
           const affordable = canBuy && pickEnergyForCost(reserve, purchaseCostOf(cardId), types[0] ?? null, virtualEnergy) !== null;
           const row = (
             <>
-              <span className="dkm-roster-avatar">{Avatar ? <Avatar size={20} /> : <TardigradeIcon size={20} />}</span>
+              <span className={`dkm-roster-avatar${hasPainting(cardId) ? " painted" : ""}`}>
+                {hasPainting(cardId)
+                  ? <Painting cardId={cardId} crop="icon" alt={card?.name ?? cardId} />
+                  : Avatar ? <Avatar size={20} /> : <TardigradeIcon size={20} />}
+              </span>
               <div className="dkm-roster-mid">
                 <span className="dkm-roster-name">{card?.name ?? cardId}</span>
                 <span className="dkm-roster-stats">{levelStatsLine(card)}</span>
@@ -3160,7 +3165,9 @@ export function DiceKingdomMobilePage() {
       <div className="dkm-bottom-bar">
         {selectedDie && (
           <div className="dkm-inspect" style={{ ["--cc" as string]: typeColorOf(selectedDie, cardsById) }}>
-            <AvatarGlyph die={selectedDie} size={42} color={typeColorOf(selectedDie, cardsById)} />
+            {hasPainting(selectedDie.cardId)
+              ? <Painting cardId={selectedDie.cardId} crop="icon" alt={nameOf(selectedDie, cardsById)} className="dkm-inspect-painting" />
+              : <AvatarGlyph die={selectedDie} size={42} color={typeColorOf(selectedDie, cardsById)} />}
             <div className="dkm-inspect-mid">
               <div className="dkm-inspect-title-row">
                 <span className="dkm-inspect-name">{nameOf(selectedDie, cardsById)}</span>

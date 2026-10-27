@@ -10,6 +10,7 @@ import { backPath } from "./AccountPage";
 import { championLabel } from "./ChampionPicker";
 import { api } from "./api";
 import { CHARACTER_ICONS, EnergyBadge, type IconComponent } from "./icons";
+import { Painting, hasPainting } from "./cardArt";
 import { players, type Collection, type PulledCard, type Rarity } from "./player";
 import { playSound, setSoundMuted, useSoundMuted } from "./sound";
 import { ThemeToggle, useTheme } from "./ThemeToggle";
@@ -39,11 +40,12 @@ function nextDaily(iso: string): string {
 export function CardFace({ card, rarity, avatar }: { card: CardDef | undefined; rarity: Rarity | "Basic"; avatar?: IconComponent }) {
   const Avatar = avatar ?? (card ? CHARACTER_ICONS[card.id] : null);
   const energy = card && energyOf(card);
+  const painted = !avatar && hasPainting(card?.id);
   return (
     <>
       <span className="dk-pack-rarity">{rarityLabel(rarity)}</span>
-      <span className="dk-pack-avatar" style={energyPlate(energy)}>
-        {Avatar && <Avatar size={44} />}
+      <span className={`dk-pack-avatar${painted ? " painted" : ""}`} style={energyPlate(energy)}>
+        {painted ? <Painting cardId={card?.id} crop="icon" alt={card?.name ?? ""} /> : Avatar && <Avatar size={44} />}
       </span>
       <span className="dk-pack-name">{card?.name ?? "?"}</span>
       {card && (
@@ -271,8 +273,8 @@ function CollectionGrid({ collection, cards }: { collection: Collection; cards: 
                           onClick={() => setSelected(selected === card.id ? null : card.id)}
                           aria-label={`${card.name}: ${count} dice`}
                         >
-                          <span className="dk-coll-avatar" style={energyPlate(energyOf(card))}>
-                            {Avatar && <Avatar size={32} />}
+                          <span className={`dk-coll-avatar${hasPainting(card.id) ? " painted" : ""}`} style={energyPlate(energyOf(card))}>
+                            {hasPainting(card.id) ? <Painting cardId={card.id} crop="icon" alt={card.name} /> : Avatar && <Avatar size={32} />}
                           </span>
                           <span className="dk-coll-name">{card.name}</span>
                           <span className="dk-coll-pips" aria-hidden>
@@ -293,6 +295,7 @@ function CollectionGrid({ collection, cards }: { collection: Collection; cards: 
       })}
       {pick && (
         <div className="dk-coll-detail">
+          <Painting cardId={pick.id} alt={pick.name} className="dk-coll-painting" />
           <b>{pick.name}</b> · {pick.kingdomSet} {rarityLabel(pick.rarity ?? "Basic")} · cost {pick.purchaseCost}{" "}
           {energyOf(pick) && <EnergyBadge type={energyOf(pick)!} size={14} />} · {collection.dice[pick.id] ?? 0} dice
           <div>{pick.rawText}</div>
