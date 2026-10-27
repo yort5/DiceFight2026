@@ -57,8 +57,8 @@ public class ElderBatchCardsTests
             Assert.DoesNotContain("Founder", card.Keywords);
             Assert.DoesNotContain("Founder", card.RawText);
         }
-        Assert.Equal(123, DiceKingdomConfig.Catalog.Count);
-        Assert.Equal(44, DiceKingdomConfig.TeamBuilderCatalog.Values.Count(c => !c.IsImplemented));
+        Assert.Equal(135, DiceKingdomConfig.Catalog.Count);
+        Assert.Equal(34, DiceKingdomConfig.TeamBuilderCatalog.Values.Count(c => !c.IsImplemented));
     }
 
     [Fact]

@@ -525,34 +525,45 @@ public static class DpsCards
     // CountAtLeast stand in: a TargetFilter with Bound set returns that
     // die without applying Tags at all (TargetResolver short-circuits),
     // so the count is always 1.
+    // Built 2026-10-27, simplified (ErrataNotes), to swap a painted animal into Dice Kingdom's Set 1;
+    // the notes above describe the source text, not this build.
     public static readonly CardDef PhoenixPsionicMaelstrom = new(
         Id: "DPS086", Name: "Phoenix", Subtitle: "Psionic Maelstrom", Set: "DPS", CardType: CardType.Character,
         PurchaseCost: 6, EnergySymbolIds: ["Bolt"],
         Die: MigrationDice.Character("DPS086Die", "Bolt", (1, 5, 5), (2, 7, 7), (3, 8, 8)),
         DieLimit: 3, Affiliations: ["X-Men"], Keywords: [],
-        RawText: "When Phoenix attacks, deal 3 damage to target character die. If that character die is a Villains character die, you may deal 3 damage to another target character die.",
-        Abilities: [], Continuous: [], IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Lionfish", KingdomEnergyType: "Claw", HasErrata: true,
+        RawText: "When Phoenix attacks, deal 3 damage to target character die.",
+        Abilities: [new TriggeredAbility(TriggerKind.DieAttacks,
+            new DealDamage(new Fixed(3), new TargetFilter(Kind: TargetKind.CharacterDie)))],
+        Continuous: [], IsImplemented: true, IncludeInTeamBuilder: true, KingdomName: "Lionfish", KingdomEnergyType: "Claw", HasErrata: true,
         ErrataNotes: [
             "Reference: rollinthunder_cards_with_dice(1).json, DPS086 (Phoenix: Psionic Maelstrom).",
             "Maximum dice: 4 -> 3.",
+            "Simplified for Dice Kingdom: dropped the second 3 damage against a Villains die.",
         ]);
 
     // Confirms V2_VOCABULARY_HISTORY.md Part 2 #14's finding on a second card:
     // DamageModifier is a CONTINUOUS template, and this is a one-shot,
     // once-per-turn, optional redirect with a burst-face alternative
     // (prevent instead). None of that is expressible.
+    // Built 2026-10-27, simplified (ErrataNotes), to swap a painted animal into Dice Kingdom's Set 1;
+    // the notes above describe the source text, not this build.
     public static readonly CardDef ColossusOrganicSteel = new(
         Id: "DPS063", Name: "Colossus", Subtitle: "Organic Steel", Set: "DPS", CardType: CardType.Character,
         PurchaseCost: 5, EnergySymbolIds: ["Fist"],
         Die: MigrationDice.Character("DPS063Die", "Fist", (1, 4, 4), (1, 6, 5), (2, 8, 7)),
         DieLimit: 3, Affiliations: ["X-Men"], Keywords: [],
-        RawText: "While Colossus is active, the first time one of your character dice would take damage each turn you may have Colossus take that damage instead. *Instead, prevent that damage.",
-        Abilities: [], Continuous: [], IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Giant Tortoise", KingdomEnergyType: "Shell", HasErrata: true,
+        RawText: "While Colossus is active, damage dealt to your character dice is reduced by 1.",
+        Abilities: [],
+        Continuous: [new DamageModifier(DamageModifierMode.Reduce,
+            new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own), Amount: 1)],
+        IsImplemented: true, IncludeInTeamBuilder: true, KingdomName: "Giant Tortoise", KingdomEnergyType: "Shell", HasErrata: true,
         ErrataNotes: [
             "Reference: rollinthunder_cards_with_dice(1).json, DPS063 (Colossus: Organic Steel).",
             "Maximum dice: 4 -> 3.",
             "Level 2 burst marks: 1 -> 0.",
             "Level 3 burst marks: 1 -> 0.",
+            "Simplified for Dice Kingdom: every hit on your character dice is 1 less, instead of taking (or preventing) the first hit each turn.",
         ]);
 
     public static IReadOnlyList<CardDef> All =>
@@ -1000,18 +1011,21 @@ public static class DpsCards
     // card is one of) - tailed, so the card stays IsImplemented: false.
     // The Energize half is ProfessorXUncannyLeadership's own identical
     // text, migrated the same way.
+    // Built 2026-10-27, simplified (ErrataNotes), to swap a painted animal into Dice Kingdom's Set 1;
+    // the notes above describe the source text, not this build.
     public static readonly CardDef ProfessorXDreamer = new(
         Id: "DPS047", Name: "Professor X", Subtitle: "Dreamer", Set: "DPS", CardType: CardType.Character,
         PurchaseCost: 5, EnergySymbolIds: ["Mask"],
         Die: MigrationDice.Character("DPS047Die", "Mask", (1, 1, 5), (2, 1, 7), (3, 1, 9)),
-        DieLimit: 4, Affiliations: ["X-Men"], Keywords: ["Energize"],
-        RawText: "If you spend an X-Men die to field Professor X, Prep a die from your bag. Energize - Move an " +
-                 "X-Men die from your Used Pile to your Prep Area.",
-        Abilities: [..Energize(new MoveDie(
-            new TargetFilter(Kind: TargetKind.AnyDie, Ownership: TargetOwnership.Own, Zones: [Zone.UsedPile], Affiliations: new TagQuery(AnyOf: ["X-Men"])),
-            Zone.PrepArea))],
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: [],
+        RawText: "When fielded, Prep a die from your bag.",
+        Abilities: [new TriggeredAbility(TriggerKind.DieFielded, new DrawToZone(1, Zone.PrepArea, Zone.Bag))],
         Continuous: [],
-        IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Nutcracker", KingdomEnergyType: "Wing");
+        IsImplemented: true, IncludeInTeamBuilder: true, KingdomName: "Nutcracker", KingdomEnergyType: "Wing", HasErrata: true,
+        ErrataNotes: [
+            "Reference: rollinthunder_cards_with_dice(1).json, DPS047 (Professor X: Dreamer).",
+            "Simplified for Dice Kingdom: Prep a die whenever it's fielded (not only when an X-Men die paid for it); dropped the Energize.",
+        ]);
 
     public static readonly CardDef AngelWingsOverTheWorld = new(
         Id: "DPS017", Name: "Angel", Subtitle: "Wings Over the World", Set: "DPS", CardType: CardType.Character,
@@ -1220,14 +1234,21 @@ public static class DpsCards
     // when the effect doesn't target at all - Reroll's own TargetFilter
     // sometimes IS a choice). No shape in the frozen vocabulary reaches
     // this. Tailed outright.
+    // Built 2026-10-27, simplified (ErrataNotes), to swap a painted animal into Dice Kingdom's Set 1;
+    // the notes above describe the source text, not this build.
     public static readonly CardDef BishopTorturedTimeline = new(
         Id: "DPS019", Name: "Bishop", Subtitle: "Tortured Timeline", Set: "DPS", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Shield"],
         Die: MigrationDice.Character("DPS019Die", "Shield", (1, 2, 5), (1, 3, 6), (2, 5, 6)),
         DieLimit: 3, Affiliations: ["X-Men"], Keywords: [],
-        RawText: "Opposing effects can't cause Bishop to be rerolled, or cause you to spin a Bishop die up " +
-                 "or down.",
-        Abilities: [], Continuous: [], IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Horseshoe Crab", KingdomEnergyType: "Shell");
+        RawText: "Bishop can't be targeted by your opponent's action dice or Global Abilities.",
+        Abilities: [],
+        Continuous: [new TargetingProtection(new TargetFilter(Self: true), ProtectionFrom.Both, OpponentsOnly: true)],
+        IsImplemented: true, IncludeInTeamBuilder: true, KingdomName: "Horseshoe Crab", KingdomEnergyType: "Shell", HasErrata: true,
+        ErrataNotes: [
+            "Reference: rollinthunder_cards_with_dice(1).json, DPS019 (Bishop: Tortured Timeline).",
+            "Simplified for Dice Kingdom: protection from being targeted, instead of from being rerolled or spun by any opposing effect.",
+        ]);
 
 
     // A spent-die reaction does not need an active copy of the card.
@@ -1707,35 +1728,20 @@ public static class DpsCards
     // Bound fix) and Global (Ko one of your own, next purchase -2) both
     // fit. The purchase discount ("if your opponent has an X-Men
     // character ON THEIR TEAM") is this batch's team-roster gap.
+    // Built 2026-10-27, simplified (ErrataNotes), to swap a painted animal into Dice Kingdom's Set 1;
+    // the notes above describe the source text, not this build.
     public static readonly CardDef DarkPhoenixMalevolent = new(
         Id: "DPS027", Name: "Dark Phoenix", Subtitle: "Malevolent", Set: "DPS", CardType: CardType.Character,
         PurchaseCost: 7, EnergySymbolIds: ["Bolt"],
         Die: MigrationDice.Character("DPS027Die", "Bolt", (1, 5, 5), (2, 7, 7), (3, 8, 8)),
         DieLimit: 4, Affiliations: ["Villains"], Keywords: [],
-        RawText: "Dark Phoenix costs 1 less to purchase if your opponent has an X-Men character on their " +
-                 "team. When fielded, KO target character die. If it's an X-Men character die, deal your " +
-                 "opponent 1 damage. Global: Pay Bolt and KO one of your character dice. The next die you " +
-                 "purchase this turn costs 2 less (to a minimum of 1).",
-        Abilities:
-        [
-            new TriggeredAbility(TriggerKind.DieFielded, new Sequence(
-            [
-                new Ko(new TargetFilter(Kind: TargetKind.CharacterDie, BindAs: "victim")),
-                new Conditional(
-                    new CountAtLeast(new TargetFilter(Bound: "victim", Affiliations: new TagQuery(AnyOf: ["X-Men"])), 1),
-                    Then: new DealDamage(new Fixed(1), new TargetFilter(Kind: TargetKind.Player, Ownership: TargetOwnership.Opposing))),
-            ])),
-            new TriggeredAbility(TriggerKind.Global, new Sequence(
-            [
-                new Ko(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own)),
-                new PurchaseModifier(Delta: -2),
-            ]), EnergyCost: new EnergyCost(1, "Bolt")),
-        ],
+        RawText: "When fielded, KO target character die.",
+        Abilities: [new TriggeredAbility(TriggerKind.DieFielded, new Ko(new TargetFilter(Kind: TargetKind.CharacterDie)))],
         Continuous: [],
-        IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Tasmanian Devil", KingdomEnergyType: "Claw", HasErrata: true,
+        IsImplemented: true, IncludeInTeamBuilder: true, KingdomName: "Tasmanian Devil", KingdomEnergyType: "Claw", HasErrata: true,
         ErrataNotes: [
             "Reference: rollinthunder_cards_with_dice(1).json, DPS027 (Dark Phoenix: Malevolent).",
-            "Rules text: the opponent damage after fielding and KOing an X-Men die is reduced from 4 to 1.",
+            "Simplified for Dice Kingdom: kept the When fielded KO; dropped the purchase discount (needs the opposing team's roster), the X-Men bonus damage and the Global.",
         ]);
 
     // "If this game is in the draft format" - no game-format concept
@@ -1753,17 +1759,22 @@ public static class DpsCards
     // batch's team-roster gap, AND (independently) a card granting
     // itself free-fielding before it's active - batch 6's Jean Grey
     // "Marvel Girl" gap. Two reasons, either one sufficient.
+    // Built 2026-10-27, simplified (ErrataNotes), to swap a painted animal into Dice Kingdom's Set 1;
+    // the notes above describe the source text, not this build.
     public static readonly CardDef WolverinePureOfHeart = new(
         Id: "DPS056", Name: "Wolverine", Subtitle: "Pure of Heart", Set: "DPS", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Fist"],
         Die: MigrationDice.Character("DPS056Die", "Fist", (1, 5, 2), (2, 6, 3), (3, 8, 4)),
-        DieLimit: 4, Affiliations: ["X-Men"], Keywords: [],
-        RawText: "If you have no Villains character dice on your team, Wolverine is free to field.",
-        Abilities: [], Continuous: [], IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Caracal", KingdomEnergyType: "Wing", HasErrata: true,
+        DieLimit: 4, Affiliations: ["X-Men"], Keywords: ["Fast"],
+        RawText: "Fast",
+        Abilities: [],
+        Continuous: [],
+        IsImplemented: true, IncludeInTeamBuilder: true, KingdomName: "Caracal", KingdomEnergyType: "Wing", HasErrata: true,
         ErrataNotes: [
             "Reference: rollinthunder_cards_with_dice(1).json, DPS056 (Wolverine: Pure of Heart).",
             "Level 1 burst marks: 1 -> 0.",
             "Level 2 burst marks: 1 -> 0.",
+            "Simplified for Dice Kingdom: Fast, instead of free to field without Villains on the team (no team-roster check, and a card can't discount its own fielding before it's active).",
         ]);
 
 
@@ -1990,13 +2001,17 @@ public static class DpsCards
     // engaged with a specific die"), which TargetFilter has no field for
     // (Zones/Ownership/Tags/Stat - none express "blocking/blocked-by
     // die X specifically").
+    // Built 2026-10-27, simplified (ErrataNotes), to swap a painted animal into Dice Kingdom's Set 1;
+    // the notes above describe the source text, not this build.
     public static readonly CardDef VulcanPowerSuppression = new(
         Id: "DPS095", Name: "Vulcan", Subtitle: "Power Suppression", Set: "DPS", CardType: CardType.Character,
         PurchaseCost: 5, EnergySymbolIds: ["Fist"],
         Die: MigrationDice.Character("DPS095Die", "Fist", (0, 3, 2), (1, 4, 4), (1, 6, 5)),
         DieLimit: 4, Affiliations: [], Keywords: [],
         RawText: "Ignore the abilities of character dice blocking or blocked by Vulcan.",
-        Abilities: [], Continuous: [], IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "King Cobra", KingdomEnergyType: "Eye", HasErrata: true,
+        Abilities: [],
+        Continuous: [new AbilityBlank(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Opposing, Count: 0, EngagedWith: "self"))],
+        IsImplemented: true, IncludeInTeamBuilder: true, KingdomName: "King Cobra", KingdomEnergyType: "Eye", HasErrata: true,
         ErrataNotes: [
             "Reference: rollinthunder_cards_with_dice(1).json, DPS095 (Vulcan: Power Suppression).",
             "Rules text: omits the reference Global, Pay Fist to make target character die attack this turn.",
@@ -2036,20 +2051,23 @@ public static class DpsCards
     // half alone and silently dropping the enforcement half would let a
     // player exploit a real rules gap (house rule: never guess wrong
     // silently), so the whole card is tailed rather than split.
+    // Built 2026-10-27, simplified (ErrataNotes), to swap a painted animal into Dice Kingdom's Set 1;
+    // the notes above describe the source text, not this build.
     public static readonly CardDef GambitILikeSolitaire = new(
         Id: "DPS072", Name: "Gambit", Subtitle: "I Like Solitaire", Set: "DPS", CardType: CardType.Character,
         PurchaseCost: 5, EnergySymbolIds: ["Mask"],
         Die: MigrationDice.Character("DPS072Die", "Mask", (1, 1, 1), (1, 2, 2), (2, 4, 5)),
         DieLimit: 4, Affiliations: ["X-Men"], Keywords: [],
-        RawText: "When fielded, if you have fielded no other character dice this turn, reroll all opposing " +
-                 "character dice. Move any that roll an energy face to their Used Pile. You may not field " +
-                 "any more character dice this turn.",
-        Abilities: [], Continuous: [], IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Cuckoo", KingdomEnergyType: "Eye", HasErrata: true,
+        RawText: "When fielded, reroll all opposing character dice. Move any that roll an energy face to their Used Pile.",
+        Abilities: [new TriggeredAbility(TriggerKind.DieFielded,
+            new Reroll(new TargetFilter(Ownership: TargetOwnership.Opposing, Count: 0), NonCharacterMoveTo: Zone.UsedPile))],
+        Continuous: [], IsImplemented: true, IncludeInTeamBuilder: true, KingdomName: "Cuckoo", KingdomEnergyType: "Eye", HasErrata: true,
         ErrataNotes: [
             "Reference: rollinthunder_cards_with_dice(1).json, DPS072 (Gambit: I Like Solitaire).",
             "Level 1 burst marks: 1 -> 0.",
             "Level 2 burst marks: 1 -> 0.",
             "Level 3 (fielding cost/attack/defense): 2/4/4 -> 2/4/5.",
+            "Simplified for Dice Kingdom: dropped \"if you have fielded no other character dice this turn\" and \"you may not field any more character dice this turn\" (the engine has no field lock yet).",
         ]);
 
     // Both keywords use the existing shared engine handling.
@@ -2393,22 +2411,23 @@ public static class DpsCards
     // "Tortured Timeline" already hit - "can't be spun to an energy face
     // or rerolled by your opponent" protects specific EFFECT TYPES, not
     // targeting-by-source, which is all TargetingProtection reaches.
+    // Built 2026-10-27, simplified (ErrataNotes), to swap a painted animal into Dice Kingdom's Set 1;
+    // the notes above describe the source text, not this build.
     public static readonly CardDef WolverineToughForTheKids = new(
         Id: "DPS152", Name: "Wolverine", Subtitle: "Tough for the Kids", Set: "DPS", CardType: CardType.Character,
         PurchaseCost: 5, EnergySymbolIds: ["Fist"],
         Die: MigrationDice.Character("DPS152Die", "Fist", (1, 5, 2), (2, 6, 3), (3, 8, 4)),
-        DieLimit: 3, Affiliations: ["X-Men"], Keywords: ["Regenerate"],
-        RawText: "Regenerate *If you have at least 3 different active X-Men, Wolverine can't be spun to an " +
-                 "energy face or rerolled by your opponent. Global: Pay Fist. Once per turn, on your turn, " +
-                 "Prep a die from your bag.",
+        DieLimit: 3, Affiliations: ["X-Men"], Keywords: [],
+        RawText: "Global: Pay Fist. Once per turn, on your turn, Prep a die from your bag.",
         Abilities: [new TriggeredAbility(TriggerKind.Global, new DrawToZone(1, Zone.PrepArea, Zone.Bag),
             EnergyCost: new EnergyCost(1, "Fist"), OncePerTurn: true)],
         Continuous: [],
-        IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Starfish", KingdomEnergyType: "Shell", HasErrata: true,
+        IsImplemented: true, IncludeInTeamBuilder: true, KingdomName: "Starfish", KingdomEnergyType: "Shell", HasErrata: true,
         ErrataNotes: [
             "Reference: rollinthunder_cards_with_dice(1).json, DPS152 (Wolverine: Tough for the Kids).",
             "Level 1 burst marks: 1 -> 0.",
             "Level 2 burst marks: 1 -> 0.",
+            "Simplified for Dice Kingdom: just the Global; dropped Regenerate (not built) and the reroll/spin protection.",
         ]);
 
     // --- Tailed outright (13 cards, no buildable clause) ---
@@ -2585,12 +2604,17 @@ public static class DpsCards
     // "If 4 or more of your character dice were KO'd this turn" needs a
     // KO COUNT for the turn - NoKOsThisTurn only expresses the boolean
     // "zero", not a threshold. No Condition kind reads a number here.
+    // Built 2026-10-27, simplified (ErrataNotes), to swap a painted animal into Dice Kingdom's Set 1;
+    // the notes above describe the source text, not this build.
     public static readonly CardDef CorsairBackFromOuterSpace = new(
         Id: "DPS139", Name: "Corsair", Subtitle: "Back from Outer Space", Set: "DPS", CardType: CardType.Character,
         PurchaseCost: 5, EnergySymbolIds: ["Fist"],
         Die: MigrationDice.Character("DPS139Die", "Fist", (0, 3, 4), (1, 3, 5), (1, 4, 5)),
         DieLimit: 4, Affiliations: [], Keywords: ["Deadly"],
-        RawText: "If 4 or more of your character dice were KO'd this turn, you may Prep a Corsair die from " +
-                 "this card. Deadly",
-        Abilities: [], Continuous: [], IsImplemented: false, IncludeInTeamBuilder: true, KingdomName: "Wasp", KingdomEnergyType: "Claw");
+        RawText: "Deadly",
+        Abilities: [], Continuous: [], IsImplemented: true, IncludeInTeamBuilder: true, KingdomName: "Wasp", KingdomEnergyType: "Claw", HasErrata: true,
+        ErrataNotes: [
+            "Reference: rollinthunder_cards_with_dice(1).json, DPS139 (Corsair: Back from Outer Space).",
+            "Simplified for Dice Kingdom: just Deadly; dropped the Prep-on-4-KOs clause (no KO count for the turn).",
+        ]);
 }

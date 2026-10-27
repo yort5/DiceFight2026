@@ -414,6 +414,34 @@ public static class KingdomImports
             Prompt: "choose a die in your opponent's Prep Area to scatter to their Used Pile."), Zone.UsedPile))],
         "Scatter", "Eye");
 
+    // ---- Painted swaps (2026-10-27) ----
+    // Animals with a public-domain painting, swapped into Set 1 for ones
+    // that had none (the user: "source other animals that we can find
+    // paintings for, find a card to build for them, and swap them into
+    // Set 1"). The other ten are DpsCards entries built the same day.
+
+    // Peacock: fans its train of eyes and the other bird backs off.
+    public static readonly CardDef PunisherUnlikelyAlly = new(
+        Id: "CW056", Name: "Punisher", Subtitle: "Unlikely ally", Set: "CW", CardType: CardType.Character,
+        PurchaseCost: 4, EnergySymbolIds: ["Fist"],
+        Die: MigrationDice.Character("CW056Die", "Fist", (1, 4, 1), (1, 5, 2), (2, 6, 2)),
+        DieLimit: 4, Affiliations: ["Thunderbolts"], Keywords: ["Intimidate"],
+        RawText: "Intimidate.",
+        Abilities: [], Continuous: [], IncludeInTeamBuilder: true,
+        KingdomName: "Peacock", KingdomEnergyType: "Eye");
+
+    // Beaver: builds the dam the whole pond shelters behind.
+    public static readonly CardDef GrootWeAreGroot = new(
+        Id: "AOU136", Name: "Groot", Subtitle: "We are Groot", Set: "AOU", CardType: CardType.Character,
+        PurchaseCost: 5, EnergySymbolIds: ["Shield"],
+        Die: MigrationDice.Character("AOU136Die", "Shield", [0, 1, 1], (0, 1, 2), (1, 2, 6), (2, 3, 7)),
+        DieLimit: 4, Affiliations: ["Guardians of The Galaxy"], Keywords: [],
+        RawText: "While Groot is active, your other character dice in the Field Zone get +3D.",
+        Abilities: [],
+        Continuous: [new StatAura(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own, Count: 0, ExcludeSelf: true),
+            DefDelta: new Fixed(3))], IncludeInTeamBuilder: true,
+        KingdomName: "Beaver", KingdomEnergyType: "Shell");
+
     public static IReadOnlyList<CardDef> All =>
     [
         BansheeWailOfTheBanshee, FrostGiantLesserElemental, NamoritaTauntingVillains, CaptainAmericaLivingLegend,
@@ -424,5 +452,6 @@ public static class KingdomImports
         TriceratopsGreaterBeast, DestroyerSkyfathersDesign, HerculesTheIncredibleHerc,
         SurpriseAttack, ExcessiveForce, HulkOut, TacticalCover, Blessing, ReleasedFromTheIce,
         NastyPlot, DimensionDoor, UpgradeUnibeam, TooBigToFly, KryptoniteThreat, TheBeyonder, Banishment,
+        PunisherUnlikelyAlly, GrootWeAreGroot,
     ];
 }

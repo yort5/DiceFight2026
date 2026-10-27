@@ -25,7 +25,7 @@ public static class DiceKingdomPacks
 
     // Every playable Character and personal Action in the Catalog. Basic
     // Actions have no rarity - see BasicActions.
-    // 45 Common, 26 Uncommon, 23 Rare, 8 Super Rare. Incomplete cards are excluded.
+    // 48 Common, 29 Uncommon, 29 Rare, 8 Super Rare. Incomplete cards are excluded.
     public static readonly IReadOnlyDictionary<string, CardRarity> Rarities = new Dictionary<string, CardRarity>
     {
         // Claw
@@ -98,6 +98,20 @@ public static class DiceKingdomPacks
         ["DPS114"] = CardRarity.Rare, // Mandrill
         ["DPS142"] = CardRarity.SuperRare, // Wombat
         ["DPS148"] = CardRarity.SuperRare, // Bison
+        // Painted swaps (2026-10-27): each takes the rarity of the Set 1 card
+        // it replaced (now in Set 2), not its printed one.
+        ["DPS027"] = CardRarity.Rare, // Tasmanian Devil (for Orca)
+        ["DPS086"] = CardRarity.Rare, // Lionfish (for Army Ant)
+        ["DPS139"] = CardRarity.Common, // Wasp (for Fire Ant)
+        ["DPS056"] = CardRarity.Rare, // Caracal (for Swordfish)
+        ["DPS047"] = CardRarity.Common, // Nutcracker (for Firefly)
+        ["DPS072"] = CardRarity.Rare, // Cuckoo (for Chameleon)
+        ["DPS095"] = CardRarity.Uncommon, // King Cobra (for Velvet Worm)
+        ["CW056"] = CardRarity.Common, // Peacock (for Orchid Mantis)
+        ["DPS063"] = CardRarity.Rare, // Giant Tortoise (for Saiga)
+        ["DPS019"] = CardRarity.Uncommon, // Horseshoe Crab (for Bombardier Beetle)
+        ["DPS152"] = CardRarity.Uncommon, // Starfish (for Planarian)
+        ["AOU136"] = CardRarity.Rare, // Beaver (for Leech)
         ["GOTG105"] = CardRarity.Rare, // Sugar Glider
         ["JLL002"] = CardRarity.Common, // Stag Beetle
         ["MSW020"] = CardRarity.Common, // Puffin

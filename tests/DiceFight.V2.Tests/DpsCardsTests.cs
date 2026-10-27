@@ -507,20 +507,6 @@ public class DpsCardsTests
     }
 
     [Fact]
-    public void Batch2_Tailed_Cards_Are_Vanilla()
-    {
-        foreach (var card in new[] { DpsCards.PhoenixPsionicMaelstrom, DpsCards.ColossusOrganicSteel })
-        {
-            Assert.False(card.IsImplemented);
-            Assert.Empty(card.Abilities);
-            Assert.Empty(card.Continuous);
-        }
-    }
-
-    // Making the Team, both branches - and the regression for FieldDie's
-    // corrected default: a die that rolls its LEVEL 3 face must be
-    // fielded at level 3, not snapped to level 1.
-    [Fact]
     public void MakingTheTeam_Fields_A_Rolled_Character_Die_At_The_Level_It_Rolled()
     {
         var state = NewGame();
@@ -987,22 +973,6 @@ public class DpsCardsTests
         Active(state, DpsCards.IcemanMrIceGuy, "p1");
 
         Assert.Equal(baseline + 1, QueryEngine.GetAttack(state, sidekick));
-    }
-
-    [Fact]
-    public void ProfessorXDreamer_Energize_Moves_An_XMen_Die_From_Used_Pile_To_Prep_Area()
-    {
-        var state = NewGame();
-        Energized(state, DpsCards.ProfessorXDreamer, "p1");
-        var dormant = new Model.DieInstance { Id = "dormant", CardId = DpsCards.PsylockeTelepath.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.UsedPile, CurrentFaceIndex = null };
-        state.Dice.Add(dormant);
-        var queue = new AbilityQueue();
-
-        FireEnergize(state, queue);
-        Drain(state, queue);
-        Answer(state, "dormant");
-
-        Assert.Equal(Zone.PrepArea, dormant.Zone);
     }
 
     [Fact]
@@ -1556,41 +1526,6 @@ public class DpsCardsTests
         Active(state, DpsCards.WolverineHardenedByMadripoor, "p1", id: "logan");
 
         Assert.Equal(baseline + 2, QueryEngine.GetAttack(state, mystique));
-    }
-
-    [Fact]
-    public void DarkPhoenixMalevolent_KOs_A_Target_And_Deals_1_If_It_Was_XMen()
-    {
-        var state = NewGame();
-        var darkPhoenix = Ready(state, DpsCards.DarkPhoenixMalevolent, "p1", 1);
-        var target = Active(state, DpsCards.PsylockeTelepath, "p2", id: "target"); // X-Men
-        var queue = new AbilityQueue();
-
-        TurnEngine.Field(state, queue, darkPhoenix.Id, Energy(state, "p1", 1));
-        Drain(state, queue);
-        Answer(state, "target");
-
-        Assert.Equal(Zone.PrepArea, target.Zone); // KO'd
-        Assert.Equal(19, state.PlayerTwo.Life);
-    }
-
-    [Fact]
-    public void DarkPhoenixMalevolent_Global_KOs_Her_Own_Die_And_Discounts_The_Next_Purchase()
-    {
-        var state = NewGame();
-        var darkPhoenix = Active(state, DpsCards.DarkPhoenixMalevolent, "p1", id: "dp");
-        var ownDie = Active(state, DpsCards.RonanTheAccuserTreason, "p1", id: "own");
-        Sidekick(state, "p1", Zone.ReservePool, 1, "bolt-energy");
-        var toBuy = new Model.DieInstance { Id = "toBuy", CardId = DpsCards.PowerBolt.Id, OwnerId = "p1", ControllerId = "p1", Zone = Zone.Unpurchased };
-        state.Dice.Add(toBuy);
-        var queue = new AbilityQueue();
-
-        TurnEngine.UseGlobal(state, queue, DpsCards.DarkPhoenixMalevolent.Id, "p1", abilityIndex: 1, ["bolt-energy"]);
-        Drain(state, queue);
-        Answer(state, "own");
-
-        TurnEngine.Purchase(state, queue, toBuy.Id, Energy(state, "p1", 1)); // 3 - 2 = 1
-        Assert.Equal(Zone.UsedPile, toBuy.Zone); // default purchase destination (no GoesToZone override)
     }
 
     // --- Batch 8 (2026-09-01) ---

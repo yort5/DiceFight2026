@@ -253,6 +253,7 @@ function CollectionGrid({ collection, cards }: { collection: Collection; cards: 
                 rarity === "Basic" ? inSet.filter((c) => !c.rarity) : inSet.filter((c) => c.rarity === rarity)
               ).sort((a, b) => (energyOf(a) ?? "").localeCompare(energyOf(b) ?? "") || a.purchaseCost - b.purchaseCost);
               const have = tier.filter((c) => (collection.dice[c.id] ?? 0) > 0).length;
+              if (tier.length === 0) return null; // Set 2 has no Super Rares or Basic Actions yet
               return (
                 <section key={rarity} className={`dk-coll-tier dk-rarity-${rarity}`}>
                   <h4>

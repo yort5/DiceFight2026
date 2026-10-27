@@ -94,6 +94,18 @@ const ART: Record<string, string> = {
   "AVX077": "hercules-beetle", // Hercules Beetle
   "DPS059": "kangaroo-rat", // Kangaroo Rat
   "THOR021": "bull-shark", // Bull Shark
+  "DPS027": "tasmanian-devil", // Tasmanian Devil
+  "DPS086": "lionfish", // Lionfish
+  "DPS139": "wasp", // Wasp
+  "DPS056": "caracal", // Caracal
+  "DPS047": "nutcracker", // Nutcracker
+  "DPS072": "cuckoo", // Cuckoo
+  "DPS095": "king-cobra", // King Cobra
+  "CW056": "peacock", // Peacock
+  "DPS063": "giant-tortoise", // Giant Tortoise
+  "DPS019": "horseshoe-crab", // Horseshoe Crab
+  "DPS152": "starfish", // Starfish
+  "AOU136": "beaver", // Beaver
 };
 
 export function hasPainting(cardId: string | null | undefined): boolean {
