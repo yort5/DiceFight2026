@@ -10,7 +10,7 @@ const art = path.join(__dirname, "../public/dice-kingdom/art");
 const slugs = [...source.matchAll(/^\s+"[^"]+": "([a-z0-9-]+)",/gm)].map((m) => m[1]);
 
 test("the painting map isn't empty", () => {
-  assert.ok(slugs.length >= 69, `only ${slugs.length} paintings found`);
+  assert.ok(slugs.length >= 81, `only ${slugs.length} paintings found`);
 });
 
 test("every painting has a full picture and an icon crop", () => {
