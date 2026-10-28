@@ -3,7 +3,9 @@
 // make the cards on the collection page 'full size' so that you can actually
 // see the art? ... And in the pack opening screen." Used by the Packs page's
 // pack reveal, collection grid and the tapped card's close-up. A card with no
-// painting yet shows its silhouette on its energy's plate in the same frame.
+// painting yet shows its silhouette on its energy's plate in the same frame,
+// and so does one you don't own yet in the collection (2026-10-28: "may just
+// use the outline for cards you don't have yet").
 import type { CSSProperties, ReactNode } from "react";
 import { KeywordText } from "../KeywordPreview";
 import { CHARACTER_ICONS, EnergyBadge } from "./icons";
@@ -25,20 +27,27 @@ export function energyPlate(energy: string | undefined): CSSProperties | undefin
   return energy ? ({ "--energy": `var(--${energy.toLowerCase()})` } as CSSProperties) : undefined;
 }
 
-export function FullArtCard({ card, rarity, foil, large, children }: {
+// A name with a long single word (Hippopotamus, Deathstalker) gets smaller
+// type on the small cards rather than splitting mid-word.
+function longWord(name: string | undefined): boolean {
+  return !!name && name.split(/\s+/).some((w) => w.length >= 10);
+}
+
+export function FullArtCard({ card, rarity, foil, large, outline, children }: {
   card: CardDef | undefined;
   rarity: Rarity | "Basic";
   foil?: boolean;
   large?: boolean; // the close-up: bigger, with the ability text and levels
+  outline?: boolean; // the silhouette even when there's a painting (a card you don't own yet)
   children?: ReactNode; // the footer's right-hand side (dice owned, "New!")
 }) {
   const Avatar = card ? CHARACTER_ICONS[card.id] : null;
   const energy = card && energyOf(card);
-  const painted = hasPainting(card?.id);
+  const painted = !outline && hasPainting(card?.id);
   return (
     <div className={`dk-fullcard dk-rarity-${rarity}${foil ? " foil" : ""}${large ? " large" : ""}`} style={energyPlate(energy)}>
       <div className="dk-fullcard-head">
-        <span className="dk-fullcard-name">{card?.name ?? "?"}</span>
+        <span className={`dk-fullcard-name${longWord(card?.name) ? " long" : ""}`}>{card?.name ?? "?"}</span>
         {card && (
           <span className="dk-fullcard-cost">
             {card.purchaseCost}

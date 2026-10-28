@@ -264,7 +264,7 @@ function CollectionGrid({ collection, cards }: { collection: Collection; cards: 
                           onClick={() => setSelected(card.id)}
                           aria-label={`${card.name}: ${count} dice`}
                         >
-                          <FullArtCard card={card} rarity={rarity} foil={rarity === "SuperRare" && count > 0}>
+                          <FullArtCard card={card} rarity={rarity} foil={rarity === "SuperRare" && count > 0} outline={count === 0}>
                             <span className="dk-coll-pips" aria-hidden>
                               {Array.from({ length: card.dieLimit }, (_, i) => (
                                 <i key={i} className={i < count ? "on" : ""} />
@@ -299,7 +299,7 @@ function CardCloseUp({ card, count, onClose }: { card: CardDef; count: number; o
   return (
     <div className="dk-closeup-backdrop" role="dialog" aria-label={card.name} onClick={onClose}>
       <div className="dk-closeup" onClick={(e) => e.stopPropagation()}>
-        <FullArtCard card={card} rarity={rarity} large foil={count > 0 && (rarity === "Rare" || rarity === "SuperRare")}>
+        <FullArtCard card={card} rarity={rarity} large outline={count === 0} foil={count > 0 && (rarity === "Rare" || rarity === "SuperRare")}>
           <span className="dk-closeup-count">
             {card.kingdomSet} · {count} {count === 1 ? "die" : "dice"}
           </span>

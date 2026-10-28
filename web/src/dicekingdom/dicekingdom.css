@@ -5765,8 +5765,34 @@
 /* The collection: a grid of full-art cards; a card you don't have yet is
    faded and grey. */
 .dk-packs .dk-coll-grid:has(.dk-coll-tile) {
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+}
+/* Smaller cards (3 across on a phone): tighter type. */
+.dk-packs .dk-coll-tile .dk-fullcard-head {
+  padding: 3px 4px 2px;
+}
+.dk-packs .dk-coll-tile .dk-fullcard-name,
+.dk-packs .dk-coll-tile .dk-fullcard-cost {
+  font-size: 10.5px;
+}
+.dk-packs .dk-coll-tile .dk-fullcard-name.long {
+  font-size: 9px;
+  letter-spacing: -0.01em;
+}
+.dk-packs .dk-coll-tile .dk-fullcard-art {
+  margin: 0 3px;
+}
+.dk-packs .dk-coll-tile .dk-fullcard-foot {
+  min-height: 16px;
+  padding: 2px 4px 3px;
+}
+.dk-packs .dk-coll-tile .dk-fullcard-rarity {
+  font-size: 8px;
+}
+.dk-packs .dk-coll-tile .dk-coll-pips i {
+  width: 7px;
+  height: 7px;
 }
 .dk-packs .dk-coll-tile {
   appearance: none;
@@ -5778,8 +5804,9 @@
   cursor: pointer;
   border-radius: 10px;
 }
+/* Not owned yet: the outline instead of the painting, greyed. */
 .dk-packs .dk-coll-tile.missing {
-  opacity: 0.6;
+  opacity: 0.7;
 }
 .dk-packs .dk-coll-tile.missing .dk-fullcard-art {
   filter: grayscale(1);

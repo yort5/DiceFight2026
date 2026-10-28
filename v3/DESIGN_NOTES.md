@@ -4811,3 +4811,11 @@ ones in your original examples, where the full art is there."
 - Checked in headless Chromium (~/.devtools/playwright/full-art-check.js,
   full-art-mobile.js): desktop and Pixel 7 Packs page, close-up, desktop
   roster popover, phone roster tap; no page errors.
+- Same day, user: "let's try it with smaller cards and see if the art still
+  comes through. Also, I'd make a bigger distinction between owned cards and
+  unowned cards ... may just use the outline for cards you don't have yet."
+  Collection cards now about 96px (3 across on a phone, about 6 on a
+  computer) with tighter type; a long single-word name (Hippopotamus,
+  Deathstalker) gets smaller type instead of splitting mid-word. A card you
+  don't own shows its outline (greyed, dashed border) in the grid and its
+  close-up; owned cards show the painting. The pack reveal stays at 3 across.
