@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CubeSpin, HeldFace, TumbleTrack } from "./DieCube";
+import type { CubeFace } from "./dieFaces";
+import { dice3d, preloadDice3d, thrownDice } from "./dice3dSetting";
 import { playSound } from "./sound";
 
 // The roll: real CSS keyframe tumbles, not transitions between computed
@@ -46,6 +48,11 @@ export interface RollTarget {
   /** What the die showed before this roll - kept on screen until the
    *  tumble is well under way (see DieCube's HeldFace). */
   held?: HeldFace;
+  /** For the 3D throw (dice3d/roll3d.ts): the die's six sides, [0] the
+   *  rolled one (facesFor), its live energy, and whose it is. */
+  faces?: CubeFace[];
+  energy?: { type: string; amount: number };
+  mine?: boolean;
 }
 
 // How far into the tumble the landed face appears: late enough that the
@@ -73,6 +80,9 @@ export function useDiceRoll() {
     timers.current.clear();
   }, []);
 
+  // The 3D code loads in the background as soon as a board is up.
+  useEffect(() => preloadDice3d(), []);
+
   const finishAfter = (dieId: string, spin: CubeSpin, delayMs: number) => {
     const previousTimer = timers.current.get(dieId);
     if (previousTimer !== undefined) clearTimeout(previousTimer);
@@ -89,9 +99,8 @@ export function useDiceRoll() {
     timers.current.set(dieId, timer);
   };
 
-  const launch = useCallback((targets: RollTarget[]) => {
-    if (targets.length === 0) return;
-    playSound(targets.length > 1 ? "roll" : "reroll");
+  // The CSS tumble, in place on each tile.
+  const tumble = useCallback((targets: RollTarget[]) => {
     const reduced = reducedMotionPreferred();
     const duration = reduced ? TUMBLE_MS_REDUCED : TUMBLE_MS;
 
@@ -120,6 +129,43 @@ export function useDiceRoll() {
     });
   }, []);
 
+  const launch = useCallback((targets: RollTarget[]) => {
+    if (targets.length === 0) return;
+    playSound(targets.length > 1 ? "roll" : "reroll");
+    const three = dice3d();
+    if (!three || !targets.every((t) => t.faces)) {
+      tumble(targets);
+      return;
+    }
+    // Thrown across the screen in 3D; each tile waits empty ("away") until
+    // its die lands on it.
+    const away: Record<string, CubeSpin> = {};
+    for (const target of targets) {
+      away[target.dieId] = { kind: "away" };
+      thrownDice.add(target.dieId);
+      const timer = timers.current.get(target.dieId);
+      if (timer !== undefined) clearTimeout(timer);
+    }
+    setSpins((current) => ({ ...current, ...away }));
+    const home = (dieId: string) => {
+      thrownDice.delete(dieId);
+      setSpins((current) => {
+        if (current[dieId] !== away[dieId]) return current;
+        const next = { ...current };
+        delete next[dieId];
+        return next;
+      });
+    };
+    three
+      .roll3d(targets.map((t) => ({ id: t.dieId, faces: t.faces!, energy: t.energy, mine: t.mine ?? true })), home)
+      .catch((error) => {
+        // No WebGL after all, or a lost context: the tumble instead.
+        console.warn("3D dice unavailable, using the 2D roll:", error);
+        targets.forEach((t) => home(t.dieId));
+        tumble(targets);
+      });
+  }, [tumble]);
+
   const spinTo = useCallback((targets: RollTarget[]) => {
     if (targets.length === 0) return;
     // Unlike launch(), this doesn't fall back to a shorter real spin in
@@ -146,6 +192,6 @@ export function useDiceRoll() {
     targets.forEach((target) => finishAfter(target.dieId, nextSpins[target.dieId], SPIN_MS));
   }, []);
 
-  const rolling = Object.values(spins).some((spin) => spin.kind === "tumble");
+  const rolling = Object.values(spins).some((spin) => spin.kind === "tumble" || spin.kind === "away");
   return { spins, offsets, rolling, launch, spinTo };
 }

@@ -1978,13 +1978,17 @@ export function DiceKingdomMobilePage() {
     for (const id of [...tumbles, ...flips]) {
       const die = byId.get(id)!;
       const was = before.get(id)!;
-      const { index } = facesFor(die, cardsById);
+      const { index, faces } = facesFor(die, cardsById);
       // What the die showed before the roll stays up until it's in the air.
       const held = {
         face: facesFor(was, cardsById).faces[0],
         energy: was.energySymbolId && was.energyAmount > 0 ? { type: was.energySymbolId, amount: was.energyAmount } : undefined,
       };
-      (tumbles.includes(id) ? rolledTargets : spunTargets).push({ dieId: id, faceIndex: index, held });
+      (tumbles.includes(id) ? rolledTargets : spunTargets).push({
+        dieId: id, faceIndex: index, held, faces,
+        energy: die.energySymbolId && die.energyAmount > 0 ? { type: die.energySymbolId, amount: die.energyAmount } : undefined,
+        mine: die.controllerId === (next.yourPlayerId ?? next.playerOne.id),
+      });
     }
     launchRoll(rolledTargets);
     spinDie(spunTargets);

@@ -4819,3 +4819,34 @@ ones in your original examples, where the full art is there."
   Deathstalker) gets smaller type instead of splitting mid-word. A card you
   don't own shows its outline (greyed, dashed border) in the grid and its
   close-up; owned cards show the painting. The pack reveal stays at 3 across.
+
+## 2026-10-28 - 3D dice
+
+The last step of the 2026-10-26 game-feel plan ("make the dice the star"),
+picked up once the card look was settled. User: "let's move on to the 3D
+dice rolling".
+
+- A roll is thrown across the whole screen as real 3D dice (three.js), which
+  bounce off the screen edges, settle, and then fly into their tiles (tray,
+  Reserve Pool). Each tile waits empty (DieCube's new "away" spin) until its
+  die lands on it showing the same face. A tap anywhere skips straight to
+  the fly-in. Your dice come from the bottom edge, the opponent's from the top.
+- The server has already rolled, so the throw is staged: `dice3d/simulate.ts`
+  (cannon-es physics, pure, Node-testable) runs the whole throw to rest
+  first (about 1.1s typical, capped at 1.8s), then `dice3d/roll3d.ts` paints
+  the rolled face on whichever side ended up on top and plays the recording
+  back. Every side shows its real face (`dice3d/faces.ts` draws them like
+  DieCube's front: silhouette, cost/attack/defense, energy pips), since you
+  watch them tumble past - the CSS cube's other sides were blank filler.
+- Loaded on demand (`dice3dSetting.ts`): three.js + physics are a separate
+  ~160 KB gzipped chunk fetched in the background when a board opens, so
+  the first page load is unchanged. Until it has loaded, or with "3D dice"
+  switched off in the ☰ menu (per device, on by default), under
+  prefers-reduced-motion, or without WebGL, rolls keep the CSS tumble.
+- dieFlights.ts leaves thrown dice alone (`thrownDice`), so the 2D
+  Prep-to-Reserve flight doesn't also play.
+- Checked: tests/dice3dSimulate.test.cjs (settles on screen within the cap,
+  the reported top face is the one facing up, deterministic per seed);
+  ~/.devtools/playwright/dice3d-check.js films a roll on the phone and
+  desktop boards on Playwright's fake clock (software WebGL is too slow to
+  film in real time) - the dice land showing the same faces as their tiles.

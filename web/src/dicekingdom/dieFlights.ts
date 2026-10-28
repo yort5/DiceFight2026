@@ -21,6 +21,7 @@
 // Purely cosmetic: it never touches game state, and does nothing under
 // prefers-reduced-motion.
 import { useLayoutEffect, useRef, type RefObject } from "react";
+import { thrownDice } from "./dice3dSetting";
 import type { Die, GameState } from "./types";
 
 interface Snap {
@@ -178,6 +179,7 @@ export function useDieFlights(rootRef: RefObject<HTMLElement | null>, game: Game
       for (const die of game.dice) {
         const prev = prevDice.current.get(die.id);
         if (!prev) continue;
+        if (thrownDice.has(die.id)) continue; // a 3D die is carrying it there
         const flyId = `die:${die.id}`;
         const el = els.get(flyId);
         const snap = snaps.current.get(flyId);

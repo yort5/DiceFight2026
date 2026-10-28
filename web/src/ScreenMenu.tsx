@@ -3,6 +3,7 @@ import { navigate, type Route } from "./router";
 import { useTeamBuilderLayout } from "./teamBuilderLayout";
 import { useIsDark, useTheme } from "./theme";
 import { setSoundMuted, useSoundMuted } from "./dicekingdom/sound";
+import { setDice3dOn, useDice3dOn } from "./dicekingdom/dice3dSetting";
 import "./ScreenMenu.css";
 
 export function ScreenMenu({ screen, startRoute, onStartGame }: {
@@ -18,6 +19,7 @@ export function ScreenMenu({ screen, startRoute, onStartGame }: {
   const [theme, setTheme] = useTheme();
   const dark = useIsDark(theme);
   const muted = useSoundMuted();
+  const dice3dOn = useDice3dOn();
   const id = useId();
   const ref = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -68,6 +70,11 @@ export function ScreenMenu({ screen, startRoute, onStartGame }: {
           <button type="button" role="switch" aria-checked={!muted} aria-label="Sound"
             className="screen-menu-theme" onClick={() => setSoundMuted(!muted)}>
             <span>Sound</span>
+            <span className="screen-menu-switch" aria-hidden="true"><span /></span>
+          </button>
+          <button type="button" role="switch" aria-checked={dice3dOn} aria-label="3D dice"
+            className="screen-menu-theme" onClick={() => setDice3dOn(!dice3dOn)}>
+            <span>3D dice</span>
             <span className="screen-menu-switch" aria-hidden="true"><span /></span>
           </button>
         </div>

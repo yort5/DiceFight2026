@@ -70,7 +70,9 @@ export type HeldFace = { face: CubeFace; energy?: { type: string; amount: number
 
 export type CubeSpin =
   | { kind: "tumble"; track: TumbleTrack; durationMs: number; delayMs: number; reduced?: boolean; generation: number; held?: HeldFace; revealAtMs?: number }
-  | { kind: "flip"; toDeg: number; durationMs: number };
+  | { kind: "flip"; toDeg: number; durationMs: number }
+  // Off being thrown as a 3D die (dice3d/roll3d.ts); the tile waits empty.
+  | { kind: "away" };
 
 export function DieCube(props: {
   faces: CubeFace[];
@@ -160,7 +162,7 @@ export function DieCube(props: {
     <span
       aria-hidden="true"
       className={`die-cube-box${cues?.intimidated ? " dk-cue-away" : ""}`}
-      style={{ width: size, height: size, perspective: size * 10 }}
+      style={{ width: size, height: size, perspective: size * 10, ...(spin?.kind === "away" ? { visibility: "hidden" } : {}) }}
     >
       <span
         key={`shadow-${cubeKey}`}
