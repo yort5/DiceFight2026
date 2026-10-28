@@ -4,33 +4,20 @@
 // rarity-less Basic Action (2026-10-20) - for coins from the starting grant and one visit a day. The Champion
 // teams stay free starter rosters, and each joins the collection once a
 // game with it is finished. Spare dice trade up a rarity (TradeIns).
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { navigate } from "../router";
 import { backPath } from "./AccountPage";
 import { championLabel } from "./ChampionPicker";
 import { api } from "./api";
 import { CHARACTER_ICONS, EnergyBadge, type IconComponent } from "./icons";
 import { Painting, hasPainting } from "./cardArt";
+import { FullArtCard, energyOf, energyPlate, rarityLabel } from "./FullArtCard";
 import { players, type Collection, type PulledCard, type Rarity } from "./player";
 import { playSound, setSoundMuted, useSoundMuted } from "./sound";
 import { ThemeToggle, useTheme } from "./ThemeToggle";
 import type { CardDef } from "./types";
 
 const RARITIES: Rarity[] = ["SuperRare", "Rare", "Uncommon", "Common"];
-
-function rarityLabel(rarity: Rarity | "Basic"): string {
-  return rarity === "SuperRare" ? "Super Rare" : rarity === "Basic" ? "Basic Action" : rarity;
-}
-
-// A Basic Action's purchase has no energy type; its die's faces do.
-export function energyOf(card: CardDef): string | undefined {
-  return card.energyTypes[0] ?? card.dieEnergyType ?? undefined;
-}
-
-// The art sits on a plate of its energy's colour (2026-10-26 polish pass).
-export function energyPlate(energy: string | undefined): CSSProperties | undefined {
-  return energy ? ({ "--energy": `var(--${energy.toLowerCase()})` } as CSSProperties) : undefined;
-}
 
 function nextDaily(iso: string): string {
   return new Date(iso).toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit" });
@@ -61,6 +48,9 @@ export function CardFace({ card, rarity, avatar }: { card: CardDef | undefined; 
 function revealOrder(pulled: PulledCard[]): PulledCard[] {
   return pulled.length === 6 ? [...pulled.slice(0, 4), pulled[5], pulled[4]] : pulled;
 }
+
+// ArtTestPage.tsx still imports these from here.
+export { energyOf, energyPlate };
 
 const SEALED_MS = 450;
 
@@ -97,12 +87,13 @@ function OpenedPack({ pulled, cards }: { pulled: PulledCard[]; cards: Map<string
         const card = cards.get(p.cardId);
         const up = i < shown;
         return (
-          <div key={i} className={`dk-pack-card dk-rarity-${p.rarity}${up ? " up" : ""}`} aria-hidden={!up}>
+          <div key={i} className={`dk-pack-card full dk-rarity-${p.rarity}${up ? " up" : ""}`} aria-hidden={!up}>
             <div className="dk-pack-card-inner">
               <div className="dk-pack-card-back" />
               <div className="dk-pack-card-front">
-                <CardFace card={card} rarity={p.rarity} />
-                <span className={`dk-pack-owned${p.new ? " new" : ""}`}>{p.new ? "New!" : `×${p.owned}`}</span>
+                <FullArtCard card={card} rarity={p.rarity} foil={p.rarity === "Rare" || p.rarity === "SuperRare"}>
+                  <span className={`dk-pack-owned${p.new ? " new" : ""}`}>{p.new ? "New!" : `×${p.owned}`}</span>
+                </FullArtCard>
               </div>
             </div>
           </div>
@@ -265,25 +256,22 @@ function CollectionGrid({ collection, cards }: { collection: Collection; cards: 
                   <div className="dk-coll-grid">
                     {tier.map((card) => {
                       const count = collection.dice[card.id] ?? 0;
-                      const Avatar = CHARACTER_ICONS[card.id];
                       return (
                         <button
                           key={card.id}
                           type="button"
-                          className={`dk-coll-card dk-rarity-${rarity}${count ? "" : " missing"}${selected === card.id ? " selected" : ""}`}
-                          onClick={() => setSelected(selected === card.id ? null : card.id)}
+                          className={`dk-coll-tile${count ? "" : " missing"}`}
+                          onClick={() => setSelected(card.id)}
                           aria-label={`${card.name}: ${count} dice`}
                         >
-                          <span className={`dk-coll-avatar${hasPainting(card.id) ? " painted" : ""}`} style={energyPlate(energyOf(card))}>
-                            {hasPainting(card.id) ? <Painting cardId={card.id} crop="icon" alt={card.name} /> : Avatar && <Avatar size={32} />}
-                          </span>
-                          <span className="dk-coll-name">{card.name}</span>
-                          <span className="dk-coll-pips" aria-hidden>
-                            {Array.from({ length: card.dieLimit }, (_, i) => (
-                              <i key={i} className={i < count ? "on" : ""} />
-                            ))}
-                            {count > card.dieLimit && <small>+{count - card.dieLimit}</small>}
-                          </span>
+                          <FullArtCard card={card} rarity={rarity} foil={rarity === "SuperRare" && count > 0}>
+                            <span className="dk-coll-pips" aria-hidden>
+                              {Array.from({ length: card.dieLimit }, (_, i) => (
+                                <i key={i} className={i < count ? "on" : ""} />
+                              ))}
+                              {count > card.dieLimit && <small>+{count - card.dieLimit}</small>}
+                            </span>
+                          </FullArtCard>
                         </button>
                       );
                     })}
@@ -294,21 +282,32 @@ function CollectionGrid({ collection, cards }: { collection: Collection; cards: 
           </section>
         );
       })}
-      {pick && (
-        <div className="dk-coll-detail">
-          <Painting cardId={pick.id} alt={pick.name} className="dk-coll-painting" />
-          <b>{pick.name}</b> · {pick.kingdomSet} {rarityLabel(pick.rarity ?? "Basic")} · cost {pick.purchaseCost}{" "}
-          {energyOf(pick) && <EnergyBadge type={energyOf(pick)!} size={14} />} · {collection.dice[pick.id] ?? 0} dice
-          <div>{pick.rawText}</div>
-          <div className="dk-coll-levels">
-            {pick.levels.map((l, i) => (
-              <span key={i}>
-                L{i + 1} {l.attack}/{l.defense}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
+      {pick && <CardCloseUp card={pick} count={collection.dice[pick.id] ?? 0} onClose={() => setSelected(null)} />}
+    </div>
+  );
+}
+
+// A tapped collection card, big, with its text - over the page rather than
+// below the whole collection, where it used to land out of sight.
+function CardCloseUp({ card, count, onClose }: { card: CardDef; count: number; onClose: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  const rarity = card.rarity ?? "Basic";
+  return (
+    <div className="dk-closeup-backdrop" role="dialog" aria-label={card.name} onClick={onClose}>
+      <div className="dk-closeup" onClick={(e) => e.stopPropagation()}>
+        <FullArtCard card={card} rarity={rarity} large foil={count > 0 && (rarity === "Rare" || rarity === "SuperRare")}>
+          <span className="dk-closeup-count">
+            {card.kingdomSet} · {count} {count === 1 ? "die" : "dice"}
+          </span>
+        </FullArtCard>
+        <button type="button" className="btn dk-closeup-close" onClick={onClose}>
+          Close
+        </button>
+      </div>
     </div>
   );
 }

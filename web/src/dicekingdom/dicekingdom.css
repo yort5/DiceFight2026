@@ -4945,23 +4945,6 @@
   font-size: 10px;
   color: var(--text-dim);
 }
-.dk-packs .dk-coll-detail {
-  margin-top: 12px;
-  padding: 10px;
-  border-top: 1px solid var(--border);
-  font-size: 14px;
-}
-.dk-packs .dk-coll-detail .energy-badge {
-  display: inline-flex;
-  vertical-align: middle;
-}
-.dk-packs .dk-coll-levels {
-  display: flex;
-  gap: 12px;
-  margin-top: 4px;
-  font-size: 12px;
-  color: var(--text-dim);
-}
 .dk-packs .dk-trade-row {
   display: flex;
   align-items: center;
@@ -5431,9 +5414,10 @@
   overflow: hidden;
 }
 /* Foil: a light sweep across Rares, a rainbow one across Super Rares. */
-.dk-packs .dk-rarity-Rare .dk-pack-card-front::after,
-.dk-packs .dk-rarity-SuperRare .dk-pack-card-front::after,
-.dk-packs .dk-coll-card.dk-rarity-SuperRare:not(.missing)::after {
+.dk-packs .dk-rarity-Rare:not(.full) .dk-pack-card-front::after,
+.dk-packs .dk-rarity-SuperRare:not(.full) .dk-pack-card-front::after,
+.dk-packs .dk-coll-card.dk-rarity-SuperRare:not(.missing)::after,
+.dk-packs .dk-fullcard.foil::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -5444,8 +5428,9 @@
   mix-blend-mode: overlay;
   animation: dkFoil 2.6s ease-in-out infinite;
 }
-.dk-packs .dk-rarity-SuperRare .dk-pack-card-front::after,
-.dk-packs .dk-coll-card.dk-rarity-SuperRare:not(.missing)::after {
+.dk-packs .dk-rarity-SuperRare:not(.full) .dk-pack-card-front::after,
+.dk-packs .dk-coll-card.dk-rarity-SuperRare:not(.missing)::after,
+.dk-packs .dk-fullcard.foil.dk-rarity-SuperRare::after {
   background: linear-gradient(115deg,
     transparent 25%, rgba(255, 90, 90, 0.35) 35%, rgba(255, 220, 90, 0.45) 42%,
     rgba(120, 255, 160, 0.4) 49%, rgba(90, 170, 255, 0.4) 56%, rgba(200, 120, 255, 0.35) 63%, transparent 72%);
@@ -5470,7 +5455,8 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .dk-packs .dk-pack-card-front::after,
-  .dk-packs .dk-coll-card::after { animation: none; }
+  .dk-packs .dk-coll-card::after,
+  .dk-packs .dk-fullcard::after { animation: none; }
   .dk-packs .dk-pack-opened.sealed .dk-pack-card-back { animation: none; }
 }
 
@@ -5610,19 +5596,6 @@
 .dk-packs .dk-coll-avatar.painted {
   box-shadow: 0 0 0 2px color-mix(in oklab, var(--energy, var(--rarity)) 70%, transparent);
 }
-.dk-packs img.dk-coll-painting {
-  float: right;
-  width: 130px;
-  aspect-ratio: 480 / 544;
-  margin: 0 0 8px 12px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-}
-.dk-packs .dk-coll-detail::after {
-  content: "";
-  display: block;
-  clear: both;
-}
 /* The mobile Full Roster sheet: once any card has a painting, the avatar
    column widens for every row so the names still line up. */
 .dk-mobile .dkm-sheet:has(.dkm-roster-avatar.painted) .dkm-roster-avatar {
@@ -5634,4 +5607,236 @@
   width: 40px;
   height: 40px;
   border-radius: 8px;
+}
+
+/* The full-art card (FullArtCard.tsx, 2026-10-28): pack reveal, collection
+   grid and the tapped card's close-up. The painting fills the art window;
+   a card without one shows its silhouette on the energy plate. */
+.dk-packs .dk-fullcard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  aspect-ratio: 5 / 7;
+  overflow: hidden;
+  border: 3px solid var(--rarity);
+  border-radius: 10px;
+  background: var(--tile-bg);
+  box-shadow: var(--shadow);
+  color: var(--text-h);
+  text-align: left;
+}
+.dk-packs .dk-fullcard-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 4px 6px 3px;
+}
+.dk-packs .dk-fullcard-name {
+  min-width: 0;
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.dk-packs .dk-fullcard-cost {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 1.15;
+}
+.dk-packs .dk-fullcard-art {
+  flex: 1;
+  min-height: 0;
+  margin: 0 4px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 5px;
+  background: radial-gradient(circle at 50% 45%,
+    color-mix(in oklab, var(--energy, var(--rarity)) 35%, var(--tile-bg)),
+    color-mix(in oklab, var(--energy, var(--rarity)) 70%, black) 120%);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--energy, var(--rarity)) 60%, transparent);
+}
+.dk-packs .dk-fullcard-art img.dk-painting {
+  width: 100%;
+  height: 100%;
+}
+.dk-packs .dk-fullcard-art svg {
+  width: 62%;
+  height: auto;
+  color: var(--on-fill, #fff);
+}
+.dk-packs .dk-fullcard-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  min-height: 20px;
+  padding: 2px 6px 3px;
+}
+.dk-packs .dk-fullcard-rarity {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--rarity);
+  white-space: nowrap;
+}
+/* The close-up: the whole painting, then the card's text and levels. */
+.dk-packs .dk-fullcard.large {
+  aspect-ratio: auto;
+  border-width: 4px;
+  border-radius: 14px;
+}
+.dk-packs .dk-fullcard.large .dk-fullcard-head {
+  padding: 8px 10px 6px;
+}
+.dk-packs .dk-fullcard.large .dk-fullcard-name {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 22px;
+}
+.dk-packs .dk-fullcard.large .dk-fullcard-cost {
+  font-size: 18px;
+}
+.dk-packs .dk-fullcard.large .dk-fullcard-art {
+  flex: none;
+  aspect-ratio: 480 / 544;
+  margin: 0 8px;
+}
+.dk-packs .dk-fullcard-text {
+  padding: 8px 12px 2px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+.dk-packs .dk-fullcard-text p {
+  margin: 0;
+}
+.dk-packs .dk-fullcard-levels {
+  display: flex;
+  gap: 14px;
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.dk-packs .dk-fullcard-levels b {
+  color: var(--text-h);
+}
+.dk-packs .dk-fullcard.large .dk-fullcard-foot {
+  padding: 6px 12px 10px;
+}
+.dk-packs .dk-fullcard.large .dk-fullcard-rarity {
+  font-size: 11px;
+}
+
+/* In the pack: the card is the flip's front face. */
+.dk-packs .dk-pack-opened:has(.dk-pack-card.full) {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.dk-packs .dk-pack-card.full {
+  aspect-ratio: 5 / 7;
+}
+.dk-packs .dk-pack-card.full .dk-pack-card-front {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.dk-packs .dk-pack-card.full .dk-fullcard {
+  height: 100%;
+}
+.dk-packs .dk-trade-result .dk-pack-opened:has(.dk-pack-card.full) {
+  grid-template-columns: minmax(0, 180px);
+}
+@media (max-width: 560px) {
+  .dk-packs .dk-pack-opened:has(.dk-pack-card.full) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .dk-packs .dk-pack-card.full {
+    aspect-ratio: 5 / 7;
+  }
+}
+
+/* The collection: a grid of full-art cards; a card you don't have yet is
+   faded and grey. */
+.dk-packs .dk-coll-grid:has(.dk-coll-tile) {
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+}
+.dk-packs .dk-coll-tile {
+  appearance: none;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+  border-radius: 10px;
+}
+.dk-packs .dk-coll-tile.missing {
+  opacity: 0.6;
+}
+.dk-packs .dk-coll-tile.missing .dk-fullcard-art {
+  filter: grayscale(1);
+}
+.dk-packs .dk-coll-tile.missing .dk-fullcard {
+  border-style: dashed;
+}
+.dk-packs .dk-coll-tile:focus-visible {
+  outline: 2px solid var(--text-h);
+  outline-offset: 2px;
+}
+@media (hover: hover) {
+  .dk-packs .dk-coll-tile:hover .dk-fullcard {
+    transform: translateY(-2px);
+  }
+}
+.dk-packs .dk-coll-tile .dk-fullcard {
+  transition: transform 0.15s ease;
+}
+
+.dk-packs .dk-closeup-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.6);
+}
+.dk-packs .dk-closeup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: min(340px, 100%);
+}
+.dk-packs .dk-closeup-count {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+/* A roster card's popover (desktop) and inspect panel (mobile) show the
+   whole painting, uncropped (2026-10-28). */
+.dicekingdom .card-popover.roster-detail.full-art {
+  width: 260px;
+}
+.dicekingdom .card-popover.full-art img.card-popover-painting {
+  height: auto;
+  aspect-ratio: 480 / 544;
+}
+.dk-mobile img.dkm-inspect-art {
+  grid-column: 1 / -1;
+  justify-self: center;
+  height: min(34vh, 260px);
+  aspect-ratio: 480 / 544;
+  margin-bottom: 4px;
+  border-radius: 10px;
+  border: 2px solid var(--cc);
 }

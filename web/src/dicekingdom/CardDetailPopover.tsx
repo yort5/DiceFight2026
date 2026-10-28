@@ -21,11 +21,13 @@ interface Props {
   cueRows?: ExplainRow[];
   placement?: "up" | "down";
   fallbackName?: string;
+  /** The whole painting, uncropped - for a roster card (2026-10-28). */
+  fullArt?: boolean;
 }
 
 // One desktop card inspector for the roster and every die zone. Its caller
 // decides whether purchasing is an available action, not which details exist.
-export function CardDetailPopover({ card, die, purchaseCost, purchase, cueRows = [], placement = "down", fallbackName }: Props) {
+export function CardDetailPopover({ card, die, purchaseCost, purchase, cueRows = [], placement = "down", fallbackName, fullArt }: Props) {
   const Avatar = card ? CHARACTER_ICONS[card.id] : null;
   const name = card?.name ?? fallbackName ?? die?.cardId ?? "Tardigrade";
   const energyType = card?.energyTypes[0];
@@ -36,7 +38,7 @@ export function CardDetailPopover({ card, die, purchaseCost, purchase, cueRows =
       : [];
 
   return (
-    <div className={`card-popover ${placement} roster-detail`}>
+    <div className={`card-popover ${placement} roster-detail${fullArt ? " full-art" : ""}`}>
       <Painting cardId={card?.id} alt={name} className="card-popover-painting" />
       <div className="card-popover-head roster-detail-head">
         {Avatar ? <Avatar size={28} /> : !card && die && <TardigradePhotoIcon size={28} />}

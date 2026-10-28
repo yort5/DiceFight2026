@@ -4786,3 +4786,28 @@ User: "Perhaps for those 31, we could source other animals that we can find pain
 - Two first drafts didn't survive the tests: Caracal as "free to field" (a card's own CostModifier only applies once it's active, so it never fired - Fast instead) and Horseshoe Crab as untargetable by any opposing ability (TargetingProtection covers action dice and Global Abilities only - the text now says so). PaintedSwapCardsTests runs each card through the real firing paths.
 - Paintings: Allen & Ginter card (Tasmanian Devil), FMIB sepia plate (Lionfish), Saunders' Hymenoptera (Wasp), Catton's Persian Lynx 1788 (Caracal), Gould (Nutcracker), a coloured Cuculus plate (Cuckoo), Iconographia Zoologica (King Cobra, hand-coloured; Horseshoe Crab), Rijksmuseum art nouveau "Pauw met kippen" (Peacock), Lydekker's Galápagos engraving (Giant Tortoise, hand-coloured), Haeckel's Asteridea (Starfish), Audubon (Beaver). 93 of the 101 Set 1 characters now have a painting; the rest are Manatee, Pistol Shrimp, Bearded Dragon, Queen Termite, Crocodile, Bottlenose Dolphin, Bowerbird and Barn Swallow (drawing).
 - Power screen (`SIM_GAMES=60 SIM_SWEEP=<the twelve>`, one standard error ~4.6 points): nothing past the +10 worth-a-look line. Highest King Cobra +6.8 and Cuckoo +2.7 (Owl, for Hyena); lowest Starfish -5.7 and Nutcracker -9.4 (a 5-cost 1-ATK die whose only job is the Prep - weak, not broken; a candidate for a cost cut later).
+
+## 2026-10-28 - Full-art cards
+
+User: "Can we make the cards on the collection page 'full size' so that you
+can actually see the art? And when you tap on a card in the roster? And in
+the pack opening screen. Basically, those cards should be like the bigger
+ones in your original examples, where the full art is there."
+
+- `FullArtCard.tsx`: the art test's full-art card made real - name and cost
+  on top, the whole painting in the art window, rarity and a footer slot
+  (pips, "New!") below. No painting yet: the silhouette on its energy plate.
+- Pack reveal: the flip's front is now a full-art card, 3 across (2 on a
+  phone) instead of 6 small tiles; Rares and Super Rares keep the foil.
+- Collection: a grid of full-art cards (about 130px wide; 2 across on a
+  phone). Missing cards are faded and grey. A tap opens a close-up over the
+  page (large card with ability text and levels; Esc, backdrop or Close),
+  replacing the detail panel that used to land below the whole collection.
+- In game: a roster card's desktop popover shows the whole painting
+  uncropped (and opens upward from your own roster so it stays on screen);
+  on the phone, a roster card or pile die shows the whole painting across
+  the top of the inspect panel. Dice in play keep the small crop and the
+  silhouettes, per the 2026-10-27 rule.
+- Checked in headless Chromium (~/.devtools/playwright/full-art-check.js,
+  full-art-mobile.js): desktop and Pixel 7 Packs page, close-up, desktop
+  roster popover, phone roster tap; no page errors.

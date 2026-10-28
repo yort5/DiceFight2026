@@ -3165,7 +3165,13 @@ export function DiceKingdomMobilePage() {
       <div className="dkm-bottom-bar">
         {selectedDie && (
           <div className="dkm-inspect" style={{ ["--cc" as string]: typeColorOf(selectedDie, cardsById) }}>
-            {hasPainting(selectedDie.cardId)
+            {/* A roster card or a pile die shows the whole painting
+                across the top (2026-10-28, "when you tap on a card in the
+                roster"); a die in play keeps the small one. */}
+            {hasPainting(selectedDie.cardId) && (selectedPurchaseCard || inspectingPileDie)
+              ? <Painting cardId={selectedDie.cardId} alt={nameOf(selectedDie, cardsById)} className="dkm-inspect-art" />
+              : null}
+            {hasPainting(selectedDie.cardId) && !(selectedPurchaseCard || inspectingPileDie)
               ? <Painting cardId={selectedDie.cardId} crop="icon" alt={nameOf(selectedDie, cardsById)} className="dkm-inspect-painting" />
               : <AvatarGlyph die={selectedDie} size={42} color={typeColorOf(selectedDie, cardsById)} />}
             <div className="dkm-inspect-mid">

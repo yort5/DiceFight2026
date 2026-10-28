@@ -1568,6 +1568,8 @@ export function DiceKingdomPage() {
                   <CardDetailPopover
                     card={card}
                     fallbackName={cardId}
+                    fullArt
+                    placement={playerId === you ? "up" : "down"}
                     purchaseCost={cardId ? game!.purchaseCosts?.[cardId] : undefined}
                     purchase={canPurchaseNow ? {
                       label: picked && paymentForId === dieId ? "Confirm" : "Purchase",
