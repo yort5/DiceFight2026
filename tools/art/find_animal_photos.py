@@ -30,19 +30,31 @@ Options:
   --extra NAMES  add animals the built-in list doesn't have
   --min P        how much of a photo's score must be on animals (0.5)
   --copy         copy the matching originals into OUT_DIR/by-animal
+  --threads N    CPU cores to use (2)
+  --rest R       after each batch of photos, rest R times as long as the
+                 batch took (1 = work half the time, 2 = a third, 0 = none)
+  --fast         every core, no rests - the old full-speed behaviour
+
+It runs gently by default (2 cores, resting half the time, low priority),
+so an overnight run keeps the computer cool and quiet - after the dog
+photos ran the fan at full tilt (2026-10-30). Progress is saved every 200
+photos: stop it any time and run the same command again to carry on.
 
 Setup: Python 3.10+, then
     pip install open_clip_torch pillow pillow-heif numpy
 (the ~/.devtools/imgtools venv has them). The first run downloads the model
-(~600 MB). It runs on a CPU at a few photos a second; nothing is uploaded.
+(~600 MB). It runs on a CPU, about a photo a second by default (a few a
+second with --fast); nothing is uploaded.
 Photos are matched on what they show, so the date and file name don't
 matter, but the CSV lists the date taken to help find a trip's photos.
 """
 import argparse
 import csv
+import os
 import re
 import shutil
 import sys
+import time
 from pathlib import Path
 
 import numpy as np
@@ -127,18 +139,21 @@ def date_taken(path):
 
 
 class Clip:
-    def __init__(self):
+    def __init__(self, threads):
         import open_clip
         import torch
 
+        torch.set_num_threads(threads)
         self.torch = torch
         self.model, _, self.preprocess = open_clip.create_model_and_transforms(MODEL, pretrained=PRETRAINED)
         self.model.eval()
         self.tokenizer = open_clip.get_tokenizer(MODEL)
 
-    def images(self, paths, batch=16):
-        out = []
+    def images(self, paths, batch=16, rest=0.0):
+        """Yields (path, vector) per photo, vector None if unreadable. After each
+        batch, sleeps `rest` times as long as the batch took, so the CPU cools."""
         for i in range(0, len(paths), batch):
+            started = time.monotonic()
             tensors, good = [], []
             for p in paths[i:i + batch]:
                 try:
@@ -148,10 +163,12 @@ class Clip:
                     print(f"  skipped {p}: {error}", file=sys.stderr)
                     good.append(False)
             vectors = iter(self._encode_images(tensors) if tensors else [])
-            out.extend(next(vectors) if ok else None for ok in good)
+            for p, ok in zip(paths[i:i + batch], good):
+                yield p, next(vectors) if ok else None
             print(f"  {min(i + batch, len(paths))}/{len(paths)} photos read", end="\r", flush=True)
+            if rest:
+                time.sleep(rest * (time.monotonic() - started))
         print()
-        return out
 
     def _encode_images(self, tensors):
         with self.torch.no_grad():
@@ -185,23 +202,29 @@ def cached_texts(clip, labels, animal, cache_path):
     return np.stack([cache[key(label)] for label in labels])
 
 
-def cached_embeddings(clip, paths, cache_path):
-    """Image vectors, reusing the cache for files that haven't changed."""
+def cached_embeddings(clip, paths, cache_path, rest=0.0, save_every=200):
+    """Image vectors, reusing the cache for files that haven't changed. The
+    cache is saved every `save_every` photos, so a stopped overnight run
+    (Ctrl+C, laptop asleep) picks up where it left off."""
     cache = {}
     if cache_path.exists():
         data = np.load(cache_path, allow_pickle=False)
         cache = {(k, s): v for k, s, v in zip(data["keys"], data["stamps"], data["vectors"])}
     stamp = lambda p: f"{p.stat().st_size}-{int(p.stat().st_mtime)}"
+    save = lambda: np.savez(cache_path, keys=[k for k, _ in cache], stamps=[s for _, s in cache],
+                            vectors=np.stack(list(cache.values())))
     todo = [p for p in paths if (str(p), stamp(p)) not in cache]
     if todo:
         print(f"Reading {len(todo)} new photos ({len(paths) - len(todo)} cached)")
-        for p, v in zip(todo, clip.images(todo)):
+        for n, (p, v) in enumerate(clip.images(todo, rest=rest), 1):
             if v is not None:
                 cache[(str(p), stamp(p))] = v
+            if n % save_every == 0:
+                save()
     keep = {(str(p), stamp(p)) for p in paths}
     cache = {k: v for k, v in cache.items() if k in keep}
     if cache:
-        np.savez(cache_path, keys=[k for k, _ in cache], stamps=[s for _, s in cache], vectors=np.stack(list(cache.values())))
+        save()
     return {Path(k): v for (k, _), v in cache.items()}
 
 
@@ -229,7 +252,17 @@ def main():
     parser.add_argument("--extra", default="")
     parser.add_argument("--min", type=float, default=0.5)
     parser.add_argument("--copy", action="store_true")
+    parser.add_argument("--threads", type=int, default=2)
+    parser.add_argument("--rest", type=float, default=1.0)
+    parser.add_argument("--fast", action="store_true")
     args = parser.parse_args()
+    if args.fast:
+        args.threads, args.rest = os.cpu_count() or 4, 0.0
+    else:
+        try:
+            os.nice(10)  # anything else on the computer goes first
+        except (AttributeError, OSError):  # Windows has no nice
+            pass
 
     animals = list(dict.fromkeys(names(DICE_KINGDOM) + names(AUSTRALIA) + names(FLORIDA) + names(EVERYDAY) + names(args.extra)))
     only = {n.lower() for n in names(args.only)}
@@ -243,8 +276,8 @@ def main():
     if not paths:
         sys.exit(f"No photos found under {args.photos}")
     print(f"{len(paths)} photos under {args.photos}; loading {MODEL}")
-    clip = Clip()
-    vectors = cached_embeddings(clip, paths, out / "embeddings.npz")
+    clip = Clip(args.threads)
+    vectors = cached_embeddings(clip, paths, out / "embeddings.npz", rest=args.rest)
     text = np.concatenate([cached_texts(clip, animals, True, out / "labels.npz"),
                            cached_texts(clip, NOT_ANIMAL, False, out / "labels.npz")])
 
