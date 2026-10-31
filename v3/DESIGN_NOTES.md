@@ -4921,3 +4921,27 @@ player could have played the boss badly for its reward. Now:
   plays; both pages' computer-turn loops leave that seat alone.
 - UI check: `~/.devtools/playwright/boss-server-check.js` - the page open
   is the only thing stepping the boss (the script never GETs the game).
+
+## 2026-10-31 - Family photos as "full art" (decision, nothing built yet)
+
+User: "I'll probably just find interesting pictures from our photos, post
+them in here, and then we can swap animals if necessary. Probably make all
+these super rare, it'll be our version of 'full art'." Asked whether that
+meant a second, Super Rare printing of the same card (the usual card-game
+meaning) or the card itself becoming Super Rare with the photo: **the card
+itself** (user's pick). So when a family photo is slotted in:
+
+- The photo becomes that card's art (the painting's place, same
+  `tools/art/scene.py` treatment and `cardArt.tsx` line), and the card's
+  rarity becomes **Super Rare** in `DiceKingdomPacks.Rarities`.
+- If a photo shows an animal with no card, a card may be swapped to that
+  animal (same energy/slot), as with the painted swaps.
+- Applies to Set 1 too, although Set 1 is locked: a rarity change shifts
+  that set's pack odds (one more Super Rare thins the 5% slot across more
+  cards; the card leaves its old rarity's pool). Known and accepted.
+- Likely first candidates: the six Set 1 animals waiting on family photos
+  (Manatee, Pistol Shrimp, Bearded Dragon, Crocodile, Bottlenose Dolphin,
+  Bowerbird). Rarity-isn't-power still holds: a Super Rare photo card
+  keeps its ability.
+- Not until the user posts a photo and okays the swap (matching a picture
+  isn't a green light to ship).
