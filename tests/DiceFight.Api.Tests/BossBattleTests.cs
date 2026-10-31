@@ -89,6 +89,10 @@ public class BossBattleTests
         var first = DiceKingdomBosses.Ladder[0];
         var second = DiceKingdomBosses.Ladder[1];
 
+        // The player gets only their own seat; the boss's stays on the server.
+        var seats = Ok(Games(store, me).Create(new CreateV2GameRequest("Wolf", BossId: first.Id))).Seats;
+        Assert.Equal("teamA", Assert.Single(seats).PlayerId);
+
         var refused = Games(store, me).Create(new CreateV2GameRequest("Wolf", BossId: second.Id));
         Assert.IsType<BadRequestObjectResult>(refused.Result);
         Assert.IsType<BadRequestObjectResult>(Games(store, null).Create(new CreateV2GameRequest("Wolf", BossId: first.Id)).Result);

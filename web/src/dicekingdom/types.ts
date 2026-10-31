@@ -203,6 +203,8 @@ export interface GameState {
   unblockableLanes?: number[];
   /** Cards a player can't buy or field right now (Pangolin), and why. */
   lockedCards?: LockedCard[];
+  /** The seat the server plays itself - a boss battle's boss (2026-10-31). Only watched, never driven. */
+  serverSeatId?: string | null;
 }
 
 export interface Seat {

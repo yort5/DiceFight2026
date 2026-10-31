@@ -19,6 +19,7 @@ public sealed class V2GameStore(Recording.GameRecorder? recorder = null, Account
 
     public Recording.GameRecorder? Recorder => recorder;
     public Accounts.PlayerAccounts? Accounts => accounts;
+    public TimeSpan BossPace { get; set; } = BossTurns.Pace;
 
     public IEnumerable<V2GameSession> Sessions => _games.Values;
     public IEnumerable<V2Lobby> Lobbies => _lobbies.Values;

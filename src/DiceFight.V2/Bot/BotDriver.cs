@@ -20,7 +20,9 @@ public sealed class BotDriver(GameState state, Random random)
 
     // Whoever has to decide next: the pending choice's owner, the priority
     // holder, the Inactive player in Assign Blockers, else the Active one.
-    public string DecisionOwner()
+    public string DecisionOwner() => DecisionOwner(state);
+
+    public static string DecisionOwner(GameState state)
     {
         if (state.PendingChoice is { } pending) return pending.ControllerId;
         if (Priority.IsWindow(state)) return state.PriorityPlayerId ?? state.ActivePlayerId;

@@ -251,7 +251,10 @@ public sealed record V2GameStateDto(
     string? WinnerId = null,
     // Status cues (2026-10-03): lanes no blocker can enter, and lockouts.
     IReadOnlyList<int>? UnblockableLanes = null,
-    IReadOnlyList<V2LockedCardDto>? LockedCards = null)
+    IReadOnlyList<V2LockedCardDto>? LockedCards = null,
+    // The seat the server plays itself - a boss battle's boss (BossTurns,
+    // 2026-10-31). The browser leaves it alone and just watches.
+    string? ServerSeatId = null)
 {
     public static V2GameStateDto From(string gameId, GameState state, string? yourPlayerId = null, int version = 0) => new(
         gameId, state.ActivePlayerId, state.CurrentStep.ToString(), state.CurrentStepId,

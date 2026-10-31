@@ -3,6 +3,7 @@ using System.Text.Json;
 using DiceFight.Api.Recording;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DiceFight.Api.Tests;
 
@@ -111,6 +112,70 @@ public class GameRecordingTests : IDisposable
         Assert.Null(outcome.Divergence);
         Assert.Equal(record.Actions.Count, outcome.ActionsReplayed);
         Assert.Equal(record.Result!.Life["teamA"], outcome.State.PlayerOne.Life);
+    }
+
+    // Boss battles (2026-10-31): the player only ever holds their own seat,
+    // and the server plays the boss on the player's check-ins (BossTurns) -
+    // through the same filter, lock and recorder as a browser's move, so the
+    // record replays.
+    [Fact]
+    public async Task The_Server_Plays_A_Boss_Battle_To_The_End_And_It_Replays()
+    {
+        string gameId;
+        await using (var server = Server())
+        {
+            server.Services.GetRequiredService<V2GameStore>().BossPace = TimeSpan.Zero;
+            var http = server.CreateClient();
+            var player = (await (await http.PostAsync("/api/players", null)).Content.ReadFromJsonAsync<JsonElement>()).GetProperty("token").GetString()!;
+            http.DefaultRequestHeaders.Add("X-Player-Token", player);
+            var bossId = DiceFight.V2.Data.DiceKingdomBosses.Ladder[0].Id;
+            var created = await (await http.PostAsJsonAsync("/api/v2/games", new { playerOneChampionId = "Wolf", bossId }))
+                .Content.ReadFromJsonAsync<JsonElement>();
+            gameId = created.GetProperty("game").GetProperty("gameId").GetString()!;
+            Assert.Equal("teamB", created.GetProperty("game").GetProperty("serverSeatId").GetString());
+            var seat = Assert.Single(created.GetProperty("seats").EnumerateArray()); // the boss's stays on the server
+            Assert.Equal("teamA", seat.GetProperty("playerId").GetString());
+            var token = seat.GetProperty("token").GetString()!;
+
+            var bossMoves = 0;
+            var over = false;
+            for (var guard = 0; guard < 6000 && !over; guard++)
+            {
+                // The browser's check-in: the boss moves, if it's its move.
+                using var poll = new HttpRequestMessage(HttpMethod.Get, $"/api/v2/games/{gameId}");
+                poll.Headers.Add("X-Seat-Token", token);
+                var state = await (await http.SendAsync(poll)).Content.ReadFromJsonAsync<JsonElement>();
+                over = state.GetProperty("gameOver").GetBoolean();
+
+                using var ask = new HttpRequestMessage(HttpMethod.Get, $"/api/v2/games/{gameId}/bot-decision");
+                ask.Headers.Add("X-Seat-Token", token);
+                var response = await http.SendAsync(ask);
+                if (response.StatusCode == System.Net.HttpStatusCode.NoContent) { bossMoves++; continue; }
+                var d = await response.Content.ReadFromJsonAsync<JsonElement>();
+                await Act(http, gameId, token, d); // a refusal is fine - the bot asks again
+            }
+            Assert.True(over, "The boss battle never finished.");
+            Assert.True(bossMoves > 0);
+
+            var me = await http.GetFromJsonAsync<JsonElement>("/api/players/me");
+            var game = me.GetProperty("games").EnumerateArray().Single(g => g.GetProperty("gameId").GetString() == gameId);
+            Assert.Equal("boss", game.GetProperty("mode").GetString());
+            Assert.NotEqual(JsonValueKind.Null, game.GetProperty("result").ValueKind);
+            var bossSeat = game.GetProperty("seats").EnumerateArray().Single(s => s.GetProperty("seatId").GetString() == "teamB");
+            Assert.Equal(JsonValueKind.Null, bossSeat.GetProperty("token").ValueKind);
+            var ladder = await http.GetFromJsonAsync<JsonElement>("/api/players/me/bosses");
+            Assert.Contains(ladder.GetProperty("results").EnumerateArray(), r => r.GetProperty("gameId").GetString() == gameId);
+        }
+
+        var file = Assert.Single(Directory.GetFiles(_folder, $"{gameId}.json", SearchOption.AllDirectories));
+        var record = GameRecordJson.Deserialize(File.ReadAllText(file));
+        Assert.Equal(DiceFight.V2.Data.DiceKingdomBosses.Ladder[0].Id, record.BossId);
+        Assert.True(record.Seats[1].Bot);
+        Assert.Contains(record.Actions, a => a.PlayerId == "teamB" && a.Action == "DeclareAttackers");
+        var outcome = GameReplayer.Replay(record);
+        Assert.Null(outcome.Divergence);
+        Assert.Equal(record.Actions.Count, outcome.ActionsReplayed);
+        Assert.True(outcome.State.IsGameOver);
     }
 
     [Fact]

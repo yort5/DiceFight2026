@@ -4889,8 +4889,35 @@ the starter rosters so it can be played end to end.
   custom team staged from the Team Builder) -> the ordinary game screen
   via `?resume=`. The game-over box shows what the battle paid and a way
   back to the ladder. The opponent's badge reads "Wolf Cub · Wolf".
-- **Known gap (hobby-grade, on purpose):** the browser holds both seat
-  tokens in any vs-computer game, the boss's included, so a determined
-  player could play the boss's moves badly for a reward. Fixing it means
-  the server driving the boss itself.
+- **The server plays the boss** (same day, user: "I'd feel better with
+  the full server version") - see the next entry.
 - UI check: `~/.devtools/playwright/boss-check.js`.
+
+### The server plays the boss (2026-10-31)
+
+At first the browser held both seats, as in any vs-computer game, so a
+player could have played the boss badly for its reward. Now:
+
+- **The boss's seat token never leaves the server.** Create returns only
+  the player's seat, and the account's game list has no token for it.
+- **`BossTurns.Step`** makes one boss move per GET of the game - the
+  browser's 2-second check-in - and only once `V2GameStore.BossPace` (1 s)
+  has passed since the last move, so the turn plays out at a pace the
+  player can follow and the page animates it like an online opponent's.
+  No background timer: Cloud Run only gives the server CPU while it's
+  answering a request, and nobody needs a boss to move in a closed tab
+  (it waits until the game is opened again).
+- Each move is carried out by calling the **same V2GamesController
+  method** a browser's request would (as GameReplayer does), with the
+  boss's token, then recorded - so the rules, accounts and recording are
+  identical, and a boss game replays exactly (GameRecordingTests plays a
+  whole one over HTTP and replays it). A refused move rules that die out
+  for the turn, as the browser did, else falls back to an empty
+  declaration or a pass; a refused boss move never fails the player's GET.
+- **One action at a time per game:** `V2GameSession.Gate`, taken in the
+  controller's action filter around every action on a game. It hadn't
+  been needed while one browser made every move in turn.
+- `V2GameStateDto.ServerSeatId` tells the page which seat the server
+  plays; both pages' computer-turn loops leave that seat alone.
+- UI check: `~/.devtools/playwright/boss-server-check.js` - the page open
+  is the only thing stepping the boss (the script never GETs the game).

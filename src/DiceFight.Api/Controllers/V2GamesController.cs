@@ -62,9 +62,11 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
         var session = store.Create(state, bossId: boss?.Id);
         store.Accounts?.GameCreated(session, HttpContext.Player());
 
+        // A boss's seat stays on the server (BossTurns plays it).
         return Ok(new V2CreatedGameDto(
-            V2GameStateDto.From(session.Id, state, state.PlayerOne.Id),
-            session.Seats.Select(seat => new SeatDto(seat.PlayerId, seat.Token)).ToList()));
+            V2GameStateDto.From(session.Id, state, state.PlayerOne.Id) with { ServerSeatId = ServerSeat(session) },
+            session.Seats.Where(seat => boss is null || seat.PlayerId == state.PlayerOne.Id)
+                .Select(seat => new SeatDto(seat.PlayerId, seat.Token)).ToList()));
     }
 
     // Open an online game with only your own Champion picked (2026-09-30,
@@ -254,6 +256,9 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
     public ActionResult<V2GameStateDto> Get(string gameId)
     {
         var (session, _) = RequireSeat(gameId);
+        // The browser checks in every couple of seconds - the boss's cue
+        // to make its next move, if it's the boss's to make.
+        BossTurns.Step(store, session);
         return Ok(Result(gameId, session.State));
     }
 
@@ -517,11 +522,20 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
     private string? _recordAction;
     private object? _recordRequest;
     private string? _recordStep;
+    private SemaphoreSlim? _gate;
 
     [NonAction]
     public void OnActionExecuting(ActionExecutingContext context)
     {
-        if (store.Recorder is null || !context.ActionArguments.TryGetValue("gameId", out var id) || id is not string gameId) return;
+        if (!context.ActionArguments.TryGetValue("gameId", out var id) || id is not string gameId) return;
+        // One action at a time on a game (V2GameSession.Gate), released in OnActionExecuted.
+        if (store.HasGame(gameId))
+        {
+            var gate = store.GetSession(gameId).Gate;
+            if (!gate.Wait(TimeSpan.FromSeconds(10))) throw new InvalidOperationException("The game is busy - try again.");
+            _gate = gate;
+        }
+        if (store.Recorder is null) return;
         var action = (context.ActionDescriptor as Microsoft.AspNetCore.Mvc.Controllers.ControllerActionDescriptor)?.ActionName;
         if (action is null or nameof(Join) or nameof(Lobby)) return;
         if (!HttpMethods.IsPost(Request.Method) && action != nameof(BotDecision)) return;
@@ -532,6 +546,16 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
 
     [NonAction]
     public void OnActionExecuted(ActionExecutedContext context)
+    {
+        try { RecordAction(context); }
+        finally
+        {
+            _gate?.Release();
+            _gate = null;
+        }
+    }
+
+    private void RecordAction(ActionExecutedContext context)
     {
         if (_recordAction is null || _recordStep is null || store.Recorder is not { } recorder) return;
         var gameId = (string)context.RouteData.Values["gameId"]!;
@@ -596,8 +620,10 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
             store.Accounts?.AfterMove(session);
         }
         Priority.Sync(state);
-        return V2GameStateDto.From(gameId, state, _seatPlayerId, session.Version);
+        return V2GameStateDto.From(gameId, state, _seatPlayerId, session.Version) with { ServerSeatId = ServerSeat(session) };
     }
+
+    private static string? ServerSeat(V2GameSession session) => session.BossId is null ? null : session.State.PlayerTwo.Id;
 
     // Same "there's no real legal-target UI resolver yet" shape as v1's
     // own Drain - the difference is v2 doesn't need one: every real

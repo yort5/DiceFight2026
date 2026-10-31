@@ -2238,6 +2238,8 @@ export function DiceKingdomMobilePage() {
       if (!g) return;
       const botId = g.playerTwo.id;
       if (decisionOwner(g) !== botId) return;
+      // A boss moves on the server; the poll above shows its moves.
+      if (g.serverSeatId === botId) return;
       botActingRef.current = true;
       performBotAction(botId).finally(() => {
         botActingRef.current = false;

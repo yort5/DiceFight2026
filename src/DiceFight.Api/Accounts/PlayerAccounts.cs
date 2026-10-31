@@ -353,7 +353,9 @@ public sealed class PlayerAccounts(IGameRecordSink? store, ILogger<PlayerAccount
         if (creator is null) return;
         lock (_gate)
         {
-            foreach (var seat in session.Seats) session.SeatOwners[seat.PlayerId] = creator.Id;
+            // Not a seat the server plays (a boss's) - its token stays there.
+            foreach (var seat in session.Seats.Where(s => session.BossId is null || !session.BotSeats.Contains(s.PlayerId)))
+                session.SeatOwners[seat.PlayerId] = creator.Id;
             Touch(session, creator);
         }
     }

@@ -54,6 +54,15 @@ public sealed class V2GameSession
     // A boss battle: the boss (DiceKingdomBosses) is teamB, the computer's
     // seat from the start, playing in the boss's Style.
     public string? BossId { get; init; }
+    // The server plays the boss (BossTurns): dice the engine refused it
+    // this turn, and whose turn that was.
+    public HashSet<string> BossSkip { get; } = [];
+    public string? BossSkipTurn { get; set; }
+
+    // One request at a time per game (2026-10-31): the server moves a boss
+    // while answering a GET, which mustn't overlap the player's own move.
+    // V2GamesController takes it around every action on this game.
+    public SemaphoreSlim Gate { get; } = new(1, 1);
 
     public string? PlayerIdFor(string? token) =>
         token is null ? null : Seats.FirstOrDefault(s => FixedTimeEquals(s.Token, token))?.PlayerId;
