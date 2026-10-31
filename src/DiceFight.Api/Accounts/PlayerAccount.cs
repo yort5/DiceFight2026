@@ -23,6 +23,9 @@ public sealed class PlayerAccount
     // player's first visit after packs arrived, which grants the starting
     // coins (PlayerAccounts.Wallet).
     public PlayerCollection? Collection { get; set; }
+    // The boss ladder (V2/Data/DiceKingdomBosses.cs), from the first boss
+    // battle on.
+    public BossProgress? Bosses { get; set; }
     // This player was linked into another one; its devices and games moved
     // there, and its old tokens resolve to that one.
     public string? MergedInto { get; set; }
@@ -40,6 +43,32 @@ public sealed class PlayerCollection
     // Champions whose starter roster has been added (each card at its
     // DieLimit), the first time the player plays one.
     public List<string> Starters { get; set; } = [];
+}
+
+public sealed class BossProgress
+{
+    // Every boss reward's Points, added up.
+    public int Points { get; set; }
+    // Boss id -> how this player has done against it.
+    public Dictionary<string, BossRecord> Records { get; set; } = [];
+}
+
+public sealed class BossRecord
+{
+    public int Wins { get; set; }
+    public int Losses { get; set; }
+    public DateTime? FirstWinUtc { get; set; }
+}
+
+// What one boss battle paid, kept on its PlayedGame.
+public sealed class BossResult
+{
+    public bool Won { get; set; }
+    public bool FirstWin { get; set; }
+    public int Points { get; set; }
+    public int Coins { get; set; }
+    // One card id per die won.
+    public List<string> Dice { get; set; } = [];
 }
 
 // A browser holding a token "{playerId}.{secret}"; only a hash of the secret is kept.
@@ -60,7 +89,8 @@ public sealed class PlayedGame
     public required string GameId { get; init; }
     public DateTime StartedUtc { get; init; } = DateTime.UtcNow;
     public DateTime? EndedUtc { get; set; }
-    // "computer", "online" or "local" (both seats on one screen).
+    // "computer", "boss" (a boss battle - also against the computer),
+    // "online" or "local" (both seats on one screen).
     public string Mode { get; set; } = "local";
     public List<PlayedSeat> Seats { get; set; } = [];
     // "win" / "loss", once over - only when this player had exactly one
@@ -69,6 +99,9 @@ public sealed class PlayedGame
     public string? WinnerSeatId { get; set; }
     // The other player's account name, in an online game.
     public string? OpponentName { get; set; }
+    // A boss battle: which boss, and - once it's over - what it paid.
+    public string? BossId { get; set; }
+    public BossResult? BossResult { get; set; }
 }
 
 public sealed class PlayedSeat

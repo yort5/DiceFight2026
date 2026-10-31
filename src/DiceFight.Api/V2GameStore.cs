@@ -24,7 +24,7 @@ public sealed class V2GameStore(Recording.GameRecorder? recorder = null, Account
     public IEnumerable<V2Lobby> Lobbies => _lobbies.Values;
 
     // `id`/`seed` are given only when replaying a recorded game.
-    public V2GameSession Create(GameState state, string? id = null, int? seed = null)
+    public V2GameSession Create(GameState state, string? id = null, int? seed = null, string? bossId = null)
     {
         id ??= Guid.NewGuid().ToString("N")[..8];
         var session = new V2GameSession
@@ -37,7 +37,9 @@ public sealed class V2GameStore(Recording.GameRecorder? recorder = null, Account
                 new Seat(state.PlayerTwo.Id, GameSession.NewToken()),
             ],
             Seed = seed ?? Random.Shared.Next(),
+            BossId = bossId,
         };
+        if (bossId is not null) session.BotSeats.Add(state.PlayerTwo.Id);
         _games[id] = session;
         recorder?.Start(session);
         return session;

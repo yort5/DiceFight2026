@@ -3868,6 +3868,60 @@
   margin: 0 0 16px;
   opacity: 0.85;
 }
+.dicekingdom .dk-gameover-boss {
+  margin: -6px 0 16px;
+  font-weight: 600;
+}
+.dicekingdom .dk-gameover .btn + .btn {
+  margin-left: 8px;
+}
+
+/* The boss ladder (BossesPage.tsx). */
+.dk-bosses .dk-boss-score {
+  font-size: 15px;
+}
+.dk-bosses .dk-boss-score p {
+  margin: 8px 0 0;
+}
+.dk-bosses .dk-boss-points {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-h);
+}
+.dk-bosses .dk-boss-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.dk-bosses .dk-boss h3 {
+  margin: 0;
+}
+.dk-bosses .dk-boss p {
+  margin: 8px 0;
+}
+.dk-bosses .dk-boss-status {
+  flex: 0 0 auto !important;
+  font-size: 13px;
+  font-weight: 600;
+}
+.dk-bosses .dk-boss-beaten .dk-boss-status {
+  color: var(--shell);
+}
+.dk-bosses .dk-boss-locked {
+  opacity: 0.6;
+}
+.dk-bosses .dk-boss-team {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.dk-bosses .dk-boss-pick {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.dk-bosses .dk-boss-pick .dk-acct-row {
+  margin-top: 12px;
+}
 
 /* Keyword Intimidate (desktop) - same dimmed treatment as mobile's. */
 .dicekingdom .dk-intimidated {

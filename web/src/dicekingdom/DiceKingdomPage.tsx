@@ -140,7 +140,7 @@ function ScoreboardSide({ player, mine, isActivePlayer, onUsePower }: { player: 
       className={`scoreboard-side${mine ? " mine" : ""}${turnClass}`}
       style={accent ? ({ ["--cc" as string]: accent } as const) : undefined}
     >
-      <button type="button" className="scoreboard-tap" onClick={() => setOpen((o) => !o)} disabled={!champion}>
+      <button type="button" className="scoreboard-tap" onClick={() => setOpen((o) => !o)} disabled={!champion} title={player.name}>
         <span className="scoreboard-label">{mine ? "You" : "Opp"}</span>
         {Icon && <Icon size={26} />}
         {/* Direct feedback (2026-09-05): even once every Champion has a
@@ -157,7 +157,7 @@ function ScoreboardSide({ player, mine, isActivePlayer, onUsePower }: { player: 
       )}
       {open && champion && (
         <div className="scoreboard-popover">
-          <div className="scoreboard-popover-name">{champion.name}</div>
+          <div className="scoreboard-popover-name">{player.name !== champion.name ? `${player.name} · ${champion.name}` : champion.name}</div>
           {champion.passiveText && <p className="scoreboard-popover-note"><KeywordText text={champion.passiveText} /></p>}
         </div>
       )}
@@ -595,7 +595,8 @@ export function DiceKingdomPage() {
   const gameId = game?.gameId ?? null;
 
   // Label this game in the browser's saved list (seats.ts), for "Resume a game".
-  const savedLabel = game ? `${game.playerOne.champion?.name ?? game.playerOne.name} vs ${game.playerTwo.champion?.name ?? game.playerTwo.name}` : null;
+  // A preset's name is its Champion's; a boss goes by its own (2026-10-31).
+  const savedLabel = game ? `${game.playerOne.name} vs ${game.playerTwo.name}` : null;
   useEffect(() => {
     if (gameId && savedLabel) describeSavedGame(gameId, savedLabel, vsComputer);
   }, [gameId, savedLabel, vsComputer]);

@@ -181,9 +181,28 @@ public sealed class PlayerAccounts(IGameRecordSink? store, ILogger<PlayerAccount
                     if (string.CompareOrdinal(theirs.LastDailyDate, mine.LastDailyDate) > 0) mine.LastDailyDate = theirs.LastDailyDate;
                 }
             }
+            if (caller.Bosses is { } theirBosses)
+            {
+                if (target.Bosses is not { } mine) target.Bosses = theirBosses;
+                else
+                {
+                    // A boss both had beaten paid its first-win Points to
+                    // each; the account keeps one of them.
+                    mine.Points += theirBosses.Points;
+                    foreach (var (bossId, other) in theirBosses.Records)
+                    {
+                        if (!mine.Records.TryGetValue(bossId, out var record)) { mine.Records[bossId] = other; continue; }
+                        if (record.Wins > 0 && other.Wins > 0) mine.Points -= DiceKingdomBosses.Find(bossId)?.FirstWin.Points ?? 0;
+                        record.Wins += other.Wins;
+                        record.Losses += other.Losses;
+                        if (other.FirstWinUtc < record.FirstWinUtc || record.FirstWinUtc is null) record.FirstWinUtc = other.FirstWinUtc;
+                    }
+                }
+            }
             caller.Devices = [];
             caller.Games = [];
             caller.Collection = null;
+            caller.Bosses = null;
             caller.MergedInto = target.Id;
             Save(target);
             Save(caller, force: true);
@@ -287,6 +306,42 @@ public sealed class PlayerAccounts(IGameRecordSink? store, ILogger<PlayerAccount
         }
     }
 
+    // --- Boss battles (DiceKingdomBosses)
+
+    public bool BossOpen(PlayerAccount player, string bossId)
+    {
+        lock (_gate)
+            return DiceKingdomBosses.IsOpen(bossId, id => player.Bosses?.Records.GetValueOrDefault(id)?.Wins > 0);
+    }
+
+    // Counts a finished boss battle and pays its reward: FirstWin the first
+    // time this boss is beaten, Rematch after. Under _gate.
+    private BossResult SettleBoss(PlayerAccount player, string bossId, bool won)
+    {
+        var progress = player.Bosses ??= new BossProgress();
+        if (!progress.Records.TryGetValue(bossId, out var record)) progress.Records[bossId] = record = new BossRecord();
+        if (!won)
+        {
+            record.Losses++;
+            return new BossResult();
+        }
+        var result = new BossResult { Won = true, FirstWin = record.Wins == 0 };
+        record.Wins++;
+        record.FirstWinUtc ??= (clock ?? TimeProvider.System).GetUtcNow().UtcDateTime;
+        var boss = DiceKingdomBosses.Find(bossId);
+        if ((result.FirstWin ? boss?.FirstWin : boss?.Rematch) is not { } reward) return result;
+        var collection = Collection(player);
+        progress.Points += result.Points = reward.Points;
+        collection.Coins += result.Coins = reward.Coins;
+        foreach (var drop in reward.Drops ?? [])
+            if (DiceKingdomBosses.Roll(drop, collection.Dice, RandomNumberGenerator.GetInt32) is { } card)
+            {
+                collection.Dice[card] = collection.Dice.GetValueOrDefault(card) + 1;
+                result.Dice.Add(card);
+            }
+        return result;
+    }
+
     // --- Games. Each owner's PlayedGame is updated as the game goes:
     // started (Create: both seats are the creator's), opened and joined
     // (an online game), a seat played from someone else's device (an
@@ -351,6 +406,9 @@ public sealed class PlayerAccounts(IGameRecordSink? store, ILogger<PlayerAccount
 
     public void BotSeat(V2GameSession session, string seatId)
     {
+        // A boss battle's seats are fixed from the start: the boss is the
+        // computer, the other seat the player, whoever asks for a hint.
+        if (session.BossId is not null) return;
         lock (_gate)
         {
             if (!session.BotSeats.Add(seatId)) return;
@@ -390,7 +448,8 @@ public sealed class PlayerAccounts(IGameRecordSink? store, ILogger<PlayerAccount
 
         }
         var owners = session.SeatOwners.Values.Distinct().Count();
-        game.Mode = session.BotSeats.Count > 0 ? "computer" : owners > 1 ? "online" : "local";
+        game.Mode = session.BossId is not null ? "boss" : session.BotSeats.Count > 0 ? "computer" : owners > 1 ? "online" : "local";
+        game.BossId = session.BossId;
         var others = session.SeatOwners.Where(kv => kv.Value != owner.Id).Select(kv => Get(kv.Value)?.Name).FirstOrDefault(n => n is not null);
         if (others is not null) game.OpponentName = others;
 
@@ -403,6 +462,9 @@ public sealed class PlayerAccounts(IGameRecordSink? store, ILogger<PlayerAccount
             // Only now: which seat the computer played is known for sure
             // once it has asked for a move (BotSeat), not at the start.
             foreach (var seat in human) AddStarter(owner, seat.ChampionId);
+            // Settled once: Touch runs again on later visits to the game.
+            if (session.BossId is { } bossId && game.Result is not null && game.BossResult is null)
+                game.BossResult = SettleBoss(owner, bossId, game.Result == "win");
         }
         Save(owner);
     }
@@ -437,7 +499,7 @@ public sealed class PlayerAccounts(IGameRecordSink? store, ILogger<PlayerAccount
     // --- Storage
 
     private static bool ShouldKeep(PlayerAccount p) =>
-        p.Name is not null || p.Games.Count > 0 || p.Devices.Count > 1 || p.Collection is { PacksOpened: > 0 };
+        p.Name is not null || p.Games.Count > 0 || p.Devices.Count > 1 || p.Collection is { PacksOpened: > 0 } || p.Bosses is not null;
 
     private void Save(PlayerAccount player, bool force = false)
     {

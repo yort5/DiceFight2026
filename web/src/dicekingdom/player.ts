@@ -17,7 +17,7 @@ export interface PlayedSeat {
 
 export interface PlayedGame {
   gameId: string;
-  mode: "computer" | "online" | "local";
+  mode: "computer" | "boss" | "online" | "local";
   status: "waiting" | "playing" | "finished";
   startedUtc: string;
   endedUtc: string | null;
@@ -74,6 +74,51 @@ export interface PulledCard {
   owned: number;
   /** The first of it. */
   new: boolean;
+}
+
+/** The boss ladder (BossesPage.tsx; server: V2/Data/DiceKingdomBosses.cs). */
+export interface BossLadder {
+  points: number;
+  bosses: Boss[];
+  /** Recent boss battles, newest first. */
+  results: BossResult[];
+}
+
+export interface Boss {
+  id: string;
+  name: string;
+  blurb: string;
+  championId: string | null;
+  /** Card id -> dice. */
+  cards: Record<string, number>;
+  /** Energy type -> Tardigrades. */
+  tardigrades: Record<string, number>;
+  /** "Aggressive, races to Rhinoceros" */
+  style: string;
+  status: "locked" | "open" | "beaten";
+  wins: number;
+  losses: number;
+  firstWin: BossReward;
+  rematch: BossReward | null;
+}
+
+export interface BossReward {
+  points: number;
+  coins: number;
+  /** A die of cardId, or of a random card of rarity; chance 0..1. */
+  drops: { chance: number; cardId: string | null; rarity: Rarity | null }[];
+}
+
+export interface BossResult {
+  gameId: string;
+  bossId: string;
+  won: boolean;
+  firstWin: boolean;
+  points: number;
+  coins: number;
+  /** One card id per die won. */
+  dice: string[];
+  endedUtc: string | null;
 }
 
 function storedToken(): string | null {
@@ -148,6 +193,7 @@ export const players = {
   /** One card id per die given. */
   tradeIn: (give: string[]) =>
     call<{ card: PulledCard; collection: Collection }>("/me/trade-in", { method: "POST", body: JSON.stringify({ give }) }),
+  bosses: () => call<BossLadder>("/me/bosses"),
   removeDevice: (deviceId: string) => call<Me>(`/me/devices/${encodeURIComponent(deviceId)}`, { method: "DELETE" }),
   /** Signs this device out: it forgets its token and becomes a new anonymous player. */
   signOut: async (me: Me) => {

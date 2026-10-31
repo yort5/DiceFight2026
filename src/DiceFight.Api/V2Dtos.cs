@@ -299,7 +299,11 @@ public sealed record CreateV2GameRequest(
     string? PlayerOneChampionId = null,
     string? PlayerTwoChampionId = null,
     CustomV2TeamRequest? PlayerOneCustomTeam = null,
-    CustomV2TeamRequest? PlayerTwoCustomTeam = null);
+    CustomV2TeamRequest? PlayerTwoCustomTeam = null,
+    // A boss battle (V2/Data/DiceKingdomBosses.cs): the boss is player two,
+    // played by the computer in the boss's style. Player Two's own fields
+    // must then be empty.
+    string? BossId = null);
 public sealed record V2PurchaseRequest(string DieId, IReadOnlyList<string> EnergyDieIds);
 public sealed record V2FieldRequest(string DieId, IReadOnlyList<string> EnergyDieIds, bool Free = false);
 public sealed record V2RerollRequest(IReadOnlyList<string> DieIds);

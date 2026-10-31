@@ -4850,3 +4850,47 @@ dice rolling".
   ~/.devtools/playwright/dice3d-check.js films a roll on the phone and
   desktop boards on Playwright's fake clock (software WebGL is too slow to
   film in real time) - the dice land showing the same faces as their tiles.
+
+## 2026-10-31 - Boss battles (infrastructure, sample bosses)
+
+User: "teams that I would provide, configure a specific bot style for, and
+then the player could progress through increasingly difficult teams,
+gaining points for defeating them as well as possible rare cards. I'm
+thinking I would just provide some Team Builder links for each team." The
+real teams come later; this is the plumbing, with three SAMPLE bosses on
+the starter rosters so it can be played end to end.
+
+- **Data: `V2/Data/DiceKingdomBosses.cs`.** `Ladder` is in order. A boss
+  is a Team Builder share link pasted as is (`ParseTeamLink` reads only the
+  query: `cards=`, `tardigrades=` - default 8 Claw, as in the builder -
+  and `champion=`), a `Style` (a `BotPersona`; `BotStyles.Balanced`,
+  `Aggressive` (Aggression 2, chumps only big hits), `Cautious`
+  (Aggression 0, blocks early), each open to `with { RushCardId = ... }`
+  and the other knobs), and rewards: `FirstWin`, and `Rematch` (null =
+  nothing). A reward is Points, Coins and Drops; a drop is a chance at one
+  die of a named card or of a random card of a rarity (current set,
+  preferring cards the player has fewer than 4 of, like trade-ins).
+  `BossBattleTests` builds every boss's team, so a bad link fails the build.
+- **Ladder rule:** the first boss is open; beating one opens the next. The
+  server refuses a locked boss.
+- **Game:** `POST /api/v2/games` with `bossId` (and player one's Champion
+  or custom team). The boss is teamB under its own name, the computer's
+  seat from creation (`V2GameSession.BossId`, `BotSeats`); bot-decision
+  plays it with the boss's Style. In a boss battle nothing else becomes a
+  bot seat, so asking the bot about your own seat doesn't void the result.
+  Records carry `BossId`.
+- **Progress:** `PlayerAccount.Bosses` (points, per-boss wins/losses). A
+  finished boss battle is settled once (`PlayedGame.BossResult`: what it
+  paid) when the result is recorded; `PlayedGame.Mode` is "boss". Linking
+  devices adds both ladders but keeps one first-win payout per boss.
+- **Pages:** `/dice-kingdom/bosses` (BossesPage.tsx; linked from the
+  "Playing as" line on both start screens): points, each boss with its
+  team, style, status and reward, Challenge -> pick a Champion (or the
+  custom team staged from the Team Builder) -> the ordinary game screen
+  via `?resume=`. The game-over box shows what the battle paid and a way
+  back to the ladder. The opponent's badge reads "Wolf Cub · Wolf".
+- **Known gap (hobby-grade, on purpose):** the browser holds both seat
+  tokens in any vs-computer game, the boss's included, so a determined
+  player could play the boss's moves badly for a reward. Fixing it means
+  the server driving the boss itself.
+- UI check: `~/.devtools/playwright/boss-check.js`.

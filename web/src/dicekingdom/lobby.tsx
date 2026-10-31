@@ -185,7 +185,7 @@ export function adoptServerGames(me: Me): void {
       mine.map((s) => ({ playerId: s.seatId, token: s.token! })),
       human.seatId,
       playedGameLabel(g),
-      g.mode === "computer",
+      g.mode === "computer" || g.mode === "boss",
     );
   }
 }

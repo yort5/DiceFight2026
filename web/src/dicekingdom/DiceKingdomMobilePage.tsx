@@ -704,7 +704,8 @@ function MatCard({
         {player.champion && (
           <button type="button" className="dkm-champion-badge" onClick={() => setChampionOpen((v) => !v)}>
             {ChampIcon && <ChampIcon size={16} />}
-            <span>{player.champion.name}</span>
+            {/* A boss battle's opponent goes by the boss's name (2026-10-31). */}
+            <span>{player.name !== player.champion.name ? `${player.name} · ${player.champion.name}` : player.champion.name}</span>
           </button>
         )}
         {onUsePower && player.champion && (
@@ -1911,7 +1912,8 @@ export function DiceKingdomMobilePage() {
   const gameVersion = game?.version ?? 0;
 
   // Label this game in the browser's saved list (seats.ts), for "Resume a game".
-  const savedLabel = game ? `${game.playerOne.champion?.name ?? game.playerOne.name} vs ${game.playerTwo.champion?.name ?? game.playerTwo.name}` : null;
+  // A preset's name is its Champion's; a boss goes by its own (2026-10-31).
+  const savedLabel = game ? `${game.playerOne.name} vs ${game.playerTwo.name}` : null;
   useEffect(() => {
     if (gameId && savedLabel) describeSavedGame(gameId, savedLabel, vsComputer);
   }, [gameId, savedLabel, vsComputer]);

@@ -96,6 +96,40 @@ public sealed class PlayersController(V2GameStore store) : ControllerBase
             DescribeCollection(collection, 0)));
     }
 
+    // The boss ladder (V2/Data/DiceKingdomBosses.cs) as this player stands
+    // on it, and what their recent boss battles paid.
+    [HttpGet("me/bosses")]
+    public ActionResult<BossLadderDto> Bosses()
+    {
+        var player = RequirePlayer();
+        var progress = player.Bosses;
+        var bosses = DiceKingdomBosses.Ladder.Select(boss =>
+        {
+            var record = progress?.Records.GetValueOrDefault(boss.Id);
+            var team = DiceKingdomBosses.ParseTeamLink(boss.TeamLink);
+            return new BossDto(
+                boss.Id, boss.Name, boss.Blurb, team.ChampionId, team.Cards, team.Tardigrades, StyleLabel(boss.Style),
+                record?.Wins > 0 ? "beaten" : Accounts.BossOpen(player, boss.Id) ? "open" : "locked",
+                record?.Wins ?? 0, record?.Losses ?? 0,
+                DescribeReward(boss.FirstWin), boss.Rematch is { } rematch ? DescribeReward(rematch) : null);
+        }).ToList();
+        var results = player.Games.Where(g => g.BossResult is not null).OrderByDescending(g => g.EndedUtc).Take(20)
+            .Select(g => new BossResultDto(g.GameId, g.BossId!, g.BossResult!.Won, g.BossResult.FirstWin,
+                g.BossResult.Points, g.BossResult.Coins, g.BossResult.Dice, g.EndedUtc)).ToList();
+        return Ok(new BossLadderDto(progress?.Points ?? 0, bosses, results));
+    }
+
+    private static BossRewardDto DescribeReward(BossReward reward) => new(reward.Points, reward.Coins,
+        (reward.Drops ?? []).Select(d => new BossDropDto(d.Chance, d.CardId, d.Rarity?.ToString())).ToList());
+
+    // "Aggressive, races to Rhinoceros" - from the Style's knobs.
+    private static string StyleLabel(DiceFight.V2.Bot.BotPersona style)
+    {
+        var label = style.Aggression >= 2 ? "Aggressive" : style.Aggression <= 0 ? "Cautious" : "Balanced";
+        if (style.RushCardId is { } rush && DiceKingdomConfig.Catalog.TryGetValue(rush, out var card)) label += $", races to {card.Name}";
+        return label;
+    }
+
     private static CollectionDto DescribeCollection(PlayerCollection c, int daily) => new(
         c.Coins, daily, DiceKingdomPacks.DailyCoins, DiceKingdomPacks.PackPrice, c.PacksOpened, c.Dice,
         DateOnly.FromDateTime(DateTime.UtcNow).AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc),
@@ -163,5 +197,15 @@ public sealed record PlayedGameDto(
     string? WinnerSeatId,
     string? OpponentName,
     IReadOnlyList<PlayedSeatDto> Seats);
+public sealed record BossLadderDto(int Points, IReadOnlyList<BossDto> Bosses, IReadOnlyList<BossResultDto> Results);
+// Status: "locked", "open" or "beaten". Cards/Tardigrades: the boss's team (id/energy -> dice).
+public sealed record BossDto(
+    string Id, string Name, string Blurb, string? ChampionId,
+    IReadOnlyDictionary<string, int> Cards, IReadOnlyDictionary<string, int> Tardigrades, string Style,
+    string Status, int Wins, int Losses, BossRewardDto FirstWin, BossRewardDto? Rematch);
+public sealed record BossRewardDto(int Points, int Coins, IReadOnlyList<BossDropDto> Drops);
+public sealed record BossDropDto(double Chance, string? CardId, string? Rarity);
+// What one finished boss battle paid. Dice: one card id per die won.
+public sealed record BossResultDto(string GameId, string BossId, bool Won, bool FirstWin, int Points, int Coins, IReadOnlyList<string> Dice, DateTime? EndedUtc);
 // Token: only on the caller's own seats - for resuming on this device.
 public sealed record PlayedSeatDto(string SeatId, string? ChampionId, string? Token, bool Bot);

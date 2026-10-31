@@ -51,6 +51,9 @@ public sealed class V2GameSession
     public System.Collections.Concurrent.ConcurrentDictionary<string, string> SeatOwners { get; } = new();
     public HashSet<string> BotSeats { get; } = [];
     public bool ResultRecorded { get; set; }
+    // A boss battle: the boss (DiceKingdomBosses) is teamB, the computer's
+    // seat from the start, playing in the boss's Style.
+    public string? BossId { get; init; }
 
     public string? PlayerIdFor(string? token) =>
         token is null ? null : Seats.FirstOrDefault(s => FixedTimeEquals(s.Token, token))?.PlayerId;

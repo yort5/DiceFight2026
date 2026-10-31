@@ -54,6 +54,16 @@ export function AccountLink({ from }: { from?: "mobile" }) {
             Packs
           </a>{" "}
           ({me.coins} coins{me.dailyCoins > 0 && <b className="dk-daily-coins"> +{me.dailyCoins} today</b>})
+          {" · "}
+          <a
+            href={`/dice-kingdom/bosses${search}`}
+            onClick={(e) => {
+              e.preventDefault();
+              navigate("/dice-kingdom/bosses", search);
+            }}
+          >
+            Boss Ladder
+          </a>
         </>
       )}
       {" · "}
@@ -80,6 +90,7 @@ function when(iso: string): string {
 
 function modeLabel(g: PlayedGame): string {
   if (g.mode === "computer") return "vs computer";
+  if (g.mode === "boss") return "boss battle";
   if (g.mode === "online") return g.opponentName ? `vs ${g.opponentName}` : "online";
   return "pass-and-play";
 }

@@ -65,6 +65,12 @@ function makeClient(tokenOverride?: string | null, auto = false) {
       request<CreatedGame>("", {
         method: "POST", body: JSON.stringify({ playerOneCustomTeam, playerTwoChampionId }),
       }, tokenOverride, auto),
+    // A boss battle (BossesPage.tsx): the boss is player two, the computer.
+    createBossGame: (bossId: string, team: TeamPick) =>
+      request<CreatedGame>("", {
+        method: "POST",
+        body: JSON.stringify(typeof team === "string" ? { bossId, playerOneChampionId: team } : { bossId, playerOneCustomTeam: team }),
+      }, tokenOverride, auto),
     getGame: (id: string) => request<GameState>(`/${id}`, undefined, tokenOverride, auto),
 
     // Online game with only your own Champion picked - the invited player

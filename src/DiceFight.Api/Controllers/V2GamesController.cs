@@ -36,10 +36,22 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
 
         Player playerOne;
         Player playerTwo;
+        BossDef? boss = null;
         try
         {
             playerOne = BuildSelectedPlayer("teamA", request.PlayerOneChampionId, request.PlayerOneCustomTeam);
-            playerTwo = BuildSelectedPlayer("teamB", request.PlayerTwoChampionId, request.PlayerTwoCustomTeam);
+            if (request.BossId is not null)
+            {
+                boss = DiceKingdomBosses.Find(request.BossId) ?? throw new ArgumentException($"Unknown boss '{request.BossId}'.");
+                if (request.PlayerTwoChampionId is not null || request.PlayerTwoCustomTeam is not null)
+                    throw new ArgumentException("A boss battle's opponent is the boss.");
+                if (HttpContext.Player() is not { } player || store.Accounts is null)
+                    throw new ArgumentException("Boss battles need a player - reload the page.");
+                if (!store.Accounts.BossOpen(player, boss.Id))
+                    throw new ArgumentException($"{boss.Name} isn't open yet - beat the boss before it first.");
+                playerTwo = BuildBoss(boss);
+            }
+            else playerTwo = BuildSelectedPlayer("teamB", request.PlayerTwoChampionId, request.PlayerTwoCustomTeam);
         }
         catch (ArgumentException e)
         {
@@ -47,7 +59,7 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
         }
 
         var state = GameSetup.NewGame(config, catalog, playerOne, playerTwo);
-        var session = store.Create(state);
+        var session = store.Create(state, bossId: boss?.Id);
         store.Accounts?.GameCreated(session, HttpContext.Player());
 
         return Ok(new V2CreatedGameDto(
@@ -144,7 +156,7 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
     // billion dice and take the server down.
     public const int MaxCustomDice = 100;
 
-    private static Player BuildSelectedPlayer(string id, string? championId, CustomV2TeamRequest? custom)
+    private static Player BuildSelectedPlayer(string id, string? championId, CustomV2TeamRequest? custom, string? name = null)
     {
         if (custom is null)
         {
@@ -162,7 +174,7 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
             champion = DiceKingdomConfig.Champions.FirstOrDefault(c => c.Id == custom.ChampionId)
                 ?? throw new ArgumentException($"Unknown Champion id '{custom.ChampionId}'.");
 
-        var player = new Player { Id = id, Name = champion?.Name ?? "Custom Team", ChampionId = champion?.Id,
+        var player = new Player { Id = id, Name = name ?? champion?.Name ?? "Custom Team", ChampionId = champion?.Id,
             CustomCardDiceCounts = new Dictionary<string, int>() };
         var cardIds = new HashSet<string>();
         foreach (var entry in custom.Cards)
@@ -201,6 +213,16 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
             throw new ArgumentException($"A custom team can have at most {MaxCustomDice} Tardigrades.");
         player.CustomBasicDicePool = pool;
         return player;
+    }
+
+    // A boss's team, from its Team Builder link, under the boss's name.
+    public static Player BuildBoss(BossDef boss)
+    {
+        var team = DiceKingdomBosses.ParseTeamLink(boss.TeamLink);
+        return BuildSelectedPlayer("teamB", null, new CustomV2TeamRequest(
+            team.Cards.Select(kv => new CustomV2CardDice(kv.Key, kv.Value)).ToList(),
+            team.Tardigrades.Select(kv => new CustomV2TardigradeDice(kv.Key, kv.Value)).ToList(),
+            team.ChampionId), boss.Name);
     }
 
     // The energy a Basic Action's die shows on its energy faces - the same
@@ -247,7 +269,8 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
         var (session, playerId) = RequireSeat(gameId);
         var skipIds = (skip ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).ToHashSet();
         store.Accounts?.BotSeat(session, playerId);
-        var decision = DiceKingdomBot.Decide(session.State, playerId, skipIds);
+        var persona = session.BossId is { } bossId && playerId == session.State.PlayerTwo.Id ? DiceKingdomBosses.Find(bossId)?.Style : null;
+        var decision = DiceKingdomBot.Decide(session.State, playerId, skipIds, persona);
         return decision is null ? NoContent() : Ok(V2BotDecisionDto.From(decision));
     }
 

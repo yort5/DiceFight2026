@@ -26,6 +26,8 @@ public sealed class GameRecord
     public string? EngineVersion { get; init; }
     public required int Seed { get; init; }
     public required List<RecordedSeat> Seats { get; init; }
+    // A boss battle (DiceKingdomBosses id) - teamB is the boss.
+    public string? BossId { get; set; }
     public List<RecordedAction> Actions { get; init; } = [];
     public int Turns { get; set; }
     public RecordedResult? Result { get; set; }

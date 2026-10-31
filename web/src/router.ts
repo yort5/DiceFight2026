@@ -13,6 +13,7 @@ export type Route =
   | "/dice-kingdom/mobile"
   | "/dice-kingdom/account"
   | "/dice-kingdom/packs"
+  | "/dice-kingdom/bosses"
   | "/dice-kingdom/art-test"
   | "/dice-kingdom/how-to-play";
 
@@ -30,6 +31,8 @@ function normalize(pathname: string): Route {
   if (pathname === "/dice-kingdom/account") return "/dice-kingdom/account";
   // Coins, random packs and your collection (dicekingdom/PacksPage.tsx).
   if (pathname === "/dice-kingdom/packs") return "/dice-kingdom/packs";
+  // The boss ladder (dicekingdom/BossesPage.tsx).
+  if (pathname === "/dice-kingdom/bosses") return "/dice-kingdom/bosses";
   // Candidate art styles side by side (dicekingdom/ArtTestPage.tsx), unlinked.
   if (pathname === "/dice-kingdom/art-test") return "/dice-kingdom/art-test";
   // The basic rules (dicekingdom/HowToPlayPage.tsx).
