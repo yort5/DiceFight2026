@@ -1025,15 +1025,23 @@ public static class DiceKingdomConfig
         // Own 2/3/mid/power: HermitCrab(2)/Pangolin(3)/MuskOx(4)/Rhinoceros(6).
         // SnappingTurtle (was the 5-cost power slot) replaced 2026-09-28.
         ["Armadillo"] = [HermitCrab.Id, Pangolin.Id, MuskOx.Id, Rhinoceros.Id, Fox.Id, Cowbird.Id, CapeBuffalo.Id, Hummingbird.Id],
-        // Own 2/3/mid/power: Swift(2)/BarnSwallow(3)/Osprey(4)/Phoenix(6).
+        // Own 2/3/mid/power: Swift(2)/Chipmunk(3)/Osprey(4)/Phoenix(6).
         // Albatross (was the 5-cost power slot) replaced 2026-09-29 by
         // Phoenix, a genuine finisher tier, same treatment the other
         // three Champions' power slots already got 2026-09-28.
-        ["GoldenEagle"] = [Swift.Id, BarnSwallow.Id, Osprey.Id, Phoenix.Id, GrizzlyBear.Id, PeregrineFalcon.Id, BoxTurtle.Id, BarnOwl.Id],
+        // Chipmunk (GOTG021, On Field: draw a die into Prep) replaced Barn
+        // Swallow (Awaken: the same draw) 2026-10-31, when Barn Swallow
+        // became a Super Rare family-photo card - a starter roster is given
+        // free. Simulator: Golden Eagle about +4 points a matchup.
+        ["GoldenEagle"] = [Swift.Id, "GOTG021", Osprey.Id, Phoenix.Id, GrizzlyBear.Id, PeregrineFalcon.Id, BoxTurtle.Id, BarnOwl.Id],
         // Own 2/3/mid/power: Cuttlefish(2)/Magpie(3)/Hyena(4)/Basilisk(7).
         // Raven (was the 5-cost power slot, despite what this comment used
         // to claim - it was never actually 7) replaced 2026-09-28.
-        ["GreatHornedOwl"] = [Cuttlefish.Id, Magpie.Id, Hyena.Id, Basilisk.Id, Opossum.Id, QueenTermite.Id, Stoat.Id, HomingPigeon.Id],
+        // Horseshoe Crab (DPS019, Shell 4, 2/5 3/6 5/6) replaced Queen
+        // Termite (Shell 4, 2/4 3/5 3/6) 2026-10-31, when Queen Termite
+        // became a Super Rare family-photo card. Simulator: Owl within a
+        // point except vs Golden Eagle (32.8% -> 29.0%).
+        ["GreatHornedOwl"] = [Cuttlefish.Id, Magpie.Id, Hyena.Id, Basilisk.Id, Opossum.Id, "DPS019", Stoat.Id, HomingPigeon.Id],
     };
 
     // --- Champions: no die, one flat always-on passive, plus the

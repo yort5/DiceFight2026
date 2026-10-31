@@ -4945,3 +4945,41 @@ itself** (user's pick). So when a family photo is slotted in:
   keeps its ability.
 - Not until the user posts a photo and okays the swap (matching a picture
   isn't a green light to ship).
+
+## 2026-10-31 - Set 1's Super Rares are its family-photo cards
+
+User: "For Set 1, let's have 8 total Super Rares. These will be the ones
+with photos instead of vintage art. If we already have a Super Rare with
+vintage art, swap it for a lower rarity one that is missing it. Keeping
+the existing animals isn't important - we aren't going to get a family
+photo of a pistol shrimp. For Set 1, the special family connection will be
+because it will come from our photos. We can save other more exotic
+favorites for future set Super Rares."
+
+Set 1 had exactly 8 unpainted cards and 8 (painted) Super Rares, so the
+rarities traded places (counts unchanged: 48 C / 29 U / 29 R / 8 SR):
+
+- **Super Rare - photo slots:** Manatee, Pistol Shrimp, Bearded Dragon,
+  Crocodile, Bottlenose Dolphin, Bowerbird, Queen Termite, Barn Swallow.
+  These are slots for whatever the photos show: a card's animal is
+  expected to change to match its photo (its ability stays).
+- **Down from Super Rare** (user approved the split): Rare - Platypus,
+  Snow Leopard, Komodo Dragon; Uncommon - Silverback, Phoenix, Basilisk
+  (the Wolf, Golden Eagle and Owl starter power cards, so every starter
+  is now Common/Uncommon/Rare only); Common - Bison, Wombat.
+- **Starter rosters:** a Super Rare on a starter would be given away (4
+  dice to anyone finishing one game with that Champion), so the two photo
+  slots that were starter cards left their rosters (user's pick):
+  Golden Eagle Barn Swallow -> **Chipmunk** (Wing 3, On Field: draw a die
+  into Prep - Barn Swallow's Awaken draw, nearly), Owl Queen Termite ->
+  **Horseshoe Crab** (Shell 4, near-identical stats; nothing else has
+  Queen Termite's +1 ATK, and its DieLimit is 3, so the Owl starter is 31
+  dice). Simulator, powers on, 400 games a matchup (SE ~2.5): Owl moves
+  under a point except vs Golden Eagle (32.8 -> 28.6 with both swaps);
+  Golden Eagle +4 vs Wolf and vs Armadillo. Prairie Dog for Queen Termite
+  was worse for Owl (-5 vs Eagle). The sample Owl boss follows its roster.
+- Players who already collected the Owl or Golden Eagle starter keep
+  their 4 Queen Termite / Barn Swallow dice (now Super Rares) and don't
+  get Horseshoe Crab or Chipmunk - a starter is granted once.
+- `GameRecordingTests`' boss replay now stops after ten boss turns: the
+  cautious sample boss can stall a game for 50+ turns.

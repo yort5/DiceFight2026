@@ -150,7 +150,7 @@ public class PackTests
     {
         var cards = Ok(new V2GamesController(new V2GameStore()).Cards());
         Assert.Equal("Common", cards.Single(c => c.Id == DiceKingdomConfig.Hummingbird.Id).Rarity);
-        Assert.Equal("SuperRare", cards.Single(c => c.Id == DiceKingdomConfig.Phoenix.Id).Rarity);
+        Assert.Equal("SuperRare", cards.Single(c => c.Id == "HQ019").Rarity); // Manatee, a family-photo slot
         Assert.Null(cards.Single(c => c.Id == DiceKingdomConfig.AngerIssues.Id).Rarity);
     }
 }
@@ -306,7 +306,8 @@ public class TradeInTests
         var (collection, _) = accounts.Wallet(player);
 
         Assert.Equal(["GreatHornedOwl"], collection.Starters);
-        Assert.Equal(32, collection.Dice.Values.Sum());
+        // Each starter card at its DieLimit (31 since Horseshoe Crab, limit 3, replaced Queen Termite).
+        Assert.Equal(DiceKingdomConfig.CharactersByChampion["GreatHornedOwl"].Sum(id => DiceKingdomConfig.Catalog[id].DieLimit), collection.Dice.Values.Sum());
         Assert.Equal(100, collection.Coins);
     }
 }

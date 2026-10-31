@@ -44,7 +44,7 @@ public static class DiceKingdomBosses
             Id: "sample-3",
             Name: "The Night Owl",
             Blurb: "Sample boss: the Great Horned Owl starter roster, attacking at every chance.",
-            TeamLink: "/teambuilder?cards=4xDK-EYE-09;4xDK-EYE-05;4xDK-EYE-02;4xDK-EYE-06;4xDK-SHELL-05;4xDK-SHELL-06;4xDK-CLAW-07;4xDK-WING-06;3xDK-ACT-04&tardigrades=8xEye&champion=GreatHornedOwl",
+            TeamLink: "/teambuilder?cards=4xDK-EYE-09;4xDK-EYE-05;4xDK-EYE-02;4xDK-EYE-06;4xDK-SHELL-05;4xDPS019;4xDK-CLAW-07;4xDK-WING-06;3xDK-ACT-04&tardigrades=8xEye&champion=GreatHornedOwl",
             Style: BotStyles.Aggressive,
             FirstWin: new(Points: 40, Coins: 25, Drops: [new(Chance: 1, Rarity: CardRarity.Rare)]),
             Rematch: new(Points: 4, Drops: [new(Chance: 0.05, CardId: DiceKingdomConfig.Basilisk.Id)])),
