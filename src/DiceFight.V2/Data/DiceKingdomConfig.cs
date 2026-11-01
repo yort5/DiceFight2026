@@ -319,8 +319,10 @@ public static class DiceKingdomConfig
         Abilities: [],
         Continuous: []);
 
-    public static readonly CardDef QueenTermite = new(
-        Id: "DK-SHELL-06", Name: "Queen Termite", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
+    // Alpaca (a family photo, 2026-11-01; was Queen Termite): kept as a
+    // herd's guardian, and the whole herd fights the better for it.
+    public static readonly CardDef Alpaca = new(
+        Id: "DK-SHELL-06", Name: "Alpaca", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 4, EnergySymbolIds: ["Shell"],
         Die: CharacterDie("DK-SHELL-06Die", energyType: "Shell", (1, 2, 4), (1, 3, 5), (2, 3, 6)),
         DieLimit: 4, Affiliations: [], Keywords: [],
@@ -369,8 +371,10 @@ public static class DiceKingdomConfig
             new MoveDie(new TargetFilter(Kind: TargetKind.AnyDie, Ownership: TargetOwnership.Own, Zones: [Zone.UsedPile], Count: 1), Zone.PrepArea))],
         Continuous: []);
 
-    public static readonly CardDef BarnSwallow = new(
-        Id: "DK-WING-02", Name: "Barn Swallow", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
+    // Sloth (a family photo, 2026-11-01; was Barn Swallow): Awaken suits
+    // an animal that sleeps most of the day.
+    public static readonly CardDef Sloth = new(
+        Id: "DK-WING-02", Name: "Sloth", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
         PurchaseCost: 3, EnergySymbolIds: ["Wing"],
         Die: CharacterDie("DK-WING-02Die", energyType: "Wing", (0, 2, 2), (1, 2, 3), (2, 4, 5)),
         DieLimit: 4, Affiliations: [], Keywords: ["Awaken"],
@@ -910,8 +914,8 @@ public static class DiceKingdomConfig
     public static readonly IReadOnlyDictionary<string, CardDef> TeamBuilderCatalog = new List<CardDef>
     {
         HoneyBadger, Wolverine, GrizzlyBear, Orca, PeregrineFalcon, Silverback, Stoat, CapeBuffalo, Mongoose,
-        Hippopotamus, MuskOx, Pangolin, HermitCrab, Opossum, QueenTermite, Rhinoceros, BoxTurtle,
-        Osprey, BarnSwallow, Hummingbird, MountainGoat, MonarchButterfly, HomingPigeon, Greyhound, Phoenix, Swift,
+        Hippopotamus, MuskOx, Pangolin, HermitCrab, Opossum, Alpaca, Rhinoceros, BoxTurtle,
+        Osprey, Sloth, Hummingbird, MountainGoat, MonarchButterfly, HomingPigeon, Greyhound, Phoenix, Swift,
         BarnOwl, Hyena, Anglerfish, Cowbird, Magpie, Basilisk, Elephant, Fox, Cuttlefish,
         FrilledLizard, FlyingSquirrel, ElectricEel, Chameleon, Firefly, Leech, Meerkat, ArmyAnt,
         Archerfish, BombardierBeetle, KomodoDragon,
@@ -1031,7 +1035,7 @@ public static class DiceKingdomConfig
         // three Champions' power slots already got 2026-09-28.
         // Chipmunk (GOTG021, On Field: draw a die into Prep) replaced Barn
         // Swallow (Awaken: the same draw) 2026-10-31, when Barn Swallow
-        // became a Super Rare family-photo card - a starter roster is given
+        // became a Super Rare family-photo card (Sloth since 2026-11-01) - a starter roster is given
         // free. Simulator: Golden Eagle about +4 points a matchup.
         ["GoldenEagle"] = [Swift.Id, "GOTG021", Osprey.Id, Phoenix.Id, GrizzlyBear.Id, PeregrineFalcon.Id, BoxTurtle.Id, BarnOwl.Id],
         // Own 2/3/mid/power: Cuttlefish(2)/Magpie(3)/Hyena(4)/Basilisk(7).
@@ -1039,7 +1043,7 @@ public static class DiceKingdomConfig
         // to claim - it was never actually 7) replaced 2026-09-28.
         // Horseshoe Crab (DPS019, Shell 4, 2/5 3/6 5/6) replaced Queen
         // Termite (Shell 4, 2/4 3/5 3/6) 2026-10-31, when Queen Termite
-        // became a Super Rare family-photo card. Simulator: Owl within a
+        // became a Super Rare family-photo card (Alpaca since 2026-11-01). Simulator: Owl within a
         // point except vs Golden Eagle (32.8% -> 29.0%).
         ["GreatHornedOwl"] = [Cuttlefish.Id, Magpie.Id, Hyena.Id, Basilisk.Id, Opossum.Id, "DPS019", Stoat.Id, HomingPigeon.Id],
     };

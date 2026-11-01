@@ -25,7 +25,9 @@ public static class DiceKingdomSets
     {
         [Set1] = new HashSet<string>
         {
-            // --- Characters (101)
+            // --- Characters (101). Names as when the set was made; six family-photo cards were
+            //   renamed 2026-11-01 (Crocodile -> Alligator, Pistol Shrimp -> Kangaroo, Queen Termite ->
+            //   Alpaca, Barn Swallow -> Sloth, Bottlenose Dolphin -> Quokka, Bowerbird -> Dragonfly).
             // Claw: Bull Shark, Cape Buffalo, Crocodile, Deathstalker Scorpion, Electric Eel, Fire Salamander, Giant
             //   Centipede, Gibbon, Grizzly Bear, Harris’s Hawk, Hercules Beetle, Honey Badger, Komodo Dragon,
             //   Lioness, Lionfish, Mandrill, Mongoose, Peregrine Falcon, Pistol Shrimp, Polar Bear, Praying

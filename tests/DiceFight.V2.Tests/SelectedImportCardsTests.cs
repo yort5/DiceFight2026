@@ -288,7 +288,7 @@ public class SelectedImportCardsTests
     }
 
     [Fact]
-    public void Bowerbird_Discounts_Every_Personal_And_Basic_Action_But_Not_Creatures()
+    public void Dragonfly_Discounts_Every_Personal_And_Basic_Action_But_Not_Creatures()
     {
         var s = Game(); var q = new AbilityQueue(); var source = Add(s, "XFO016", zone: Zone.ReservePool); source.CurrentFaceIndex = 3;
         EventBus.Fire(s, q, new GameEvent(TriggerKind.TurnStepEntered, null, "p1", StepIds.Main)); Drain(s, q);

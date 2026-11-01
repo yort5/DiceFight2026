@@ -57,7 +57,7 @@ public static class DiceKingdomPacks
         [DiceKingdomConfig.Pangolin.Id] = CardRarity.Rare,
         [DiceKingdomConfig.HermitCrab.Id] = CardRarity.Common,
         [DiceKingdomConfig.Opossum.Id] = CardRarity.Uncommon,
-        [DiceKingdomConfig.QueenTermite.Id] = CardRarity.SuperRare, // family photo slot
+        [DiceKingdomConfig.Alpaca.Id] = CardRarity.SuperRare, // family photo (was Queen Termite)
         [DiceKingdomConfig.Rhinoceros.Id] = CardRarity.Rare,
         [DiceKingdomConfig.BoxTurtle.Id] = CardRarity.Common,
         [DiceKingdomConfig.Leech.Id] = CardRarity.Rare,
@@ -65,7 +65,7 @@ public static class DiceKingdomPacks
         [DiceKingdomConfig.BombardierBeetle.Id] = CardRarity.Uncommon,
         // Wing
         [DiceKingdomConfig.Osprey.Id] = CardRarity.Uncommon,
-        [DiceKingdomConfig.BarnSwallow.Id] = CardRarity.SuperRare, // family photo slot
+        [DiceKingdomConfig.Sloth.Id] = CardRarity.SuperRare, // family photo (was Barn Swallow)
         [DiceKingdomConfig.Hummingbird.Id] = CardRarity.Common,
         [DiceKingdomConfig.MountainGoat.Id] = CardRarity.Common,
         [DiceKingdomConfig.MonarchButterfly.Id] = CardRarity.Rare,
@@ -137,7 +137,7 @@ public static class DiceKingdomPacks
         ["AVX066"] = CardRarity.Uncommon, // Velvet Worm
         ["AVX019"] = CardRarity.Common, // Leaf Insect
         ["XFO004"] = CardRarity.Common, // Orchid Mantis
-        ["XFO016"] = CardRarity.SuperRare, // Bowerbird - family photo slot
+        ["XFO016"] = CardRarity.SuperRare, // Dragonfly - family photo (was Bowerbird)
         ["XFC017"] = CardRarity.Common, // Fire Salamander
         ["XFC110"] = CardRarity.Rare, // Mimic Filefish
         ["SW018"] = CardRarity.Common, // Harris’s Hawk
@@ -145,13 +145,13 @@ public static class DiceKingdomPacks
         // KingdomImports.cs (2026-10-20). The user's seven ("probably at
         // higher rarities because my family thinks they are cooler") are
         // Rare or Super Rare whatever the printing says; the rest keep it.
-        ["XFC003"] = CardRarity.SuperRare, // Pistol Shrimp - family photo slot
+        ["XFC003"] = CardRarity.SuperRare, // Kangaroo - family photo (was Pistol Shrimp)
         ["BFF033"] = CardRarity.Rare, // Snow Leopard (Super Rare until 2026-10-31)
         ["CW054"] = CardRarity.Rare, // Red Panda
         ["AI013"] = CardRarity.Rare, // Koala
-        ["HQ019"] = CardRarity.SuperRare, // Manatee - family photo slot
+        ["HQ019"] = CardRarity.SuperRare, // Manatee - family photo
         ["DOOM017"] = CardRarity.Rare, // Platypus (Super Rare until 2026-10-31)
-        ["SWW020"] = CardRarity.SuperRare, // Bearded Dragon - family photo slot
+        ["SWW020"] = CardRarity.SuperRare, // Bearded Dragon - family photo
         ["SW001"] = CardRarity.Common, // Box Jellyfish
         ["GOTG032"] = CardRarity.Common, // Raccoon
         ["WWE037"] = CardRarity.Common, // Praying Mantis
@@ -164,9 +164,9 @@ public static class DiceKingdomPacks
         ["IG068"] = CardRarity.Uncommon, // Hare
         ["ASM110"] = CardRarity.Rare, // Swordfish
         ["FUS004"] = CardRarity.Common, // Cone Snail
-        ["TOA086"] = CardRarity.SuperRare, // Crocodile - family photo slot
+        ["TOA086"] = CardRarity.SuperRare, // Alligator - family photo (was Crocodile)
         ["THOR021"] = CardRarity.Common, // Bull Shark
-        ["CW042"] = CardRarity.SuperRare, // Bottlenose Dolphin - family photo slot
+        ["CW042"] = CardRarity.SuperRare, // Quokka - family photo (was Bottlenose Dolphin)
     };
 
     // A pack is six dice: three Commons, an Uncommon, a "rare slot" that's

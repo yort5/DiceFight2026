@@ -94,3 +94,13 @@ giant-tortoise: "Engraving of Giant Tortoises of the Galápagos Islands from "Th
 horseshoe-crab: "Limulus - Print - Iconographia Zoologica - Special Collections University of Amsterdam - UBAINV0274 006 03 0065.tif" - unknown (Public domain) https://commons.wikimedia.org/wiki/File:Limulus_-_Print_-_Iconographia_Zoologica_-_Special_Collections_University_of_Amsterdam_-_UBAINV0274_006_03_0065.tif
 starfish: "Haeckel Asteridea.jpg" - Ernst Haeckel (Public domain) https://commons.wikimedia.org/wiki/File:Haeckel_Asteridea.jpg
 beaver: "Audubon-castor 1854.jpg" - John James Audubon (Public domain) https://commons.wikimedia.org/wiki/File:Audubon-castor_1854.jpg
+
+Family photos (2026-11-01) - Set 1's Super Rares, the family's own pictures, used with permission; cropped and lightly colour-corrected by tools/art/scene.py photo, people cropped out:
+manatee: family photo, aquarium, 2016
+bearded-dragon: family photo, 2017
+alligator: family photo, 2017
+kangaroo: family photo, 2001
+alpaca: family photo, state fair, 2015
+quokka: family photo
+dragonfly: family photo, 2020
+sloth: family photo, 2009

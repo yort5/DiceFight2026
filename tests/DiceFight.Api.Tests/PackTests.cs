@@ -306,7 +306,7 @@ public class TradeInTests
         var (collection, _) = accounts.Wallet(player);
 
         Assert.Equal(["GreatHornedOwl"], collection.Starters);
-        // Each starter card at its DieLimit (31 since Horseshoe Crab, limit 3, replaced Queen Termite).
+        // Each starter card at its DieLimit (31 since Horseshoe Crab, limit 3, replaced Queen Termite, now Alpaca).
         Assert.Equal(DiceKingdomConfig.CharactersByChampion["GreatHornedOwl"].Sum(id => DiceKingdomConfig.Catalog[id].DieLimit), collection.Dice.Values.Sum());
         Assert.Equal(100, collection.Coins);
     }

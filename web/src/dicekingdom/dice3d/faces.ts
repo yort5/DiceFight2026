@@ -29,7 +29,7 @@ function loadImage(src: string): Promise<HTMLImageElement | null> {
 
 // An icon component as an image: rendered to markup once, then loaded. The
 // silhouettes are currentColor SVGs (tinted here); a few are raster drawings
-// (<img>, like the family's Barn Swallow duck), used as they are.
+// (<img>, like the Wolf Champion portrait), used as they are.
 function iconImage(icon: Icon, color: string): Promise<CanvasImageSource | null> {
   let id = iconKeys.get(icon);
   if (!id) iconKeys.set(icon, (id = String(nextIconKey++)));

@@ -219,7 +219,7 @@ public class KingdomImportsTests
     }
 
     [Fact]
-    public void Crocodile_Can_Only_KO_A_Level_1_Creature()
+    public void Alligator_Can_Only_KO_A_Level_1_Creature()
     {
         var s = Game(); var q = new AbilityQueue();
         var young = Add(s, DiceKingdomConfig.Elephant.Id, "p2", level: 1);
@@ -252,7 +252,7 @@ public class KingdomImportsTests
     }
 
     [Fact]
-    public void Bottlenose_Dolphin_Gives_The_Other_Attackers_1_ATK()
+    public void Quokka_Gives_The_Other_Attackers_1_ATK()
     {
         var s = Game(); var q = new AbilityQueue();
         var dolphin = Add(s, "CW042"); // L1 4/4

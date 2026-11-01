@@ -79,10 +79,10 @@ anglerfish, cowbird, magpie, basilisk lizard, elephant, fox, cuttlefish, frilled
 pufferfish, scorpion, woodpecker, frigatebird, secretary bird, gibbon, kangaroo rat, wild boar,
 orb weaver spider, centipede, dung beetle, lion, saiga antelope, mandrill, wombat, bison, sugar glider,
 stag beetle, puffin, cobra, prairie dog, flatworm, hercules beetle, marmoset, fire ant, electric ray,
-velvet worm, leaf insect, orchid mantis, bowerbird, fire salamander, filefish, hawk, pistol shrimp,
+velvet worm, leaf insect, orchid mantis, dragonfly, fire salamander, filefish, hawk, pistol shrimp,
 red panda, manatee, platypus, bearded dragon, box jellyfish, raccoon, praying mantis, polar bear,
-cassowary, skunk, penguin, raven, chipmunk, hare, swordfish, cone snail, crocodile, bull shark,
-bottlenose dolphin, barn swallow, koala, hummingbird, snow leopard, tardigrade"""
+cassowary, skunk, penguin, raven, chipmunk, hare, swordfish, cone snail, alligator, bull shark,
+quokka, sloth, kangaroo, alpaca, koala, hummingbird, snow leopard, tardigrade"""
 
 AUSTRALIA = """kangaroo, wallaby, quokka, echidna, emu, kookaburra, cockatoo, galah, rainbow lorikeet,
 possum, tasmanian devil, dingo, goanna, blue-tongued skink, flying fox, black swan, ibis, pelican,

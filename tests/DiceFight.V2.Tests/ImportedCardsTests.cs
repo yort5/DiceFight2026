@@ -168,7 +168,7 @@ public class ImportedCardsTests
     {
         var state = NewGame();
         var queue = new AbilityQueue();
-        var swallow = Add(state, DiceKingdomConfig.BarnSwallow.Id, "p1", Zone.FieldZone);
+        var swallow = Add(state, DiceKingdomConfig.Sloth.Id, "p1", Zone.FieldZone);
         swallow.GrantedTags.Add(new GrantedTag("Amplify", Duration.EndOfTurn, "p1"));
         var action = Add(state, DiceKingdomConfig.AngerIssues.Id, "p1", Zone.ReservePool);
         TurnEngine.UseAction(state, queue, action.Id);

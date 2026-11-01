@@ -9,10 +9,23 @@
 // Files: public/dice-kingdom/art/<slug>.webp (480x544, the whole picture)
 // and <slug>-icon.webp (256 square, a tighter crop for round plates), made
 // by tools/art/scene.py; sources and licences in CREDITS.txt there. A card
-// with no painting yet falls back to its silhouette everywhere (Barn Swallow
-// keeps the family duck drawing on purpose).
+// with no painting yet falls back to its silhouette everywhere.
+//
+// Set 1's eight Super Rares are family photos instead (2026-11-01, user:
+// "these will be the ones with photos instead of vintage art"), made with
+// scene.py photo and listed in CREDITS.txt.
 
 const ART: Record<string, string> = {
+  // Family photos (Super Rare)
+  "HQ019": "manatee", // Manatee
+  "SWW020": "bearded-dragon", // Bearded Dragon
+  "TOA086": "alligator", // Alligator
+  "XFC003": "kangaroo", // Kangaroo
+  "DK-SHELL-06": "alpaca", // Alpaca
+  "CW042": "quokka", // Quokka
+  "XFO016": "dragonfly", // Dragonfly
+  "DK-WING-02": "sloth", // Sloth
+  // Vintage paintings
   "AI013": "koala", // Koala
   "DK-WING-03": "hummingbird", // Hummingbird
   "BFF033": "snow-leopard", // Snow Leopard

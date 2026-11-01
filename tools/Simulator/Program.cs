@@ -40,7 +40,7 @@ using DiceFight.V2.Model.Effects;
 //                    v3/DESIGN_NOTES.md 2026-10-14.
 //   SIM_DUMP=N       print the full match log of game N of each matchup
 //   SIM_SWAP=Champ:oldId=newId;...  what-if roster swap, e.g.
-//                    Armadillo:DK-SHELL-02=DK-SHELL-06 (Musk Ox -> Queen Termite)
+//                    Armadillo:DK-SHELL-02=DK-SHELL-06 (Musk Ox -> Alpaca)
 //   SIM_PERSONAS=off play every seat with the Default persona instead of
 //                    its Champion's (BotPersona.ForChampion)
 //   SIM_NO_GLOBALS=id,id  strip the Global abilities off these card ids

@@ -170,7 +170,7 @@ public static class BonusCards
         RawText: "Energize: Action dice, including Basic Action dice, cost you 2 less to purchase until end of turn (minimum 1).",
         Abilities: [..KeywordAbilities.Energize(new PurchaseModifier(-2, CardKind: CardType.Action, EveryPurchase: true))],
         Continuous: [], IncludeInTeamBuilder: true,
-        KingdomName: "Bowerbird", KingdomEnergyType: "Wing");
+        KingdomName: "Dragonfly", KingdomEnergyType: "Wing"); // Bowerbird until 2026-11-01 (a family photo)
 
     public static readonly CardDef JubileeLifeontheStreets = new(
         Id: "XFC017", Name: "Jubilee", Subtitle: "Life on the Streets", Set: "XFC", CardType: CardType.Character,

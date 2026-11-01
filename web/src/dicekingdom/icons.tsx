@@ -1,7 +1,6 @@
 import { useId, type ReactElement, type ReactNode } from "react";
 import wolfChampionArt from "./assets/wolf-champion.jpg";
 import tardigradeSketch from "./assets/tardigrade-sketch.jpg";
-import barnSwallowDuck from "./assets/barn-swallow-duck.jpg";
 
 // Hand-drawn icon set for Dice Kingdom - the same SVG concepts already
 // designed and reviewed as Claude artifacts this session (the energy-pip
@@ -356,18 +355,6 @@ function OspreyIcon(props: IconProps) {
 // picture could replace ("if I upload a duck, you could swap out the
 // barn swallow"), then an actual duck drawing arrived a few messages
 // later. Same img-based pattern as WolfIcon.
-function BarnSwallowIcon({ size = 24 }: IconProps) {
-  return (
-    <img
-      src={barnSwallowDuck}
-      alt="Barn Swallow"
-      width={size}
-      height={size}
-      style={{ objectFit: "contain", borderRadius: "20%", background: "#fff" }}
-    />
-  );
-}
-
 function BarnOwlIcon(props: IconProps) {
   return (
     <Svg {...props}>
@@ -516,18 +503,6 @@ function OpossumIcon(props: IconProps) {
       <g stroke="currentColor" strokeWidth={2} strokeLinecap="round">
         <path d="M27,32 L31,36 M31,32 L27,36" />
         <path d="M33,32 L37,36 M37,32 L33,36" />
-      </g>
-    </Svg>
-  );
-}
-
-function QueenTermiteIcon(props: IconProps) {
-  return (
-    <Svg {...props}>
-      <path fill="currentColor" d="M32,10 C36,24 42,38 46,52 L18,52 C22,38 28,24 32,10 Z" />
-      <g stroke={CREAM} strokeWidth={2}>
-        <path d="M23,32 L41,32" />
-        <path d="M21,42 L43,42" />
       </g>
     </Svg>
   );
@@ -1163,7 +1138,6 @@ const StampedeIcon = silhouette("M8 44L17 30L27 34L30 22L45 26L57 14L61 19L48 33
 const CleanerWrasseIcon = silhouette("M5 31L13 26Q33 11 47 25L59 16L57 30L61 43L47 36Q30 49 13 36ZM19 25L16 30Q30 32 44 28L41 23Q30 28 19 25ZM11 31a2 2 0 1 0 4 0a2 2 0 1 0-4 0");
 const DungBeetleIcon = silhouette("M25 27L19 19L13 18L10 23L17 28L16 39L8 44L10 48L19 45L22 51L18 58H24L30 52H35L41 58H47L42 50L45 45L54 49L57 44L48 39L47 29L53 25L54 18L48 17L42 24L38 26ZM30 29V47H34V29ZM29 5Q40 0 44 11Q48 23 35 23Q24 24 24 14Q24 8 29 5Z");
 const PeacockMantisShrimpIcon = silhouette("M15 18L6 8L10 4L22 13L26 7L31 14L37 8L41 16L52 13L56 17L44 23L44 30L56 33L55 39L43 36L40 43L50 48L47 53L38 48L32 57L24 53L19 42L10 47L7 43L17 36L15 29L5 32L3 28L13 23ZM23 21L29 23L27 27L21 25ZM34 20L39 22L38 27L32 25Z");
-const PistolShrimpIcon = silhouette("M23 17L20 8L24 6L30 15L35 6L39 9L34 18L39 26L50 20L56 23L60 34L56 41L46 39L43 34L38 36L35 46L26 54L13 51L5 45L9 40L19 46L27 40L24 31L14 36L10 32L20 24ZM49 28L49 33L54 34L53 29Z");
 const SaigaIcon = silhouette("M20 24L16 5L20 3L25 20H38L44 3L48 5L43 26L43 38L39 44L44 49L41 56H30L25 48L18 44L16 34ZM24 28L28 29L28 34L23 32ZM37 28L41 29L42 33L38 34ZM27 40L34 39L39 49L34 52L29 48Z");
 const ArcticTernIcon = silhouette("M29 27L11 10L2 12L21 35L27 34L21 53L32 45L43 53L37 34L43 35L62 12L53 10L35 27L34 19L43 17L35 13L29 16Z");
 const QueenBeeIcon = silhouette("M25 21L19 13L22 10L30 17L32 8L35 17L43 10L46 13L39 21L41 28Q55 15 59 26Q61 37 42 37L40 46L32 57L24 46L22 37Q3 37 5 26Q9 15 23 28ZM26 34H38V39H26ZM28 45H36L32 50Z");
@@ -1180,7 +1154,6 @@ const ElectricRayIcon = silhouette("M32 9Q36 17 42 20L59 33L49 40L38 39L34 45V52
 const VelvetWormIcon = silhouette("M47 13L45 5L49 4L52 13L57 8L60 11L55 18Q59 24 53 28L48 33L52 38L49 42L44 38L39 41L42 47L38 50L34 44L28 43L26 50L22 48L24 41L19 37L13 41L10 37L16 32Q10 26 14 19L8 15L11 11L17 15Q21 10 27 14L25 21Q20 20 21 26Q24 34 33 34Q42 33 44 24Q38 19 41 15ZM47 18a2 2 0 1 0 4 0a2 2 0 1 0-4 0");
 const LeafInsectIcon = silhouette("M29 16L23 5L27 3L32 12L37 3L41 5L35 16L43 23L55 15L58 19L46 28L48 36L59 35L59 40L47 41L43 48L53 55L50 59L39 51L32 59L25 51L14 59L11 55L21 48L17 41L5 40L5 35L16 36L18 28L6 19L9 15L21 23ZM30 23V48H34V23ZM22 29L27 33L27 38L21 34ZM42 29L37 33L37 38L43 34Z");
 const OrchidMantisIcon = silhouette("M24 8L32 14L40 8L43 13L35 21L35 29L45 21L44 12L48 11L54 27L41 34L52 43L48 49L38 39L37 50L44 57L40 61L32 54L24 61L20 57L27 50L26 39L16 49L12 43L23 34L10 27L16 11L20 12L19 21L29 29L29 21L21 13ZM26 14a2 2 0 1 0 4 0a2 2 0 1 0-4 0M34 14a2 2 0 1 0 4 0a2 2 0 1 0-4 0");
-const BowerbirdIcon = silhouette("M6 55V28Q6 9 23 6L25 11Q12 14 12 29V55ZM58 55V28Q58 9 41 6L39 11Q52 14 52 29V55ZM25 25Q29 17 37 22L40 27L49 29L39 34Q41 42 36 46L42 54H36L32 47L28 54H22L25 44L17 45L20 32L14 27ZM31 26a2 2 0 1 0 4 0a2 2 0 1 0-4 0M24 33L28 40L34 35Z");
 const FireSalamanderIcon = silhouette("M28 19L18 14L10 18L8 14L17 8L28 12L29 5L34 3L39 10L37 21L44 28L53 23L58 28L56 32L50 29L43 35L38 42L43 48L50 49L49 54L40 54L32 47L23 49L17 46L13 38L17 36L22 43L27 42L30 31L23 27Q17 31 17 36L12 35Q12 28 22 22ZM30 14a2 2 0 1 0 4 0a2 2 0 1 0-4 0M31 25a2 2 0 1 0 4 0a2 2 0 1 0-4 0M9 40Q6 56 22 57L25 52Q11 51 13 41Z");
 const MimicFilefishIcon = silhouette("M7 34L17 25L18 9L22 7L25 22Q37 17 46 28L59 22L57 34L60 46L46 39Q35 49 23 43L18 52L15 49L18 41L8 38ZM17 30a2 2 0 1 0 4 0a2 2 0 1 0-4 0M29 27L35 24L38 29L31 32ZM34 35L40 32L43 37L37 41Z");
 const HarrisHawkIcon = silhouette("M30 20L19 6L10 4L19 22L4 14L3 20L22 35L11 34L8 39L25 42L24 54L32 49L40 54L39 42L56 39L53 34L42 35L61 20L60 14L45 22L54 4L45 6L34 20L33 12L39 14L43 19L38 23L37 31L31 36L27 30ZM32 17a1.6 1.6 0 1 0 3.2 0a1.6 1.6 0 1 0-3.2 0");
@@ -1207,9 +1180,17 @@ const ChipmunkIcon = silhouette("M30 10Q38 8 42 14L46 18L42 20Q46 26 44 32Q50 38
 const HareIcon = silhouette("M40 16L36 2L41 2L44 14L48 2L52 4L48 17Q54 22 52 28L58 30L54 33L46 34L48 50L56 54L54 58L42 56L40 46L28 50L20 58H10L18 50Q8 46 8 36Q10 26 24 26Q34 26 40 22ZM46 23a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0M8 34Q2 32 4 28Q8 28 10 31Z");
 const SwordfishIcon = silhouette("M2 31L24 29Q30 24 38 24L42 14L46 25Q52 27 54 30L60 20L62 22L58 32L62 42L60 44L54 34Q50 38 42 39L38 44L36 39Q28 38 24 34L2 32ZM29 30a1.4 1.4 0 1 0 2.8 0a1.4 1.4 0 1 0-2.8 0M36 37L40 46L34 40Z");
 const ConeSnailIcon = silhouette("M8 57L38 13Q48 4 58 12Q63 22 53 30ZM22 42L29 34L32 38L26 45ZM33 28L40 21L43 25L36 32ZM47 13Q54 11 56 17Q51 15 47 17ZM16 50L19 47L21 49L18 52Z");
+// Family-photo Super Rares (2026-11-01): side profiles drawn to match the
+// photos' animals (the dragonfly traced from its photo, tools/art/scene.py
+// trace). The Alligator keeps the crocodile outline.
+const KangarooIcon = silhouette("M19 13L17 3L22 9L25 3L26 12Q29 15 29 20Q38 22 44 32Q48 40 47 46Q53 50 62 55L61 58Q52 57 45 54L43 55L51 59L51 62H33L33 59L37 57Q31 52 29 46L25 41L20 45L17 43L22 36Q20 29 22 25Q16 25 11 23L5 21Q5 17 11 15ZM15 18a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0");
+const AlpacaIcon = silhouette("M15 6L14 1L18 5L21 1L22 6Q27 8 26 14L25 30Q34 28 46 29Q56 30 57 36Q60 34 61 37Q58 40 56 42Q56 47 52 48L52 62H48L47 49L42 49L41 62H37L36 49L29 49L28 62H24L23 48Q19 44 19 36L18 20Q12 21 8 19L5 16Q5 12 10 11ZM14 12a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0");
+const QuokkaIcon = silhouette("M22 10Q22 4 27 5Q29 7 29 10Q33 11 35 14Q46 18 50 32Q53 44 50 52Q56 55 62 60L60 62Q52 59 47 57L44 60H34L35 57Q28 56 26 50L24 44L19 42L17 40L22 37Q20 30 22 26Q16 26 13 23Q12 18 17 15Q19 12 22 10ZM20 17a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0");
+const DragonflyIcon = silhouette("M61 14L35 20L39 14L35 19L37 10L35 16L31 14L29 17L27 11L29 20L3 20L13 24L29 24L5 31L27 33L30 30L32 54L33 32L44 33L60 28L35 24L49 21Z");
+// Hangs upside down from a branch; its parts overlap, so the eyes are holes.
+const SlothIcon = silhouette("M2 5H62V9H2ZM11 30Q11 19 30 19Q49 19 51 29Q49 41 30 41Q11 41 11 30ZM13 27L11 8H16L19 24ZM21 22L21 8H26L27 21ZM37 21L39 8H44L43 22ZM46 24L50 8H55L51 28ZM43 36a9 9 0 1 0 18 0a9 9 0 1 0-18 0", "M47.5 36a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0M53.5 36a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0");
 const CrocodileIcon = silhouette("M2 33L14 30L20 31L24 27L28 30L32 26L36 30L40 26L44 30L48 28L56 32L62 36L56 37L48 38L46 44L40 44L40 39L30 39L28 45L22 45L22 39L14 38L2 36ZM12 31a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0M3 34L13 34L13 35L3 35Z");
 const BullSharkIcon = silhouette("M4 34Q10 26 24 26L30 16L36 26Q46 27 52 31L60 22L62 24L58 34L62 44L60 46L52 37Q46 42 34 42L30 48L26 42Q12 42 4 34ZM12 31a1.6 1.6 0 1 0 3.2 0a1.6 1.6 0 1 0-3.2 0M12 37Q16 38 20 36");
-const DolphinIcon = silhouette("M8 40Q10 24 26 18L28 10L34 17Q46 18 54 26L60 22L58 30L62 36L56 34Q50 30 42 30L38 38L34 30Q24 32 18 42L22 46L14 46L10 50ZM12 42Q8 42 6 44L10 38ZM22 25a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0");
 const FireflySquidIcon = silhouette("M32 2Q42 10 40 26L40 34L46 52L42 52L38 40L36 58L33 58L33 40L31 40L31 58L28 58L26 40L22 52L18 52L24 34L24 26Q22 10 32 2ZM29 14a1.6 1.6 0 1 0 3.2 0a1.6 1.6 0 1 0-3.2 0M33 20a1.6 1.6 0 1 0 3.2 0a1.6 1.6 0 1 0-3.2 0M28 24a1.6 1.6 0 1 0 3.2 0a1.6 1.6 0 1 0-3.2 0M33 29a1.6 1.6 0 1 0 3.2 0a1.6 1.6 0 1 0-3.2 0M27 31a1.6 1.6 0 1 0 3.2 0a1.6 1.6 0 1 0-3.2 0");
 
 // KingdomImports.cs Basic Actions (2026-10-20) - plants, like the other Basic Actions.
@@ -1237,7 +1218,7 @@ export const CHARACTER_ICONS: Record<string, (p: IconProps) => ReactElement> = {
   "AVX066": VelvetWormIcon,
   "AVX019": LeafInsectIcon,
   "XFO004": OrchidMantisIcon,
-  "XFO016": BowerbirdIcon,
+  "XFO016": DragonflyIcon,
   "XFC017": FireSalamanderIcon,
   "XFC110": MimicFilefishIcon,
   "SW018": HarrisHawkIcon,
@@ -1333,14 +1314,14 @@ export const CHARACTER_ICONS: Record<string, (p: IconProps) => ReactElement> = {
   "DK-SHELL-03": PangolinIcon,
   "DK-SHELL-04": HermitCrabIcon,
   "DK-SHELL-05": OpossumIcon,
-  "DK-SHELL-06": QueenTermiteIcon,
+  "DK-SHELL-06": AlpacaIcon,
   "DK-SHELL-07": SnappingTurtleIcon,
   "DK-SHELL-08": BoxTurtleIcon,
   "DK-SHELL-09": LeechIcon,
   "DK-SHELL-10": MeerkatIcon,
   "DK-SHELL-11": BombardierBeetleIcon,
   "DK-WING-01": OspreyIcon,
-  "DK-WING-02": BarnSwallowIcon,
+  "DK-WING-02": SlothIcon,
   "DK-WING-03": HummingbirdIcon,
   "DK-WING-04": MountainGoatIcon,
   "DK-WING-05": MonarchButterflyIcon,
@@ -1362,7 +1343,7 @@ export const CHARACTER_ICONS: Record<string, (p: IconProps) => ReactElement> = {
   "DK-EYE-09": CuttlefishIcon,
   "DK-EYE-10": FrilledLizardIcon,
   "DK-EYE-11": ChameleonIcon,
-  "XFC003": PistolShrimpIcon,
+  "XFC003": KangarooIcon,
   "BFF033": SnowLeopardIcon,
   "CW054": RedPandaIcon,
   "AI013": KoalaIcon,
@@ -1381,9 +1362,9 @@ export const CHARACTER_ICONS: Record<string, (p: IconProps) => ReactElement> = {
   "IG068": HareIcon,
   "ASM110": SwordfishIcon,
   "FUS004": ConeSnailIcon,
-  "TOA086": CrocodileIcon,
+  "TOA086": CrocodileIcon, // Alligator
   "THOR021": BullSharkIcon,
-  "CW042": DolphinIcon,
+  "CW042": QuokkaIcon,
   "IG014": BurdockIcon,
   "JUS067": CactusIcon,
   "AOU029": ChiliPepperIcon,

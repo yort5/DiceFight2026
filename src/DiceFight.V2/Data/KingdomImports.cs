@@ -19,8 +19,9 @@ public static class KingdomImports
 {
     // ---- The user's seven ----
 
-    // Pistol Shrimp: its snapping claw fires a shockwave that stuns
-    // everything nearby - Banshee's sonic scream.
+    // Kangaroo (a family photo, 2026-11-01; was Pistol Shrimp, whose
+    // snapping claw's shockwave this was): a boxer, landing blows all round
+    // - Banshee's sonic scream.
     public static readonly CardDef BansheeWailOfTheBanshee = new(
         Id: "XFC003", Name: "Banshee", Subtitle: "The Wail of the Banshee", Set: "XFC", CardType: CardType.Character,
         PurchaseCost: 3, EnergySymbolIds: ["Mask"],
@@ -30,7 +31,7 @@ public static class KingdomImports
         Abilities: [new TriggeredAbility(TriggerKind.DieFielded,
             new DealDamage(new Fixed(1), new TargetFilter(Ownership: TargetOwnership.Opposing, Count: 0)))],
         Continuous: [], IncludeInTeamBuilder: true,
-        KingdomName: "Pistol Shrimp", KingdomEnergyType: "Claw");
+        KingdomName: "Kangaroo", KingdomEnergyType: "Claw");
 
     // Snow Leopard: the "ghost of the mountains" - one defender never
     // catches it.
@@ -250,7 +251,8 @@ public static class KingdomImports
         Continuous: [], IncludeInTeamBuilder: true,
         KingdomName: "Cone Snail", KingdomEnergyType: "Eye");
 
-    // Crocodile: waits at the water's edge for the young ones.
+    // Alligator (a family photo, 2026-11-01; was Crocodile): waits at the
+    // water's edge for the young ones.
     public static readonly CardDef TriceratopsGreaterBeast = new(
         Id: "TOA086", Name: "Triceratops", Subtitle: "Greater Beast", Set: "TOA", CardType: CardType.Character,
         PurchaseCost: 5, EnergySymbolIds: ["Fist"],
@@ -260,7 +262,7 @@ public static class KingdomImports
         Abilities: [new TriggeredAbility(TriggerKind.DieFielded, new Ko(new TargetFilter(
             Stat: new StatThreshold(StatKind.Level, Max: 1))))],
         Continuous: [], IncludeInTeamBuilder: true,
-        KingdomName: "Crocodile", KingdomEnergyType: "Claw");
+        KingdomName: "Alligator", KingdomEnergyType: "Claw");
 
     // Bull Shark: the most aggressive shark there is. Simplified: the
     // source also has to attack every turn, which no rule here enforces
@@ -276,7 +278,8 @@ public static class KingdomImports
         KingdomName: "Bull Shark", KingdomEnergyType: "Claw", HasErrata: true,
         ErrataNotes: ["Reference: BulkCards.json.", "Removed \"must attack each turn (if able)\" - no continuous must-attack rule exists."]);
 
-    // Bottlenose Dolphin: hunts as a pod, herding fish for the others.
+    // Quokka (a family photo, 2026-11-01; was Bottlenose Dolphin, hunting
+    // as a pod): "the happiest animal", cheering the others on.
     public static readonly CardDef HerculesTheIncredibleHerc = new(
         Id: "CW042", Name: "Hercules", Subtitle: "The Incredible Herc", Set: "CW", CardType: CardType.Character,
         PurchaseCost: 5, EnergySymbolIds: ["Fist"],
@@ -286,7 +289,7 @@ public static class KingdomImports
         Abilities: [new TriggeredAbility(TriggerKind.DieAttacks, new ModifyStat(new TargetFilter(
             Ownership: TargetOwnership.Own, Count: 0, AttackersOnly: true, ExcludeSelf: true), AtkDelta: 1))],
         Continuous: [], IncludeInTeamBuilder: true,
-        KingdomName: "Bottlenose Dolphin", KingdomEnergyType: "Wing");
+        KingdomName: "Quokka", KingdomEnergyType: "Wing");
 
     // ---- Basic Actions (2026-10-20, user: "another bunch of Basic Action
     // cards"). Three or four per energy, named for an animal behaviour.

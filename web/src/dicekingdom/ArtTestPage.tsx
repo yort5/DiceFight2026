@@ -197,7 +197,7 @@ export function ArtTestPage() {
         <section className="panel">
           <h3>Family drawings</h3>
           <p className="dk-acct-dim">
-            Already in the game: the duck drawing stands in for the Barn Swallow, and the Wolf Champion portrait.
+            Already in the game: the Wolf Champion portrait (the family duck drawing stood in for the Barn Swallow until 2026-11-01).
           </p>
           <div className="dk-art-row">
             <Frames card={swallow} rarity="Uncommon" avatar={CHARACTER_ICONS["DK-WING-02"]} cardsById={byId} />

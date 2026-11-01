@@ -9,6 +9,8 @@ behind the animal instead of cutting it out.
     python scene.py paint    PHOTO OUT_PREFIX --frame x0,y0,x1,y1 --face x0,y0,x1,y1
     python scene.py plate    PLATE OUT_PREFIX --frame ... --face ... [--hand-colour]
     python scene.py backdrop PLATE OUT_PREFIX --crop ... --energy Shell --style rays|wash [--erase 'x,y x,y ...']
+    python scene.py photo    PHOTO OUT_PREFIX --frame ... --face ...
+    python scene.py trace    PHOTO OUT_PREFIX [--crop ...] [--erase ...]
 
 paint: the photo as a vivid painting (OpenCV's edge-preserving stylization,
 then extra colour and a warm/cool grade). plate: a vintage painting as it
@@ -16,6 +18,12 @@ is; --hand-colour washes colour into a black-and-white engraving.
 backdrop: the animal cut out of a plate (rembg) and set on a new
 background in its energy's colours - "rays" (a trading-card sunburst) or
 "wash" (soft watercolour blobs).
+photo (2026-11-01): a family photo kept a photo - Set 1's Super Rares are
+the family's own pictures (v3/DESIGN_NOTES.md) - with only a light
+levels-and-colour touch. Crop people out with --frame/--face.
+trace: the animal's outline (the cut-out's mask) as an SVG path in a 64x64
+box, written to OUT_PREFIX.path - the dice silhouette (icons.tsx
+silhouette()) for an animal that has none.
 
 Each writes OUT_PREFIX-full.webp (480x544, the full-art card's art window)
 and OUT_PREFIX-icon.webp (256 square, the tighter --face crop for the small
@@ -28,7 +36,14 @@ import argparse
 
 import cv2
 import numpy as np
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter, ImageOps
+
+try:
+    import pillow_heif  # iPhone photos
+
+    pillow_heif.register_heif_opener()
+except ImportError:
+    pass
 
 ENERGY = {"Claw": "#b8451f", "Shell": "#2f6b52", "Wing": "#2f6690", "Eye": "#6a4189"}
 CREAM = (255, 248, 236)
@@ -99,6 +114,38 @@ def grade(bgr):
     lum = f.mean(axis=2, keepdims=True)
     warm, cool = np.array([0.9, 0.98, 1.1]), np.array([1.04, 1.0, 0.96])  # BGR
     return (np.clip(f * (lum * warm + (1 - lum) * cool), 0, 1) * 255).astype(np.uint8)
+
+
+def photo_touch(im, strength=1.0, balance=0.0):
+    """Levels stretched a touch (0.5% clipped each end) and a little colour,
+    `strength` of the way (0 = the photo as it is). `balance` pulls a colour
+    cast (an aquarium's blue) that far toward grey first."""
+    im = im.convert("RGB")
+    if balance:
+        f = np.array(im).astype(np.float32)
+        gain = f.reshape(-1, 3).mean(axis=0).mean() / f.reshape(-1, 3).mean(axis=0)
+        im = Image.fromarray(np.clip(f * (1 + balance * (gain - 1)), 0, 255).astype(np.uint8))
+    touched = ImageOps.autocontrast(im, cutoff=0.5, preserve_tone=True)
+    bgr = vibrance(cv2.cvtColor(np.array(touched), cv2.COLOR_RGB2BGR), 0.2)
+    return Image.blend(im, Image.fromarray(cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)), strength)
+
+
+def trace(cut, box=64, margin=3, detail=0.003):
+    """The cut-out's outline as an SVG path filling a box x box square."""
+    mask = (np.array(cut.getchannel("A")) > 128).astype(np.uint8)
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    biggest = max(cv2.contourArea(c) for c in contours)
+    h, w = mask.shape
+    k = (box - 2 * margin) / max(w, h)
+    ox, oy = (box - w * k) / 2, (box - h * k) / 2
+    parts = []
+    for c in contours:
+        if cv2.contourArea(c) < biggest * 0.02:
+            continue
+        c = cv2.approxPolyDP(c, detail * cv2.arcLength(c, True), True)
+        pts = [f"{x * k + ox:.0f} {y * k + oy:.0f}" for x, y in c[:, 0]]
+        parts.append("M" + "L".join(pts) + "Z")
+    return "".join(parts)
 
 
 def painted(im):
@@ -229,7 +276,7 @@ def on_backdrop(cut, bg, scale=0.86):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", choices=["paint", "plate", "backdrop"])
+    parser.add_argument("mode", choices=["paint", "plate", "backdrop", "photo", "trace"])
     parser.add_argument("source")
     parser.add_argument("out_prefix")
     parser.add_argument("--frame", type=box, help="the scene to keep (x0,y0,x1,y1); widened to fit. Left out: found automatically")
@@ -238,18 +285,27 @@ def main():
     parser.add_argument("--erase", action="append", default=[], type=points,
                         help="backdrop: a polygon to drop from the cut-out, 'x,y x,y ...' within --crop (repeatable)")
     parser.add_argument("--hand-colour", action="store_true")
+    parser.add_argument("--detail", type=float, default=0.003, help="trace: outline simplification (smaller keeps more)")
+    parser.add_argument("--strength", type=float, default=1.0, help="photo: how much of the touch-up (0-1)")
+    parser.add_argument("--balance", type=float, default=0.0, help="photo: pull a colour cast toward grey (0-1)")
     parser.add_argument("--contain", action="store_true", help="plate/paint: fit the whole frame, padding with its paper colour")
     parser.add_argument("--energy", choices=ENERGY)
     parser.add_argument("--style", choices=["rays", "wash"], default="rays")
     args = parser.parse_args()
-    im = Image.open(args.source).convert("RGB")
+    im = ImageOps.exif_transpose(Image.open(args.source)).convert("RGB")  # phone photos are often stored sideways
+    if args.mode == "trace":
+        path = trace(cut_out(im.crop(args.crop) if args.crop else im, args.erase), detail=args.detail)
+        with open(f"{args.out_prefix}.path", "w") as out:
+            out.write(path + "\n")
+        print(f"{len(path)} characters -> {args.out_prefix}.path")
+        return
     if args.mode == "backdrop":
         cut = cut_out(im.crop(args.crop) if args.crop else im, args.erase)
         make = rays if args.style == "rays" else wash
         full = on_backdrop(cut, make(FULL, args.energy))
         icon = on_backdrop(cut, make((ICON, ICON), args.energy), scale=0.95)
     else:
-        look = painted if args.mode == "paint" else hand_coloured if args.hand_colour else (lambda x: x)
+        look = painted if args.mode == "paint" else (lambda x: photo_touch(x, args.strength, args.balance)) if args.mode == "photo" else hand_coloured if args.hand_colour else (lambda x: x)
         if not args.frame:
             args.frame, found_face = auto_frame(im)
             args.face = args.face or found_face

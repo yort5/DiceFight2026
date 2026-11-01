@@ -78,7 +78,7 @@ public class DiceKingdomKeywordTests
         var state = NewGame();
         state.MoveToStep(StepIds.RollAndReroll);
         var queue = new AbilityQueue();
-        var swallow = AddDie(state, DiceKingdomConfig.BarnSwallow.Id, "p1",
+        var swallow = AddDie(state, DiceKingdomConfig.Sloth.Id, "p1",
             reroll ? Zone.ReservePool : Zone.DiceFromBag);
 
         if (reroll) TurnEngine.RerollOwn(state, queue, new FixedRoller(1), [swallow.Id]);
@@ -95,7 +95,7 @@ public class DiceKingdomKeywordTests
     {
         var state = NewGame();
         var queue = new AbilityQueue();
-        var swallow = AddDie(state, DiceKingdomConfig.BarnSwallow.Id, "p1", Zone.FieldZone);
+        var swallow = AddDie(state, DiceKingdomConfig.Sloth.Id, "p1", Zone.FieldZone);
         var context = new EffectContext
         {
             State = state, Queue = queue, ControllerId = "p1", Trigger = TriggerKind.Global,
@@ -117,7 +117,7 @@ public class DiceKingdomKeywordTests
         var state = NewGame();
         var queue = new AbilityQueue();
         var down = AddDie(state, DiceKingdomConfig.Hippopotamus.Id, "p1", Zone.FieldZone, level: 2);
-        var swallow = AddDie(state, DiceKingdomConfig.BarnSwallow.Id, "p1", Zone.FieldZone);
+        var swallow = AddDie(state, DiceKingdomConfig.Sloth.Id, "p1", Zone.FieldZone);
         var globalIndex = DiceKingdomConfig.Mutation.Abilities.ToList().FindIndex(a => a.Trigger == TriggerKind.Global);
 
         TurnEngine.UseGlobal(state, queue, DiceKingdomConfig.Mutation.Id, "p1", globalIndex,
@@ -131,7 +131,7 @@ public class DiceKingdomKeywordTests
         Assert.Null(state.PendingChoice);
         Assert.Equal(1, state.GetCurrentFace(down)!.Character!.Level);
         Assert.Equal(2, state.GetCurrentFace(swallow)!.Character!.Level);
-        Assert.Single(state.DiceIn("p1", Zone.PrepArea)); // Barn Swallow's Awaken drew a die.
+        Assert.Single(state.DiceIn("p1", Zone.PrepArea)); // Sloth's Awaken drew a die.
     }
 
     // --- Intimidate ---

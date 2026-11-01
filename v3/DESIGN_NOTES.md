@@ -4983,3 +4983,39 @@ rarities traded places (counts unchanged: 48 C / 29 U / 29 R / 8 SR):
   get Horseshoe Crab or Chipmunk - a starter is granted once.
 - `GameRecordingTests`' boss replay now stops after ten boss turns: the
   cautious sample boss can stall a game for 50+ turns.
+
+## 2026-11-01 - The eight family-photo Super Rares
+
+The user sent 20 family photos ("see what we can do with these") and
+approved this mapping: each Set 1 photo slot keeps its card (energy, cost,
+ability); six change animal to fit a photo.
+
+| Card id | Was | Now (photo) | Why it fits |
+|---|---|---|---|
+| HQ019 | Manatee | Manatee | same animal (see below) |
+| SWW020 | Bearded Dragon | Bearded Dragon | same animal |
+| TOA086 | Crocodile | Alligator | ambush predator, KO a level 1 |
+| XFC003 | Pistol Shrimp | Kangaroo | a boxer: 1 damage to each opposing character |
+| DK-SHELL-06 | Queen Termite | Alpaca | herd guardian: your creatures +1 ATK |
+| CW042 | Bottlenose Dolphin | Quokka | "happiest animal" cheering: other attackers +1 ATK |
+| XFO016 | Bowerbird | Dragonfly | a flier (Wing), Energize |
+| DK-WING-02 | Barn Swallow | Sloth | Awaken, for an animal that sleeps all day |
+
+- **Art:** real photos, not painted (`tools/art/scene.py photo`, new):
+  crop, levels and a little colour; `--strength`/`--balance` for the
+  aquarium shot's blue cast. People cropped out (user: "at least faces");
+  hands stay (the bearded dragon and alligator are being held). Credits in
+  `art/CREDITS.txt`. The family duck drawing (Barn Swallow's icon) is no
+  longer used; its file stays in `assets/`.
+- **Dice silhouettes:** Kangaroo, Alpaca, Quokka and Sloth hand-drawn side
+  profiles; Dragonfly traced from its photo (`scene.py trace`, new - mask
+  outlines of animals facing the camera came out as blobs, so tracing only
+  suits side-on/flat subjects). Alligator keeps the crocodile outline.
+- **Possible seal:** the aquarium "manatee" has a seal's splayed hind
+  flippers, not a manatee's paddle tail - asked the user.
+- The other photos are kept for later: Koala, Wombat, Komodo Dragon,
+  Monarch, Bison, Snow Leopard (animals with painted cards - "in our back
+  pocket for actual full art rarities"), Echidna, Leopard Gecko, a day
+  gecko, Slug; Emu and Cassowary are only 240x180.
+- UI checks: `~/.devtools/playwright/photo-sr-check.js` (collection +
+  close-ups, desktop and phone), `photo-sr-dice.js` (a game's roster).
