@@ -426,9 +426,10 @@ public class V2GamesControllerTests
         var controller = V2SeatedController.Anonymous(new V2GameStore());
         var result = Assert.IsType<Microsoft.AspNetCore.Mvc.OkObjectResult>(controller.Cards().Result);
         var cards = Assert.IsAssignableFrom<IReadOnlyList<V2CardDefDto>>(result.Value);
-        Assert.Equal(169, cards.Count);
+        Assert.Equal(182, cards.Count); // 13 boss-only (BossCards), flagged BossOnly
+        Assert.Equal(13, cards.Count(c => c.BossOnly));
         Assert.Equal(34, cards.Count(card => !card.IsImplemented));
-        Assert.Equal(54, cards.Count(card => card.HasErrata));
+        Assert.Equal(65, cards.Count(card => card.HasErrata)); // 11 boss cards (BossCards)
         Assert.DoesNotContain(cards, card => card.Id == CardCatalog.CosmicCube.Id);
         Assert.DoesNotContain(cards, card => card.Id == DpsCards.TightRanks.Id);
         Assert.DoesNotContain(cards, card => card.Id == DpsCards.Radicalization.Id);

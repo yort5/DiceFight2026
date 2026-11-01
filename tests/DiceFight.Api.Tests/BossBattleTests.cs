@@ -64,6 +64,17 @@ public class BossBattleTests
     }
 
     [Fact]
+    public void A_Players_Own_Team_Cannot_Use_A_Bosss_Cards()
+    {
+        var store = new V2GameStore();
+        var team = new CustomV2TeamRequest(
+            [new CustomV2CardDice("THOR036", 2), new CustomV2CardDice(DiceKingdomConfig.HoneyBadger.Id, 2)],
+            [new CustomV2TardigradeDice("Claw", 8)]);
+        var refused = Games(store, null).Create(new CreateV2GameRequest(PlayerOneCustomTeam: team, PlayerTwoChampionId: "Wolf"));
+        Assert.Contains("boss", Assert.IsType<BadRequestObjectResult>(refused.Result).Value!.ToString());
+    }
+
+    [Fact]
     public void A_Team_Link_Reads_With_Or_Without_The_Site_And_Encoding()
     {
         var full = DiceKingdomBosses.ParseTeamLink(

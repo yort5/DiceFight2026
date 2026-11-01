@@ -5921,3 +5921,12 @@
   border-radius: 10px;
   border: 2px solid var(--cc);
 }
+
+/* A Champion-less team's name on the desktop scoreboard (a boss). */
+.dicekingdom .scoreboard-name {
+  font-size: 11px;
+  line-height: 1.1;
+  max-width: 64px;
+  text-align: center;
+  overflow-wrap: anywhere;
+}

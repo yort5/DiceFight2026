@@ -9,8 +9,10 @@ public class DiceKingdomPacksTests
     [Fact]
     public void Every_Collectible_Team_Card_Has_A_Rarity_And_No_Basic_Action_Does()
     {
-        foreach (var card in DiceKingdomConfig.Catalog.Values)
+        // A boss's own cards (BossCards) are no one's to collect.
+        foreach (var card in DiceKingdomConfig.Catalog.Values.Where(c => !BossCards.Ids.Contains(c.Id)))
             Assert.Equal(card.CardType is Model.CardType.Character or Model.CardType.Action, DiceKingdomPacks.Rarities.ContainsKey(card.Id));
+        Assert.All(BossCards.Ids, id => Assert.False(DiceKingdomPacks.Rarities.ContainsKey(id) || DiceKingdomPacks.BasicActions.Contains(id), id));
         Assert.All(DiceKingdomPacks.Rarities.Keys, id => Assert.True(DiceKingdomConfig.Catalog.ContainsKey(id), id));
     }
 
@@ -44,7 +46,7 @@ public class DiceKingdomPacksTests
     public void Every_Basic_Action_Can_Come_In_A_Pack()
     {
         Assert.Equal(
-            DiceKingdomConfig.Catalog.Values.Count(c => c.CardType == Model.CardType.BasicAction),
+            DiceKingdomConfig.Catalog.Values.Count(c => c.CardType == Model.CardType.BasicAction && !BossCards.Ids.Contains(c.Id)),
             DiceKingdomPacks.BasicActions.Count);
         var random = new Random(3);
         var seen = Enumerable.Range(0, 2000).Select(_ => DiceKingdomPacks.Open(random.Next)[5]).ToHashSet();

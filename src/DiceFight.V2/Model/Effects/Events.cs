@@ -159,5 +159,7 @@ public sealed record TriggeredAbility(
 public enum PaymentPurpose { Purchase, Fielding }
 public sealed record PaymentPayload(PaymentPurpose Purpose, string PaidForDieId,
     EnergyPayment Payment) : EventPayload;
+// MinSymbols: how many of SymbolId the payment must include (Tiger /
+// Superwoman WF129: "if you spend at least three Bolt", 2026-11-01).
 public sealed record PaymentFilter(PaymentPurpose? Purpose = null, string? SymbolId = null,
-    bool OnlyListenerCard = false, CardType? PaidForCardType = null);
+    bool OnlyListenerCard = false, CardType? PaidForCardType = null, int MinSymbols = 1);

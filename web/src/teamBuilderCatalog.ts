@@ -47,5 +47,6 @@ export function adaptKingdomCard(card: KingdomCardDef): CardDef {
 
 export async function loadTeamBuilderCards(): Promise<CardDef[]> {
   if (!USE_DICE_KINGDOM_CATALOG) return classicApi.getCards();
-  return (await kingdomApi.getCards()).map(adaptKingdomCard);
+  // A boss's own cards aren't for players' teams (V2GamesController refuses them).
+  return (await kingdomApi.getCards()).filter((card) => !card.bossOnly).map(adaptKingdomCard);
 }

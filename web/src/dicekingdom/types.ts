@@ -42,6 +42,8 @@ export interface CardDef {
   rarity?: "Common" | "Uncommon" | "Rare" | "SuperRare" | null;
   /** "Set 1" etc. (DiceKingdomSets) - null for Champions, Tardigrades and unfinished cards. */
   kingdomSet?: string | null;
+  /** Only a boss plays it (2026-11-01) - not in packs or the Team Builder. */
+  bossOnly?: boolean;
 }
 
 export interface GlobalAbility {

@@ -148,6 +148,8 @@ function ScoreboardSide({ player, mine, isActivePlayer, onUsePower }: { player: 
             glance - a photo alone doesn't carry that the way a color
             glyph did. */}
         {champion && <EnergyBadge type={champion.energySymbolId} size={14} />}
+        {/* A team without a Champion - a boss, or a custom team - by name (2026-11-01). */}
+        {!champion && <small className="scoreboard-name">{player.name}</small>}
         <span className="scoreboard-life">{player.life}</span>
       </button>
       {onUsePower && champion && (

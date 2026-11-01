@@ -708,6 +708,12 @@ function MatCard({
             <span>{player.name !== player.champion.name ? `${player.name} · ${player.champion.name}` : player.champion.name}</span>
           </button>
         )}
+        {/* A team without a Champion - a boss, or a custom team - by name (2026-11-01). */}
+        {!player.champion && (
+          <span className="dkm-champion-badge">
+            <span>{player.name}</span>
+          </span>
+        )}
         {onUsePower && player.champion && (
           <button type="button" className="dkm-chip-btn dkm-power-btn" onClick={onUsePower} title={player.champion.passiveText}>
             {POWER_LABELS[player.champion.id] ?? "Power"}

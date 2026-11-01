@@ -206,3 +206,10 @@ public sealed record GrantCounter(TargetFilter Target, string CounterName, int A
 // same player overwrites the first player's choice rather than stacking,
 // which is what the text says happens.
 public sealed record RememberCard(TargetFilter Target, string MemoryName) : EffectNode;
+
+// Lyrebird (Hope Summers, 2026-11-01 boss card): the card a RememberCard
+// chose, read back - its On Field abilities resolve now, as this die's own
+// (it is "self", so "deal damage to me"-style text refers to this die).
+// Only unfiltered ones: a filtered On Field watches someone else's
+// fielding, and a remembered card that is this card itself does nothing.
+public sealed record UseRememberedOnField(string MemoryName) : EffectNode;

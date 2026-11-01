@@ -188,7 +188,7 @@ public static class DiceKingdomPacks
     // "more like Energy cards in Pokemon". Uniform over the pack's set,
     // the Champions' own included. Not traded in.
     public static readonly IReadOnlyList<string> BasicActions = DiceKingdomConfig.Catalog.Values
-        .Where(card => card.CardType == Model.CardType.BasicAction).Select(card => card.Id).Order().ToList();
+        .Where(card => card.CardType == Model.CardType.BasicAction && !BossCards.Ids.Contains(card.Id)).Select(card => card.Id).Order().ToList();
 
     // "Basic" for a Basic Action, which has no CardRarity.
     public static string RarityLabel(string id) => Rarities.TryGetValue(id, out var rarity) ? rarity.ToString() : "Basic";

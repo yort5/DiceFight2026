@@ -158,7 +158,7 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
     // billion dice and take the server down.
     public const int MaxCustomDice = 100;
 
-    private static Player BuildSelectedPlayer(string id, string? championId, CustomV2TeamRequest? custom, string? name = null)
+    private static Player BuildSelectedPlayer(string id, string? championId, CustomV2TeamRequest? custom, string? name = null, bool boss = false)
     {
         if (custom is null)
         {
@@ -188,6 +188,8 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
                 throw new ArgumentException("Invalid or duplicate card in custom team.");
             if (!card.IsImplemented)
                 throw new ArgumentException($"{card.Name} is Incomplete and cannot be used in a game yet.");
+            if (!boss && BossCards.Ids.Contains(entry.CardId))
+                throw new ArgumentException($"{card.Name} is a boss's card.");
             if (!DiceKingdomConfig.Catalog.ContainsKey(entry.CardId))
                 throw new ArgumentException($"{card.Name} is not available in Dice Kingdom games yet.");
             // A Champion's team plays only Basic Actions of its own energy
@@ -224,7 +226,7 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
         return BuildSelectedPlayer("teamB", null, new CustomV2TeamRequest(
             team.Cards.Select(kv => new CustomV2CardDice(kv.Key, kv.Value)).ToList(),
             team.Tardigrades.Select(kv => new CustomV2TardigradeDice(kv.Key, kv.Value)).ToList(),
-            team.ChampionId), boss.Name);
+            team.ChampionId), boss.Name, boss: true);
     }
 
     // The energy a Basic Action's die shows on its energy faces - the same

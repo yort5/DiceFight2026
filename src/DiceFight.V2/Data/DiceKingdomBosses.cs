@@ -1,4 +1,5 @@
 using DiceFight.V2.Bot;
+using DiceFight.V2.Model;
 
 namespace DiceFight.V2.Data;
 
@@ -17,40 +18,76 @@ namespace DiceFight.V2.Data;
 // one - same as a trade-in).
 //
 // Adding a boss: build the team in /teambuilder, "Copy Team Link", and add
-// an entry. DiceKingdomBossesTests checks every link builds a legal game
-// team. The three below are SAMPLES on the starter rosters, there so the
-// ladder can be tried end to end - replace them with real bosses.
+// an entry. BossBattleTests checks every link builds a legal game team.
+// Since 2026-11-01 the ladder is the user's own three Dice Masters teams
+// (replacing three samples on the starter rosters); cards they needed that
+// Dice Kingdom lacked are boss-only (BossCards).
 public static class DiceKingdomBosses
 {
+    // Easiest first, by tools/Simulator SIM_BOSSES=1 (2026-11-01, 200 games
+    // against each starter roster, the boss in its own style): Fire Ant
+    // Colony 19.5% of games won, Basilisk's Lair 26.5%, Tardigrade Swarm
+    // 34.7%. Every boss is still below the starter rosters (50%).
     public static readonly IReadOnlyList<BossDef> Ladder =
     [
+        // The user's Dice Masters team "Tag-Jubilee Bolt":
+        // rollinthunder.xyz/teambuilder/?view&cards=3x58ig;1x27dps;4x20wwe;1x9uxm;1x17tiw;5x28xmf;3x135ig;2x24aiw;3x23hq;3x68jus
+        // Eddie Guerrero is Meerkat (Tag Out at 2); Iceman, Intellect
+        // Devourer, Typhoid Mary, Yawning Portal and Target Lock are boss
+        // cards. Claw Tardigrades feed Fire Ant (Jubilee).
         new(
-            Id: "sample-1",
-            Name: "Wolf Cub",
-            Blurb: "Sample boss: the Wolf starter roster, played cautiously.",
-            TeamLink: "/teambuilder?cards=4xDK-CLAW-01;4xDK-CLAW-09;4xDK-CLAW-02;4xDK-CLAW-06;4xDK-WING-04;4xDK-WING-07;4xDK-SHELL-01;4xDK-EYE-07;3xDK-ACT-01&tardigrades=8xClaw&champion=Wolf",
-            Style: BotStyles.Cautious,
-            FirstWin: new(Points: 10, Coins: 10),
-            Rematch: new(Points: 1)),
-        new(
-            Id: "sample-2",
-            Name: "Iron Armadillo",
-            Blurb: "Sample boss: the Armadillo starter roster, racing to Rhinoceros.",
-            TeamLink: "/teambuilder?cards=4xDK-SHELL-04;4xDK-SHELL-03;4xDK-SHELL-02;4xDK-SHELL-07;4xDK-EYE-08;4xDK-EYE-04;4xDK-CLAW-08;4xDK-WING-03;3xDK-ACT-05&tardigrades=8xShell&champion=Armadillo",
-            Style: BotStyles.Balanced with { RushCardId = DiceKingdomConfig.Rhinoceros.Id, RushBonus = 5 },
-            FirstWin: new(Points: 20, Coins: 15, Drops: [new(Chance: 1, Rarity: CardRarity.Uncommon)]),
-            Rematch: new(Points: 2, Drops: [new(Chance: 0.1, Rarity: CardRarity.Uncommon)])),
-        new(
-            Id: "sample-3",
-            Name: "The Night Owl",
-            Blurb: "Sample boss: the Great Horned Owl starter roster, attacking at every chance.",
-            TeamLink: "/teambuilder?cards=4xDK-EYE-09;4xDK-EYE-05;4xDK-EYE-02;4xDK-EYE-06;4xDK-SHELL-05;4xDPS019;4xDK-CLAW-07;4xDK-WING-06;3xDK-ACT-04&tardigrades=8xEye&champion=GreatHornedOwl",
+            Id: "tag-jubilee",
+            Name: "The Fire Ant Colony",
+            Blurb: "Every Claw creature it fields stings you - and it fields them for free.",
+            TeamLink: "/teambuilder?cards=3xIG058;1xDPS027;4xDK-SHELL-10;1xUXM009;1xTIW017;5xXMF028;3xIG135;2xAIW024;3xHQ023;3xJUS068&tardigrades=8xClaw",
             Style: BotStyles.Aggressive,
+            FirstWin: new(Points: 20, Coins: 15, Drops: [new(Chance: 1, Rarity: CardRarity.Uncommon)]),
+            Rematch: new(Points: 2)),
+        // "X-Men Colossus":
+        // rollinthunder.xyz/teambuilder/?view&cards=4x66avx;1x62uxm;1x101avx;4x20xmf;3x9dxm;1x49uxm;4x19avx;2x40xfc;3x49ai;3x64xmf
+        // Colossus is Basilisk (word for word), Big Entrance is Spring
+        // Emergence, Counterstrike is Hibernation; Hope Summers, Mimic,
+        // Professor X, Cerebro and Xavier's School are boss cards. It races
+        // to Basilisk rather than playing Cautious - a cautious bot stalls.
+        new(
+            Id: "xmen-colossus",
+            Name: "The Basilisk's Lair",
+            Blurb: "It grows its creatures up a level, then lets Basilisk burn you at the end of every turn.",
+            TeamLink: "/teambuilder?cards=4xAVX066;1xUXM062;1xDK-EYE-06;4xXMF020;3xDXM009;1xUXM049;4xAVX019;2xXFC040;3xIG003;3xTHOR009&tardigrades=8xEye",
+            Style: BotStyles.Balanced with { RushCardId = DiceKingdomConfig.Basilisk.Id, RushBonus = 5 },
             FirstWin: new(Points: 40, Coins: 25, Drops: [new(Chance: 1, Rarity: CardRarity.Rare)]),
-            Rematch: new(Points: 4, Drops: [new(Chance: 0.05, CardId: DiceKingdomConfig.Basilisk.Id)])),
+            Rematch: new(Points: 4, Drops: [new(Chance: 0.05, Rarity: CardRarity.Uncommon)])),
+        // "Sidekicks":
+        // rollinthunder.xyz/teambuilder/?view&cards=4x75wf;3x2myst;2x87xfc;1x27dps;2x77avx;3x36thor;1x129wf;4x22drs;3x11toa;3x68jus
+        // Blob is Pangolin (the same lockout); Mr. Fixit, Superwoman and
+        // Magic Missile are boss cards (BossCards).
+        new(
+            Id: "sidekicks",
+            Name: "The Tardigrade Swarm",
+            Blurb: "A swarm of Tardigrades backing a Moose that gets angrier the more it's hurt.",
+            TeamLink: "/teambuilder?cards=4xWF075;3xMYST002;2xDK-SHELL-03;1xDPS027;2xAVX077;3xTHOR036;1xWF129;4xDRS022;3xTOA011;3xJUS068&tardigrades=8xClaw",
+            Style: BotStyles.Balanced,
+            FirstWin: new(Points: 75, Coins: 40, Drops: [new(Chance: 1, Rarity: CardRarity.Rare), new(Chance: 0.25, Rarity: CardRarity.SuperRare)]),
+            Rematch: new(Points: 8, Drops: [new(Chance: 0.05, Rarity: CardRarity.Rare)])),
     ];
 
     public static BossDef? Find(string? id) => Ladder.FirstOrDefault(b => b.Id == id);
+
+    // The boss's team as a game Player, unchecked - for tools/Simulator.
+    // The API builds it through V2GamesController.BuildBoss, which checks
+    // every card the way it checks a player's custom team.
+    public static Player BuildPlayer(BossDef boss, string id)
+    {
+        var team = ParseTeamLink(boss.TeamLink);
+        var player = new Player
+        {
+            Id = id, Name = boss.Name, ChampionId = team.ChampionId,
+            CustomCardDiceCounts = team.Cards.ToDictionary(kv => kv.Key, kv => kv.Value),
+            CustomBasicDicePool = team.Tardigrades.Select(kv => DiceKingdomConfig.CustomTardigrade(kv.Key, kv.Value)).ToList(),
+        };
+        player.TeamCardIds.AddRange(team.Cards.Keys);
+        return player;
+    }
 
     // Open = the first boss, or one whose previous boss has been beaten.
     public static bool IsOpen(string bossId, Func<string, bool> beaten)

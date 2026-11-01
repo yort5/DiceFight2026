@@ -71,15 +71,20 @@ public static class EventBus
                             (evt.Payload as DamageDealtPayload)?.Amount);
                 }
             }
-            foreach (var grant in state.GrantedTriggeredAbilities.Where(g => g.ControllerId == controllerId))
+            foreach (var grant in state.GrantedTriggeredAbilities.Where(g => g.ControllerId == controllerId).ToList())
             {
                 var source = state.Dice.FirstOrDefault(d => d.Id == grant.SourceDieId);
                 if (grant.Ability.Trigger == evt.Kind && (grant.Ability.Filter is { } filter
                     ? MatchesFilter(state, evt, source, grant.ControllerId, filter)
                     : source is null || evt.SubjectDie is null || evt.SubjectDie.Id == source.Id) &&
                     (!grant.Ability.OncePerCard || firedCards.Add((grant.ControllerId, source?.CardId ?? grant.SourceName, grant.Ability))))
+                {
                     queue.Enqueue(grant.SourceDieId, grant.ControllerId, grant.Ability.Trigger, grant.Ability.Effect,
                         evt.SubjectDie?.Id, (evt.Payload as DamageDealtPayload)?.Amount, grant.SourceName, isGranted: true);
+                    // A granted "once" (Echolocation, 2026-11-01): it fires,
+                    // then it's gone - a grant lasts a turn at most anyway.
+                    if (grant.Ability.OncePerTurn) state.GrantedTriggeredAbilities.Remove(grant);
+                }
             }
         }
     }
@@ -124,7 +129,8 @@ public static class EventBus
         {
             if (evt.Payload is not PaymentPayload paid) return false;
             if (requirement.Purpose is { } purpose && paid.Purpose != purpose) return false;
-            if (requirement.SymbolId is { } symbol && !paid.Payment.Spent.Any(p => p.SymbolId == symbol && p.Count > 0)) return false;
+            if (requirement.SymbolId is { } symbol &&
+                paid.Payment.Spent.Where(p => p.SymbolId == symbol).Sum(p => p.Count) < Math.Max(1, requirement.MinSymbols)) return false;
             if (requirement.PaidForCardType is { } type &&
                 (state.Dice.First(d => d.Id == paid.PaidForDieId).CardId is not { } paidCard ||
                  state.CardCatalog[paidCard].CardType != type)) return false;

@@ -41,7 +41,7 @@ const string KeywordSource = "https://wizkids.com/dicemasters/keywords/";
 var catalog = DiceKingdomConfig.Catalog;
 
 // Source printings for the imports, by id (the Dice Kingdom copy has its animal's name).
-var ImportSources = new[] { CardCatalog.BuildCatalog().Values.AsEnumerable(), DpsCards.All, BonusCards.All, KingdomImports.All }
+var ImportSources = new[] { CardCatalog.BuildCatalog().Values.AsEnumerable(), DpsCards.All, BonusCards.All, KingdomImports.All, BossCards.All }
     .SelectMany(cards => cards).GroupBy(c => c.Id).ToDictionary(g => g.Key, g => g.First());
 var NativeSources = new Dictionary<string, string>
 {
@@ -132,7 +132,8 @@ foreach (var champion in config.Champions)
 // They were invisible here before, so a card could exist with nobody
 // able to see it short of reading the config.
 var benched = catalog.Values
-    .Where(c => c.CardType == CardType.Character && !DiceKingdomConfig.CharactersByChampion.Values.Any(team => team.Contains(c.Id)))
+    .Where(c => c.CardType == CardType.Character && !BossCards.Ids.Contains(c.Id)
+        && !DiceKingdomConfig.CharactersByChampion.Values.Any(team => team.Contains(c.Id)))
     .OrderBy(c => c.EnergySymbolIds.FirstOrDefault()).ThenBy(c => c.PurchaseCost).ThenBy(c => c.Name)
     .ToList();
 if (benched.Count > 0)
@@ -143,6 +144,15 @@ if (benched.Count > 0)
     foreach (var card in benched) AppendCardRow(html, card);
     html.AppendLine("</tbody></table>");
 }
+
+// Boss cards (2026-11-01, BossCards.cs) - only the boss battles' teams
+// play them; no pack, set or player's team has them.
+var bossCards = BossCards.All.Select(c => catalog[c.Id]).OrderBy(c => c.CardType).ThenBy(c => c.Name).ToList();
+html.AppendLine("<h2>Boss cards</h2>");
+html.AppendLine("<p class=\"note\">Only the boss battles' teams play these - they aren't in packs or the Team Builder.</p>");
+html.AppendLine("<table><thead><tr><th>Name</th><th>Cost</th><th>Die&nbsp;Limit</th><th>Keywords</th><th>Stats (fielding&nbsp;/&nbsp;ATK&nbsp;/&nbsp;DEF per level)</th><th>Energy faces</th><th>Ability text</th><th>Dice Masters source</th></tr></thead><tbody>");
+foreach (var card in bossCards) AppendCardRow(html, card);
+html.AppendLine("</tbody></table>");
 
 html.AppendLine("<h2>Champion Basic Actions <small>(Global abilities, one per Champion)</small></h2>");
 html.AppendLine("<table><thead><tr><th>Champion</th><th>Name</th><th>Cost</th><th>Die&nbsp;Limit</th><th>Die faces</th><th>Ability text</th><th>Dice Masters source</th></tr></thead><tbody>");
@@ -165,7 +175,7 @@ html.AppendLine("<p class=\"note\">Either player may buy either Basic Action; ea
 // Basic Actions no Champion brings (2026-10-20) - a custom team can take
 // one whose energy matches its Champion.
 var otherActions = catalog.Values
-    .Where(c => c.CardType == CardType.BasicAction && !DiceKingdomConfig.ActionByChampion.Values.Contains(c.Id))
+    .Where(c => c.CardType == CardType.BasicAction && !BossCards.Ids.Contains(c.Id) && !DiceKingdomConfig.ActionByChampion.Values.Contains(c.Id))
     .OrderBy(ActionEnergy).ThenBy(c => c.PurchaseCost).ThenBy(c => c.Name).ToList();
 html.AppendLine("<h2>Other Basic Actions</h2>");
 html.AppendLine("<p class=\"note\">For custom teams: with a Champion, the Basic Action must share its energy.</p>");
@@ -270,6 +280,14 @@ string BuildMarkdown()
         md.AppendLine("| Name | Cost | Die Limit | Keywords | Stats (fielding / ATK / DEF per level) | Energy faces | Ability text | Dice Masters source |");
         md.AppendLine("|---|:-:|:-:|---|---|---|---|---|");
         foreach (var card in benched) AppendMdRow(md, card);
+        md.AppendLine();
+        md.AppendLine("## Boss cards");
+        md.AppendLine();
+        md.AppendLine("_Only the boss battles' teams play these - they aren't in packs or the Team Builder._");
+        md.AppendLine();
+        md.AppendLine("| Name | Cost | Die Limit | Keywords | Stats (fielding / ATK / DEF per level) | Energy faces | Ability text | Dice Masters source |");
+        md.AppendLine("|---|:-:|:-:|---|---|---|---|---|");
+        foreach (var card in bossCards) AppendMdRow(md, card);
     }
     md.AppendLine();
     md.AppendLine("## Champion Basic Actions (Global abilities, one per Champion)");

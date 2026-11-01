@@ -37,7 +37,9 @@ public sealed record V2CardDefDto(
     string? Type = null, string? Set = null, IReadOnlyList<string>? Affiliations = null,
     // Pack rarity (DiceKingdomPacks) - null for Basic Actions. KingdomSet:
     // "Set 1" etc. (DiceKingdomSets), not Set - that's the Dice Masters source.
-    string? Rarity = null, IReadOnlyList<int>? ActionFaceBursts = null, string? KingdomSet = null)
+    string? Rarity = null, IReadOnlyList<int>? ActionFaceBursts = null, string? KingdomSet = null,
+    // Only a boss plays it (BossCards) - the Team Builder leaves it out.
+    bool BossOnly = false)
 {
     public static V2CardDefDto From(CardDef card)
     {
@@ -66,7 +68,8 @@ public sealed record V2CardDefDto(
             card.HasErrata, card.IsImplemented, card.CardType.ToString(), card.Set, card.Affiliations,
             Rarity: DiceKingdomPacks.Rarities.TryGetValue(card.Id, out var rarity) ? rarity.ToString() : null,
             ActionFaceBursts: card.CardType.IsActionDie() ? card.Die.Faces.Where(f => f.Kind == FaceKind.ActionFace).Select(f => f.Burst).ToList() : null,
-            KingdomSet: DiceKingdomSets.SetOf(card.Id));
+            KingdomSet: DiceKingdomSets.SetOf(card.Id),
+            BossOnly: BossCards.Ids.Contains(card.Id));
     }
 }
 

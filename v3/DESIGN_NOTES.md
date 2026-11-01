@@ -5021,3 +5021,65 @@ ability); six change animal to fit a photo.
   gecko, Slug; Emu and Cassowary are only 240x180.
 - UI checks: `~/.devtools/playwright/photo-sr-check.js` (collection +
   close-ups, desktop and phone), `photo-sr-dice.js` (a game's roster).
+
+## 2026-11-01 - The user's three Dice Masters teams as the boss ladder
+
+User sent three rollinthunder Teambuilder links ("Sidekicks", "X-Men
+Colossus", "Tag-Jubilee Bolt"): "We will likely need to create new cards
+for these. They won't have to be in Set 1 (i.e., they aren't attainable),
+and they may have to be modified in order to work with the Game engine."
+Replaced the three sample bosses (user's call); styles as proposed.
+
+- **Existing cards first** (user: "check abilities - Colossus, for
+  example, I thought we'd already created a card with that ability"):
+  Colossus = Basilisk (word for word), Blob = Pangolin (Drax's lockout),
+  Big Entrance = Spring Emergence, Eddie Guerrero = Meerkat (Tag Out at 2),
+  Counterstrike = Hibernation; and the cards already imported (Planarian,
+  Abundant Waters, Tasmanian Devil, Hercules Beetle, Marmoset, Foraging,
+  Velvet Worm, Leaf Insect, Electric Ray, Fire Ant).
+- **13 boss-only cards** (`V2/Data/BossCards.cs`): Moose (Mr. Fixit),
+  Tiger (Superwoman), Stinging Nettle (Magic Missile), Lyrebird (Hope
+  Summers), Octopus (Mimic), Orangutan (Professor X), Echolocation
+  (Cerebro), The Den (Xavier's School), Arctic Fox (Iceman), Slug
+  (Intellect Devourer), Tsetse Fly (Typhoid Mary), Watering Hole (Yawning
+  Portal), Venus Flytrap (Target Lock). Each card's ErrataNotes says what
+  was simplified. Mimic Octopus and Mosquito were taken (unfinished DPS
+  cards), hence Octopus and Tsetse Fly.
+- **Boss-only:** in the catalog (games show them) but no set, rarity or
+  pack (`DiceKingdomPacks.BasicActions` skips them), refused in a
+  player's custom team, `bossOnly` on /cards so the Team Builder hides
+  them; the card reference lists them under "Boss cards". Basic Actions
+  are still shared in play - a player may buy the boss's Venus Flytrap
+  during the battle.
+- **Engine additions:** `UseRememberedOnField` (Lyrebird runs a
+  remembered card's unfiltered On Field abilities as its own);
+  `PaymentFilter.MinSymbols` (Tiger: at least 3 Claw - any Claw card
+  needs one Claw, so "spent Claw" alone was always true); a granted
+  ability with `OncePerTurn` now drops after firing (it was only enforced
+  for Globals - Echolocation KO'd on every fielding).
+- **Two traps found:** Typhoid Mary's "while active, ignore that card's
+  text" as a continuous lockout would recurse (is Tsetse Fly active? -
+  asks whether its own text is ignored - asks Tsetse Fly...), so Tsetse
+  Fly ignores the card until your next turn (the existing BlankCardText).
+  And targets are chosen against a snapshot taken when an ability
+  starts, so two "pick a Tardigrade from your bag" in one ability offer
+  the same die twice - Orangutan has two one-Tardigrade abilities.
+- **Ladder order** from `tools/Simulator SIM_BOSSES=1` (new; each boss in
+  its style, 200 games against each starter roster, powers on): Fire Ant
+  Colony (Tag-Jubilee) 19.5% won, Basilisk's Lair (X-Men Colossus) 26.5%,
+  Tardigrade Swarm (Sidekicks) 34.7% - so that order, rewards rising.
+  Every boss is weaker than a starter roster against the same bot (and
+  humans beat the bot 15-6 in real games), so they'll likely be easy.
+  The bot rarely uses Echolocation or The Den after buying them.
+- **Art:** paintings (Commons, public domain - CREDITS.txt) for Moose,
+  Tiger, Lyrebird, Octopus (Haeckel), Orangutan, Arctic Fox; the family's
+  slug photo; none found for the tsetse fly (the 1909 Austen plates are
+  *other* biting flies). Silhouettes: six new (Moose, Orangutan, Slug,
+  Stinging Nettle, The Den, Watering Hole) plus distinct Arctic Fox,
+  Tiger and Flytrap ones (the existing Fox/Tiger/Venus Flytrap icons are
+  player cards'); Lyrebird, Octopus, Tsetse Fly and Echolocation reuse
+  Mockingbird, Mimic Octopus, Mosquito and Fruit Bat designs.
+- A team with no Champion (every boss) now shows its name on the board
+  (it showed nothing).
+- UI checks: `~/.devtools/playwright/boss-teams-check.js`,
+  `boss-roster-check.js`.

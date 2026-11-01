@@ -196,6 +196,26 @@ In the card pool but in no Champion's pack, so they don't come up in games.
 | Bearded Dragon | 6 | 4 |  | L1: 1&#9889; / 4A / 6D<br>L2: 2&#9889; / 6A / 7D<br>L3: 2&#9889; / 7A / 8D | 2 Wing<br>2 Wing<br>1 Wing | Bearded Dragon gets +1A and +1D for each different energy type in your Reserve Pool (Wild doesn't count). | Superman, "Living in a world of Cardboard" (SWW020) |
 | Swordfish | 6 | 4 | On Attack | L1: 1&#9889; / 4A / 5D<br>L2: 1&#9889; / 4A / 4D<br>L3: 2&#9889; / 5A / 5D | 2 Wing<br>2 Wing<br>1 Wing | On Attack: target opposing character die gets -2A and Swordfish gets +2A until end of turn. | Blade, "Vengeful" (ASM110) |
 
+## Boss cards
+
+_Only the boss battles' teams play these - they aren't in packs or the Team Builder._
+
+| Name | Cost | Die Limit | Keywords | Stats (fielding / ATK / DEF per level) | Energy faces | Ability text | Dice Masters source |
+|---|:-:|:-:|---|---|---|---|---|
+| Arctic Fox | 5 | 4 | On Attack | L1: 1&#9889; / 2A / 4D<br>L2: 1&#9889; / 3A / 6D<br>L3: 1&#9889; / 4A / 6D | 2 Claw<br>2 Claw<br>1 Claw | On Attack: you may pay 1 energy to double his A (until end of turn). | Iceman, "Too Cool for Words" (UXM009) |
+| Lyrebird | 3 | 4 | On Field | L1: 0&#9889; / 1A / 2D<br>L2: 0&#9889; / 2A / 2D<br>L3: 1&#9889; / 2A / 2D | 2 Eye<br>2 Eye<br>1 Eye | On Field: choose another character card on your team. Lyrebird uses that card's On Field abilities as her own. | Hope Summers, "Pluripotent Echopraxia" (XMF020) |
+| Moose | 6 | 4 |  | L1: 1&#9889; / 6A / 5D<br>L2: 2&#9889; / 7A / 7D<br>L3: 3&#9889; / 8A / 8D | 2 Claw<br>2 Claw<br>1 Claw | When Moose is damaged, he gets +XA, where X is his printed A (until end of turn). | Mr. Fixit, "Muscle for Hire" (THOR036) |
+| Octopus | 4 | 4 | On Field | L1: 0&#9889; / 1A / 1D<br>L2: 1&#9889; / 1A / 1D<br>L3: 1&#9889; / 1A / 2D | 2 Eye<br>2 Eye<br>1 Eye | On Field: reroll Octopus and target opposing character die. If that die rolls a character face, KO it. If it rolls an energy face, KO Octopus. | Mimic, "Flying, Blasting, Slashing" (DXM009) |
+| Orangutan | 6 | 4 | On Field | L1: 1&#9889; / 1A / 5D<br>L2: 2&#9889; / 1A / 7D<br>L3: 3&#9889; / 1A / 9D | 2 Wing<br>2 Wing<br>1 Wing | On Field: search your bag for up to 2 Tardigrade dice and roll them into your Reserve Pool. Global: Pay Wing. Move up to 2 Tardigrade dice from your Used Pile to your Prep Area. | Professor X, "Recruiting Young Mutants" (UXM049) |
+| Slug | 3 | 4 | On Field | L1: 0&#9889; / 1A / 1D<br>L2: 0&#9889; / 2A / 2D<br>L3: 1&#9889; / 5A / 2D | 2 Eye<br>2 Eye<br>1 Eye | On Field: spin target character die down 1 level. | Intellect Devourer, "Brain Eating Monster" (TIW017) |
+| Tiger | 5 | 4 | Impulse | L1: 1&#9889; / 4A / 2D<br>L2: 2&#9889; / 5A / 3D<br>L3: 3&#9889; / 7A / 4D | 2 Claw<br>2 Claw<br>1 Claw | Impulse: if you spent at least 3 Claw energy to purchase Tiger, you may Prep this die and deal 2 damage to each opposing character die. | Superwoman, "Reign of Terror" (WF129) |
+| Tsetse Fly | 4 | 4 | On Field | L1: 0&#9889; / 1A / 2D<br>L2: 1&#9889; / 1A / 4D<br>L3: 2&#9889; / 4A / 5D | 2 Claw<br>2 Claw<br>1 Claw | On Field: choose an opposing character card. Ignore that card's text (including Global Abilities) until your next turn. | Typhoid Mary, "Red Rubber Boots" (IG135) |
+| Echolocation | 5 | 1 |  | <em>no character face</em> | 2 Eye<br>2 Eye<br>1 Eye | The next time you field a character die this turn, KO target opposing character die. | Cerebro (UXM062) |
+| The Den | 3 | 4 |  | <em>no character face</em> | 2 Wing<br>2 Wing<br>1 Wing | Spin all of your character dice up 1 level. */** Also Prep a die from your bag. | Xavier's School (XFC040) |
+| Watering Hole | 2 | 4 |  | <em>no character face</em> | 2 Wing<br>2 Wing<br>1 Wing | Field all of your character dice in your Reserve Pool for free. | Yawning Portal (AIW024) |
+| Stinging Nettle | 3 | 3 |  | <em>no character face</em> | 2 Claw<br>2 Claw<br>1 Claw | Deal 2 damage to target character die or the opponent. Global: Pay Claw. Deal 1 damage to target character die. | Magic Missile (TOA011) |
+| Venus Flytrap | 3 | 3 |  | <em>no character face</em> | 2 Eye<br>2 Eye<br>1 Eye | Move target die from your opponent's Prep Area to their Used Pile. Prep a die from your bag. | Target Lock (HQ023) |
+
 ## Champion Basic Actions (Global abilities, one per Champion)
 
 | Champion | Name | Cost | Die Limit | Die faces | Ability text | Dice Masters source |
@@ -239,7 +259,7 @@ Every keyword the engine accepts on a Dice Kingdom card, from `DiceKingdomConfig
 |---|---|---|---|
 | **Kinfolk** | _not a Dice Masters keyword_ | This creature also counts as a Tardigrade while in the Field or Attack Zone; it keeps its other attributes. | _Marmoset_, _Planarian_ |
 | **Rebound** | _not a Dice Masters keyword_ | After using this action die, roll it. An action result goes to Prep; an energy result goes to Used. | _Thorn Shot_ |
-| **Impulse** _(label)_ | _not a Dice Masters keyword_ | Use the listed Impulse ability when purchasing this die. | _Spring Emergence_ |
+| **Impulse** _(label)_ | _not a Dice Masters keyword_ | Use the listed Impulse ability when purchasing this die. | _Spring Emergence_, _Tiger_ |
 | **Fast** | Characters with Fast deal combat damage before other characters, all at the same time, instead of at the regular time for combat damage. | As written. | Greyhound, Peregrine Falcon, Wolverine, _Caracal_, _Marmoset_, _Platypus_, _Praying Mantis_ |
 | **Amplify** | _not a Dice Masters keyword_ | When you use an action die, spin this creature up one level. | _Stag Beetle_ |
 | **Overcrush** | When attacking, if this character KOs all of its blockers (or they are removed for other reasons), it deals any remaining damage to your opponent. | Also: any lane with two or more attackers has Overcrush, and one attacker's Overcrush covers its whole lane. | Grizzly Bear, Silverback, _Bison_, _Giant Centipede_, _Polar Bear_ |
@@ -257,6 +277,6 @@ Every keyword the engine accepts on a Dice Kingdom card, from `DiceKingdomConfig
 | **Sacrifice** _(label)_ | Sacrificed characters are moved from the Field Zone to the Used Pile (often as a cost or penalty). If one of your character dice is sacrificed while you are the active player, it goes Out of Play first. | As written. | _Army Ant_ |
 | **Aftershock** _(label)_ | When this character leaves the Field Zone because of your opponent (damage from their characters or actions, getting KO'd, being removed from the game, sent to the Used Pile or Reserve Pool) you must use their Aftershock effect. | As written. | _Bombardier Beetle_ |
 | **Awaken** _(label)_ | When a die with Awaken spins up 1 or more levels, you may use its Awaken effect. You get to use the effect for each individual die that spins up, so if you have two copies of the same die active and they both spin up, you will get two instances of the effect. | Not optional here - the Awaken ability always fires. | Cowbird, Mongoose, _Fire Salamander_, _Mimic Filefish_, _Sloth_ |
-| **On Field** _(label)_ | _not a Dice Masters keyword_ | Its ability fires when it's fielded. | Barn Owl, Chipmunk, Hermit Crab, Homing Pigeon, Honey Badger, Hummingbird, Magpie, Pangolin, Peregrine Falcon, Phoenix, Stoat, _Alligator_, _Army Ant_, _Cone Snail_, _Cuckoo_, _Fire Ant_, _Hare_, _Kangaroo_, _Leaf Insect_, _Manatee_, _Nutcracker_, _Orca_, _Puffin_, _Tasmanian Devil_, _Wild Boar_, _Woodpecker_ |
-| **On Attack** _(label)_ | _not a Dice Masters keyword_ | Its ability fires when it attacks. | Cuttlefish, Mountain Goat, Osprey, Swift, Wolverine, _Anglerfish_, _Bull Shark_, _Lioness_, _Lionfish_, _Quokka_, _Swordfish_ |
+| **On Field** _(label)_ | _not a Dice Masters keyword_ | Its ability fires when it's fielded. | Barn Owl, Chipmunk, Hermit Crab, Homing Pigeon, Honey Badger, Hummingbird, Magpie, Pangolin, Peregrine Falcon, Phoenix, Stoat, _Alligator_, _Army Ant_, _Cone Snail_, _Cuckoo_, _Fire Ant_, _Hare_, _Kangaroo_, _Leaf Insect_, _Lyrebird_, _Manatee_, _Nutcracker_, _Octopus_, _Orangutan_, _Orca_, _Puffin_, _Slug_, _Tasmanian Devil_, _Tsetse Fly_, _Wild Boar_, _Woodpecker_ |
+| **On Attack** _(label)_ | _not a Dice Masters keyword_ | Its ability fires when it attacks. | Cuttlefish, Mountain Goat, Osprey, Swift, Wolverine, _Anglerfish_, _Arctic Fox_, _Bull Shark_, _Lioness_, _Lionfish_, _Quokka_, _Swordfish_ |
 | **On Block** _(label)_ | _not a Dice Masters keyword_ | Its ability fires when it blocks. | Box Turtle, _Red Panda_, _Velvet Worm_ |

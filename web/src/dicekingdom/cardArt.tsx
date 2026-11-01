@@ -25,6 +25,14 @@ const ART: Record<string, string> = {
   "CW042": "quokka", // Quokka
   "XFO016": "dragonfly", // Dragonfly
   "DK-WING-02": "sloth", // Sloth
+  // Boss cards (BossCards.cs) - paintings, and the family's slug
+  "THOR036": "moose", // Moose
+  "WF129": "tiger", // Tiger
+  "XMF020": "lyrebird", // Lyrebird
+  "DXM009": "octopus", // Octopus
+  "UXM049": "orangutan", // Orangutan
+  "UXM009": "arctic-fox", // Arctic Fox
+  "TIW017": "slug", // Slug (family photo)
   // Vintage paintings
   "AI013": "koala", // Koala
   "DK-WING-03": "hummingbird", // Hummingbird

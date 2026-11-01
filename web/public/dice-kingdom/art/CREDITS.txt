@@ -104,3 +104,12 @@ alpaca: family photo, state fair, 2015
 quokka: family photo
 dragonfly: family photo, 2020
 sloth: family photo, 2009
+
+Boss cards (2026-11-01) - only the boss battles' teams play these:
+moose: "Cervus alces - 1818-1842 - Print - Iconographia Zoologica - Special Collections University of Amsterdam - UBA01 IZ21500094.tif" - Jacques Christophe Werner / Charles Philibert de Lasteyrie, between 1818 and 1842 (Public domain) https://commons.wikimedia.org/wiki/File:Cervus_alces_-_1818-1842_-_Print_-_Iconographia_Zoologica_-_Special_Collections_University_of_Amsterdam_-_UBA01_IZ21500094.tif
+tiger: "A handbook to the carnivora (Panthera tigris).jpg" - Lydekker, Richard, 1896 (Public domain) https://commons.wikimedia.org/wiki/File:A_handbook_to_the_carnivora_(Panthera_tigris).jpg
+lyrebird: "Menura superba - 1825-1834 - Print - Iconographia Zoologica - Special Collections University of Amsterdam - UBA01 IZ19200407.tif" - Paul Louis Oudart / Charles Étienne Pierre Motte, between 1825 and 1834 (Public domain) https://commons.wikimedia.org/wiki/File:Menura_superba_-_1825-1834_-_Print_-_Iconographia_Zoologica_-_Special_Collections_University_of_Amsterdam_-_UBA01_IZ19200407.tif
+octopus: "Lower left detail, Gamochonia. - Trichterkraken LCCN2015648938 (cropped).jpg" - Giltsch, Adolf, 1852-1911, lithographer; Haeckel, Ernst, 1834-1919, artist, 1904 (Public domain) https://commons.wikimedia.org/wiki/File:Lower_left_detail,_Gamochonia._-_Trichterkraken_LCCN2015648938_(cropped).jpg
+orangutan: "Pithecus satyrus - 1810-1819 - Print - Iconographia Zoologica - Special Collections University of Amsterdam - UBA01 IZ19800056.tif" - Adriaan de Lelie, between 1810 and 1819 (Public domain) https://commons.wikimedia.org/wiki/File:Pithecus_satyrus_-_1810-1819_-_Print_-_Iconographia_Zoologica_-_Special_Collections_University_of_Amsterdam_-_UBA01_IZ19800056.tif
+arctic-fox: "Vulpes lagopus - 1700-1880 - Print - Iconographia Zoologica - Special Collections University of Amsterdam - UBA01 IZ22200289.tif" - Jacques de Sève, between 1700 and 1880 (Public domain) https://commons.wikimedia.org/wiki/File:Vulpes_lagopus_-_1700-1880_-_Print_-_Iconographia_Zoologica_-_Special_Collections_University_of_Amsterdam_-_UBA01_IZ22200289.tif
+slug: family photo, 2021

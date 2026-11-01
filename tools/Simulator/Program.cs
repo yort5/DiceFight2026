@@ -41,6 +41,9 @@ using DiceFight.V2.Model.Effects;
 //   SIM_DUMP=N       print the full match log of game N of each matchup
 //   SIM_SWAP=Champ:oldId=newId;...  what-if roster swap, e.g.
 //                    Armadillo:DK-SHELL-02=DK-SHELL-06 (Musk Ox -> Alpaca)
+//   SIM_BOSSES=1     each boss (DiceKingdomBosses.Ladder) in its own style
+//                    against each starter roster (powers on) - for putting
+//                    the ladder in order. SIM_GAMES per pairing.
 //   SIM_PERSONAS=off play every seat with the Default persona instead of
 //                    its Champion's (BotPersona.ForChampion)
 //   SIM_NO_GLOBALS=id,id  strip the Global abilities off these card ids
@@ -67,6 +70,12 @@ var matchups = new List<(string A, string B)>();
 for (var i = 0; i < championIds.Length; i++)
     for (var j = i + 1; j < championIds.Length; j++)
         matchups.Add((championIds[i], championIds[j]));
+
+if (Environment.GetEnvironmentVariable("SIM_BOSSES") == "1")
+{
+    BossRun.Run(championIds, displayName, gamesPerMatchup, BuildPlayer, MaxTurns);
+    return;
+}
 
 if (Environment.GetEnvironmentVariable("SIM_SWEEP") is { Length: > 0 } sweep)
 {
@@ -448,6 +457,80 @@ static class Sweep
         bool oppWon = host.Life <= 0 && opp.Life > 0 || cap && opp.Life > host.Life;
         return (hostWon, oppWon, buys, fielded, cap);
     }
+}
+
+// SIM_BOSSES=1 (2026-11-01): how hard each boss is - its win rate against
+// every starter roster, the boss played in its own Style, seats alternated.
+static class BossRun
+{
+    public static void Run(string[] championIds, Dictionary<string, string> names, int games,
+        Func<string, string, IReadOnlyDictionary<string, string>?, Player> buildChampion, int maxTurns)
+    {
+        foreach (var boss in DiceKingdomBosses.Ladder)
+        {
+            Console.WriteLine($"=== {boss.Name} ({boss.Id})");
+            var total = 0.0;
+            foreach (var champ in championIds)
+            {
+                int wins = 0, losses = 0, caps = 0, turns = 0, errors = 0;
+                var rng = new Random(StableSeed(boss.Id + champ));
+                for (var g = 0; g < games; g++)
+                {
+                    var bossFirst = g % 2 == 0;
+                    var bossSeat = bossFirst ? "p1" : "p2";
+                    var bossPlayer = DiceKingdomBosses.BuildPlayer(boss, bossSeat);
+                    var champPlayer = buildChampion(bossFirst ? "p2" : "p1", champ, null);
+                    try
+                    {
+                        var (bossWon, champWon, cap, t) = Play(bossFirst ? bossPlayer : champPlayer, bossFirst ? champPlayer : bossPlayer, bossSeat, boss.Style, rng, maxTurns);
+                        if (bossWon) wins++; else if (champWon) losses++;
+                        if (cap) caps++;
+                        turns += t;
+                    }
+                    catch (Exception e)
+                    {
+                        if (errors++ == 0) Console.WriteLine($"  error vs {champ}: {e.Message}");
+                    }
+                }
+                var decided = Math.Max(1, wins + losses);
+                total += 100.0 * wins / decided;
+                Console.WriteLine($"  vs {names[champ],-9} boss wins {wins,3}/{games} ({100.0 * wins / decided:F1}%)  turn-cap {caps}  avg {turns / (double)Math.Max(1, games - errors):F1} turns{(errors > 0 ? $"  errors {errors}" : "")}");
+            }
+            Console.WriteLine($"  average {total / championIds.Length:F1}%");
+        }
+    }
+
+    static (bool BossWon, bool ChampWon, bool Cap, int Turns) Play(Player one, Player two, string bossSeat, BotPersona style, Random rng, int maxTurns)
+    {
+        var state = GameSetup.NewGame(DiceKingdomConfig.Config, Catalog.Cards, one, two);
+        var driver = new BotDriver(state, rng);
+        Priority.Sync(state);
+        var skip = new HashSet<string>();
+        var turn = 1;
+        var lastActive = state.ActivePlayerId;
+        for (var guard = 0; guard < 20_000 && state.PlayerOne.Life > 0 && state.PlayerTwo.Life > 0; guard++)
+        {
+            if (state.ActivePlayerId != lastActive)
+            {
+                lastActive = state.ActivePlayerId;
+                skip.Clear();
+                if (++turn > maxTurns) break;
+            }
+            var owner = driver.DecisionOwner();
+            var persona = owner == bossSeat ? style : BotPersona.ForChampion(state.GetPlayer(owner).ChampionId);
+            var decision = DiceKingdomBot.Decide(state, owner, skip, persona)
+                ?? throw new InvalidOperationException($"Bot had no decision for {owner} at step {state.CurrentStepId}.");
+            try { driver.Apply(owner, decision); }
+            catch (InvalidOperationException) when (decision.DieId is not null) { skip.Add(decision.DieId); }
+        }
+        var boss = state.GetPlayer(bossSeat);
+        var champ = bossSeat == "p1" ? state.PlayerTwo : state.PlayerOne;
+        var cap = boss.Life > 0 && champ.Life > 0;
+        return (champ.Life <= 0 && boss.Life > 0 || cap && boss.Life > champ.Life,
+            boss.Life <= 0 && champ.Life > 0 || cap && champ.Life > boss.Life, cap, turn);
+    }
+
+    static int StableSeed(string s) => s.Aggregate(17, (h, c) => unchecked(h * 31 + c));
 }
 
 static class Catalog

@@ -169,6 +169,7 @@ public static class EffectInterpreter
             case BlankText n: ExecuteBlankText(n, ctx, onComplete); break;
             case BlankCardText n: ExecuteBlankCardText(n, ctx, onComplete); break;
             case RememberCard n: ExecuteRememberCard(n, ctx, onComplete); break;
+            case UseRememberedOnField n: ExecuteUseRememberedOnField(n, ctx, onComplete); break;
             case LifeChange n: ExecuteLifeChange(n, ctx, onComplete); break;
             case PurchaseModifier n: ExecutePurchaseModifier(n, ctx, onComplete); break;
             case GrantTriggeredAbility n:
@@ -956,6 +957,28 @@ public static class EffectInterpreter
             }
             onComplete();
         });
+    }
+
+    private static void ExecuteUseRememberedOnField(UseRememberedOnField n, EffectContext ctx, Action onComplete)
+    {
+        if (ctx.Bindings.TryGetValue("self", out var selfId)
+            && ctx.State.Dice.FirstOrDefault(d => d.Id == selfId) is { CardId: { } sourceCardId } self
+            && ctx.State.Memories.TryGetValue((ctx.ControllerId, sourceCardId, n.MemoryName), out var chosenCardId)
+            && chosenCardId != sourceCardId
+            && ctx.State.CardCatalog.TryGetValue(chosenCardId, out var chosen))
+        {
+            var onField = chosen.Abilities
+                .Concat(KeywordAbilities.For(chosen.Keywords.ToHashSet()))
+                .Where(a => a.Trigger == TriggerKind.DieFielded && a.Filter is null)
+                .ToList();
+            LogAbility(ctx, onField.Count == 0
+                ? $"{SourceName(ctx)} copies {chosen.Name}, which has no On Field ability."
+                : $"{SourceName(ctx)} uses {chosen.Name}'s On Field ability.");
+            foreach (var ability in onField)
+                ctx.Queue.Enqueue(self.Id, ctx.ControllerId, TriggerKind.DieFielded, ability.Effect, self.Id,
+                    sourceName: $"{SourceName(ctx)} (as {chosen.Name})");
+        }
+        onComplete();
     }
 
     private static void ExecuteLifeChange(LifeChange n, EffectContext ctx, Action onComplete)

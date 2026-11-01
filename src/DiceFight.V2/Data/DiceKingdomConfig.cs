@@ -925,6 +925,9 @@ public static class DiceKingdomConfig
         .Concat(DpsCards.All.Where(card => card.IncludeInTeamBuilder).Select(ToKingdomCard))
         .Concat(BonusCards.All.Where(card => card.IncludeInTeamBuilder).Select(ToKingdomCard))
         .Concat(KingdomImports.All.Select(ToKingdomCard))
+        // Boss-only (BossCards.Ids): in the catalog so games can show them,
+        // kept out of packs and players' teams.
+        .Concat(BossCards.All.Select(ToKingdomCard))
         .ToDictionary(card => card.Id);
 
     public static readonly IReadOnlyDictionary<string, CardDef> Catalog = TeamBuilderCatalog.Values
