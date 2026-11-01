@@ -5011,8 +5011,10 @@ ability); six change animal to fit a photo.
   profiles; Dragonfly traced from its photo (`scene.py trace`, new - mask
   outlines of animals facing the camera came out as blobs, so tracing only
   suits side-on/flat subjects). Alligator keeps the crocodile outline.
-- **Possible seal:** the aquarium "manatee" has a seal's splayed hind
-  flippers, not a manatee's paddle tail - asked the user.
+- **Probably a seal:** the aquarium "manatee" has a seal's splayed hind
+  flippers, not a manatee's paddle tail. User: "probably a seal, but we'll
+  keep it for now" - the card stays Manatee with this photo until they
+  find a real manatee picture (a straight art swap: manatee.webp/-icon).
 - The other photos are kept for later: Koala, Wombat, Komodo Dragon,
   Monarch, Bison, Snow Leopard (animals with painted cards - "in our back
   pocket for actual full art rarities"), Echidna, Leopard Gecko, a day
