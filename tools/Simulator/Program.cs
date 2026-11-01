@@ -68,6 +68,23 @@ for (var i = 0; i < championIds.Length; i++)
     for (var j = i + 1; j < championIds.Length; j++)
         matchups.Add((championIds[i], championIds[j]));
 
+// SIM_BOSSES=on (or =id,id) - each boss battle boss (DiceKingdomBosses.Ladder)
+// against the four starter Champions, powers on, the boss played with its
+// own Style. Rows read "Boss vs Champion"; the boss's share is the number
+// to watch (target: at least half - a boss should be a challenge).
+if (Environment.GetEnvironmentVariable("SIM_BOSSES") is { Length: > 0 } bossSwitch)
+{
+    var bosses = DiceKingdomBosses.Ladder.Where(b => bossSwitch == "on" || bossSwitch.Split(',').Contains(b.Id)).ToList();
+    foreach (var b in bosses) displayName[b.Id] = b.Name;
+    matchups.Clear();
+    foreach (var b in bosses)
+        foreach (var c in championIds)
+            matchups.Add((b.Id, c));
+    Console.WriteLine("############ BOSSES vs starter Champions (powers on) ############");
+    RunAllMatchups(championPowersEnabled: true);
+    return;
+}
+
 if (Environment.GetEnvironmentVariable("SIM_SWEEP") is { Length: > 0 } sweep)
 {
     Sweep.Run(sweep, championIds, displayName, gamesPerMatchup, BuildPlayer, StableHash);
@@ -155,7 +172,7 @@ static (string WinnerChampionIdOrSentinel, int Turns) PlayOneGame(
         config = WithBulwarkDefense(config, bulwarkDef);
     if (Environment.GetEnvironmentVariable("SIM_TARDIGRADE") is { Length: > 0 } tardigradeSpec)
         config = WithTardigradeFaces(config, tardigradeSpec);
-    var state = GameSetup.NewGame(config, Catalog.Cards, BuildPlayer("p1", championOne), BuildPlayer("p2", championTwo));
+    var state = GameSetup.NewGame(config, Catalog.Cards, BuildSide("p1", championOne), BuildSide("p2", championTwo));
     var driver = new BotDriver(state, rng);
     Priority.Sync(state);
 
@@ -176,7 +193,10 @@ static (string WinnerChampionIdOrSentinel, int Turns) PlayOneGame(
         }
 
         var owner = driver.DecisionOwner();
-        var persona = Environment.GetEnvironmentVariable("SIM_PERSONAS") == "off" ? BotPersona.Default : BotPersona.ForChampion(state.GetPlayer(owner).ChampionId);
+        var side = owner == "p1" ? championOne : championTwo;
+        var persona = Environment.GetEnvironmentVariable("SIM_PERSONAS") == "off" ? BotPersona.Default
+            : DiceKingdomBosses.Find(side) is { } bossDef ? BossTweak.Style(bossDef)
+            : BotPersona.ForChampion(state.GetPlayer(owner).ChampionId);
         // SIM_DILUTION=N - what-if: each die a purchase adds to the Bag costs N plan value.
         if (double.TryParse(Environment.GetEnvironmentVariable("SIM_DILUTION"), System.Globalization.CultureInfo.InvariantCulture, out var dilution))
             persona = persona with { DilutionPerDie = dilution };
@@ -210,6 +230,18 @@ static (string WinnerChampionIdOrSentinel, int Turns) PlayOneGame(
     Stats.CapHit();
     if (state.PlayerOne.Life == state.PlayerTwo.Life) return ("__timeout__", turn);
     return (state.PlayerOne.Life > state.PlayerTwo.Life ? championOne : championTwo, turn);
+}
+
+// A Champion's starter team, or a boss's team the way the server builds it
+// (V2GamesController.BuildBoss: the link's cards and Tardigrades).
+static Player BuildSide(string id, string sideId)
+{
+    if (DiceKingdomBosses.Find(sideId) is not { } boss) return BuildPlayer(id, sideId);
+    var team = DiceKingdomBosses.ParseTeamLink(BossTweak.Link(boss));
+    var player = new Player { Id = id, Name = boss.Name, ChampionId = team.ChampionId, CustomCardDiceCounts = new Dictionary<string, int>() };
+    foreach (var (card, count) in team.Cards) { player.TeamCardIds.Add(card); player.CustomCardDiceCounts[card] = count; }
+    player.CustomBasicDicePool = team.Tardigrades.Select(kv => DiceKingdomConfig.CustomTardigrade(kv.Key, kv.Value)).ToList();
+    return player;
 }
 
 static Player BuildPlayer(string id, string championId, IReadOnlyDictionary<string, string>? swapOverride = null)
@@ -447,6 +479,28 @@ static class Sweep
         bool hostWon = opp.Life <= 0 && host.Life > 0 || cap && host.Life > opp.Life;
         bool oppWon = host.Life <= 0 && opp.Life > 0 || cap && opp.Life > host.Life;
         return (hostWon, oppWon, buys, fielded, cap);
+    }
+}
+
+// SIM_BOSS_TWEAK - what-if for the bosses under test (SIM_BOSSES):
+// semicolon list of aggr=N, chump=N, rush=CardId:Bonus, hold=CardId,
+// dilution=N, recycle=CardId,CardId|none, link=<team builder query, & written as | and ; as ~>.
+static class BossTweak
+{
+    static Dictionary<string, string> Fields => (Environment.GetEnvironmentVariable("SIM_BOSS_TWEAK") ?? "")
+        .Split(';', StringSplitOptions.RemoveEmptyEntries).Select(f => f.Split('=', 2)).ToDictionary(f => f[0], f => f[1]);
+    public static string Link(BossDef b) => Fields.TryGetValue("link", out var l) ? l.Replace('|', '&').Replace('~', ';') : b.TeamLink;
+    public static BotPersona Style(BossDef b)
+    {
+        var f = Fields; var p = b.Style;
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        if (f.TryGetValue("aggr", out var a)) p = p with { Aggression = double.Parse(a, inv) };
+        if (f.TryGetValue("chump", out var c)) p = p with { ChumpThreshold = double.Parse(c, inv) };
+        if (f.TryGetValue("dilution", out var d)) p = p with { DilutionPerDie = double.Parse(d, inv) };
+        if (f.TryGetValue("recycle", out var rc)) p = p with { RecycleCardIds = rc == "none" ? null : rc.Split(',') };
+        if (f.TryGetValue("hold", out var h)) p = p with { HoldForGlobalCardId = h };
+        if (f.TryGetValue("rush", out var r)) { var rr = r.Split(':'); p = p with { RushCardId = rr[0] == "none" ? null : rr[0], RushBonus = rr.Length > 1 ? double.Parse(rr[1], inv) : 0 }; }
+        return p;
     }
 }
 

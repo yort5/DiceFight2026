@@ -68,7 +68,14 @@ public sealed record BotPersona(
     // buy can beat two small ones of more total cost. 2 since 2026-10-11:
     // the value that best matched 48 real games' purchases (and the most
     // even simulator results) - v3/DESIGN_NOTES.md.
-    double DilutionPerDie = 2)
+    double DilutionPerDie = 2,
+    // Cards whose dice the bot wants to cycle back through the Bag (boss
+    // battles, 2026-11-01): a cheap creature with a strong On Field. An
+    // attacker comes back either way - unblocked it leaves play to the
+    // Bag (rule 2.7.4.3.1), blocked and KO'd it waits in the Used Pile -
+    // so these always swing (unless the crack-back would be lethal), and
+    // the fielding is the payoff, not the combat.
+    IReadOnlyList<string>? RecycleCardIds = null)
 {
     public static readonly BotPersona Default = new();
 
