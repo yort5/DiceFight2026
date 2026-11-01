@@ -27,24 +27,32 @@ public static class DiceKingdomBosses
         new(
             Id: "sample-1",
             Name: "Wolf Cub",
-            Blurb: "Sample boss: the Wolf starter roster, played cautiously.",
+            Blurb: "Sample boss: the Wolf starter roster, hunting at every chance.",
             TeamLink: "/teambuilder?cards=4xDK-CLAW-01;4xDK-CLAW-09;4xDK-CLAW-02;4xDK-CLAW-06;4xDK-WING-04;4xDK-WING-07;4xDK-SHELL-01;4xDK-EYE-07;3xDK-ACT-01&tardigrades=8xClaw&champion=Wolf",
-            Style: BotStyles.Cautious,
+            // Aggressive, not Cautious (2026-11-01 simulator: Cautious won
+            // 39% against the starter teams, Aggressive 63%).
+            Style: BotStyles.Aggressive,
             FirstWin: new(Points: 10, Coins: 10),
             Rematch: new(Points: 1)),
         new(
             Id: "sample-2",
             Name: "Iron Armadillo",
-            Blurb: "Sample boss: the Armadillo starter roster, racing to Rhinoceros.",
-            TeamLink: "/teambuilder?cards=4xDK-SHELL-04;4xDK-SHELL-03;4xDK-SHELL-02;4xDK-SHELL-07;4xDK-EYE-08;4xDK-EYE-04;4xDK-CLAW-08;4xDK-WING-03;3xDK-ACT-05&tardigrades=8xShell&champion=Armadillo",
-            Style: BotStyles.Balanced with { RushCardId = DiceKingdomConfig.Rhinoceros.Id, RushBonus = 5 },
+            Blurb: "Sample boss: the Armadillo roster, racing to Rhinoceros while its Hummingbirds keep coming back to KO.",
+            // Fox -> Opossum, and its Hummingbirds (free at level 1, On
+            // Field: KO a creature) always attack so they cycle back to be
+            // fielded again - 46% -> 54% against the starter teams
+            // (2026-11-01 simulator).
+            TeamLink: "/teambuilder?cards=4xDK-SHELL-04;4xDK-SHELL-03;4xDK-SHELL-02;4xDK-SHELL-07;4xDK-SHELL-05;4xDK-EYE-04;4xDK-CLAW-08;4xDK-WING-03;3xDK-ACT-05&tardigrades=8xShell&champion=Armadillo",
+            Style: BotStyles.Balanced with { RushCardId = DiceKingdomConfig.Rhinoceros.Id, RushBonus = 5, RecycleCardIds = [DiceKingdomConfig.Hummingbird.Id] },
             FirstWin: new(Points: 20, Coins: 15, Drops: [new(Chance: 1, Rarity: CardRarity.Uncommon)]),
             Rematch: new(Points: 2, Drops: [new(Chance: 0.1, Rarity: CardRarity.Uncommon)])),
         new(
             Id: "sample-3",
             Name: "The Night Owl",
             Blurb: "Sample boss: the Great Horned Owl starter roster, attacking at every chance.",
-            TeamLink: "/teambuilder?cards=4xDK-EYE-09;4xDK-EYE-05;4xDK-EYE-02;4xDK-EYE-06;4xDK-SHELL-05;4xDPS019;4xDK-CLAW-07;4xDK-WING-06;3xDK-ACT-04&tardigrades=8xEye&champion=GreatHornedOwl",
+            // Hyena -> Frigatebird (free at level 1, 5/5, Intimidate):
+            // 49% -> 63% against the starter teams (2026-11-01 simulator).
+            TeamLink: "/teambuilder?cards=4xDK-EYE-09;4xDK-EYE-05;4xDPS033;4xDK-EYE-06;4xDK-SHELL-05;4xDPS019;4xDK-CLAW-07;4xDK-WING-06;3xDK-ACT-04&tardigrades=8xEye&champion=GreatHornedOwl",
             Style: BotStyles.Aggressive,
             FirstWin: new(Points: 40, Coins: 25, Drops: [new(Chance: 1, Rarity: CardRarity.Rare)]),
             Rematch: new(Points: 4, Drops: [new(Chance: 0.05, CardId: DiceKingdomConfig.Basilisk.Id)])),

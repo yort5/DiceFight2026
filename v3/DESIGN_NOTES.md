@@ -4983,3 +4983,25 @@ rarities traded places (counts unchanged: 48 C / 29 U / 29 R / 8 SR):
   get Horseshoe Crab or Chipmunk - a starter is granted once.
 - `GameRecordingTests`' boss replay now stops after ten boss turns: the
   cautious sample boss can stall a game for 50+ turns.
+
+## 2026-11-01 - Boss tuning (simulator)
+
+User: bosses "should probably win at least half or more in simulations",
+each with its own playstyle. `SIM_BOSSES=on` (tools/Simulator) plays each
+boss against the four starter Champions; `SIM_BOSS_TWEAK` tries styles and
+team links. 300 games per pairing, boss win share before -> after:
+
+| Boss | Before | After | Change |
+|---|---|---|---|
+| Wolf Cub | 39% | 63% | Cautious -> Aggressive (Aggression below 2 stayed ~47%) |
+| Iron Armadillo | 46% | 54% | Fox -> Opossum; Hummingbirds always attack (`RecycleCardIds`) |
+| The Night Owl | 49% | 63% | Hyena -> Frigatebird |
+
+- **`BotPersona.RecycleCardIds`** - the Cerebro idea in Dice Kingdom
+  terms: a free creature whose On Field is the payoff (Hummingbird: KO a
+  creature) always swings, since it comes back either way - unblocked to
+  the Bag, KO'd to the Used Pile - to be fielded and KO again. Off for
+  every non-boss bot.
+- Swap searches that dropped Hummingbird scored about the same; it was
+  kept for the playstyle.
+- Ladder isn't monotone yet (Cub ≈ Owl > Armadillo); all three clear 50%.
