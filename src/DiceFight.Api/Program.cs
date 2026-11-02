@@ -37,13 +37,16 @@ builder.Services.AddSingleton(sp => new V2GameStore(
 builder.Services.Configure<GameExpiryOptions>(builder.Configuration.GetSection("GameExpiry"));
 builder.Services.AddHostedService<GameSweeper>();
 
-// No-ops (logs a warning, doesn't start a gateway connection) unless
-// DiscordBot:Token is configured - see DiscordBotService's own remarks.
-// The Discord gateway connection this opens is long-lived, so whatever
-// deploys this needs to be pinned to a single always-on instance rather
-// than scaling to zero/many.
-builder.Services.Configure<DiscordBotOptions>(builder.Configuration.GetSection("DiscordBot"));
-builder.Services.AddHostedService<DiscordBotService>();
+// Discord bots (2026-11-02): every bot under "DiscordBots" that has a
+// token (DiscordBots__<name>__Token), each running the features its
+// config names - see DiceFight.DiscordBot/DiscordBots.cs. Each holds a
+// long-lived gateway connection, so the deployment needs one always-on
+// instance. Their data (game libraries) goes in the game-records bucket
+// under discord/.
+builder.Services.AddDiscordBots();
+builder.Services.AddSingleton<IBotDataStore>(sp => DiceFight.Api.Recording.GameRecorderSetup.SinkFromConfig(sp) is { } sink
+    ? new DiceFight.Api.SinkBotDataStore(sink)
+    : new MemoryBotDataStore());
 
 var app = builder.Build();
 

@@ -10980,3 +10980,40 @@ green text + green life panel + green near-mat glow; P2 (waiting) shows
 the same three cues in amber-grey, including on the FAR (mirrored) mat -
 so "whose turn" reads the same way whichever side is looking. 908 tests
 pass - CSS/component-position only.
+
+## Status update — several Discord bots in one process (2026-11-02)
+
+User: run more than one bot from this server ("save on hosting") - their
+church bot (github.com/yort5/churchdiscordbot) and a third for a board
+game group - with command code kept separate from the bots, and per-bot
+choice of commands ("both the church bot and the board game bot could use
+commands to list board games available or checkout"). Config: user offered
+a bucket file per bot or appsettings; went with appsettings (reviewable,
+deploys with the code; tokens stay in env vars/secrets) - per-bot files in
+the bucket remain an option if they want to change bots without a deploy.
+
+- `IBotFeature` (DiceFight.DiscordBot/BotFeature.cs): a feature's slash
+  commands, their handling, optional autocomplete and background work.
+  `BotHost`: one bot's client; registers its features' commands as a set
+  (bulk overwrite, so a feature taken off a bot takes its commands with it),
+  routes each command to its feature, starts background work once. A
+  command-name clash between two features of one bot is logged and skipped.
+- Config `DiscordBots:<name>` - Features, DevGuildId, feature settings;
+  token `DiscordBots__<name>__Token`. The old `DiscordBot__Token` still
+  works (fills the "dicefight" bot). appsettings.json carries three bots:
+  dicefight (dicemasters), church (radio + game-library), boardgames
+  (game-library) - none run until they have tokens.
+- Features: `dicemasters` (the old /card and /team, moved unchanged),
+  `radio` (the church bot's whole feature - it had no commands; Live365
+  now-playing posted to channels; the original drove headless Chrome
+  through PuppeteerSharp to read the JSON, a plain request does it; m:ss
+  song length, the original printed 3:5), `game-library` (new: /games list,
+  mine, checkout, return, add, remove, with autocomplete; bots naming the
+  same LibraryId share a library; managers = Manage Server or configured
+  roles; saved to the bucket under discord/libraries/).
+- The church bot's real station URL and channel ids lived in Azure App
+  Configuration, not its repo - waiting on the user for them.
+- Hosting: one always-on instance with CPU always allocated (gateway
+  connections, radio polling). Setup steps in DiceFight.DiscordBot/README.md.
+- Tests: DiscordBotsTests (which commands each bot registers, legacy token,
+  library rules, shared/saved libraries, radio parsing).
