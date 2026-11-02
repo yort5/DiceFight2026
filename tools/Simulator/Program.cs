@@ -503,7 +503,7 @@ static class BossRun
             // What the boss did with each card, per game.
             var played = games * championIds.Length;
             foreach (var card in Tally.Keys.Select(k => k.Card).Distinct().OrderBy(c => c))
-                Console.WriteLine($"    {Catalog.Cards[card].KingdomName ?? Catalog.Cards[card].Name,-20} bought {Tally.GetValueOrDefault((card, "buy")) / (double)played,5:F2}  fielded {Tally.GetValueOrDefault((card, "field")) / (double)played,5:F2}  used {Tally.GetValueOrDefault((card, "use")) / (double)played,5:F2}");
+                Console.WriteLine($"    {Catalog.Cards[card].KingdomName ?? Catalog.Cards[card].Name,-20} bought {Tally.GetValueOrDefault((card, "buy")) / (double)played,5:F2}  fielded {Tally.GetValueOrDefault((card, "field")) / (double)played,5:F2}  used {Tally.GetValueOrDefault((card, "use")) / (double)played,5:F2}  global {Tally.GetValueOrDefault((card, "global")) / (double)played,5:F2}");
         }
     }
 
@@ -531,6 +531,8 @@ static class BossRun
             try
             {
                 driver.Apply(owner, decision);
+                if (owner == bossSeat && decision.Kind == BotActionKind.UseGlobal && decision.CardId is { } g)
+                    Tally[(g, "global")] = Tally.GetValueOrDefault((g, "global")) + 1;
                 if (owner == bossSeat && card is not null && decision.Kind is BotActionKind.Purchase or BotActionKind.Field or BotActionKind.UseAction)
                     Tally[(card, decision.Kind switch { BotActionKind.Purchase => "buy", BotActionKind.Field => "field", _ => "use" })] =
                         Tally.GetValueOrDefault((card, decision.Kind switch { BotActionKind.Purchase => "buy", BotActionKind.Field => "field", _ => "use" })) + 1;

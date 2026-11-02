@@ -234,7 +234,42 @@ public static class DiceKingdomBot
         if (leftover is not null && Circulating(state, botId) - 1 >= drawCount - Math.Max(0, allowedShortfall - 1))
             return new(BotActionKind.Field, "Field a leftover Tardigrade.") { DieId = leftover.Id, EnergyDieIds = [] };
 
+        // Spare energy: Mutation's Global (spin one of yours down to spin
+        // another up) when it's a net gain - a level-1 creature to level 2
+        // for a Tardigrade's drop, above all with Basilisk active.
+        if (SpinSwapPlan(state, botId) is not null
+            && GlobalDecision(state, botId, onlyRealPips: false, g => g.Effect is Sequence { Steps: [Spin { LevelDelta: -1 }, Spin { LevelDelta: 1 }] }) is { } spinSwap)
+            return spinSwap with { Reason = "Spin one down to spin another up." };
+
         return new(BotActionKind.Pass, "Done in Main - on to the Attack Step.");
+    }
+
+    // Mutation's Global (2026-11-02, boss tuning): the (down, up) pair of
+    // this player's creatures with the best gain, if it gains 2 or more.
+    // Gain = the ATK+DEF the up die gains minus what the down die loses,
+    // +4 for a non-Tardigrade reaching level 2 under an active Basilisk
+    // (2 damage a turn) and -4 for one dropping below it.
+    private static (DieInstance Down, DieInstance Up)? SpinSwapPlan(GameState state, string botId)
+    {
+        var mine = state.DiceIn(botId, Zone.FieldZone).Where(d => state.GetCurrentFace(d)?.Character is not null).ToList();
+        if (mine.Count < 2) return null;
+        var basilisk = mine.Any(d => d.CardId == Data.DiceKingdomConfig.Basilisk.Id);
+        int Level(DieInstance d) => state.GetCurrentFace(d)!.Character!.Level;
+        double Worth(DieInstance d, int level)
+        {
+            var face = state.GetDieDefinition(d).Faces.FirstOrDefault(f => f.Character?.Level == level)?.Character;
+            if (face is null) return double.NaN;
+            return face.Attack + face.Defense + (basilisk && d.CardId is not null && level >= 2 ? 4 : 0);
+        }
+        (DieInstance, DieInstance)? best = null;
+        var bestGain = 1.99;
+        foreach (var down in mine.Where(d => QueryEngine.LevelsAround(state, d, above: false) > 0))
+            foreach (var up in mine.Where(d => d != down && QueryEngine.LevelsAround(state, d, above: true) > 0))
+            {
+                var gain = Worth(up, Level(up) + 1) - Worth(up, Level(up)) - (Worth(down, Level(down)) - Worth(down, Level(down) - 1));
+                if (gain > bestGain) { bestGain = gain; best = (down, up); }
+            }
+        return best;
     }
 
     // The opponent's Main: one Global, or pass. Energy left in the Reserve
@@ -1085,6 +1120,12 @@ public static class DiceKingdomBot
                 return new(BotActionKind.ResolvePendingChoice, "Archnemesis: my fighter.") { DieIds = [fight.Mine.Id] };
             case DealDamage { Amount: StatOf } when BestFight(state, botId) is { } fight && pending.CandidateIds.Contains(fight.Theirs.Id):
                 return new(BotActionKind.ResolvePendingChoice, "Archnemesis: their fighter.") { DieIds = [fight.Theirs.Id] };
+            case Spin { LevelDelta: -1 } when SpinSwapPlan(state, botId) is { } swapDown && pending.CandidateIds.Contains(swapDown.Down.Id):
+                return new(BotActionKind.ResolvePendingChoice, "Spin this one down.") { DieIds = [swapDown.Down.Id] };
+            case Spin { LevelDelta: 1 } when pending.CandidateIds.Where(id => !state.IsPlayerId(id)).Select(id => state.Dice.First(d => d.Id == id))
+                    .Where(d => d.ControllerId == botId && d.CardId is not null)
+                    .OrderBy(d => state.GetCurrentFace(d)?.Character?.Level ?? 9).ThenByDescending(d => DieValue(state, d)).FirstOrDefault() is { } upPick:
+                return new(BotActionKind.ResolvePendingChoice, "Spin this one up.") { DieIds = [upPick.Id] };
             case ModifyStat { SetDefense: not null }:
                 var pick = pending.CandidateIds.Where(id => !state.IsPlayerId(id))
                     .OrderByDescending(id => SetDefenseGain(state, botId, state.Dice.First(d => d.Id == id))
