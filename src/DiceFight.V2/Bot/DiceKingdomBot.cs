@@ -175,6 +175,16 @@ public static class DiceKingdomBot
                 return new(BotActionKind.UseAction, $"Use {CardName(state, die)}.") { DieId = die.Id };
         }
 
+        // Churn first (2026-11-02, user on Professor X: "Every turn, the bot
+        // should be prioritizing rolling the energy for the global and using
+        // it to move Tardigrades from Used to Prep. You spend one energy on
+        // the global to get two extra dice to roll the next turn"): a Global
+        // that Preps Tardigrades from the Used Pile, as long as there's one.
+        if (state.DiceIn(botId, Zone.UsedPile).Any(d => d.CardId is null)
+            && GlobalDecision(state, botId, onlyRealPips: false,
+                g => g.Effect is MoveDie { ToZone: Zone.PrepArea, Target.Zones: [Zone.UsedPile] }) is { } churn)
+            return churn with { Reason = $"{churn.Reason} Tardigrades from Used to Prep - two more dice next turn." };
+
         // Racing to a rush card: buy its first copy the moment it's
         // affordable, before fielding spends any of the energy - with a
         // purchase discount first if that's what brings it into reach.

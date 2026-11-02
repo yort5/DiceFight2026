@@ -53,7 +53,13 @@ public static class DiceKingdomBosses
             Id: "xmen-colossus",
             Name: "The Basilisk's Lair",
             Blurb: "It grows its creatures up a level, then lets Basilisk burn you at the end of every turn.",
-            TeamLink: "/teambuilder?cards=4xAVX066;1xUXM062;1xDK-EYE-06;4xXMF020;3xDXM009;1xUXM049;4xAVX019;2xXFC040;3xIG003;3xTHOR009&tardigrades=8xEye",
+            // 2026-11-02 (user: Cerebro/Mimic "might have been too defensive -
+            // neither is helping get the persistent characters in the field on
+            // Level 2"): Cerebro -> Frigatebird (cheap to field, 5/5, hard to
+            // KO) and Big Entrance -> Mutation (its Global spins one down to
+            // spin another up). Professor X stays for its Global - Tardigrades
+            // from Used to Prep every turn (the bot's churn rule).
+            TeamLink: "/teambuilder?cards=4xAVX066;4xDPS033;1xDK-EYE-06;4xXMF020;3xDXM009;1xUXM049;4xAVX019;2xXFC040;3xDK-ACT-04;3xTHOR009&tardigrades=8xEye",
             Style: BotStyles.Balanced with { RushCardId = DiceKingdomConfig.Basilisk.Id, RushBonus = 5 },
             FirstWin: new(Points: 40, Coins: 25, Drops: [new(Chance: 1, Rarity: CardRarity.Rare)]),
             Rematch: new(Points: 4, Drops: [new(Chance: 0.05, Rarity: CardRarity.Uncommon)])),

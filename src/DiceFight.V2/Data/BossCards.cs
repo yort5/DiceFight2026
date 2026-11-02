@@ -131,7 +131,11 @@ public static class BossCards
                 EnergyCost: new EnergyCost(1, "Mask")),
         ],
         Continuous: [], IncludeInTeamBuilder: true,
-        KingdomName: "Orangutan", KingdomEnergyType: "Wing");
+        // Eye, like Velvet Worm (Beast) and Leaf Insect (Storm): all three
+        // are Mask in the source team, where the cheap Mask dice feed this
+        // Global every turn (user, 2026-11-02). It was Wing, which nothing
+        // cheap on the team rolls.
+        KingdomName: "Orangutan", KingdomEnergyType: "Eye");
 
     private static EffectNode RecruitTardigrade() => new Sequence([
         new MoveDie(new TargetFilter(Kind: TargetKind.AnyDie, Ownership: TargetOwnership.Own, Zones: [Zone.Bag], Optional: true,
