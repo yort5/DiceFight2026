@@ -29,6 +29,11 @@ public interface IBotFeature
     // Suggestions as someone types an autocomplete option of one of its commands.
     Task AutocompleteAsync(SocketAutocompleteInteraction interaction, BotContext bot) => Task.CompletedTask;
 
+    // A button on one of its messages was pressed. A button's custom id
+    // starts with the command name and a colon ("games:lend:..."), which is
+    // how the bot knows whose it is.
+    Task ButtonAsync(SocketMessageComponent button, BotContext bot) => Task.CompletedTask;
+
     // Work that runs as long as the bot does, started once it's connected
     // (the radio's now-playing poll). Most features have none.
     Task RunAsync(BotContext bot, CancellationToken stop) => Task.CompletedTask;

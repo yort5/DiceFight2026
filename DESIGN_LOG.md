@@ -11018,3 +11018,18 @@ the bucket remain an option if they want to change bots without a deploy.
   connections, radio polling). Setup steps in DiceFight.DiscordBot/README.md.
 - Tests: DiscordBotsTests (which commands each bot registers, legacy token,
   library rules, shared/saved libraries, radio parsing).
+
+### Game library: members' own games, borrowing, selling (2026-11-02)
+
+User: "add a board game of yours to the list of available board games;
+request to borrow a board game from someone; list the available board
+games that people own; list the available board games that aren't
+currently being borrowed; list a board game for sale". Replaced the
+central-shelf first draft (never live - no tokens yet): every game is now
+one member's copy (several can own a title), `/games add, remove, list,
+available, borrow, return, mine, sell, unsell, forsale`. Borrowing posts a
+request in the channel pinging the owner, with Lend / Not now buttons only
+the owner's press counts on (BotHost now routes buttons to the feature
+whose command name prefixes the button id). BoardGameGeek: no API (it
+needs an approved application and token now) - each game name links to a
+BGG search instead.

@@ -9,7 +9,7 @@ run in several bots.
 |---|---|---|
 | `dicemasters` | `/card`, `/team` | Dice Masters card lookup and Teambuilder link preview |
 | `radio` | none | Posts each new song a Live365 station plays to channels (from the church bot) |
-| `game-library` | `/games list · mine · checkout · return · add · remove` | A shelf of board games members can borrow |
+| `game-library` | `/games add · remove · list · available · borrow · return · mine · sell · unsell · forsale` | Board games the members own, to lend and sell |
 
 ## Adding a bot
 
@@ -39,9 +39,13 @@ to register in that one server instantly.
 
 - **radio** - `"Radio": { "PollSeconds": 65, "Stations": [ { "Name": "...", "Url": "https://api.live365.com/station/<id>", "Channels": [ <channel id> ] } ] }`
 - **game-library** - `"GameLibrary": { "LibraryId": "...", "ManagerRoleIds": [ ... ] }`.
-  Bots naming the same `LibraryId` share one library (default: the bot's name).
-  Adding/removing games and returning someone else's loan need Manage Server
-  or a manager role. Libraries are saved in the game-records bucket as
+  Every game is one member's copy: they add it, can list it for sale, and
+  answer borrow requests with the Lend / Not now buttons the bot posts
+  (pinging them). The borrower or the owner marks it returned. Game names
+  link to a BoardGameGeek search. Bots naming the same `LibraryId` share one
+  library (default: the bot's name). Managers (Manage Server or a manager
+  role) can remove anyone's game or listing and mark any loan returned.
+  Libraries are saved in the game-records bucket as
   `discord/libraries/<id>.json`.
 
 ## Adding a feature

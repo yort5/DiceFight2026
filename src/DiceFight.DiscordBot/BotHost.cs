@@ -46,6 +46,7 @@ public sealed class BotHost
         Client.Ready += OnReadyAsync;
         Client.SlashCommandExecuted += OnSlashCommandAsync;
         Client.AutocompleteExecuted += OnAutocompleteAsync;
+        Client.ButtonExecuted += OnButtonAsync;
     }
 
     public DiscordSocketClient Client { get; }
@@ -131,6 +132,22 @@ public sealed class BotHost
             _logger.LogError(ex, "Bot {Bot}: /{Command} failed", Context.Name, command.Data.Name);
             if (!command.HasResponded)
                 await command.RespondAsync("Something went wrong handling that command.", ephemeral: true);
+        }
+    }
+
+    private async Task OnButtonAsync(SocketMessageComponent button)
+    {
+        var commandName = button.Data.CustomId.Split(':')[0];
+        if (!_byCommand.TryGetValue(commandName, out var feature)) return;
+        try
+        {
+            await feature.ButtonAsync(button, Context);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Bot {Bot}: button {Button} failed", Context.Name, button.Data.CustomId);
+            if (!button.HasResponded)
+                await button.RespondAsync("Something went wrong with that button.", ephemeral: true);
         }
     }
 
