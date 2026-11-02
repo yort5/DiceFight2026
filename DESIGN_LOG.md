@@ -11011,8 +11011,9 @@ the bucket remain an option if they want to change bots without a deploy.
   mine, checkout, return, add, remove, with autocomplete; bots naming the
   same LibraryId share a library; managers = Manage Server or configured
   roles; saved to the bucket under discord/libraries/).
-- The church bot's real station URL and channel ids lived in Azure App
-  Configuration, not its repo - waiting on the user for them.
+- Radio is off for now (user: "that station no longer exists"): the church
+  bot runs only game-library. The radio feature stays, ready for a new
+  station - add "radio" to a bot's Features with Radio:Stations.
 - Hosting: one always-on instance with CPU always allocated (gateway
   connections, radio polling). Setup steps in DiceFight.DiscordBot/README.md.
 - Tests: DiscordBotsTests (which commands each bot registers, legacy token,
