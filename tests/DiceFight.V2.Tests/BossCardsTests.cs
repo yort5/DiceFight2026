@@ -158,14 +158,23 @@ public class BossCardsTests
     }
 
     [Fact]
-    public void Octopus_Is_Caught_When_The_Target_Rolls_Energy()
+    public void Octopus_KOs_Its_Target_And_Is_Caught_When_A_Die_Rolls_Energy()
     {
         var s = Game(); var q = new AbilityQueue();
         var prey = Add(s, DiceKingdomConfig.Elephant.Id, "p2");
         var octopus = Add(s, "DXM009", zone: Zone.ReservePool);
         Field(s, q, octopus, c => c.CandidateIds.Contains(prey.Id) ? prey.Id : c.CandidateIds[0], roll: 5); // energy faces
-        Assert.Equal(Zone.ReservePool, prey.Zone); // rolled to energy: off the Field, not KO'd
+        Assert.Equal(Zone.PrepArea, prey.Zone); // KO'd
         Assert.NotEqual(Zone.FieldZone, octopus.Zone);
+    }
+
+    [Fact]
+    public void Octopus_Does_Nothing_With_No_Opposing_Creature()
+    {
+        var s = Game(); var q = new AbilityQueue();
+        var octopus = Add(s, "DXM009", zone: Zone.ReservePool);
+        Field(s, q, octopus, roll: 5);
+        Assert.Equal(Zone.FieldZone, octopus.Zone);
     }
 
     [Fact]
@@ -177,16 +186,18 @@ public class BossCardsTests
     }
 
     [Fact]
-    public void Echolocation_KOs_Once_For_The_Next_Creature_Fielded()
+    public void Echolocation_KOs_Each_Time_An_Octopus_Is_Fielded_And_Doesnt_Stack()
     {
         var s = Game(); var q = new AbilityQueue();
         var first = Add(s, DiceKingdomConfig.Elephant.Id, "p2");
         var second = Add(s, DiceKingdomConfig.Elephant.Id, "p2");
+        var third = Add(s, DiceKingdomConfig.Elephant.Id, "p2");
         Use(s, q, Add(s, "UXM062", zone: Zone.ReservePool));
-        Field(s, q, Add(s, DiceKingdomConfig.Elephant.Id, zone: Zone.ReservePool), c => c.CandidateIds.Contains(first.Id) ? first.Id : c.CandidateIds[0]);
-        Assert.NotEqual(Zone.FieldZone, first.Zone);
-        Field(s, q, Add(s, DiceKingdomConfig.Elephant.Id, zone: Zone.ReservePool));
-        Assert.Equal(Zone.FieldZone, second.Zone);
+        Assert.False(AbilityPreview.CouldHaveResult(s, "p1", s.CardCatalog["UXM062"].Abilities[0].Effect, null)); // a second use adds nothing
+        Field(s, q, Add(s, DiceKingdomConfig.Elephant.Id, zone: Zone.ReservePool)); // not an Octopus
+        Assert.Equal(3, s.DiceIn("p2", Zone.FieldZone).Count());
+        Field(s, q, Add(s, "DXM009", zone: Zone.ReservePool), c => c.CandidateIds.Contains(first.Id) ? first.Id : c.CandidateIds.Contains(second.Id) ? second.Id : c.CandidateIds[0]);
+        Assert.True(s.DiceIn("p2", Zone.FieldZone).Count() <= 2);
     }
 
     [Fact]

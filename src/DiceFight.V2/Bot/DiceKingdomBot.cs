@@ -1130,6 +1130,12 @@ public static class DiceKingdomBot
                 return new(BotActionKind.ResolvePendingChoice, "Archnemesis: my fighter.") { DieIds = [fight.Mine.Id] };
             case DealDamage { Amount: StatOf } when BestFight(state, botId) is { } fight && pending.CandidateIds.Contains(fight.Theirs.Id):
                 return new(BotActionKind.ResolvePendingChoice, "Archnemesis: their fighter.") { DieIds = [fight.Theirs.Id] };
+            // A copier (Lyrebird): the most expensive card of this player's
+            // own - Basilisk on its team.
+            case RememberCard when pending.CandidateIds.Where(id => !state.IsPlayerId(id)).Select(id => state.Dice.First(d => d.Id == id))
+                    .Where(d => d.ControllerId == botId && d.CardId is not null)
+                    .OrderByDescending(d => state.CardCatalog[d.CardId!].PurchaseCost).FirstOrDefault() is { } model:
+                return new(BotActionKind.ResolvePendingChoice, $"Copy {CardName(state, model)}.") { DieIds = [model.Id] };
             case Spin { LevelDelta: -1 } when SpinSwapPlan(state, botId) is { } swapDown && pending.CandidateIds.Contains(swapDown.Down.Id):
                 return new(BotActionKind.ResolvePendingChoice, "Spin this one down.") { DieIds = [swapDown.Down.Id] };
             case Spin { LevelDelta: 1 } when pending.CandidateIds.Where(id => !state.IsPlayerId(id)).Select(id => state.Dice.First(d => d.Id == id))

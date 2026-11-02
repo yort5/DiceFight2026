@@ -60,7 +60,10 @@ public static class DiceKingdomBosses
             // spin another up). Professor X stays for its Global - Tardigrades
             // from Used to Prep every turn (the bot's churn rule).
             TeamLink: "/teambuilder?cards=4xAVX066;4xDPS033;1xDK-EYE-06;4xXMF020;3xDXM009;1xUXM049;4xAVX019;2xXFC040;3xDK-ACT-04;3xTHOR009&tardigrades=8xEye",
-            Style: BotStyles.Balanced with { RushCardId = DiceKingdomConfig.Basilisk.Id, RushBonus = 5 },
+            // Races to Lyrebird (Hope Summers), which copies Basilisk for
+            // less than half its cost (user, 2026-11-02), and holds blockers
+            // while the burn does the work.
+            Style: BotStyles.Cautious with { RushCardId = BossCards.HopeSummersPluripotentEchopraxia.Id, RushBonus = 5 },
             FirstWin: new(Points: 40, Coins: 25, Drops: [new(Chance: 1, Rarity: CardRarity.Rare)]),
             Rematch: new(Points: 4, Drops: [new(Chance: 0.05, Rarity: CardRarity.Uncommon)])),
         // "Sidekicks":

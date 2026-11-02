@@ -70,18 +70,18 @@ public static class BossCards
         PurchaseCost: 3, EnergySymbolIds: ["Shield"],
         Die: MigrationDice.Character("XMF020Die", "Shield", (0, 1, 2), (0, 2, 2), (1, 2, 2)),
         DieLimit: 4, Affiliations: [], Keywords: [],
-        RawText: "When fielded, choose another character card on your team. Hope Summers uses that card's On Field abilities as her own.",
+        RawText: "When fielded, choose another creature card on your team. Lyrebird uses its On Field ability now and has its other abilities until a Lyrebird is fielded again.",
         Abilities: [new TriggeredAbility(TriggerKind.DieFielded, new Sequence([
             new RememberCard(new TargetFilter(Kind: TargetKind.AnyDie, Ownership: TargetOwnership.Own,
                 Zones: [Zone.Unpurchased, Zone.Bag, Zone.UsedPile, Zone.PrepArea, Zone.ReservePool, Zone.FieldZone, Zone.AttackZone, Zone.OutOfPlay],
                 Tags: new TagQuery(NoneOf: ["sidekick", "Lyrebird"]),
-                Prompt: "choose another card on your team - Lyrebird uses its On Field ability."), "copied"),
+                Prompt: "choose another card on your team - Lyrebird copies it."), "copied"),
             new UseRememberedOnField("copied"),
         ]))],
         Continuous: [], IncludeInTeamBuilder: true,
         KingdomName: "Lyrebird", KingdomEnergyType: "Eye", HasErrata: true,
         ErrataNotes: ["Reference: BulkCards.json, XMF020 (Hope Summers: Pluripotent Echopraxia).",
-            "Copies the chosen card's On Field abilities once, now (the source gains its whole text box until fielded again); any card, not only X-Men."]);
+            "Copies the chosen card's abilities (its On Field once, now; the rest while active, until a Lyrebird is fielded again) but not its Globals; any card, not only X-Men."]);
 
     // Octopus: changes colour and shape to pass for something else - and
     // sometimes gets caught. ("Mimic Octopus" is an unfinished card already.)
@@ -94,19 +94,18 @@ public static class BossCards
         // character"): back to the source's outcome - the target is always
         // KO'd, and Octopus goes too if either die rolls energy.
         RawText: "When fielded, reroll Octopus and target opposing creature. KO that creature. If either die rolled an energy face, KO Octopus too.",
-        Abilities: [new TriggeredAbility(TriggerKind.DieFielded, new Sequence([
+        // No opposing creature to pick: nothing happens.
+        Abilities: [new TriggeredAbility(TriggerKind.DieFielded, new Conditional(
+            new CountAtLeast(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Opposing), 1), new Sequence([
             new Reroll(new TargetFilter(Ownership: TargetOwnership.Opposing, BindAs: "prey",
                 Prompt: "choose an opposing creature - both it and Octopus are rerolled, and it is KO'd.")),
-            // No opposing creature to pick: nothing happens.
-            new Conditional(new InZone(Zone.FieldZone, "prey"), new Sequence([
-                new Reroll(new TargetFilter(Self: true)),
-                new Conditional(new OnFaceKind(FaceKind.CharacterFace, "self"),
-                    Then: new Conditional(new OnFaceKind(FaceKind.CharacterFace, "prey"),
-                        Then: new Ko(new TargetFilter(Bound: "prey")),
-                        Else: new Sequence([new Ko(new TargetFilter(Bound: "prey")), new Ko(new TargetFilter(Self: true))])),
+            new Reroll(new TargetFilter(Self: true)),
+            new Conditional(new OnFaceKind(FaceKind.CharacterFace, "self"),
+                Then: new Conditional(new OnFaceKind(FaceKind.CharacterFace, "prey"),
+                    Then: new Ko(new TargetFilter(Bound: "prey")),
                     Else: new Sequence([new Ko(new TargetFilter(Bound: "prey")), new Ko(new TargetFilter(Self: true))])),
-            ])),
-        ]))],
+                Else: new Sequence([new Ko(new TargetFilter(Bound: "prey")), new Ko(new TargetFilter(Self: true))])),
+        ])))],
         Continuous: [], IncludeInTeamBuilder: true,
         KingdomName: "Octopus", KingdomEnergyType: "Eye", HasErrata: true,
         ErrataNotes: ["Reference: BulkCards.json, DXM009 (Mimic: Flying, Blasting, Slashing).",

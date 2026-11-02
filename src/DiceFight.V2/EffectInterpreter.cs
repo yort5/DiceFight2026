@@ -943,7 +943,7 @@ public static class EffectInterpreter
 
     private static void ExecuteRememberCard(RememberCard n, EffectContext ctx, Action onComplete)
     {
-        ResolveTarget(ctx, n.Target, ProtectionFor(ctx.Trigger), ChoiceIntent.NameCard, ids =>
+        ResolveTarget(ctx, n.Target, ProtectionFor(ctx.Trigger), ChoiceIntent.NameCard, n, ids =>
         {
             foreach (var id in ids)
             {
@@ -977,7 +977,7 @@ public static class EffectInterpreter
                 .Where(a => a.Trigger == TriggerKind.DieFielded && a.Filter is null)
                 .ToList();
             LogAbility(ctx, onField.Count == 0
-                ? $"{SourceName(ctx)} copies {chosen.Name}, which has no On Field ability."
+                ? $"{SourceName(ctx)} copies {chosen.Name}."
                 : $"{SourceName(ctx)} uses {chosen.Name}'s On Field ability.");
             foreach (var ability in onField)
                 ctx.Queue.Enqueue(self.Id, ctx.ControllerId, TriggerKind.DieFielded, ability.Effect, self.Id,

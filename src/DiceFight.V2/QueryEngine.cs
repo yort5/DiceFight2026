@@ -399,6 +399,14 @@ public static class QueryEngine
     public static bool TriggerActive(GameState state, DieInstance die, TriggerKind trigger) =>
         !state.AbilityBlanks.Any(b => b.Trigger == trigger && b.AppliesTo(state, die));
 
+    private static IEnumerable<string> CopyMemories(CardDef card) => card.Abilities.SelectMany(a => CopyMemories(a.Effect)).Distinct();
+    private static IEnumerable<string> CopyMemories(EffectNode effect) => effect switch
+    {
+        UseRememberedOnField u => [u.MemoryName],
+        Sequence seq => seq.Steps.SelectMany(CopyMemories),
+        _ => [],
+    };
+
     public static IEnumerable<TriggeredAbility> AbilitiesOf(GameState state, DieInstance die)
     {
         if (die.CardId is { } cardId && state.CardCatalog.TryGetValue(cardId, out var card))
@@ -407,7 +415,20 @@ public static class QueryEngine
             // THE line. Permanent and granted are unconditional by
             // construction; this is the only one blanking touches.
             if (AbilitiesActive(state, die))
+            {
                 foreach (var ability in card.Abilities.Where(a => TriggerActive(state, die, a.Trigger))) yield return ability;
+                // A copier (Lyrebird / Hope Summers, 2026-11-02: "she copies
+                // Colossus and hopefully starts the damage engine early"):
+                // the remembered card's other abilities are this die's too.
+                // Its On Field already ran when the choice was made
+                // (UseRememberedOnField), and its Globals stay the card's.
+                foreach (var memory in CopyMemories(card))
+                    if (state.Memories.TryGetValue((die.ControllerId, cardId, memory), out var copiedId) && copiedId != cardId
+                        && state.CardCatalog.TryGetValue(copiedId, out var copied))
+                        foreach (var ability in copied.Abilities.Where(a => a.Trigger is not (TriggerKind.DieFielded or TriggerKind.Global)
+                                     && TriggerActive(state, die, a.Trigger)))
+                            yield return ability;
+            }
         }
 
         foreach (var granted in die.GrantedAbilities.Where(g => TriggerActive(state, die, g.Ability.Trigger))) yield return granted.Ability;
