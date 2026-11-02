@@ -173,6 +173,11 @@ public static class EffectInterpreter
             case LifeChange n: ExecuteLifeChange(n, ctx, onComplete); break;
             case PurchaseModifier n: ExecutePurchaseModifier(n, ctx, onComplete); break;
             case GrantTriggeredAbility n:
+                // A lasting grant doesn't stack: the same card's ability,
+                // granted again, is already there (Echolocation, 2026-11-01).
+                if (n.Duration == Duration.Permanent && ctx.State.GrantedTriggeredAbilities.Any(g =>
+                        g.ControllerId == ctx.ControllerId && g.SourceName == SourceName(ctx) && g.Ability == n.Ability))
+                { onComplete(); break; }
                 ctx.State.GrantedTriggeredAbilities.Add(new GrantedTriggeredAbility(ctx.ControllerId,
                     ctx.Bindings.GetValueOrDefault("self"), SourceName(ctx), n.Ability, n.Duration, ctx.State.ActivePlayerId));
                 onComplete(); break;

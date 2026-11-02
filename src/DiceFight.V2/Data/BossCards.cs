@@ -90,19 +90,27 @@ public static class BossCards
         PurchaseCost: 4, EnergySymbolIds: ["Mask"],
         Die: MigrationDice.Character("DXM009Die", "Mask", (0, 1, 1), (1, 1, 1), (1, 1, 2)),
         DieLimit: 4, Affiliations: [], Keywords: [],
-        RawText: "When fielded, reroll Mimic and target opposing character die. If that die rolls a character face, KO it. If it rolls an energy face, KO Mimic.",
+        // 2026-11-01 (user: Mimic "likely KOs itself and KOs an opposing
+        // character"): back to the source's outcome - the target is always
+        // KO'd, and Octopus goes too if either die rolls energy.
+        RawText: "When fielded, reroll Octopus and target opposing creature. KO that creature. If either die rolled an energy face, KO Octopus too.",
         Abilities: [new TriggeredAbility(TriggerKind.DieFielded, new Sequence([
             new Reroll(new TargetFilter(Ownership: TargetOwnership.Opposing, BindAs: "prey",
-                Prompt: "choose an opposing creature - both it and Octopus are rerolled.")),
-            new Reroll(new TargetFilter(Self: true)),
-            new Conditional(new OnFaceKind(FaceKind.CharacterFace, "prey"),
-                Then: new Ko(new TargetFilter(Bound: "prey")),
-                Else: new Ko(new TargetFilter(Self: true))),
+                Prompt: "choose an opposing creature - both it and Octopus are rerolled, and it is KO'd.")),
+            // No opposing creature to pick: nothing happens.
+            new Conditional(new InZone(Zone.FieldZone, "prey"), new Sequence([
+                new Reroll(new TargetFilter(Self: true)),
+                new Conditional(new OnFaceKind(FaceKind.CharacterFace, "self"),
+                    Then: new Conditional(new OnFaceKind(FaceKind.CharacterFace, "prey"),
+                        Then: new Ko(new TargetFilter(Bound: "prey")),
+                        Else: new Sequence([new Ko(new TargetFilter(Bound: "prey")), new Ko(new TargetFilter(Self: true))])),
+                    Else: new Sequence([new Ko(new TargetFilter(Bound: "prey")), new Ko(new TargetFilter(Self: true))])),
+            ])),
         ]))],
         Continuous: [], IncludeInTeamBuilder: true,
         KingdomName: "Octopus", KingdomEnergyType: "Eye", HasErrata: true,
         ErrataNotes: ["Reference: BulkCards.json, DXM009 (Mimic: Flying, Blasting, Slashing).",
-            "The copying part dropped; the outcome is decided by the target's roll (the source KOs both if either rolls energy)."]);
+            "The copying part dropped."]);
 
     // Orangutan: the wise old one who brings the young along.
     public static readonly CardDef ProfessorXRecruitingYoungMutants = new(
@@ -138,14 +146,19 @@ public static class BossCards
         PurchaseCost: 5, EnergySymbolIds: ["Mask"],
         Die: MigrationDice.Action("UXM062Die", ["Mask"], 0, 1, 2),
         DieLimit: 1, Affiliations: [], Keywords: [],
-        RawText: "The next time you field a character die this turn, KO target opposing character die.",
+        // 2026-11-01 (user: Cerebro "should _always_ be used ... every time
+        // you field that character you get to knock out a die"): lasting,
+        // as the source is, instead of once this turn. The source attaches
+        // to an X-Men card of the player's choice; Dice Kingdom has no
+        // X-Men, and this team's X-Men engine is Mimic, so it is Octopus.
+        RawText: "For the rest of the game, whenever you field an Octopus die, KO target opposing creature.",
         Abilities: [new TriggeredAbility(TriggerKind.DieUsed, new GrantTriggeredAbility(new TriggeredAbility(TriggerKind.DieFielded,
             new Ko(new TargetFilter(Ownership: TargetOwnership.Opposing, Prompt: "Echolocation - KO a target opposing creature.")),
-            Filter: new EventFilter(Ownership: TargetOwnership.Own), OncePerTurn: true)))],
+            Filter: new EventFilter(Ownership: TargetOwnership.Own, Tags: new TagQuery(AnyOf: ["Mimic"]))), Duration.Permanent))],
         Continuous: [], IncludeInTeamBuilder: true,
         KingdomName: "Echolocation", KingdomEnergyType: "Eye", HasErrata: true,
         ErrataNotes: ["Reference: BulkCards.json, UXM062 (Cerebro: Cybernetic Intelligence).",
-            "Once, this turn (the source attaches to an X-Men card for good and KOs each time one of its dice is fielded)."]);
+            "Fixed to Octopus (Mimic) - the source attaches to an X-Men card of your choice. Using it again adds nothing."]);
 
     // The Den: the safe place the young grow up.
     public static readonly CardDef XaviersSchoolHomeForGiftedYoungsters = new(

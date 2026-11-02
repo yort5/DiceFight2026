@@ -547,7 +547,8 @@ public static class DiceKingdomBot
             // (rule 2.7.4.3.1) - which is exactly what the simulator saw it
             // do every game (2026-09-29).
             if (IsRetaliator(state, die)) continue;
-            if (!WorthSwinging(state, die, blockers, persona)) continue;
+            var recycle = die.CardId is { } rc && persona.RecycleCardIds?.Contains(rc) == true;
+            if (!recycle && !WorthSwinging(state, die, blockers, persona)) continue;
             if (DrawsOnAttack(state, die))
             {
                 if (drawable - 1 < minDrawable) continue;
@@ -565,7 +566,7 @@ public static class DiceKingdomBot
             var absorbed = home < theirAttack.Count ? theirAttack[home] : 0;
             var swing = (double)QueryEngine.GetAttack(state, die) / Math.Max(1, oppLife);
             var hold = absorbed / Math.Max(1, myLife);
-            if (hold > swing * (0.75 + 0.25 * persona.Aggression)) continue;
+            if (!recycle && hold > swing * (0.75 + 0.25 * persona.Aggression)) continue;
             attackers.Add(die);
         }
         // Retaliating blockers (Rhinoceros): each can block one attacker and

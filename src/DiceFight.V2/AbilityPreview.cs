@@ -44,6 +44,9 @@ public static class AbilityPreview
         // this turn - it's discarded at Clean Up.
         if (effect is PurchaseModifier)
             return controllerId == state.ActivePlayerId && state.CurrentStep == TurnStep.Main;
+        // A lasting grant the player already has adds nothing (Echolocation).
+        if (effect is GrantTriggeredAbility { Duration: Duration.Permanent } grant)
+            return !state.GrantedTriggeredAbilities.Any(g => g.ControllerId == controllerId && g.Ability == grant.Ability);
         if (TargetOf(effect) is not { } filter) return true;
         if (filter.Bound is not null) return false;
         if (filter.Self) return true;

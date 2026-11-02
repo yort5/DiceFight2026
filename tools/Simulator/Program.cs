@@ -466,8 +466,11 @@ static class BossRun
     public static void Run(string[] championIds, Dictionary<string, string> names, int games,
         Func<string, string, IReadOnlyDictionary<string, string>?, Player> buildChampion, int maxTurns)
     {
-        foreach (var boss in DiceKingdomBosses.Ladder)
+        var only = Environment.GetEnvironmentVariable("SIM_BOSS_ONLY")?.Split(',');
+        foreach (var listed in DiceKingdomBosses.Ladder.Where(b => only is null || only.Contains(b.Id)))
         {
+            var boss = listed with { TeamLink = BossTweak.Link(listed), Style = BossTweak.Style(listed) };
+            Tally.Clear();
             Console.WriteLine($"=== {boss.Name} ({boss.Id})");
             var total = 0.0;
             foreach (var champ in championIds)
@@ -497,6 +500,10 @@ static class BossRun
                 Console.WriteLine($"  vs {names[champ],-9} boss wins {wins,3}/{games} ({100.0 * wins / decided:F1}%)  turn-cap {caps}  avg {turns / (double)Math.Max(1, games - errors):F1} turns{(errors > 0 ? $"  errors {errors}" : "")}");
             }
             Console.WriteLine($"  average {total / championIds.Length:F1}%");
+            // What the boss did with each card, per game.
+            var played = games * championIds.Length;
+            foreach (var card in Tally.Keys.Select(k => k.Card).Distinct().OrderBy(c => c))
+                Console.WriteLine($"    {Catalog.Cards[card].KingdomName ?? Catalog.Cards[card].Name,-20} bought {Tally.GetValueOrDefault((card, "buy")) / (double)played,5:F2}  fielded {Tally.GetValueOrDefault((card, "field")) / (double)played,5:F2}  used {Tally.GetValueOrDefault((card, "use")) / (double)played,5:F2}");
         }
     }
 
@@ -520,7 +527,14 @@ static class BossRun
             var persona = owner == bossSeat ? style : BotPersona.ForChampion(state.GetPlayer(owner).ChampionId);
             var decision = DiceKingdomBot.Decide(state, owner, skip, persona)
                 ?? throw new InvalidOperationException($"Bot had no decision for {owner} at step {state.CurrentStepId}.");
-            try { driver.Apply(owner, decision); }
+            var card = decision.DieId is { } die ? state.Dice.FirstOrDefault(d => d.Id == die)?.CardId : null;
+            try
+            {
+                driver.Apply(owner, decision);
+                if (owner == bossSeat && card is not null && decision.Kind is BotActionKind.Purchase or BotActionKind.Field or BotActionKind.UseAction)
+                    Tally[(card, decision.Kind switch { BotActionKind.Purchase => "buy", BotActionKind.Field => "field", _ => "use" })] =
+                        Tally.GetValueOrDefault((card, decision.Kind switch { BotActionKind.Purchase => "buy", BotActionKind.Field => "field", _ => "use" })) + 1;
+            }
             catch (InvalidOperationException) when (decision.DieId is not null) { skip.Add(decision.DieId); }
         }
         var boss = state.GetPlayer(bossSeat);
@@ -530,7 +544,31 @@ static class BossRun
             boss.Life <= 0 && champ.Life > 0 || cap && champ.Life > boss.Life, cap, turn);
     }
 
+    static readonly Dictionary<(string Card, string What), int> Tally = [];
+
     static int StableSeed(string s) => s.Aggregate(17, (h, c) => unchecked(h * 31 + c));
+}
+
+// SIM_BOSS_TWEAK - what-if for SIM_BOSSES=1 (SIM_BOSS_ONLY=id,id narrows
+// it): semicolon list of aggr=N, chump=N, rush=CardId:Bonus|none,
+// recycle=CardId,CardId|none, dilution=N, link=<team builder query,
+// & written as | and ; as ~>.
+static class BossTweak
+{
+    static Dictionary<string, string> Fields => (Environment.GetEnvironmentVariable("SIM_BOSS_TWEAK") ?? "")
+        .Split(';', StringSplitOptions.RemoveEmptyEntries).Select(f => f.Split('=', 2)).ToDictionary(f => f[0], f => f[1]);
+    public static string Link(BossDef b) => Fields.TryGetValue("link", out var l) ? l.Replace('|', '&').Replace('~', ';') : b.TeamLink;
+    public static BotPersona Style(BossDef b)
+    {
+        var f = Fields; var p = b.Style;
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        if (f.TryGetValue("aggr", out var a)) p = p with { Aggression = double.Parse(a, inv) };
+        if (f.TryGetValue("chump", out var c)) p = p with { ChumpThreshold = double.Parse(c, inv) };
+        if (f.TryGetValue("dilution", out var d)) p = p with { DilutionPerDie = double.Parse(d, inv) };
+        if (f.TryGetValue("recycle", out var rc)) p = p with { RecycleCardIds = rc == "none" ? null : rc.Split(',') };
+        if (f.TryGetValue("rush", out var r)) { var rr = r.Split(':'); p = p with { RushCardId = rr[0] == "none" ? null : rr[0], RushBonus = rr.Length > 1 ? double.Parse(rr[1], inv) : 0 }; }
+        return p;
+    }
 }
 
 static class Catalog
