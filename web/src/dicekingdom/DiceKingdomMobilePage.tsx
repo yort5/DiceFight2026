@@ -1,6 +1,5 @@
 import { KeywordAction, KeywordText } from "../KeywordPreview";
 import { CUSTOM_TEAM_PICK, pendingCustomTeam } from "./customTeams";
-import { CustomTeamSetupChoice } from "./CustomTeamSetupChoice";
 import { startTransition, useEffect, useRef, useState } from "react";
 import "./dicekingdom.css";
 import { ScreenMenu } from "../ScreenMenu";
@@ -18,9 +17,8 @@ import {
 import { Painting, hasPainting } from "./cardArt";
 import { describeSavedGame, forgetSeats, inviteLink, myLink, rememberSeats } from "./seats";
 import { GameOverOverlay } from "./GameOverOverlay";
-import { AccountLink } from "./AccountPage";
-import { OPPONENT_PICKS, PickYourChampion, ResumeGames, WaitingForOpponent, resolveInvite } from "./lobby";
-import { ChampionPicker } from "./ChampionPicker";
+import { OPPONENT_PICKS, PickYourChampion, WaitingForOpponent, resolveInvite } from "./lobby";
+import { MobileBrand, MobileHome, MobileSetup, clearPlayMode, usePlayMode } from "./MobileHome";
 import { DieCube, type CubeSpin } from "./DieCube";
 import { DieVisual } from "./DieVisual";
 import { dieEnergyType, dieIdentityKey } from "./dieDisplay";
@@ -1779,8 +1777,6 @@ export function DiceKingdomMobilePage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
-  const [setupA, setSetupA] = useState<string | null>(() => pendingCustomTeam() ? CUSTOM_TEAM_PICK : null);
-  const [setupB, setSetupB] = useState<string | null>(null);
   // Player Two becomes a basic rule-based opponent instead of a second
   // human seat - see bot.ts, and ../DiceKingdomPage.tsx's identical
   // vsComputer for the fuller remarks (fixed to player two rather than
@@ -2255,31 +2251,43 @@ export function DiceKingdomMobilePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vsComputer, gameId]);
 
-  async function startMatch() {
-    if (!setupA || !setupB) return;
-    if (setupB === OPPONENT_PICKS) {
+  // Called by the setup step (MobileHome.tsx MobileSetup) with what was
+  // picked there: `mine` a Champion or CUSTOM_TEAM_PICK, `theirs` a
+  // Champion or OPPONENT_PICKS.
+  async function startMatch(mine: string, theirs: string, computer: boolean) {
+    if (busyRef.current) return;
+    setVsComputer(computer);
+    if (theirs === OPPONENT_PICKS) {
       // Online game with only your own Champion: open it, keep both seats
       // (yours plays, the other becomes the invite link), and wait.
+      setBusy(true);
+      busyRef.current = true;
+      setError(null);
       try {
-        const hostTeam = setupA === CUSTOM_TEAM_PICK ? pendingCustomTeam() : null;
-        const opened = await api.openGame(hostTeam ?? setupA);
+        const hostTeam = mine === CUSTOM_TEAM_PICK ? pendingCustomTeam() : null;
+        const opened = await api.openGame(hostTeam ?? mine);
         rememberSeats(opened.gameId, opened.seats);
+        clearPlayMode();
         setWaiting({ gameId: opened.gameId, hostLabel: opened.hostLabel });
         const link = inviteLink(opened.gameId, "/dice-kingdom/mobile");
         if (link) navigator.clipboard?.writeText(link).catch(() => {});
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
+      } finally {
+        setBusy(false);
+        busyRef.current = false;
       }
       return;
     }
     const next = await run(async () => {
-      const custom = setupA === CUSTOM_TEAM_PICK ? pendingCustomTeam() : null;
+      const custom = mine === CUSTOM_TEAM_PICK ? pendingCustomTeam() : null;
       const created = custom
-        ? await api.createCustomGame(custom, setupB)
-        : await api.createGame(setupA, setupB);
+        ? await api.createCustomGame(custom, theirs)
+        : await api.createGame(mine, theirs);
       rememberSeats(created.game.gameId, created.seats);
       return created.game;
     });
+    clearPlayMode();
     // Copies the invite link the moment the match exists, right off the
     // Start Match tap - direct feedback (2026-09-17), asked for alongside
     // moving the persistent Invite row down to above the Log: "maybe we
@@ -2288,7 +2296,7 @@ export function DiceKingdomMobilePage() {
     // closest real equivalent - the very first thing that happens after
     // starting is the link already being in your clipboard, ready to
     // send, rather than needing to scroll down to find the button.
-    if (!vsComputer) {
+    if (!computer) {
       const link = inviteLink(next.gameId, "/dice-kingdom/mobile");
       if (link) {
         navigator.clipboard?.writeText(link).then(
@@ -2306,13 +2314,14 @@ export function DiceKingdomMobilePage() {
   usePhaseHeight(stageShellRef, flightPhase);
   useDieFlights(rootRef, game, flightPhase, game ? (game.yourPlayerId ?? game.playerOne.id) : "");
   useGameSounds(game);
+  // Before a game: the home, or the setup step for one way to play (?play=).
+  const playMode = usePlayMode();
 
   if (!game && (waiting || invitePick)) {
     return (
       <div ref={rootRef} className="dicekingdom dk-mobile dkm-root">
         <EnergyBadgeOutlineDefs />
-        <p className="dkm-eyebrow">DiceFight v3 · mobile</p>
-        <h1 className="dkm-title">Dice Kingdom</h1>
+        <MobileBrand />
         {error && <p className="dkm-error">{error}</p>}
         {waiting ? (
           <WaitingForOpponent
@@ -2339,68 +2348,37 @@ export function DiceKingdomMobilePage() {
     );
   }
 
+  // The launch page (2026-11-10) - MobileHome.tsx. It replaced a form
+  // (a "Play vs Computer" checkbox over two columns of Champion buttons
+  // shared with ../DiceKingdomPage.tsx) with a lobby: pick a way to play,
+  // then your Champion.
   if (!game) {
     return (
       <div ref={rootRef} className="dicekingdom dk-mobile dkm-root">
-        <div className="start-screen-navigation"><ScreenMenu screen="start" startRoute="/dice-kingdom/mobile" /></div>
         <EnergyBadgeOutlineDefs />
-        <p className="dkm-eyebrow">DiceFight v3 · mobile</p>
-        <h1 className="dkm-title">Dice Kingdom</h1>
-        <p className="dkm-dek">
-          Pick your Champion. For an online game, choose "Opponent picks" for Player 2 and send the link - they choose
-          their own.
-        </p>
-        {error && <p className="dkm-error">{error}</p>}
-        <AccountLink from="mobile" />
-        <ResumeGames
-          onResume={(r) => {
-            setError(null);
-            if (r.kind === "game") {
-              setVsComputer(r.vsComputer);
-              setGame(r.game);
-            } else setWaiting({ gameId: r.gameId, hostLabel: r.hostLabel });
-          }}
-        />
-        {/* Same two-column layout as ../DiceKingdomPage.tsx's own picker
-            (direct feedback, 2026-09-14: "makes more sense to have them
-            in two columns") - reuses that page's own .champ-pick-columns/
-            .champ-opt classes verbatim rather than a mobile-specific
-            reimplementation, now that this page carries the .dicekingdom
-            class those are scoped under (see the energy-badge fix's own
-            remarks on why that class was added here). */}
-        <div className="panel">
-          <label style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 0 14px", fontSize: 14 }}>
-            <input
-              type="checkbox"
-              checked={vsComputer}
-              onChange={(e) => {
-                setVsComputer(e.target.checked);
-                if (e.target.checked && setupB === OPPONENT_PICKS) setSetupB(null);
-              }}
-            />
-            Play vs Computer - a basic rule-based opponent (highest attacker attacks, best affordable
-            purchase/block), not a strategic one
-          </label>
-          <div className="champ-pick-columns">
-            {[
-              { label: "Player 1", value: setupA, setValue: setSetupA },
-              { label: vsComputer ? "Computer" : "Player 2", value: setupB, setValue: setSetupB },
-            ].map(({ label, value, setValue }) => (
-              <div className="champ-pick-column" key={label}>
-                <h3 style={{ margin: "0 0 10px" }}>{label}</h3>
-                {setValue === setSetupA && pendingCustomTeam()
-                  ? <CustomTeamSetupChoice champions={CHAMPIONS} team={pendingCustomTeam()}
-                      value={value} onPick={setValue} />
-                  : <ChampionPicker champions={CHAMPIONS} value={value} onPick={setValue}
-                      allowOpponentPicks={setValue === setSetupB && !vsComputer} />}
-
-              </div>
-            ))}
-          </div>
-          <button className="btn" disabled={!setupA || !setupB || busy} onClick={startMatch}>
-            Start Match
-          </button>
-        </div>
+        {playMode ? (
+          <MobileSetup
+            key={playMode}
+            mode={playMode}
+            champions={CHAMPIONS}
+            busy={busy}
+            error={error}
+            onBack={() => setError(null)}
+            onStart={startMatch}
+          />
+        ) : (
+          <MobileHome
+            cardsById={cardsById}
+            error={error}
+            onResume={(r) => {
+              setError(null);
+              if (r.kind === "game") {
+                setVsComputer(r.vsComputer);
+                setGame(r.game);
+              } else setWaiting({ gameId: r.gameId, hostLabel: r.hostLabel });
+            }}
+          />
+        )}
       </div>
     );
   }

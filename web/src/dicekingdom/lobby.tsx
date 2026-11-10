@@ -156,7 +156,7 @@ export type Resumed =
   | { kind: "game"; game: GameState; vsComputer: boolean }
   | { kind: "waiting"; gameId: string; hostLabel: string };
 
-function ago(ms: number): string {
+export function ago(ms: number): string {
   const minutes = Math.round((Date.now() - ms) / 60000);
   if (minutes < 1) return "just now";
   if (minutes < 60) return `${minutes} min ago`;
@@ -195,8 +195,10 @@ export function adoptServerGames(me: Me): void {
  * holds a seat in (seats.ts) - and, since 2026-10-10, unfinished games this
  * player started on their other devices (player.ts). `?resume=<gameId>` in
  * the URL (the account page's Resume) resumes that one straight away.
+ * The list and its actions are a hook so the mobile home (MobileHome.tsx)
+ * can draw its own "Continue" cards from the same thing.
  */
-export function ResumeGames({ onResume }: { onResume: (r: Resumed) => void }) {
+export function useResumeGames(onResume: (r: Resumed) => void) {
   const [games, setGames] = useState<SavedGame[]>(() => savedGames());
   const [note, setNote] = useState<string | null>(null);
   // Read once, before the effect strips it - StrictMode runs effects twice.
@@ -224,8 +226,6 @@ export function ResumeGames({ onResume }: { onResume: (r: Resumed) => void }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (games.length === 0 && !note) return null;
-
   async function resume(g: SavedGame) {
     setNote(null);
     resumeSeats(g.gameId);
@@ -243,6 +243,18 @@ export function ResumeGames({ onResume }: { onResume: (r: Resumed) => void }) {
       setNote(`${g.label ?? "That game"} can't be resumed: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
+
+  function forget(g: SavedGame) {
+    forgetSavedGame(g.gameId);
+    setGames(savedGames());
+  }
+
+  return { games, note, resume, forget };
+}
+
+export function ResumeGames({ onResume }: { onResume: (r: Resumed) => void }) {
+  const { games, note, resume, forget } = useResumeGames(onResume);
+  if (games.length === 0 && !note) return null;
 
   return (
     <div className="panel dk-resume">
@@ -263,10 +275,7 @@ export function ResumeGames({ onResume }: { onResume: (r: Resumed) => void }) {
             className="dk-resume-forget"
             aria-label="Forget this game"
             title="Forget this game"
-            onClick={() => {
-              forgetSavedGame(g.gameId);
-              setGames(savedGames());
-            }}
+            onClick={() => forget(g)}
           >
             ✕
           </button>

@@ -5083,3 +5083,45 @@ Replaced the three sample bosses (user's call); styles as proposed.
   (it showed nothing).
 - UI checks: `~/.devtools/playwright/boss-teams-check.js`,
   `boss-roster-check.js`.
+
+## 2026-11-10 - A launch page for the mobile app
+
+User: "the home page leaves much to be desired. Can we re-imagine the
+launch page to be more engaging, eye-catching?" The mobile start screen
+was the desktop setup form squeezed down: an eyebrow ("DiceFight v3 ·
+mobile"), four text links, two Champion columns, a "play the computer"
+checkbox and a Start button - a form, and nothing of the game on it.
+
+- **Home** (`MobileHome.tsx`, `mobileHome.css`): a dusk hero that is the
+  same in both themes - a fan of five real card paintings (dealt in,
+  one flips to a new card every few seconds; tap one to flip it), two
+  3D energy dice (each rolls once on arrival; tap to roll), the
+  wordmark, the four energy badges. Then what a player came for, in order: Continue
+  cards for unfinished games (two, the rest behind "N more"), a big
+  Quick Match button, tiles for Boss Ladder (next boss, progress pips),
+  Play a Friend, Pass & Play and Card Packs (says when a pack is
+  affordable), and Team Builder / How to Play (tagged "Start here" for
+  a player with no games yet). Top bar: player chip -> account, coins
+  -> packs, the menu. All motion stops under prefers-reduced-motion.
+- **Setup is a step, not the page** (`MobileSetup`): `?play=computer`,
+  `friend` or `local` on the same route, pushed onto history so the
+  phone's Back returns home. The mode decides the rest, so the checkbox
+  and the second column are gone: Quick Match = your Champion + a
+  compact opponent row that defaults to "Surprise me" (a random other
+  Champion); Play a Friend = your Champion only, then the invite link
+  (always the open-game flow - the host no longer picks for the
+  friend on mobile); Pass & Play = both. Picking shows the Champion's
+  power. The last Champion you started with is preselected
+  (`dicekingdom:lastChampion`). A staged custom team leads the list.
+- The waiting and invite-pick screens get the compact hero
+  (`MobileBrand`) instead of the old eyebrow/title.
+- **Shared code:** `useResumeGames` (lobby.tsx) is the list behind both
+  `ResumeGames` and the Continue cards; `players.me()` dedupes
+  in-flight calls (the home asks from three places); `PLAYSTYLES` and
+  `usePowerText` exported from ChampionPicker. `startMatch(mine,
+  theirs, vsComputer)` takes its picks as arguments now.
+- Desktop `/dice-kingdom` is unchanged.
+- The personal UI checks in `~/.devtools/playwright/` that start a
+  mobile game through the old form (`.champ-pick-column`, "Start
+  Match") no longer match; start one with
+  `/dice-kingdom/mobile?play=computer`, `.dks-champ`, `.dks-start`.

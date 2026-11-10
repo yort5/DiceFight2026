@@ -34,7 +34,7 @@ export function OpponentPicksOption({ selected, onPick }: { selected: boolean; o
 // How each Champion tends to play. The power itself comes from the server
 // (Champion.passiveText - ChampionPowers.Describe, the same text the card
 // reference prints), so it can't drift from the rules when a power changes.
-const PLAYSTYLES: Record<string, string> = {
+export const PLAYSTYLES: Record<string, string> = {
   Wolf: "Aggressive: push damage by strengthening a key attacker.",
   Armadillo: "Defensive: protect a valuable creature during combat.",
   GoldenEagle: "Efficient: deploy creatures while conserving energy for other actions.",
@@ -43,7 +43,7 @@ const PLAYSTYLES: Record<string, string> = {
 
 // One fetch of the Champions' power text, shared by every picker on the page.
 let powerText: Promise<Record<string, string>> | null = null;
-function usePowerText(): Record<string, string> {
+export function usePowerText(): Record<string, string> {
   const [text, setText] = useState<Record<string, string>>({});
   useEffect(() => {
     powerText ??= api

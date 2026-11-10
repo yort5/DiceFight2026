@@ -183,8 +183,16 @@ async function call<T>(path: string, init?: RequestInit, retried = false): Promi
   return res.json() as Promise<T>;
 }
 
+// One request for everything on the screen that asks at once: the day's
+// coins are only reported on the first answer (Me.dailyCoins), so two
+// callers racing would leave one of them - whichever shows it - without.
+let meInFlight: Promise<Me> | null = null;
+
 export const players = {
-  me: () => call<Me>("/me"),
+  me: () =>
+    (meInFlight ??= call<Me>("/me").finally(() => {
+      meInFlight = null;
+    })),
   setName: (name: string | null) => call<Me>("/me/name", { method: "PUT", body: JSON.stringify({ name }) }),
   linkCode: () => call<{ code: string; expiresUtc: string }>("/me/link-code", { method: "POST" }),
   link: (code: string) => call<Me>("/me/link", { method: "POST", body: JSON.stringify({ code }) }),
