@@ -1,0 +1,1267 @@
+/* The side pages in the launch page's style (2026-11-11): Boss Ladder, Card
+   Packs, How to Play, Account. PageShell.tsx draws the frame - a dusk bar
+   that stays put over the launch page's sky (mobileHome.css) - and each
+   page's own pieces follow: dkp- is the frame and what the pages share,
+   dkb- the boss ladder, dkk- the packs, dkr- the rules, dka- the account.
+   Everything reads the .dicekingdom tokens, so it follows light and dark;
+   the colours made here are mixed from those rather than set per theme. */
+
+.dkp {
+  --dkp-go-a: #ffb066;
+  --dkp-go-b: #dd5a2a;
+  --dkp-go-lip: #96380f;
+  --dkp-go-ink: #2a1206;
+  /* Gold that reads on the page's own surface: darker on light, paler on dark. */
+  --dkp-gold: color-mix(in srgb, #f0a81e 58%, var(--text-h));
+  /* A well sunk into a panel. */
+  --dkp-inset: color-mix(in srgb, var(--text-h) 7%, transparent);
+  --dkp-lip: color-mix(in srgb, var(--text-h) 22%, var(--panel-bg));
+}
+
+/* ---- The bar: the way back, and the page's switches ---- */
+.dkp .dkp-bar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -24px -16px 0;
+  padding: max(8px, env(safe-area-inset-top, 0px)) 12px 8px;
+  background: #171427;
+  color: #fff8ec;
+  box-shadow: 0 10px 16px -14px rgba(0, 0, 0, 0.9);
+}
+.dkp .dkp-round {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid rgba(255, 248, 236, 0.2);
+  border-radius: 50%;
+  background: rgba(255, 248, 236, 0.08);
+  color: #fff8ec;
+  cursor: pointer;
+  transition: transform 0.09s ease, background 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.dkp .dkp-round:active {
+  transform: scale(0.92);
+  background: rgba(255, 248, 236, 0.2);
+}
+.dkp .dkp-round.is-off {
+  color: rgba(255, 248, 236, 0.5);
+}
+/* The page's name joins the bar once its big one has scrolled away. */
+.dkp .dkp-bar-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font: 400 19px/1 var(--display);
+  letter-spacing: 0.04em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+  opacity: 0;
+}
+@supports (animation-timeline: scroll()) {
+  .dkp .dkp-bar-title {
+    animation: dkp-bar-title linear both;
+    animation-timeline: scroll(root);
+    animation-range: 60px 130px;
+  }
+}
+@keyframes dkp-bar-title {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.dkp .dkp-bar-tools {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+/* A count in the bar: your coins. */
+.dkp .dkp-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 44px;
+  padding: 0 14px 0 10px;
+  border: 1px solid rgba(255, 248, 236, 0.2);
+  border-radius: 22px;
+  background: rgba(255, 248, 236, 0.08);
+  font: 400 19px/1 var(--display);
+  letter-spacing: 0.03em;
+}
+.dkp .dkp-chip svg {
+  color: #ffd45f;
+}
+.dkp .dkp-chip small {
+  color: #9be0b4;
+  font: 700 12px/1 var(--sans);
+  letter-spacing: 0;
+}
+
+/* ---- The hero: the launch page's sky, the page's name in the logo's gold ---- */
+.dkp .dkh-hero.dkp-hero {
+  margin: 0 -16px 18px;
+  padding: 6px 18px 22px;
+}
+.dkp .dkp-hero-in {
+  position: relative;
+}
+.dkp .dkp-hero.has-art .dkp-hero-in {
+  padding-right: 128px;
+}
+.dkp .dkp-title {
+  --ring: #4a1c0c;
+  position: relative;
+  isolation: isolate;
+  display: inline-block;
+  max-width: 100%;
+  margin: 0;
+  color: var(--ring);
+  font: 400 clamp(38px, 12.5vw, 56px) / 1.02 var(--display);
+  letter-spacing: 0.02em;
+  overflow-wrap: anywhere;
+  text-transform: uppercase;
+  text-shadow:
+    0.05em 0 0 var(--ring), 0.043em 0.025em 0 var(--ring), 0.025em 0.043em 0 var(--ring),
+    0 0.05em 0 var(--ring), -0.025em 0.043em 0 var(--ring), -0.043em 0.025em 0 var(--ring),
+    -0.05em 0 0 var(--ring), -0.043em -0.025em 0 var(--ring), -0.025em -0.043em 0 var(--ring),
+    0 -0.05em 0 var(--ring), 0.025em -0.043em 0 var(--ring), 0.043em -0.025em 0 var(--ring);
+}
+/* The same letter twice more: a dropped edge behind, the gold face in front. */
+.dkp .dkp-title::before,
+.dkp .dkp-title::after {
+  content: attr(data-text);
+  content: attr(data-text) / "";
+  position: absolute;
+  inset: 0;
+}
+.dkp .dkp-title::before {
+  --ring: #1f0a05;
+  z-index: -1;
+  top: 0.075em;
+  color: var(--ring);
+  text-shadow:
+    0.05em 0 0 var(--ring), 0.043em 0.025em 0 var(--ring), 0.025em 0.043em 0 var(--ring),
+    0 0.05em 0 var(--ring), -0.025em 0.043em 0 var(--ring), -0.043em 0.025em 0 var(--ring),
+    -0.05em 0 0 var(--ring), -0.043em -0.025em 0 var(--ring), -0.025em -0.043em 0 var(--ring),
+    0 0.16em 0.16em rgba(0, 0, 0, 0.55);
+}
+.dkp .dkp-title::after {
+  color: #ffd56e;
+  text-shadow: none;
+  background:
+    linear-gradient(105deg, transparent 42%, rgba(255, 255, 255, 0.95) 50%, transparent 58%) 100% 0 / 300% 100% no-repeat,
+    linear-gradient(180deg, #fffdf0 8%, #ffe592 40%, #ffc24e 50%, #f59a3a 74%, #e2702e 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: dkh-sheen 6s ease-in-out 1.2s infinite;
+}
+.dkp .dkp-dek {
+  max-width: 44ch;
+  margin: 10px 0 0;
+  color: rgba(255, 248, 236, 0.84);
+  font-size: 14.5px;
+  line-height: 1.45;
+}
+.dkp .dkp-loading {
+  margin: 32px 0;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+/* ---- What the pages share ---- */
+.dkp .panel {
+  margin: 14px 0;
+  padding: 16px;
+  border-radius: 20px;
+}
+.dkp .panel p {
+  font-size: 14px;
+  line-height: 1.45;
+}
+.dkp .panel > h3,
+.dkp .dkp-h {
+  margin: 0 0 10px;
+  color: var(--text-h);
+  font: 400 21px/1.1 var(--display);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.dkp .dk-acct-dim {
+  color: var(--text-dim);
+  opacity: 1;
+}
+
+/* A button with a lip under it that sinks when pressed - the launch page's. */
+.dicekingdom.dkp button.btn {
+  --a: var(--panel-bg-strong);
+  --b: var(--panel-bg-strong);
+  --lip: var(--dkp-lip);
+  --ink: var(--text-h);
+  --drop: 4px;
+  position: relative;
+  min-height: 44px;
+  margin-bottom: var(--drop);
+  padding: 9px 18px;
+  border: 0;
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 52%),
+    linear-gradient(160deg, var(--a), var(--b));
+  color: var(--ink);
+  font: 700 15px var(--sans);
+  letter-spacing: 0;
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.12),
+    inset 0 0 0 1px color-mix(in srgb, var(--lip) 55%, transparent),
+    0 var(--drop) 0 var(--lip),
+    0 calc(var(--drop) + 7px) 12px -8px rgba(0, 0, 0, 0.5);
+  transition: transform 0.09s ease, box-shadow 0.09s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.dicekingdom.dkp button.btn:active:not(:disabled) {
+  transform: translateY(calc(var(--drop) - 1px));
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.12),
+    inset 0 0 0 1px color-mix(in srgb, var(--lip) 55%, transparent),
+    0 1px 0 var(--lip),
+    0 4px 6px -5px rgba(0, 0, 0, 0.5);
+}
+.dicekingdom.dkp button.btn.is-go {
+  --a: var(--dkp-go-a);
+  --b: var(--dkp-go-b);
+  --lip: var(--dkp-go-lip);
+  --ink: var(--dkp-go-ink);
+}
+.dicekingdom.dkp button.btn.is-boss {
+  --a: #9468dc;
+  --b: #55299a;
+  --lip: #331766;
+  --ink: #fff;
+}
+.dicekingdom.dkp button.btn.is-blue {
+  --a: #55aaf0;
+  --b: #2262bd;
+  --lip: #153b80;
+  --ink: #fff;
+}
+.dicekingdom.dkp button.btn.is-green {
+  --a: #45c592;
+  --b: #18805b;
+  --lip: #0c553c;
+  --ink: #fff;
+}
+.dicekingdom.dkp button.btn.is-gold {
+  --a: #ffd96a;
+  --b: #f09c22;
+  --lip: #a05c08;
+  --ink: #3a2002;
+}
+.dicekingdom.dkp button.btn:is(.is-boss, .is-blue, .is-green) {
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
+}
+/* The quiet ones stay flat: Cancel, Rename, Sign out. */
+.dicekingdom.dkp button.btn.ghost,
+.dicekingdom.dkp button.btn.dk-acct-quiet {
+  margin-bottom: 0;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: none;
+  opacity: 1;
+}
+.dicekingdom.dkp button.btn.ghost:active,
+.dicekingdom.dkp button.btn.dk-acct-quiet:active {
+  transform: scale(0.97);
+  background: var(--dkp-inset);
+  box-shadow: none;
+}
+.dicekingdom.dkp button.btn:disabled {
+  --a: var(--panel-bg-strong);
+  --b: var(--panel-bg-strong);
+  --lip: var(--dkp-lip);
+  --ink: var(--text-dim);
+  opacity: 0.7;
+  text-shadow: none;
+}
+/* A big one: the page's main move. */
+.dicekingdom.dkp button.btn.dkb-go {
+  width: 100%;
+}
+.dicekingdom.dkp button.btn:is(.is-big, .dkb-go) {
+  --drop: 5px;
+  min-height: 54px;
+  padding: 10px 22px;
+  border-radius: 18px;
+  font: 400 21px/1 var(--display);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.dkp input,
+.dkp select {
+  min-height: 44px;
+  border-radius: 12px;
+}
+
+/* A line of news above the page's panels. */
+.dkp .dkp-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 11px 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--panel-bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.4;
+}
+.dkp .dkp-note svg {
+  flex: none;
+}
+.dkp .dkp-note b {
+  color: var(--text-h);
+}
+.dkp .dkp-note.is-won {
+  border-color: color-mix(in srgb, var(--shell) 60%, transparent);
+  background: color-mix(in srgb, var(--shell) 16%, var(--panel-bg));
+  color: var(--text-h);
+}
+.dkp .dkp-note.is-won svg {
+  color: var(--shell);
+}
+
+/* A way on to somewhere else. */
+.dkp .dkp-linkcard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 16px 0 0;
+  padding: 14px 16px;
+  border: 1.5px dashed var(--border);
+  border-radius: 18px;
+  color: var(--text);
+  font-size: 13.5px;
+  line-height: 1.4;
+  text-decoration: none;
+}
+.dkp .dkp-linkcard svg {
+  flex: none;
+  color: var(--dkp-gold);
+}
+.dkp .dkp-linkcard b {
+  display: block;
+  color: var(--text-h);
+  font: 400 17px/1.2 var(--display);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.dkp .dkp-linkcard:active {
+  background: var(--dkp-inset);
+}
+
+/* The Champion picker, as tiles you press. */
+.dkp .champ-opt {
+  margin-bottom: 4px;
+  padding: 12px 8px 10px;
+  border: 2px solid transparent;
+  border-radius: 16px;
+  background: var(--panel-bg-strong);
+  box-shadow: 0 4px 0 var(--dkp-lip);
+  transition: transform 0.09s ease, box-shadow 0.09s ease, background 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.dkp .champ-opt:hover {
+  transform: none;
+}
+.dkp .champ-opt:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--dkp-lip);
+}
+.dkp .champ-opt.selected {
+  border-color: var(--sel, var(--text-h));
+  background: color-mix(in srgb, var(--sel, var(--text-h)) 18%, var(--panel-bg-strong));
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--sel, var(--text-h)) 60%, #000);
+}
+.dkp .champ-opt .cname {
+  font-size: 14px;
+  letter-spacing: 0.03em;
+}
+
+.dkp a:focus-visible,
+.dkp button:focus-visible,
+.dkp summary:focus-visible,
+.dkp select:focus-visible {
+  outline: 2px solid var(--wing);
+  outline-offset: 2px;
+}
+.dkp .dkp-bar :focus-visible {
+  outline-color: #7cb8e6;
+}
+
+/* ---- Boss Ladder ---- */
+.dkp .dkb-score {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 16px;
+  padding: 9px 16px 9px 12px;
+  border: 1px solid rgba(255, 248, 236, 0.2);
+  border-radius: 18px;
+  background: rgba(20, 16, 34, 0.5);
+}
+.dkp .dkb-rungs {
+  flex: none;
+  display: flex;
+  gap: 5px;
+}
+.dkp .dkb-rungs .dkh-crown {
+  width: 26px;
+  color: rgba(255, 255, 255, 0.24);
+}
+.dkp .dkb-rungs .is-beaten {
+  color: #ffd45f;
+}
+.dkp .dkb-rungs .is-open {
+  color: #fff8ec;
+  animation: dkh-blink 1.6s ease-in-out infinite alternate;
+}
+.dkp .dkb-score-text {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.dkp .dkb-score-text b {
+  color: #ffd45f;
+  font: 400 24px/1 var(--display);
+  letter-spacing: 0.02em;
+}
+.dkp .dkb-score-text small {
+  display: block;
+  margin-top: 2px;
+  color: rgba(255, 248, 236, 0.7);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.dkp .dkb-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 22px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dkp .dkb-boss {
+  --a: #9468dc;
+  --b: #55299a;
+  --ink: #fff;
+  position: relative;
+  border-radius: 22px;
+  background: var(--panel-bg);
+  box-shadow: 0 0 0 1px var(--border), var(--shadow);
+  animation: dkh-rise 0.5s ease backwards;
+}
+.dkp .dkb-boss:nth-child(2) {
+  animation-delay: 0.07s;
+}
+.dkp .dkb-boss:nth-child(n + 3) {
+  animation-delay: 0.14s;
+}
+/* The rail from one boss up to the next. */
+.dkp .dkb-boss + .dkb-boss::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -22px;
+  width: 4px;
+  height: 22px;
+  margin-left: -2px;
+  background: repeating-linear-gradient(180deg, var(--border) 0 4px, transparent 4px 8px);
+}
+.dkp .dkb-boss.is-beaten {
+  --a: #ffd96a;
+  --b: #f09c22;
+  --ink: #3a2002;
+}
+.dkp .dkb-boss.is-locked {
+  --a: #7d8398;
+  --b: #4a4f63;
+}
+.dkp .dkb-banner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 5px;
+  min-height: 126px;
+  padding: 14px 120px 14px 16px;
+  border-radius: 22px 22px 0 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 52%),
+    repeating-linear-gradient(118deg, rgba(255, 255, 255, 0.055) 0 16px, transparent 16px 32px),
+    linear-gradient(160deg, var(--a), var(--b));
+  box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.45), inset 0 -2px 0 rgba(0, 0, 0, 0.14);
+  color: var(--ink);
+}
+.dkp .dkb-rank {
+  padding: 4px 10px 3px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.28);
+  color: #fff;
+  font: 400 12px/1 var(--display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.dkp .dkb-banner h3 {
+  margin: 0;
+  color: inherit;
+  font: 400 clamp(22px, 6.6vw, 27px) / 1.05 var(--display);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
+}
+.dkp .dkb-boss.is-beaten .dkb-banner h3 {
+  text-shadow: 0 1.5px 0 rgba(255, 255, 255, 0.4);
+}
+.dkp .dkb-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 700;
+  opacity: 0.92;
+}
+/* The boss's own card, tilted, crowned. */
+.dkp .dkb-card {
+  position: absolute;
+  top: 14px;
+  right: 22px;
+  width: 74px;
+  height: 100px;
+  border: 4px solid #fff8ec;
+  border-radius: 10px;
+  background: linear-gradient(160deg, #3a2066, #170b30);
+  box-shadow: 0 8px 14px -6px rgba(0, 0, 0, 0.7);
+  rotate: 6deg;
+}
+.dkp .dkb-card img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 6px;
+  object-fit: cover;
+}
+.dkp .dkb-card .dkh-crown {
+  position: absolute;
+  left: -19px;
+  top: -20px;
+  width: 42px;
+  color: #ffd45f;
+  stroke: #5a2c08;
+  stroke-width: 3;
+  stroke-linejoin: round;
+  paint-order: stroke;
+  rotate: -22deg;
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.3));
+}
+.dkp .dkb-card .dkh-crown-band {
+  stroke: #5a2c08;
+  stroke-width: 2;
+}
+.dkp .dkb-boss.is-open .dkb-card {
+  animation: dkh-float 3s ease-in-out 0.6s infinite alternate;
+}
+.dkp .dkb-boss.is-open .dkb-card .dkh-crown {
+  transform-origin: 60% 90%;
+  animation: dkh-nod 4.5s ease-in-out 1.5s infinite;
+}
+.dkp .dkb-boss.is-beaten .dkb-card .dkh-crown {
+  color: #fff8ec;
+}
+.dkp .dkb-boss.is-locked .dkb-card img {
+  filter: grayscale(1) brightness(0.45);
+}
+.dkp .dkb-card-lock {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #fff8ec;
+}
+
+.dkp .dkb-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  padding: 14px 16px 16px;
+}
+.dkp .dkb-body p {
+  margin: 0;
+}
+.dkp .dkb-blurb {
+  color: var(--text-h);
+  font-size: 15px;
+  line-height: 1.45;
+}
+.dkp .dkb-style {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.dkp .dkb-style span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--dkp-inset);
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+/* Its team: faces in a row, then the list. */
+.dkp .dkb-team summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 5px 10px 5px 6px;
+  border-radius: 14px;
+  background: var(--dkp-inset);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  list-style: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.dkp .dkb-team summary::-webkit-details-marker {
+  display: none;
+}
+.dkp .dkb-team summary svg {
+  flex: none;
+  transition: rotate 0.15s ease;
+}
+.dkp .dkb-team[open] summary svg {
+  rotate: 180deg;
+}
+.dkp .dkb-peek {
+  display: flex;
+  min-width: 0;
+  /* Room for the faces' rings; a narrow phone shows as many as fit. */
+  padding: 2px 2px 2px 8px;
+  overflow: hidden;
+}
+.dkp .dkb-peek .dkb-face {
+  margin-left: -6px;
+  box-shadow: 0 0 0 2px var(--panel-bg);
+}
+.dkp .dkb-team-label {
+  margin-left: auto;
+  white-space: nowrap;
+}
+.dkp .dkb-face {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--energy, var(--wild)) 34%, var(--panel-bg-strong));
+  color: var(--energy, var(--wild));
+  font: 400 15px/1 var(--display);
+  overflow: hidden;
+}
+.dkp .dkb-face img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.dkp .dkb-face.is-tardigrade {
+  --energy: var(--tone);
+}
+.dkp .dkb-face.is-more {
+  background: var(--panel-bg-strong);
+  color: var(--text);
+  font: 700 11.5px/1 var(--sans);
+}
+.dkp .dkb-team ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(124px, 1fr));
+  gap: 8px 14px;
+  margin: 10px 0 0;
+  padding: 0 4px;
+  list-style: none;
+}
+.dkp .dkb-team li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 13.5px;
+}
+.dkp .dkb-team li span:not(.dkb-face) {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-h);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dkp .dkb-team li b {
+  color: var(--text-dim);
+  font-weight: 700;
+}
+
+/* What a win pays, as chips. */
+.dkp .dkb-reward {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.dkp .dkb-reward > b {
+  margin-right: 2px;
+  color: var(--text-dim);
+  font: 400 14px/1 var(--display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.dkp .dkb-prize {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--dkp-gold) 16%, transparent);
+  color: var(--text-h);
+  font-size: 13px;
+  font-weight: 700;
+}
+.dkp .dkb-prize svg {
+  flex: none;
+  width: 16px;
+  color: var(--dkp-gold);
+}
+.dkp .dkb-prize.is-die {
+  background: color-mix(in srgb, var(--rarity, var(--wild)) 20%, transparent);
+}
+.dkp .dkb-prize.is-none {
+  background: var(--dkp-inset);
+  color: var(--text-dim);
+  font-weight: 600;
+}
+/* A die of that rarity. */
+.dkp .dkb-gem {
+  flex: none;
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--rarity, var(--wild)) 60%, #fff), var(--rarity, var(--wild)));
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
+  rotate: 45deg;
+}
+.dkp .dkb-locked {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-dim);
+  font-size: 14px;
+  font-weight: 600;
+}
+.dkp .dkb-pick {
+  padding: 14px;
+  border-radius: 18px;
+  background: var(--dkp-inset);
+}
+.dkp .dkb-pick h4 {
+  margin: 0 0 10px;
+  color: var(--text-h);
+  font: 400 17px/1 var(--display);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.dkp .dkb-pick .hint {
+  margin: 10px 0 0;
+}
+.dkp .dkb-pick-go {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+.dkp .dkb-pick-go .is-go {
+  flex: 1 1 180px;
+}
+.dkp .dkb-pick-go .ghost {
+  min-height: 48px;
+}
+
+/* ---- Stat tiles (the account's record, the collection's counts) ---- */
+.dkp .panel .dka-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+  gap: 8px;
+  margin: 0 0 12px;
+}
+.dkp .dka-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--dkp-inset);
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.dkp .dka-stat b {
+  color: var(--text-h);
+  font: 400 30px/1 var(--display);
+  letter-spacing: 0.02em;
+}
+.dkp .dka-stat.is-win b {
+  color: var(--shell);
+}
+.dkp .dka-stat.is-loss b {
+  color: var(--claw);
+}
+
+/* ---- Account ---- */
+.dkp .dka-avatar {
+  position: absolute;
+  top: 8px;
+  right: 22px;
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  border: 4px solid #fff8ec;
+  border-radius: 26px;
+  background: linear-gradient(160deg, #ffb066, #dd5a2a);
+  box-shadow: 0 5px 0 #96380f, 0 14px 16px -8px rgba(0, 0, 0, 0.7);
+  color: #fff8ec;
+  font: 400 50px/1 var(--display);
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.25);
+  rotate: 5deg;
+}
+.dkp.dka .dkp-hero.has-art .dkp-hero-in {
+  min-height: 92px;
+  padding-right: 112px;
+}
+.dkp .dka-champs {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dkp .dka-champs li {
+  display: grid;
+  grid-template-columns: minmax(0, 9.5em) 1fr auto;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+.dkp .dka-champ {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-h);
+  font-weight: 600;
+}
+.dkp .dka-champs b {
+  color: var(--text-h);
+  font-variant-numeric: tabular-nums;
+}
+/* A track, filled as far as --won / --have. */
+.dkp .dka-bar,
+.dkp .dkk-progress {
+  display: block;
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--fill, var(--shell)) var(--won, var(--have, 0%)), var(--dkp-inset) 0);
+}
+.dkp .dk-acct-game {
+  min-height: 44px;
+  padding: 9px 0;
+  font-size: 14px;
+}
+.dkp .dk-acct-game-label {
+  color: var(--text-h);
+}
+.dkp .dk-acct-game-label small {
+  color: var(--text-dim);
+  opacity: 1;
+}
+.dkp .dk-acct-result {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--dkp-inset);
+}
+.dkp .dk-acct-win {
+  background: color-mix(in srgb, var(--shell) 18%, transparent);
+}
+.dkp .dk-acct-loss {
+  background: color-mix(in srgb, var(--claw) 16%, transparent);
+}
+.dkp .dk-acct-row {
+  align-items: center;
+}
+.dkp .dk-acct-row input {
+  flex: 1 1 140px;
+  min-width: 0;
+}
+.dkp .panel .dk-acct-code {
+  padding: 12px 14px;
+  border: 2px dashed var(--border);
+  border-radius: 16px;
+  background: var(--dkp-inset);
+  text-align: center;
+}
+
+/* ---- Card Packs ---- */
+.dkp.dkk .dkp-hero.has-art .dkp-hero-in {
+  min-height: 118px;
+  padding-right: 118px;
+}
+.dkp.dkk .dkh-art-pack {
+  top: 4px;
+}
+.dkp.dkk.is-opening .dkh-pack {
+  animation: dkk-shake 0.4s ease-in-out infinite;
+}
+@keyframes dkk-shake {
+  0%,
+  100% {
+    transform: rotate(-7deg);
+  }
+  50% {
+    transform: rotate(7deg);
+  }
+}
+.dkp .dkk-wallet {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 7px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 14px 0 0;
+  padding: 7px 16px 7px 10px;
+  border: 1px solid rgba(255, 248, 236, 0.2);
+  border-radius: 18px;
+  background: rgba(20, 16, 34, 0.5);
+  font-size: 14px;
+  font-weight: 600;
+}
+.dkp .dkk-wallet svg {
+  flex: none;
+  color: #ffd45f;
+}
+.dkp .dkk-wallet .dk-pack-coins {
+  margin: 0;
+  color: #ffd45f;
+  font: 400 28px/1 var(--display);
+  letter-spacing: 0.02em;
+}
+.dkp .dkk-wallet small {
+  flex-basis: 100%;
+  color: #9be0b4;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+/* What's inside: six little card backs in their rarity's colour. */
+.dkp .dkk-slots {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+  max-width: 372px;
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+}
+.dkp .dkk-slots li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 5px;
+  justify-items: center;
+  min-width: 0;
+  animation: dkh-rise 0.45s ease backwards;
+  animation-delay: calc(var(--i, 0) * 0.05s);
+}
+.dkp .dkk-slots li:nth-child(2) { --i: 2; }
+.dkp .dkk-slots li:nth-child(3) { --i: 3; }
+.dkp .dkk-slots li:nth-child(4) { --i: 4; }
+.dkp .dkk-slot-cards {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  width: 100%;
+}
+.dkp .dkk-slot {
+  display: grid;
+  place-items: center;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 52px;
+  aspect-ratio: 5 / 7;
+  border: 2.5px solid #fff8ec;
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0) 55%),
+    linear-gradient(160deg, color-mix(in srgb, var(--rarity) 78%, #fff), var(--rarity));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--rarity) 70%, #000), 0 3px 0 color-mix(in srgb, var(--rarity) 60%, #000);
+  color: #fff;
+  font: 400 22px/1 var(--display);
+  text-shadow: 0 1.5px 0 rgba(0, 0, 0, 0.3);
+}
+.dkp .dkk-slots .is-lucky .dkk-slot {
+  background:
+    linear-gradient(112deg, transparent 30%, rgba(255, 255, 255, 0.5) 46%, transparent 62%),
+    linear-gradient(160deg, var(--rarity-Uncommon), var(--rarity-Rare) 50%, var(--rarity-SuperRare));
+}
+.dkp .dkk-slot-name {
+  color: var(--text-dim);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+@media (max-width: 359px) {
+  .dkp .dkk-slot-name {
+    font-size: 8.5px;
+    letter-spacing: -0.01em;
+  }
+}
+.dkp .dk-pack-buy {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+}
+.dkp .dkk-price {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px 4px 7px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.24);
+  color: #fff8ec;
+  text-shadow: none;
+}
+.dkp .dkk-price svg {
+  color: #ffd45f;
+}
+.dkp .dk-pack-shop .dkk-short {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 0;
+  color: var(--text-h);
+  font-size: 13.5px;
+  font-weight: 700;
+  text-align: center;
+}
+.dkp .dkk-short .dkk-progress {
+  --fill: var(--dkp-gold);
+}
+.dkp .dk-pack-shop .dk-acct-dim {
+  margin: 12px 0 0;
+  font-size: 13px;
+}
+.dkp .dk-pack-shop .dk-pack-opened {
+  margin-top: 16px;
+}
+/* Trade-ins: what you give, what you get. */
+.dkp .dk-trade-row {
+  gap: 10px;
+  padding: 10px 0;
+}
+.dkp .dk-trade-row .dk-acct-game-label b {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  color: var(--text-h);
+  font-size: 14.5px;
+}
+.dkp .dk-trade-row .dk-acct-game-label small {
+  display: block;
+  margin-top: 3px;
+  font-size: 12.5px;
+}
+.dkp .dkk-to {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.dkp .dk-trade-row .dkb-gem {
+  margin: 0 2px;
+}
+/* The collection: a set's name over how much of it you have. */
+.dkp .dk-coll-set-name {
+  margin: 22px 0 4px;
+  padding: 0;
+  border: 0;
+  font: 400 22px/1.1 var(--display);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.dkp .dk-coll-set-name small {
+  display: block;
+  margin: 5px 0 7px;
+  font: 600 12.5px/1.2 var(--sans);
+  letter-spacing: 0;
+  text-transform: none;
+}
+.dkp .dk-coll-set-name .dkk-progress {
+  --fill: var(--dkp-gold);
+}
+.dkp .dk-coll-tier h4 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 16px 0 8px;
+  color: var(--text-h);
+  font: 700 13px/1 var(--sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.dkp .dk-coll-tier h4 small {
+  margin-left: auto;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--rarity, var(--wild)) 20%, transparent);
+  color: var(--text-h);
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+/* ---- How to Play ---- */
+.dkp .dkr-jump {
+  min-width: 0;
+  max-width: 132px;
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 248, 236, 0.2);
+  border-radius: 22px;
+  background: #2a2540;
+  color: #fff8ec;
+  font: 700 13.5px var(--sans);
+}
+/* A section's number, on a die. */
+.dkp .dkr-num {
+  --die: var(--claw);
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 1.5em;
+  height: 1.5em;
+  border-radius: 0.38em;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0) 55%),
+    var(--die);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.14), 0 0.12em 0 color-mix(in srgb, var(--die) 62%, #000);
+  color: #fff;
+  font: 400 0.82em/1 var(--display);
+  letter-spacing: 0;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
+}
+.dkp .dkr-num.is-1 {
+  --die: var(--shell);
+}
+.dkp .dkr-num.is-2 {
+  --die: var(--wing);
+}
+.dkp .dkr-num.is-3 {
+  --die: var(--eye);
+}
+.dkp .dk-howto-toc {
+  gap: 8px;
+  margin: 0 0 18px;
+}
+.dkp .dk-howto-toc a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 5px 14px 5px 7px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--panel-bg);
+  box-shadow: 0 0 0 1px var(--border), 0 3px 0 var(--dkp-lip);
+  font-size: 14px;
+  font-weight: 700;
+  transition: transform 0.09s ease, box-shadow 0.09s ease;
+}
+.dkp .dk-howto-toc a:active {
+  transform: translateY(2px);
+  box-shadow: 0 0 0 1px var(--border), 0 1px 0 var(--dkp-lip);
+}
+.dkp .dk-howto-toc .dkr-num {
+  font-size: 17px;
+}
+.dkp .dk-howto-section {
+  /* A section jumped to lands below the bar, not under it. */
+  scroll-margin-top: 72px;
+  font-size: 15px;
+}
+.dkp .dk-howto-section h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 12px;
+  font: 400 24px/1.1 var(--display);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.dkp .dk-howto-section p {
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+/* Wider than a phone: the bar and the sky keep to the page's column. */
+@media (min-width: 800px) {
+  .dkp .dkp-bar {
+    border-radius: 0 0 22px 22px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dkp .dkp-title::after,
+  .dkp .dkb-boss,
+  .dkp .dkb-boss *,
+  .dkp .dkk *,
+  .dkp .dkk *::before,
+  .dkp .dkk *::after {
+    animation: none !important;
+  }
+}

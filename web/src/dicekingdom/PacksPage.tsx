@@ -4,17 +4,16 @@
 // rarity-less Basic Action (2026-10-20) - for coins from the starting grant and one visit a day. The Champion
 // teams stay free starter rosters, and each joins the collection once a
 // game with it is finished. Spare dice trade up a rarity (TradeIns).
-import { useEffect, useMemo, useState } from "react";
-import { navigate } from "../router";
-import { backPath } from "./AccountPage";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { championLabel } from "./ChampionPicker";
 import { api } from "./api";
 import { CHARACTER_ICONS, EnergyBadge, type IconComponent } from "./icons";
 import { Painting, hasPainting } from "./cardArt";
 import { FullArtCard, energyOf, energyPlate, rarityLabel } from "./FullArtCard";
+import { CoinIcon, PackArt } from "./kingdomArt";
+import { KingdomPage, SoundButton } from "./PageShell";
 import { players, type Collection, type PulledCard, type Rarity } from "./player";
-import { playSound, setSoundMuted, useSoundMuted } from "./sound";
-import { ThemeToggle, useTheme } from "./ThemeToggle";
+import { playSound } from "./sound";
 import type { CardDef } from "./types";
 
 const RARITIES: Rarity[] = ["SuperRare", "Rare", "Uncommon", "Common"];
@@ -176,14 +175,18 @@ function TradeIns({
           <div key={rarity} className={`dk-trade-row dk-rarity-${rarity}`}>
             <span className="dk-acct-game-label">
               <b>
-                {cost} {rarityLabel(rarity)} → 1 {rarityLabel(next)}
+                <i className="dkb-gem" />
+                {cost} {rarityLabel(rarity)}
+                <span aria-hidden="true">→</span>
+                <span className="dkk-to" style={{ ["--rarity" as string]: `var(--rarity-${next})` } as CSSProperties}>
+                  <i className="dkb-gem" />1 {rarityLabel(next)}
+                </span>
               </b>
               <small>
-                {" "}
-                · {spare} spare{names && <> · gives {names}</>}
+                {spare} spare{names && <> · gives {names}</>}
               </small>
             </span>
-            <button type="button" className="btn" disabled={!plan || busy} onClick={() => plan && void trade(plan)}>
+            <button type="button" className="btn is-blue" disabled={!plan || busy} onClick={() => plan && void trade(plan)}>
               Trade
             </button>
           </div>
@@ -210,16 +213,22 @@ function CollectionGrid({ collection, cards }: { collection: Collection; cards: 
   return (
     <div className="panel">
       <h3>Your collection</h3>
-      <p className="dk-acct-dim">
-        {dice} dice · {collection.packsOpened} {collection.packsOpened === 1 ? "pack" : "packs"} opened
+      <p className="dka-stats">
+        <span className="dka-stat">
+          <b>{dice}</b>Dice
+        </span>
+        <span className="dka-stat">
+          <b>{collection.packsOpened}</b>
+          {collection.packsOpened === 1 ? "Pack opened" : "Packs opened"}
+        </span>
         {collection.tradeIns > 0 && (
-          <>
-            {" "}
-            · {collection.tradeIns} {collection.tradeIns === 1 ? "trade-in" : "trade-ins"}
-          </>
+          <span className="dka-stat">
+            <b>{collection.tradeIns}</b>
+            {collection.tradeIns === 1 ? "Trade-in" : "Trade-ins"}
+          </span>
         )}
-        . A team plays up to a card's die limit (usually 4); extras can be traded in.
       </p>
+      <p className="dk-acct-dim">A team plays up to a card's die limit (usually 4); extras can be traded in.</p>
       <p className="dk-acct-dim">
         {collection.starters.length
           ? `Starter rosters added: ${collection.starters.map(championLabel).join(", ")}. `
@@ -238,6 +247,8 @@ function CollectionGrid({ collection, cards }: { collection: Collection; cards: 
               <small>
                 {ownedCharacters}/{characters.length} characters · {owned}/{inSet.length} cards
               </small>
+              {/* How much of the set you have. */}
+              <span className="dkk-progress" style={{ ["--have" as string]: `${(owned / inSet.length) * 100}%` } as CSSProperties} />
             </h4>
             {[...RARITIES, "Basic" as const].map((rarity) => {
               const tier = (
@@ -248,6 +259,7 @@ function CollectionGrid({ collection, cards }: { collection: Collection; cards: 
               return (
                 <section key={rarity} className={`dk-coll-tier dk-rarity-${rarity}`}>
                   <h4>
+                    <i className="dkb-gem" />
                     {rarityLabel(rarity)}{" "}
                     <small>
                       {have}/{tier.length}
@@ -312,18 +324,15 @@ function CardCloseUp({ card, count, onClose }: { card: CardDef; count: number; o
   );
 }
 
-// This page has no ☰ menu, so the sound switch sits by the theme one.
-function SoundToggle() {
-  const muted = useSoundMuted();
-  return (
-    <button type="button" className="theme-toggle" aria-pressed={!muted} onClick={() => setSoundMuted(!muted)}>
-      {muted ? "Sound off" : "Sound on"}
-    </button>
-  );
-}
+// What a pack holds (the server's DiceKingdomPacks.cs): rarity, how many, and what to call the slot.
+const SLOTS: { rarity: Rarity | "Basic"; count: number; label: string; lucky?: boolean }[] = [
+  { rarity: "Common", count: 3, label: "3 Common" },
+  { rarity: "Uncommon", count: 1, label: "Uncommon" },
+  { rarity: "Rare", count: 1, label: "Lucky", lucky: true },
+  { rarity: "Basic", count: 1, label: "Basic" },
+];
 
 export function PacksPage() {
-  const [theme, setTheme] = useTheme();
   const [collection, setCollection] = useState<Collection | null>(null);
   const [daily, setDaily] = useState(0);
   const [cards, setCards] = useState<CardDef[]>([]);
@@ -358,41 +367,63 @@ export function PacksPage() {
     }
   }
 
-  const back = backPath();
   const canBuy = collection && collection.coins >= collection.packPrice;
 
   return (
-    <div className="dicekingdom dk-account dk-packs">
-      <div className="dk-titlebar-right" style={{ float: "right" }}>
-        <SoundToggle /> <ThemeToggle theme={theme} setTheme={setTheme} />
-      </div>
-      <p className="dk-acct-back">
-        <a
-          href={back}
-          onClick={(e) => {
-            e.preventDefault();
-            navigate(back);
-          }}
-        >
-          ← Dice Kingdom
-        </a>
-      </p>
-      <h1>Packs</h1>
+    <KingdomPage
+      className={`dk-packs dkk${busy ? " is-opening" : ""}`}
+      title="Card Packs"
+      dek="Six dice in every pack. Open one, and see what joins your collection."
+      tools={<SoundButton />}
+      art={<PackArt />}
+      hero={
+        collection && (
+          <p className="dkk-wallet">
+            <CoinIcon size={26} />
+            <b className="dk-pack-coins">{collection.coins}</b> coins
+            {daily > 0 && <small className="dk-daily-coins">+{daily} for today's visit</small>}
+          </p>
+        )
+      }
+    >
       {error && <p className="error">{error}</p>}
-      {!collection && !error && <p className="dk-acct-dim">Loading…</p>}
+      {!collection && !error && <p className="dkp-loading">Loading…</p>}
       {collection && (
         <>
           <div className="panel dk-pack-shop">
-            <div className="dk-pack-wallet">
-              <span className="dk-pack-coins">{collection.coins}</span> coins
-              {daily > 0 && <b className="dk-daily-coins"> +{daily} for today's visit</b>}
-            </div>
-            <button type="button" className="btn dk-pack-buy" disabled={!canBuy || busy} onClick={() => void open()}>
-              Open a {collection.packSet} pack · {collection.packPrice} coins
+            <h3>{collection.packSet} pack</h3>
+            <ul className="dkk-slots" aria-label="What's inside">
+              {SLOTS.map((slot) => (
+                <li key={slot.label} className={`dk-rarity-${slot.rarity}${slot.lucky ? " is-lucky" : ""}`} style={{ gridColumn: `span ${slot.count}` }}>
+                  <span className="dkk-slot-cards" aria-hidden="true">
+                    {Array.from({ length: slot.count }, (_, i) => (
+                      <span key={i} className="dkk-slot">
+                        {slot.lucky ? "?" : ""}
+                      </span>
+                    ))}
+                  </span>
+                  <span className="dkk-slot-name">{slot.label}</span>
+                </li>
+              ))}
+            </ul>
+            <button type="button" className="btn is-gold is-big dk-pack-buy" disabled={!canBuy || busy} onClick={() => void open()}>
+              {busy ? "Opening…" : "Open a pack"}
+              <span className="dkk-price">
+                <CoinIcon size={18} />
+                {collection.packPrice}
+              </span>
             </button>
+            {!canBuy && (
+              <p className="dkk-short">
+                <span className="dkk-progress" style={{ ["--have" as string]: `${(collection.coins / collection.packPrice) * 100}%` } as CSSProperties} />
+                {collection.packPrice - collection.coins} more coins to go
+              </p>
+            )}
             <p className="dk-acct-dim">
-              Each {collection.packSet} pack holds 6 dice: 3 Common, 1 Uncommon, 1 more that's Uncommon, Rare or (1 in
-              20) Super Rare, and a Basic Action. Rarer isn't stronger - plenty of the best cards are Common.{" "}
+              Each {collection.packSet} pack holds 6 dice: 3 Common, 1 Uncommon, 1 lucky one that's Uncommon, Rare or (1
+              in 20) Super Rare, and a Basic Action. Rarer isn't stronger - plenty of the best cards are Common.
+            </p>
+            <p className="dk-acct-dim">
               {collection.dailyAmount} more coins each day you visit; next from {nextDaily(collection.nextDailyUtc)}.
             </p>
             {pulled && <OpenedPack key={pulled.n} pulled={pulled.cards} cards={byId} />}
@@ -401,6 +432,6 @@ export function PacksPage() {
           <CollectionGrid collection={collection} cards={cards} />
         </>
       )}
-    </div>
+    </KingdomPage>
   );
 }

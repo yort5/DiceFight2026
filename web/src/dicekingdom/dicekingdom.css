@@ -3876,52 +3876,7 @@
   margin-left: 8px;
 }
 
-/* The boss ladder (BossesPage.tsx). */
-.dk-bosses .dk-boss-score {
-  font-size: 15px;
-}
-.dk-bosses .dk-boss-score p {
-  margin: 8px 0 0;
-}
-.dk-bosses .dk-boss-points {
-  font-size: 26px;
-  font-weight: 700;
-  color: var(--text-h);
-}
-.dk-bosses .dk-boss-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.dk-bosses .dk-boss h3 {
-  margin: 0;
-}
-.dk-bosses .dk-boss p {
-  margin: 8px 0;
-}
-.dk-bosses .dk-boss-status {
-  flex: 0 0 auto !important;
-  font-size: 13px;
-  font-weight: 600;
-}
-.dk-bosses .dk-boss-beaten .dk-boss-status {
-  color: var(--shell);
-}
-.dk-bosses .dk-boss-locked {
-  opacity: 0.6;
-}
-.dk-bosses .dk-boss-team {
-  font-size: 13px;
-  overflow-wrap: anywhere;
-}
-.dk-bosses .dk-boss-pick {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--border);
-}
-.dk-bosses .dk-boss-pick .dk-acct-row {
-  margin-top: 12px;
-}
+/* The boss ladder (BossesPage.tsx) is styled in kingdomPages.css. */
 
 /* Keyword Intimidate (desktop) - same dimmed treatment as mobile's. */
 .dicekingdom .dk-intimidated {
@@ -4426,19 +4381,6 @@
 }
 .dk-account .dk-acct-quiet {
   opacity: 0.8;
-}
-.dk-account .panel .dk-acct-record {
-  font-size: 22px;
-  margin: 0 0 8px;
-  color: var(--text-h);
-}
-.dk-account .dk-acct-table {
-  border-collapse: collapse;
-  font-size: 14px;
-}
-.dk-account .dk-acct-table td {
-  padding: 3px 16px 3px 0;
-  border-top: 1px solid var(--border);
 }
 .dk-account .dk-acct-game {
   display: flex;
@@ -5031,47 +4973,7 @@
 }
 
 /* ---- How to Play (/dice-kingdom/how-to-play) ---- */
-/* The way back and a section jump, pinned while the page scrolls. Runs
-   edge to edge over the page's own 16px padding. */
-.dk-howto .dk-howto-bar {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: -24px -16px 12px;
-  padding: 10px 16px;
-  background: color-mix(in srgb, var(--dk-page-a) 90%, transparent);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-bottom: 1px solid var(--border);
-}
-.dk-howto .dk-howto-bar a {
-  color: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  text-decoration: none;
-  white-space: nowrap;
-}
-.dk-howto .dk-howto-bar select {
-  margin-left: auto;
-  min-width: 0;
-  padding: 5px 8px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--panel-bg);
-  color: var(--text-h);
-  font: 600 13px var(--sans);
-}
-.dk-howto .dk-howto-bar .theme-toggle {
-  flex: none;
-  white-space: nowrap;
-}
-/* A section jumped to lands below the bar, not under it. */
-.dk-howto .dk-howto-section {
-  scroll-margin-top: 60px;
-}
+/* Its bar (the way back, the section jump) is the shared one: kingdomPages.css. */
 .dk-howto .dk-howto-lede {
   font-size: 16px;
   line-height: 1.5;

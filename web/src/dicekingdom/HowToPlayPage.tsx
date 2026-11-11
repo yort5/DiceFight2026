@@ -5,12 +5,10 @@
 // rule changes there, change it here too.
 import { useEffect, useMemo, useState } from "react";
 import { KEYWORD_RULES } from "../keywordRules";
-import { navigate } from "../router";
-import { backPath } from "./AccountPage";
 import { DieAnatomy, LaneFightExample, StackingExamples, TardigradeFaces, TurnStrip, ZoneMap } from "./HowToPlayFigures";
 import { api } from "./api";
 import { CHAMPION_ICONS, EnergyBadge, TardigradeIcon } from "./icons";
-import { ThemeToggle, useTheme } from "./ThemeToggle";
+import { KingdomPage } from "./PageShell";
 import type { CardDef } from "./types";
 
 const SECTIONS = [
@@ -32,17 +30,28 @@ const CHAMPIONS = [
   { id: "GreatHornedOwl", name: "Great Horned Owl", energy: "Eye", power: "Once during your turn, spin one creature one level - yours up, or your opponent's down." },
 ];
 
+/** A section's number on a die, the four energies' colours in turn. */
+function Num({ index }: { index: number }) {
+  return (
+    <span className={`dkr-num is-${index % 4}`} aria-hidden="true">
+      {index + 1}
+    </span>
+  );
+}
+
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
     <section id={id} className="panel dk-howto-section">
-      <h2>{title}</h2>
+      <h2>
+        <Num index={SECTIONS.findIndex(([s]) => s === id)} />
+        {title}
+      </h2>
       {children}
     </section>
   );
 }
 
 export function HowToPlayPage() {
-  const [theme, setTheme] = useTheme();
   const [cards, setCards] = useState<CardDef[] | null>(null);
   const [cardsFailed, setCardsFailed] = useState(false);
   useEffect(() => {
@@ -55,23 +64,17 @@ export function HowToPlayPage() {
     const used = new Set(cards.flatMap((c) => c.keywords));
     return Object.keys(KEYWORD_RULES).filter((k) => used.has(k)).sort((a, b) => a.localeCompare(b));
   }, [cards]);
-  const back = backPath();
 
   return (
-    <div className="dicekingdom dk-account dk-howto">
-      {/* Stays on screen while you scroll (2026-10-19): the installed app has
-          no browser back button or address bar, so this is the only way out. */}
-      <header className="dk-howto-bar">
-        <a
-          href={back}
-          onClick={(e) => {
-            e.preventDefault();
-            navigate(back);
-          }}
-        >
-          ← Dice Kingdom
-        </a>
+    <KingdomPage
+      className="dk-howto"
+      title="How to Play"
+      dek="Dice Kingdom is a dice-building game for two players. You start with a bag of small dice, buy stronger creature dice as you go, and send them into battle."
+      tools={
+        // In the bar, which stays on screen while you scroll (2026-10-19): the
+        // page is long, and the installed app has no address bar to jump with.
         <select
+          className="dkr-jump"
           aria-label="Jump to a section"
           value=""
           onChange={(e) => {
@@ -90,16 +93,12 @@ export function HowToPlayPage() {
             </option>
           ))}
         </select>
-        <ThemeToggle theme={theme} setTheme={setTheme} />
-      </header>
-      <h1>How to Play</h1>
-      <p className="dk-howto-lede">
-        Dice Kingdom is a dice-building game for two players. You start with a bag of small dice, buy stronger
-        creature dice as you go, and send them into battle.
-      </p>
+      }
+    >
       <nav className="dk-howto-toc" aria-label="Contents">
-        {SECTIONS.map(([id, title]) => (
+        {SECTIONS.map(([id, title], i) => (
           <a key={id} href={`#${id}`}>
+            <Num index={i} />
             {title}
           </a>
         ))}
@@ -300,6 +299,6 @@ export function HowToPlayPage() {
           doesn't mean stronger - a team of common cards can win.
         </p>
       </Section>
-    </div>
+    </KingdomPage>
   );
 }

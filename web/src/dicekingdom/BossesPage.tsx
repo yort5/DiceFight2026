@@ -4,16 +4,21 @@
 // everyone; beating one opens the next. A first win pays points, coins and
 // sometimes dice; a rematch pays less. The fight itself is an ordinary
 // vs-computer game on the usual game screen.
-import { useEffect, useMemo, useState } from "react";
+// 2026-11-11: redrawn in the launch page's style (PageShell.tsx) - each boss
+// a card under its own crowned painting, its team as faces, its prizes as chips.
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { navigate } from "../router";
-import { backPath } from "./AccountPage";
+import { hasPainting, paintingSrc } from "./cardArt";
 import { ChampionPicker, championLabel } from "./ChampionPicker";
 import { CustomTeamSetupChoice } from "./CustomTeamSetupChoice";
 import { CUSTOM_TEAM_PICK, pendingCustomTeam } from "./customTeams";
 import { api } from "./api";
+import { energyOf, energyPlate } from "./FullArtCard";
+import { CHAMPION_ICONS, CHARACTER_ICONS, TardigradeIcon } from "./icons";
+import { BOSS_FACES, BuilderIcon, CheckIcon, CoinIcon, Crown, Line, LockIcon, tone } from "./kingdomArt";
+import { KingdomPage, backPath } from "./PageShell";
 import { players, type Boss, type BossLadder, type BossReward, type BossResult } from "./player";
 import { describeSavedGame, rememberSeats } from "./seats";
-import { ThemeToggle, useTheme } from "./ThemeToggle";
 import type { CardDef } from "./types";
 
 const CHAMPIONS = [
@@ -53,14 +58,97 @@ export function resultText(result: BossResult, cards: Map<string, CardDef>): str
   return parts.join(" · ");
 }
 
-function teamSummary(boss: Boss, cards: Map<string, CardDef>): string {
-  const names = Object.entries(boss.cards).map(([id, n]) => `${cards.get(id)?.name ?? id} ×${n}`);
-  const tardigrades = Object.entries(boss.tardigrades).filter(([, n]) => n > 0).map(([t, n]) => `${n} ${t}`);
-  return `${names.join(", ")}${tardigrades.length ? ` · Tardigrades: ${tardigrades.join(", ")}` : ""}`;
+const dropName = (drop: BossReward["drops"][number], cards: Map<string, CardDef>) =>
+  article(`${drop.cardId ? cards.get(drop.cardId)?.name ?? drop.cardId : RARITY_NAMES[drop.rarity ?? ""] ?? drop.rarity} die`);
+
+/** A reward as chips: points, coins, and each die it can drop. */
+function Prizes({ reward, cards }: { reward: BossReward | null; cards: Map<string, CardDef> }) {
+  if (!reward || (!reward.points && !reward.coins && reward.drops.length === 0)) {
+    return <span className="dkb-prize is-none">nothing more</span>;
+  }
+  return (
+    <>
+      {reward.points > 0 && <span className="dkb-prize is-points"><Crown />{plural(reward.points, "point")}</span>}
+      {reward.coins > 0 && <span className="dkb-prize is-coins"><CoinIcon size={15} />{plural(reward.coins, "coin")}</span>}
+      {reward.drops.map((drop, i) => {
+        const rarity = drop.rarity ?? (drop.cardId ? cards.get(drop.cardId)?.rarity : null);
+        return (
+          <span key={i} className="dkb-prize is-die"
+            style={rarity ? ({ "--rarity": `var(--rarity-${rarity})` } as CSSProperties) : undefined}>
+            <i className="dkb-gem" />{percent(drop.chance)}{dropName(drop, cards)}
+          </span>
+        );
+      })}
+    </>
+  );
+}
+
+/** A card's face, small and round: its painting, or its silhouette on its energy's plate. */
+function Face({ id, card }: { id: string; card: CardDef | undefined }) {
+  const Avatar = CHARACTER_ICONS[id];
+  return (
+    <span className="dkb-face" style={energyPlate(card && energyOf(card))}>
+      {hasPainting(id) ? <img src={paintingSrc(id, "icon")!} alt="" loading="lazy" /> : Avatar ? <Avatar size={22} /> : (card?.name ?? "?")[0]}
+    </span>
+  );
+}
+
+const PEEK = 7;
+
+/** The boss's team: a row of faces that opens into the list, dice counts and all. */
+function Team({ boss, cards }: { boss: Boss; cards: Map<string, CardDef> }) {
+  const team = Object.entries(boss.cards);
+  const tardigrades = Object.entries(boss.tardigrades).filter(([, n]) => n > 0);
+  return (
+    <details className="dkb-team">
+      <summary>
+        <span className="dkb-peek" aria-hidden="true">
+          {team.slice(0, PEEK).map(([id]) => <Face key={id} id={id} card={cards.get(id)} />)}
+          {team.length > PEEK && <span className="dkb-face is-more">+{team.length - PEEK}</span>}
+        </span>
+        <span className="dkb-team-label">Its team</span>
+        <Line size={18}><path d="M6 9.5 12 15.5l6-6" /></Line>
+      </summary>
+      <ul>
+        {team.map(([id, n]) => (
+          <li key={id}>
+            <Face id={id} card={cards.get(id)} />
+            <span>{cards.get(id)?.name ?? id}</span>
+            <b>×{n}</b>
+          </li>
+        ))}
+        {tardigrades.map(([type, n]) => (
+          <li key={type}>
+            <span className="dkb-face is-tardigrade" style={tone(type)}><TardigradeIcon size={22} /></span>
+            <span>{type} Tardigrades</span>
+            <b>×{n}</b>
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
+
+/** The boss's own card on its banner, crowned - or under lock. */
+function BossCard({ boss }: { boss: Boss }) {
+  const face = BOSS_FACES[boss.id] ?? Object.keys(boss.cards).find((id) => hasPainting(id));
+  const src = face ? paintingSrc(face) : null;
+  return (
+    <span className="dkb-card" aria-hidden="true">
+      {src && <img src={src} alt="" loading="lazy" />}
+      {boss.status === "locked" ? <span className="dkb-card-lock"><LockIcon size={26} /></span> : <Crown />}
+    </span>
+  );
+}
+
+function statusText(boss: Boss): string {
+  const record = `${boss.wins}W ${boss.losses}L`;
+  if (boss.status === "beaten") return `Beaten · ${record}`;
+  if (boss.status === "locked") return "Locked";
+  return boss.losses ? `Open · ${boss.losses}L` : "Open";
 }
 
 export function BossesPage() {
-  const [theme, setTheme] = useTheme();
   const [ladder, setLadder] = useState<BossLadder | null>(null);
   const [cards, setCards] = useState<CardDef[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -93,85 +181,98 @@ export function BossesPage() {
 
   const latest = ladder?.results[0];
   const latestBoss = latest && ladder?.bosses.find((b) => b.id === latest.bossId);
+  const beaten = ladder?.bosses.filter((b) => b.status === "beaten").length ?? 0;
 
   return (
-    <div className="dicekingdom dk-account dk-bosses">
-      <div className="dk-titlebar-right" style={{ float: "right" }}>
-        <ThemeToggle theme={theme} setTheme={setTheme} />
-      </div>
-      <p className="dk-acct-back">
-        <a href={back} onClick={(e) => { e.preventDefault(); navigate(back); }}>← Dice Kingdom</a>
-      </p>
-      <h1>Boss Ladder</h1>
-      <p className="dk-acct-dim">
-        Beat each boss to open the next. A first win pays the most; rematches pay a little.
-      </p>
+    <KingdomPage
+      className="dk-bosses"
+      title="Boss Ladder"
+      dek="Beat each boss to open the next. A first win pays the most; rematches pay a little."
+      hero={ladder && (
+        <div className="dkb-score">
+          <span className="dkb-rungs" aria-hidden="true">
+            {ladder.bosses.map((b) => <Crown key={b.id} className={`is-${b.status}`} />)}
+          </span>
+          <span className="dkb-score-text">
+            <b>{ladder.points}</b> boss {ladder.points === 1 ? "point" : "points"}
+            <small>{beaten} of {ladder.bosses.length} bosses beaten</small>
+          </span>
+        </div>
+      )}
+    >
       {error && <p className="error">{error}</p>}
-      {!ladder && !error && <p className="dk-acct-dim">Loading…</p>}
+      {!ladder && !error && <p className="dkp-loading">Loading…</p>}
       {ladder && (
         <>
-          <div className="panel dk-boss-score">
-            <span className="dk-boss-points">{ladder.points}</span> boss points ·{" "}
-            {ladder.bosses.filter((b) => b.status === "beaten").length} of {ladder.bosses.length} bosses beaten
-            {latest && latestBoss && (
-              <p className={latest.won ? "dk-acct-ok" : "dk-acct-dim"}>
-                Last battle: {latest.won ? `beat ${latestBoss.name}` : `lost to ${latestBoss.name}`}
+          {latest && latestBoss && (
+            <p className={`dkp-note${latest.won ? " is-won" : ""}`}>
+              {latest.won ? <CheckIcon size={18} /> : null}
+              <span>
+                <b>Last battle:</b> {latest.won ? `beat ${latestBoss.name}` : `lost to ${latestBoss.name}`}
                 {latest.won && resultText(latest, byId) && ` - ${resultText(latest, byId)}`}
-              </p>
-            )}
-          </div>
-          <ol className="dk-boss-list">
-            {ladder.bosses.map((boss, i) => (
-              <li key={boss.id} className={`panel dk-boss dk-boss-${boss.status}`}>
-                <div className="dk-acct-row">
-                  <span>
-                    <small className="dk-acct-dim">Boss {i + 1}</small>
+              </span>
+            </p>
+          )}
+          <ol className="dkb-list">
+            {ladder.bosses.map((boss, i) => {
+              const Champion = boss.championId ? CHAMPION_ICONS[boss.championId] : null;
+              return (
+                <li key={boss.id} className={`dkb-boss is-${boss.status}`}>
+                  <div className="dkb-banner">
+                    <BossCard boss={boss} />
+                    <span className="dkb-rank">Boss {i + 1}</span>
                     <h3>{boss.name}</h3>
-                  </span>
-                  <span className="dk-boss-status">
-                    {boss.status === "beaten" ? `Beaten · ${boss.wins}W ${boss.losses}L` : boss.status === "open" ? (boss.losses ? `${boss.losses}L` : "Open") : "Locked"}
-                  </span>
-                </div>
-                <p>{boss.blurb}</p>
-                <p className="dk-acct-dim dk-boss-team">
-                  {boss.championId ? `${championLabel(boss.championId)} · ` : ""}Plays: {boss.style}
-                  <br />
-                  {teamSummary(boss, byId)}
-                </p>
-                <p className="dk-boss-reward">
-                  <b>{boss.status === "beaten" ? "Rematch:" : "First win:"}</b>{" "}
-                  {boss.status === "beaten" ? (boss.rematch ? rewardText(boss.rematch, byId) : "nothing more") : rewardText(boss.firstWin, byId)}
-                </p>
-                {boss.status === "locked" ? (
-                  <p className="dk-acct-dim">Beat {ladder.bosses[i - 1]?.name} to open.</p>
-                ) : picking === boss.id ? (
-                  <div className="dk-boss-pick">
-                    <h3>Your team</h3>
-                    {pendingCustomTeam()
-                      ? <CustomTeamSetupChoice champions={CHAMPIONS} team={pendingCustomTeam()} value={team} onPick={setTeam} />
-                      : <ChampionPicker champions={CHAMPIONS} value={team} onPick={setTeam} />}
-                    <div className="dk-acct-row">
-                      <button type="button" className="btn" disabled={!team || busy} onClick={() => void fight(boss)}>
-                        Fight {boss.name}
-                      </button>
-                      <button type="button" className="btn ghost" onClick={() => setPicking(null)}>Cancel</button>
-                    </div>
+                    <span className="dkb-status">
+                      {boss.status === "beaten" ? <CheckIcon /> : boss.status === "locked" ? <LockIcon size={14} /> : null}
+                      {statusText(boss)}
+                    </span>
                   </div>
-                ) : (
-                  <button type="button" className="btn" onClick={() => setPicking(boss.id)}>
-                    {boss.status === "beaten" ? "Rematch" : "Challenge"}
-                  </button>
-                )}
-              </li>
-            ))}
+                  <div className="dkb-body">
+                    <p className="dkb-blurb">{boss.blurb}</p>
+                    <p className="dkb-style">
+                      {boss.championId && <span>{Champion && <Champion size={18} />}{championLabel(boss.championId)}</span>}
+                      <span>Plays: {boss.style}</span>
+                    </p>
+                    <Team boss={boss} cards={byId} />
+                    <p className="dkb-reward">
+                      <b>{boss.status === "beaten" ? "Rematch" : "First win"}</b>
+                      <Prizes reward={boss.status === "beaten" ? boss.rematch : boss.firstWin} cards={byId} />
+                    </p>
+                    {boss.status === "locked" ? (
+                      <p className="dkb-locked"><LockIcon /> Beat {ladder.bosses[i - 1]?.name} to open.</p>
+                    ) : picking === boss.id ? (
+                      <div className="dkb-pick">
+                        <h4>Your team</h4>
+                        {pendingCustomTeam()
+                          ? <CustomTeamSetupChoice champions={CHAMPIONS} team={pendingCustomTeam()} value={team} onPick={setTeam} />
+                          : <ChampionPicker champions={CHAMPIONS} value={team} onPick={setTeam} />}
+                        <div className="dkb-pick-go">
+                          <button type="button" className="btn is-go" disabled={!team || busy} onClick={() => void fight(boss)}>
+                            Fight {boss.name}
+                          </button>
+                          <button type="button" className="btn ghost" onClick={() => setPicking(null)}>Cancel</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button type="button" className={`btn dkb-go ${boss.status === "beaten" ? "is-gold" : "is-boss"}`}
+                        onClick={() => setPicking(boss.id)}>
+                        {boss.status === "beaten" ? "Rematch" : "Challenge"}
+                      </button>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
           </ol>
-          <p className="dk-acct-dim">
-            To fight with your own team, build it in the{" "}
-            <a href="/teambuilder" onClick={(e) => { e.preventDefault(); navigate("/teambuilder"); }}>Team Builder</a>{" "}
-            and press "Play with this team", then come back here.
-          </p>
+          <a className="dkp-linkcard" href="/teambuilder" onClick={(e) => { e.preventDefault(); navigate("/teambuilder"); }}>
+            <BuilderIcon size={26} />
+            <span>
+              <b>Fight with your own team</b>
+              Build it in the Team Builder and press "Play with this team", then come back here.
+            </span>
+          </a>
         </>
       )}
-    </div>
+    </KingdomPage>
   );
 }

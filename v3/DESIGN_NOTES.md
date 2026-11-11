@@ -5165,3 +5165,47 @@ and the page's order are unchanged.
     lip and coloured icon chips.
 - New motion follows the rule already there: it all stops under
   prefers-reduced-motion (the rule now covers ::before / ::after too).
+
+## 2026-11-11 - The side pages get the launch page's look
+
+User, on the launch page: "I like the dice cubes for the dice. The rest
+is definitely better, it looks more like a real game now. Can we give
+the other screens (packs, boss ladder, etc) a similar glow up?" Boss
+Ladder, Card Packs, How to Play and Account were plain panels under a
+text back link; they now share one frame and the launch page's pieces.
+The DICE cubes are untouched. The Team Builder is its own, larger tool
+page and was left as it is.
+
+- **Frame** (`PageShell.tsx`, `kingdomPages.css`): `KingdomPage` draws a
+  dusk bar that stays on screen (round back button, the page's own
+  switches, light/dark) over the launch page's sky with the page's name
+  in the logo's outlined gold. The name joins the bar once the big one
+  scrolls away (scroll-driven, where the browser has it). `backPath()`
+  moved here from `AccountPage.tsx`.
+- **Shared art** (`kingdomArt.tsx`): the sky, crown, coin, foil pack and
+  small icons moved out of `MobileHome.tsx`; their rules in
+  `mobileHome.css` now match `:is(.dk-mobile, .dkp)`.
+- **Buttons**: `.btn` on these pages has the launch page's lip that
+  sinks on a press, coloured by what it does (`is-go` orange, `is-boss`
+  purple, `is-gold`, `is-blue`, `is-green`; plain is paper); Cancel,
+  Rename and Sign out stay flat. Champion tiles press the same way.
+- **Boss Ladder**: the hero carries the points and a crown per boss.
+  Each boss is a card with a jewel banner (purple open, gold beaten,
+  grey locked), its own painting tilted and crowned, rewards as chips,
+  and its team folded into a row of faces that opens to the full list -
+  ten cards and eight Tardigrades made every boss very tall.
+- **Card Packs**: the foil pack and your coins sit on the hero; the shop
+  shows the six slots in their rarity colours, a gold "Open a pack"
+  button with the price, and a meter when you're short. Trade-ins show
+  rarity gems; the collection has stat tiles and a bar per set. The
+  sound switch moved into the bar.
+- **How to Play**: the Contents jump is in the bar; the contents and
+  each section carry their number on a die, the four energies in turn.
+- **Account**: your initial on a tile in the hero; the record is
+  won / lost / win-rate tiles with a bar per Champion.
+- **Lobby** (waiting for an opponent, joining an invite, on mobile): the
+  same buttons.
+
+Checked in headless Chromium at 402, 320 and 1280 wide, dark and light,
+with the ladder mid-way, a team pick open, a pack opened, too few coins,
+and a named account: no sideways scroll, no console errors.

@@ -2,17 +2,14 @@
 // your games, and your devices. Every browser is a player already
 // (player.ts); a name makes it an account, and a link code puts another
 // device on it - no password, no email (yet).
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { navigate } from "../router";
 import { championLabel } from "./ChampionPicker";
+import { CHAMPION_ICONS } from "./icons";
+import { PawIcon } from "./kingdomArt";
 import { adoptServerGames, playedGameLabel } from "./lobby";
+import { KingdomPage, backPath } from "./PageShell";
 import { players, type Me, type PlayedGame } from "./player";
-import { ThemeToggle, useTheme } from "./ThemeToggle";
-
-/** Back to whichever Dice Kingdom page sent you here (?from=mobile). */
-export function backPath(): "/dice-kingdom" | "/dice-kingdom/mobile" {
-  return new URLSearchParams(window.location.search).get("from") === "mobile" ? "/dice-kingdom/mobile" : "/dice-kingdom";
-}
 
 /** The start screens' "Playing as ..." line, linking here. */
 export function AccountLink({ from }: { from?: "mobile" }) {
@@ -115,23 +112,37 @@ function Record({ games }: { games: PlayedGame[] }) {
   const wins = decided.filter((g) => g.result === "win").length;
   return (
     <>
-      <p className="dk-acct-record">
-        <b>{wins}</b> W · <b>{decided.length - wins}</b> L
+      <p className="dka-stats">
+        <span className="dka-stat is-win">
+          <b>{wins}</b>Won
+        </span>
+        <span className="dka-stat is-loss">
+          <b>{decided.length - wins}</b>Lost
+        </span>
+        <span className="dka-stat">
+          <b>{Math.round((wins / decided.length) * 100)}%</b>Win rate
+        </span>
       </p>
-      <table className="dk-acct-table">
-        <tbody>
-          {[...by.entries()]
-            .sort((a, b) => b[1].w + b[1].l - (a[1].w + a[1].l))
-            .map(([champ, r]) => (
-              <tr key={champ}>
-                <td>{championLabel(champ)}</td>
-                <td>
+      <ul className="dka-champs">
+        {[...by.entries()]
+          .sort((a, b) => b[1].w + b[1].l - (a[1].w + a[1].l))
+          .map(([champ, r]) => {
+            const Icon = CHAMPION_ICONS[champ];
+            return (
+              <li key={champ}>
+                <span className="dka-champ">
+                  {Icon && <Icon size={20} />}
+                  {championLabel(champ)}
+                </span>
+                {/* How much of this Champion's games were wins. */}
+                <span className="dka-bar" style={{ ["--won" as string]: `${(r.w / (r.w + r.l)) * 100}%` } as CSSProperties} />
+                <b>
                   {r.w}–{r.l}
-                </td>
-              </tr>
-            ))}
-        </tbody>
-      </table>
+                </b>
+              </li>
+            );
+          })}
+      </ul>
     </>
   );
 }
@@ -180,7 +191,7 @@ function LinkDevices({ me, onChanged }: { me: Me; onChanged: (me: Me) => void })
           ) : (
             <button
               type="button"
-              className="btn"
+              className="btn is-blue"
               disabled={busy || !me.name}
               title={me.name ? undefined : "Pick a name first"}
               onClick={() => run(async () => setCode(await players.linkCode()))}
@@ -216,7 +227,7 @@ function LinkDevices({ me, onChanged }: { me: Me; onChanged: (me: Me) => void })
               maxLength={8}
               aria-label="Code from your other device"
             />
-            <button type="submit" className="btn" disabled={busy || entered.replace(/\W/g, "").length < 6}>
+            <button type="submit" className="btn is-blue" disabled={busy || entered.replace(/\W/g, "").length < 6}>
               Link
             </button>
           </form>
@@ -227,7 +238,6 @@ function LinkDevices({ me, onChanged }: { me: Me; onChanged: (me: Me) => void })
 }
 
 export function AccountPage() {
-  const [theme, setTheme] = useTheme();
   const [me, setMe] = useState<Me | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -259,24 +269,24 @@ export function AccountPage() {
   const finished = me?.games.filter((g) => g.status === "finished") ?? [];
 
   return (
-    <div className="dicekingdom dk-account">
-      <div className="dk-titlebar-right" style={{ float: "right" }}>
-        <ThemeToggle theme={theme} setTheme={setTheme} />
-      </div>
-      <p className="dk-acct-back">
-        <a
-          href={back}
-          onClick={(e) => {
-            e.preventDefault();
-            navigate(back);
-          }}
-        >
-          ← Dice Kingdom
-        </a>
-      </p>
-      <h1>{me?.name ?? "Your account"}</h1>
+    <KingdomPage
+      className="dka"
+      title={me?.name ?? "Your account"}
+      dek={
+        !me
+          ? undefined
+          : me.name
+            ? "Your record, your games, and the devices you play on."
+            : "You're playing as a guest. Pick a name to make it an account."
+      }
+      art={
+        <span className="dka-avatar" aria-hidden="true">
+          {me?.name ? me.name.trim().charAt(0).toUpperCase() : <PawIcon size={38} />}
+        </span>
+      }
+    >
       {error && <p className="error">{error}</p>}
-      {!me && !error && <p className="dk-acct-dim">Loading…</p>}
+      {!me && !error && <p className="dkp-loading">Loading…</p>}
       {me && (
         <>
           <div className="panel">
@@ -300,7 +310,7 @@ export function AccountPage() {
                 }}
               >
                 <input value={name} onChange={(e) => setName(e.target.value)} maxLength={24} placeholder="Your name" aria-label="Your name" />
-                <button type="submit" className="btn" disabled={!name.trim()}>
+                <button type="submit" className="btn is-go" disabled={!name.trim()}>
                   {me.name ? "Save" : "Make account"}
                 </button>
                 {me.name && (
@@ -340,7 +350,7 @@ export function AccountPage() {
                   </span>
                   <button
                     type="button"
-                    className="btn"
+                    className="btn is-green"
                     onClick={() => {
                       adoptServerGames(me);
                       navigate(back, `?resume=${encodeURIComponent(g.gameId)}`);
@@ -440,6 +450,6 @@ export function AccountPage() {
           </div>
         </>
       )}
-    </div>
+    </KingdomPage>
   );
 }

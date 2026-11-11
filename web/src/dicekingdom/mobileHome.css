@@ -1,7 +1,9 @@
 /* The mobile launch page and its setup step (MobileHome.tsx). Everything
    sits under .dk-mobile, so it reads that page's tokens (dicekingdom.css)
    and follows the light/dark preference - except the key-art band, which
-   is a dusk sky in both. dkh- is the home, dks- the setup step. */
+   is a dusk sky in both. dkh- is the home, dks- the setup step. The rules
+   under `:is(.dk-mobile, .dkp)` are the ones the side pages borrow
+   (kingdomArt.tsx, PageShell.tsx, kingdomPages.css). */
 
 .dk-mobile {
   --dkh-gold: #f2c14e;
@@ -21,7 +23,7 @@
   flex-direction: column;
   min-width: 0;
 }
-.dk-mobile .dkh-visually-hidden {
+:is(.dk-mobile, .dkp) .dkh-visually-hidden {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -31,7 +33,7 @@
 }
 
 /* ---- Key art ---- */
-.dk-mobile .dkh-hero {
+:is(.dk-mobile, .dkp) .dkh-hero {
   /* The dark palette's energy colours, whatever the theme: this band is always night. */
   --claw: #e78a5a;
   --shell: #6cb494;
@@ -47,12 +49,12 @@
   color: #fff8ec;
   box-shadow: 0 14px 30px -18px rgba(0, 0, 0, 0.8);
 }
-.dk-mobile .dkh-hero.is-compact {
+:is(.dk-mobile, .dkp) .dkh-hero.is-compact {
   padding: max(20px, env(safe-area-inset-top, 0px)) 0 18px;
   margin-bottom: 16px;
 }
 /* The sky clips itself, not the band: the menu's panel hangs out of it. */
-.dk-mobile .dkh-sky {
+:is(.dk-mobile, .dkp) .dkh-sky {
   position: absolute;
   inset: 0;
   overflow: hidden;
@@ -61,12 +63,12 @@
     radial-gradient(70% 46% at 50% 47%, rgba(255, 164, 84, 0.62) 0%, rgba(226, 92, 86, 0.3) 45%, transparent 75%),
     linear-gradient(180deg, #171427 0%, #2c2147 38%, #50305c 62%, #2a1f3f 86%, #1b1729 100%);
 }
-.dk-mobile .dkh-hero.is-compact .dkh-sky {
+:is(.dk-mobile, .dkp) .dkh-hero.is-compact .dkh-sky {
   background:
     radial-gradient(80% 90% at 50% 100%, rgba(255, 164, 84, 0.42) 0%, rgba(226, 92, 86, 0.2) 50%, transparent 80%),
     linear-gradient(180deg, #171427 0%, #2c2147 60%, #472c58 100%);
 }
-.dk-mobile .dkh-stars {
+:is(.dk-mobile, .dkp) .dkh-stars {
   position: absolute;
   inset: 0 0 55% 0;
   opacity: 0.8;
@@ -81,7 +83,7 @@
     radial-gradient(1px 1px at 6% 70%, #fff 50%, transparent 51%);
   animation: dkh-twinkle 5s ease-in-out infinite alternate;
 }
-.dk-mobile .dkh-rays {
+:is(.dk-mobile, .dkp) .dkh-rays {
   position: absolute;
   left: 50%;
   top: 47%;
@@ -95,7 +97,7 @@
   mask-image: radial-gradient(closest-side, #000 0%, rgba(0, 0, 0, 0.5) 34%, transparent 62%);
   animation: dkh-spin 90s linear infinite;
 }
-.dk-mobile .dkh-hero.is-compact .dkh-rays {
+:is(.dk-mobile, .dkp) .dkh-hero.is-compact .dkh-rays {
   top: 100%;
 }
 
@@ -351,12 +353,12 @@
 
 /* ---- The logo ---- */
 /* A filled crown, coloured by its parent (the logo's K, the boss tile, the ladder's rungs). */
-.dk-mobile .dkh-crown {
+:is(.dk-mobile, .dkp) .dkh-crown {
   display: block;
   fill: currentColor;
   overflow: visible;
 }
-.dk-mobile .dkh-crown-band {
+:is(.dk-mobile, .dkp) .dkh-crown-band {
   fill: none;
   stroke: rgba(0, 0, 0, 0.3);
   stroke-width: 2.5;
@@ -834,7 +836,7 @@
 }
 
 /* The art sits behind the words, off to the top or the right. */
-.dk-mobile .dkh-art {
+:is(.dk-mobile, .dkp) .dkh-art {
   position: absolute;
   pointer-events: none;
 }
@@ -963,13 +965,13 @@
 }
 
 /* Card Packs: a foil pack, two cards on their way out of it. */
-.dk-mobile .dkh-art-pack {
+:is(.dk-mobile, .dkp) .dkh-art-pack {
   top: 0;
   right: 0;
   bottom: 0;
   width: 140px;
 }
-.dk-mobile .dkh-art-pack img {
+:is(.dk-mobile, .dkp) .dkh-art-pack img {
   position: absolute;
   width: 50px;
   height: 68px;
@@ -978,17 +980,17 @@
   box-shadow: 0 4px 8px -3px rgba(60, 30, 0, 0.6);
   object-fit: cover;
 }
-.dk-mobile .dkh-art-pack img.is-a {
+:is(.dk-mobile, .dkp) .dkh-art-pack img.is-a {
   top: 5px;
   right: 74px;
   rotate: -17deg;
 }
-.dk-mobile .dkh-art-pack img.is-b {
+:is(.dk-mobile, .dkp) .dkh-art-pack img.is-b {
   top: 1px;
   right: 16px;
   rotate: 13deg;
 }
-.dk-mobile .dkh-pack {
+:is(.dk-mobile, .dkp) .dkh-pack {
   position: absolute;
   top: 26px;
   right: 34px;
@@ -1005,7 +1007,7 @@
   rotate: -5deg;
 }
 /* The crimped seal. */
-.dk-mobile .dkh-pack::before {
+:is(.dk-mobile, .dkp) .dkh-pack::before {
   content: "";
   position: absolute;
   inset: 0 0 auto;
@@ -1013,13 +1015,13 @@
   border-radius: 6px 6px 0 0;
   background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.5) 0 2px, rgba(74, 29, 120, 0.25) 2px 5px);
 }
-.dk-mobile .dkh-pack svg {
+:is(.dk-mobile, .dkp) .dkh-pack svg {
   width: 34px;
   height: 34px;
   margin-top: -10px;
   filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.25));
 }
-.dk-mobile .dkh-spark {
+:is(.dk-mobile, .dkp) .dkh-spark {
   position: absolute;
   width: 16px;
   height: 16px;
@@ -1027,18 +1029,18 @@
   clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
   animation: dkh-spark 2.6s ease-in-out infinite;
 }
-.dk-mobile .dkh-spark.is-a {
+:is(.dk-mobile, .dkp) .dkh-spark.is-a {
   top: 24px;
   right: 122px;
 }
-.dk-mobile .dkh-spark.is-b {
+:is(.dk-mobile, .dkp) .dkh-spark.is-b {
   top: 78px;
   right: 14px;
   width: 12px;
   height: 12px;
   animation-delay: 0.9s;
 }
-.dk-mobile .dkh-spark.is-c {
+:is(.dk-mobile, .dkp) .dkh-spark.is-c {
   top: 92px;
   right: 112px;
   width: 10px;
@@ -1635,13 +1637,69 @@
   .dk-mobile .dkh *,
   .dk-mobile .dkh *::before,
   .dk-mobile .dkh *::after,
-  .dk-mobile .dkh-hero *,
-  .dk-mobile .dkh-hero *::before,
-  .dk-mobile .dkh-hero *::after,
+  :is(.dk-mobile, .dkp) .dkh-hero *,
+  :is(.dk-mobile, .dkp) .dkh-hero *::before,
+  :is(.dk-mobile, .dkp) .dkh-hero *::after,
   .dk-mobile .dks * {
     animation: none !important;
   }
   .dk-mobile .dkh-die-cube {
     transition: none;
   }
+}
+
+/* ---- Waiting for an opponent / joining an invite (lobby.tsx) ---- */
+/* The launch page's buttons, small: a lip underneath that sinks on a press. */
+.dk-mobile .dk-lobby {
+  border-radius: 20px;
+}
+.dk-mobile .dk-lobby h3 {
+  font: 400 21px/1.1 var(--display);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.dk-mobile .dk-lobby button.btn:not(.dk-lobby-cancel) {
+  --lip: #96380f;
+  min-height: 44px;
+  margin-bottom: 4px;
+  border: 0;
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 52%),
+    linear-gradient(160deg, #ffb066, #dd5a2a);
+  color: #2a1206;
+  font: 700 15px var(--sans);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.12),
+    0 4px 0 var(--lip),
+    0 11px 12px -8px rgba(0, 0, 0, 0.5);
+  transition: transform 0.09s ease, box-shadow 0.09s ease;
+}
+.dk-mobile .dk-lobby button.btn:not(.dk-lobby-cancel):active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.12),
+    0 1px 0 var(--lip),
+    0 4px 6px -5px rgba(0, 0, 0, 0.5);
+}
+.dk-mobile .dk-lobby .dk-lobby-link {
+  flex-wrap: wrap;
+}
+.dk-mobile .dk-lobby .dk-lobby-link input {
+  flex: 1 1 100%;
+  min-height: 44px;
+  border-radius: 12px;
+}
+.dk-mobile .dk-lobby .dk-lobby-link button.btn {
+  flex: 1;
+}
+.dk-mobile .dk-lobby .dk-lobby-cancel {
+  min-height: 44px;
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  background: transparent;
+  color: var(--text);
+  opacity: 1;
 }
