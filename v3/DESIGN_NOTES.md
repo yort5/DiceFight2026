@@ -5125,3 +5125,43 @@ checkbox and a Start button - a form, and nothing of the game on it.
   mobile game through the old form (`.champ-pick-column`, "Start
   Match") no longer match; start one with
   `/dice-kingdom/mobile?play=computer`, `.dks-champ`, `.dks-start`.
+
+## 2026-11-11 - The launch page's logo and buttons
+
+User, on the new launch page: "I like most of the new look - I'd like to
+try something different/better for the words 'Dice Kingdom' though. I'd
+like to give the other buttons a bit more pizzaz then as well, instead
+of just being a bunch of boxes with text in them." The wordmark was one
+line of gradient type over a row of energy badges; the tiles were tinted
+cards with a small icon chip. The hero's sky, card fan, 3D dice, top bar
+and the page's order are unchanged.
+
+- **Logo** (`Wordmark` in `MobileHome.tsx`): DICE is spelled on four
+  dice, one per energy (Claw, Shell, Wing, Eye - four letters, four
+  energies), which drop in and hop in a wave now and then. KINGDOM sits
+  under them, large, on an arch, in gold with a dark outline and a
+  dropped edge, a crown on the K, and a sheen that crosses it every few
+  seconds. Each letter is three layers (edge, outline, face); the
+  outline is a ring of text shadows, since a text stroke spikes at the
+  corners of K and M. The energy-badge row is gone - the dice carry the
+  colours. The `h1` still reads "Dice Kingdom" to a screen reader.
+  `MobileBrand` (waiting / invite screens) gets the same pieces on one
+  line, no arch.
+- **Buttons**: each is a face in its own jewel colour over a darker lip
+  that the press sinks into (the same colours in light and dark), with
+  its own art instead of an icon chip:
+  - Quick Match keeps its orange, gains the lip and a passing glint.
+  - Boss Ladder is a full-width banner: the boss's card, crowned, and a
+    row of crowns for progress (gold = beaten, white = next, dim =
+    locked). The card is `BOSS_FACES[boss.id]` - a hand-picked card
+    from that boss's team - else its first painted card. Add a line
+    there when a boss is added to `DiceKingdomBosses.cs`.
+  - Play a Friend: a paper plane and its dashed loop. Pass & Play: a
+    chip each for players 1 and 2.
+  - Card Packs is a full-width gold banner: a foil pack with two cards
+    coming out of it, and a meter of coins saved towards the next pack
+    (the pack wiggles when one is affordable).
+  - Team Builder / How to Play stay quiet (theme-coloured) but get the
+    lip and coloured icon chips.
+- New motion follows the rule already there: it all stops under
+  prefers-reduced-motion (the rule now covers ::before / ::after too).

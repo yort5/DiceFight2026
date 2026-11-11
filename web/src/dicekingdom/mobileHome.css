@@ -349,59 +349,187 @@
 .dk-mobile .dkh-die-face.is-f4 { transform: rotateX(90deg) translateZ(calc(var(--s) / 2)); }
 .dk-mobile .dkh-die-face.is-f5 { transform: rotateX(-90deg) translateZ(calc(var(--s) / 2)); }
 
-.dk-mobile .dkh-wordmark {
+/* ---- The logo ---- */
+/* A filled crown, coloured by its parent (the logo's K, the boss tile, the ladder's rungs). */
+.dk-mobile .dkh-crown {
+  display: block;
+  fill: currentColor;
+  overflow: visible;
+}
+.dk-mobile .dkh-crown-band {
+  fill: none;
+  stroke: rgba(0, 0, 0, 0.3);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
+/* DICE on four dice over an arched, gold KINGDOM. The font size here is KINGDOM's. */
+.dk-mobile .dkh-logo {
+  --d: clamp(46px, 13.4vw, 60px);
+  --arc: 0.021em;
+  --tilt: 3deg;
   position: relative;
   z-index: 2;
-  margin: 10px 0 0;
-  padding: 0 12px;
-  font: 400 clamp(50px, 16.4vw, 78px) / 0.95 var(--display);
-  letter-spacing: 0.01em;
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: -8px 0 0;
+  font: 400 clamp(64px, 21.4vw, 96px) / 1 var(--display);
   text-transform: uppercase;
   white-space: nowrap;
-  color: #ffd58a;
-  background: linear-gradient(180deg, #fff8ec 18%, #ffd58a 58%, #f29a4f 100%);
+  -webkit-user-select: none;
+  user-select: none;
+}
+.dk-mobile .dkh-logo-dice {
+  display: flex;
+  gap: calc(var(--d) * 0.13);
+}
+.dk-mobile .dkh-logo-die {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--d);
+  height: var(--d);
+  border-radius: 24%;
+  background: linear-gradient(150deg, color-mix(in srgb, var(--tone) 78%, #fff) 0%, var(--tone) 46%, color-mix(in srgb, var(--tone) 74%, #000) 100%);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.5),
+    inset 0 calc(var(--d) * -0.09) 0 rgba(0, 0, 0, 0.16),
+    0 calc(var(--d) * 0.09) 0 color-mix(in srgb, var(--tone) 42%, #000),
+    0 calc(var(--d) * 0.22) calc(var(--d) * 0.24) calc(var(--d) * -0.06) rgba(0, 0, 0, 0.6);
+  animation:
+    dkh-drop 0.55s cubic-bezier(0.3, 1.5, 0.5, 1) calc(0.35s + var(--n) * 0.09s) both,
+    dkh-logo-hop 7s ease-in-out calc(3.2s + var(--n) * 0.11s) infinite;
+}
+.dk-mobile .dkh-logo-die:nth-child(1) { rotate: -7deg; }
+.dk-mobile .dkh-logo-die:nth-child(2) { rotate: 4deg; }
+.dk-mobile .dkh-logo-die:nth-child(3) { rotate: -3deg; }
+.dk-mobile .dkh-logo-die:nth-child(4) { rotate: 7deg; }
+.dk-mobile .dkh-logo-die b {
+  /* Anton sits high in its box; nudge it onto the die's face, clear of the shaded foot. */
+  margin-top: calc(var(--d) * -0.06);
+  color: #fffaf0;
+  font: 400 calc(var(--d) * 0.74) / 1 var(--display);
+  text-shadow: 0 calc(var(--d) * 0.04) 0 rgba(0, 0, 0, 0.28);
+}
+
+.dk-mobile .dkh-logo-word {
+  display: flex;
+  margin-top: 0.1em;
+  letter-spacing: 0;
+  animation: dkh-rise 0.6s ease 0.6s both;
+}
+/* A letter is three layers: the dropped edge (::before), the outline (its
+   own text), the gold face (::after). The outline is a ring of shadows -
+   a text stroke spikes at K's and M's corners. */
+.dk-mobile .dkh-logo-ch {
+  --ring: #4a1c0c;
+  position: relative;
+  margin: 0 0.012em;
+  color: var(--ring);
+  transform: translateY(calc(var(--i) * var(--i) * var(--arc))) rotate(calc(var(--i) * var(--tilt)));
+  text-shadow:
+    0.05em 0 0 var(--ring), 0.043em 0.025em 0 var(--ring), 0.025em 0.043em 0 var(--ring),
+    0 0.05em 0 var(--ring), -0.025em 0.043em 0 var(--ring), -0.043em 0.025em 0 var(--ring),
+    -0.05em 0 0 var(--ring), -0.043em -0.025em 0 var(--ring), -0.025em -0.043em 0 var(--ring),
+    0 -0.05em 0 var(--ring), 0.025em -0.043em 0 var(--ring), 0.043em -0.025em 0 var(--ring);
+}
+.dk-mobile .dkh-logo-ch::before,
+.dk-mobile .dkh-logo-ch::after {
+  content: attr(data-ch);
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+.dk-mobile .dkh-logo-ch::before {
+  --ring: #1f0a05;
+  z-index: -1;
+  top: 0.075em;
+  color: var(--ring);
+  text-shadow:
+    0.05em 0 0 var(--ring), 0.043em 0.025em 0 var(--ring), 0.025em 0.043em 0 var(--ring),
+    0 0.05em 0 var(--ring), -0.025em 0.043em 0 var(--ring), -0.043em 0.025em 0 var(--ring),
+    -0.05em 0 0 var(--ring), -0.043em -0.025em 0 var(--ring), -0.025em -0.043em 0 var(--ring),
+    0 0.16em 0.16em rgba(0, 0, 0, 0.55);
+}
+.dk-mobile .dkh-logo-ch::after {
+  color: #ffd56e;
+  text-shadow: none;
+  background:
+    linear-gradient(105deg, transparent 42%, rgba(255, 255, 255, 0.95) 50%, transparent 58%) 100% 0 / 300% 100% no-repeat,
+    linear-gradient(180deg, #fffdf0 8%, #ffe592 40%, #ffc24e 50%, #f59a3a 74%, #e2702e 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 3px 0 #5a2412) drop-shadow(0 10px 14px rgba(0, 0, 0, 0.55));
-  animation: dkh-rise 0.6s ease 0.35s both;
+  animation: dkh-sheen 6s ease-in-out calc(2.4s + var(--i) * 0.07s) infinite;
 }
-.dk-mobile .dkh-wordmark.is-small {
+.dk-mobile .dkh-logo-crown {
+  position: absolute;
+  z-index: 1;
+  left: -0.19em;
+  top: -0.2em;
+  width: 0.44em;
+  rotate: -24deg;
+  color: #ffd56e;
+  stroke: #4a1c0c;
+  stroke-width: 3.5;
+  stroke-linejoin: round;
+  paint-order: stroke;
+  filter: drop-shadow(0 0.03em 0 #1f0a05);
+}
+.dk-mobile .dkh-logo-crown .dkh-crown-band {
+  stroke: #c9762a;
+  stroke-width: 2.5;
+}
+
+/* On one line, for the screens that only carry the name (MobileBrand). */
+.dk-mobile .dkh-logo.is-small {
+  --d: 30px;
+  --arc: 0em;
+  --tilt: 0deg;
+  flex-direction: row;
+  justify-content: center;
+  gap: 12px;
   margin: 0;
-  font-size: 44px;
+  font-size: 42px;
 }
-.dk-mobile .dkh-energies {
+.dk-mobile .dkh-logo.is-small .dkh-logo-word {
+  margin-top: 0;
+  animation-delay: 0.2s;
+}
+.dk-mobile .dkh-logo.is-small .dkh-logo-die {
+  animation-delay: calc(var(--n) * 0.07s), calc(3.2s + var(--n) * 0.11s);
+}
+.dk-mobile .dkh-logo.is-small .dkh-logo-crown {
+  display: none;
+}
+
+.dk-mobile .dkh-tagline {
   position: relative;
   z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 9px;
-  margin-top: 12px;
-  animation: dkh-rise 0.6s ease 0.5s both;
-}
-.dk-mobile .dkh-energies::before,
-.dk-mobile .dkh-energies::after {
-  content: "";
-  width: 44px;
-  height: 1.5px;
-  background: linear-gradient(90deg, transparent, rgba(255, 248, 236, 0.55));
-}
-.dk-mobile .dkh-energies::after {
-  transform: scaleX(-1);
-}
-.dk-mobile .dkh-tagline {
-  position: relative;
-  z-index: 2;
-  margin: 11px 0 0;
-  color: rgba(255, 248, 236, 0.78);
+  gap: 10px;
+  margin: 26px 0 0;
+  color: rgba(255, 248, 236, 0.8);
   font-size: 11.5px;
   font-weight: 600;
   letter-spacing: 0.2em;
   text-align: center;
   text-transform: uppercase;
-  animation: dkh-rise 0.6s ease 0.6s both;
+  white-space: nowrap;
+  animation: dkh-rise 0.6s ease 0.75s both;
+}
+.dk-mobile .dkh-tagline::before,
+.dk-mobile .dkh-tagline::after {
+  content: "";
+  flex: 0 1 26px;
+  height: 1.5px;
+  background: linear-gradient(90deg, transparent, rgba(255, 248, 236, 0.55));
+}
+.dk-mobile .dkh-tagline::after {
+  transform: scaleX(-1);
 }
 
 /* ---- Below the key art ---- */
@@ -519,31 +647,81 @@
   font-size: 13.5px;
 }
 
-/* The one big button. */
+/* ---- The buttons ---- */
+/* Chunky ones: a face in a jewel colour over a darker lip, which the press
+   sinks into. Their colours are their own, the same in light and dark. */
 .dk-mobile .dkh-quick,
+.dk-mobile .dkh-tile {
+  --a: var(--dkm-raised);
+  --b: var(--dkm-raised);
+  --lip: var(--dkm-border);
+  --drop: 5px;
+  position: relative;
+  margin-bottom: var(--drop);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 52%),
+    repeating-linear-gradient(118deg, rgba(255, 255, 255, 0.055) 0 16px, transparent 16px 32px),
+    linear-gradient(160deg, var(--a), var(--b));
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.12),
+    0 var(--drop) 0 var(--lip),
+    0 calc(var(--drop) + 9px) 16px -8px rgba(0, 0, 0, 0.55);
+  text-align: left;
+  text-decoration: none;
+  overflow: hidden;
+  transition: transform 0.09s ease, box-shadow 0.09s ease;
+  animation: dkh-rise 0.5s ease backwards;
+  -webkit-tap-highlight-color: transparent;
+}
+.dk-mobile .dkh-quick:active,
+.dk-mobile .dkh-tile:active {
+  transform: translateY(calc(var(--drop) - 1px));
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.12),
+    0 1px 0 var(--lip),
+    0 5px 8px -6px rgba(0, 0, 0, 0.55);
+}
 .dk-mobile .dks-start {
   background: linear-gradient(135deg, var(--dkh-go-a) 0%, var(--dkh-go-b) 58%, var(--dkh-go-c) 100%);
   color: var(--dkh-go-ink);
   box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.45), 0 12px 22px -12px rgba(221, 90, 42, 0.9);
   transition: transform 0.12s ease;
 }
-.dk-mobile .dkh-quick:active,
 .dk-mobile .dks-start:active:not(:disabled),
-.dk-mobile .dkh-tile:active,
 .dk-mobile .dks-champ:active,
 .dk-mobile .dkh-continue-main:active {
   transform: scale(0.975);
 }
+
+/* The one big button. */
 .dk-mobile .dkh-quick {
-  position: relative;
+  --a: var(--dkh-go-a);
+  --b: var(--dkh-go-c);
+  --lip: #96380f;
+  --drop: 6px;
   display: flex;
   align-items: center;
   gap: 12px;
   width: 100%;
   padding: 18px 16px 18px 20px;
   border-radius: 22px;
-  overflow: hidden;
-  text-align: left;
+  color: var(--dkh-go-ink);
+  animation-delay: 0.05s;
+}
+/* A glint crosses it now and then. */
+.dk-mobile .dkh-quick::after {
+  content: "";
+  position: absolute;
+  top: -20%;
+  bottom: -20%;
+  left: -30%;
+  width: 22%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+  transform: skewX(-20deg);
+  animation: dkh-glint 6.5s ease-in-out 2.6s infinite;
+  pointer-events: none;
 }
 .dk-mobile .dkh-quick-mark {
   position: absolute;
@@ -551,7 +729,7 @@
   top: 50%;
   display: flex;
   margin-top: -60px;
-  opacity: 0.13;
+  opacity: 0.14;
   transform: rotate(-14deg);
 }
 .dk-mobile .dkh-quick-text {
@@ -564,9 +742,10 @@
   font-weight: 600;
 }
 .dk-mobile .dkh-quick-text b {
-  font: 400 32px/1 var(--display);
+  font: 400 34px/1 var(--display);
   letter-spacing: 0.02em;
   text-transform: uppercase;
+  text-shadow: 0 1.5px 0 rgba(255, 255, 255, 0.35);
 }
 .dk-mobile .dkh-quick-go {
   position: relative;
@@ -579,6 +758,7 @@
   padding-left: 3px;
   background: var(--dkh-go-ink);
   color: var(--dkh-go-a);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.25), inset 0 1.5px 0 rgba(255, 255, 255, 0.18);
   animation: dkh-beckon 2.4s ease-in-out 2s infinite;
 }
 
@@ -588,125 +768,346 @@
   gap: 10px;
 }
 .dk-mobile .dkh-tile {
-  --tone: var(--wild);
-  position: relative;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
-  min-height: 128px;
-  padding: 14px;
-  border: 1px solid color-mix(in srgb, var(--tone) 50%, var(--dkm-border));
-  border-radius: 18px;
-  background: color-mix(in srgb, var(--tone) 13%, var(--dkm-card));
-  box-shadow: var(--shadow);
-  color: var(--dkm-ink-2);
+  justify-content: flex-end;
+  gap: 3px;
+  min-height: 158px;
+  padding: 14px 14px 13px;
+  border-radius: 20px;
+  color: rgba(255, 252, 244, 0.9);
   font-size: 12.5px;
+  font-weight: 500;
   line-height: 1.3;
-  text-align: left;
-  text-decoration: none;
-  overflow: hidden;
-  transition: transform 0.12s ease;
-  -webkit-tap-highlight-color: transparent;
-}
-.dk-mobile .dkh-tile.is-gold {
-  --tone: var(--dkh-gold);
 }
 .dk-mobile .dkh-tile > b {
-  color: var(--dkm-ink);
-  font: 400 20px/1.1 var(--display);
+  position: relative;
+  color: #fff;
+  font: 400 clamp(19px, 5.7vw, 23px) / 1.05 var(--display);
   letter-spacing: 0.02em;
   text-transform: uppercase;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
 }
-.dk-mobile .dkh-tile-icon {
-  flex: none;
-  width: 40px;
-  height: 40px;
-  margin-bottom: 6px;
-  border-radius: 13px;
-  display: grid;
-  place-items: center;
-  background: var(--tone);
-  color: var(--dkm-on-accent);
+.dk-mobile .dkh-tile > span:not(.dkh-art) {
+  position: relative;
+}
+.dk-mobile .dkh-tile.is-wide {
+  min-height: 126px;
+  justify-content: center;
+  padding-right: 136px;
+}
+.dk-mobile .dkh-tile.is-boss {
+  --a: #9468dc;
+  --b: #55299a;
+  --lip: #331766;
+  animation-delay: 0.12s;
+}
+.dk-mobile .dkh-tile.is-friend {
+  --a: #55aaf0;
+  --b: #2262bd;
+  --lip: #153b80;
+  animation-delay: 0.19s;
+}
+.dk-mobile .dkh-tile.is-local {
+  --a: #45c592;
+  --b: #18805b;
+  --lip: #0c553c;
+  animation-delay: 0.24s;
+}
+.dk-mobile .dkh-tile.is-gold {
+  --a: #ffd96a;
+  --b: #f09c22;
+  --lip: #a05c08;
+  color: rgba(58, 32, 2, 0.86);
+  font-weight: 600;
+  animation-delay: 0.31s;
+}
+.dk-mobile .dkh-tile.is-gold > b {
+  color: #3a2002;
+  text-shadow: 0 1.5px 0 rgba(255, 255, 255, 0.4);
 }
 .dk-mobile .dkh-tile-foot {
-  margin-top: auto;
-  padding-top: 6px;
-  color: var(--dkm-ink-dim);
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
+  opacity: 0.75;
 }
-.dk-mobile .dkh-pips {
+
+/* The art sits behind the words, off to the top or the right. */
+.dk-mobile .dkh-art {
+  position: absolute;
+  pointer-events: none;
+}
+
+/* Boss Ladder: the boss's card, crowned. */
+.dk-mobile .dkh-art-boss {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 150px;
+  background: radial-gradient(circle at 58% 55%, rgba(255, 214, 120, 0.5), transparent 62%);
+}
+.dk-mobile .dkh-boss-card {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  width: 88px;
+  height: 120px;
+  border: 4px solid #fff8ec;
+  border-radius: 10px;
+  background: linear-gradient(160deg, #3a2066, #170b30);
+  box-shadow: 0 8px 14px -4px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+  rotate: 7deg;
+}
+.dk-mobile .dkh-boss-card img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.dk-mobile .dkh-art-boss .dkh-crown {
+  position: absolute;
+  top: 1px;
+  right: 9px;
+  width: 46px;
+  rotate: 21deg;
+  color: #ffd45f;
+  stroke: #5a2c08;
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  paint-order: stroke;
+  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.4));
+  animation: dkh-nod 5s ease-in-out 2s infinite;
+}
+.dk-mobile .dkh-art-boss .dkh-crown-band {
+  stroke: #c98524;
+}
+/* A crown for each boss: won, up next, still locked. */
+.dk-mobile .dkh-rungs {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: auto;
-  padding-top: 8px;
+  gap: 5px;
+  margin-top: 7px;
 }
-.dk-mobile .dkh-pips i {
-  width: 14px;
-  height: 6px;
-  border-radius: 3px;
-  background: var(--dkm-hairline);
+.dk-mobile .dkh-rungs .dkh-crown {
+  width: 22px;
+  color: rgba(255, 255, 255, 0.24);
 }
-.dk-mobile .dkh-pips i.is-beaten {
-  background: var(--tone);
+.dk-mobile .dkh-rungs .dkh-crown .dkh-crown-band {
+  stroke: none;
 }
-.dk-mobile .dkh-pips i.is-open {
-  background: none;
-  box-shadow: inset 0 0 0 1.5px var(--tone);
+.dk-mobile .dkh-rungs .dkh-crown.is-beaten {
+  color: #ffd45f;
+  filter: drop-shadow(0 1.5px 0 rgba(0, 0, 0, 0.3));
 }
-/* A little foil pack, drawn. */
+.dk-mobile .dkh-rungs .dkh-crown.is-open {
+  color: #fff8ec;
+  animation: dkh-blink 1.2s ease-in-out infinite alternate;
+}
+
+/* Play a Friend: a paper plane. */
+.dk-mobile .dkh-art-plane {
+  top: 6px;
+  right: 2px;
+  width: 116px;
+  overflow: visible;
+}
+.dk-mobile .dkh-art-trail {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.6);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-dasharray: 5 7;
+  animation: dkh-dash 1.4s linear infinite;
+}
+.dk-mobile .dkh-art-float {
+  filter: drop-shadow(0 5px 4px rgba(10, 30, 80, 0.4));
+  animation: dkh-float 3.4s ease-in-out infinite alternate;
+}
+
+/* Pass & Play: a chip for each player. */
+.dk-mobile .dkh-art-chips {
+  top: 12px;
+  right: 10px;
+  width: 104px;
+  height: 80px;
+}
+.dk-mobile .dkh-art-chips i {
+  --c: #e2703f;
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, var(--c) 0 53%, #fff8ec 54% 60%, transparent 61%),
+    repeating-conic-gradient(#fff8ec 0 22.5deg, var(--c) 22.5deg 45deg);
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--c) 55%, #000), 0 9px 9px -3px rgba(0, 0, 0, 0.45);
+  color: #fff8ec;
+  font: 400 27px/1 var(--display);
+  font-style: normal;
+  text-shadow: 0 1.5px 0 rgba(0, 0, 0, 0.3);
+}
+.dk-mobile .dkh-art-chips .is-one {
+  left: 2px;
+  top: 18px;
+  rotate: -10deg;
+}
+.dk-mobile .dkh-art-chips .is-two {
+  --c: #3b4f9f;
+  right: 0;
+  top: 0;
+  rotate: 14deg;
+  animation: dkh-float 3s ease-in-out 0.6s infinite alternate;
+}
+
+/* Card Packs: a foil pack, two cards on their way out of it. */
+.dk-mobile .dkh-art-pack {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 140px;
+}
+.dk-mobile .dkh-art-pack img {
+  position: absolute;
+  width: 50px;
+  height: 68px;
+  border: 3px solid #fff8ec;
+  border-radius: 7px;
+  box-shadow: 0 4px 8px -3px rgba(60, 30, 0, 0.6);
+  object-fit: cover;
+}
+.dk-mobile .dkh-art-pack img.is-a {
+  top: 5px;
+  right: 74px;
+  rotate: -17deg;
+}
+.dk-mobile .dkh-art-pack img.is-b {
+  top: 1px;
+  right: 16px;
+  rotate: 13deg;
+}
 .dk-mobile .dkh-pack {
-  position: relative;
-  flex: none;
-  width: 32px;
-  height: 40px;
-  margin: 0 0 6px 4px;
-  border-radius: 5px;
-  background: linear-gradient(120deg, #f7d774 0%, #f2a444 45%, #e2703f 100%);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4), 0 6px 10px -6px rgba(0, 0, 0, 0.6);
-  transform: rotate(-8deg);
+  position: absolute;
+  top: 26px;
+  right: 34px;
+  display: grid;
+  place-items: center;
+  width: 70px;
+  height: 92px;
+  border-radius: 6px;
+  background:
+    linear-gradient(112deg, transparent 30%, rgba(255, 255, 255, 0.34) 44%, transparent 58%),
+    linear-gradient(160deg, #d0559c 0%, #8a2f96 52%, #4a1d78 100%);
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.35), 0 8px 12px -4px rgba(60, 30, 0, 0.65);
+  color: #fff8ec;
+  rotate: -5deg;
 }
+/* The crimped seal. */
 .dk-mobile .dkh-pack::before {
   content: "";
   position: absolute;
-  inset: 5px 0 auto;
-  height: 1.5px;
-  background: rgba(42, 18, 6, 0.35);
+  inset: 0 0 auto;
+  height: 9px;
+  border-radius: 6px 6px 0 0;
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.5) 0 2px, rgba(74, 29, 120, 0.25) 2px 5px);
 }
-.dk-mobile .dkh-pack i {
+.dk-mobile .dkh-pack svg {
+  width: 34px;
+  height: 34px;
+  margin-top: -10px;
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.25));
+}
+.dk-mobile .dkh-spark {
   position: absolute;
-  left: 50%;
-  top: 58%;
-  width: 14px;
-  height: 14px;
-  margin: -7px 0 0 -7px;
-  border-radius: 50%;
-  background: #fff8ec;
-  box-shadow: 0 0 0 2px rgba(42, 18, 6, 0.25);
+  width: 16px;
+  height: 16px;
+  background: #fff;
+  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  animation: dkh-spark 2.6s ease-in-out infinite;
+}
+.dk-mobile .dkh-spark.is-a {
+  top: 24px;
+  right: 122px;
+}
+.dk-mobile .dkh-spark.is-b {
+  top: 78px;
+  right: 14px;
+  width: 12px;
+  height: 12px;
+  animation-delay: 0.9s;
+}
+.dk-mobile .dkh-spark.is-c {
+  top: 92px;
+  right: 112px;
+  width: 10px;
+  height: 10px;
+  animation-delay: 1.7s;
 }
 .dk-mobile .dkh-tile.is-ready .dkh-pack {
   animation: dkh-wiggle 2.6s ease-in-out 1.5s infinite;
 }
-.dk-mobile .dkh-tile.is-ready {
-  border-color: var(--tone);
+/* Coins saved towards the next pack. */
+.dk-mobile .dkh-meter {
+  width: 100%;
+  max-width: 170px;
+  height: 8px;
+  margin: 6px 0 3px;
+  border-radius: 4px;
+  background: rgba(74, 40, 0, 0.26);
+  box-shadow: inset 0 1px 1px rgba(74, 40, 0, 0.3);
+  overflow: hidden;
 }
+.dk-mobile .dkh-meter i {
+  display: block;
+  min-width: 8px;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(180deg, #7a4208, #4a2600);
+}
+
+/* The quieter pair under "More". */
 .dk-mobile .dkh-tile.is-slim {
+  --drop: 4px;
   flex-direction: row;
   align-items: center;
+  justify-content: flex-start;
   gap: 10px;
   min-height: 0;
   padding: 10px 12px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0) 60%), var(--dkm-raised);
+  box-shadow:
+    inset 0 0 0 1px var(--dkm-border),
+    0 var(--drop) 0 var(--dkm-border),
+    0 calc(var(--drop) + 8px) 12px -8px rgba(0, 0, 0, 0.4);
+  animation-delay: 0.38s;
+}
+.dk-mobile .dkh-tile.is-slim:active {
+  box-shadow: inset 0 0 0 1px var(--dkm-border), 0 1px 0 var(--dkm-border);
 }
 .dk-mobile .dkh-tile.is-slim > b {
-  font-size: 16px;
+  color: var(--dkm-ink);
+  font-size: clamp(14px, 4.2vw, 17px);
+  text-shadow: none;
 }
-.dk-mobile .dkh-tile.is-slim .dkh-tile-icon {
-  width: 34px;
-  height: 34px;
-  margin: 0;
-  border-radius: 11px;
+.dk-mobile .dkh-tile-icon {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(160deg, #55aaf0, #2262bd);
+  box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.4), 0 2px 0 #153b80;
+  color: #fff;
+  rotate: -5deg;
+}
+.dk-mobile .dkh-grid > :nth-child(2) > .dkh-tile-icon {
+  background: linear-gradient(160deg, var(--dkh-go-a), var(--dkh-go-c));
+  box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.4), 0 2px 0 #96380f;
+  rotate: 5deg;
 }
 .dk-mobile .dkh-tag {
   position: absolute;
@@ -1138,26 +1539,105 @@
     transform: translateX(-1px);
   }
 }
+@keyframes dkh-logo-hop {
+  0%,
+  9%,
+  100% {
+    translate: 0 0;
+  }
+  3.5% {
+    translate: 0 -10px;
+  }
+  6.5% {
+    translate: 0 2px;
+  }
+}
+@keyframes dkh-sheen {
+  0%,
+  100% {
+    background-position: 100% 0, 0 0;
+  }
+  22% {
+    background-position: 0% 0, 0 0;
+  }
+  22.01% {
+    background-position: 100% 0, 0 0;
+  }
+}
+@keyframes dkh-glint {
+  0%,
+  100% {
+    left: -30%;
+  }
+  16%,
+  99.9% {
+    left: 115%;
+  }
+}
+@keyframes dkh-nod {
+  0%,
+  86%,
+  100% {
+    rotate: 21deg;
+  }
+  91% {
+    rotate: 9deg;
+  }
+  96% {
+    rotate: 25deg;
+  }
+}
+@keyframes dkh-blink {
+  from {
+    opacity: 0.6;
+    scale: 0.88;
+  }
+}
+@keyframes dkh-dash {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+@keyframes dkh-float {
+  to {
+    translate: 0 -5px;
+  }
+}
+@keyframes dkh-spark {
+  0%,
+  100% {
+    opacity: 0;
+    scale: 0.3;
+  }
+  50% {
+    opacity: 1;
+    scale: 1;
+  }
+}
 @keyframes dkh-wiggle {
   0%,
   78%,
   100% {
-    transform: rotate(-8deg);
+    transform: rotate(0deg);
   }
   84% {
-    transform: rotate(-16deg);
+    transform: rotate(-8deg);
   }
   90% {
-    transform: rotate(2deg);
+    transform: rotate(8deg);
   }
   95% {
-    transform: rotate(-11deg);
+    transform: rotate(-4deg);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .dk-mobile .dkh *,
+  .dk-mobile .dkh *::before,
+  .dk-mobile .dkh *::after,
   .dk-mobile .dkh-hero *,
+  .dk-mobile .dkh-hero *::before,
+  .dk-mobile .dkh-hero *::after,
   .dk-mobile .dks * {
     animation: none !important;
   }

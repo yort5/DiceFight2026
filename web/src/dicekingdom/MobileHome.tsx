@@ -15,7 +15,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import { navigate, type Route } from "../router";
 import { ScreenMenu } from "../ScreenMenu";
-import { paintingSrc } from "./cardArt";
+import { hasPainting, paintingSrc } from "./cardArt";
 import { OPPONENT_PICKS, PLAYSTYLES, championLabel, usePowerText, type ChampionChoice } from "./ChampionPicker";
 import { CUSTOM_TEAM_PICK, pendingCustomTeam, type CustomTeam } from "./customTeams";
 import { CHAMPION_ICONS, ENERGY_ICONS, EnergyBadge, TardigradeIcon, type IconComponent } from "./icons";
@@ -90,18 +90,6 @@ const DieIcon = ({ size }: { size?: number }) => (
     {[[8.4, 8.4], [15.6, 8.4], [12, 12], [8.4, 15.6], [15.6, 15.6]].map(([x, y]) => (
       <circle key={`${x}-${y}`} cx={x} cy={y} r="1.25" fill="currentColor" stroke="none" />
     ))}
-  </Line>
-);
-const CrownIcon = ({ size }: { size?: number }) => (
-  <Line size={size}><path d="M4.5 15.5 3 7l5 4 4-6.5L16 11l5-4-1.5 8.5zM5 19h14" /></Line>
-);
-const SendIcon = ({ size }: { size?: number }) => (
-  <Line size={size}><path d="M21 3 10.5 13.5M21 3l-6.5 18-4-7.5L3 9.5z" /></Line>
-);
-const PairIcon = ({ size }: { size?: number }) => (
-  <Line size={size}>
-    <circle cx="8.5" cy="8" r="3.3" />
-    <path d="M2.5 19.5c0-3.2 2.7-5.3 6-5.3s6 2.1 6 5.3M15.5 4.9a3.3 3.3 0 0 1 0 6.2M17.5 14.6c2.3.7 4 2.5 4 4.9" />
   </Line>
 );
 const BuilderIcon = ({ size }: { size?: number }) => (
@@ -335,14 +323,49 @@ function Sky() {
   );
 }
 
+// ---- The logo ----
+
+/** A filled crown: on the logo's K, the boss tile, the ladder's rungs. */
+function Crown({ className }: { className?: string }) {
+  return (
+    <svg className={`dkh-crown${className ? ` ${className}` : ""}`} viewBox="-2 -2 48 36" aria-hidden="true">
+      <path className="dkh-crown-body" d="M6 30 3 9l10 8L22 3l9 14 10-8-3 21z" />
+      <path className="dkh-crown-band" d="M9 24.5h26" />
+      <circle cx="3" cy="9" r="2.6" />
+      <circle cx="22" cy="3" r="2.6" />
+      <circle cx="41" cy="9" r="2.6" />
+    </svg>
+  );
+}
+
+// Four letters, four energies: DICE is spelled on a die of each.
+const LOGO_DICE: [string, string][] = [["D", "Claw"], ["I", "Shell"], ["C", "Wing"], ["E", "Eye"]];
+const LOGO_WORD = [..."KINGDOM"];
+
+// 2026-11-11, user: "I'd like to try something different/better for the
+// words 'Dice Kingdom'" - it was one line of gradient type. Each KINGDOM
+// letter is two layers (a dark outline with its drop, the gold face over
+// it) on an arch; --i is its place from the middle.
 function Wordmark({ small = false }: { small?: boolean }) {
   return (
-    <>
-      <h1 className={`dkh-wordmark${small ? " is-small" : ""}`}>Dice Kingdom</h1>
-      <div className="dkh-energies" aria-hidden="true">
-        {["Claw", "Shell", "Wing", "Eye"].map((e) => <EnergyBadge key={e} type={e} size={small ? 16 : 20} />)}
-      </div>
-    </>
+    <h1 className={`dkh-logo${small ? " is-small" : ""}`}>
+      <span className="dkh-visually-hidden">Dice Kingdom</span>
+      <span className="dkh-logo-dice" aria-hidden="true">
+        {LOGO_DICE.map(([letter, energy], n) => (
+          <span key={letter} className="dkh-logo-die" style={{ ...tone(energy), ["--n" as string]: n }}>
+            <b>{letter}</b>
+          </span>
+        ))}
+      </span>
+      <span className="dkh-logo-word" aria-hidden="true">
+        {LOGO_WORD.map((letter, n) => (
+          <span key={n} className="dkh-logo-ch" data-ch={letter} style={{ ["--i" as string]: n - 3 }}>
+            {letter}
+            {n === 0 && <Crown className="dkh-logo-crown" />}
+          </span>
+        ))}
+      </span>
+    </h1>
   );
 }
 
@@ -378,6 +401,55 @@ function Go({ to, search = FROM, className, style, children }: {
     >
       {children}
     </a>
+  );
+}
+
+// ---- The tiles' art (2026-11-11, user: "a bit more pizzaz ... instead of
+// just being a bunch of boxes with text in them") ----
+
+// The card that stands for each boss on its tile - one from its team (the
+// server's DiceKingdomBosses.cs). A boss not listed shows its first painted card.
+const BOSS_FACES: Record<string, string> = {
+  "tag-jubilee": "DPS027", // Tasmanian Devil
+  "xmen-colossus": "DK-EYE-06", // Basilisk
+  sidekicks: "THOR036", // Moose
+};
+
+/** A paper plane and the loop it flew. */
+function PlaneArt() {
+  return (
+    <svg className="dkh-art dkh-art-plane" viewBox="0 0 120 92" aria-hidden="true">
+      <path className="dkh-art-trail" d="M2 68c12 4 28 1 34-12 5-11-6-20-13-13-7 8 7 19 21 15 8-2 14-4 20-6" />
+      <g className="dkh-art-float">
+        <path d="M112 8 44 34l26 16z" fill="#fff8ec" />
+        <path d="M112 8 70 50l14 28z" fill="#cfe4f8" />
+        <path d="M70 50l2 20 9-9z" fill="#9cc3ea" />
+      </g>
+    </svg>
+  );
+}
+
+/** Player 1's and Player 2's chips. */
+function ChipsArt() {
+  return (
+    <span className="dkh-art dkh-art-chips" aria-hidden="true">
+      <i className="is-two">2</i>
+      <i className="is-one">1</i>
+    </span>
+  );
+}
+
+/** A foil pack with two cards on their way out of it. */
+function PackArt() {
+  return (
+    <span className="dkh-art dkh-art-pack" aria-hidden="true">
+      <img className="is-a" src={paintingSrc("DK-WING-08")!} alt="" loading="lazy" />
+      <img className="is-b" src={paintingSrc("CW054")!} alt="" loading="lazy" />
+      <span className="dkh-pack"><PawIcon /></span>
+      <i className="dkh-spark is-a" />
+      <i className="dkh-spark is-b" />
+      <i className="dkh-spark is-c" />
+    </span>
   );
 }
 
@@ -428,6 +500,9 @@ export function MobileHome({ cardsById, error, onResume }: {
   const owned = collection ? Object.keys(collection.dice).length : 0;
   const beaten = ladder?.bosses.filter((b) => b.status === "beaten").length ?? 0;
   const nextBoss = ladder?.bosses.find((b) => b.status === "open");
+  // The boss to show: the one to fight next, else the last one beaten.
+  const faceBoss = nextBoss ?? ladder?.bosses.findLast((b) => b.status === "beaten");
+  const bossCard = faceBoss ? (BOSS_FACES[faceBoss.id] ?? Object.keys(faceBoss.cards).find(hasPainting)) : undefined;
   const shown = showAll ? games : games.slice(0, 2);
 
   return (
@@ -512,50 +587,62 @@ export function MobileHome({ cardsById, error, onResume }: {
           <span className="dkh-quick-go"><PlayIcon size={24} /></span>
         </button>
 
-        <div className="dkh-grid">
-          <Go to="/dice-kingdom/bosses" className="dkh-tile" style={tone("Eye")}>
-            <span className="dkh-tile-icon"><CrownIcon /></span>
-            <b>Boss Ladder</b>
-            <span>
-              {!ladder ? "Beat the bosses, win their dice"
-                : nextBoss ? `Next: ${nextBoss.name}`
-                : beaten === ladder.bosses.length ? "Every boss beaten!" : "Beat the bosses, win their dice"}
+        <Go to="/dice-kingdom/bosses" className="dkh-tile is-wide is-boss">
+          <span className="dkh-art dkh-art-boss" aria-hidden="true">
+            <span className="dkh-boss-card">
+              {bossCard && <img src={paintingSrc(bossCard)!} alt="" loading="lazy" />}
             </span>
-            {ladder && ladder.bosses.length > 0 && (
-              <span className="dkh-pips" aria-label={`${beaten} of ${ladder.bosses.length} bosses beaten`}>
-                {ladder.bosses.map((b) => <i key={b.id} className={`is-${b.status}`} />)}
-              </span>
-            )}
-          </Go>
-          <button type="button" className="dkh-tile" style={tone("Wing")} onClick={() => openSetup("friend")}>
-            <span className="dkh-tile-icon"><SendIcon /></span>
+            <Crown />
+          </span>
+          <b>Boss Ladder</b>
+          <span>
+            {!ladder ? "Beat the bosses, win their dice"
+              : nextBoss ? `Next: ${nextBoss.name}`
+              : beaten === ladder.bosses.length ? "Every boss beaten!" : "Beat the bosses, win their dice"}
+          </span>
+          {ladder && ladder.bosses.length > 0 && (
+            <span className="dkh-rungs" role="img" aria-label={`${beaten} of ${ladder.bosses.length} bosses beaten`}>
+              {ladder.bosses.map((b) => <Crown key={b.id} className={`is-${b.status}`} />)}
+            </span>
+          )}
+        </Go>
+
+        <div className="dkh-grid">
+          <button type="button" className="dkh-tile is-friend" onClick={() => openSetup("friend")}>
+            <PlaneArt />
             <b>Play a Friend</b>
             <span>Online - send them an invite link</span>
           </button>
-          <button type="button" className="dkh-tile" style={tone("Shell")} onClick={() => openSetup("local")}>
-            <span className="dkh-tile-icon"><PairIcon /></span>
+          <button type="button" className="dkh-tile is-local" onClick={() => openSetup("local")}>
+            <ChipsArt />
             <b>Pass &amp; Play</b>
             <span>Two players, one device</span>
           </button>
-          <Go to="/dice-kingdom/packs" className={`dkh-tile is-gold${packReady ? " is-ready" : ""}`}>
-            <span className="dkh-pack" aria-hidden="true"><i /></span>
-            <b>Card Packs</b>
-            <span>
-              {!collection ? "Spend coins on new dice"
-                : packReady ? "A pack is ready to open!"
-                : `${collection.packPrice - collection.coins} more coins to the next pack`}
-            </span>
-            {collection && <span className="dkh-tile-foot">{owned} {owned === 1 ? "card" : "cards"} collected</span>}
-          </Go>
         </div>
+
+        <Go to="/dice-kingdom/packs" className={`dkh-tile is-wide is-gold${packReady ? " is-ready" : ""}`}>
+          <PackArt />
+          <b>Card Packs</b>
+          <span>
+            {!collection ? "Spend coins on new dice"
+              : packReady ? "A pack is ready to open!"
+              : `${collection.packPrice - collection.coins} more coins to the next pack`}
+          </span>
+          {collection && !packReady && (
+            <span className="dkh-meter" aria-hidden="true">
+              <i style={{ width: `${Math.round((100 * collection.coins) / collection.packPrice)}%` }} />
+            </span>
+          )}
+          {collection && <span className="dkh-tile-foot">{owned} {owned === 1 ? "card" : "cards"} collected</span>}
+        </Go>
 
         <h2 className="dkh-label">More</h2>
         <div className="dkh-grid">
-          <Go to="/teambuilder" search="" className="dkh-tile is-slim" style={tone("Wild")}>
+          <Go to="/teambuilder" search="" className="dkh-tile is-slim">
             <span className="dkh-tile-icon"><BuilderIcon size={20} /></span>
             <b>Team Builder</b>
           </Go>
-          <Go to="/dice-kingdom/how-to-play" className="dkh-tile is-slim" style={tone("Wild")}>
+          <Go to="/dice-kingdom/how-to-play" className="dkh-tile is-slim">
             <span className="dkh-tile-icon"><BookIcon size={20} /></span>
             <b>How to Play</b>
             {newPlayer && <em className="dkh-tag">Start here</em>}
