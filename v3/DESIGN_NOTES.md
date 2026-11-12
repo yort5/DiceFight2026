@@ -5209,3 +5209,31 @@ page and was left as it is.
 Checked in headless Chromium at 402, 320 and 1280 wide, dark and light,
 with the ladder mid-way, a team pick open, a pack opened, too few coins,
 and a named account: no sideways scroll, no console errors.
+
+## 2026-11-12 - A pack opens over the whole screen
+
+User, on an iPhone SE: "I clicked on the 'Open pack' button and I heard
+the sound effects, but I didn't see the pack being opened. Seems like it
+happened off screen - when I scrolled down, I could see the cards. ...
+There should probably be a full-screen animation overlaid or something,
+but with an option to skip the full animation and just get a quick
+1-second one." The cards used to turn over at the bottom of the shop
+panel, below the fold on a small phone.
+
+- **`PackOpening`** (`PacksPage.tsx`, styles under `.dkk-opening` in
+  `kingdomPages.css`): pressing the button puts a full-screen layer over
+  the page. The foil pack shakes while the server deals, bursts, and the
+  six cards turn over one at a time, three across and two down, sized to
+  fit the screen (checked at 375x667 and 320x568 with nothing to scroll).
+  Then **Done**, and **Another** when you can afford it.
+- **Skip** during the show turns everything face up at once (Escape does
+  the same). **Quick open** - a tick box under the shop's button and
+  after each pack, remembered on the device (`dk-pack-quick`) - skips the
+  pack and turns all six in about half a second, a second or so in all
+  with the server's reply; one flip sound, plus the fanfare for a Rare
+  or Super Rare.
+- The pack just opened stays in the shop as "Your last pack", already
+  face up. `OpenedPack` takes a `pace` ("full", "quick", "done") for the
+  three uses; a trade-in's single card is unchanged.
+- Fixed while here: the side pages' reduced-motion rule for the packs
+  page never matched (`.dkp .dkk *` for a class on the same element).

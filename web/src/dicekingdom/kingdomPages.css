@@ -1100,6 +1100,225 @@
 .dkp .dk-pack-shop .dk-pack-opened {
   margin-top: 16px;
 }
+/* "Quick open": remembered, under the button and after a pack. */
+.dkp .dkk-quick {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  margin-top: 8px;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.dkp .dkk-quick input {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  min-height: 0;
+  margin: 0;
+  accent-color: #f09c22;
+}
+.dkp .dkk-quick small {
+  font-size: 12.5px;
+  font-weight: 500;
+  opacity: 0.75;
+}
+.dkp .dkk-last {
+  margin: 14px 0 0;
+  color: var(--text-dim);
+  font: 700 12px/1 var(--sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* A pack opening, over the whole screen (PackOpening). */
+.dkp .dkk-opening {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: max(12px, env(safe-area-inset-top, 0px)) 16px max(14px, env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+  background: radial-gradient(120% 75% at 50% 42%, #55307c 0%, #231a3c 55%, #120e20 100%);
+  color: #fff8ec;
+  animation: dkk-fade 0.2s ease;
+}
+@keyframes dkk-fade {
+  from {
+    opacity: 0;
+  }
+}
+.dkp .dkk-opening-top {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  max-width: 560px;
+}
+.dkp .dkk-opening-top h2 {
+  margin: 0;
+  color: #fff8ec;
+  font: 400 24px/1 var(--display);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.dkp .dkk-opening-stage {
+  flex: 1 0 auto;
+  display: grid;
+  place-items: center;
+  width: 100%;
+}
+/* Three across, two down, as big as the screen's height allows. */
+.dkp .dkk-opening .dk-pack-opened:has(.dk-pack-card.full) {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  width: min(100%, 560px, max(230px, (100dvh - 210px) * 1.07 + 20px));
+  margin: 0;
+}
+.dkp .dkk-opening .dk-pack-card.up {
+  animation: dkk-pop 0.45s ease;
+}
+@keyframes dkk-pop {
+  50% {
+    transform: scale(1.07);
+  }
+}
+/* Three across on a phone: the collection tiles' tighter type. */
+@media (max-width: 560px) {
+  .dkp .dkk-opening .dk-fullcard-head {
+    padding: 3px 4px 2px;
+  }
+  .dkp .dkk-opening .dk-fullcard-name,
+  .dkp .dkk-opening .dk-fullcard-cost {
+    font-size: 10.5px;
+  }
+  .dkp .dkk-opening .dk-fullcard-name.long {
+    font-size: 9px;
+    letter-spacing: -0.01em;
+  }
+  .dkp .dkk-opening .dk-fullcard-art {
+    margin: 0 3px;
+  }
+  .dkp .dkk-opening .dk-fullcard-foot {
+    gap: 2px;
+    padding: 2px 3px 3px 4px;
+  }
+  .dkp .dkk-opening .dk-fullcard-rarity {
+    min-width: 0;
+    overflow: hidden;
+    font-size: 7.5px;
+    letter-spacing: 0.02em;
+    text-overflow: ellipsis;
+  }
+  .dkp .dkk-opening .dk-pack-owned {
+    flex: none;
+  }
+  .dkp .dkk-opening .dk-pack-owned {
+    font-size: 9.5px;
+  }
+  .dkp .dkk-opening .dk-pack-owned.new {
+    padding: 1px 5px;
+  }
+}
+@media (max-width: 359px) {
+  .dkp .dkk-opening .dk-fullcard-name,
+  .dkp .dkk-opening .dk-fullcard-name.long {
+    font-size: 8.5px;
+    letter-spacing: -0.01em;
+  }
+}
+.dkp .dkk-bigpack {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 168px;
+  height: 224px;
+  border-radius: 12px;
+  background:
+    linear-gradient(112deg, transparent 30%, rgba(255, 255, 255, 0.36) 44%, transparent 58%),
+    linear-gradient(160deg, #d0559c 0%, #8a2f96 52%, #4a1d78 100%);
+  box-shadow:
+    inset 0 0 0 2.5px rgba(255, 255, 255, 0.35),
+    0 0 60px 6px rgba(255, 190, 110, 0.35),
+    0 22px 30px -12px rgba(0, 0, 0, 0.8);
+  color: #fff8ec;
+  animation: dkk-shake 0.36s ease-in-out infinite;
+}
+/* The crimped ends of the foil. */
+.dkp .dkk-bigpack::before,
+.dkp .dkk-bigpack::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 16px;
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.3) 0 3px, transparent 3px 7px);
+}
+.dkp .dkk-bigpack::before {
+  top: 0;
+  border-radius: 12px 12px 0 0;
+}
+.dkp .dkk-bigpack::after {
+  bottom: 0;
+  border-radius: 0 0 12px 12px;
+}
+.dkp .dkk-bigpack.is-burst {
+  animation: dkk-burst 0.45s ease-in forwards;
+}
+@keyframes dkk-burst {
+  30% {
+    transform: scale(0.9);
+    filter: brightness(1);
+  }
+  100% {
+    transform: scale(1.9);
+    filter: brightness(3);
+    opacity: 0;
+  }
+}
+.dkp .dkk-opening-foot {
+  flex: none;
+  display: grid;
+  justify-items: center;
+  width: 100%;
+  max-width: 420px;
+  min-height: 112px;
+  align-content: start;
+}
+.dkp .dkk-opening-go {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+.dkp .dkk-opening-go .btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding-inline: 12px;
+}
+.dicekingdom.dkp .dkk-opening button.btn.dkk-skip {
+  min-width: 140px;
+  min-height: 48px;
+  border-color: rgba(255, 248, 236, 0.35);
+  color: #fff8ec;
+}
+.dicekingdom.dkp .dkk-opening button.btn.dkk-skip:disabled {
+  background: transparent;
+  box-shadow: none;
+  opacity: 0.35;
+}
+.dkp .dkk-opening .dkk-quick {
+  color: rgba(255, 248, 236, 0.9);
+}
+
 /* Trade-ins: what you give, what you get. */
 .dkp .dk-trade-row {
   gap: 10px;
@@ -1259,9 +1478,9 @@
   .dkp .dkp-title::after,
   .dkp .dkb-boss,
   .dkp .dkb-boss *,
-  .dkp .dkk *,
-  .dkp .dkk *::before,
-  .dkp .dkk *::after {
+  .dkp.dkk *,
+  .dkp.dkk *::before,
+  .dkp.dkk *::after {
     animation: none !important;
   }
 }

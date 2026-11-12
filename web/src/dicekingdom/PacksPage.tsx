@@ -4,13 +4,13 @@
 // rarity-less Basic Action (2026-10-20) - for coins from the starting grant and one visit a day. The Champion
 // teams stay free starter rosters, and each joins the collection once a
 // game with it is finished. Spare dice trade up a rarity (TradeIns).
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { championLabel } from "./ChampionPicker";
 import { api } from "./api";
 import { CHARACTER_ICONS, EnergyBadge, type IconComponent } from "./icons";
 import { Painting, hasPainting } from "./cardArt";
 import { FullArtCard, energyOf, energyPlate, rarityLabel } from "./FullArtCard";
-import { CoinIcon, PackArt } from "./kingdomArt";
+import { CoinIcon, PackArt, PawIcon } from "./kingdomArt";
 import { KingdomPage, SoundButton } from "./PageShell";
 import { players, type Collection, type PulledCard, type Rarity } from "./player";
 import { playSound } from "./sound";
@@ -53,11 +53,20 @@ export { energyOf, energyPlate };
 
 const SEALED_MS = 450;
 
-function OpenedPack({ pulled, cards }: { pulled: PulledCard[]; cards: Map<string, CardDef> }) {
+// How the cards turn over: one at a time with a beat before the last
+// ("full"), all inside a second ("quick"), or already face up ("done").
+type Pace = "full" | "quick" | "done";
+
+function OpenedPack({ pulled, cards, pace = "full", onDone }: {
+  pulled: PulledCard[];
+  cards: Map<string, CardDef>;
+  pace?: Pace;
+  onDone?: () => void;
+}) {
   // A short sealed beat, then turned over one at a time; a tap turns the rest.
   const order = useMemo(() => revealOrder(pulled), [pulled]);
-  const [shown, setShown] = useState(0);
-  const [sealed, setSealed] = useState(order.length > 1);
+  const [shown, setShown] = useState(pace === "done" ? order.length : 0);
+  const [sealed, setSealed] = useState(pace === "full" && order.length > 1);
   useEffect(() => {
     if (!sealed) return;
     const timer = window.setTimeout(() => setSealed(false), SEALED_MS);
@@ -65,14 +74,21 @@ function OpenedPack({ pulled, cards }: { pulled: PulledCard[]; cards: Map<string
   }, [sealed]);
   useEffect(() => {
     if (sealed || shown >= order.length) return;
-    const timer = window.setTimeout(() => setShown((n) => n + 1), shown === order.length - 1 ? 700 : 350);
+    const wait = pace === "quick" ? 80 : shown === order.length - 1 ? 700 : 350;
+    const timer = window.setTimeout(() => setShown((n) => n + 1), wait);
     return () => window.clearTimeout(timer);
-  }, [sealed, shown, order.length]);
+  }, [sealed, shown, order.length, pace]);
   useEffect(() => {
-    if (shown === 0) return;
+    if (shown === 0 || pace === "done") return;
     const rarity = order[shown - 1].rarity;
+    // Quick: one flip for the lot, and still the fanfare for a rare one.
+    if (pace === "quick" && shown > 1 && rarity !== "SuperRare" && rarity !== "Rare") return;
     playSound(rarity === "SuperRare" ? "superRare" : rarity === "Rare" ? "rare" : "cardFlip");
-  }, [shown, order]);
+  }, [shown, order, pace]);
+  const allUp = shown >= order.length;
+  useEffect(() => {
+    if (allUp) onDone?.();
+  }, [allUp, onDone]);
 
   return (
     <div
@@ -98,6 +114,134 @@ function OpenedPack({ pulled, cards }: { pulled: PulledCard[]; cards: Map<string
           </div>
         );
       })}
+    </div>
+  );
+}
+
+// "Quick open" is remembered on this device.
+const QUICK_KEY = "dk-pack-quick";
+function storedQuick(): boolean {
+  try {
+    return localStorage.getItem(QUICK_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function QuickToggle({ quick, setQuick }: { quick: boolean; setQuick: (next: boolean) => void }) {
+  return (
+    <label className="dkk-quick">
+      <input type="checkbox" checked={quick} onChange={(e) => setQuick(e.currentTarget.checked)} />
+      <span>
+        Quick open <small>- skip the show, about a second</small>
+      </span>
+    </label>
+  );
+}
+
+const SHAKE_MS = 900;
+const BURST_MS = 450;
+
+// The pack opens over the whole screen (2026-11-12, user, on an iPhone SE:
+// "I heard the sound effects, but I didn't see the pack being opened. Seems
+// like it happened off screen"): the foil pack shakes while the server
+// deals, bursts, and the six cards turn over where you can't miss them.
+// Skip - or Quick open, for every pack - goes straight to the cards.
+function PackOpening({ pulled, cards, packSet, coins, price, quick, setQuick, onAgain, onClose }: {
+  /** null while the server is still dealing. */
+  pulled: PulledCard[] | null;
+  cards: Map<string, CardDef>;
+  packSet: string;
+  coins: number;
+  price: number;
+  quick: boolean;
+  setQuick: (next: boolean) => void;
+  onAgain: () => void;
+  onClose: () => void;
+}) {
+  // Quick as it was when this pack was opened - ticking the box is for the next one.
+  const [fast] = useState(quick);
+  const [skipped, setSkipped] = useState(false);
+  const [shaken, setShaken] = useState(false);
+  const [burst, setBurst] = useState(false);
+  const [done, setDone] = useState(false);
+  const markDone = useCallback(() => setDone(true), []);
+  const dealt = pulled !== null;
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setShaken(true), SHAKE_MS);
+    return () => window.clearTimeout(timer);
+  }, []);
+  useEffect(() => {
+    if (!dealt || !shaken) return;
+    const timer = window.setTimeout(() => setBurst(true), BURST_MS);
+    return () => window.clearTimeout(timer);
+  }, [dealt, shaken]);
+  // The page behind stays put.
+  useEffect(() => {
+    const root = document.documentElement;
+    const was = root.style.overflow;
+    root.style.overflow = "hidden";
+    return () => {
+      root.style.overflow = was;
+    };
+  }, []);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (done) onClose();
+      else setSkipped(true);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [done, onClose]);
+
+  const pace: Pace = skipped ? "done" : fast ? "quick" : "full";
+  const stage = !pulled ? "pack" : pace !== "full" || burst ? "cards" : shaken ? "burst" : "pack";
+
+  return (
+    <div className="dkk-opening" role="dialog" aria-modal="true" aria-label={`Opening a ${packSet} pack`}>
+      <div className="dkk-opening-top">
+        <h2>{packSet} pack</h2>
+        <span className="dkp-chip" aria-label={`${coins} coins`}>
+          <CoinIcon size={20} />
+          {coins}
+        </span>
+      </div>
+      <div className="dkk-opening-stage">
+        {stage === "cards" && pulled ? (
+          <OpenedPack key={pace} pulled={pulled} cards={cards} pace={pace} onDone={markDone} />
+        ) : (
+          <span className={`dkk-bigpack${stage === "burst" ? " is-burst" : ""}`} aria-hidden="true">
+            <PawIcon size={64} />
+          </span>
+        )}
+      </div>
+      <div className="dkk-opening-foot">
+        {done ? (
+          <>
+            <div className="dkk-opening-go">
+              <button type="button" className="btn is-go is-big" autoFocus onClick={onClose}>
+                Done
+              </button>
+              {coins >= price && (
+                <button type="button" className="btn is-gold is-big" onClick={onAgain}>
+                  Another
+                  <span className="dkk-price">
+                    <CoinIcon size={18} />
+                    {price}
+                  </span>
+                </button>
+              )}
+            </div>
+            <QuickToggle quick={quick} setQuick={setQuick} />
+          </>
+        ) : (
+          <button type="button" className="btn ghost dkk-skip" disabled={!dealt} onClick={() => setSkipped(true)}>
+            Skip
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -336,7 +480,11 @@ export function PacksPage() {
   const [collection, setCollection] = useState<Collection | null>(null);
   const [daily, setDaily] = useState(0);
   const [cards, setCards] = useState<CardDef[]>([]);
-  const [pulled, setPulled] = useState<{ n: number; cards: PulledCard[] } | null>(null);
+  // The pack being opened, over the page (PackOpening), and the last one, left in the shop.
+  const [opening, setOpening] = useState<{ n: number; cards: PulledCard[] | null } | null>(null);
+  const opened = useRef(0);
+  const [last, setLast] = useState<PulledCard[] | null>(null);
+  const [quick, setQuickState] = useState(storedQuick);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const byId = useMemo(() => new Map(cards.map((c) => [c.id, c])), [cards]);
@@ -352,15 +500,27 @@ export function PacksPage() {
     api.getCards().then(setCards, (e) => setError(e instanceof Error ? e.message : String(e)));
   }, []);
 
+  function setQuick(next: boolean) {
+    setQuickState(next);
+    try {
+      localStorage.setItem(QUICK_KEY, next ? "1" : "0");
+    } catch {
+      // storage blocked - it lasts as long as the page
+    }
+  }
+
   async function open() {
+    const n = ++opened.current;
     setBusy(true);
     setError(null);
+    setOpening({ n, cards: null });
     try {
       playSound("packOpen");
       const res = await players.openPack();
       setCollection(res.collection);
-      setPulled((p) => ({ n: (p?.n ?? 0) + 1, cards: res.cards }));
+      setOpening({ n, cards: res.cards });
     } catch (e) {
+      setOpening(null);
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
@@ -426,10 +586,33 @@ export function PacksPage() {
             <p className="dk-acct-dim">
               {collection.dailyAmount} more coins each day you visit; next from {nextDaily(collection.nextDailyUtc)}.
             </p>
-            {pulled && <OpenedPack key={pulled.n} pulled={pulled.cards} cards={byId} />}
+            <QuickToggle quick={quick} setQuick={setQuick} />
+            {last && (
+              <>
+                <h4 className="dkk-last">Your last pack</h4>
+                <OpenedPack key={opened.current} pulled={last} cards={byId} pace="done" />
+              </>
+            )}
           </div>
           <TradeIns collection={collection} cards={cards} byId={byId} onTraded={setCollection} />
           <CollectionGrid collection={collection} cards={cards} />
+          {opening && (
+            <PackOpening
+              key={opening.n}
+              pulled={opening.cards}
+              cards={byId}
+              packSet={collection.packSet}
+              coins={collection.coins}
+              price={collection.packPrice}
+              quick={quick}
+              setQuick={setQuick}
+              onAgain={() => void open()}
+              onClose={() => {
+                setLast(opening.cards);
+                setOpening(null);
+              }}
+            />
+          )}
         </>
       )}
     </KingdomPage>
