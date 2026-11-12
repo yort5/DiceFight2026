@@ -5263,3 +5263,9 @@ opponent's turn (`~/.devtools/playwright/glowup-check.js`).
   round a panel now means whose turn it is ("· playing" on the label),
   not "this one is yours" - the old always-on orange border on your
   own panel is gone. Roster and the pile counters are 32px chips.
+- **Buy row** (`BuyCard`): the three options are small cards - the
+  painting (or the line icon on the card's energy colour for Basic
+  Actions and Tardigrades), the price in a dark pill on the corner, the
+  name under it in up to two lines so the three line up. A card you
+  can't afford is dimmed and its art greyed, the name still readable.
+  "Full Roster" is a chip like Roster.

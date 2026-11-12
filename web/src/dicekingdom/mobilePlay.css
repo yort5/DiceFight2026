@@ -320,6 +320,103 @@
   font-size: 16px;
 }
 
+/* ---- The buy row (BuyCard) ---- */
+
+.dicekingdom.dk-mobile .dkm-buy-card .dkm-card-head {
+  align-items: center;
+}
+.dicekingdom.dk-mobile .dkm-buy-card .dkm-card-title {
+  font-size: 17px;
+}
+.dicekingdom.dk-mobile .dkm-buy-row {
+  align-items: flex-start;
+  gap: 8px;
+}
+/* Three small cards in the card's energy colour, price first. */
+.dicekingdom.dk-mobile .dkm-buy-tile {
+  position: relative;
+  min-width: 0;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 14px;
+  background: var(--dkm-raised);
+  box-shadow:
+    0 0 0 1.5px color-mix(in srgb, var(--energy) 60%, var(--dkm-border)),
+    0 4px 0 color-mix(in srgb, var(--energy) 45%, #000);
+  margin-bottom: 4px;
+  transition: transform 0.09s ease, box-shadow 0.09s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.dicekingdom.dk-mobile .dkm-buy-tile:active {
+  transform: translateY(3px);
+  box-shadow:
+    0 0 0 1.5px color-mix(in srgb, var(--energy) 60%, var(--dkm-border)),
+    0 1px 0 color-mix(in srgb, var(--energy) 45%, #000);
+}
+.dicekingdom.dk-mobile .dkm-buy-tile.picked {
+  transform: translateY(-3px);
+  box-shadow:
+    0 0 0 3px var(--claw),
+    0 4px 0 color-mix(in srgb, var(--energy) 45%, #000),
+    0 8px 14px -6px rgba(0, 0, 0, 0.5);
+}
+.dicekingdom.dk-mobile .dkm-buy-art {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: color-mix(in srgb, var(--energy) 30%, var(--dkm-raised));
+  color: var(--dkm-ink);
+}
+/* Out of the flow, so the painting's own size can't stretch the card. */
+.dicekingdom.dk-mobile .dkm-buy-art.painted {
+  position: relative;
+  overflow: hidden;
+}
+.dicekingdom.dk-mobile .dkm-buy-art.painted img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.dicekingdom.dk-mobile .dkm-buy-name {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  align-self: stretch;
+  /* Two lines of name, so the three cards line up. */
+  min-height: calc(2.4em + 11px);
+  padding: 5px 4px 6px;
+  font: 700 11px/1.2 "Work Sans", var(--sans);
+  color: var(--dkm-ink);
+}
+.dicekingdom.dk-mobile .dkm-buy-cost-row {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  gap: 3px;
+  padding: 3px 7px 2px 4px;
+  border-radius: 999px;
+  background: rgba(15, 17, 23, 0.78);
+}
+.dicekingdom.dk-mobile .dkm-buy-cost {
+  font: 400 15px/1 var(--display);
+  color: #fff;
+}
+/* Can't afford it: dimmed, and the art loses its colour, but the name
+   stays readable. */
+.dicekingdom.dk-mobile .dkm-buy-tile.unaffordable {
+  opacity: 0.55;
+}
+.dicekingdom.dk-mobile .dkm-buy-tile.unaffordable .dkm-buy-art {
+  filter: saturate(0.5);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .dicekingdom.dk-mobile .dkm-bottom-bar .dkm-primary-btn {
     animation: none !important;

@@ -1044,10 +1044,10 @@ function BuyCard({
   const unaffordableEntries = entries.filter(([id]) => !canAfford(id)).sort(([a], [b]) => costOf(a) - costOf(b));
   const visible = [...affordableEntries, ...unaffordableEntries].slice(0, 3);
   return (
-    <div className="dkm-card">
+    <div className="dkm-card dkm-buy-card">
       <div className="dkm-card-head">
         <span className="dkm-card-title accent">Buy</span>
-        <button type="button" className="dkm-text-btn" onClick={onOpenRoster}>
+        <button type="button" className="dkm-chip-btn" onClick={onOpenRoster}>
           Full Roster
         </button>
       </div>
@@ -1064,17 +1064,24 @@ function BuyCard({
               type="button"
               data-fly-id={`card:${cardId}`}
               className={`dkm-buy-tile${selectedId === dieId ? " picked" : ""}${affordable ? "" : " unaffordable"}${lockers ? " dk-locked" : ""}`}
+              style={{ ["--energy" as string]: `var(--${(card?.energyTypes[0] ?? "wild").toLowerCase()})` }}
               title={lockers ? `Locked out by ${lockers.join(", ")} - you can't buy or field it while that's active.` : undefined}
               onClick={() => onSelect(dieId)}
             >
               {lockers && <span className="dk-locked-hatch" aria-hidden="true" />}
-              <span className="dkm-buy-avatar">{Avatar ? <Avatar size={22} /> : <TardigradeIcon size={22} />}</span>
+              {/* A small card (2026-11-12 glow-up): the painting, or the
+                  line icon on the energy's colour, with the price on it. */}
+              <span className={`dkm-buy-art${hasPainting(cardId) ? " painted" : ""}`}>
+                {hasPainting(cardId)
+                  ? <Painting cardId={cardId} crop="icon" alt="" />
+                  : Avatar ? <Avatar size={30} /> : <TardigradeIcon size={30} />}
+              </span>
               <span className="dkm-buy-name">{card?.name ?? cardId}</span>
               <span className="dkm-buy-cost-row">
                 {(card?.energyTypes ?? []).map((t) => (
                   <EnergyBadge key={t} type={t} size={11} />
                 ))}
-                <b className="dkm-buy-cost" style={{ color: `var(--${(card?.energyTypes[0] ?? "claw").toLowerCase()})` }}>
+                <b className="dkm-buy-cost">
                   <CostNumber printed={card?.purchaseCost ?? 0} actual={costOf(cardId)} />
                 </b>
               </span>
