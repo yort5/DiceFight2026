@@ -462,6 +462,119 @@
   letter-spacing: 0.06em;
 }
 
+/* ---- The phase header: a dusk bar ---- */
+
+/* Dark in both themes, as on the side pages, so everything in it uses
+   the fixed cream palette rather than the --dkm-* tokens. */
+.dicekingdom.dk-mobile .dkm-header {
+  background: #171427;
+  color: #fff8ec;
+  border-radius: 0 0 22px 22px;
+  box-shadow: 0 10px 16px -14px rgba(0, 0, 0, 0.9);
+  padding-bottom: 10px;
+}
+/* The five phases on a track: done ones filled, the current one an
+   orange pill with its name. Not pressable (no onTap today). */
+.dicekingdom.dk-mobile .dkm-phase-rail {
+  position: relative;
+  align-items: center;
+}
+.dicekingdom.dk-mobile .dkm-phase-rail::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 19px;
+  right: 19px;
+  height: 3px;
+  margin-top: -1.5px;
+  border-radius: 2px;
+  background: rgba(255, 248, 236, 0.18);
+}
+.dicekingdom.dk-mobile .dkm-phase-pill {
+  position: relative;
+  height: 34px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(255, 248, 236, 0.22);
+  background: #2a2540;
+  color: rgba(255, 248, 236, 0.5);
+  cursor: default;
+  -webkit-tap-highlight-color: transparent;
+}
+.dicekingdom.dk-mobile .dkm-header-controls .dkm-phase-pill:not(.active) {
+  flex: 0 0 34px;
+}
+.dicekingdom.dk-mobile .dkm-phase-pill.done {
+  background: #3d3560;
+  color: #fff8ec;
+}
+.dicekingdom.dk-mobile .dkm-phase-pill.active {
+  border: 0;
+  background: linear-gradient(160deg, #ffb066, #dd5a2a);
+  color: #2a1206;
+  box-shadow: 0 3px 0 #96380f;
+}
+.dicekingdom.dk-mobile .dkm-phase-label {
+  font-weight: 700;
+}
+.dicekingdom.dk-mobile .dkm-step-line {
+  padding-bottom: 0;
+}
+.dicekingdom.dk-mobile .dkm-step-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 26px;
+  line-height: 1.2;
+  color: #fff8ec;
+}
+.dicekingdom.dk-mobile .dkm-step-chip {
+  border-radius: 999px;
+  background: rgba(255, 248, 236, 0.1);
+  border: 1px solid rgba(255, 248, 236, 0.2);
+  color: rgba(255, 248, 236, 0.8);
+}
+/* Whose turn: orange for you, purple for them (the screen's wayfinding
+   pair). If space runs out the title ellipsizes, not this. */
+.dicekingdom.dk-mobile .dkm-turn-flag {
+  flex: 0 0 auto;
+  padding: 5px 9px 4px;
+  border-radius: 999px;
+  background: #55299a;
+  color: #fff;
+  font: 400 12px/1 var(--display);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.dicekingdom.dk-mobile .dkm-turn-flag.mine {
+  background: linear-gradient(160deg, #ffb066, #dd5a2a);
+  color: #2a1206;
+}
+/* "Great Horned Owl's turn" left the title one letter at 320px, so a
+   narrow screen says "Their turn" (the purple already says who). */
+.dicekingdom.dk-mobile .dkm-turn-short {
+  display: none;
+}
+@media (max-width: 360px) {
+  .dicekingdom.dk-mobile .dkm-turn-long {
+    display: none;
+  }
+  .dicekingdom.dk-mobile .dkm-turn-short {
+    display: inline;
+  }
+}
+/* The menu: the side pages' round button. */
+.dicekingdom.dk-mobile .dkm-header-controls .screen-menu-button {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 248, 236, 0.2);
+  background: rgba(255, 248, 236, 0.08);
+  color: #fff8ec;
+}
+.dicekingdom.dk-mobile .dkm-navigation-divider {
+  background: rgba(255, 248, 236, 0.15);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .dicekingdom.dk-mobile .dkm-bottom-bar .dkm-primary-btn {
     animation: none !important;

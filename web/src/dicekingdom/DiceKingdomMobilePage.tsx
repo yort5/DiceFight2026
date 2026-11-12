@@ -574,15 +574,19 @@ function StepLine({
   index,
   total,
   onToggle,
+  flag,
 }: {
   title: string;
   index: number;
   total: number;
   onToggle: () => void;
+  /** Whose turn it is, beside the title (2026-11-12 glow-up). */
+  flag?: React.ReactNode;
 }) {
   return (
     <button type="button" className="dkm-step-line" onClick={onToggle}>
       <span className="dkm-step-title">{title}</span>
+      {flag}
       <span className="dkm-step-chip">
         step {index + 1}/{total}
         <ChevronDownIcon size={10} />
@@ -2972,7 +2976,8 @@ export function DiceKingdomMobilePage() {
           <span className="dkm-navigation-divider" aria-hidden="true" />
           <ScreenMenu screen="game" startRoute="/dice-kingdom/mobile" onStartGame={() => setGame(null)} />
         </div>
-        <StepLine title={chainSteps[chainIndex]?.label ?? phaseLabel} index={chainIndex} total={chainSteps.length} onToggle={() => setStepsOpen((v) => !v)} />
+        <StepLine title={chainSteps[chainIndex]?.label ?? phaseLabel} index={chainIndex} total={chainSteps.length} onToggle={() => setStepsOpen((v) => !v)}
+          flag={<span className={`dkm-turn-flag${isYourTurn ? " mine" : ""}`}>{isYourTurn ? "Your turn" : <><span className="dkm-turn-long">{oppPlayer.name}'s turn</span><span className="dkm-turn-short">Their turn</span></>}</span>} />
       </div>
 
       <div className="dkm-scroll">

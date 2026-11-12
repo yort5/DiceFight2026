@@ -5278,3 +5278,12 @@ opponent's turn (`~/.devtools/playwright/glowup-check.js`).
   stripes are at 4%; the inner shadow is lighter on the light theme. A
   die fielded from the Reserve still flies into the strip (checked frame
   by frame).
+- **Header** (`PhaseRail`, `StepLine`): a dusk bar, dark in both
+  themes like the side pages' bar. The five phases sit on a track -
+  upcoming ones dim circles, done ones filled, the current one the
+  orange pill with its name (still not pressable). Step title in cream
+  at 26px; the step chip and the menu button (now the side pages' round
+  one) are translucent cream. A new flag beside the title says whose
+  turn it is - orange "Your turn", purple "Golden Eagle's turn". At
+  320px a long opponent name left the title as one letter, so on
+  screens 360px and narrower the purple flag says "Their turn".
