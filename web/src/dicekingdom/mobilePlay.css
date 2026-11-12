@@ -417,6 +417,51 @@
   filter: saturate(0.5);
 }
 
+/* ---- The field: a recessed playmat ---- */
+
+/* Every place dice sit (your Field, theirs, the Reserve, the tray) is a
+   sunken strip. Keep data-region on the same element: the dice flights
+   land on it. The Reserve and the tray are neutral (-plain). */
+.dicekingdom.dk-mobile .dkm-fieldmat {
+  min-height: 66px;
+  padding: 8px;
+  border-radius: 14px;
+  align-items: center;
+  background:
+    repeating-linear-gradient(118deg, color-mix(in srgb, var(--cc) 4%, transparent) 0 14px, transparent 14px 28px),
+    color-mix(in srgb, var(--cc) 10%, var(--dkm-raised));
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.28),
+    inset 0 0 0 1px color-mix(in srgb, var(--cc) 30%, transparent);
+}
+.dicekingdom.dk-mobile .dkm-fieldmat-plain {
+  --cc: var(--dkm-ink-dim);
+}
+/* On the light theme a full-strength inner shadow reads as dirt. */
+:root[data-theme="light"] .dicekingdom.dk-mobile .dkm-fieldmat {
+  box-shadow:
+    inset 0 1px 3px rgba(0, 0, 0, 0.12),
+    inset 0 0 0 1px color-mix(in srgb, var(--cc) 30%, transparent);
+}
+.dicekingdom.dk-mobile .dkm-fieldmat .dkm-empty-hint {
+  padding-left: 4px;
+}
+.dicekingdom.dk-mobile .dkm-empty-slots {
+  display: flex;
+  gap: 7px;
+}
+.dicekingdom.dk-mobile .dkm-empty-slots i {
+  width: 46px;
+  height: 46px;
+  border-radius: 10px;
+  border: 1.5px dashed color-mix(in srgb, var(--cc) 45%, transparent);
+}
+.dicekingdom.dk-mobile .dkm-field-label {
+  margin: 0 0 4px 2px;
+  font: 400 12px/1.1 var(--display);
+  letter-spacing: 0.06em;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .dicekingdom.dk-mobile .dkm-bottom-bar .dkm-primary-btn {
     animation: none !important;

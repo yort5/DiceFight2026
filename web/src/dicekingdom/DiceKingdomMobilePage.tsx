@@ -818,9 +818,11 @@ function MatCard({
         </>
       )}
 
-      <span className="dkm-field-label">{mine ? "Field" : "Their field · active"}</span>
-      <div className="dkm-tile-row wrap" data-region={mine ? "field-mine" : "field-opp"}>
-        {field.length === 0 && <span className="dkm-empty-hint">Nothing fielded.</span>}
+      {/* A recessed playmat (2026-11-12 glow-up): an empty one shows
+          slots waiting for dice. */}
+      <span className="dkm-field-label">{mine ? "Field" : "Their field"}</span>
+      <div className="dkm-tile-row wrap dkm-fieldmat" data-region={mine ? "field-mine" : "field-opp"}>
+        {field.length === 0 && <span className="dkm-empty-slots" aria-label="Nothing fielded"><i /><i /><i /></span>}
         {field.map((d) => (
           <DTile
             key={d.id}
@@ -955,7 +957,7 @@ function TrayCard({
         <span className="dkm-card-title accent">{title}</span>
         <span className="dkm-card-hint">{hint}</span>
       </div>
-      <div className="dkm-tile-row wrap">
+      <div className="dkm-tile-row wrap dkm-fieldmat dkm-fieldmat-plain">
         {dice.length === 0 && <span className="dkm-empty-hint">Tray is empty — draw to fill it.</span>}
         {dice.map((d) =>
           rolledYet ? (
@@ -1091,7 +1093,7 @@ function BuyCard({
         {unpurchasedByCard.size === 0 && <span className="dkm-empty-hint">Nothing left to buy.</span>}
       </div>
       <span className="dkm-field-label">Reserve</span>
-      <div className="dkm-tile-row wrap">
+      <div className="dkm-tile-row wrap dkm-fieldmat dkm-fieldmat-plain">
         {rolledReserve.length === 0 && <span className="dkm-empty-hint">Nothing rolled yet.</span>}
         {rolledReserve.map((d) => {
           // A creature face to field, or an action face to use.

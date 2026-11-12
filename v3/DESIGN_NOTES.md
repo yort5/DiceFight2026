@@ -5269,3 +5269,12 @@ opponent's turn (`~/.devtools/playwright/glowup-check.js`).
   name under it in up to two lines so the three line up. A card you
   can't afford is dimmed and its art greyed, the name still readable.
   "Full Roster" is a chip like Roster.
+- **Field** (`MatCard`, `BuyCard`, `TrayCard`): every place dice sit -
+  each side's Field, the Reserve and the tray - is a sunken strip
+  (`.dkm-fieldmat`), tinted by side for the Fields and neutral for the
+  other two. An empty Field shows three dashed slots instead of
+  "Nothing fielded."; the opponent's label is just "Their field". The
+  plan's stripe strength (7%) looked busy in the screenshots, so the
+  stripes are at 4%; the inner shadow is lighter on the light theme. A
+  die fielded from the Reserve still flies into the strip (checked frame
+  by frame).
