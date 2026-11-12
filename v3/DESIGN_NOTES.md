@@ -5237,3 +5237,21 @@ panel, below the fold on a small phone.
   three uses; a trade-in's single card is unchanged.
 - Fixed while here: the side pages' reduced-motion rule for the packs
   page never matched (`.dkp .dkk *` for a class on the same element).
+
+## 2026-11-12 - The play screen gets the launch page's look
+
+User: "implement v3/PLAY_SCREEN_GLOWUP_PLAN.md" - the follow-on to the
+side pages' glow-up: the in-game mobile screen (`/dice-kingdom/mobile`)
+still had the older flat look. Done in the plan's six steps, one commit
+each. New rules live in `mobilePlay.css` (selectors start
+`.dicekingdom.dk-mobile`, one class above the old `.dk-mobile .dkm-*`
+rules in `dicekingdom.css`, which stay). Checked each step in headless
+Chromium at 402x874, 375x667 and 320x568, dark and light, at the draw,
+a rolled tray, the buy step, an attack with dice fielded and the
+opponent's turn (`~/.devtools/playwright/glowup-check.js`).
+
+- **Bottom bar**: the main button is the launch page's orange jewel
+  (54px, sinks on a press) with a slow ring while it is yours to press;
+  "Waiting..." is a flat grey slab with the same footprint, so the bar
+  never moves. Skip attack stays flat (the quiet choice). Buy / Field /
+  Use in the inspect card are small green jewels (40px, up from 38).

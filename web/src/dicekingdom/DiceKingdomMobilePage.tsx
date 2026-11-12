@@ -2,6 +2,7 @@ import { KeywordAction, KeywordText } from "../KeywordPreview";
 import { CUSTOM_TEAM_PICK, pendingCustomTeam } from "./customTeams";
 import { startTransition, useEffect, useRef, useState } from "react";
 import "./dicekingdom.css";
+import "./mobilePlay.css";
 import { ScreenMenu } from "../ScreenMenu";
 import { api, apiAs } from "./api";
 import {

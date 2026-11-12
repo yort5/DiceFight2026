@@ -1,0 +1,179 @@
+/* The mobile play screen's glow-up (v3/PLAY_SCREEN_GLOWUP_PLAN.md,
+   2026-11-12): brings the in-game screen in line with the launch page and
+   the side pages. The older rules for this screen stay in dicekingdom.css
+   under `.dk-mobile .dkm-*`; every selector here starts with
+   `.dicekingdom.dk-mobile`, one class more, so these win without
+   !important and whatever the load order.
+
+   Don't put transform, filter or contain on .dkm-root, .dkm-scroll,
+   .dkm-mat or a resting .dkm-card: the sheets and flying dice inside them
+   are position: fixed and would be placed against the wrong box. */
+
+/* ---- Bottom action bar ---- */
+
+/* The one thing to press: the launch page's chunky orange jewel. */
+.dicekingdom.dk-mobile .dkm-primary-btn {
+  --a: #ffb066;
+  --b: #dd5a2a;
+  --lip: #96380f;
+  --drop: 5px;
+  height: 54px;
+  margin-bottom: var(--drop);
+  border: 0;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 52%),
+    linear-gradient(160deg, var(--a), var(--b));
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.12),
+    0 var(--drop) 0 var(--lip),
+    0 calc(var(--drop) + 7px) 12px -8px rgba(0, 0, 0, 0.5);
+  transition: transform 0.09s ease, box-shadow 0.09s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.dicekingdom.dk-mobile .dkm-primary-btn span {
+  font: 400 20px/1 var(--display);
+  letter-spacing: 0.04em;
+  color: #2a1206;
+}
+.dicekingdom.dk-mobile .dkm-primary-btn small {
+  font: 600 10.5px/1.1 "Work Sans", var(--sans);
+  color: rgba(42, 18, 6, 0.7);
+}
+.dicekingdom.dk-mobile .dkm-primary-btn:active:not(:disabled) {
+  transform: translateY(calc(var(--drop) - 1px));
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.12),
+    0 1px 0 var(--lip),
+    0 4px 6px -5px rgba(0, 0, 0, 0.5);
+}
+/* Your move: a slow ring so the eye lands on the button. Enabled in the
+   bottom bar means it's yours to press - while the other side acts it is
+   disabled. The keyframes repeat the whole shadow list so the lip stays. */
+.dicekingdom.dk-mobile .dkm-bottom-bar .dkm-primary-btn:not(:disabled):not(:active) {
+  animation: dkmp-ready 2.4s ease-in-out infinite;
+}
+@keyframes dkmp-ready {
+  0% {
+    box-shadow:
+      inset 0 1.5px 0 rgba(255, 255, 255, 0.45),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.12),
+      0 var(--drop) 0 var(--lip),
+      0 calc(var(--drop) + 7px) 12px -8px rgba(0, 0, 0, 0.5),
+      0 0 0 0 rgba(255, 176, 102, 0.55);
+  }
+  70%,
+  100% {
+    box-shadow:
+      inset 0 1.5px 0 rgba(255, 255, 255, 0.45),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.12),
+      0 var(--drop) 0 var(--lip),
+      0 calc(var(--drop) + 7px) 12px -8px rgba(0, 0, 0, 0.5),
+      0 0 0 8px rgba(255, 176, 102, 0);
+  }
+}
+/* "Waiting... X is acting": plainly asleep - no jewel, no lip, no glow.
+   The margin stands in for the lip so the bar doesn't move by a pixel. */
+.dicekingdom.dk-mobile .dkm-primary-btn:disabled {
+  opacity: 1;
+  background: var(--dkm-raised);
+  box-shadow: inset 0 0 0 1px var(--dkm-border);
+  margin-bottom: 5px;
+  animation: none;
+}
+.dicekingdom.dk-mobile .dkm-primary-btn:disabled span,
+.dicekingdom.dk-mobile .dkm-primary-btn:disabled small {
+  color: var(--dkm-ink-dim);
+}
+
+/* "Skip attack": the quiet choice, so it stays flat on purpose. */
+.dicekingdom.dk-mobile .dkm-secondary-btn {
+  height: 54px;
+  border-radius: 18px;
+  border: 1.5px solid var(--dkm-border);
+  font: 700 13px/1.1 "Work Sans", var(--sans);
+  text-transform: none;
+  letter-spacing: 0;
+  transition: transform 0.09s ease, background-color 0.09s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.dicekingdom.dk-mobile .dkm-secondary-btn:active:not(:disabled) {
+  transform: scale(0.97);
+  background: color-mix(in srgb, var(--dkm-ink) 7%, transparent);
+}
+/* The Pangolin name-a-card rows reuse the secondary button; keep them
+   their own height. */
+.dicekingdom.dk-mobile .dkm-secondary-btn.dkm-name-card {
+  height: auto;
+  min-height: 44px;
+  border-radius: 12px;
+}
+
+.dicekingdom.dk-mobile .dkm-bottom-bar {
+  border-top: 0;
+  border-radius: 22px 22px 0 0;
+  box-shadow: 0 -1px 0 var(--dkm-border), 0 -16px 30px -12px rgba(0, 0, 0, 0.5);
+}
+
+/* Buy / Field / Use in the inspect card: a smaller green jewel. */
+.dicekingdom.dk-mobile .dkm-inspect-action {
+  --a: #45c592;
+  --b: #18805b;
+  --lip: #0c553c;
+  --drop: 3px;
+  height: 40px;
+  margin-bottom: var(--drop);
+  border: 0;
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 52%),
+    linear-gradient(160deg, var(--a), var(--b));
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.12),
+    0 var(--drop) 0 var(--lip),
+    0 calc(var(--drop) + 7px) 12px -8px rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font: 700 12.5px/1 "Work Sans", var(--sans);
+  letter-spacing: 0.03em;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+  transition: transform 0.09s ease, box-shadow 0.09s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.dicekingdom.dk-mobile .dkm-inspect-action:active:not(:disabled) {
+  transform: translateY(calc(var(--drop) - 1px));
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.12),
+    0 1px 0 var(--lip),
+    0 4px 6px -5px rgba(0, 0, 0, 0.5);
+}
+.dicekingdom.dk-mobile .dkm-inspect-action:disabled {
+  opacity: 1;
+  background: var(--dkm-raised);
+  box-shadow: inset 0 0 0 1px var(--dkm-border);
+  color: var(--dkm-ink-dim);
+  text-shadow: none;
+}
+/* The Buy row: the counts line up with the button's face, not its lip. */
+.dicekingdom.dk-mobile .dkm-purchase-row {
+  height: auto;
+  align-items: start;
+}
+.dicekingdom.dk-mobile .dkm-purchase-count {
+  height: 40px;
+}
+.dicekingdom.dk-mobile .dkm-purchase-actions {
+  height: auto;
+}
+.dicekingdom.dk-mobile .dkm-purchase-actions .dkm-inspect-action {
+  height: 40px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dicekingdom.dk-mobile .dkm-bottom-bar .dkm-primary-btn {
+    animation: none !important;
+  }
+}
