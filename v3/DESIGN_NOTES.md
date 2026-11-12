@@ -5287,3 +5287,20 @@ opponent's turn (`~/.devtools/playwright/glowup-check.js`).
   turn it is - orange "Your turn", purple "Golden Eagle's turn". At
   320px a long opponent name left the title as one letter, so on
   screens 360px and narrower the purple flag says "Their turn".
+- **Moments** (`MatCard`, `GameOverOverlay.tsx`): display only - they
+  watch the game and never change it. A life change floats off the
+  heart badge for about a second (orange for a loss, green for a gain)
+  and a loss shakes the badge; losing 5 or more also flashes the panel's
+  ring red-orange once. Game over on mobile is a popping card: a win
+  gets a nodding gold crown, a gold "You win!" and a purple dusk behind
+  it (the win card is dusk-dark in both themes - the gold title washed
+  out on the light theme's white card); a loss is plain. Both life
+  totals are pills, the winner's ringed in gold; New game is the orange
+  jewel and Boss Ladder the purple one, stacked; a boss reward sits on a
+  gold-tinted panel. The crown uses its own small nod - the launch
+  page's `dkh-nod` swings around the logo's 21-degree tilt. The overlay
+  is shared with desktop: its new markup is plain spans and a crown
+  hidden there by default, and the desktop dialog screenshots
+  pixel-identical before and after. Checked with the game state patched
+  in Playwright (`~/.devtools/playwright/glowup-moments.js`), animations
+  stepped to exact times.

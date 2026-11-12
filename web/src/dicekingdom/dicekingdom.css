@@ -3875,6 +3875,10 @@
 .dicekingdom .dk-gameover .btn + .btn {
   margin-left: 8px;
 }
+/* The win crown is a mobile-only flourish (mobilePlay.css shows it). */
+.dicekingdom .dk-gameover-crown {
+  display: none;
+}
 
 /* The boss ladder (BossesPage.tsx) is styled in kingdomPages.css. */
 

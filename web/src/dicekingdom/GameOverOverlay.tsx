@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { navigate } from "../router";
 import { api } from "./api";
 import { resultText } from "./BossesPage";
+import { Crown } from "./kingdomArt";
 import { players, type BossResult } from "./player";
 import type { CardDef, GameState } from "./types";
 
@@ -30,14 +31,26 @@ export function GameOverOverlay({ game, you, onNewGame }: { game: GameState; you
   if (!game.gameOver) return null;
   const winner = game.winnerId === game.playerOne.id ? game.playerOne : game.winnerId === game.playerTwo.id ? game.playerTwo : null;
   const title = !winner ? "It's a tie" : you && winner.id === you ? "You win!" : `${winner.name} wins`;
+  const won = !!winner && !!you && winner.id === you;
   const ladderSearch = window.location.pathname === "/dice-kingdom/mobile" ? "?from=mobile" : "";
   return (
     <div className="dk-gameover-backdrop" role="dialog" aria-label="Game over">
-      <div className="dk-gameover">
+      <div className={`dk-gameover${won ? " is-won" : winner ? " is-lost" : ""}`}>
+        {/* Shown on mobile only (mobilePlay.css); hidden on desktop. */}
+        {won && <Crown className="dk-gameover-crown" />}
         <p className="dk-gameover-eyebrow">Game over</p>
         <h2>{title}</h2>
+        {/* Plain spans, so desktop reads exactly as before; mobile makes
+            them two pills (2026-11-12). */}
         <p className="dk-gameover-life">
-          {game.playerOne.name} {game.playerOne.life} · {game.playerTwo.name} {game.playerTwo.life}
+          {[game.playerOne, game.playerTwo].map((p, i) => (
+            <span key={p.id}>
+              {i > 0 && <span className="dk-gameover-sep"> · </span>}
+              <span className={`dk-gameover-side${winner?.id === p.id ? " is-winner" : ""}`}>
+                {p.name} <span className="dk-gameover-n">{p.life}</span>
+              </span>
+            </span>
+          ))}
         </p>
         {boss && (
           <p className="dk-gameover-boss">

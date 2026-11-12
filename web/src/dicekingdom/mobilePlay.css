@@ -575,8 +575,250 @@
   background: rgba(255, 248, 236, 0.15);
 }
 
+/* ---- Moments: life changes ---- */
+
+/* The change floats up off the badge and the badge shakes on a loss;
+   five or more flashes the whole panel once. Over in about a second. */
+.dicekingdom.dk-mobile .dkm-life-delta {
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  z-index: 2;
+  translate: -50% 0;
+  pointer-events: none;
+  font: 400 20px/1 var(--display);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+  white-space: nowrap;
+  opacity: 0;
+  animation: dkmp-float 1.1s ease-out;
+}
+.dicekingdom.dk-mobile .dkm-life-delta.loss {
+  color: var(--claw);
+}
+.dicekingdom.dk-mobile .dkm-life-delta.gain {
+  color: var(--shell);
+}
+@keyframes dkmp-float {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.8);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(0) scale(1.1);
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-22px) scale(1);
+  }
+}
+.dicekingdom.dk-mobile .dkm-life-hit {
+  animation: dkmp-shake 0.35s ease-in-out;
+}
+@keyframes dkmp-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  16%,
+  50%,
+  83% {
+    transform: translateX(-3px);
+  }
+  33%,
+  66% {
+    transform: translateX(3px);
+  }
+}
+/* Box-shadow only: no transform on the mat itself. Interpolates from the
+   red-orange ring back to whatever ring the mat has at rest. */
+.dicekingdom.dk-mobile .dkm-mat.dkm-mat-big-hit {
+  animation: dkmp-flash 0.5s ease-out;
+}
+@keyframes dkmp-flash {
+  from {
+    box-shadow: inset 0 0 0 3px #ff5a2e, 0 0 18px -2px rgba(255, 90, 46, 0.6);
+  }
+}
+
+/* ---- Moments: game over (mobile only; desktop keeps its dialog) ---- */
+
+.dicekingdom.dk-mobile .dk-gameover-backdrop {
+  background: rgba(10, 10, 16, 0.82);
+}
+.dicekingdom.dk-mobile .dk-gameover-backdrop:has(.is-won) {
+  background: radial-gradient(120% 75% at 50% 42%, #55307c 0%, #231a3c 55%, rgba(18, 14, 32, 0.96) 100%);
+}
+.dicekingdom.dk-mobile .dk-gameover {
+  padding: 26px 20px 22px;
+  border-radius: 24px;
+  border: 0;
+  background: var(--dkm-card);
+  box-shadow: inset 0 0 0 1px var(--dkm-border), 0 18px 50px rgba(0, 0, 0, 0.6);
+  animation: dkh-pop 0.45s ease backwards;
+}
+.dicekingdom.dk-mobile .dk-gameover-crown {
+  display: block;
+  width: 64px;
+  margin: -6px auto 4px;
+  color: #ffd45f;
+  transform-origin: 50% 90%;
+  animation: dkmp-nod 4.5s ease-in-out 1s infinite;
+}
+.dicekingdom.dk-mobile .dk-gameover-crown .dkh-crown-band {
+  stroke: #c98524;
+}
+/* The launch page's dkh-nod swings around a 21deg tilt (the logo's
+   crown); this one sits straight, so it gets its own small nod. */
+@keyframes dkmp-nod {
+  0%,
+  86%,
+  100% {
+    rotate: 0deg;
+  }
+  91% {
+    rotate: -7deg;
+  }
+  95% {
+    rotate: 4deg;
+  }
+}
+.dicekingdom.dk-mobile .dk-gameover-eyebrow {
+  color: var(--dkm-ink-dim);
+  font-weight: 700;
+  opacity: 1;
+}
+.dicekingdom.dk-mobile .dk-gameover h2 {
+  margin: 6px 0 14px;
+  font: 400 44px/1 var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  color: var(--dkm-ink);
+}
+.dicekingdom.dk-mobile .dk-gameover.is-won h2 {
+  color: #ffd45f;
+  text-shadow: 0 3px 0 #96380f, 0 6px 14px rgba(0, 0, 0, 0.5);
+}
+/* A win is a dusk card in both themes: the gold title washed out on the
+   light theme's white card. Fixed cream palette inside, like the header. */
+.dicekingdom.dk-mobile .dk-gameover.is-won {
+  background: linear-gradient(180deg, #2c2148, #1b1630);
+  box-shadow: inset 0 0 0 1px rgba(255, 248, 236, 0.16), 0 18px 50px rgba(0, 0, 0, 0.6);
+}
+.dicekingdom.dk-mobile .dk-gameover.is-won .dk-gameover-eyebrow {
+  color: rgba(255, 248, 236, 0.65);
+}
+.dicekingdom.dk-mobile .dk-gameover.is-won .dk-gameover-side {
+  background: rgba(255, 248, 236, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 248, 236, 0.2);
+  color: rgba(255, 248, 236, 0.8);
+}
+.dicekingdom.dk-mobile .dk-gameover.is-won .dk-gameover-side.is-winner {
+  box-shadow: inset 0 0 0 2px #f0a81e;
+}
+.dicekingdom.dk-mobile .dk-gameover.is-won .dk-gameover-n,
+.dicekingdom.dk-mobile .dk-gameover.is-won .dk-gameover-boss {
+  color: #fff8ec;
+}
+.dicekingdom.dk-mobile .dk-gameover-life {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 18px;
+  opacity: 1;
+}
+.dicekingdom.dk-mobile .dk-gameover-sep {
+  display: none;
+}
+.dicekingdom.dk-mobile .dk-gameover-side {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px 4px;
+  border-radius: 999px;
+  background: var(--dkm-raised);
+  box-shadow: inset 0 0 0 1px var(--dkm-border);
+  font: 700 13px/1.2 "Work Sans", var(--sans);
+  color: var(--dkm-ink-2);
+}
+.dicekingdom.dk-mobile .dk-gameover-side.is-winner {
+  box-shadow: inset 0 0 0 2px #f0a81e;
+}
+.dicekingdom.dk-mobile .dk-gameover-n {
+  font: 400 20px/1 var(--display);
+  color: var(--dkm-ink);
+}
+.dicekingdom.dk-mobile .dk-gameover-boss {
+  margin: -4px 0 18px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: color-mix(in srgb, #f0a81e 16%, transparent);
+  color: var(--dkm-ink);
+  font-size: 13px;
+  line-height: 1.4;
+}
+/* New game (orange) and Boss Ladder (purple): stacked jewels. */
+.dicekingdom.dk-mobile .dk-gameover button.btn {
+  --a: #ffb066;
+  --b: #dd5a2a;
+  --lip: #96380f;
+  --drop: 5px;
+  display: block;
+  width: 100%;
+  height: 52px;
+  margin: 0 0 var(--drop);
+  padding: 0 16px;
+  border: 0;
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 52%),
+    linear-gradient(160deg, var(--a), var(--b));
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.12),
+    0 var(--drop) 0 var(--lip),
+    0 calc(var(--drop) + 7px) 12px -8px rgba(0, 0, 0, 0.5);
+  color: #2a1206;
+  font: 400 20px/1 var(--display);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: transform 0.09s ease, box-shadow 0.09s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.dicekingdom.dk-mobile .dk-gameover button.btn.ghost {
+  --a: #9468dc;
+  --b: #55299a;
+  --lip: #331766;
+  color: #fff;
+}
+.dicekingdom.dk-mobile .dk-gameover .btn + .btn {
+  margin-left: 0;
+  margin-top: 10px;
+}
+.dicekingdom.dk-mobile .dk-gameover button.btn:active {
+  transform: translateY(calc(var(--drop) - 1px));
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.12),
+    0 1px 0 var(--lip),
+    0 4px 6px -5px rgba(0, 0, 0, 0.5);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .dicekingdom.dk-mobile .dkm-bottom-bar .dkm-primary-btn {
+  .dicekingdom.dk-mobile .dkm-bottom-bar .dkm-primary-btn,
+  .dicekingdom.dk-mobile .dkm-life-hit,
+  .dicekingdom.dk-mobile .dkm-mat.dkm-mat-big-hit,
+  .dicekingdom.dk-mobile .dk-gameover,
+  .dicekingdom.dk-mobile .dk-gameover-crown {
     animation: none !important;
+  }
+  /* Without the float, the change just shows beside the badge. */
+  .dicekingdom.dk-mobile .dkm-life-delta {
+    animation: none !important;
+    opacity: 1;
   }
 }
