@@ -172,6 +172,154 @@
   height: 40px;
 }
 
+/* ---- Nameplates (MatCard) ---- */
+
+/* Side tint from --cc (orange you, purple them). The ring means "whose
+   turn"; the old always-on orange border on your own mat said "this is
+   yours", which the colour and label say now. */
+.dicekingdom.dk-mobile .dkm-mat {
+  border: 0;
+  border-radius: 18px;
+  padding: 12px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--cc) 9%, var(--dkm-card)), var(--dkm-card) 70px);
+  box-shadow: inset 0 0 0 1px var(--dkm-border);
+}
+.dicekingdom.dk-mobile .dkm-mat.active {
+  box-shadow: inset 0 0 0 2px var(--cc);
+}
+.dicekingdom.dk-mobile .dkm-mat-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.dicekingdom.dk-mobile .dkm-plate-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--cc) 80%, #fff), var(--cc));
+  box-shadow: 0 3px 0 color-mix(in srgb, var(--cc) 55%, #000);
+  color: #fff;
+}
+.dicekingdom.dk-mobile .dkm-plate-who {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  min-width: 0;
+}
+.dicekingdom.dk-mobile .dkm-mat-label {
+  font: 700 9.5px/1 "Work Sans", var(--sans);
+  letter-spacing: 0.14em;
+  white-space: nowrap;
+}
+.dicekingdom.dk-mobile .dkm-champion-badge {
+  max-width: 100%;
+  min-width: 0;
+  padding: 0;
+  text-align: left;
+  color: var(--dkm-ink);
+}
+.dicekingdom.dk-mobile .dkm-champion-badge span {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 700 14px/1.2 "Work Sans", var(--sans);
+}
+/* Life is life: the same red-orange heart on both sides; only the plate
+   icon carries the side's colour. */
+.dicekingdom.dk-mobile .dkm-mat-life,
+.dicekingdom.dk-mobile .dkm-mat.mine .dkm-mat-life {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px 3px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--claw) 16%, var(--dkm-raised));
+  font: 400 22px/1 var(--display);
+  color: var(--dkm-ink);
+}
+.dicekingdom.dk-mobile .dkm-mat-life svg {
+  flex: none;
+  color: var(--claw);
+}
+.dicekingdom.dk-mobile .dkm-plate-row {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+.dicekingdom.dk-mobile .dkm-plate-row .dkm-reserve-anchor {
+  min-width: 0;
+}
+.dicekingdom.dk-mobile .dkm-chip-btn {
+  min-height: 32px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--dkm-raised);
+  font: 700 10px/1 "Work Sans", var(--sans);
+  letter-spacing: 0.06em;
+}
+.dicekingdom.dk-mobile .dkm-chip-btn:active {
+  transform: scale(0.96);
+}
+/* The Champion's power is a real action: a small orange jewel. */
+.dicekingdom.dk-mobile .dkm-power-btn {
+  --a: #ffb066;
+  --b: #dd5a2a;
+  --lip: #96380f;
+  --drop: 3px;
+  flex: none;
+  margin-bottom: var(--drop);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 52%),
+    linear-gradient(160deg, var(--a), var(--b));
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.12),
+    0 var(--drop) 0 var(--lip),
+    0 calc(var(--drop) + 7px) 12px -8px rgba(0, 0, 0, 0.5);
+  color: #2a1206;
+  font-weight: 800;
+  transition: transform 0.09s ease, box-shadow 0.09s ease;
+}
+.dicekingdom.dk-mobile .dkm-power-btn:active {
+  transform: translateY(calc(var(--drop) - 1px));
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.12),
+    0 1px 0 var(--lip),
+    0 4px 6px -5px rgba(0, 0, 0, 0.5);
+}
+.dicekingdom.dk-mobile .dkm-mat-head-actions {
+  flex: none;
+  gap: 8px;
+}
+.dicekingdom.dk-mobile .dkm-collapsed-row {
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.dicekingdom.dk-mobile .dkm-collapsed-row button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 10px;
+  background: var(--dkm-raised);
+}
+.dicekingdom.dk-mobile .dkm-collapsed-row b {
+  font-size: 16px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .dicekingdom.dk-mobile .dkm-bottom-bar .dkm-primary-btn {
     animation: none !important;

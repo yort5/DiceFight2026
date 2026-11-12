@@ -16,6 +16,7 @@ import {
   type PhaseKey,
 } from "./icons";
 import { Painting, hasPainting } from "./cardArt";
+import { PawIcon } from "./kingdomArt";
 import { describeSavedGame, forgetSeats, inviteLink, myLink, rememberSeats } from "./seats";
 import { GameOverOverlay } from "./GameOverOverlay";
 import { OPPONENT_PICKS, PickYourChampion, WaitingForOpponent, resolveInvite } from "./lobby";
@@ -698,42 +699,49 @@ function MatCard({
 
   return (
     <div className={`dkm-mat${mine ? " mine" : ""}${turnClass}`} style={{ ["--cc" as string]: accent }}>
+      {/* A nameplate (2026-11-12 glow-up): Champion tile, who, life on the
+          first row; Power, energy and the piles on the second. */}
       <div className="dkm-mat-head">
-        <span className="dkm-mat-label">{mine ? "You" : "Opp"}</span>
-        {player.champion && (
-          <button type="button" className="dkm-champion-badge" onClick={() => setChampionOpen((v) => !v)}>
-            {ChampIcon && <ChampIcon size={16} />}
-            {/* A boss battle's opponent goes by the boss's name (2026-10-31). */}
-            <span>{player.name !== player.champion.name ? `${player.name} · ${player.champion.name}` : player.champion.name}</span>
-          </button>
-        )}
-        {/* A team without a Champion - a boss, or a custom team - by name (2026-11-01). */}
-        {!player.champion && (
-          <span className="dkm-champion-badge">
-            <span>{player.name}</span>
-          </span>
-        )}
-        {onUsePower && player.champion && (
-          <button type="button" className="dkm-chip-btn dkm-power-btn" onClick={onUsePower} title={player.champion.passiveText}>
-            {POWER_LABELS[player.champion.id] ?? "Power"}
-          </button>
-        )}
-        <span className="dkm-mat-life">
-          {player.life} <small>life</small>
-        </span>
-        <span className="dkm-reserve-anchor" data-pile={`${mine ? "mine" : "opp"}-reserve`}>
-          <EnergyChips dice={reserve} size={mine ? 16 : 15} generic={player.virtualEnergy ?? 0} />
-        </span>
-        <span className="dkm-mat-head-actions">
-          <button type="button" className="dkm-chip-btn" data-pile={`${mine ? "mine" : "opp"}-roster`} onClick={onOpenRoster}>
-            Roster
-          </button>
-          {expandable && (
-            <button type="button" className="dkm-text-btn" onClick={() => setExpanded((v) => !v)}>
-              {expanded ? "Hide piles" : "Show piles"}
+        <span className="dkm-plate-icon">{ChampIcon ? <ChampIcon size={22} /> : <PawIcon size={18} />}</span>
+        <span className="dkm-plate-who">
+          <span className="dkm-mat-label">{mine ? "You" : "Opponent"}{isActivePlayer && " · playing"}</span>
+          {player.champion && (
+            <button type="button" className="dkm-champion-badge" onClick={() => setChampionOpen((v) => !v)}>
+              {/* A boss battle's opponent goes by the boss's name (2026-10-31). */}
+              <span>{player.name !== player.champion.name ? `${player.name} · ${player.champion.name}` : player.champion.name}</span>
             </button>
           )}
+          {/* A team without a Champion - a boss, or a custom team - by name (2026-11-01). */}
+          {!player.champion && (
+            <span className="dkm-champion-badge">
+              <span>{player.name}</span>
+            </span>
+          )}
         </span>
+        <span className="dkm-mat-life" aria-label={`${player.life} life`}>
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" /></svg>
+          {player.life}
+        </span>
+        <div className="dkm-plate-row">
+          {onUsePower && player.champion && (
+            <button type="button" className="dkm-chip-btn dkm-power-btn" onClick={onUsePower} title={player.champion.passiveText}>
+              {POWER_LABELS[player.champion.id] ?? "Power"}
+            </button>
+          )}
+          <span className="dkm-reserve-anchor" data-pile={`${mine ? "mine" : "opp"}-reserve`}>
+            <EnergyChips dice={reserve} size={mine ? 16 : 15} generic={player.virtualEnergy ?? 0} />
+          </span>
+          <span className="dkm-mat-head-actions">
+            <button type="button" className="dkm-chip-btn" data-pile={`${mine ? "mine" : "opp"}-roster`} onClick={onOpenRoster}>
+              Roster
+            </button>
+            {expandable && (
+              <button type="button" className="dkm-text-btn" onClick={() => setExpanded((v) => !v)}>
+                {expanded ? "Hide piles" : "Show piles"}
+              </button>
+            )}
+          </span>
+        </div>
       </div>
 
       {/* Real gap, direct feedback (2026-09-17): "once the game is in

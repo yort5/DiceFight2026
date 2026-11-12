@@ -5255,3 +5255,11 @@ opponent's turn (`~/.devtools/playwright/glowup-check.js`).
   "Waiting..." is a flat grey slab with the same footprint, so the bar
   never moves. Skip attack stays flat (the quiet choice). Buy / Field /
   Use in the inspect card are small green jewels (40px, up from 38).
+- **Nameplates** (`MatCard`): each side's panel opens with a nameplate -
+  the Champion on a coloured tile (a paw for a team without one),
+  "You" / "Opponent" over the name (long boss names ellipsize; checked
+  at 320px), and life as a heart badge. Power, energy, Roster and the
+  piles sit on a second row; Power is a small orange jewel. The ring
+  round a panel now means whose turn it is ("· playing" on the label),
+  not "this one is yours" - the old always-on orange border on your
+  own panel is gone. Roster and the pile counters are 32px chips.
