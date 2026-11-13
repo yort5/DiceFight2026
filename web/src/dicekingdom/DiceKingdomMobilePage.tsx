@@ -861,8 +861,10 @@ function MatCard({
       {/* A recessed playmat (2026-11-12 glow-up): an empty one shows
           slots waiting for dice. */}
       <span className="dkm-field-label">{mine ? "Field" : "Their field"}</span>
-      <div className="dkm-tile-row wrap dkm-fieldmat" data-region={mine ? "field-mine" : "field-opp"}>
-        {field.length === 0 && <span className="dkm-empty-slots" aria-label="Nothing fielded"><i /><i /><i /></span>}
+      {/* --slot is the die size below: the mat draws a dashed slot at
+          every place a die can sit, and the dice cover the taken ones. */}
+      <div className="dkm-tile-row wrap dkm-fieldmat dkm-fieldmat-slots" style={{ ["--slot" as string]: `${mine ? 50 : 48}px` }} data-region={mine ? "field-mine" : "field-opp"}>
+        {field.length === 0 && <span className="dkm-sr-only">Nothing fielded</span>}
         {field.map((d) => (
           <DTile
             key={d.id}

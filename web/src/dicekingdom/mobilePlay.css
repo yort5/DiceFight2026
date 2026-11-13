@@ -439,15 +439,16 @@
 
 /* Every place dice sit (your Field, theirs, the Reserve, the tray) is a
    sunken strip. Keep data-region on the same element: the dice flights
-   land on it. The Reserve and the tray are neutral (-plain). */
+   land on it. The Reserve and the tray are neutral (-plain). The first
+   pass striped these; in use the stripes read as decoration, so the
+   surface is plain and the Fields carry slots instead (2026-11-13). */
 .dicekingdom.dk-mobile .dkm-fieldmat {
+  position: relative;
   min-height: 66px;
   padding: 8px;
   border-radius: 14px;
   align-items: center;
-  background:
-    repeating-linear-gradient(118deg, color-mix(in srgb, var(--cc) 4%, transparent) 0 14px, transparent 14px 28px),
-    color-mix(in srgb, var(--cc) 10%, var(--dkm-raised));
+  background: color-mix(in srgb, var(--cc) 9%, var(--dkm-raised));
   box-shadow:
     inset 0 2px 6px rgba(0, 0, 0, 0.28),
     inset 0 0 0 1px color-mix(in srgb, var(--cc) 30%, transparent);
@@ -464,15 +465,37 @@
 .dicekingdom.dk-mobile .dkm-fieldmat .dkm-empty-hint {
   padding-left: 4px;
 }
-.dicekingdom.dk-mobile .dkm-empty-slots {
-  display: flex;
-  gap: 7px;
+/* A Field is a grid of dashed slots, one per place a die can sit, at the
+   dice's own pitch (die + the row's 7px gap) so each die lands exactly on
+   one and covers it. The mat's colour shows through a mask of slot
+   outlines; the width and height snap down to whole slots so none is cut
+   at the edge (browsers without round() just get a clipped last one). */
+.dicekingdom.dk-mobile .dkm-fieldmat-slots {
+  --pitch: calc(var(--slot) + 7px);
+  /* One full row of slots even when empty. */
+  min-height: calc(var(--slot) + 16px);
 }
-.dicekingdom.dk-mobile .dkm-empty-slots i {
-  width: 46px;
-  height: 46px;
-  border-radius: 10px;
-  border: 1.5px dashed color-mix(in srgb, var(--cc) 45%, transparent);
+.dicekingdom.dk-mobile .dkm-fieldmat-slots::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: calc(100% - 16px);
+  width: round(down, calc(100% - 9px), var(--pitch));
+  height: calc(100% - 16px);
+  height: round(down, calc(100% - 9px), var(--pitch));
+  background: color-mix(in srgb, var(--cc) 42%, transparent);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 57 57'%3E%3Crect x='1' y='1' width='48' height='48' rx='9' fill='none' stroke='%23000' stroke-width='1.5' stroke-dasharray='4 3.5'/%3E%3C/svg%3E") 0 0 / var(--pitch) var(--pitch) repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 57 57'%3E%3Crect x='1' y='1' width='48' height='48' rx='9' fill='none' stroke='%23000' stroke-width='1.5' stroke-dasharray='4 3.5'/%3E%3C/svg%3E") 0 0 / var(--pitch) var(--pitch) repeat;
+  pointer-events: none;
+}
+.dicekingdom.dk-mobile .dkm-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 .dicekingdom.dk-mobile .dkm-field-label {
   margin: 0 0 4px 2px;
@@ -724,12 +747,60 @@
 /* ---- Moments: game over (mobile only; desktop keeps its dialog) ---- */
 
 .dicekingdom.dk-mobile .dk-gameover-backdrop {
+  overflow: hidden;
   background: rgba(10, 10, 16, 0.82);
 }
 .dicekingdom.dk-mobile .dk-gameover-backdrop:has(.is-won) {
   background: radial-gradient(120% 75% at 50% 42%, #55307c 0%, #231a3c 55%, rgba(18, 14, 32, 0.96) 100%);
 }
+/* A win opens like a prize: gold rays fan out behind the card once, then
+   the crown, the title, the totals and the button arrive in turn. */
+.dicekingdom.dk-mobile .dk-gameover-backdrop:has(.is-won)::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 190vmax;
+  height: 190vmax;
+  margin: -95vmax 0 0 -95vmax;
+  background: repeating-conic-gradient(from -6deg, rgba(255, 212, 95, 0.16) 0 12deg, transparent 12deg 30deg);
+  -webkit-mask: radial-gradient(circle, #000 0%, rgba(0, 0, 0, 0.5) 18%, transparent 42%);
+  mask: radial-gradient(circle, #000 0%, rgba(0, 0, 0, 0.5) 18%, transparent 42%);
+  pointer-events: none;
+  animation: dkmp-rays 0.9s cubic-bezier(0.2, 0.8, 0.3, 1) backwards;
+}
+@keyframes dkmp-rays {
+  from {
+    opacity: 0;
+    transform: scale(0.4) rotate(-25deg);
+  }
+}
+.dicekingdom.dk-mobile .dk-gameover.is-won > * {
+  animation: dkmp-arrive 0.4s ease-out backwards;
+}
+.dicekingdom.dk-mobile .dk-gameover.is-won > h2 {
+  animation: dkh-pop 0.5s cubic-bezier(0.2, 1.6, 0.4, 1) 0.3s backwards;
+}
+.dicekingdom.dk-mobile .dk-gameover.is-won > .dk-gameover-life {
+  animation-delay: 0.5s;
+}
+.dicekingdom.dk-mobile .dk-gameover.is-won > .dk-gameover-boss {
+  animation-delay: 0.62s;
+}
+.dicekingdom.dk-mobile .dk-gameover.is-won > .btn {
+  animation-delay: 0.74s;
+}
+.dicekingdom.dk-mobile .dk-gameover.is-won > .btn + .btn {
+  animation-delay: 0.84s;
+}
+@keyframes dkmp-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
 .dicekingdom.dk-mobile .dk-gameover {
+  position: relative;
   padding: 26px 20px 22px;
   border-radius: 24px;
   border: 0;
@@ -737,13 +808,24 @@
   box-shadow: inset 0 0 0 1px var(--dkm-border), 0 18px 50px rgba(0, 0, 0, 0.6);
   animation: dkh-pop 0.45s ease backwards;
 }
-.dicekingdom.dk-mobile .dk-gameover-crown {
+/* The crown sits half out of the card's top edge, like a trophy on it. */
+.dicekingdom.dk-mobile .dk-gameover.is-won {
+  margin-top: 30px;
+  padding-top: 52px;
+}
+.dicekingdom.dk-mobile .dk-gameover.is-won > .dk-gameover-crown {
+  position: absolute;
+  top: -40px;
+  left: 50%;
   display: block;
-  width: 64px;
-  margin: -6px auto 4px;
+  width: 96px;
+  margin-left: -48px;
   color: #ffd45f;
+  filter: drop-shadow(0 4px 0 #96380f) drop-shadow(0 10px 12px rgba(0, 0, 0, 0.45));
   transform-origin: 50% 90%;
-  animation: dkmp-nod 4.5s ease-in-out 1s infinite;
+  animation:
+    dkh-pop 0.55s cubic-bezier(0.2, 1.6, 0.4, 1) 0.15s backwards,
+    dkmp-nod 4.5s ease-in-out 1.6s infinite;
 }
 .dicekingdom.dk-mobile .dk-gameover-crown .dkh-crown-band {
   stroke: #c98524;
@@ -770,12 +852,15 @@
 }
 .dicekingdom.dk-mobile .dk-gameover h2 {
   margin: 6px 0 14px;
-  font: 400 44px/1 var(--display);
+  /* Sized so "<Champion> wins" mostly stays on one line. */
+  font: 400 38px/1 var(--display);
+  text-wrap: balance;
   text-transform: uppercase;
   letter-spacing: 0.01em;
   color: var(--dkm-ink);
 }
 .dicekingdom.dk-mobile .dk-gameover.is-won h2 {
+  font-size: 56px;
   color: #ffd45f;
   text-shadow: 0 3px 0 #96380f, 0 6px 14px rgba(0, 0, 0, 0.5);
 }
@@ -892,7 +977,8 @@
   .dicekingdom.dk-mobile .dkm-hit-vignette,
   .dicekingdom.dk-mobile .dkm-mat.dkm-mat-big-hit,
   .dicekingdom.dk-mobile .dk-gameover,
-  .dicekingdom.dk-mobile .dk-gameover-crown {
+  .dicekingdom.dk-mobile .dk-gameover > *,
+  .dicekingdom.dk-mobile .dk-gameover-backdrop::before {
     animation: none !important;
   }
   /* Without the float, the change just shows beside the badge. */

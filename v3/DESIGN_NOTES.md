@@ -5338,3 +5338,28 @@ screenshots showed:
   fixed inside the mat). Still over in about a second; all of it is off
   under reduced motion.
 - The field stripes (4%) and the game-over card were left as they are.
+
+## 2026-11-13 - Play screen glow-up: the field and game over, redone
+
+User: "I also meant the steps that you recommended keeping for Fable" -
+steps 4 (the field) and 6 (the moments), which had been built to the
+plan's letter along with the rest. Second look at both:
+
+- **Field**: the diagonal stripes are gone - in use they read as
+  decoration, not as a place. Each Field is now a row of dashed slots at
+  the dice's own pitch (`.dkm-fieldmat-slots`, `--slot` set from the die
+  size in `MatCard`): a fielded die lands exactly on a slot and covers
+  it, the open ones stay visible beside it, and a full Field wraps to a
+  second row of slots. Drawn as a mask over the side's colour, snapped
+  to whole slots with CSS `round()`. This replaces the three fixed ghost
+  slots, which vanished the moment one die was fielded. The Reserve and
+  the tray stay plain sunken strips. Checked with 7 dice on the Field at
+  320px (state patched: `FIELD_CLONE=7` in `glowup-check.js`).
+- **Winning**: gold rays fan out behind the card once; the crown is
+  bigger (96px) and sits half out of the card's top edge; crown, title
+  (56px), totals, reward and buttons arrive in turn over about a
+  second. A loss keeps the plain card, its title at 38px so
+  "<Champion> wins" mostly stays on one line.
+- Seen for the first time (patched `/me/bosses`, `BOSS=1` in
+  `glowup-moments.js`): a boss win's reward panel and the purple Boss
+  Ladder button under New game.
