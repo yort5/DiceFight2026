@@ -5397,3 +5397,23 @@ highlights what you can pay for and what you might field, while
 keeping the rest in reach (your bag, what the opponent has bought and
 fielded). "It's a lot of information!" - needs a design before any
 code.
+
+## 2026-11-13 - Buy options: the words lie on the painting
+
+User, after the three-across cards grew to 150px with the ability
+under the art: "Would there be a way to overlay the text on the graphic
+and still be readable?... I'd like to use this to reduce the size
+rather than getting a bigger picture," then "What if we moved the
+name? The image is usually centered," and, from a mock-up of frosted
+bands and dark fades at two heights: "I think I prefer F... if the name
+is too long, we can cut it off. It should be enough to identify. In the
+rare instances it isn't, we can click on the full roster."
+
+Each option is now 112px tall (from 150). The whole painting fills it
+(the full picture, not the icon crop); the name and price lie on a dark
+fade along the top edge, three lines of ability on one along the
+bottom, and the middle - where the animal is - shows clear. The words
+are white in both themes. A long name is cut ("Honey Bad..."), by
+choice. A card without a painting keeps its line icon on the energy
+colour under the same fades. Unaffordable: picture greyed and darkened,
+grey edge, words dimmed but readable.

@@ -1119,10 +1119,12 @@ function BuyCard({
             >
               {lockers && <span className="dk-locked-hatch" aria-hidden="true" />}
               {/* A small card (2026-11-12 glow-up): the painting, or the
-                  line icon on the energy's colour, with the price on it. */}
+                  line icon on the energy's colour, fills it; the name and
+                  price lie over its top edge and the ability over its
+                  bottom (2026-11-13), so the whole picture is used. */}
               <span className={`dkm-buy-art${hasPainting(cardId) ? " painted" : ""}`}>
                 {hasPainting(cardId)
-                  ? <Painting cardId={cardId} crop="icon" alt="" />
+                  ? <Painting cardId={cardId} alt="" />
                   : Avatar ? <Avatar size={30} /> : <TardigradeIcon size={30} />}
               </span>
               <span className="dkm-buy-name">{card?.name ?? cardId}</span>
@@ -1132,7 +1134,7 @@ function BuyCard({
                   KeywordText - this is already inside a button; the
                   inspect card it opens has the tappable ones. */}
               <span className="dkm-buy-text">
-                {splitKeywordText(cardTextOf(card)).map((part, i) => (part.keyword ? <b key={i}>{part.text}</b> : part.text))}
+                <span>{splitKeywordText(cardTextOf(card)).map((part, i) => (part.keyword ? <b key={i}>{part.text}</b> : part.text))}</span>
               </span>
               <span className="dkm-buy-cost-row">
                 {(card?.energyTypes ?? []).map((t) => (
