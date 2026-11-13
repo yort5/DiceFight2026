@@ -5304,3 +5304,37 @@ opponent's turn (`~/.devtools/playwright/glowup-check.js`).
   pixel-identical before and after. Checked with the game state patched
   in Playwright (`~/.devtools/playwright/glowup-moments.js`), animations
   stepped to exact times.
+
+## 2026-11-13 - Play screen glow-up: the eye pass
+
+User, after the six steps shipped: "It doesn't look drastically
+different, but better. Maybe take a quick look and then finish your
+part." - the plan had marked the field and the moments as needing an
+eye. Looked at the live screen in headless Chromium and fixed what the
+screenshots showed:
+
+- **The step title was the thing getting cut** ("ASSIGN BL..." at
+  402px, "REROLL & PLA..." at 375) because the turn flag and step chip
+  sat beside it. `StepLine` now shrinks the title (26px down to 15px)
+  until it fits; the flag always reads "Your turn" / "Their turn" (the
+  opponent's name is on the purple nameplate just below); the chip is
+  "2/3" without the word "step" (the button's label still says it).
+  Every title fits at 402 and 375; at 320 all but "Reroll & place in
+  Reserve" do.
+- **Phase track on narrow phones**: smaller circles up to 390px wide so
+  the current phase keeps its whole name at 375; at 340px and under the
+  pill is the icon alone instead of "RO...".
+- **Tray**: the title is just "Tray"; how to use it ("Tap dice to
+  reroll them · long press for die info") is a small line under it,
+  not two lines of orange capitals.
+- **Phase cards** (tray, buy, lanes, clean up) take the nameplate
+  panels' shell - 18px corners, same padding and ring.
+- **Life changes were too quiet.** The number is now a chip beside the
+  heart badge (orange for a loss, green for a gain) that pops in and
+  drifts off, rather than small text above the badge where the header
+  covered the opponent's; the heart beats once. Your own nameplate is
+  often under the bottom bar when the hit lands (375x667), so a loss of
+  yours also flashes the screen's edges once (`.dkm-hit-vignette`,
+  fixed inside the mat). Still over in about a second; all of it is off
+  under reduced motion.
+- The field stripes (4%) and the game-over card were left as they are.

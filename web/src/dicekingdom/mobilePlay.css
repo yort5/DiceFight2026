@@ -320,6 +320,24 @@
   font-size: 16px;
 }
 
+/* ---- The phase cards (tray, buy, lanes, clean up) ---- */
+
+/* The same shell as the nameplate panels, so the column reads as one set. */
+.dicekingdom.dk-mobile .dkm-card {
+  border: 0;
+  border-radius: 18px;
+  padding: 12px;
+  box-shadow: inset 0 0 0 1px var(--dkm-border);
+}
+.dicekingdom.dk-mobile .dkm-card-title {
+  font-size: 17px;
+}
+.dicekingdom.dk-mobile .dkm-card-note {
+  margin: -3px 0 8px;
+  font: 500 11px/1.35 "Work Sans", var(--sans);
+  color: var(--dkm-ink-dim);
+}
+
 /* ---- The buy row (BuyCard) ---- */
 
 .dicekingdom.dk-mobile .dkm-buy-card .dkm-card-head {
@@ -517,14 +535,44 @@
   font-weight: 700;
 }
 .dicekingdom.dk-mobile .dkm-step-line {
+  /* One height whatever size the title settles at. */
+  min-height: 34px;
   padding-bottom: 0;
 }
+/* StepLine shrinks the font (26px down to 15px) until the title fits. */
 .dicekingdom.dk-mobile .dkm-step-title {
   flex: 1 1 auto;
   min-width: 0;
   font-size: 26px;
   line-height: 1.2;
   color: #fff8ec;
+}
+/* A narrow phone: smaller circles, so the current phase keeps its name. */
+@media (max-width: 390px) {
+  .dicekingdom.dk-mobile .dkm-phase-rail {
+    gap: 4px;
+  }
+  .dicekingdom.dk-mobile .dkm-phase-pill {
+    height: 32px;
+    padding: 0 8px;
+    gap: 5px;
+  }
+  .dicekingdom.dk-mobile .dkm-header-controls .dkm-phase-pill:not(.active) {
+    flex-basis: 30px;
+    height: 30px;
+  }
+  .dicekingdom.dk-mobile .dkm-phase-label {
+    letter-spacing: 0.03em;
+  }
+  .dicekingdom.dk-mobile .dkm-header-controls {
+    gap: 8px;
+  }
+}
+/* Too narrow for any of it ("RO..."): the icon alone. */
+@media (max-width: 340px) {
+  .dicekingdom.dk-mobile .dkm-phase-label {
+    display: none;
+  }
 }
 .dicekingdom.dk-mobile .dkm-step-chip {
   border-radius: 999px;
@@ -549,19 +597,8 @@
   background: linear-gradient(160deg, #ffb066, #dd5a2a);
   color: #2a1206;
 }
-/* "Great Horned Owl's turn" left the title one letter at 320px, so a
-   narrow screen says "Their turn" (the purple already says who). */
-.dicekingdom.dk-mobile .dkm-turn-short {
-  display: none;
-}
-@media (max-width: 360px) {
-  .dicekingdom.dk-mobile .dkm-turn-long {
-    display: none;
-  }
-  .dicekingdom.dk-mobile .dkm-turn-short {
-    display: inline;
-  }
-}
+/* "Their turn", not the opponent's name: the name squeezed the title,
+   and the purple nameplate right below says who. */
 /* The menu: the side pages' round button. */
 .dicekingdom.dk-mobile .dkm-header-controls .screen-menu-button {
   width: 44px;
@@ -581,38 +618,48 @@
    five or more flashes the whole panel once. Over in about a second. */
 .dicekingdom.dk-mobile .dkm-life-delta {
   position: absolute;
-  left: 50%;
-  bottom: 100%;
+  right: calc(100% + 6px);
+  top: 50%;
   z-index: 2;
-  translate: -50% 0;
+  margin-top: -15px;
+  padding: 4px 10px 3px;
+  border-radius: 999px;
   pointer-events: none;
-  font: 400 20px/1 var(--display);
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+  font: 400 24px/1 var(--display);
   white-space: nowrap;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.3), 0 8px 14px -6px rgba(0, 0, 0, 0.6);
   opacity: 0;
   animation: dkmp-float 1.1s ease-out;
 }
+/* A chip beside the badge (not above it, where the header would cover
+   the opponent's): jewel orange for a loss, green for a gain. */
 .dicekingdom.dk-mobile .dkm-life-delta.loss {
-  color: var(--claw);
+  background: linear-gradient(160deg, #ffb066, #dd5a2a);
+  color: #2a1206;
 }
 .dicekingdom.dk-mobile .dkm-life-delta.gain {
-  color: var(--shell);
+  background: linear-gradient(160deg, #45c592, #18805b);
+  color: #fff;
 }
 @keyframes dkmp-float {
   0% {
     opacity: 0;
-    transform: translateY(6px) scale(0.8);
+    transform: translateX(14px) scale(0.5);
   }
-  15% {
+  14% {
     opacity: 1;
-    transform: translateY(0) scale(1.1);
+    transform: translateX(0) scale(1.25);
   }
-  70% {
+  26% {
+    transform: translateX(0) scale(1);
+  }
+  72% {
     opacity: 1;
+    transform: translateY(0);
   }
   100% {
     opacity: 0;
-    transform: translateY(-22px) scale(1);
+    transform: translateY(-14px);
   }
 }
 .dicekingdom.dk-mobile .dkm-life-hit {
@@ -631,6 +678,36 @@
   33%,
   66% {
     transform: translateX(3px);
+  }
+}
+.dicekingdom.dk-mobile .dkm-life-hit svg {
+  animation: dkmp-beat 0.45s ease-out;
+}
+@keyframes dkmp-beat {
+  30% {
+    transform: scale(1.6);
+  }
+}
+/* Your own loss also flashes the screen's edges once. Fixed inside the
+   mat - which is why the mat must never carry a transform. */
+.dicekingdom.dk-mobile .dkm-hit-vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  box-shadow: inset 0 0 70px 6px rgba(255, 90, 46, 0.55);
+  opacity: 0;
+  animation: dkmp-vignette 0.7s ease-out;
+}
+@keyframes dkmp-vignette {
+  0% {
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
   }
 }
 /* Box-shadow only: no transform on the mat itself. Interpolates from the
@@ -811,6 +888,8 @@
 @media (prefers-reduced-motion: reduce) {
   .dicekingdom.dk-mobile .dkm-bottom-bar .dkm-primary-btn,
   .dicekingdom.dk-mobile .dkm-life-hit,
+  .dicekingdom.dk-mobile .dkm-life-hit svg,
+  .dicekingdom.dk-mobile .dkm-hit-vignette,
   .dicekingdom.dk-mobile .dkm-mat.dkm-mat-big-hit,
   .dicekingdom.dk-mobile .dk-gameover,
   .dicekingdom.dk-mobile .dk-gameover-crown {

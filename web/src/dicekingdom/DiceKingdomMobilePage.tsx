@@ -1,6 +1,6 @@
 import { KeywordAction, KeywordText } from "../KeywordPreview";
 import { CUSTOM_TEAM_PICK, pendingCustomTeam } from "./customTeams";
-import { startTransition, useEffect, useRef, useState } from "react";
+import { startTransition, useEffect, useLayoutEffect, useRef, useState } from "react";
 import "./dicekingdom.css";
 import "./mobilePlay.css";
 import { ScreenMenu } from "../ScreenMenu";
@@ -583,12 +583,31 @@ function StepLine({
   /** Whose turn it is, beside the title (2026-11-12 glow-up). */
   flag?: React.ReactNode;
 }) {
+  // The title is the line that matters, so it shrinks to fit beside the
+  // flag and the chip rather than ellipsizing ("ASSIGN BL..." at 402px in
+  // the first glow-up pass, 2026-11-13); only below 15px does it cut off.
+  const titleRef = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    const el = titleRef.current;
+    if (!el) return;
+    const fit = () => {
+      let size = 26;
+      el.style.fontSize = `${size}px`;
+      while (size > 15 && el.scrollWidth > el.clientWidth) el.style.fontSize = `${--size}px`;
+    };
+    fit();
+    // The flag changing width resizes the title; Anton arriving changes its text width.
+    const observer = new ResizeObserver(fit);
+    observer.observe(el);
+    void document.fonts?.ready.then(fit);
+    return () => observer.disconnect();
+  }, [title]);
   return (
-    <button type="button" className="dkm-step-line" onClick={onToggle}>
-      <span className="dkm-step-title">{title}</span>
+    <button type="button" className="dkm-step-line" onClick={onToggle} aria-label={`${title}, step ${index + 1} of ${total}. Show the steps`}>
+      <span ref={titleRef} className="dkm-step-title">{title}</span>
       {flag}
       <span className="dkm-step-chip">
-        step {index + 1}/{total}
+        {index + 1}/{total}
         <ChevronDownIcon size={10} />
       </span>
     </button>
@@ -740,6 +759,9 @@ function MatCard({
           {player.life}
           {lifeDelta && <b key={lifeDelta.key} className={`dkm-life-delta${lifeDelta.n < 0 ? " loss" : " gain"}`} aria-hidden="true">{lifeDelta.n > 0 ? `+${lifeDelta.n}` : lifeDelta.n}</b>}
         </span>
+        {/* Your own nameplate is often scrolled under the bottom bar when
+            the hit lands, so the screen's edges flash too (2026-11-13). */}
+        {mine && lifeDelta && lifeDelta.n < 0 && <span key={`v${lifeDelta.key}`} className="dkm-hit-vignette" aria-hidden="true" />}
         <div className="dkm-plate-row">
           {onUsePower && player.champion && (
             <button type="button" className="dkm-chip-btn dkm-power-btn" onClick={onUsePower} title={player.champion.passiveText}>
@@ -946,6 +968,7 @@ function RerollDieTile({ die, cardsById, picked, spin, turnOffset, onToggle, onI
 function TrayCard({
   title,
   hint,
+  note,
   dice,
   cardsById,
   rolledYet,
@@ -958,6 +981,8 @@ function TrayCard({
 }: {
   title: string;
   hint: string;
+  /** How to use the tray, under the title (was crammed into the title). */
+  note?: string;
   dice: Die[];
   cardsById: Map<string, CardDef>;
   rolledYet: boolean;
@@ -975,6 +1000,7 @@ function TrayCard({
         <span className="dkm-card-title accent">{title}</span>
         <span className="dkm-card-hint">{hint}</span>
       </div>
+      {note && <p className="dkm-card-note">{note}</p>}
       <div className="dkm-tile-row wrap dkm-fieldmat dkm-fieldmat-plain">
         {dice.length === 0 && <span className="dkm-empty-hint">Tray is empty — draw to fill it.</span>}
         {dice.map((d) =>
@@ -2991,7 +3017,7 @@ export function DiceKingdomMobilePage() {
           <ScreenMenu screen="game" startRoute="/dice-kingdom/mobile" onStartGame={() => setGame(null)} />
         </div>
         <StepLine title={chainSteps[chainIndex]?.label ?? phaseLabel} index={chainIndex} total={chainSteps.length} onToggle={() => setStepsOpen((v) => !v)}
-          flag={<span className={`dkm-turn-flag${isYourTurn ? " mine" : ""}`}>{isYourTurn ? "Your turn" : <><span className="dkm-turn-long">{oppPlayer.name}'s turn</span><span className="dkm-turn-short">Their turn</span></>}</span>} />
+          flag={<span className={`dkm-turn-flag${isYourTurn ? " mine" : ""}`}>{isYourTurn ? "Your turn" : "Their turn"}</span>} />
       </div>
 
       <div className="dkm-scroll">
@@ -3051,9 +3077,8 @@ export function DiceKingdomMobilePage() {
           )}
           {phase === "roll" && (
             <TrayCard
-              title={
-                !isYourTurn ? `${oppPlayer.name}'s tray` : hasRolledThisStep ? "Tray · tap to select for reroll · long press to view die info" : "Tray"
-              }
+              title={isYourTurn ? "Tray" : `${oppPlayer.name}'s tray`}
+              note={isYourTurn && hasRolledThisStep ? "Tap dice to reroll them · long press for die info" : undefined}
               hint={`${trayDrawn.length || trayReserve.length} dice`}
               dice={trayRolled ? trayReserve : trayDrawn}
               cardsById={cardsById}
