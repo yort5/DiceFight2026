@@ -346,23 +346,15 @@
 .dicekingdom.dk-mobile .dkm-buy-card .dkm-card-title {
   font-size: 17px;
 }
-/* Three options, one per row: the art, then the name and what the card
-   does - the ability decides the purchase, and three columns left it no
-   room (2026-11-13). Each row is in the card's energy colour. */
 .dicekingdom.dk-mobile .dkm-buy-row {
-  flex-direction: column;
+  align-items: flex-start;
   gap: 8px;
 }
+/* Three small cards in the card's energy colour, price first. */
 .dicekingdom.dk-mobile .dkm-buy-tile {
   position: relative;
-  flex: none;
-  display: grid;
-  grid-template-columns: 68px minmax(0, 1fr);
-  grid-template-rows: auto 1fr;
-  align-items: start;
+  min-width: 0;
   gap: 0;
-  width: 100%;
-  min-height: 68px;
   padding: 0;
   overflow: hidden;
   border: 0;
@@ -372,7 +364,6 @@
     0 0 0 1.5px color-mix(in srgb, var(--energy) 60%, var(--dkm-border)),
     0 4px 0 color-mix(in srgb, var(--energy) 45%, #000);
   margin-bottom: 4px;
-  text-align: left;
   transition: transform 0.09s ease, box-shadow 0.09s ease;
   -webkit-tap-highlight-color: transparent;
 }
@@ -390,15 +381,14 @@
     0 8px 14px -6px rgba(0, 0, 0, 0.5);
 }
 .dicekingdom.dk-mobile .dkm-buy-art {
-  grid-row: 1 / -1;
-  align-self: stretch;
   display: grid;
   place-items: center;
-  min-height: 68px;
+  width: 100%;
+  aspect-ratio: 4 / 3;
   background: color-mix(in srgb, var(--energy) 30%, var(--dkm-raised));
   color: var(--dkm-ink);
 }
-/* Out of the flow, so the painting's own size can't stretch the row. */
+/* Out of the flow, so the painting's own size can't stretch the card. */
 .dicekingdom.dk-mobile .dkm-buy-art.painted {
   position: relative;
   overflow: hidden;
@@ -412,23 +402,29 @@
   object-fit: cover;
 }
 .dicekingdom.dk-mobile .dkm-buy-name {
-  /* Clear of the price in the corner. */
-  padding: 8px 64px 0 10px;
+  align-self: stretch;
+  padding: 6px 6px 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font: 700 13.5px/1.25 "Work Sans", var(--sans);
+  font: 700 11.5px/1.25 "Work Sans", var(--sans);
   text-align: left;
   color: var(--dkm-ink);
 }
-/* Up to four lines; the inspect card (a tap) has the rest. */
+/* The start of the ability, as a reminder (user, 2026-11-13: "just put
+   the first line of the ability on the card... If not, I can always tap
+   for the full roster"). Three short lines in a column this narrow; the
+   height is fixed so the three cards line up. */
 .dicekingdom.dk-mobile .dkm-buy-text {
   display: -webkit-box;
-  -webkit-line-clamp: 4;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  margin: 3px 10px 8px;
-  font: 400 11.5px/1.35 "Work Sans", var(--sans);
+  align-self: stretch;
+  height: calc(3 * 1.3em);
+  margin: 2px 6px 7px;
+  font: 400 10px/1.3 "Work Sans", var(--sans);
+  text-align: left;
   color: var(--dkm-ink-2);
 }
 .dicekingdom.dk-mobile .dkm-buy-text b {
@@ -437,8 +433,8 @@
 }
 .dicekingdom.dk-mobile .dkm-buy-cost-row {
   position: absolute;
-  top: 6px;
-  right: 6px;
+  top: 4px;
+  right: 4px;
   gap: 3px;
   padding: 3px 7px 2px 4px;
   border-radius: 999px;
@@ -448,13 +444,13 @@
   font: 400 15px/1 var(--display);
   color: #fff;
 }
-/* Can't afford it: the art and the price fade, the edge goes grey, but
-   the words stay readable - you may be saving up for it. */
-.dicekingdom.dk-mobile .dkm-buy-tile.unaffordable:not(.picked) {
-  box-shadow: 0 0 0 1.5px var(--dkm-border), 0 4px 0 color-mix(in srgb, var(--dkm-border) 60%, #000);
-}
+/* Can't afford it: the art and the price fade and the edge goes grey,
+   but the words stay readable - you may be saving up for it. */
 .dicekingdom.dk-mobile .dkm-buy-tile.unaffordable {
   opacity: 1;
+}
+.dicekingdom.dk-mobile .dkm-buy-tile.unaffordable:not(.picked) {
+  box-shadow: 0 0 0 1.5px var(--dkm-border), 0 4px 0 color-mix(in srgb, var(--dkm-border) 60%, #000);
 }
 .dicekingdom.dk-mobile .dkm-buy-tile.unaffordable .dkm-buy-art {
   filter: saturate(0.3);

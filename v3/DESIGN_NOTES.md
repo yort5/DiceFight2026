@@ -5378,3 +5378,22 @@ button - the inspect card keeps the tappable ones. A card you can't
 afford greys its art, price and edge, but its words stay readable.
 Cost: the Buy card is about 110px taller, so on a 375x667 phone only
 the first option shows above the bottom bar before scrolling.
+
+## 2026-11-13 - Buy options: back to three across, with the ability's start
+
+User, on the one-per-row version: "I think that takes up too much space
+overall... if we go back to the three in a row for the quick buy and
+just put the first line of the ability on the card, that might be
+enough to remind me what the full ability is. If not, I can always tap
+for the full roster." And: "Don't worry too much about catering to my
+small phone." The three options are small cards across again; under
+the one-line name each shows the start of its ability - three short
+lines at 10px (a column is only ~20 characters wide), keywords bold,
+fixed height so the cards line up. The unaffordable treatment from the
+row version stays (art, price and edge grey; words readable).
+
+Parked, from the same message: a whole overlay for the Main step that
+highlights what you can pay for and what you might field, while
+keeping the rest in reach (your bag, what the opponent has bought and
+fielded). "It's a lot of information!" - needs a design before any
+code.
