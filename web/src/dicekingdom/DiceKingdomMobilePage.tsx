@@ -1134,7 +1134,24 @@ function BuyCard({
                   KeywordText - this is already inside a button; the
                   inspect card it opens has the tappable ones. */}
               <span className="dkm-buy-text">
-                <span>{splitKeywordText(cardTextOf(card)).map((part, i) => (part.keyword ? <b key={i}>{part.text}</b> : part.text))}</span>
+                {/* The die's three levels as small glass dice, read like a
+                    die face: fielding cost top-left, attack top-right,
+                    defense bottom-right (user's pick from a mock-up,
+                    2026-11-13: stats as dice, "just a series of numbers
+                    doesn't feel right in... a dice-based game"). */}
+                {!!card?.levels.length && (
+                  <span className="dkm-buy-dice" aria-label={`Levels: ${card.levels.map((l) => `field ${l.fieldingCost}, attack ${l.attack}, defense ${l.defense}`).join("; ")}`}>
+                    {card.levels.map((l, i) => (
+                      <span key={i} className="dkm-buy-die" aria-hidden="true">
+                        <i className="f">{l.fieldingCost}</i>
+                        <i className="a">{l.attack}</i>
+                        <i className="d">{l.defense}</i>
+                        {(l.burst ?? 0) > 0 && <i className="b">{"✦".repeat(l.burst ?? 0)}</i>}
+                      </span>
+                    ))}
+                  </span>
+                )}
+                <span className="dkm-buy-ability">{splitKeywordText(cardTextOf(card)).map((part, i) => (part.keyword ? <b key={i}>{part.text}</b> : part.text))}</span>
               </span>
               <span className="dkm-buy-cost-row">
                 {(card?.energyTypes ?? []).map((t) => (

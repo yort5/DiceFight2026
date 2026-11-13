@@ -5417,3 +5417,22 @@ are white in both themes. A long name is cut ("Honey Bad..."), by
 choice. A card without a painting keeps its line icon on the energy
 colour under the same fades. Unaffordable: picture greyed and darkened,
 grey edge, words dimmed but readable.
+
+## 2026-11-13 - Buy options: the die's three levels as glass dice
+
+User: "now that I can easily see the ability, I am aware that I am
+missing the stats. Can we squeeze a die in there with stats on it?"
+Mocked up: one die by the price (one level only), three small dice, a
+line of numbers ("just a series of numbers doesn't feel right in what
+is supposed to be a dice-based game"), a column beside the ability
+(too little text), then see-through versions of the three dice and a
+small die turning through the levels. Picked: "Q1" - three glass dice.
+
+Each quick-buy card now carries a row of three 25px dice above the
+ability, one per level, read like a die face: fielding cost top-left,
+attack top-right, defense bottom-right (a burst, on the 3 cards that
+have one, bottom-left). The dice are a dark see-through tint with the
+painting blurred behind them and a light rim. The card is 136px tall
+(from 112); an action card has no levels and no dice but keeps the
+height so the three line up. "In the context of playing the game,
+while having the image is nice, it's not the crucial thing."
