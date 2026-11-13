@@ -5363,3 +5363,18 @@ plan's letter along with the rest. Second look at both:
 - Seen for the first time (patched `/me/bosses`, `BOSS=1` in
   `glowup-moments.js`): a boss win's reward panel and the purple Boss
   Ladder button under New game.
+
+## 2026-11-13 - The buy options show what the card does
+
+User: "Can we get the ability on the card for the three 'quick buy'
+options when you're buying? The ability is going to be important in
+deciding what to purchase." Card text runs to a median of about 84
+characters (up to ~300), which three 100px columns can't hold, so the
+three options are now one per row: the painting on the left, the name
+and the ability beside it (up to four lines; a tap still opens the
+inspect card with the whole text), the price in the top-right corner.
+Keywords are bold but not tappable here - the option is itself a
+button - the inspect card keeps the tappable ones. A card you can't
+afford greys its art, price and edge, but its words stay readable.
+Cost: the Buy card is about 110px taller, so on a 375x667 phone only
+the first option shows above the bottom bar before scrolling.

@@ -1,4 +1,5 @@
 import { KeywordAction, KeywordText } from "../KeywordPreview";
+import { splitKeywordText } from "../keywordRules";
 import { CUSTOM_TEAM_PICK, pendingCustomTeam } from "./customTeams";
 import { startTransition, useEffect, useLayoutEffect, useRef, useState } from "react";
 import "./dicekingdom.css";
@@ -1125,6 +1126,14 @@ function BuyCard({
                   : Avatar ? <Avatar size={30} /> : <TardigradeIcon size={30} />}
               </span>
               <span className="dkm-buy-name">{card?.name ?? cardId}</span>
+              {/* What it does, on the option itself (user, 2026-11-13: "the
+                  ability is going to be important in deciding what to
+                  purchase"). Keywords are bold, not the tappable
+                  KeywordText - this is already inside a button; the
+                  inspect card it opens has the tappable ones. */}
+              <span className="dkm-buy-text">
+                {splitKeywordText(cardTextOf(card)).map((part, i) => (part.keyword ? <b key={i}>{part.text}</b> : part.text))}
+              </span>
               <span className="dkm-buy-cost-row">
                 {(card?.energyTypes ?? []).map((t) => (
                   <EnergyBadge key={t} type={t} size={11} />
