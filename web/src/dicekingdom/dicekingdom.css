@@ -3807,10 +3807,12 @@
   position: relative;
 }
 
+/* Lower right, by the D it counts against (user, 2026-11-14: in the upper
+   left it sat by the fielding cost). */
 .dicekingdom .dk-damage-badge {
   position: absolute;
-  top: -6px;
-  left: -6px;
+  bottom: -6px;
+  right: -6px;
   min-width: 18px;
   padding: 2px 4px;
   border-radius: 9px;

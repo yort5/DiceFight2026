@@ -382,6 +382,24 @@ function AvatarGlyph({ die, size = 15, color }: { die: Die; cardsById?: never; s
   );
 }
 
+// The die's own symbol, as it's printed on every face of the die, on the
+// card's energy colour. A painting replaced it on the buy options and in
+// the roster (2026-11-12), and then a die that rolled an energy face, which
+// shows only this symbol and its energy, couldn't be matched to its card
+// (user, 2026-11-14). So a painted card wears it as a badge.
+function CardSymbolBadge({ cardId, energyType, size, className }: { cardId: string; energyType?: string; size: number; className: string }) {
+  const Avatar = CHARACTER_ICONS[cardId];
+  return (
+    <span
+      className={`dkm-avatar-disc ${className}`}
+      style={{ width: size, height: size, background: `var(--${(energyType ?? "wild").toLowerCase()})`, color: "#fff8ec" }}
+      aria-hidden="true"
+    >
+      {Avatar ? <Avatar size={Math.round(size * 0.62)} /> : <TardigradeIcon size={Math.round(size * 0.62)} />}
+    </span>
+  );
+}
+
 function typeColorOf(die: Die, cardsById: Map<string, CardDef>): string {
   const type = dieEnergyType(die, cardsById);
   return `var(--${type.toLowerCase()})`;
@@ -678,7 +696,11 @@ function MatCard({
   onInspectPileDie,
   targeting,
   onUsePower,
+  reserveInTray,
 }: {
+  /** Their rolled Reserve dice are up in the tray right now (their Roll &
+   *  Reroll step), so the reserve row leaves them out - see below. */
+  reserveInTray?: boolean;
   /** Your Champion's once-per-turn power is usable now (2026-10-04). */
   onUsePower?: () => void;
   mine: boolean;
@@ -847,13 +869,18 @@ function MatCard({
       {/* The opponent's rolled Reserve dice, so a creature they field visibly
           comes OUT of somewhere (it used to appear from nowhere - only their
           energy total showed, in the header). Your own reserve lives in the
-          Buy card on your turn. */}
-      {!mine && rolledReserve.length > 0 && (
+          Buy card on your turn. While their tray is up showing those same
+          dice mid-roll, the row stays away (user, 2026-11-13: the dice sat
+          in two places during the roll) - the tray holds them, and when the
+          step ends they fly from the tray down into this row. A 3D throw can
+          outlast that, so the tiles also take the roll's spin: each stays
+          hidden until its thrown die lands on it. */}
+      {!mine && !reserveInTray && rolledReserve.length > 0 && (
         <>
           <span className="dkm-field-label">Their reserve</span>
           <div className="dkm-tile-row wrap" data-region="opp-reserve">
             {rolledReserve.map((d) => (
-              <DTile key={d.id} die={d} cardsById={cardsById} size={40} mine={false} />
+              <DTile key={d.id} die={d} cardsById={cardsById} size={40} mine={false} spin={spins[d.id]} turnOffset={turnOffsets[d.id]} />
             ))}
           </div>
         </>
@@ -926,7 +953,7 @@ function RerollDieTile({ die, cardsById, picked, spin, turnOffset, onToggle, onI
   return (
     <button
       type="button"
-      data-fly-id={interactive ? `die:${die.id}` : undefined}
+      data-fly-id={`die:${die.id}`}
       className={`dkm-tile${interactive ? " clickable" : ""}${picked ? " picked" : ""}`}
       onPointerDown={(e) => {
         if (!interactive || e.button !== 0) return;
@@ -1127,6 +1154,7 @@ function BuyCard({
                   ? <Painting cardId={cardId} alt="" />
                   : Avatar ? <Avatar size={30} /> : <TardigradeIcon size={30} />}
               </span>
+              {hasPainting(cardId) && <CardSymbolBadge cardId={cardId} energyType={card?.energyTypes[0]} size={20} className="dkm-buy-symbol" />}
               <span className="dkm-buy-name">{card?.name ?? cardId}</span>
               {/* What it does, on the option itself (user, 2026-11-13: "the
                   ability is going to be important in deciding what to
@@ -1558,6 +1586,7 @@ function RosterSheet({
                 {hasPainting(cardId)
                   ? <Painting cardId={cardId} crop="icon" alt={card?.name ?? cardId} />
                   : Avatar ? <Avatar size={20} /> : <TardigradeIcon size={20} />}
+                {hasPainting(cardId) && <CardSymbolBadge cardId={cardId} energyType={types[0]} size={18} className="dkm-roster-symbol" />}
               </span>
               <div className="dkm-roster-mid">
                 <span className="dkm-roster-name">{card?.name ?? cardId}</span>
@@ -3071,6 +3100,7 @@ export function DiceKingdomMobilePage() {
           onTapDie={onTapAttacker}
           onInspectPileDie={onInspectPileDie}
           targeting={targeting}
+          reserveInTray={!isYourTurn && phase === "roll" && trayRolled}
         />
 
         <SharedAbilityPanel

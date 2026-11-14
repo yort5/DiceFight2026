@@ -5436,3 +5436,69 @@ painting blurred behind them and a light rim. The card is 136px tall
 (from 112); an action card has no levels and no dice but keeps the
 height so the three line up. "In the context of playing the game,
 while having the image is nice, it's not the crucial thing."
+
+## 2026-11-14 - The opponent's dice in one place while they roll
+
+User: "when the opponent is rolling their dice, the dice image stays in
+the reserve pool. So you've got dice in two places during that rolling
+animation." On the mobile page the opponent's freshly rolled dice showed
+twice: in their tray (the roll) and, at rest, in the "Their reserve" row
+on their mat. Worse, the opponent's tray tiles had no `data-fly-id`, so
+the 3D throw aimed at the reserve-row tiles, which never hid.
+
+Now, while the opponent's tray is up with rolled dice (`reserveInTray`
+on MatCard), the reserve row is left out, and the tray tiles are the
+dice's home for the throw and for flights. When the step ends the
+existing flight carries them from the tray down into the row. The row's
+tiles also take the roll's spin, so a 3D throw that outlasts the step
+hold (1.9s) keeps each tile hidden until its die lands. Check:
+`~/.devtools/playwright/opp-roll-dup-check.js` (old code: the reserve
+row showed in 48 samples over two opponent rolls; now 0).
+
+## 2026-11-14 - Playtest fixes: KO on a lowered D, auras don't stack, games survive restarts
+
+From one session's notes (user):
+
+- **A die whose D drops to its damage is KO'd then.** Archnemesis's
+  Global set a creature's D to its A (1) after Honey Badger had dealt it
+  1, and it lived, through Resolve Damage too. The engine only checked
+  for a KO when damage landed. `EffectInterpreter.DrainQueue` now ends
+  with a sweep: once an action's abilities have resolved (and no choice is
+  waiting), every creature on the Field or attacking whose damage meets
+  its D is KO'd, logged "X is knocked out." The same covers an aura
+  holding a D up leaving play.
+- **While Active abilities don't stack.** Two Foxes gave +2 DEF. v1 had
+  rule 3.4.5.3 ("regardless of how many copies of that die are fielded,
+  this ability occurs only one time"); the v2 registry summed every copy.
+  `ContinuousRegistry` now applies a card's StatAura and CostModifier once
+  however many of its dice qualify (the strongest, if copies resolve to
+  different amounts). Different cards still add up. The Gibbon test that
+  expected two Gibbons to give +2 now expects +1.
+- **Resume survives the server forgetting a game.** Games live in memory,
+  and Cloud Run stops idle instances (and starts new ones on deploys), so
+  "No V2 game with id" could happen after half an hour with no deploy.
+  Now the game record is written after every move (it was every turn's
+  end), with a small `LiveGame` file beside it under
+  `dice-kingdom/live/<id>.json` holding what the record can't (seat
+  tokens, seat owners, bot seats, boss, version). A request for a game
+  the server doesn't have rebuilds it by replaying the record under the
+  same tokens (`GameReplayer.Restore`), then carries on as normal. If the
+  engine changed since (a deploy), a checksum drift is logged and the
+  replay carries on; it stops only where a move no longer goes through.
+  Writes of the same file coalesce (Cloud Storage takes about one write a
+  second per object). Not covered: an invite nobody has joined yet (still
+  memory only), and two Cloud Run instances serving one game at once would
+  each have their own copy.
+- **The die's symbol is back on the buy options and the roster.** Since
+  the paintings (2026-11-12), a painted card showed no symbol, so a die
+  that rolled an energy face (symbol + energy only) couldn't be matched
+  to its card. A painted card now wears the symbol as a small disc on its
+  energy colour: under the name on a buy option, on the thumbnail's
+  corner in the roster.
+- **The damage pill moved to a die's lower right**, by the D it counts
+  against (it sat by the fielding cost).
+
+Checks: `~/.devtools/playwright/symbol-damage-check.js` (symbols, pill),
+`~/.devtools/playwright/resume-restart-check.js` (start a game, restart
+the API, `after`: resume and play on); API test
+`A_Forgotten_Game_Is_Restored_From_Its_Record_Mid_Turn`.

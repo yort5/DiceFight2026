@@ -405,6 +405,28 @@
   height: 100%;
   object-fit: cover;
 }
+/* The die's symbol (CardSymbolBadge), under the name on the painting's
+   left edge - what a die that rolled an energy face shows. */
+.dicekingdom.dk-mobile .dkm-buy-symbol {
+  position: absolute;
+  top: 22px;
+  left: 6px;
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.75), 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+.dicekingdom.dk-mobile .dkm-buy-tile.unaffordable .dkm-buy-symbol {
+  filter: saturate(0.3) brightness(0.75);
+}
+/* ...and on the roster's thumbnail, in its lower right corner. */
+.dicekingdom.dk-mobile .dkm-roster-avatar.painted {
+  position: relative;
+}
+.dicekingdom.dk-mobile .dkm-roster-symbol {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  box-shadow: 0 0 0 1.5px var(--dkm-raised, #fff);
+}
+
 /* A long name is cut off ("Mountain ..."): enough to tell the cards
    apart, and the Full Roster has room for all of it. */
 .dicekingdom.dk-mobile .dkm-buy-name {
