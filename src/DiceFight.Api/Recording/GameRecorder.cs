@@ -8,14 +8,17 @@ using DiceFight.V2.Model;
 namespace DiceFight.Api.Recording;
 
 // Keeps each live game's GameRecord (on its V2GameSession) up to date and
-// writes it out - at the end of every turn, so an abandoned game is still
-// kept, and once more at game over. Writes go through a queue drained in
-// the background, so a slow bucket never holds up a move. Registered only
-// when GameRecordOptions names a sink (Program.cs); V2GameStore works
-// without one.
+// writes it out - after every move, with its LiveGame beside it, so a game
+// the server forgets can be restored (Restore below). Writes go through a
+// queue drained in the background, so a slow bucket never holds up a move,
+// and a file written again before its last write went out is written once,
+// newest version (Cloud Storage allows about one write a second per object,
+// and a computer turn makes several moves in a row). Registered only when
+// GameRecordOptions names a sink (Program.cs); V2GameStore works without one.
 public sealed class GameRecorder(IGameRecordSink sink, GameRecordOptions options, ILogger<GameRecorder> logger) : BackgroundService
 {
-    private readonly Channel<(string Name, byte[] Json)> _writes = Channel.CreateUnbounded<(string, byte[])>();
+    private readonly Channel<string> _writes = Channel.CreateUnbounded<string>();
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte[]> _pending = new();
 
     private static readonly string? EngineVersion =
         Environment.GetEnvironmentVariable("K_REVISION") is { } revision
@@ -45,6 +48,7 @@ public sealed class GameRecorder(IGameRecordSink sink, GameRecordOptions options
         };
         if (session.BossId is not null) session.Record.Seats[1].Bot = true;
         session.RecordedActivePlayerId = session.State.ActivePlayerId;
+        Save(session);
     }
 
     private static RecordedSeat Seat(Player player) => new()
@@ -87,7 +91,7 @@ public sealed class GameRecorder(IGameRecordSink sink, GameRecordOptions options
             record.Turns++;
             session.RecordedActivePlayerId = state.ActivePlayerId;
         }
-        if (state.IsGameOver || turnEnded) Save(session);
+        Save(session);
     }
 
     public void Save(V2GameSession session)
@@ -103,8 +107,46 @@ public sealed class GameRecorder(IGameRecordSink sink, GameRecordOptions options
         };
         record.Log = state.Log.Select(l => l.PlayerId is { } p ? $"[{p}] {l.Text}" : l.Text).ToList();
         // Serialized now, on the request's thread - the record keeps changing.
-        var name = $"{options.Prefix}{record.CreatedUtc:yyyy/MM/dd}/{record.GameId}.json";
-        _writes.Writer.TryWrite((name, GameRecordJson.Serialize(record)));
+        var name = RecordName(record);
+        Queue(name, GameRecordJson.Serialize(record));
+        Queue(LiveName(record.GameId), GameRecordJson.Serialize(new LiveGame
+        {
+            RecordName = name,
+            SeatTokens = session.Seats.ToDictionary(s => s.PlayerId, s => s.Token),
+            SeatOwners = new(session.SeatOwners),
+            BotSeats = [.. session.BotSeats],
+            BossId = session.BossId,
+            Version = session.Version,
+        }));
+    }
+
+    private string RecordName(GameRecord record) => $"{options.Prefix}{record.CreatedUtc:yyyy/MM/dd}/{record.GameId}.json";
+    private string LiveName(string gameId) => $"{options.LivePrefix}{gameId}.json";
+
+    private void Queue(string name, byte[] json)
+    {
+        _pending[name] = json;
+        _writes.Writer.TryWrite(name);
+    }
+
+    // A game this server doesn't have in memory, rebuilt from its record, or
+    // null when there's no record of it. Blocks on the bucket: it runs once
+    // per forgotten game, on the first request that asks for it.
+    public V2GameSession? Restore(string gameId)
+    {
+        if (!System.Text.RegularExpressions.Regex.IsMatch(gameId, "^[0-9a-f]{8}$")) return null;
+        var liveJson = sink.ReadAsync(LiveName(gameId), CancellationToken.None).GetAwaiter().GetResult();
+        if (liveJson is null) return null;
+        var live = GameRecordJson.DeserializeLive(liveJson);
+        var recordJson = sink.ReadAsync(live.RecordName, CancellationToken.None).GetAwaiter().GetResult();
+        if (recordJson is null) return null;
+        var record = GameRecordJson.Deserialize(System.Text.Encoding.UTF8.GetString(recordJson));
+        var (session, divergence) = GameReplayer.Restore(record, live);
+        if (divergence is not null)
+            logger.LogWarning("Restored game {GameId} from its record, but the replay drifted: {Divergence}", gameId, divergence);
+        else
+            logger.LogInformation("Restored game {GameId} from its record ({Actions} actions).", gameId, record.Actions.Count);
+        return session;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -115,7 +157,7 @@ public sealed class GameRecorder(IGameRecordSink sink, GameRecordOptions options
             // A write already under way finishes even as shutdown begins:
             // cancelling it would lose it, since it's already off the queue
             // StopAsync drains.
-            await foreach (var (name, json) in _writes.Reader.ReadAllAsync(stoppingToken)) await WriteOne(name, json, CancellationToken.None);
+            await foreach (var name in _writes.Reader.ReadAllAsync(stoppingToken)) await WriteOne(name, CancellationToken.None);
         }
         catch (OperationCanceledException) { }
     }
@@ -125,11 +167,16 @@ public sealed class GameRecorder(IGameRecordSink sink, GameRecordOptions options
     {
         _writes.Writer.TryComplete();
         await base.StopAsync(cancellationToken);
-        while (_writes.Reader.TryRead(out var write)) await WriteOne(write.Name, write.Json, cancellationToken);
+        while (_writes.Reader.TryRead(out var name)) await WriteOne(name, cancellationToken);
     }
 
-    private async Task WriteOne(string name, byte[] json, CancellationToken cancel)
+    public void LogRestoreFailure(string gameId, Exception ex) =>
+        logger.LogWarning(ex, "Couldn't restore game {GameId} from its record.", gameId);
+
+    private async Task WriteOne(string name, CancellationToken cancel)
     {
+        // Already written by an earlier signal for the same file.
+        if (!_pending.TryRemove(name, out var json)) return;
         try
         {
             await sink.WriteAsync(name, json, cancel);

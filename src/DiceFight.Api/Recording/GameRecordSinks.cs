@@ -8,6 +8,9 @@ namespace DiceFight.Api.Recording;
 //   Bucket     a Cloud Storage bucket name: records go there (Cloud Run)
 //   LocalPath  a folder: records go there (local dev, or a mounted volume)
 //   Prefix     object/folder prefix, default "dice-kingdom/games/"
+//   LivePrefix where each unfinished game's LiveGame goes, default
+//              "dice-kingdom/live/" (outside Prefix, so record readers
+//              never see one)
 // Bucket wins when both are set; neither set = recording off. On Cloud Run
 // set it as an environment variable: GameRecords__Bucket=<bucket>.
 public sealed class GameRecordOptions
@@ -15,6 +18,7 @@ public sealed class GameRecordOptions
     public string? Bucket { get; set; }
     public string? LocalPath { get; set; }
     public string Prefix { get; set; } = "dice-kingdom/games/";
+    public string LivePrefix { get; set; } = "dice-kingdom/live/";
 }
 
 // Also where player accounts are kept (Accounts/PlayerAccounts.cs), under

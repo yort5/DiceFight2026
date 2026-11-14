@@ -42,6 +42,46 @@ public static class GameReplayer
         return new(state, replayed, null);
     }
 
+    // A game the server forgot, rebuilt to carry on (2026-11-14, user: "No
+    // V2 game with id" on a game left for half an hour): the same replay,
+    // but under the game's own seat tokens, and lenient - a checksum that
+    // drifts (the engine changed since the move was made) is reported, not
+    // fatal, since the same moves on a slightly different engine beat losing
+    // the game. It stops only where a move no longer goes through (or one
+    // that was refused now would), and the record is cut back to match.
+    public static (V2GameSession Session, string? Divergence) Restore(GameRecord record, LiveGame live)
+    {
+        var players = record.Seats.Select(BuildPlayer).ToList();
+        var state = GameSetup.NewGame(DiceKingdomConfig.Config, DiceKingdomConfig.Catalog, players[0], players[1]);
+        var store = new V2GameStore();
+        var seats = record.Seats.Select(s => new Seat(s.PlayerId, live.SeatTokens[s.PlayerId])).ToList();
+        var session = store.Create(state, record.GameId, record.Seed, live.BossId, seats);
+
+        string? divergence = null;
+        var replayed = 0;
+        foreach (var action in record.Actions)
+        {
+            var error = Invoke(store, session, action);
+            if ((error is null) != (action.Error is null))
+            {
+                divergence = $"Action {action.Seq} ({action.Action}): recorded {(action.Error is null ? "success" : "a refusal")}, replay {(error is null ? "succeeded" : $"failed: {error}")} - restored up to the move before.";
+                break;
+            }
+            if (divergence is null && StateChecksum.Of(state) != action.Check)
+                divergence = $"Action {action.Seq} ({action.Action}) and on: the state differs from the recording (engine changed?) - carried on.";
+            replayed++;
+        }
+        if (replayed < record.Actions.Count) record.Actions.RemoveRange(replayed, record.Actions.Count - replayed);
+
+        session.Record = record;
+        session.RecordedActivePlayerId = state.ActivePlayerId;
+        foreach (var (seat, owner) in live.SeatOwners) session.SeatOwners[seat] = owner;
+        foreach (var seat in live.BotSeats) session.BotSeats.Add(seat);
+        // Past any version a browser already saw, so every open tab reloads.
+        session.RestoreVersion(Math.Max(live.Version, session.Version) + 1);
+        return (session, divergence);
+    }
+
     private static string? Invoke(V2GameStore store, V2GameSession session, RecordedAction action)
     {
         var method = typeof(V2GamesController).GetMethod(action.Action, BindingFlags.Public | BindingFlags.Instance)

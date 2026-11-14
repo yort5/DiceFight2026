@@ -5,8 +5,8 @@ on real human play and for teaching the bot. Added 2026-10-04.
 
 ## What gets recorded
 
-One file per game, rewritten at the end of every turn (so abandoned games
-are kept too) and once more at game over:
+One file per game, rewritten after every move (since 2026-11-14; before,
+at the end of every turn) and once more at game over:
 
 - **Header:** game id, start time, engine version (the Cloud Run revision,
   plus a git commit when built from a checkout), the game's random seed,
@@ -129,14 +129,20 @@ checked every 30 minutes; config section `GameExpiry`):
 
 An unfinished game's record is saved once more as it's dropped, which also
 keeps the moves of the turn it was abandoned in. Someone opening a dropped
-game within a week is told it has expired.
+game within a week is told it has expired - unless its record can
+rebuild it (below), which it now usually can.
 
 ## Known limits
 
-- **Games still live only in server memory while being played.** A
-  redeploy, or Cloud Run shutting down an idle instance, ends any game in
-  progress. Its record is kept up to its last completed turn, since a
-  shutdown flushes pending writes. Saving games so they can be resumed is a
-  separate piece of work.
+- **Games live in server memory, and come back from their record.**
+  (2026-11-14.) A redeploy or Cloud Run stopping an idle instance drops
+  them from memory; the next request for one rebuilds it by replaying its
+  record (`GameReplayer.Restore`), under the seat tokens kept beside it in
+  `dice-kingdom/live/<game id>.json` (with seat owners, bot seats, boss and
+  version - never in the record itself, so a record reader can't move for
+  a player). A replay that drifts after an engine change carries on and is
+  logged; one stops only at a move that no longer goes through. Limits: an
+  invite nobody has joined is still memory only, and two instances
+  serving the same game at once would each hold their own copy.
 - **The desktop page has no Global rail.** That's unrelated to recording,
   but it means desktop players can't use Globals.

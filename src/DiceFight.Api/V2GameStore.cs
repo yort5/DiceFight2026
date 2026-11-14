@@ -6,7 +6,9 @@ namespace DiceFight.Api;
 // v2 counterpart to GameStore.cs - kept as a genuinely separate class
 // (not a shared generic store) per the mellow-sparking-comet plan's own
 // reasoning: "keeps v1 untouched" matters more here than avoiding a
-// little duplication. In-memory only, same caveat as GameStore.
+// little duplication. Games are held in memory; with recording on, one
+// this server doesn't have (a restart, a deploy, Cloud Run stopping an
+// idle instance) is rebuilt from its record on first use (TryRestore).
 //
 // `recorder` (2026-10-04): when game recording is configured, every game
 // started here gets a GameRecord (Recording/GameRecorder.cs).
@@ -24,15 +26,15 @@ public sealed class V2GameStore(Recording.GameRecorder? recorder = null, Account
     public IEnumerable<V2GameSession> Sessions => _games.Values;
     public IEnumerable<V2Lobby> Lobbies => _lobbies.Values;
 
-    // `id`/`seed` are given only when replaying a recorded game.
-    public V2GameSession Create(GameState state, string? id = null, int? seed = null, string? bossId = null)
+    // `id`/`seed` (and `seats`, restoring) are given only when replaying a recorded game.
+    public V2GameSession Create(GameState state, string? id = null, int? seed = null, string? bossId = null, IReadOnlyList<Seat>? seats = null)
     {
         id ??= Guid.NewGuid().ToString("N")[..8];
         var session = new V2GameSession
         {
             Id = id,
             State = state,
-            Seats =
+            Seats = seats ??
             [
                 new Seat(state.PlayerOne.Id, GameSession.NewToken()),
                 new Seat(state.PlayerTwo.Id, GameSession.NewToken()),
@@ -47,11 +49,45 @@ public sealed class V2GameStore(Recording.GameRecorder? recorder = null, Account
     }
 
     public V2GameSession GetSession(string gameId) =>
-        _games.TryGetValue(gameId, out var session)
+        _games.TryGetValue(gameId, out var session) || TryRestore(gameId, out session)
             ? session
             : _forgotten.ContainsKey(gameId)
                 ? throw new KeyNotFoundException("This game has expired - nobody moved for a long while. Start a new one from the menu.")
                 : throw new KeyNotFoundException($"No V2 game with id '{gameId}'.");
+
+    // A game not in memory, from its record (GameRecorder.Restore). One
+    // restore at a time, so two requests for the same game build it once;
+    // an id with no record is remembered for a minute, since a browser left
+    // on a gone game polls every couple of seconds.
+    private readonly object _restoreLock = new();
+    private readonly ConcurrentDictionary<string, DateTime> _notRestorable = new();
+
+    private bool TryRestore(string gameId, out V2GameSession session)
+    {
+        session = null!;
+        if (recorder is null || _lobbies.ContainsKey(gameId)) return false;
+        if (_notRestorable.TryGetValue(gameId, out var missedAt) && DateTime.UtcNow - missedAt < TimeSpan.FromMinutes(1)) return false;
+        lock (_restoreLock)
+        {
+            if (_games.TryGetValue(gameId, out var found)) { session = found; return true; }
+            V2GameSession? restored;
+            try { restored = recorder.Restore(gameId); }
+            catch (Exception ex) when (ex is IOException or HttpRequestException or InvalidDataException or System.Text.Json.JsonException or KeyNotFoundException or InvalidOperationException)
+            {
+                recorder.LogRestoreFailure(gameId, ex);
+                restored = null;
+            }
+            if (restored is null)
+            {
+                _notRestorable[gameId] = DateTime.UtcNow;
+                return false;
+            }
+            _forgotten.TryRemove(gameId, out _);
+            _games[gameId] = restored;
+            session = restored;
+            return true;
+        }
+    }
 
     // --- Forgetting idle games (2026-10-04). Games and open invites only
     // live in memory, so ones nobody will come back to are dropped by
@@ -83,6 +119,8 @@ public sealed class V2GameStore(Recording.GameRecorder? recorder = null, Account
             }
         foreach (var (id, at) in _forgotten)
             if (nowUtc - at > TimeSpan.FromDays(7)) _forgotten.TryRemove(id, out _);
+        foreach (var (id, at) in _notRestorable)
+            if (nowUtc - at > TimeSpan.FromMinutes(1)) _notRestorable.TryRemove(id, out _);
         return forgotten;
     }
 
@@ -111,7 +149,7 @@ public sealed class V2GameStore(Recording.GameRecorder? recorder = null, Account
 
     public V2Lobby? GetLobby(string gameId) => _lobbies.TryGetValue(gameId, out var lobby) ? lobby : null;
 
-    public bool HasGame(string gameId) => _games.ContainsKey(gameId);
+    public bool HasGame(string gameId) => _games.ContainsKey(gameId) || TryRestore(gameId, out _);
 
     // Builds the real game under the lobby's id and seats, exactly once -
     // a second join (a double tap, two tabs) finds the lobby already gone.

@@ -90,7 +90,7 @@ public class GameRecordingTests : IDisposable
             }
         } // disposing the server flushes the write queue
 
-        var file = Assert.Single(Directory.GetFiles(_folder, $"{gameId}.json", SearchOption.AllDirectories));
+        var file = Assert.Single(Directory.GetFiles(Path.Combine(_folder, "dice-kingdom", "games"), $"{gameId}.json", SearchOption.AllDirectories));
         var record = GameRecordJson.Deserialize(File.ReadAllText(file));
 
         Assert.Equal([customTeam && !withChampion ? null : "Wolf", "Armadillo"], record.Seats.Select(s => s.ChampionId));
@@ -112,6 +112,66 @@ public class GameRecordingTests : IDisposable
         Assert.Null(outcome.Divergence);
         Assert.Equal(record.Actions.Count, outcome.ActionsReplayed);
         Assert.Equal(record.Result!.Life["teamA"], outcome.State.PlayerOne.Life);
+    }
+
+    // A game the server has forgotten (a restart, a deploy, Cloud Run
+    // stopping an idle instance) comes back from its record on the next
+    // request - mid-turn, with the same seat tokens - and play carries on
+    // (2026-11-14, user: "No V2 game with id" after half an hour away).
+    [Fact]
+    public async Task A_Forgotten_Game_Is_Restored_From_Its_Record_Mid_Turn()
+    {
+        string gameId;
+        Dictionary<string, string> tokens;
+        JsonElement before;
+        await using (var server = Server())
+        {
+            var http = server.CreateClient();
+            var created = await (await http.PostAsJsonAsync("/api/v2/games", new { playerOneChampionId = "Wolf", playerTwoChampionId = "Armadillo" }))
+                .Content.ReadFromJsonAsync<JsonElement>();
+            gameId = created.GetProperty("game").GetProperty("gameId").GetString()!;
+            tokens = created.GetProperty("seats").EnumerateArray()
+                .ToDictionary(s => s.GetProperty("playerId").GetString()!, s => s.GetProperty("token").GetString()!);
+            // 45 bot moves: a few turns in, and (almost certainly) partway through one.
+            for (var i = 0; i < 45; i++) Assert.True(await BotMove(http, gameId, tokens), "Neither seat had a move.");
+            before = await Get(http, gameId, tokens["teamA"]);
+        } // a new server below knows nothing of this game
+
+        await using (var server = Server())
+        {
+            var http = server.CreateClient();
+            var after = await Get(http, gameId, tokens["teamA"]);
+            foreach (var field in new[] { "dice", "activePlayerId", "currentStepId", "playerOne", "playerTwo", "log" })
+                Assert.Equal(before.GetProperty(field).GetRawText(), after.GetProperty(field).GetRawText());
+            Assert.True(after.GetProperty("version").GetInt32() > before.GetProperty("version").GetInt32()); // open tabs reload
+            for (var i = 0; i < 10; i++) Assert.True(await BotMove(http, gameId, tokens), "Neither seat had a move after the restore.");
+        }
+    }
+
+    private static async Task<JsonElement> Get(HttpClient http, string gameId, string token)
+    {
+        using var get = new HttpRequestMessage(HttpMethod.Get, $"/api/v2/games/{gameId}");
+        get.Headers.Add("X-Seat-Token", token);
+        var response = await http.SendAsync(get);
+        Assert.True(response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync());
+        return await response.Content.ReadFromJsonAsync<JsonElement>();
+    }
+
+    // One move by whichever seat has one, as the web client's computer seat makes it.
+    private static async Task<bool> BotMove(HttpClient http, string gameId, Dictionary<string, string> tokens)
+    {
+        foreach (var token in tokens.Values)
+        {
+            using var get = new HttpRequestMessage(HttpMethod.Get, $"/api/v2/games/{gameId}/bot-decision");
+            get.Headers.Add("X-Seat-Token", token);
+            var response = await http.SendAsync(get);
+            if (response.StatusCode == System.Net.HttpStatusCode.NoContent) continue;
+            var d = await response.Content.ReadFromJsonAsync<JsonElement>();
+            var result = await Act(http, gameId, token, d);
+            Assert.True(result.IsSuccessStatusCode, $"{d.GetProperty("kind")}: {await result.Content.ReadAsStringAsync()}");
+            return true;
+        }
+        return false;
     }
 
     // Boss battles (2026-10-31): the player only ever holds their own seat,
@@ -173,7 +233,7 @@ public class GameRecordingTests : IDisposable
             if (over) Assert.Contains(ladder.GetProperty("results").EnumerateArray(), r => r.GetProperty("gameId").GetString() == gameId);
         }
 
-        var file = Assert.Single(Directory.GetFiles(_folder, $"{gameId}.json", SearchOption.AllDirectories));
+        var file = Assert.Single(Directory.GetFiles(Path.Combine(_folder, "dice-kingdom", "games"), $"{gameId}.json", SearchOption.AllDirectories));
         var record = GameRecordJson.Deserialize(File.ReadAllText(file));
         Assert.Equal(DiceFight.V2.Data.DiceKingdomBosses.Ladder[0].Id, record.BossId);
         Assert.True(record.Seats[1].Bot);

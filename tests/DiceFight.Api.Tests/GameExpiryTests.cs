@@ -79,7 +79,7 @@ public class GameExpiryTests
     {
         var recorder = new GameRecorder(new LocalFolderSink(Path.GetTempPath()), new GameRecordOptions(), NullLogger<GameRecorder>.Instance);
         var (store, session) = NewGame(recorder);
-        Assert.Null(session.Record!.Result); // no turn has ended yet
+        session.Record!.Result = null; // as if no write had happened yet (every move writes one now)
 
         store.ForgetIdle(session.LastMoveUtc.AddHours(25), Expiry);
 

@@ -26,6 +26,10 @@ public sealed class V2GameSession
 
     private int _version;
     public int Version => Volatile.Read(ref _version);
+    // A restored game (GameReplayer.Restore) picks up past the version its
+    // players last saw.
+    public void RestoreVersion(int version) => Volatile.Write(ref _version, version);
+
     public void MarkChanged()
     {
         Interlocked.Increment(ref _version);

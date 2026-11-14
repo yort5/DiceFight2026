@@ -11,7 +11,8 @@ namespace DiceFight.Api.Recording;
 // replay that has drifted, e.g. across an engine change.
 //
 // Written as JSON to a local folder or a Cloud Storage bucket
-// (GameRecordSinks.cs) at the end of every turn and at game over.
+// (GameRecordSinks.cs) after every move (2026-11-14; it was every turn's
+// end, which was too late to resume a game from).
 public sealed class GameRecord
 {
     public const int CurrentFormat = 1;
@@ -80,6 +81,24 @@ public sealed class RecordedResult
     public required Dictionary<string, int> Life { get; init; }
 }
 
+// What a record can't hold but a restore needs (2026-11-14): the seat
+// tokens the players' browsers carry, who holds each seat, and which seats
+// the computer plays. Written beside the record (GameRecordOptions.
+// LivePrefix, one per game id) every time the record is, so a game the
+// server has forgotten - a restart, a deploy, Cloud Run stopping an idle
+// instance - can be rebuilt by replaying its record (GameReplayer.Restore).
+// Kept out of the record itself: records are read for analysis, and a
+// token would let the reader move for that player.
+public sealed class LiveGame
+{
+    public required string RecordName { get; init; }
+    public required Dictionary<string, string> SeatTokens { get; init; }
+    public Dictionary<string, string> SeatOwners { get; init; } = [];
+    public List<string> BotSeats { get; init; } = [];
+    public string? BossId { get; init; }
+    public int Version { get; init; }
+}
+
 public static class GameRecordJson
 {
     public static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web)
@@ -89,6 +108,11 @@ public static class GameRecordJson
     };
 
     public static byte[] Serialize(GameRecord record) => JsonSerializer.SerializeToUtf8Bytes(record, Options);
+
+    public static byte[] Serialize(LiveGame live) => JsonSerializer.SerializeToUtf8Bytes(live, Options);
+
+    public static LiveGame DeserializeLive(byte[] json) =>
+        JsonSerializer.Deserialize<LiveGame>(json, Options) ?? throw new InvalidDataException("Empty live game file.");
 
     public static GameRecord Deserialize(string json) =>
         JsonSerializer.Deserialize<GameRecord>(json, Options) ?? throw new InvalidDataException("Empty game record.");
