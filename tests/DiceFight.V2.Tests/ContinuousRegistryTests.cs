@@ -81,6 +81,35 @@ public class ContinuousRegistryTests
         Assert.Equal(2 + 1 + 2, QueryEngine.GetAttack(state, targetDie));
     }
 
+    // Rule 3.4.5.3 (user, 2026-11-14: two Foxes gave +2 DEF): however many
+    // copies of a card are active, its while-active text applies once.
+    [Fact]
+    public void StatAura_From_Two_Copies_Of_The_Same_Card_Applies_Once()
+    {
+        var source = BuildCard("Source", [Level1Char], [new StatAura(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own), DefDelta: new Fixed(1))]);
+        var target = BuildCard("Target", [Level1Char]);
+        var state = BuildState(source, target);
+        AddDie(state, source, "p1", Zone.FieldZone, 0);
+        var second = AddDie(state, source, "p1", Zone.FieldZone, 0);
+        var targetDie = AddDie(state, target, "p1", Zone.FieldZone, 0);
+
+        Assert.Equal(2 + 1, QueryEngine.GetDefense(state, targetDie));
+        second.Zone = Zone.UsedPile;
+        Assert.Equal(2 + 1, QueryEngine.GetDefense(state, targetDie));
+    }
+
+    [Fact]
+    public void CostModifier_From_Two_Copies_Of_The_Same_Card_Applies_Once()
+    {
+        var source = BuildCard("Source", [Level1Char], [new CostModifier(CostKind.Purchase, new TargetFilter(Kind: TargetKind.Player, Ownership: TargetOwnership.Own), Delta: -1)]);
+        var target = BuildCard("Target", [Level1Char], purchaseCost: 3);
+        var state = BuildState(source, target);
+        AddDie(state, source, "p1", Zone.FieldZone, 0);
+        AddDie(state, source, "p1", Zone.FieldZone, 0);
+
+        Assert.Equal(2, QueryEngine.GetPurchaseCost(state, target, "p1"));
+    }
+
     // --- CostModifier ---
 
     [Fact]

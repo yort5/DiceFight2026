@@ -71,7 +71,34 @@ public static class EffectInterpreter
     public static void DrainQueue(GameState state, AbilityQueue queue, IDiceRoller roller, Random random)
     {
         if (state.IsGameOver) return;
-        queue.Drain(qa => ResolveQueued(qa, state, queue, roller, random), () => state.PendingChoice is not null || state.IsGameOver);
+        while (true)
+        {
+            queue.Drain(qa => ResolveQueued(qa, state, queue, roller, random), () => state.PendingChoice is not null || state.IsGameOver);
+            if (state.PendingChoice is not null || state.IsGameOver) return;
+            // A KO's own abilities queue up; resolve them, then look again.
+            if (!KoDiceOutOfDefense(state, queue)) return;
+        }
+    }
+
+    // Damage stays on a die until Clean Up, so a die can be done in without
+    // being hit again: its D lowered to the damage already on it (user,
+    // 2026-11-14: Archnemesis set a creature's D to its A of 1 after Honey
+    // Badger dealt it 1, and nothing happened, not even at Resolve Damage),
+    // or the aura holding its D up leaving play. TryResolveKO only ran when
+    // damage landed, so this sweep catches the rest: once an action's
+    // abilities have all resolved, every active creature whose damage meets
+    // its D is KO'd. Combat's own waves KO before it gets here.
+    private static bool KoDiceOutOfDefense(GameState state, AbilityQueue queue)
+    {
+        var doomed = state.Dice
+            .Where(d => d.Zone is Zone.FieldZone or Zone.AttackZone && d.Damage > 0 && QueryEngine.GetDefense(state, d) <= d.Damage)
+            .ToList();
+        foreach (var die in doomed)
+        {
+            state.LogEvent(die.ControllerId, $"{DieName(state, die)} is knocked out.");
+            KoDie(state, queue, die, triggersKOAbilities: true);
+        }
+        return doomed.Count > 0;
     }
 
     private static void ResolveQueued(QueuedAbility ability, GameState state, AbilityQueue queue, IDiceRoller roller, Random random)

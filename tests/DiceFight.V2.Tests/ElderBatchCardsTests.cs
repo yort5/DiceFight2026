@@ -68,7 +68,7 @@ public class ElderBatchCardsTests
         var copy = Add(state, "DPS057"); var enemy = Add(state, "DPS114", player: "p2");
         Assert.Equal(3, QueryEngine.GetAttack(state, gibbon)); // other copy grants +1
         Assert.Equal(3, QueryEngine.GetAttack(state, copy));
-        Assert.Equal(4, QueryEngine.GetAttack(state, mandrill)); // both Gibbons grant +1
+        Assert.Equal(3, QueryEngine.GetAttack(state, mandrill)); // two Gibbons, still +1: copies don't stack (rule 3.4.5.3)
         Assert.Equal(2, QueryEngine.GetAttack(state, enemy));
         var queue = new AbilityQueue();
         queue.Enqueue(mandrill.Id, "p1", TriggerKind.DieFielded, new BlankText(new TargetFilter(Self: true)));

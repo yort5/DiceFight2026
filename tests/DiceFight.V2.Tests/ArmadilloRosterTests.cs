@@ -115,6 +115,33 @@ public class ArmadilloRosterTests
         Assert.Equal(2, mine.Damage); // ...but it still hit back
     }
 
+    // A die whose D drops to the damage already on it is KO'd then, not
+    // only when it's next hit (user, 2026-11-14: Archnemesis's Global set a
+    // creature's D to its A of 1 after Honey Badger dealt it 1, and it
+    // lived, through Resolve Damage too).
+    [Fact]
+    public void Archnemesis_Global_KOs_A_Die_Whose_New_D_Its_Damage_Already_Meets()
+    {
+        var state = NewGame();
+        var queue = new AbilityQueue();
+        var target = Place(state, "p1", d => d.CardId == DiceKingdomConfig.Hummingbird.Id, Zone.FieldZone, 1); // L2: 2/3
+        var attack = QueryEngine.GetAttack(state, target);
+        Assert.True(QueryEngine.GetDefense(state, target) > attack, "needs a face with D above A");
+        target.Damage = attack;
+        var pay = Shell(state, 2); // 1 Shell
+        var global = DiceKingdomConfig.Archnemesis.Abilities.ToList().FindIndex(a => a.Trigger == TriggerKind.Global);
+
+        TurnEngine.UseGlobal(state, queue, DiceKingdomConfig.Archnemesis.Id, "p1", global, [pay.Id]);
+        Drain(state, queue);
+        if (state.PendingChoice is not null)
+        {
+            EffectInterpreter.AnswerPendingChoice(state, [target.Id]);
+            Drain(state, queue);
+        }
+
+        Assert.Equal(Zone.PrepArea, target.Zone);
+    }
+
     // Kree Captain's Global on Musk Ox (2026-10-04, since taken off the live
     // card): pay 2 Shell, the next creature this turn costs 3 less (min 1).
     private static int MuskOxGlobal => DiceKingdomConfig.WithKreeCaptainGlobal(DiceKingdomConfig.MuskOx).Abilities.ToList().FindIndex(a => a.Trigger == TriggerKind.Global);

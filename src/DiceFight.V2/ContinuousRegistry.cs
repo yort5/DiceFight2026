@@ -15,10 +15,13 @@ namespace DiceFight.V2;
 // own AppliesTo (via QualifyingSources below) re-scans ALL of that
 // card's currently-active (Field/Attack Zone) dice, across both players
 // independently, every time it's asked - so "aura appears/disappears as
-// the source die enters/leaves the field" and "two auras stack
-// additively" (including two copies of the SAME card, DieLimit > 1) both
-// fall out for free from a live re-scan, no event hook needed to add or
-// remove anything.
+// the source die enters/leaves the field" and "two different cards'
+// auras stack additively" both fall out for free from a live re-scan, no
+// event hook needed to add or remove anything. Two copies of the SAME
+// card do not stack (rule 3.4.5.3, "regardless of how many copies of
+// that die are fielded, this ability occurs only one time" - v1 had it,
+// v2 summed every copy until 2026-11-14, user: two active Foxes gave
+// +2 DEF): a modifier counts once however many of its dice qualify.
 //
 // Every template resolves its own Target/Whose TargetFilter relative to
 // EACH qualifying active source die's OWN controller (not a single fixed
@@ -110,8 +113,12 @@ public static class ContinuousRegistry
             QualifyingSources(state, card, def.ActiveWhen, def.Target, die.Id).Any();
 
         public int GetDelta(GameState state, DieInstance die) =>
+            // Once per card (rule 3.4.5.3). Copies can resolve differently
+            // (an amount counted from the source's controller), so the
+            // strongest one - largest either way, buff or penalty - applies.
             QualifyingSources(state, card, def.ActiveWhen, def.Target, die.Id)
-                .Sum(src => AmountResolver.Resolve(state, src.ControllerId, amount, Bindings(src), includeContinuous: false));
+                .Select(src => AmountResolver.Resolve(state, src.ControllerId, amount, Bindings(src), includeContinuous: false))
+                .OrderByDescending(Math.Abs).FirstOrDefault();
 
         public string Label => card.Name;
     }
@@ -150,7 +157,7 @@ public static class ContinuousRegistry
             QualifyingSources(state, card, def.ActiveWhen, def.Whose, payerId).Any();
 
         public int GetDelta(GameState state, CardDef _, string payerId) =>
-            QualifyingSources(state, card, def.ActiveWhen, def.Whose, payerId).Count() * def.Delta;
+            QualifyingSources(state, card, def.ActiveWhen, def.Whose, payerId).Any() ? def.Delta : 0; // once per card, rule 3.4.5.3
     }
 
     private sealed class DieCostModifierAdapter(CardDef card, CostModifier def) : IDieStatModifier
@@ -159,7 +166,7 @@ public static class ContinuousRegistry
             QualifyingSources(state, card, def.ActiveWhen, def.Whose, die.Id).Any();
 
         public int GetDelta(GameState state, DieInstance die) =>
-            QualifyingSources(state, card, def.ActiveWhen, def.Whose, die.Id).Count() * def.Delta;
+            QualifyingSources(state, card, def.ActiveWhen, def.Whose, die.Id).Any() ? def.Delta : 0; // once per card, rule 3.4.5.3
 
         public string Label => card.Name;
     }
