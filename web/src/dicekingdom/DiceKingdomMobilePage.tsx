@@ -3069,8 +3069,11 @@ export function DiceKingdomMobilePage() {
     // User, 2026-11-15: "I was done buying, but not done fielding!" - the
     // button says both, and with a creature in your Reserve you could
     // still field, the first tap only says so.
+    // Not a card Pangolin has locked (user, 2026-11-15: it nagged about a
+    // Wolverine that couldn't be fielded).
+    const lockedIds = new Set((game.lockedCards ?? []).filter((l) => l.playerId === you).map((l) => l.cardId));
     const fieldable = isYourTurn
-      ? yourReserve.filter((d) => rolled(d) && d.effectiveAttack !== null && (youPlayer.freeFieldAvailable
+      ? yourReserve.filter((d) => rolled(d) && d.effectiveAttack !== null && !(d.cardId && lockedIds.has(d.cardId)) && (youPlayer.freeFieldAvailable
         || pickEnergyForCost(yourReserve.filter((e) => e.id !== d.id), costFor(d).amount, null, yourVirtual) !== null))
       : [];
     const armed = leaveMainArmedAt === game.version;

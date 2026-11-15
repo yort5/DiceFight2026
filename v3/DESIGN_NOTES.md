@@ -5596,3 +5596,7 @@ unshielded lane), `~/.devtools/playwright/leave-main-check.js`.
   or "Armadillo can't respond - damage resolves". The flag behind the
   note (`PassGivesPriority`) now counts the opponent's Champion power as
   well as Globals, the same test `Priority.Pass` makes.
+- **The "still fieldable" reminder skips locked cards.** User: "it tries
+  to remind me that I still have a fieldable character, but it's
+  Wolverine" - locked by Pangolin. A die of a locked card no longer
+  counts toward "Done anyway? N creatures still fieldable".
