@@ -75,6 +75,10 @@ public class CombatEngineTests
 
         Assert.Equal(17, state.PlayerTwo.Life);
         Assert.Equal(Zone.OutOfPlay, attacker.Zone);
+        // Its lane goes with it, or it would show as an attacker the next
+        // time it blocked (2026-11-15).
+        Assert.Null(attacker.Lane);
+        Assert.Null(attacker.AttackOrder);
         Assert.Empty(result.KOdDieIds);
     }
 

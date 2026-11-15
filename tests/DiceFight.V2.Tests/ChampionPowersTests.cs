@@ -26,6 +26,7 @@ public class ChampionPowersTests
         var two = new Player { Id = "p2", Name = "Two", ChampionId = p2Champion };
         two.TeamCardIds.AddRange(DiceKingdomConfig.CharactersByChampion[p2Champion]);
         var state = GameSetup.NewGame(DiceKingdomConfig.Config, DiceKingdomConfig.Catalog, one, two);
+        state.TurnNumber = ChampionPowers.FirstPowerTurn; // past the first-turn lockout
         state.ActivePlayerId = "p1";
         state.MoveToStep(StepIds.Main);
         Priority.Sync(state);

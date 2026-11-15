@@ -55,6 +55,7 @@ public static class TurnEngine
         state.GlobalsUsedThisTurn.Clear();
         state.ForesightUsedThisTurn.Clear();
         state.ChampionPowerUsedThisTurn.Clear();
+        state.TurnNumber++;
         state.PurchasedThisTurn.Clear();
         state.PurchasedCharacterThisTurn.Clear();
         state.FieldedCharacterThisTurn.Clear();

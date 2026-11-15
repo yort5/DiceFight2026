@@ -101,7 +101,10 @@ export function CombatLane(props: {
   const byId = new Map(dice.map((d) => [d.id, d]));
   // Both attackers and blockers occupy AttackZone once blocks are declared.
   // Only declared attackers have a lane; blockers must not create extra columns.
-  const attackers = dice.filter((d) => d.zone === "AttackZone" && d.lane !== null);
+  // A blocker can still carry a lane from an old attack (fixed in the
+  // engine 2026-11-15), so a declared blocker is never an attacker here.
+  const blockerIds = new Set(assignments.map((a) => a.blockerDieId));
+  const attackers = dice.filter((d) => d.zone === "AttackZone" && d.lane !== null && !blockerIds.has(d.id));
   const engagements: Engagement[] = attackers.map((attacker) => ({
     attacker,
     blockers: assignments

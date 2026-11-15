@@ -28,6 +28,7 @@ public class ArmadilloRosterTests
         var catalog = DiceKingdomConfig.Catalog.ToDictionary(kv => kv.Key, kv => kv.Value);
         if (kreeGlobal) catalog[DiceKingdomConfig.MuskOx.Id] = DiceKingdomConfig.WithKreeCaptainGlobal(DiceKingdomConfig.MuskOx);
         var state = GameSetup.NewGame(config, catalog, Build("p1", "Armadillo"), Build("p2", "Wolf"));
+        state.TurnNumber = ChampionPowers.FirstPowerTurn; // past the Champion-power lockout
         state.MoveToStep(StepIds.Main);
         return state;
     }

@@ -426,6 +426,11 @@ public static class CombatEngine
                     var attack = QueryEngine.GetAttack(state, attacker);
                     EffectInterpreter.MarkDamage(state, queue, DamageSource.Combat, inactivePlayer.Id, attack);
                     attacker.Zone = Zone.OutOfPlay;
+                    // Its lane goes with it (2026-11-15): kept, it followed
+                    // the die back to the Field, and the next time that die
+                    // blocked, the lanes drew it as an attacker too.
+                    attacker.Lane = null;
+                    attacker.AttackOrder = null;
                     if (attack > 0)
                     {
                         var unblockedName = attacker.CardId is { } unblockedCardId ? state.CardCatalog[unblockedCardId].Name : "a Tardigrade";

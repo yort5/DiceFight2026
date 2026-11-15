@@ -5502,3 +5502,47 @@ Checks: `~/.devtools/playwright/symbol-damage-check.js` (symbols, pill),
 `~/.devtools/playwright/resume-restart-check.js` (start a game, restart
 the API, `after`: resume and play on); API test
 `A_Forgotten_Game_Is_Restored_From_Its_Record_Mid_Turn`.
+
+## 2026-11-15 - No Champion power on the first turns; shield previews; tap their dice; "Done buying"
+
+From a playtest (user):
+
+- **No Champion power during either player's first turn.** "Wolf has a
+  pretty big advantage, especially if it goes first, if it can field an
+  early Tardigrade and pump it +3." `GameState.TurnNumber` counts turns
+  (each Clear and Draw); `ChampionPowers.FirstPowerTurn = 3` locks all
+  four once-per-turn powers (Wolf, Armadillo, Owl, Golden Eagle's free
+  field) for game turns 1-2. The power text says so. The user floated
+  "first turn (or two?)"; bump the constant to lock longer.
+- **A shielded blocker's lane no longer predicts a KO or Overcrush.** The
+  lane preview (mobile `combatPreview` / `laneFaceDamage`) mirrors
+  CombatEngine but didn't know Armadillo's shield: it showed the shielded
+  Tardigrade KO'd and "7 to face". The engine was right - a shielded die
+  takes no combat damage, and Overcrush only carries through once every
+  blocker is gone. The preview now gives a shielded die no incoming damage
+  and a lane with a shielded blocker no Overcrush.
+- **Tap any of the opponent's dice for its details** (Field, the reserve
+  row, their tray) - before, only their lane dice and ones with a status
+  badge opened the inspect panel.
+- **"Done buying" -> "Done buying & fielding".** "I was done buying, but
+  not done fielding!" With a creature in your Reserve you could still
+  field (affordable, or Golden Eagle's free field unused), the first tap
+  (on it or Skip Attack) only turns it into "Done anyway? N creature(s)
+  still fieldable"; a second tap leaves Main. Any move in between resets
+  it.
+
+Checks: `~/.devtools/playwright/shield-tap-check.js` (SHIELD=0 for the
+unshielded lane), `~/.devtools/playwright/leave-main-check.js`.
+- **Blockers drawn as attackers.** User: "after declaring blockers
+  Armadillo got copies of Wolf's blockers as attackers?!" An unblocked
+  attacker went to Out of Play keeping its lane number (CombatEngine set
+  the zone directly; only MoveToZone and Return to Field cleared lanes),
+  and the lane followed the die back to the Field. When it later blocked,
+  the mobile lanes - which took every Attack Zone die with a lane as an
+  attacker - drew it on both sides, and the KO / "to face" preview counted
+  it too. The engine's own combat math only ever reads the active
+  player's dice, so damage was right. Fixed both ends: the unblocked
+  attacker drops its lane, and the lanes (mobile and desktop) only take
+  the attacking player's dice / never a declared blocker. Dice in games
+  already under way may still carry an old lane; the display filter
+  covers them.

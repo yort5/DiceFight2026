@@ -354,7 +354,10 @@ public class V2GamesControllerTests
         V2SeatedController.Dto(teamB.DeclareBlockers(session.Id, new V2DeclareBlockersRequest([])));
         // Wolf's once-per-turn power (2026-10-04, replaced its +1 ATK to
         // everything): +3 ATK on its one creature - no choice needed - so
-        // even a 0-ATK Tardigrade lands damage.
+        // even a 0-ATK Tardigrade lands damage. Not on the first turn
+        // (2026-11-15) - played on as if it were turn 3.
+        Assert.False(V2SeatedController.Dto(teamA.Get(session.Id)).PlayerOne.ChampionPowerUsable);
+        session.State.TurnNumber = DiceFight.V2.ChampionPowers.FirstPowerTurn;
         var pumped = V2SeatedController.Dto(teamA.ChampionPower(session.Id));
         Assert.Equal(printedAttack + 3, pumped.Dice.Single(d => d.Id == fielded.Id).EffectiveAttack);
         Assert.Contains(pumped.Log, l => l.Text.EndsWith("Tardigrade gets +3 ATK this turn.")); // says which creature
@@ -377,6 +380,7 @@ public class V2GamesControllerTests
         var teamA = V2SeatedController.For(store, session, "teamA");
         var teamB = V2SeatedController.For(store, session, "teamB");
         teamA.ClearAndDraw(session.Id);
+        session.State.TurnNumber = DiceFight.V2.ChampionPowers.FirstPowerTurn; // Armadillo's shield is in play
         teamA.Roll(session.Id);
         teamA.FinishRoll(session.Id);
 

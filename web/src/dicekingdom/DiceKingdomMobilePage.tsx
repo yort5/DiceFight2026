@@ -150,10 +150,19 @@ function laneReflect(attackers: Die[], blockers: Die[], preview: Map<string, Die
     .filter((r) => r.amount > 0);
 }
 
+// Armadillo's shield: combat damage to this die is prevented this turn.
+function shielded(d: Die): boolean {
+  return d.statuses?.some((s) => s.kind === "protected") ?? false;
+}
+
 function laneFaceDamage(attackers: Die[], blockers: Die[], cardsById: Map<string, CardDef>): number {
   const totalAtk = attackers.reduce((n, a) => n + (a.effectiveAttack ?? 0), 0);
   if (blockers.length === 0) return totalAtk;
   if (!laneOvercrush(attackers, cardsById)) return 0;
+  // Overcrush carries through only once every blocker is gone, and a
+  // shielded one survives the fight (user, 2026-11-15: the lane still
+  // read "7 to face" after Armadillo shielded its blocker).
+  if (blockers.some(shielded)) return 0;
   const blockerDefTotal = blockers.reduce((n, b) => n + (b.effectiveDefense ?? 0), 0);
   return Math.max(0, totalAtk - blockerDefTotal);
 }
@@ -162,7 +171,8 @@ function laneFaceDamage(attackers: Die[], blockers: Die[], cardsById: Map<string
 // now - mirrors CombatEngine.AssignCombatDamage: a lane's attackers pool
 // their Attack against its blockers, and its blockers pool their Attack
 // back across its attackers (each lethal-first in order, remainder on the
-// last). A die is KO'd when marked + new damage reaches its Defense.
+// last). A die is KO'd when marked + new damage reaches its Defense; a
+// shielded one takes none.
 // Approximation: ignores Fast's two-wave ordering and on-damage abilities.
 // Only dice in a blocked lane get an entry.
 interface DiePreview {
@@ -187,7 +197,8 @@ function poolDamage(sources: Die[], targets: Die[]): Map<string, number> {
 }
 function combatPreview(lanes: Die[][], blockersByAttacker: Map<string, Die[]>): Map<string, DiePreview> {
   const out = new Map<string, DiePreview>();
-  const entry = (d: Die, incoming: number) => {
+  const entry = (d: Die, dealt: number) => {
+    const incoming = shielded(d) ? 0 : dealt;
     const defense = d.effectiveDefense ?? 0;
     const already = d.damage ?? 0;
     out.set(d.id, { defense, already, incoming, ko: already + incoming >= defense });
@@ -880,7 +891,8 @@ function MatCard({
           <span className="dkm-field-label">Their reserve</span>
           <div className="dkm-tile-row wrap" data-region="opp-reserve">
             {rolledReserve.map((d) => (
-              <DTile key={d.id} die={d} cardsById={cardsById} size={40} mine={false} spin={spins[d.id]} turnOffset={turnOffsets[d.id]} />
+              <DTile key={d.id} die={d} cardsById={cardsById} size={40} mine={false} spin={spins[d.id]} turnOffset={turnOffsets[d.id]}
+                clickable={!targeting} picked={selectedId === d.id} onClick={() => onTapDie(d.id)} />
             ))}
           </div>
         </>
@@ -954,7 +966,7 @@ function RerollDieTile({ die, cardsById, picked, spin, turnOffset, onToggle, onI
     <button
       type="button"
       data-fly-id={`die:${die.id}`}
-      className={`dkm-tile${interactive ? " clickable" : ""}${picked ? " picked" : ""}`}
+      className={`dkm-tile clickable${picked ? " picked" : ""}`}
       onPointerDown={(e) => {
         if (!interactive || e.button !== 0) return;
         clearPress();
@@ -984,9 +996,10 @@ function RerollDieTile({ die, cardsById, picked, spin, turnOffset, onToggle, onI
           longPressed.current = false;
           return;
         }
+        // The opponent's tray: a tap shows the die's details.
         if (interactive) onToggle();
+        else onInspect();
       }}
-      disabled={!interactive}
     >
       <DieVisual die={die} cardsById={cardsById} size={58} mine={interactive} spin={spin} turnOffset={turnOffset} />
     </button>
@@ -1940,6 +1953,10 @@ export function DiceKingdomMobilePage() {
   const logScrollRef = useRef<HTMLDivElement>(null);
   const logScrollHandlers = useLogAutoFollow(logScrollRef, game?.log.at(-1)?.seq, logOpen);
   const [rerollPicked, setRerollPicked] = useState<string[]>([]);
+  // Leaving Main with a creature still fieldable takes a second tap; this
+  // holds the game version that first tap was made on, so any move in
+  // between (fielding it, say) asks again.
+  const [leaveMainArmedAt, setLeaveMainArmedAt] = useState<number | null>(null);
   const [rerollUsedThisStep, setRerollUsedThisStep] = useState(false);
   const [pendingAttackers, setPendingAttackers] = useState<Record<string, number>>({});
   const [laneSel, setLaneSel] = useState(0);
@@ -2572,7 +2589,10 @@ export function DiceKingdomMobilePage() {
     }
   } else {
     for (const d of game.dice) {
-      if (d.zone === "AttackZone" && d.lane !== null) attackersByLane[d.lane]?.push(d);
+      // Only the attacker's dice: blockers stand in the Attack Zone too, and
+      // one can carry a stale lane (user, 2026-11-15: Wolf's blockers drawn
+      // as Armadillo's attackers).
+      if (d.zone === "AttackZone" && d.lane !== null && d.controllerId === game.activePlayerId) attackersByLane[d.lane]?.push(d);
     }
     // Declaration order, same as while declaring and as the engine deals
     // damage - game.dice is internal die order.
@@ -2727,7 +2747,7 @@ export function DiceKingdomMobilePage() {
         },
       });
     }
-    if (selectedDie.zone === "ReservePool" && rolled(selectedDie) && selectedDie.effectiveAttack !== null && step === "main" && isYourTurn) {
+    if (selectedDie.zone === "ReservePool" && selectedDie.controllerId === you && rolled(selectedDie) && selectedDie.effectiveAttack !== null && step === "main" && isYourTurn) {
       const { amount, matchType } = costFor(selectedDie);
       const ids = pickEnergyForCost(yourReserve, amount, matchType, yourVirtual);
       // Free (Tardigrade), covered by Virtual energy, or no real choice
@@ -2842,7 +2862,8 @@ export function DiceKingdomMobilePage() {
 
   const onTapAttacker = (attackerId: string) => {
     if (tapTarget(attackerId)) return;
-    if (step === "assign-blockers" && !isYourTurn && selectedId) {
+    const tapped = game.dice.find((d) => d.id === attackerId);
+    if (step === "assign-blockers" && !isYourTurn && selectedId && tapped?.zone === "AttackZone") {
       const blockerDie = game.dice.find((d) => d.id === selectedId);
       if (blockerDie && blockerDie.controllerId === you && blockerDie.zone === "FieldZone") {
         addBlocker(attackerId, selectedId);
@@ -2977,11 +2998,25 @@ export function DiceKingdomMobilePage() {
       primaryRun = () => run(() => api.finishRoll(game.gameId));
     }
   } else if (step === "main") {
-    primaryLabel = "Done buying";
-    primaryNote = "enter the Attack Step";
-    primaryRun = () => run(() => api.enterAttackStep(game.gameId));
-    secondaryLabel = "Skip Attack";
-    secondaryRun = () => run(() => api.skipAttackStep(game.gameId));
+    // User, 2026-11-15: "I was done buying, but not done fielding!" - the
+    // button says both, and with a creature in your Reserve you could
+    // still field, the first tap only says so.
+    const fieldable = isYourTurn
+      ? yourReserve.filter((d) => rolled(d) && d.effectiveAttack !== null && (youPlayer.freeFieldAvailable
+        || pickEnergyForCost(yourReserve.filter((e) => e.id !== d.id), costFor(d).amount, null, yourVirtual) !== null))
+      : [];
+    const armed = leaveMainArmedAt === game.version;
+    const leave = (go: () => void) => () => {
+      if (fieldable.length > 0 && !armed) setLeaveMainArmedAt(game.version);
+      else go();
+    };
+    primaryLabel = armed ? "Done anyway?" : "Done buying & fielding";
+    primaryNote = armed
+      ? `${fieldable.length} creature${fieldable.length === 1 ? "" : "s"} still fieldable`
+      : "enter the Attack Step";
+    primaryRun = leave(() => run(() => api.enterAttackStep(game.gameId)));
+    secondaryLabel = armed ? "Skip Attack anyway" : "Skip Attack";
+    secondaryRun = leave(() => run(() => api.skipAttackStep(game.gameId)));
   } else if (step === "select-attackers") {
     const n = Object.keys(pendingAttackers).length;
     primaryLabel = `Declare Attackers (${n})`;
@@ -3096,7 +3131,9 @@ export function DiceKingdomMobilePage() {
           spins={spins}
           turnOffsets={offsets}
           selectedId={selectedId}
-          fieldClickable={() => false}
+          // Any of their dice opens its details (user, 2026-11-15: "tap on
+          // my opponents die to find out what it is and its ability").
+          fieldClickable={() => true}
           onTapDie={onTapAttacker}
           onInspectPileDie={onInspectPileDie}
           targeting={targeting}

@@ -14,7 +14,13 @@ public static class ChampionPowers
     public static ChampionDef? Of(GameState state, string playerId) =>
         state.GetPlayer(playerId).ChampionId is { } id ? state.Config.Champions.FirstOrDefault(c => c.Id == id) : null;
 
-    private static bool Unused(GameState state, string playerId) => !state.ChampionPowerUsedThisTurn.Contains(playerId);
+    // No Champion power during either player's first turn (user,
+    // 2026-11-15: going first, Wolf could field an early Tardigrade and pump
+    // it +3). From game turn 3 on - the first player's second turn.
+    public const int FirstPowerTurn = 3;
+
+    private static bool Unused(GameState state, string playerId) =>
+        state.TurnNumber >= FirstPowerTurn && !state.ChampionPowerUsedThisTurn.Contains(playerId);
 
     // Wolf / Armadillo / Owl: usable right now by this player? Also gates
     // whether the Inactive player is offered priority (Priority.Pass), so
@@ -59,6 +65,8 @@ public static class ChampionPowers
     public static void Use(GameState state, AbilityQueue queue, string playerId)
     {
         Priority.RequireHolder(state, playerId);
+        if (state.TurnNumber < FirstPowerTurn)
+            throw new InvalidOperationException("Champion powers can't be used during either player's first turn.");
         if (!CanUse(state, playerId) || Of(state, playerId) is not { } champion)
             throw new InvalidOperationException("Your Champion's power can't be used right now.");
 
@@ -80,7 +88,13 @@ public static class ChampionPowers
     }
 
     // Plain-language text for each kind - shared by the API and the card reference.
-    public static string Describe(ChampionDef c) => c.PassiveKind switch
+    // A once-per-turn power says it's locked at the start (FirstPowerTurn).
+    public static string Describe(ChampionDef c) => c.PassiveKind is ChampionPassiveKind.PumpOneAttack
+        or ChampionPassiveKind.ShieldOneFromCombat or ChampionPassiveKind.FieldOneFree or ChampionPassiveKind.SpinOne
+        ? DescribeKind(c) + " (not during either player's first turn)"
+        : DescribeKind(c);
+
+    private static string DescribeKind(ChampionDef c) => c.PassiveKind switch
     {
         ChampionPassiveKind.AttackBuff => $"+{c.Amount} ATK to all your dice",
         ChampionPassiveKind.DefenseBuff => $"+{c.Amount} DEF to all your dice",

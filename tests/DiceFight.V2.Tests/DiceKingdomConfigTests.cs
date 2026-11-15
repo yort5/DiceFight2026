@@ -126,6 +126,11 @@ public class DiceKingdomConfigTests
         CombatEngine.DeclareAttackers(state, queue, [toField.Id]);
         var assignment = new CombatAssignment();
         CombatEngine.DeclareBlockers(state, queue, assignment, []);
+        // Not on either player's first turn (2026-11-15) - this is turn 1;
+        // played on as if it were turn 3.
+        Assert.False(ChampionPowers.CanUse(state, "p1"));
+        Assert.Throws<InvalidOperationException>(() => ChampionPowers.Use(state, queue, "p1"));
+        state.TurnNumber = ChampionPowers.FirstPowerTurn;
         Assert.True(ChampionPowers.CanUse(state, "p1"));
         ChampionPowers.Use(state, queue, "p1");
         EffectInterpreter.DrainQueue(state, queue, new ScriptedRoller(0), new Random(1));

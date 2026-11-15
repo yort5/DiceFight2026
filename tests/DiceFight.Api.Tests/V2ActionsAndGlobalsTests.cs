@@ -222,6 +222,7 @@ public class V2ActionsAndGlobalsTests
         var b = V2SeatedController.For(store, session, "teamB");
         a.ClearAndDraw(session.Id); a.Roll(session.Id); a.FinishRoll(session.Id);
         foreach (var d in session.State.Dice.Where(d => d.Zone == Zone.ReservePool)) { d.Zone = Zone.UsedPile; d.CurrentFaceIndex = null; }
+        session.State.TurnNumber = DiceFight.V2.ChampionPowers.FirstPowerTurn; // past the first-turn lockout
         return (session, a, b);
     }
 
