@@ -5546,3 +5546,14 @@ unshielded lane), `~/.devtools/playwright/leave-main-check.js`.
   the attacking player's dice / never a declared blocker. Dice in games
   already under way may still carry an old lane; the display filter
   covers them.
+- **The bot adds Rhinoceros to a lane it already blocks.** User: "Wolf
+  attacked with a Wolverine, and Armadillo did not block with Rhino?!? It
+  had 8D." From the game record (05f15108, turn 11): Wolverine 2/3 alone;
+  the bot walled it with Fox 5/9, which KOs it, over Rhinoceros 2/8,
+  which can't - a fair pick, but it never sent both, since it only ever
+  put one blocker in a lane (more only for Snow Leopard's minimum). Now a
+  leftover retaliator that survives a lane's full attack (plus Wolf's
+  unused pump) joins the strongest lane already blocked, declared first,
+  so it takes the damage lethal-first and reflects it while the other
+  blocker does its job. Not into a Deadly lane or one with a retaliating
+  attacker.

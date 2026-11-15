@@ -239,6 +239,38 @@ public class ArmadilloRosterTests
 
     // Armadillo's shield prevents the damage Rhinoceros would send back, so
     // the bot doesn't spend it there - but still does on any other creature.
+    // User, 2026-11-15: a lone Wolverine was blocked by a Fox while an
+    // 8-DEF Rhinoceros stood by. The bot now sends both, Rhinoceros first,
+    // so it takes the hit and reflects it while the Fox still KOs.
+    [Fact]
+    public void Bot_Adds_A_Surviving_Rhinoceros_First_To_A_Lane_It_Already_Blocks()
+    {
+        var state = NewGame();
+        var queue = new AbilityQueue();
+        state.ActivePlayerId = "p2";
+        var wolverine = Place(state, "p2", d => d.CardId == DiceKingdomConfig.Wolverine.Id, Zone.FieldZone, 0); // L1 2/3
+        var rhino = Place(state, "p1", d => d.CardId == DiceKingdomConfig.Rhinoceros.Id, Zone.FieldZone, 0);    // L1 1/5: can't KO it
+        var fox = Place(state, "p1", d => d.CardId == DiceKingdomConfig.Fox.Id, Zone.FieldZone, 2);             // L3 5/8: can
+        state.MoveToStep(StepIds.SelectAttackers);
+        CombatEngine.DeclareAttackers(state, queue, [wolverine.Id]);
+        Drain(state, queue);
+        var lifeBefore = state.PlayerTwo.Life;
+
+        var decision = Bot.DiceKingdomBot.Decide(state, "p1")!;
+        Assert.Equal([(wolverine.Id, rhino.Id), (wolverine.Id, fox.Id)], decision.Blocks.Select(b => (b.AttackerId, b.BlockerId)));
+
+        var assignment = new CombatAssignment();
+        foreach (var (attackerId, blockerId) in decision.Blocks) assignment.AssignBlocker(attackerId, blockerId);
+        CombatEngine.DeclareBlockers(state, queue, assignment, [rhino.Id, fox.Id]);
+        Drain(state, queue);
+        CombatEngine.AssignCombatDamage(state, queue, assignment, new Dictionary<string, IReadOnlyDictionary<string, int>>());
+        Drain(state, queue);
+
+        Assert.Equal(Zone.PrepArea, wolverine.Zone); // the Fox KO'd it
+        Assert.Equal(Zone.FieldZone, rhino.Zone);
+        Assert.Equal(lifeBefore - 2, state.PlayerTwo.Life); // Rhinoceros took its 2 and sent them back
+    }
+
     [Theory]
     [InlineData(true)]
     [InlineData(false)]

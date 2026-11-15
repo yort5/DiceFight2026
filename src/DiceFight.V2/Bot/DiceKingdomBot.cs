@@ -746,6 +746,25 @@ public static class DiceKingdomBot
             incoming -= prevented;
         }
 
+        // A retaliator (Rhinoceros) left over joins a lane someone else
+        // already blocks, if it survives the whole lane: put FIRST, it takes
+        // the attackers' damage (lethal-first, in block order) and sends it
+        // back, while the other blocker still does its job (user,
+        // 2026-11-15: a lone Wolverine was walled by a Fox, and an 8-DEF
+        // Rhinoceros stood by - "no reason not to block and reflect").
+        foreach (var rhino in available.Where(b => IsRetaliator(state, b)).ToList())
+        {
+            var rhinoDef = QueryEngine.GetDefense(state, rhino) - rhino.Damage;
+            var lane = lanes
+                .Where(l => blocks.Any(x => x.Item1 == l.Attackers[0].Id) && !l.Deadly
+                    && !l.Attackers.Any(a => IsRetaliator(state, a)) && l.Attack > 0 && rhinoDef > l.Attack + pump)
+                .OrderByDescending(l => l.Attack)
+                .FirstOrDefault();
+            if (lane is null) continue;
+            blocks.Insert(blocks.FindIndex(x => x.Item1 == lane.Attackers[0].Id), (lane.Attackers[0].Id, rhino.Id));
+            available.Remove(rhino);
+        }
+
         // Forced blockers (Hermit Crab's "must block") have to be declared
         // if there's anything to block - into whichever lane hurts least.
         if (lanes.Count > 0)
