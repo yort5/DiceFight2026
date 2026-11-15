@@ -1044,7 +1044,13 @@ public static class EffectInterpreter
     // Phase 7's concern - this template only records the grant.
     private static void ExecuteCombatFlag(CombatFlag n, EffectContext ctx, Action onComplete)
     {
-        ResolveTarget(ctx, n.Target, ProtectionFor(ctx.Trigger), ChoiceIntent.Harmful, ids =>
+        // Armadillo's shield is a help, not a harm, and the choice names its
+        // effect (2026-11-15): as a bare "harmful" pick the bot never saw it
+        // was a shield and, harming itself as little as it could, shielded
+        // its least valuable die - a Tardigrade in a lane sending nothing
+        // through, over a Fox about to be KO'd with damage behind it.
+        var intent = n.Flag == CombatFlagKind.PreventCombatDamage ? ChoiceIntent.Beneficial : ChoiceIntent.Harmful;
+        ResolveTarget(ctx, n.Target, ProtectionFor(ctx.Trigger), intent, n, ids =>
         {
             foreach (var id in ids)
             {

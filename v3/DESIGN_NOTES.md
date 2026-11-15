@@ -5600,3 +5600,23 @@ unshielded lane), `~/.devtools/playwright/leave-main-check.js`.
   to remind me that I still have a fieldable character, but it's
   Wolverine" - locked by Pangolin. A die of a locked card no longer
   counts toward "Done anyway? N creatures still fieldable".
+- **Armadillo shields the right blocker.** User: "Why did Armadillo
+  shield the lane that wasn't going to do any damage?" Replaying game
+  05f15108: the bot's shield logic (`ShieldTarget`) picked the Fox -
+  doomed, with 2 Overcrush behind it - but its answer never got used. The
+  shield's target choice was marked *harmful* (as Hermit Crab's forced
+  block is) and carried no effect, so the bot's "Shield it" case never
+  matched and the generic fallback, harming itself as little as it could,
+  picked its least valuable die: a Tardigrade in a lane sending nothing
+  through. `ExecuteCombatFlag` now marks the shield beneficial and names
+  its effect. `ShieldTarget` also weighs the Overcrush a surviving blocker
+  stops (only once every blocker is gone does it go through), more as
+  life runs low. (Armadillo was at 2 life facing 5 to face, so it lost
+  either way this time.)
+- **The mobile win screen: "Play again" and "Home".** The old "New game"
+  button already went to the home page - under the wrong name. Now "Home"
+  does that, and against the computer "Play again" opens its new-match
+  screen. (Boss battles keep "Boss Ladder"; a friend game only gets Home,
+  since the friend has to be invited again.)
+- **Coins for finishing a game: never built.** Coins come only from the
+  100 starting, 5 a day, and boss wins. Asked the user for numbers.

@@ -11,7 +11,11 @@ import { Crown } from "./kingdomArt";
 import { players, type BossResult } from "./player";
 import type { CardDef, GameState } from "./types";
 
-export function GameOverOverlay({ game, you, onNewGame }: { game: GameState; you: string | null; onNewGame: () => void }) {
+// `onHome` (mobile, 2026-11-15, user: the win screen "doesn't give an
+// option to go to the home page, only start a new game" - on mobile that
+// button already went home, under the wrong name): with it, the buttons are
+// "Play again" (onNewGame, when given) and "Home".
+export function GameOverOverlay({ game, you, onNewGame, onHome }: { game: GameState; you: string | null; onNewGame?: () => void; onHome?: () => void }) {
   const [boss, setBoss] = useState<{ name: string; result: BossResult; cards: Map<string, CardDef> } | null>(null);
   useEffect(() => {
     if (!game.gameOver) return;
@@ -59,9 +63,16 @@ export function GameOverOverlay({ game, you, onNewGame }: { game: GameState; you
               : `${boss.name} holds. Try again from the Boss Ladder.`}
           </p>
         )}
-        <button type="button" className="btn" onClick={onNewGame}>
-          New game
-        </button>
+        {onNewGame && (
+          <button type="button" className="btn" onClick={onNewGame}>
+            {onHome ? "Play again" : "New game"}
+          </button>
+        )}
+        {onHome && (
+          <button type="button" className={onNewGame ? "btn ghost" : "btn"} onClick={onHome}>
+            Home
+          </button>
+        )}
         {boss && (
           <button type="button" className="btn ghost" onClick={() => navigate("/dice-kingdom/bosses", ladderSearch)}>
             Boss Ladder

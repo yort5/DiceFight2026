@@ -53,7 +53,7 @@ export function usePlayMode(): PlayMode | null {
   return useSyncExternalStore(subscribeToHistory, readPlayMode);
 }
 
-function openSetup(mode: PlayMode) {
+export function openSetup(mode: PlayMode) {
   window.history.pushState({ dkSetup: true }, "", `${HOME}?play=${mode}`);
   announce();
 }

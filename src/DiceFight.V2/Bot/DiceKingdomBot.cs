@@ -926,10 +926,23 @@ public static class DiceKingdomBot
         // damage it would send back - it cancelled the Hermit Crab combo on
         // ~0.9 turns a game in the Owl matchup (2026-10-04). KO'd, it goes
         // to the Prep Area and is rolled again next turn.
+        // A blocker kept alive also stops its lane's Overcrush, which only
+        // goes through once every blocker is gone - worth more the less life
+        // is left (2026-11-15).
+        int OvercrushStopped(DieInstance die)
+        {
+            if (die.ControllerId == state.ActivePlayerId) return 0;
+            var lane = attackers.Where(a => blocks.BlockersOf(a.Id).Contains(die.Id)).Select(a => a.Lane).FirstOrDefault();
+            var laneAttackers = attackers.Where(a => a.Lane == lane).ToList();
+            if (laneAttackers.Count < 2 && !laneAttackers.Any(a => QueryEngine.GetKeywords(state, a).Contains("Overcrush"))) return 0;
+            var laneBlockers = laneAttackers.SelectMany(a => blocks.BlockersOf(a.Id)).Distinct().Select(id => state.Dice.First(d => d.Id == id));
+            return Math.Max(0, laneAttackers.Sum(a => QueryEngine.GetAttack(state, a)) - laneBlockers.Sum(b => QueryEngine.GetDefense(state, b)));
+        }
+        var faceWeight = Math.Max(1.0, 6.0 / Math.Max(1, state.GetPlayer(botId).Life));
         return EngagedOwnDice(state, botId)
             .Where(d => !IsRetaliator(state, d))
             .Where(d => Incoming(d) >= QueryEngine.GetDefense(state, d) - d.Damage)
-            .OrderByDescending(d => DieValue(state, d)).FirstOrDefault();
+            .OrderByDescending(d => DieValue(state, d) + OvercrushStopped(d) * faceWeight).FirstOrDefault();
     }
 
     // Owl: spin down the opponent's most valuable creature at L2+, else spin

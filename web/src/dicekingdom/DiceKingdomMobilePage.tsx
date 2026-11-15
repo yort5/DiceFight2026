@@ -21,7 +21,7 @@ import { PawIcon } from "./kingdomArt";
 import { describeSavedGame, forgetSeats, inviteLink, myLink, rememberSeats } from "./seats";
 import { GameOverOverlay } from "./GameOverOverlay";
 import { OPPONENT_PICKS, PickYourChampion, WaitingForOpponent, resolveInvite } from "./lobby";
-import { MobileBrand, MobileHome, MobileSetup, clearPlayMode, usePlayMode } from "./MobileHome";
+import { MobileBrand, MobileHome, MobileSetup, clearPlayMode, openSetup, usePlayMode } from "./MobileHome";
 import { DieCube, type CubeSpin } from "./DieCube";
 import { DieVisual } from "./DieVisual";
 import { dieEnergyType, dieIdentityKey } from "./dieDisplay";
@@ -3172,7 +3172,14 @@ export function DiceKingdomMobilePage() {
       <GameOverOverlay
         game={game}
         you={vsComputer ? game.playerOne.id : you}
-        onNewGame={() => {
+        // Against the computer, straight back to its new-match screen; a
+        // friend has to be invited again, so that goes through the home.
+        onNewGame={vsComputer && !game.serverSeatId ? () => {
+          forgetSeats();
+          setGame(null);
+          openSetup("computer");
+        } : undefined}
+        onHome={() => {
           forgetSeats();
           setGame(null);
         }}

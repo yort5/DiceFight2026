@@ -168,6 +168,38 @@ public class ChampionPowersTests
             Assert.Equal([blocker.Id], DiceKingdomBot.Decide(state2, "p2")!.DieIds);
     }
 
+    // User, 2026-11-15: Armadillo shielded a Tardigrade in a lane sending
+    // nothing through rather than a Fox about to die with 2 Overcrush
+    // behind it. The shield's choice was marked harmful and carried no
+    // effect, so the bot fell back to sacrificing its least valuable die.
+    [Fact]
+    public void Bot_Shields_The_Doomed_Blocker_Worth_Most_Not_The_Least()
+    {
+        var state = NewGame("Wolf", "Armadillo");
+        var queue = new AbilityQueue();
+        var hippoA = AddDie(state, DiceKingdomConfig.Hippopotamus.Id, "p1", Zone.FieldZone, level: 3, tag: "a");
+        var hippoB = AddDie(state, DiceKingdomConfig.Hippopotamus.Id, "p1", Zone.FieldZone, level: 3, tag: "b");
+        var fox = AddDie(state, DiceKingdomConfig.Fox.Id, "p2", Zone.FieldZone);
+        var crab = AddDie(state, DiceKingdomConfig.HermitCrab.Id, "p2", Zone.FieldZone); // 1/2 (3 with the Fox)
+        // Enough to KO both (Fox's own aura makes it 2/6).
+        foreach (var hippo in new[] { hippoA, hippoB }) hippo.AppliedModifiers.Add(new AppliedModifier(5, 0, 0, "test", Duration.EndOfTurn));
+        state.MoveToStep(StepIds.SelectAttackers);
+        CombatEngine.DeclareAttackers(state, queue, new Dictionary<string, int> { [hippoA.Id] = 0, [hippoB.Id] = 1 });
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(hippoA.Id, fox.Id);
+        assignment.AssignBlocker(hippoB.Id, crab.Id);
+        CombatEngine.DeclareBlockers(state, queue, assignment, [fox.Id, crab.Id]);
+        Drain(state, queue);
+        Priority.Sync(state);
+        Priority.Pass(state, queue, "p1");
+
+        Assert.Equal(BotActionKind.UseChampionPower, DiceKingdomBot.Decide(state, "p2")!.Kind);
+        ChampionPowers.Use(state, queue, "p2");
+        Drain(state, queue);
+        Assert.NotNull(state.PendingChoice);
+        Assert.Equal([fox.Id], DiceKingdomBot.Decide(state, "p2")!.DieIds);
+    }
+
     [Fact]
     public void Bot_Uses_Eagles_Free_Field_On_The_Costliest_Creature()
     {
