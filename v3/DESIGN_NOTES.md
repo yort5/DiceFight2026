@@ -5579,3 +5579,20 @@ unshielded lane), `~/.devtools/playwright/leave-main-check.js`.
   picture (lower right, with the text above). The explicit text stays on
   the button and the picture. Also fixed: the buy option's hatch was
   drawn under the painting, so a locked buy option never looked locked.
+- **Locked fielding gets the same treatment.** A die of a Pangolin-locked
+  card showing a creature face carries the lock token (top edge of the
+  tile) in your Reserve and in the tray - so a reroll can be aimed at it -
+  and in the details panel (corner of its small picture), where the Field
+  button reads "Locked by Pangolin", disabled (Golden Eagle's free field
+  is withheld too). An energy face gets no token: it can still be spent.
+- **"Resolve Damage" is "Pass Priority".** User: the attacker's button in
+  the action window "should say Pass Priority", and after pumping with
+  Wolf's power, pressing it ended the step. The record (05f15108) shows
+  the engine did treat the power like a Global: Armadillo had already
+  used its own power and had no energy for a Global, so it passed
+  automatically ("Armadillo passes (no energy left for a Global)") and
+  damage resolved. The label hid that. It now always reads "Pass
+  Priority", with a note: "Armadillo may respond, then damage resolves"
+  or "Armadillo can't respond - damage resolves". The flag behind the
+  note (`PassGivesPriority`) now counts the opponent's Champion power as
+  well as Globals, the same test `Priority.Pass` makes.

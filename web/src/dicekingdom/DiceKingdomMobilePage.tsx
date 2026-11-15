@@ -437,6 +437,14 @@ function CardToken({ sources, cardsById, size, className }: { sources: string[];
   );
 }
 
+// The lock token on a die showing a creature face of a locked card - the
+// one it can't be fielded on (user, 2026-11-15: "the same treatment for
+// fielding"). An energy face can still be spent, so it gets none.
+function dieLockToken(die: Die, lockedBy: Map<string, string[]> | undefined, cardsById: Map<string, CardDef>, size: number) {
+  const sources = die.cardId && die.effectiveAttack !== null ? lockedBy?.get(die.cardId) : undefined;
+  return sources ? <CardToken sources={sources} cardsById={cardsById} size={size} className="dkm-die-token" /> : null;
+}
+
 function typeColorOf(die: Die, cardsById: Map<string, CardDef>): string {
   const type = dieEnergyType(die, cardsById);
   return `var(--${type.toLowerCase()})`;
@@ -543,7 +551,10 @@ function DTile({
   onClick,
   flyId = true,
   targetable,
+  token,
 }: {
+  /** Something set on the die (a CardToken - Pangolin's lock). */
+  token?: React.ReactNode;
   die: Die;
   cardsById: Map<string, CardDef>;
   size: number;
@@ -562,6 +573,7 @@ function DTile({
   return (
     <button type="button" className={cls} onClick={clickable ? onClick : undefined} disabled={!clickable} data-fly-id={flyId ? `die:${die.id}` : undefined}>
       <DieVisual die={die} cardsById={cardsById} size={size} mine={mine} spin={spin} turnOffset={turnOffset} />
+      {token}
     </button>
   );
 }
@@ -967,7 +979,8 @@ function MatCard({
 }
 
 // A tap still toggles reroll selection. Holding a die opens its details instead.
-function RerollDieTile({ die, cardsById, picked, spin, turnOffset, onToggle, onInspect, interactive }: {
+function RerollDieTile({ die, cardsById, picked, spin, turnOffset, onToggle, onInspect, interactive, token }: {
+  token?: React.ReactNode;
   die: Die;
   cardsById: Map<string, CardDef>;
   picked: boolean;
@@ -1028,6 +1041,7 @@ function RerollDieTile({ die, cardsById, picked, spin, turnOffset, onToggle, onI
       }}
     >
       <DieVisual die={die} cardsById={cardsById} size={58} mine={interactive} spin={spin} turnOffset={turnOffset} />
+      {token}
     </button>
   );
 }
@@ -1047,7 +1061,10 @@ function TrayCard({
   spins,
   turnOffsets,
   interactive = true,
+  lockedBy,
 }: {
+  /** Cards locked out for the tray's owner (Pangolin), by card id. */
+  lockedBy?: Map<string, string[]>;
   title: string;
   hint: string;
   /** How to use the tray, under the title (was crammed into the title). */
@@ -1082,6 +1099,7 @@ function TrayCard({
               spin={spins[d.id]}
               turnOffset={turnOffsets[d.id]}
               interactive={interactive}
+              token={dieLockToken(d, lockedBy, cardsById, 20)}
               onToggle={() => onToggleReroll(d.id)}
               onInspect={() => onInspectDie(d.id)}
             />
@@ -1252,6 +1270,7 @@ function BuyCard({
               picked={selectedId === d.id}
               clickable={fieldable}
               onClick={fieldable ? () => onSelect(d.id) : undefined}
+              token={dieLockToken(d, lockedBy, cardsById, 18)}
             />
           );
         })}
@@ -2800,22 +2819,26 @@ export function DiceKingdomMobilePage() {
       // dice to spend.
       const spendable = yourReserve.filter((d) => d.energyAmount > 0 && d.id !== selectedDie.id);
       const noChoice = spendable.reduce((n, d) => n + d.energyAmount, 0) === amount;
-      // Golden Eagle (2026-10-04): once per turn, field one creature free.
-      if (youPlayer.freeFieldAvailable && amount > 0) {
+      if (selectedLockers.length > 0) {
+        inspectActions.push({ label: `Locked by ${selectedLockers.join(", ")}`, disabled: true, run: () => {} });
+      } else {
+        // Golden Eagle (2026-10-04): once per turn, field one creature free.
+        if (youPlayer.freeFieldAvailable && amount > 0) {
+          inspectActions.push({
+            label: "Field free (Golden Eagle)",
+            run: () => run(() => api.field(game.gameId, selectedDie.id, [], true)),
+          });
+        }
         inspectActions.push({
-          label: "Field free (Golden Eagle)",
-          run: () => run(() => api.field(game.gameId, selectedDie.id, [], true)),
+          label: ids === null ? "Can't afford" : "Field this creature",
+          run: () => {
+            if (ids === null) return;
+            if (amount === 0 || ids.length === 0) run(() => api.field(game.gameId, selectedDie.id, []));
+            else if (noChoice) run(() => api.field(game.gameId, selectedDie.id, spendable.map((d) => d.id)));
+            else setPayingFieldId(selectedDie.id);
+          },
         });
       }
-      inspectActions.push({
-        label: ids === null ? "Can't afford" : "Field this creature",
-        run: () => {
-          if (ids === null) return;
-          if (amount === 0 || ids.length === 0) run(() => api.field(game.gameId, selectedDie.id, []));
-          else if (noChoice) run(() => api.field(game.gameId, selectedDie.id, spendable.map((d) => d.id)));
-          else setPayingFieldId(selectedDie.id);
-        },
-      });
     }
     const foresightCommand = abilities.foresightDice.find((a) => a.die.id === selectedDie.id)?.command;
     if (foresightCommand) {
@@ -3093,11 +3116,13 @@ export function DiceKingdomMobilePage() {
       }
     }
   } else if (step === "action-global-window") {
-    // Passing only resolves damage if the other player can't respond; if
-    // they could use a Global it hands them priority first (Priority.cs) -
-    // "Resolve Damage" was the label either way (direct feedback 2026-09-30).
-    primaryLabel = game.passGivesPriority ? "Pass Priority" : "Resolve Damage";
-    if (game.passGivesPriority) primaryNote = `${oppPlayer.name} may use a Global, then damage resolves`;
+    // Always "Pass Priority" (user, 2026-11-15) - that's what it does. Whether
+    // the other player can still respond (a Global or their Champion power,
+    // Priority.cs) or damage resolves straight away goes in the note.
+    primaryLabel = "Pass Priority";
+    primaryNote = game.passGivesPriority
+      ? `${oppPlayer.name} may respond, then damage resolves`
+      : `${oppPlayer.name} can't respond - damage resolves`;
     primaryRun = () => run(() => api.assignCombatDamage(game.gameId, game.blocks ?? []));
   } else {
     // return-to-field
@@ -3231,6 +3256,7 @@ export function DiceKingdomMobilePage() {
               spins={spins}
               turnOffsets={offsets}
               interactive={isYourTurn}
+              lockedBy={new Map((game.lockedCards ?? []).filter((l) => l.playerId === (isYourTurn ? you : opponentId)).map((l) => [l.cardId, l.sources]))}
             />
           )}
           {/* Only on your own turn - on the opponent's Main phase your
@@ -3382,7 +3408,15 @@ export function DiceKingdomMobilePage() {
                 : <Painting cardId={selectedDie.cardId} alt={nameOf(selectedDie, cardsById)} className="dkm-inspect-art" />
               : null}
             {hasPainting(selectedDie.cardId) && !(selectedPurchaseCard || inspectingPileDie)
-              ? <Painting cardId={selectedDie.cardId} crop="icon" alt={nameOf(selectedDie, cardsById)} className="dkm-inspect-painting" />
+              ? selectedLockers.length > 0 && selectedDie.effectiveAttack !== null
+                // A die of a locked card, on a face it can't be fielded on.
+                ? (
+                  <span className="dkm-inspect-painting-wrap">
+                    <Painting cardId={selectedDie.cardId} crop="icon" alt={nameOf(selectedDie, cardsById)} className="dkm-inspect-painting" />
+                    <CardToken sources={selectedLockers} cardsById={cardsById} size={22} className="dkm-inspect-die-token" />
+                  </span>
+                )
+                : <Painting cardId={selectedDie.cardId} crop="icon" alt={nameOf(selectedDie, cardsById)} className="dkm-inspect-painting" />
               : <AvatarGlyph die={selectedDie} size={42} color={typeColorOf(selectedDie, cardsById)} />}
             <div className="dkm-inspect-mid">
               <div className="dkm-inspect-title-row">

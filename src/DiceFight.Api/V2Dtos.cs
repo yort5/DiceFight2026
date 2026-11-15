@@ -244,9 +244,10 @@ public sealed record V2GameStateDto(
     // the purchase-side twin of V2DieDto.FieldingCost. Null without a seat.
     IReadOnlyDictionary<string, int>? PurchaseCosts = null,
     // Would the Active player's pass right now hand priority to the other
-    // player (they could still use a Global - Priority.CanUseAnyGlobal), or
-    // close the window? The client labels the button "Pass Priority" vs
-    // "Resolve Damage" by it (2026-09-30).
+    // player (they could still use a Global or their Champion power), or
+    // close the window? The client's note under "Pass Priority" says which
+    // (2026-09-30; the label itself is always "Pass Priority" since
+    // 2026-11-15).
     bool PassGivesPriority = false,
     // Rule 2.9: the game is over once a player's Life reaches 0 - WinnerId
     // null with GameOver true is a tie.
@@ -272,8 +273,10 @@ public sealed record V2GameStateDto(
             : state.PlayerOne.TeamCardIds.Concat(state.PlayerTwo.TeamCardIds).Distinct()
                 .Where(state.CardCatalog.ContainsKey)
                 .ToDictionary(id => id, id => QueryEngine.GetPurchaseCostNow(state, state.CardCatalog[id], yourPlayerId)),
+        // The same test Priority.Pass makes: a Global, or their Champion power.
         Priority.IsWindow(state) && state.PriorityPlayerId == state.ActivePlayerId
-            && Priority.CanUseAnyGlobal(state, state.OpponentOf(state.ActivePlayerId)),
+            && (Priority.CanUseAnyGlobal(state, state.OpponentOf(state.ActivePlayerId))
+                || ChampionPowers.CanUse(state, state.OpponentOf(state.ActivePlayerId))),
         state.IsGameOver,
         state.WinnerId,
         DieStatuses.UnblockableLanes(state),

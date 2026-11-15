@@ -4120,6 +4120,19 @@
   top: 22px;
   right: 7px;
 }
+/* On a die tile: the middle of its top edge, clear of the cost and
+   attack in the corners. */
+.dk-mobile .dkm-die-token {
+  top: -9px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+/* On the details panel's small picture: its upper left corner, clear of
+   the name beside it and the ability text below. */
+.dk-mobile .dkm-inspect-die-token {
+  left: -6px;
+  top: -6px;
+}
 .dk-mobile .dkm-roster-token {
   top: -4px;
   left: -4px;
@@ -5583,8 +5596,15 @@
   border-radius: 10px 10px 0 0;
   border-bottom: 3px solid var(--border);
 }
-.dk-mobile .dkm-inspect:has(> .dkm-inspect-painting) {
+.dk-mobile .dkm-inspect:has(> .dkm-inspect-painting, > .dkm-inspect-painting-wrap) {
   grid-template-columns: 58px 1fr auto;
+}
+.dk-mobile .dkm-inspect-painting-wrap {
+  position: relative;
+  align-self: start;
+}
+.dk-mobile .dkm-inspect-painting-wrap img.dkm-inspect-painting {
+  display: block;
 }
 .dk-mobile img.dkm-inspect-painting {
   width: 58px;
