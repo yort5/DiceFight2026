@@ -3081,10 +3081,14 @@ export function DiceKingdomMobilePage() {
       if (fieldable.length > 0 && !armed) setLeaveMainArmedAt(game.version);
       else go();
     };
-    primaryLabel = armed ? "Done anyway?" : "Done buying & fielding";
+    // Says what passing does (user, 2026-11-15): hands the opponent a
+    // chance to use a Global first (Priority.Pass), or ends Main now. If
+    // they only pass back, Main still ends - hence the fielding check
+    // either way.
+    primaryLabel = armed ? "Done anyway?" : game.passGivesPriority ? "Pass Priority" : "Done buying & fielding";
     primaryNote = armed
       ? `${fieldable.length} creature${fieldable.length === 1 ? "" : "s"} still fieldable`
-      : "enter the Attack Step";
+      : game.passGivesPriority ? `${oppPlayer.name} may use a Global, then the Attack Step` : "enter the Attack Step";
     primaryRun = leave(() => run(() => api.enterAttackStep(game.gameId)));
     secondaryLabel = armed ? "Skip Attack anyway" : "Skip Attack";
     secondaryRun = leave(() => run(() => api.skipAttackStep(game.gameId)));
@@ -3119,13 +3123,14 @@ export function DiceKingdomMobilePage() {
       }
     }
   } else if (step === "action-global-window") {
-    // Always "Pass Priority" (user, 2026-11-15) - that's what it does. Whether
-    // the other player can still respond (a Global or their Champion power,
-    // Priority.cs) or damage resolves straight away goes in the note.
-    primaryLabel = "Pass Priority";
+    // The label says what passing does (user, 2026-11-15): "Pass Priority"
+    // when the other player can still respond (a Global or their Champion
+    // power, Priority.cs) and you may get another turn to act; "Resolve
+    // Damage" when it ends the window here and now.
+    primaryLabel = game.passGivesPriority ? "Pass Priority" : "Resolve Damage";
     primaryNote = game.passGivesPriority
       ? `${oppPlayer.name} may respond, then damage resolves`
-      : `${oppPlayer.name} can't respond - damage resolves`;
+      : `${oppPlayer.name} can't respond`;
     primaryRun = () => run(() => api.assignCombatDamage(game.gameId, game.blocks ?? []));
   } else {
     // return-to-field

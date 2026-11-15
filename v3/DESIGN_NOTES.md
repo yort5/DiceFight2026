@@ -5630,3 +5630,26 @@ unshielded lane), `~/.devtools/playwright/leave-main-check.js`.
   (`PlayedGame.CoinsEarned`), never for an old game merely reopened. The
   win/lose screen says "+10 coins for finishing the game." or that the
   day's 50 are already in.
+- **The pass button says what passing does.** User: "If clicking the
+  button would result in the stage being over, it should have the 'done'
+  message. If clicking it would pass priority, eventually giving me
+  another chance to do something, then it should say 'Pass Priority.'
+  This applies to Main Step and the globals section in the Attack Step."
+  Keyed on `passGivesPriority` (now counting Champion powers too): Main
+  reads "Pass Priority" ("Armadillo may use a Global, then the Attack
+  Step") or "Done buying & fielding"; the action window "Pass Priority"
+  or "Resolve Damage" ("Armadillo can't respond"). Reverses the earlier
+  same-day "always Pass Priority".
+- **The last win stands (rule 2.9.1).** User asked whether Armadillo's
+  Rhinoceros reflect should have landed at the same time, making it a
+  both-at-0 game. Rule 2.9.1: "As soon as a player's Life total reaches 0
+  or below the game ends immediately ... Even when an ability causing one
+  player to reach 0 Life trigger[s] other abilities that would
+  subsequently put another player at 0 Life, those other abilities would
+  not occur." The reflect is a triggered ability on Rhinoceros taking
+  combat damage - subsequent, not simultaneous - so it never resolves.
+  2.9.3 (one ability hitting both players: a tie) and 2.9.4 (several
+  simultaneous abilities: the Active player orders them) don't apply. The
+  engine already did this (DrainQueue stops at game over). Armadillo at
+  -10 is real: all of a combat's damage, Overcrush included, lands
+  together.
