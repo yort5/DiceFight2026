@@ -3105,6 +3105,7 @@
   text-align: right;
 }
 .dk-mobile .dkm-roster-avatar {
+  position: relative;
   width: 20px;
   flex-shrink: 0;
   color: var(--dkm-ink-2);
@@ -4091,6 +4092,41 @@
   background: repeating-linear-gradient(45deg, rgba(20, 21, 28, 0.82) 0 3px, rgba(20, 21, 28, 0.45) 3px 6px);
   pointer-events: none;
   border-radius: inherit;
+}
+
+/* A token set on a card (CardToken): a coin with the locking card's
+   symbol, a light rim and a drop shadow, like the physical ones. */
+.dk-mobile .dkm-card-token {
+  position: absolute;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: #fff8ec;
+  box-shadow: 0 0 0 2px #fff8ec, 0 0 0 3px rgba(0, 0, 0, 0.35), 0 3px 6px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+}
+.dk-mobile .dkm-card-token-lock {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  padding: 1px;
+  border-radius: 999px;
+  background: #fff8ec;
+  box-sizing: content-box;
+}
+.dk-mobile .dkm-buy-token {
+  top: 22px;
+  right: 7px;
+}
+.dk-mobile .dkm-roster-token {
+  top: -4px;
+  left: -4px;
+}
+.dk-mobile .dkm-inspect-token {
+  right: 12px;
+  bottom: 12px;
 }
 
 /* First-time "Reading a die's frame" legend (status cues, screen 2d). */

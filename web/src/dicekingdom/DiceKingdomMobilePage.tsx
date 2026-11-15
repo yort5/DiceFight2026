@@ -411,6 +411,32 @@ function CardSymbolBadge({ cardId, energyType, size, className }: { cardId: stri
   );
 }
 
+// The digital version of the 3-D printed tokens the user set on cards in
+// the physical game ("blanked", "blob'd") - 2026-11-15. A coin with the
+// symbol of the card doing it (Pangolin), set on the card it affects, plus
+// a small padlock. `sources` are card names, as the server sends them.
+function CardToken({ sources, cardsById, size, className }: { sources: string[]; cardsById: Map<string, CardDef>; size: number; className: string }) {
+  const source = [...cardsById.values()].find((c) => c.name === sources[0]);
+  const Avatar = source ? CHARACTER_ICONS[source.id] : undefined;
+  const lock = Math.round(size * 0.42);
+  return (
+    <span
+      className={`dkm-card-token ${className}`}
+      style={{ width: size, height: size, background: `var(--${(source?.energyTypes[0] ?? "wild").toLowerCase()})` }}
+      role="img"
+      aria-label={`Locked by ${sources.join(", ")}`}
+      title={`Locked by ${sources.join(", ")}`}
+    >
+      {Avatar ? <Avatar size={Math.round(size * 0.58)} /> : <TardigradeIcon size={Math.round(size * 0.58)} />}
+      <svg className="dkm-card-token-lock" width={lock} height={lock} viewBox="0 0 12 12" aria-hidden="true">
+        <rect x="1.5" y="5" width="9" height="6.5" rx="1.5" fill="#1a1622" />
+        <path d="M3.5 5V3.6a2.5 2.5 0 0 1 5 0V5" fill="none" stroke="#1a1622" strokeWidth="1.6" />
+        <circle cx="6" cy="8.2" r="1" fill="#fff8ec" />
+      </svg>
+    </span>
+  );
+}
+
 function typeColorOf(die: Die, cardsById: Map<string, CardDef>): string {
   const type = dieEnergyType(die, cardsById);
   return `var(--${type.toLowerCase()})`;
@@ -1157,7 +1183,6 @@ function BuyCard({
               title={lockers ? `Locked out by ${lockers.join(", ")} - you can't buy or field it while that's active.` : undefined}
               onClick={() => onSelect(dieId)}
             >
-              {lockers && <span className="dk-locked-hatch" aria-hidden="true" />}
               {/* A small card (2026-11-12 glow-up): the painting, or the
                   line icon on the energy's colour, fills it; the name and
                   price lie over its top edge and the ability over its
@@ -1167,6 +1192,10 @@ function BuyCard({
                   ? <Painting cardId={cardId} alt="" />
                   : Avatar ? <Avatar size={30} /> : <TardigradeIcon size={30} />}
               </span>
+              {/* Over the picture, under the words (it sat under the
+                  picture before, so it never showed). */}
+              {lockers && <span className="dk-locked-hatch" aria-hidden="true" />}
+              {lockers && <CardToken sources={lockers} cardsById={cardsById} size={24} className="dkm-buy-token" />}
               {hasPainting(cardId) && <CardSymbolBadge cardId={cardId} energyType={card?.energyTypes[0]} size={20} className="dkm-buy-symbol" />}
               <span className="dkm-buy-name">{card?.name ?? cardId}</span>
               {/* What it does, on the option itself (user, 2026-11-13: "the
@@ -1549,8 +1578,13 @@ function RosterSheet({
   onClose,
   purchaseCostOf,
   virtualEnergy = 0,
+  lockedBy,
+  cardsById,
 }: {
   title: string;
+  /** Cards locked out for this roster's owner (Pangolin), by card id. */
+  lockedBy?: Map<string, string[]>;
+  cardsById: Map<string, CardDef>;
   purchaseCostOf: (cardId: string) => number;
   /** Deck-out generic energy, spent automatically before any die. */
   virtualEnergy?: number;
@@ -1600,6 +1634,7 @@ function RosterSheet({
                   ? <Painting cardId={cardId} crop="icon" alt={card?.name ?? cardId} />
                   : Avatar ? <Avatar size={20} /> : <TardigradeIcon size={20} />}
                 {hasPainting(cardId) && <CardSymbolBadge cardId={cardId} energyType={types[0]} size={18} className="dkm-roster-symbol" />}
+                {lockedBy?.get(cardId) && <CardToken sources={lockedBy.get(cardId)!} cardsById={cardsById} size={20} className="dkm-roster-token" />}
               </span>
               <div className="dkm-roster-mid">
                 <span className="dkm-roster-name">{card?.name ?? cardId}</span>
@@ -3337,6 +3372,7 @@ export function DiceKingdomMobilePage() {
                   <span className="dkm-inspect-art-wrap">
                     <Painting cardId={selectedDie.cardId} alt={nameOf(selectedDie, cardsById)} className="dkm-inspect-art" />
                     <span className="dk-locked-hatch" aria-hidden="true" />
+                    <CardToken sources={selectedLockers} cardsById={cardsById} size={38} className="dkm-inspect-token" />
                     <span className="dkm-locked-label">
                       Locked by {selectedLockers.join(", ")}
                       <small>{selectedDie.controllerId === you || selectedDie.ownerId === you ? "You can't buy or field it while that's active." : "They can't buy or field it while that's active."}</small>
@@ -3560,6 +3596,8 @@ export function DiceKingdomMobilePage() {
           onClose={() => setRosterViewFor(null)}
           purchaseCostOf={purchaseCostOf}
           virtualEnergy={yourVirtual}
+          cardsById={cardsById}
+          lockedBy={new Map((game.lockedCards ?? []).filter((l) => l.playerId === rosterViewFor).map((l) => [l.cardId, l.sources]))}
         />
       )}
     </div>

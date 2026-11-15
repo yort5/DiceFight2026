@@ -5570,3 +5570,12 @@ unshielded lane), `~/.devtools/playwright/leave-main-check.js`.
   is disabled, and in-game error messages stay pinned in view while you
   scroll. The button's "(4)" is now "Purchase for 4" - next to the
   purchased/unpurchased counts it read as a number of dice.
+- **Tokens on locked cards.** User: in the physical game "we 3-D printed
+  tokens for things like 'blanked' or 'blob'd' ... and we'd put the token
+  on the card." A locked card now carries a token (`CardToken`): a coin
+  on the locking card's energy colour with its die symbol and a small
+  padlock - on the buy option (right edge, under the price), the Full
+  Roster thumbnail (top left; either player's roster) and the details
+  picture (lower right, with the text above). The explicit text stays on
+  the button and the picture. Also fixed: the buy option's hatch was
+  drawn under the painting, so a locked buy option never looked locked.
