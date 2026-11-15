@@ -2710,6 +2710,10 @@ export function DiceKingdomMobilePage() {
 
   const selectedDie = selectedId ? game.dice.find((d) => d.id === selectedId) ?? null : null;
   const inspectingPileDie = selectedDie !== null && pileInspectId === selectedDie.id && pileView !== null;
+  // Who has locked the selected die's card out for its owner (Pangolin).
+  const selectedLockers = selectedDie?.cardId
+    ? (game.lockedCards ?? []).find((l) => l.playerId === selectedDie.ownerId && l.cardId === selectedDie.cardId)?.sources ?? []
+    : [];
   const selectedPurchaseCard = selectedDie?.zone === "Unpurchased" && selectedDie.cardId
     ? cardsById.get(selectedDie.cardId) : undefined;
   const purchaseCopies = selectedPurchaseCard && selectedDie
@@ -2734,16 +2738,22 @@ export function DiceKingdomMobilePage() {
 
   // The inspect panel's action list - README's own table, mapped onto
   // the actions this page can actually take right now.
-  type InspectAction = { label: string; run: () => void; primary?: boolean };
+  type InspectAction = { label: string; run: () => void; primary?: boolean; disabled?: boolean };
   const inspectActions: InspectAction[] = [];
   if (selectedDie) {
     if (selectedDie.zone === "Unpurchased" && step === "main" && isYourTurn) {
       const { amount, matchType } = costFor(selectedDie);
       const ids = pickEnergyForCost(yourReserve, amount, matchType, yourVirtual);
+      // Pangolin's lockout (user, 2026-11-15: "clicking Purchase does
+      // nothing" - the server refused it, out of sight) says so here.
+      const lockers = selectedLockers;
       inspectActions.push({
-        label: ids === null ? "Can't afford" : `Purchase (${amount})`,
+        // "for 4", not "(4)": next to the purchased/unpurchased counts a
+        // bare number read as a count of dice.
+        label: lockers?.length ? `Locked by ${lockers.join(", ")}` : ids === null ? "Can't afford" : `Purchase for ${amount}`,
+        disabled: !!lockers?.length,
         run: () => {
-          if (ids !== null) run(() => api.purchase(game.gameId, selectedDie.id, ids));
+          if (ids !== null && !lockers?.length) run(() => api.purchase(game.gameId, selectedDie.id, ids));
         },
       });
     }
@@ -3115,7 +3125,7 @@ export function DiceKingdomMobilePage() {
       </div>
 
       <div className="dkm-scroll">
-        {error && <p className="dkm-error">{error}</p>}
+        {error && <p className="dkm-error dkm-error-pinned" role="alert">{error}</p>}
         {inviteCopiedBanner && <p className="dkm-invite-toast">Invite link copied — send it to your opponent.</p>}
 
         <MatCard
@@ -3320,7 +3330,20 @@ export function DiceKingdomMobilePage() {
                 across the top (2026-10-28, "when you tap on a card in the
                 roster"); a die in play keeps the small one. */}
             {hasPainting(selectedDie.cardId) && (selectedPurchaseCard || inspectingPileDie)
-              ? <Painting cardId={selectedDie.cardId} alt={nameOf(selectedDie, cardsById)} className="dkm-inspect-art" />
+              ? selectedLockers.length > 0
+                // Locked out (Pangolin): said across the picture itself
+                // (user, 2026-11-15), not only on the button.
+                ? (
+                  <span className="dkm-inspect-art-wrap">
+                    <Painting cardId={selectedDie.cardId} alt={nameOf(selectedDie, cardsById)} className="dkm-inspect-art" />
+                    <span className="dk-locked-hatch" aria-hidden="true" />
+                    <span className="dkm-locked-label">
+                      Locked by {selectedLockers.join(", ")}
+                      <small>{selectedDie.controllerId === you || selectedDie.ownerId === you ? "You can't buy or field it while that's active." : "They can't buy or field it while that's active."}</small>
+                    </span>
+                  </span>
+                )
+                : <Painting cardId={selectedDie.cardId} alt={nameOf(selectedDie, cardsById)} className="dkm-inspect-art" />
               : null}
             {hasPainting(selectedDie.cardId) && !(selectedPurchaseCard || inspectingPileDie)
               ? <Painting cardId={selectedDie.cardId} crop="icon" alt={nameOf(selectedDie, cardsById)} className="dkm-inspect-painting" />
@@ -3385,7 +3408,7 @@ export function DiceKingdomMobilePage() {
                 <div className="dkm-purchase-actions">
                   {inspectActions.map((a) => (
                     <button key={a.label} type="button" className="dkm-inspect-action"
-                      disabled={a.label === "Can't afford"} onClick={a.run}>
+                      disabled={a.disabled || a.label === "Can't afford"} onClick={a.run}>
                       {a.label}
                     </button>
                   ))}
@@ -3400,7 +3423,7 @@ export function DiceKingdomMobilePage() {
                 key={a.label}
                 type="button"
                 className="dkm-inspect-action"
-                disabled={a.label === "Can't afford"}
+                disabled={a.disabled || a.label === "Can't afford"}
                 onClick={a.run}
               >
                 {a.label}

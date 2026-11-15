@@ -981,6 +981,9 @@ public static class EffectInterpreter
                 if (!ctx.Bindings.TryGetValue("self", out var selfId)) continue;
                 if (FindDie(ctx.State, selfId).CardId is not { } sourceCardId) continue;
                 ctx.State.Memories[(ctx.ControllerId, sourceCardId, n.MemoryName)] = chosenCardId;
+                // Said out loud, or a lockout is invisible (user,
+                // 2026-11-15: a Wolverine "Purchase" that did nothing).
+                LogAbility(ctx, $"{SourceName(ctx)} names {ctx.State.CardCatalog[chosenCardId].Name}.");
             }
             onComplete();
         });

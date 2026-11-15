@@ -2370,6 +2370,15 @@
   color: var(--dkm-error);
   font-size: 12.5px;
 }
+/* In a game the message stays in view however far down you've scrolled
+   (2026-11-15: a refused purchase showed at the top, off screen). */
+.dk-mobile .dkm-error-pinned {
+  position: sticky;
+  top: 8px;
+  z-index: 20;
+  background: color-mix(in srgb, #c0553f 22%, var(--dkm-raised, #2a2838));
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
 /* Champion picker now reuses ../DiceKingdomPage.tsx's own .champ-pick-
    columns/.champ-opt/.panel classes directly (see the picker JSX's own
    remarks) rather than a mobile-specific .dkm-champ-* set. */
@@ -5819,6 +5828,46 @@
 .dicekingdom .card-popover.full-art img.card-popover-painting {
   height: auto;
   aspect-ratio: 480 / 544;
+}
+/* A locked card's picture carries the hatch and the reason. */
+.dk-mobile .dkm-inspect-art-wrap {
+  position: relative;
+  grid-column: 1 / -1;
+  justify-self: center;
+  margin-bottom: 4px;
+  border-radius: 10px;
+}
+.dk-mobile .dkm-inspect-art-wrap .dk-locked-hatch {
+  /* Lighter than a buy tile's, so the animal still shows through. */
+  background: repeating-linear-gradient(45deg, rgba(20, 21, 28, 0.55) 0 3px, rgba(20, 21, 28, 0.12) 3px 10px);
+}
+.dk-mobile .dkm-inspect-art-wrap img.dkm-inspect-art {
+  display: block;
+  margin-bottom: 0;
+}
+.dk-mobile .dkm-locked-label {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  /* Over the sky, mostly - the animal sits mid-picture. */
+  top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(20, 21, 28, 0.88);
+  color: #fff;
+  font: 400 20px/1.05 Anton, "Arial Narrow", sans-serif;
+  letter-spacing: 0.02em;
+  text-align: center;
+  text-transform: uppercase;
+}
+.dk-mobile .dkm-locked-label small {
+  font: 500 12px/1.3 "Work Sans", var(--sans, sans-serif);
+  letter-spacing: 0;
+  text-transform: none;
+  opacity: 0.85;
 }
 .dk-mobile img.dkm-inspect-art {
   grid-column: 1 / -1;

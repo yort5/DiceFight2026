@@ -5557,3 +5557,16 @@ unshielded lane), `~/.devtools/playwright/leave-main-check.js`.
   so it takes the damage lethal-first and reflects it while the other
   blocker does its job. Not into a Deadly lane or one with a retaliating
   attacker.
+- **A locked card says so.** User: "I try to buy a Wolverine, but
+  clicking Purchase does nothing." The game record (05f15108) shows
+  thirteen refused Purchases: "'Wolverine' cannot be purchased right
+  now" - Armadillo's Pangolin had named Wolverine. The rule worked, but
+  nothing said so: the naming wasn't logged, the Purchase button looked
+  live, and the refusal showed at the top of the scroll area, out of
+  sight. Now Pangolin's pick is logged ("Pangolin names Wolverine."), a
+  locked card's picture in the details panel is hatched with "Locked by
+  Pangolin - you can't buy or field it while that's active" over it (user
+  asked for it on the picture), its button reads "Locked by Pangolin" and
+  is disabled, and in-game error messages stay pinned in view while you
+  scroll. The button's "(4)" is now "Purchase for 4" - next to the
+  purchased/unpurchased counts it read as a number of dice.
