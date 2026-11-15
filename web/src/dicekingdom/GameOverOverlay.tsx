@@ -17,9 +17,15 @@ import type { CardDef, GameState } from "./types";
 // "Play again" (onNewGame, when given) and "Home".
 export function GameOverOverlay({ game, you, onNewGame, onHome }: { game: GameState; you: string | null; onNewGame?: () => void; onHome?: () => void }) {
   const [boss, setBoss] = useState<{ name: string; result: BossResult; cards: Map<string, CardDef> } | null>(null);
+  // Coins for finishing it (2026-11-15) - settled on the move that ended it.
+  const [coins, setCoins] = useState<{ earned: number; mode: string } | null>(null);
   useEffect(() => {
     if (!game.gameOver) return;
     let live = true;
+    players.me().then((me) => {
+      const played = me.games.find((g) => g.gameId === game.gameId);
+      if (live && played && played.coinsEarned != null) setCoins({ earned: played.coinsEarned, mode: played.mode });
+    }, () => {});
     // The server settles a boss battle on the move that ends it, so it's there by now.
     players.bosses().then(async (ladder) => {
       const result = ladder.results.find((r) => r.gameId === game.gameId);
@@ -61,6 +67,13 @@ export function GameOverOverlay({ game, you, onNewGame, onHome }: { game: GameSt
             {boss.result.won
               ? `${boss.result.firstWin ? `${boss.name} beaten for the first time!` : `${boss.name} beaten again.`} ${resultText(boss.result, boss.cards)}`
               : `${boss.name} holds. Try again from the Boss Ladder.`}
+          </p>
+        )}
+        {coins && coins.mode !== "local" && (
+          <p className="dk-gameover-boss dk-gameover-coins">
+            {coins.earned > 0
+              ? `+${coins.earned} coins for finishing the game.`
+              : "No coins this time - today's 50 from games are already yours. More tomorrow."}
           </p>
         )}
         {onNewGame && (

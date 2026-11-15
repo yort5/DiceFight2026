@@ -36,6 +36,10 @@ public sealed class PlayerCollection
     public int Coins { get; set; }
     // The UTC day the daily coins were last given, "2026-10-12".
     public string? LastDailyDate { get; set; }
+    // Coins from finished games on GameCoinsDate (UTC), against the daily
+    // cap (DiceKingdomPacks.GameCoinsPerDay).
+    public string? GameCoinsDate { get; set; }
+    public int GameCoinsToday { get; set; }
     // Card id -> dice of it owned, past its DieLimit too (for trade-ins).
     public Dictionary<string, int> Dice { get; set; } = [];
     public int PacksOpened { get; set; }
@@ -102,6 +106,9 @@ public sealed class PlayedGame
     // A boss battle: which boss, and - once it's over - what it paid.
     public string? BossId { get; set; }
     public BossResult? BossResult { get; set; }
+    // What finishing it paid (PlayerAccounts.PayGameCoins): null until it
+    // ends, then 0 for pass-and-play or once the day's cap is reached.
+    public int? CoinsEarned { get; set; }
 }
 
 public sealed class PlayedSeat

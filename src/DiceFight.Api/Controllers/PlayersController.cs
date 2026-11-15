@@ -156,7 +156,8 @@ public sealed class PlayersController(V2GameStore store) : ControllerBase
                 g.Result,
                 g.WinnerSeatId,
                 g.OpponentName,
-                g.Seats.Select(s => new PlayedSeatDto(s.SeatId, s.ChampionId, s.Token, s.Bot)).ToList()))
+                g.Seats.Select(s => new PlayedSeatDto(s.SeatId, s.ChampionId, s.Token, s.Bot)).ToList(),
+                g.CoinsEarned))
             .ToList();
         return new PlayerDto(
             player.Id,
@@ -196,7 +197,9 @@ public sealed record PlayedGameDto(
     string? Result,
     string? WinnerSeatId,
     string? OpponentName,
-    IReadOnlyList<PlayedSeatDto> Seats);
+    IReadOnlyList<PlayedSeatDto> Seats,
+    // What finishing it paid; null while it's still going.
+    int? CoinsEarned = null);
 public sealed record BossLadderDto(int Points, IReadOnlyList<BossDto> Bosses, IReadOnlyList<BossResultDto> Results);
 // Status: "locked", "open" or "beaten". Cards/Tardigrades: the boss's team (id/energy -> dice).
 public sealed record BossDto(

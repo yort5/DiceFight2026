@@ -22,6 +22,11 @@ public static class DiceKingdomPacks
     public const int PackPrice = 10;
     // Once per UTC day, on the first visit (PlayerAccounts.ClaimDaily).
     public const int DailyCoins = 5;
+    // For finishing a game, win or lose (user, 2026-11-15: "10 coins for
+    // now, but only for completing the game ... 50 coins max a day from
+    // playing games. No coins for pass-and-play for now").
+    public const int GameCoins = 10;
+    public const int GameCoinsPerDay = 50;
 
     // Every playable Character and personal Action in the Catalog. Basic
     // Actions have no rarity - see BasicActions.

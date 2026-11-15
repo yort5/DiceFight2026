@@ -25,6 +25,8 @@ export interface PlayedGame {
   winnerSeatId: string | null;
   opponentName: string | null;
   seats: PlayedSeat[];
+  /** What finishing it paid (10, up to 50 a day; 0 for pass-and-play). Null while it's going. */
+  coinsEarned?: number | null;
 }
 
 export interface PlayerDevice {

@@ -5620,3 +5620,13 @@ unshielded lane), `~/.devtools/playwright/leave-main-check.js`.
   since the friend has to be invited again.)
 - **Coins for finishing a game: never built.** Coins come only from the
   100 starting, 5 a day, and boss wins. Asked the user for numbers.
+- **Coins for finishing a game.** User: "10 coins for now, but only for
+  completing the game. We'll do 50 coins max a day from playing games. No
+  coins for pass-and-play for now." Each player with a human seat gets
+  `DiceKingdomPacks.GameCoins` (10) when a game ends, win or lose - vs the
+  computer, online, and boss battles (on top of a boss's reward) - up to
+  `GameCoinsPerDay` (50) a UTC day (`PlayerCollection.GameCoinsDate/
+  Today`). Pass-and-play ("local") pays 0. Paid once, as the game ends
+  (`PlayedGame.CoinsEarned`), never for an old game merely reopened. The
+  win/lose screen says "+10 coins for finishing the game." or that the
+  day's 50 are already in.

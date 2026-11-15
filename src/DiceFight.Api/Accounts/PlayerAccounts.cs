@@ -314,6 +314,22 @@ public sealed class PlayerAccounts(IGameRecordSink? store, ILogger<PlayerAccount
             return DiceKingdomBosses.IsOpen(bossId, id => player.Bosses?.Records.GetValueOrDefault(id)?.Wins > 0);
     }
 
+    // Coins for finishing a game, up to the day's cap. Under _gate.
+    private int PayGameCoins(PlayerAccount player)
+    {
+        var collection = Collection(player);
+        var today = DateOnly.FromDateTime((clock ?? TimeProvider.System).GetUtcNow().UtcDateTime).ToString("yyyy-MM-dd");
+        if (collection.GameCoinsDate != today)
+        {
+            collection.GameCoinsDate = today;
+            collection.GameCoinsToday = 0;
+        }
+        var paid = Math.Max(0, Math.Min(DiceKingdomPacks.GameCoins, DiceKingdomPacks.GameCoinsPerDay - collection.GameCoinsToday));
+        collection.GameCoinsToday += paid;
+        collection.Coins += paid;
+        return paid;
+    }
+
     // Counts a finished boss battle and pays its reward: FirstWin the first
     // time this boss is beaten, Rematch after. Under _gate.
     private BossResult SettleBoss(PlayerAccount player, string bossId, bool won)
@@ -457,6 +473,9 @@ public sealed class PlayerAccounts(IGameRecordSink? store, ILogger<PlayerAccount
 
         if (state.IsGameOver)
         {
+            // Coins only as it ends - not for a game that ended before they
+            // existed and is merely being looked at again.
+            var endingNow = game.EndedUtc is null;
             game.EndedUtc ??= DateTime.UtcNow;
             game.WinnerSeatId = state.WinnerId;
             var human = game.Seats.Where(s => s.Token is not null && !s.Bot).ToList();
@@ -467,6 +486,7 @@ public sealed class PlayerAccounts(IGameRecordSink? store, ILogger<PlayerAccount
             // Settled once: Touch runs again on later visits to the game.
             if (session.BossId is { } bossId && game.Result is not null && game.BossResult is null)
                 game.BossResult = SettleBoss(owner, bossId, game.Result == "win");
+            game.CoinsEarned ??= !endingNow || game.Mode == "local" || human.Count == 0 ? 0 : PayGameCoins(owner);
         }
         Save(owner);
     }

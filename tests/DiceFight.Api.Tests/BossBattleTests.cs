@@ -111,7 +111,7 @@ public class BossBattleTests
         var ladder = Ok(Players(store, me).Bosses());
         Assert.Equal(["open", "locked"], ladder.Bosses.Take(2).Select(b => b.Status));
 
-        // A loss counts, pays nothing, opens nothing.
+        // A loss counts, pays no reward, opens nothing.
         var lost = Fight(store, me, first.Id);
         Assert.Equal(first.Name, lost.State.PlayerTwo.Name);
         Assert.Contains("teamB", lost.BotSeats); // the computer's from the start
@@ -128,7 +128,8 @@ public class BossBattleTests
         ladder = Ok(Players(store, me).Bosses());
         Assert.Equal(["beaten", "open"], ladder.Bosses.Take(2).Select(b => b.Status));
         Assert.Equal(first.FirstWin.Points, ladder.Points);
-        Assert.Equal(coins + first.FirstWin.Coins, Ok(Players(store, me).Collection()).Coins);
+        // The boss's reward, plus what finishing any game pays (2026-11-15).
+        Assert.Equal(coins + first.FirstWin.Coins + DiceKingdomPacks.GameCoins, Ok(Players(store, me).Collection()).Coins);
         var result = ladder.Results[0];
         Assert.Equal((won.Id, true, true), (result.GameId, result.Won, result.FirstWin));
         Assert.Equal("boss", Ok(Players(store, me).Me()).Games.Single(g => g.GameId == won.Id).Mode);

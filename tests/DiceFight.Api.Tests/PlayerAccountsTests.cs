@@ -2,6 +2,7 @@ using DiceFight.Api;
 using DiceFight.Api.Accounts;
 using DiceFight.Api.Controllers;
 using DiceFight.Api.Recording;
+using DiceFight.V2.Data;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -77,6 +78,37 @@ public class PlayerAccountsTests
         Assert.Equal("win", done.Result);
     }
 
+    // User, 2026-11-15: "10 coins for now, but only for completing the
+    // game ... 50 coins max a day from playing games. No coins for
+    // pass-and-play for now."
+    [Fact]
+    public void Finishing_A_Game_Pays_10_Coins_Up_To_50_A_Day_But_Not_Pass_And_Play()
+    {
+        var store = new V2GameStore(accounts: NewAccounts());
+        var (me, _) = store.Accounts!.Register(null);
+        var start = Ok(Players(store, me).Collection()).Coins;
+
+        V2GameSession Play(bool vsComputer)
+        {
+            var created = Ok(Games(store, me).Create(new CreateV2GameRequest("Wolf", "Armadillo")));
+            var session = store.GetSession(created.Game.GameId);
+            if (vsComputer)
+                Games(store, me, created.Seats.Single(s => s.PlayerId == "teamB").Token, "GET").BotDecision(session.Id, null);
+            End(store, session, loserSeat: "teamA"); // a loss pays too
+            store.Accounts.AfterMove(session); // and only once
+            return session;
+        }
+        int? Earned(V2GameSession s) => Ok(Players(store, me).Me()).Games.Single(g => g.GameId == s.Id).CoinsEarned;
+
+        var local = Play(vsComputer: false);
+        Assert.Equal(0, Earned(local));
+        Assert.Equal(start, Ok(Players(store, me).Collection()).Coins);
+
+        var games = Enumerable.Range(0, 6).Select(_ => Play(vsComputer: true)).ToList();
+        Assert.Equal([10, 10, 10, 10, 10, 0], games.Select(Earned));
+        Assert.Equal(start + DiceKingdomPacks.GameCoinsPerDay, Ok(Players(store, me).Collection()).Coins);
+    }
+
     [Fact]
     public void An_Online_Game_Is_A_Win_For_One_Player_And_A_Loss_For_The_Other()
     {
@@ -97,6 +129,7 @@ public class PlayerAccountsTests
         var guestGame = Assert.Single(Ok(Players(store, guest).Me()).Games);
         Assert.Equal(("online", "loss", "Sam"), (hostGame.Mode, hostGame.Result, hostGame.OpponentName));
         Assert.Equal(("online", "win", "Troy"), (guestGame.Mode, guestGame.Result, guestGame.OpponentName));
+        Assert.Equal((10, 10), (hostGame.CoinsEarned, guestGame.CoinsEarned)); // both finished it
         // Each sees only their own seat's token.
         Assert.Equal(["teamA"], hostGame.Seats.Where(s => s.Token is not null).Select(s => s.SeatId));
         Assert.Equal(["teamB"], guestGame.Seats.Where(s => s.Token is not null).Select(s => s.SeatId));
