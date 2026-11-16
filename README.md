@@ -1,14 +1,14 @@
 # Dice Kingdom (DiceFight2026)
 
-Dice Kingdom is a mobile-friendly web game that began as a fan re-creation of the Dice Masters dice-building game and became its own animal-themed game on the same engine. You buy dice with energy you roll, field creatures, and attack. You can play against the computer, against a friend through an invite link, pass-and-play on one device, or climb a boss ladder. Dice roll in 3D (three.js and cannon-es physics). Coins earned in play buy card packs that grow a collection. Accounts are passwordless: a device plays anonymously, and you link more devices to the same player with a short code.
+**Play it in your browser (works on a phone, no sign-up): https://dicefight2026-999266422848.us-central1.run.app/dice-kingdom/mobile**
 
-Live: https://dicefight2026-999266422848.us-central1.run.app/dice-kingdom/mobile
+Dice Kingdom is a mobile-friendly web game that began as a fan re-creation of the Dice Masters dice-building game and became its own animal-themed game on the same engine. You buy dice with energy you roll, field creatures, and attack. You can play against the computer, against a friend through an invite link, pass-and-play on one device, or climb a boss ladder. Dice roll in 3D (three.js and cannon-es physics). Coins earned in play buy card packs that grow a collection. Accounts are passwordless: a device plays anonymously, and you link more devices to the same player with a short code.
 
 This is a personal learning project. It is not affiliated with or endorsed by the makers of Dice Masters. The Dice Kingdom card art is public-domain or CC0 natural-history artwork (see `web/public/dice-kingdom/art/CREDITS.txt`).
 
 ## Try it
 
-**In 30 seconds:** open the live link, choose to play the computer, pick a Champion, and start. Each turn you draw dice from your bag, roll them, spend energy faces to buy dice or field creature faces, then attack. [How to Play](https://dicefight2026-999266422848.us-central1.run.app/dice-kingdom/how-to-play) has the full rules.
+**In 30 seconds:** open the link at the top, choose to play the computer, pick a Champion, and start. Each turn you draw dice from your bag, roll them, spend energy faces to buy dice or field creature faces, then attack. [How to Play](https://dicefight2026-999266422848.us-central1.run.app/dice-kingdom/how-to-play) has the full rules.
 
 **Locally** (needs the .NET 10 SDK and Node 22):
 
