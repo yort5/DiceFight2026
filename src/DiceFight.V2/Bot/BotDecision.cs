@@ -68,7 +68,17 @@ public sealed record BotPersona(
     // buy can beat two small ones of more total cost. 2 since 2026-10-11:
     // the value that best matched 48 real games' purchases (and the most
     // even simulator results) - v3/DESIGN_NOTES.md.
-    double DilutionPerDie = 2)
+    double DilutionPerDie = 2,
+    // Experiment, off by default (user, 2026-11-16: keep a Tardigrade
+    // home rather than swing it for 1, so it stays out of the Bag) - see
+    // DiceKingdomBot.DecideAttackers and v3/DESIGN_NOTES.md for why it
+    // isn't on. HoldTardigradesAt: only once this many bought Character
+    // dice are in the rotation. TardigradeChumpCost: with it on, what
+    // losing a Tardigrade blocker costs (null = its stats' value, which
+    // left the held ones standing by while 3 damage went through).
+    bool HoldWeakTardigrades = false,
+    int HoldTardigradesAt = 0,
+    double? TardigradeChumpCost = null)
 {
     public static readonly BotPersona Default = new();
 

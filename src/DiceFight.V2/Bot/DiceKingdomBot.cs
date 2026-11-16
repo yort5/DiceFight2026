@@ -539,6 +539,10 @@ public static class DiceKingdomBot
         var drawable = Circulating(state, botId);
         var minDrawable = state.Config.Rules.DrawCount - BurnBudget(state, botId);
 
+        // Bought Character dice in the rotation - what a Tardigrade kept out
+        // of the Bag makes room for.
+        var betterDice = state.Dice.Count(d => d.ControllerId == botId && !d.IsSidekick && IsCharacterCard(state, d)
+            && d.Zone is not (Zone.Unpurchased or Zone.FieldZone or Zone.AttackZone));
         var attackers = new List<DieInstance>();
         foreach (var die in candidates)
         {
@@ -547,6 +551,18 @@ public static class DiceKingdomBot
             // (rule 2.7.4.3.1) - which is exactly what the simulator saw it
             // do every game (2026-09-29).
             if (IsRetaliator(state, die)) continue;
+            // A Tardigrade swinging for 1 (user, 2026-11-16: "rarely is
+            // attacking with a Tardigrade for 1 the best move unless it's
+            // going to end the game"): unblocked it leaves play for the
+            // Used Pile and is back in the rotation, diluting the draws.
+            // OFF by default (BotPersona.HoldWeakTardigrades): against
+            // itself the bot did worse holding them - v3/DESIGN_NOTES.md,
+            // 2026-11-16. Lethal is handled above; a pumped one (Wolf,
+            // Anger Issues) is weighed like any other attacker; and when
+            // the rotation is too thin to fill a draw, getting it back is
+            // the point.
+            if (persona.HoldWeakTardigrades && die.IsSidekick && QueryEngine.GetAttack(state, die) <= 1
+                && drawable >= minDrawable && betterDice >= persona.HoldTardigradesAt) continue;
             if (!WorthSwinging(state, die, blockers, persona)) continue;
             if (DrawsOnAttack(state, die))
             {
@@ -710,7 +726,7 @@ public static class DiceKingdomBot
             if (lane.Need > 1)
             {
                 if (available.Count < lane.Need) continue;
-                var team = available.Select(b => (Blocker: b, Score: BlockScore(state, b, lane, DamageWeight(), pump: pump)))
+                var team = available.Select(b => (Blocker: b, Score: BlockScore(state, b, lane, DamageWeight(), pump: pump, chumpCost: persona.HoldWeakTardigrades ? persona.TardigradeChumpCost : null)))
                     .OrderByDescending(x => x.Score).Take(lane.Need).ToList();
                 if (team.Sum(x => x.Score) <= 0 && !mustBlock) continue;
                 foreach (var (blocker, _) in team)
@@ -724,12 +740,12 @@ public static class DiceKingdomBot
             (DieInstance Blocker, double Score)? best = null;
             foreach (var b in available)
             {
-                var score = BlockScore(state, b, lane, DamageWeight(), pump: pump);
+                var score = BlockScore(state, b, lane, DamageWeight(), pump: pump, chumpCost: persona.HoldWeakTardigrades ? persona.TardigradeChumpCost : null);
                 if (best is null || score > best.Value.Score) best = (b, score);
             }
             if (shieldLeft && !lane.Deadly)
             {
-                var shielded = available.Select(b => (Blocker: b, Score: BlockScore(state, b, lane, DamageWeight(), shielded: true, pump: pump)))
+                var shielded = available.Select(b => (Blocker: b, Score: BlockScore(state, b, lane, DamageWeight(), shielded: true, pump: pump, chumpCost: persona.HoldWeakTardigrades ? persona.TardigradeChumpCost : null)))
                     .OrderByDescending(x => x.Score).First();
                 if (shielded.Score > Math.Max(0, best?.Score ?? 0) + 0.5)
                 {
@@ -789,7 +805,9 @@ public static class DiceKingdomBot
     // it kills one, minus its own if it dies, plus the damage it keeps off
     // this player's life (weighted by how much life matters right now).
     // `shielded`: Armadillo will prevent the combat damage to it. `pump`:
-    // Wolf's +N may still land on the attacker after blocks.
+    // Wolf's +N may still land on the attacker after blocks. `chumpCost`:
+    // what losing a Tardigrade blocker costs, in place of its stats' value
+    // (BotPersona.TardigradeChumpCost - the hold-Tardigrades experiment).
     //
     // Dice Kingdom is a bag-builder, so where a die ENDS UP matters, not just
     // whether it survives (user, 2026-10-04 - the Dice Masters "let the
@@ -801,7 +819,7 @@ public static class DiceKingdomBot
     //   - an unblocked attacker leaves play for the Used Pile and then the
     //     Bag - a fielded Tardigrade is effectively culled, and letting one
     //     through un-culls it into the attacker's draws (UncullBonus).
-    private static double BlockScore(GameState state, DieInstance b, Lane lane, double damageWeight, bool shielded = false, int pump = 0)
+    private static double BlockScore(GameState state, DieInstance b, Lane lane, double damageWeight, bool shielded = false, int pump = 0, double? chumpCost = null)
     {
         var bAtk = QueryEngine.GetAttack(state, b);
         var bDef = QueryEngine.GetDefense(state, b) - b.Damage;
@@ -818,7 +836,7 @@ public static class DiceKingdomBot
         if (IsRetaliator(state, b) && !shielded) score += Math.Min(lane.Attack, bDef) * reflectWeight; // shielded, it takes nothing to reflect
         if (lane.Attackers.Any(a => IsRetaliator(state, a))) score -= bAtk * damageWeight * 1.5;
         if (killed is not null) score += DieValue(state, killed) - PrepBonus(killed);
-        if (!survives) score -= DieValue(state, b) - PrepBonus(b);
+        if (!survives) score -= b.IsSidekick && chumpCost is { } cost ? cost : DieValue(state, b) - PrepBonus(b);
         if (survives && killed is null) score += 0.5; // a free wall
         // Blocking keeps the lane's surviving Tardigrade attackers on the
         // Field (still culled) instead of sending them back to their Bag.

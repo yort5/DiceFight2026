@@ -5653,3 +5653,53 @@ unshielded lane), `~/.devtools/playwright/leave-main-check.js`.
   engine already did this (DrainQueue stops at game over). Armadillo at
   -10 is real: all of a combat's damage, Overcrush included, lands
   together.
+
+## 2026-11-16 - Bot: holding Tardigrades home (tested, not turned on)
+
+User, after a game: the bot "had a 3/9 character and a 1/2 Tardigrade,
+I had no field. They chose to attack with the Tardigrade. That's
+usually not the best choice. You only get one point of damage, and that
+die goes back in your rotation. It's better to keep that die out of the
+bag so that you can churn through to your better dice faster... rarely
+is attacking with a Tardigrade for 1 the best move unless it's going to
+end the game."
+
+Built as `BotPersona.HoldWeakTardigrades`: a Tardigrade with 1 ATK or
+less stays home unless the swing is lethal, it has been pumped, or the
+rotation is too thin to fill a draw. **Off by default** - the simulator
+(1,200 games a run, powers on, one seat holding against one not;
+`SIM_TARDIGRADE_HOLD=p1|p2|both`) says the bot gets weaker against
+itself. Seat one wins 56.2% with nobody holding; the holder's change
+from that baseline:
+
+| Version | Holder goes first | Holder goes second |
+|---|---|---|
+| Always hold | -8.3 | +0.4 |
+| Hold once 2 bought Character dice are in the rotation (`SIM_HOLD_AT=2`) | -5.8 | +0.5 |
+| ...once 4 | -1.5 | -1.1 |
+| Always hold + chump-block with them (`SIM_CHUMP=0.3`) | -5.5 | +3.5 |
+| Hold at 2 + chump | -3.0 | +1.8 |
+| Hold at 3 + chump | -2.8 | +1.8 |
+
+(About 1.4 points either way is noise.) With both seats holding, games
+ran 2-5 turns longer, deck-out burn losses went from 2 to 17 in 1,200,
+and Wolf fell from 43.8% to 32.2% wins.
+
+What the numbers showed:
+- The swings given up are only about 2.5 damage a game (Wolf's
+  unblocked damage 15.0 -> 12.4).
+- **The held dice were wasted.** Defenders had twice the blockers on
+  hand (2.0 -> 4.1 against Wolf) and still used under one per attack:
+  `BlockScore` prices a Tardigrade body by its stats (2.8, less 1 for
+  the Prep roll), so at full life it takes 3 damage rather than lose a
+  1/2 that goes to Prep anyway. Pricing a Tardigrade chump at 0.3
+  (`BotPersona.TardigradeChumpCost`, only with holding on) recovers
+  most of the loss and makes holding a gain for the second player.
+- Going first still loses with every version: the first player's edge
+  is the race, and holding gives up its early points.
+- All runs include the 2026-11-15 lock on Champion powers during each
+  player's first turn, so that change isn't what separates the rows.
+
+User's call: ship nothing for now, look further. Next to try: the cheap
+Tardigrade chump on its own (it is tied to the hold switch here), and
+why seat one wins 56% at all.

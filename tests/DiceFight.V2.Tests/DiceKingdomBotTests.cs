@@ -155,4 +155,27 @@ public class DiceKingdomBotTests
         Assert.Equal(BotActionKind.DeclareAttackers, decision.Kind);
         Assert.DoesNotContain(die.Id, decision.AttackerLanes.Keys);
     }
+
+    // The hold-Tardigrades experiment (BotPersona.HoldWeakTardigrades, off
+    // by default - user, 2026-11-16): the bot had a 3/9 and a 1/2
+    // Tardigrade against an empty Field and swung the Tardigrade.
+    private static readonly BotPersona Holding = BotPersona.Default with { HoldWeakTardigrades = true };
+
+    [Fact]
+    public void Holding_Keeps_A_Tardigrade_Home_Rather_Than_Swing_For_One()
+    {
+        var (state, die) = AboutToAttack();
+        var decision = DiceKingdomBot.Decide(state, "p1", persona: Holding)!;
+        Assert.Equal(BotActionKind.DeclareAttackers, decision.Kind);
+        Assert.DoesNotContain(die.Id, decision.AttackerLanes.Keys);
+    }
+
+    [Fact]
+    public void Holding_Still_Swings_A_Tardigrade_For_One_When_It_Ends_The_Game()
+    {
+        var (state, die) = AboutToAttack();
+        state.GetPlayer("p2").Life = 1;
+        var decision = DiceKingdomBot.Decide(state, "p1", persona: Holding)!;
+        Assert.Contains(die.Id, decision.AttackerLanes.Keys);
+    }
 }

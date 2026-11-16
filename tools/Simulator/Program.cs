@@ -25,6 +25,10 @@ using DiceFight.V2.Model.Effects;
 //   SIM_ONLY=A,B     only the A-vs-B matchup (Champion ids)
 //   SIM_MUSKOX_GLOBAL=on  Musk Ox gets Kree Captain's purchase-discount Global
 //   SIM_DILUTION=N   bot persona's DilutionPerDie (each purchased die costs N plan value)
+//   SIM_TARDIGRADE_HOLD=both|p1|p2  both seats, or only that one, keep a 1-ATK Tardigrade home
+//                    (BotPersona.HoldWeakTardigrades); SIM_HOLD_AT=N only once N bought
+//                    Character dice are in the rotation; SIM_CHUMP=C and chump-block with
+//                    Tardigrades at cost C
 //   SIM_DUMP_ALL=1   print every game's match log
 //   SIM_POWERS=on    also run a pass WITH Champion passives (default:
 //                    powers-off only - every passive's Amount zeroed and
@@ -189,6 +193,15 @@ static (string WinnerChampionIdOrSentinel, int Turns) PlayOneGame(
         // SIM_DILUTION=N - what-if: each die a purchase adds to the Bag costs N plan value.
         if (double.TryParse(Environment.GetEnvironmentVariable("SIM_DILUTION"), System.Globalization.CultureInfo.InvariantCulture, out var dilution))
             persona = persona with { DilutionPerDie = dilution };
+        // SIM_TARDIGRADE_HOLD=both|p1|p2 - what-if: both seats, or only that one, keep a 1-ATK Tardigrade home
+        // (SIM_HOLD_AT=N: once N bought Character dice are in the rotation; SIM_CHUMP=C: and chump-block with them at cost C).
+        if (Environment.GetEnvironmentVariable("SIM_TARDIGRADE_HOLD") is { } hold && (hold == "both" || hold == owner))
+            persona = persona with
+            {
+                HoldWeakTardigrades = true,
+                HoldTardigradesAt = int.TryParse(Environment.GetEnvironmentVariable("SIM_HOLD_AT"), out var at) ? at : 0,
+                TardigradeChumpCost = double.TryParse(Environment.GetEnvironmentVariable("SIM_CHUMP"), System.Globalization.CultureInfo.InvariantCulture, out var chump) ? chump : null,
+            };
         var decision = DiceKingdomBot.Decide(state, owner, skip, persona)
             ?? throw new InvalidOperationException($"Bot had no decision for {owner} at step {state.CurrentStepId}.");
         var lifeBefore = (state.PlayerOne.Life, state.PlayerTwo.Life);
