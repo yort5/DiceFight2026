@@ -5703,3 +5703,23 @@ What the numbers showed:
 User's call: ship nothing for now, look further. Next to try: the cheap
 Tardigrade chump on its own (it is tied to the hold switch here), and
 why seat one wins 56% at all.
+
+## 2026-11-17 - Plan: the play screen in table order
+
+User: "when I fielded characters - they moved down from the screen, and
+it felt like they should move up," and a dedicated buy view was ruled
+out because buying needs the opponent's Field and both sets of piles in
+sight. Mocked up in four rounds and written as a handoff:
+`v3/PLAY_SCREEN_TABLE_ORDER_PLAN.md`, with the mock-up in
+`v3/mockups/play-screen-table-order/`. Not built yet.
+
+The order becomes their panel, the attack zones, your Field, your
+Reserve and the buy cards, the Globals, your nameplate. Decisions from
+the rounds: the attack zone is a thin seam outside the Attack step;
+each player has their own attack zone, the front of their own Field
+("my attack zone is part of my field, but my opponent's attack zone is
+part of their field ... The two attack zones meet during combat, but
+still belong to their owners"); and a lane keeps one box round attacker
+and blocker ("the attack and field blend together a bit too much"). The
+plan keeps today's one-box-per-lane structure and styles the strip as
+two joined halves, instead of splitting the lanes into two components.

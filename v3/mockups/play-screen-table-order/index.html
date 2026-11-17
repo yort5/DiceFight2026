@@ -1,0 +1,200 @@
+<!doctype html><meta charset="utf-8"><body style="margin:0">
+<title>Play Screen Table Order</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Work+Sans:wght@400;500;700&display=swap">
+<style>
+  /* Layout: phone frames side by side - today's screen as a screenshot, the proposed order as a live mock - for the Main step, then the Attack step. */
+  :root {
+    --bg: #eceaf2; --ink: #1a1726; --ink-dim: #5d5870; --line: #d4d0df; --accent: #c4521f;
+    --display: "Anton", "Arial Narrow", Impact, sans-serif;
+    --sans: "Work Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #100e1b; --ink: #fff8ec; --ink-dim: #b3abc6; --line: #3a3354; --accent: #ff9a5c; color-scheme: dark; }
+  }
+  :root[data-theme="dark"] { --bg: #100e1b; --ink: #fff8ec; --ink-dim: #b3abc6; --line: #3a3354; --accent: #ff9a5c; color-scheme: dark; }
+  body { background: var(--bg); color: var(--ink); font: 400 15px/1.55 var(--sans); }
+  .wrap {
+    max-width: 920px; margin: 0 auto; padding-block: 28px 56px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: grid; gap: 36px;
+  }
+  header { display: grid; gap: 8px; }
+  .eyebrow { font: 700 11px/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--accent); }
+  h1 { margin: 0; font: 400 clamp(30px, 6vw, 46px)/1.05 var(--display); text-transform: uppercase; text-wrap: balance; }
+  header p, section > p, .cap { margin: 0; max-width: 64ch; color: var(--ink-dim); }
+  section { display: grid; gap: 14px; }
+  h2 { margin: 0; font: 400 24px/1.1 var(--display); text-transform: uppercase; }
+  .pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr)); gap: 22px 28px; justify-items: center; align-items: start; }
+  figure { margin: 0; display: grid; gap: 8px; width: 100%; max-width: 402px; min-width: 0; }
+  figcaption { font-size: 13px; color: var(--ink-dim); }
+  figcaption b { color: var(--ink); }
+  figure > img { display: block; width: 100%; height: auto; border-radius: 22px; border: 1px solid var(--line); }
+  ol { margin: 0; padding-left: 20px; max-width: 64ch; color: var(--ink-dim); }
+  ol b { color: var(--ink); }
+
+  /* ---- the phone: the game's own dark colours, fixed ---- */
+  .phone {
+    --card: #20232e; --raised: #2e3548; --border: #5c6484; --ink2: #c7cce0; --dim: #9198b0;
+    --claw: #e8895a; --eye: #b48ae6; --wing: #6aa7d8;
+    position: relative; width: 100%; aspect-ratio: 402 / 874; overflow: hidden; border-radius: 22px; border: 1px solid var(--line);
+    background: radial-gradient(120% 90% at 50% 0%, #2b3143, #14151c); color: var(--ink2); font: 400 12px/1.3 var(--sans);
+    display: flex; flex-direction: column;
+  }
+  .phone * { box-sizing: border-box; }
+  .hd { flex: none; background: #171427; color: #fff8ec; border-radius: 0 0 22px 22px; padding: 12px 14px 10px; }
+  .rail { display: flex; align-items: center; gap: 5px; margin-bottom: 8px; }
+  .rail i { width: 30px; height: 30px; border-radius: 50%; background: #2a2540; border: 1.5px solid rgba(255,248,236,.22); }
+  .rail i.done { background: #3d3560; }
+  .rail b { flex: 1; height: 32px; border-radius: 999px; background: linear-gradient(160deg,#ffb066,#dd5a2a); box-shadow: 0 3px 0 #96380f; color: #2a1206; display: grid; place-items: center; font: 700 9.5px/1 var(--sans); letter-spacing: .08em; text-transform: uppercase; }
+  .rail u { width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(255,248,236,.2); background: rgba(255,248,236,.08); margin-left: 6px; }
+  .step { display: flex; align-items: center; gap: 8px; }
+  .step b { flex: 1; font: 400 24px/1.2 var(--display); text-transform: uppercase; white-space: nowrap; }
+  .step span { padding: 5px 9px 4px; border-radius: 999px; background: linear-gradient(160deg,#ffb066,#dd5a2a); color: #2a1206; font: 400 12px/1 var(--display); letter-spacing: .05em; text-transform: uppercase; }
+  .step em { font-style: normal; padding: 5px 9px; border-radius: 999px; border: 1px solid rgba(255,248,236,.2); font: 700 9.5px/1 var(--sans); color: rgba(255,248,236,.8); }
+  .scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 10px 14px 12px; display: flex; flex-direction: column; gap: 8px; }
+  .scroll > *, .side > * { flex: none; }
+  .bar { flex: none; background: var(--card); border-radius: 22px 22px 0 0; box-shadow: 0 -1px 0 var(--border), 0 -16px 30px -12px rgba(0,0,0,.5); padding: 10px 14px 14px; display: flex; gap: 8px; }
+  .bar .go { flex: 1; height: 54px; border-radius: 18px; background: linear-gradient(160deg,#ffb066,#dd5a2a); box-shadow: inset 0 1.5px 0 rgba(255,255,255,.45), 0 5px 0 #96380f; margin-bottom: 5px; display: grid; place-items: center; align-content: center; color: #2a1206; font: 400 20px/1 var(--display); letter-spacing: .04em; text-transform: uppercase; }
+  .bar .go small { font: 600 10.5px/1.1 var(--sans); text-transform: none; letter-spacing: 0; opacity: .7; }
+  .bar .quiet { height: 54px; padding: 0 16px; border-radius: 18px; border: 1.5px solid var(--border); display: grid; place-items: center; font: 700 13px/1 var(--sans); }
+
+  /* a side's panel: --cc is its colour */
+  .side { --cc: var(--claw); border-radius: 18px; padding: 10px 12px; background: linear-gradient(180deg, color-mix(in srgb, var(--cc) 9%, var(--card)), var(--card) 70px); box-shadow: inset 0 0 0 1px var(--border); display: flex; flex-direction: column; gap: 8px; }
+  .side.them { --cc: var(--eye); }
+  .side.turn { box-shadow: inset 0 0 0 2px var(--cc); }
+  .plate { display: grid; grid-template-columns: auto minmax(0,1fr) auto; gap: 10px; align-items: center; }
+  .plate .ic { width: 34px; height: 34px; border-radius: 11px; background: linear-gradient(160deg, color-mix(in srgb, var(--cc) 80%, #fff), var(--cc)); box-shadow: 0 3px 0 color-mix(in srgb, var(--cc) 55%, #000); }
+  .plate .who small { display: block; font: 700 9.5px/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--cc); margin-bottom: 3px; }
+  .plate .who b { font: 700 14px/1.2 var(--sans); color: #fff; }
+  .plate .life { padding: 4px 10px 3px 9px; border-radius: 999px; background: color-mix(in srgb, var(--claw) 16%, var(--raised)); font: 400 20px/1 var(--display); color: #fff; }
+  .plate .life::before { content: "♥ "; color: var(--claw); font-size: 13px; vertical-align: 2px; }
+  .chips { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .chips span { display: inline-flex; align-items: center; gap: 4px; min-height: 28px; padding: 0 9px; border-radius: 10px; background: var(--raised); font: 600 9px/1 var(--sans); text-transform: uppercase; color: var(--dim); }
+  .chips span b { font: 400 15px/1 var(--display); color: #fff; }
+  .chips .btn { margin-left: auto; color: var(--ink2); font-weight: 700; letter-spacing: .06em; }
+  .lbl { font: 400 12px/1.1 var(--display); letter-spacing: .06em; text-transform: uppercase; color: var(--cc); margin: 0 0 -4px 2px; }
+  .mat { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; min-height: 62px; padding: 7px; border-radius: 14px; background: color-mix(in srgb, var(--cc) 9%, var(--raised)); box-shadow: inset 0 2px 6px rgba(0,0,0,.28), inset 0 0 0 1px color-mix(in srgb, var(--cc) 30%, transparent); }
+  .mat.plain { --cc: var(--dim); }
+  .slot { width: 48px; height: 48px; border-radius: 10px; border: 1.5px dashed color-mix(in srgb, var(--cc) 42%, transparent); }
+  .die { position: relative; width: 48px; height: 48px; border-radius: 10px; background: linear-gradient(160deg, #4a3a2c, #2a2018); border: 1px solid #7a6650; box-shadow: 0 3px 4px rgba(0,0,0,.45); color: #f4ecdc; font: 700 15px/1 var(--sans); }
+  .die.them { background: linear-gradient(160deg, #2c3a4a, #18202a); border-color: #506a7a; }
+  .die s, .die em { position: absolute; right: 6px; text-decoration: none; font-style: normal; }
+  .die s { top: 4px; } .die em { bottom: 4px; }
+  .die::before { content: ""; position: absolute; left: 7px; top: 15px; width: 20px; height: 13px; border-radius: 50% 50% 40% 40%; background: rgba(244,236,220,.85); }
+  .die.en::before { left: 50%; top: 50%; width: 18px; height: 18px; border-radius: 50%; translate: -50% -50%; background: var(--e, var(--claw)); box-shadow: 0 0 0 1.5px rgba(255,255,255,.75); }
+
+  /* the attack zone: a seam between the Fields outside the Attack step, lanes inside it */
+  .seam { display: flex; align-items: center; gap: 8px; margin: -2px 4px; font: 700 8.5px/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+  .seam::before, .seam::after { content: ""; flex: 1; height: 0; border-top: 1.5px dashed color-mix(in srgb, var(--claw) 45%, transparent); }
+  .lanes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .lane { min-height: 112px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--cc) 35%, var(--border)); background: color-mix(in srgb, var(--cc) 6%, transparent); display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 4px; padding: 6px 4px; font: 600 9px/1 var(--sans); color: var(--dim); }
+  .lane.hot { border-color: var(--cc); background: color-mix(in srgb, var(--cc) 14%, transparent); }
+  .lane .tag { padding: 3px 6px; border-radius: 999px; background: var(--cc); color: #14151c; font: 700 8.5px/1 var(--sans); text-transform: uppercase; }
+  .lane .blk { width: 44px; height: 22px; border-radius: 7px; border: 1px dashed var(--border); display: grid; place-items: center; font-size: 8px; }
+  .front { border-radius: 14px; padding: 7px; background: color-mix(in srgb, var(--cc) 9%, var(--raised)); box-shadow: inset 0 2px 6px rgba(0,0,0,.28), inset 0 0 0 1px color-mix(in srgb, var(--cc) 30%, transparent); display: flex; flex-direction: column; gap: 7px; }
+  .front .mat { background: none; box-shadow: none; padding: 0; min-height: 48px; }
+  .front hr { width: 100%; margin: 0; border: 0; border-top: 1.5px dashed color-mix(in srgb, var(--cc) 40%, transparent); }
+
+  .glob { display: flex; gap: 6px; }
+  .glob span { flex: 1; min-height: 34px; display: flex; align-items: center; gap: 6px; padding: 0 9px; border-radius: 10px; border: 1px solid color-mix(in srgb, #45c592 45%, var(--border)); font: 700 10.5px/1 var(--sans); color: #fff; }
+  .glob span i { margin-left: auto; font: 700 9px/1 var(--sans); font-style: normal; color: var(--dim); }
+  .buy { display: flex; gap: 7px; }
+  .bc { position: relative; flex: 1; min-width: 0; height: 130px; overflow: hidden; border-radius: 13px; box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--e) 60%, var(--border)), 0 4px 0 color-mix(in srgb, var(--e) 45%, #000); margin-bottom: 4px; --e: var(--claw); }
+  .bc img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .bc .t { position: absolute; left: 0; right: 0; top: 0; display: flex; gap: 4px; padding: 5px 6px 14px 7px; background: linear-gradient(0deg, transparent, rgba(12,10,20,.72) 55%, rgba(12,10,20,.9)); color: #fff; font: 700 10.5px/1.25 var(--sans); }
+  .bc .t b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bc .t span { font: 400 13px/1 var(--display); }
+  .bc .w { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 6px 6px; background: linear-gradient(180deg, transparent, rgba(12,10,20,.78) 38%, rgba(12,10,20,.92)); color: rgba(255,255,255,.92); font: 400 9.5px/1.3 var(--sans); }
+  .bc .w p { margin: 0; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .bc .d { display: flex; gap: 3px; margin-bottom: 4px; }
+  .bc .d i { position: relative; width: 23px; height: 23px; border-radius: 22%; border: 1px solid rgba(255,255,255,.55); background: rgba(14,12,24,.42); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+  .move { align-self: center; margin: -3px 0; padding: 3px 9px; border-radius: 999px; border: 1.5px dashed #ffd45f; color: #ffd45f; font: 700 9.5px/1 var(--sans); letter-spacing: .04em; }
+
+  /* ---- joined version: the two attack zones meet in one strip between the Fields ---- */
+  .card { border-radius: 18px; padding: 10px 12px; background: var(--card); box-shadow: inset 0 0 0 1px var(--border); display: flex; flex-direction: column; gap: 8px; }
+  .card > * { flex: none; }
+  .side.open-b { border-radius: 18px 18px 0 0; padding-bottom: 8px; }
+  .side.open-t { border-radius: 0 0 18px 18px; padding-top: 8px; margin-top: 0; }
+  .strip { position: relative; margin: -8px 0; padding: 0 12px; background: linear-gradient(180deg, color-mix(in srgb, var(--top) 16%, #14151c) 0 50%, color-mix(in srgb, var(--bot) 16%, #14151c) 50% 100%); box-shadow: inset 1px 0 0 var(--border), inset -1px 0 0 var(--border); }
+  .strip::after { content: ""; position: absolute; left: 12px; right: 12px; top: 50%; border-top: 1.5px dashed rgba(255,248,236,.35); }
+  .strip.turn-top { box-shadow: inset 2px 0 0 var(--top), inset -2px 0 0 var(--top); }
+  .strip.turn-bot { box-shadow: inset 2px 0 0 var(--bot), inset -2px 0 0 var(--bot); }
+  .zlbl { display: block; padding: 5px 2px 4px; font: 400 10.5px/1 var(--display); letter-spacing: .08em; text-transform: uppercase; }
+  .zlbl.t { color: var(--top); } .zlbl.b { color: var(--bot); }
+  .lanes2 { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .ln { display: grid; grid-template-rows: 62px 62px; border-radius: 12px; border: 1.5px dashed rgba(255,248,236,.22); position: relative; }
+  .ln > span { display: grid; place-items: center; font: 600 8.5px/1.1 var(--sans); color: var(--dim); text-align: center; }
+  .ln.on { border: 2px solid #fff8ec; box-shadow: 0 0 0 3px rgba(255,248,236,.16), 0 0 14px rgba(255,248,236,.22); background: rgba(255,248,236,.05); }
+  .ln .chip { position: absolute; left: 50%; top: 50%; translate: -50% -50%; z-index: 2; padding: 3px 7px; border-radius: 999px; background: #fff8ec; color: #14151c; font: 700 8.5px/1 var(--sans); text-transform: uppercase; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,.5); }
+  .ln .num { position: absolute; right: 5px; bottom: 3px; font: 600 8px/1 var(--sans); color: var(--dim); }
+  .die.sm { width: 44px; height: 44px; } .die.sm s, .die.sm em { font-size: 13px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Dice Kingdom · mock-up, not built</span>
+    <h1>The play screen in table order</h1>
+    <p>Today your Reserve sits above your Field, so fielding a die sends it down the screen. This puts your side in the order it has on a table: Reserve nearest you, Field ahead of it, your attack zone ahead of that, then their attack zone and their Field. Screenshots are the game today; the others are a live mock of the proposal at 402×874. The yellow dashed tags are notes, not part of the design.</p>
+  </header>
+
+  <section>
+    <h2>Main step: buying and fielding</h2>
+    <div class="pair">
+      <figure><img src="art/now-main.png" alt="Today's Main step: Buy and Reserve above your panel and Field"><figcaption><b>Today.</b> Buy and Reserve are above your panel; your Field is at the bottom, off screen here. Fielding moves a die down.</figcaption></figure>
+      <figure><div class="phone"><div class="hd"><div class="rail"><i class="done"></i><i class="done"></i><b>Main</b><i></i><i></i><u></u></div><div class="step"><b>Buy &amp; field</b><span>Your turn</span><em>1/1</em></div></div><div class="scroll"><div class="side them">
+  <div class="plate"><span class="ic"></span><span class="who"><small>Opponent</small><b>Armadillo</b></span><span class="life">20</span></div>
+  <div class="chips"><span><b>5</b>used</span><span><b>0</b>prep</span><span><b>2</b>out</span><span><b>1</b>bag</span><span class="btn">Roster</span></div>
+  <div class="lbl">Their field</div>
+  <div class="mat"><span class="die them"><s>3</s><em>9</em></span><span class="die them"><s>1</s><em>2</em></span><span class="slot"></span><span class="slot"></span><span class="slot"></span><span class="slot"></span></div>
+</div><div class="seam">Attack zone</div><div class="side turn"><div class="lbl">Your field</div><div class="mat"><span class="die"><s>2</s><em>3</em></span><span class="slot"></span><span class="slot"></span><span class="slot"></span><span class="slot"></span><span class="slot"></span></div><span class="move">▲ fielding moves a die up, from Reserve to Field</span></div><div class="card"><div class="lbl" style="--cc:var(--dim)">Reserve</div><div class="mat plain"><span class="die"><s>1</s><em>1</em></span><span class="die en"></span><span class="die en"></span><span class="die en" style="--e:var(--wing)"></span></div><div class="buy"><div class="bc"><img src="art/wolverine.webp" alt=""><div class="t"><b>Wolverine</b><span>4</span></div><div class="w"><div class="d"><i></i><i></i><i></i></div><p><b>Fast</b>. <b>On Attack</b>: deal 1 damage to the opponent directly.</p></div></div><div class="bc" style="--e:var(--wing)"><img src="art/mountain-goat.webp" alt=""><div class="t"><b>Mountain Goat</b><span>3</span></div><div class="w"><div class="d"><i></i><i></i><i></i></div><p><b>On Attack</b>: draw a die into your Prep Area.</p></div></div><div class="bc"><img src="art/honey-badger.webp" alt=""><div class="t"><b>Honey Badger</b><span>2</span></div><div class="w"><div class="d"><i></i><i></i><i></i></div><p><b>On Field</b>: deal 1 damage to a target creature.</p></div></div></div></div><div class="glob"><span>Anger Issues<i>USE</i></span><span>Archnemesis<i>USE</i></span></div><div class="side turn">
+  <div class="chips"><span><b>2</b>used</span><span><b>0</b>prep</span><span><b>1</b>out</span><span><b>4</b>bag</span><span class="btn">Full roster</span></div>
+  <div class="plate"><span class="ic"></span><span class="who"><small>You · playing</small><b>Wolf</b></span><span class="life">20</span></div>
+</div></div><div class="bar"><span class="quiet">Skip Attack</span><span class="go">Done buying<small>enter the Attack Step</small></span></div></div><figcaption><b>Proposed.</b> The two Fields face each other, with the attack zones folded down to a seam between them. Your Reserve and the buy cards sit under your Field, then the Global abilities, and your nameplate closes the screen.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>Attack step, your turn</h2>
+    <div class="pair">
+      <figure><img src="art/now-attack.png" alt="Today's Attack step: the Attack Zone card between the two panels"><figcaption><b>Today.</b> The Attack Zone is its own card between the two panels, with the Global abilities above it.</figcaption></figure>
+      <figure><div class="phone"><div class="hd"><div class="rail"><i class="done"></i><i class="done"></i><i class="done"></i><b>Attack</b><i></i><u></u></div><div class="step"><b>Declare attackers</b><span>Your turn</span><em>1/3</em></div></div><div class="scroll"><div class="side them open-b">
+  <div class="plate"><span class="ic"></span><span class="who"><small>Opponent</small><b>Armadillo</b></span><span class="life">20</span></div>
+  <div class="chips"><span><b>5</b>used</span><span><b>0</b>prep</span><span><b>2</b>out</span><span><b>1</b>bag</span><span class="btn">Roster</span></div>
+  <div class="lbl">Their field</div>
+  <div class="mat"><span class="die them"><s>3</s><em>9</em></span><span class="die them"><s>1</s><em>2</em></span><span class="slot"></span><span class="slot"></span><span class="slot"></span><span class="slot"></span></div>
+</div><div class="strip turn-bot" style="--top:var(--eye);--bot:var(--claw)"><span class="zlbl t">Their attack zone</span><div class="lanes2"><div class="ln on"><span>no blocker</span><span class="chip">2 to face</span><span><span class="die sm"><s>2</s><em>3</em></span></span><span class="num">01</span></div><div class="ln"><span></span><span></span><span class="num">02</span></div><div class="ln"><span></span><span></span><span class="num">03</span></div><div class="ln"><span></span><span></span><span class="num">04</span></div></div><span class="zlbl b">Your attack zone</span></div><div class="side turn open-t"><div class="lbl">Your field</div><div class="mat"><span class="die"><s>1</s><em>1</em></span><span class="slot"></span><span class="slot"></span><span class="slot"></span><span class="slot"></span><span class="slot"></span></div><span class="move">▲ your attacker steps up into your attack zone</span></div><div class="glob"><span>Anger Issues<i>USE</i></span><span>Archnemesis<i>USE</i></span></div><div class="side turn">
+  <div class="chips"><span><b>2</b>used</span><span><b>0</b>prep</span><span><b>3</b>out</span><span><b>4</b>bag</span><span class="btn">Full roster</span></div>
+  <div class="plate"><span class="ic"></span><span class="who"><small>You · playing</small><b>Wolf</b></span><span class="life">20</span></div>
+</div></div><div class="bar"><span class="go">Declare attackers (1)</span></div></div><figcaption><b>Proposed.</b> The seam opens into one strip that joins the two Fields. Its top half is their attack zone (purple, continuing their frame) and its bottom half is yours (orange, continuing your frame); the dashed line is where they meet. Each lane is one box across both halves: your attacker in your half, their blocker's place in theirs. A lane with a fight in it gets the bright outline.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>Attack step, their turn</h2>
+    <div class="pair">
+      <figure><div class="phone"><div class="hd"><div class="rail"><i class="done"></i><i class="done"></i><i class="done"></i><b>Attack</b><i></i><u></u></div><div class="step"><b>Assign blockers</b><span style="background:#55299a;color:#fff">Their turn</span><em>2/3</em></div></div><div class="scroll"><div class="side them turn open-b">
+  <div class="plate"><span class="ic"></span><span class="who"><small>Opponent · playing</small><b>Armadillo</b></span><span class="life">20</span></div>
+  <div class="chips"><span><b>5</b>used</span><span><b>0</b>prep</span><span><b>2</b>out</span><span><b>1</b>bag</span><span class="btn">Roster</span></div>
+  <div class="lbl">Their field</div>
+  <div class="mat"><span class="die them"><s>1</s><em>2</em></span><span class="slot"></span><span class="slot"></span><span class="slot"></span><span class="slot"></span><span class="slot"></span></div>
+</div><div class="strip turn-top" style="--top:var(--eye);--bot:var(--claw)"><span class="zlbl t">Their attack zone</span><div class="lanes2"><div class="ln on"><span><span class="die them sm"><s>3</s><em>9</em></span></span><span class="chip">blocked</span><span><span class="die sm"><s>1</s><em>1</em></span></span><span class="num">01</span></div><div class="ln on"><span><span class="die them sm"><s>1</s><em>2</em></span></span><span class="chip">1 to face</span><span>no blocker</span><span class="num">02</span></div><div class="ln"><span></span><span></span><span class="num">03</span></div><div class="ln"><span></span><span></span><span class="num">04</span></div></div><span class="zlbl b">Your attack zone</span></div><div class="side open-t"><div class="lbl">Your field</div><div class="mat"><span class="die"><s>2</s><em>3</em></span><span class="slot"></span><span class="slot"></span><span class="slot"></span><span class="slot"></span><span class="slot"></span></div><span class="move">▼ their attackers come down into their zone · ▲ your blocker steps up into yours</span></div><div class="glob"><span>Anger Issues<i>USE</i></span><span>Archnemesis<i>USE</i></span></div><div class="side">
+  <div class="chips"><span><b>2</b>used</span><span><b>0</b>prep</span><span><b>1</b>out</span><span><b>4</b>bag</span><span class="btn">Full roster</span></div>
+  <div class="plate"><span class="ic"></span><span class="who"><small>You</small><b>Wolf</b></span><span class="life">20</span></div>
+</div></div><div class="bar"><span class="go">Blockers set</span></div></div><figcaption><b>Proposed.</b> The same strip, roles swapped: their attackers come down into their half, your blockers step up into yours. A die never leaves its owner's half, which is what makes "a die on the Field" cover it. Lane 1 is blocked; lane 2 is going through.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>What moved</h2>
+    <ol>
+      <li><b>Your Field</b> moved from the bottom of the screen to the middle, directly under their Field.</li>
+      <li><b>The attack zones</b> are a thin seam between the Fields outside the Attack step. During it they open into one strip joined to both Fields: their zone on top, yours below, lined up lane for lane.</li>
+      <li><b>A lane is still one box</b> holding the attacker and its blocker, so the fight reads as a unit; the box is cream-white, belonging to neither side.</li>
+      <li><b>Reserve and the buy cards</b> moved below your Field, nearest your thumb.</li>
+      <li><b>The Global abilities</b> moved from between the two panels to under the buy cards.</li>
+      <li><b>Your nameplate and piles</b> moved to the bottom, mirroring the opponent's at the top.</li>
+    </ol>
+  </section>
+</div>
