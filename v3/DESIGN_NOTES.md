@@ -5742,3 +5742,42 @@ nameplate - and so your life - often sits under the bottom bar until
 you scroll; the edge flash on a hit still fires. Checked at 402x874,
 375x667 and 320x568, dark and light, at the draw, roll, buy, both
 players' attacks and the opponent's turn.
+
+## 2026-11-18 - Play screen in table order, step 2: the attack strip
+
+The Attack Zone card is now two attack zones that meet
+(`.dkm-attack-strip`): the opponent's half on top, tinted purple and
+joined to their panel; yours below, tinted orange and joined to your
+Field; a dashed line where they meet. The panels square off the corners
+that face it (`MatCard joined`), and the attacker's colour runs down the
+strip's edges. Each lane is still one tappable box across both halves -
+same handlers, same dice order - and once it has an attacker it gets the
+fight box: a solid ink outline round attacker and blocker together
+(user: "we still need a box around the lane highlighting attackers and
+blockers, even though they are in their owner's zones"). Ink rather
+than a side's colour, so it reads as the fight's, white on dark and
+near-black on light. The "to face" and reflect chips sit on the meeting
+line.
+
+Also: the targeted-lane outline and "tap a lane" hint only show while
+you're declaring attackers (they showed on the opponent's turn too).
+An empty lane's attacker placeholder takes the attacker's colour.
+
+Found while checking: the lanes' own stacking layer (to sit above the
+meeting line) painted the lane dice over the sticky bottom bar at
+320x568. `isolation: isolate` on the strip keeps it inside; checked by
+probing the bar's area with the strip scrolled under it (six lane
+elements on top without it, none with it).
+
+Checked with a new `FIGHT=1` mode in `glowup-check.js` (declares up to
+three attackers on your turn, blocks with one on theirs): two attackers
+declared, their two attackers with one blocked (KO meter showing), and
+the action window after blocks, at all three sizes in both themes.
+`FIELD_CLONE` can't be used for this - its dice are display-only and
+the server rejects them as attackers.
+
+Step 3 of the plan needed nothing more: the Main step's height matches
+the mock (your nameplate under the bar until you scroll), and the
+opponent's tray sits above the seam on their turn. On a 375x667 phone
+your Field is below the fold during your Attack step, so declaring
+means a scroll down first; at 402x874 it is in view.

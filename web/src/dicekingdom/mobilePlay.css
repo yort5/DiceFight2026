@@ -1134,6 +1134,139 @@
   border-top: 1.5px dashed color-mix(in srgb, var(--dkm-ink-dim) 55%, transparent);
 }
 
+/* ---- The attack strip: two attack zones that meet ---- */
+
+/* Each player's attack zone is the front of their own Field (user,
+   2026-11-17) - so the strip is two halves: theirs on top continuing
+   their panel, yours below continuing your Field. A die never leaves
+   its owner's half. */
+.dicekingdom.dk-mobile .dkm-attack-strip {
+  position: relative;
+  /* Keeps the lanes' own layering (above the meeting line) inside the
+     strip: without it the lane dice painted over the sticky bottom bar. */
+  isolation: isolate;
+  /* Cancels .dkm-scroll's gap, so the strip touches both panels. */
+  margin: -9px 0;
+  padding: 0 12px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--eye) 14%, var(--dkm-raised)) 0 50%,
+    color-mix(in srgb, var(--claw) 14%, var(--dkm-raised)) 50% 100%
+  );
+  box-shadow: inset 1px 0 0 var(--dkm-border), inset -1px 0 0 var(--dkm-border);
+}
+/* The attacker's side carries the "whose turn" ring down the strip's edges. */
+.dicekingdom.dk-mobile .dkm-attack-strip.they-attack {
+  box-shadow: inset 2px 0 0 var(--eye), inset -2px 0 0 var(--eye);
+}
+.dicekingdom.dk-mobile .dkm-attack-strip.you-attack {
+  box-shadow: inset 2px 0 0 var(--claw), inset -2px 0 0 var(--claw);
+}
+/* Where the two zones meet. */
+.dicekingdom.dk-mobile .dkm-attack-strip::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 50%;
+  border-top: 1.5px dashed color-mix(in srgb, var(--dkm-ink) 35%, transparent);
+  pointer-events: none;
+}
+/* Same height top and bottom, so the strip's midline is the lanes' midline. */
+.dicekingdom.dk-mobile .dkm-zone-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 24px;
+}
+.dicekingdom.dk-mobile .dkm-zone-label {
+  font: 400 10.5px/1 var(--display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.dicekingdom.dk-mobile .dkm-zone-row.top .dkm-zone-label {
+  color: var(--eye);
+}
+.dicekingdom.dk-mobile .dkm-zone-row.bottom .dkm-zone-label {
+  color: var(--claw);
+}
+/* The panels either side square off the corners that face the strip. */
+.dicekingdom.dk-mobile .dkm-mat.dkm-mat-joined:not(.mine) {
+  border-radius: 18px 18px 0 0;
+}
+.dicekingdom.dk-mobile .dkm-mat.dkm-mat-joined.dkm-mat-field {
+  border-radius: 0 0 18px 18px;
+}
+
+/* A lane is one box across both zones. */
+.dicekingdom.dk-mobile .dkm-attack-strip .dkm-lanes {
+  position: relative;
+  z-index: 1;
+}
+.dicekingdom.dk-mobile .dkm-attack-strip .dkm-lane {
+  position: relative;
+  display: grid;
+  grid-template-rows: minmax(64px, 1fr) minmax(64px, 1fr);
+  gap: 0;
+  padding: 4px 3px;
+  border: 1.5px dashed color-mix(in srgb, var(--dkm-ink) 22%, transparent);
+  border-radius: 12px;
+  background: transparent;
+}
+.dicekingdom.dk-mobile .dkm-attack-strip .dkm-lane-half.top {
+  justify-content: flex-end;
+  padding-bottom: 12px;
+}
+.dicekingdom.dk-mobile .dkm-attack-strip .dkm-lane-half.bottom {
+  justify-content: flex-start;
+  padding-top: 12px;
+}
+/* The fight box. Ink, not orange or purple: it belongs to the fight,
+   not to a side. */
+.dicekingdom.dk-mobile .dkm-attack-strip .dkm-lane.engaged {
+  border: 2px solid var(--dkm-ink);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--dkm-ink) 16%, transparent);
+  background: color-mix(in srgb, var(--dkm-ink) 5%, transparent);
+}
+/* The lane your next attacker goes to keeps its orange edge - only on
+   your turn, when there is something to target. */
+.dicekingdom.dk-mobile .dkm-attack-strip.you-attack .dkm-lane.targeted {
+  border-color: var(--claw);
+}
+/* An empty lane's attacker placeholder takes the attacker's colour. */
+.dicekingdom.dk-mobile .dkm-attack-strip.they-attack .dkm-lane-tile.attacker-empty {
+  border-color: color-mix(in srgb, var(--eye) 55%, transparent);
+}
+/* An unblockable attacker keeps its own double gold edge. */
+.dicekingdom.dk-mobile .dkm-attack-strip .dkm-lane.unblockable {
+  border: 3px double oklch(0.85 0.15 88);
+}
+/* The chips sit on the meeting line. */
+.dicekingdom.dk-mobile .dkm-lane-mid {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 2;
+  translate: -50% -50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.dicekingdom.dk-mobile .dkm-attack-strip .dkm-lane-chip:not(.reflect) {
+  border-radius: 999px;
+  background: var(--dkm-ink);
+  color: var(--dkm-card);
+  white-space: nowrap;
+}
+.dicekingdom.dk-mobile .dkm-attack-strip .dkm-lane-number {
+  position: absolute;
+  right: 5px;
+  bottom: 3px;
+  font-size: 8px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .dicekingdom.dk-mobile .dkm-bottom-bar .dkm-primary-btn,
   .dicekingdom.dk-mobile .dkm-life-hit,

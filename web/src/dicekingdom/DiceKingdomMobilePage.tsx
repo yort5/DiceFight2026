@@ -747,7 +747,11 @@ function MatCard({
   onUsePower,
   reserveInTray,
   part = "all",
+  joined = false,
 }: {
+  /** The attack zones are open against this panel (the Attack step), so
+   *  the corners facing them square off and the two read as one piece. */
+  joined?: boolean;
   /** Which part of the panel to draw (table order, 2026-11-17): your
    *  side is split, so your Field sits up against the attack zone and
    *  your nameplate closes the screen. "all" for the opponent's panel. */
@@ -974,7 +978,7 @@ function MatCard({
 
   // Your Field alone, right up against the attack zone (table order).
   if (part === "field") {
-    return <div className={`dkm-mat mine dkm-mat-field${turnClass}`} style={style}>{fieldBlock}</div>;
+    return <div className={`dkm-mat mine dkm-mat-field${turnClass}${joined ? " dkm-mat-joined" : ""}`} style={style}>{fieldBlock}</div>;
   }
   // Your piles, then your nameplate last: it closes the screen, mirroring
   // the opponent's at the top.
@@ -988,7 +992,7 @@ function MatCard({
     );
   }
   return (
-    <div className={`dkm-mat${mine ? " mine" : ""}${turnClass}${bigHit}`} style={style}>
+    <div className={`dkm-mat${mine ? " mine" : ""}${turnClass}${bigHit}${joined ? " dkm-mat-joined" : ""}`} style={style}>
       {nameplate}
       {passiveText}
       {pilesBlock}
@@ -1434,21 +1438,30 @@ function AttackLanesCard({
 }) {
   const totalDeclared = attackersByLane.reduce((n, l) => n + l.length, 0);
   const preview = combatPreview(attackersByLane, blockersByAttacker);
+  // Two attack zones that meet (table order, 2026-11-17): each player's
+  // is the front of their own Field, so the opponent's half is on top,
+  // joined to their panel, and yours below, joined to your Field ("my
+  // attack zone is part of my field, but my opponent's attack zone is
+  // part of their field"). A lane is still one box across both halves,
+  // drawn round attacker and blocker together once it has a fight in it
+  // ("we still need a box around the lane highlighting attackers and
+  // blockers, even though they are in their owner's zones").
   return (
-    <div className="dkm-card">
-      <div className="dkm-card-head">
-        <span className="dkm-card-title accent">Attack Zone</span>
+    <div className={`dkm-attack-strip ${isYourTurn ? "you-attack" : "they-attack"}`}>
+      <div className="dkm-zone-row top">
+        <span className="dkm-zone-label">Their attack zone</span>
         <span className="dkm-card-hint">
           {closedLanes.some(Boolean)
             ? "a lane stacks only when another has as many"
-            : totalDeclared > 0 ? `lane ${laneSel + 1} targeted` : "tap a lane to target it"}
+            : !isYourTurn || step !== "select-attackers" ? "" : totalDeclared > 0 ? `lane ${laneSel + 1} targeted` : "tap a lane to target it"}
         </span>
       </div>
       <div className="dkm-lanes">
         {Array.from({ length: LANE_COUNT }, (_, lane) => {
           const attackers = attackersByLane[lane] ?? [];
           const closed = closedLanes[lane] ?? false;
-          const targeted = lane === laneSel && !closed;
+          // Only while you're declaring: otherwise there's nothing to target.
+          const targeted = isYourTurn && step === "select-attackers" && lane === laneSel && !closed;
           const blockers = laneBlockersOf(attackers, blockersByAttacker);
           const tileSize = attackers.length <= 1 ? 52 : attackers.length === 2 ? 42 : 34;
           // Direct feedback (2026-09-17): "get rid of '1 v 1'... it's not
@@ -1488,7 +1501,7 @@ function AttackLanesCard({
               data-lane={lane}
               aria-disabled={closed || undefined}
               title={closed ? `Needs another lane with ${attackers.length} attacker${attackers.length === 1 ? "" : "s"} first` : undefined}
-              className={`dkm-lane${targeted ? " targeted" : ""}${closed ? " closed" : ""}${laneUnblockable ? " unblockable" : ""}`}
+              className={`dkm-lane${attackers.length > 0 ? " engaged" : ""}${targeted ? " targeted" : ""}${closed ? " closed" : ""}${laneUnblockable ? " unblockable" : ""}`}
               onClick={tapLane}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") tapLane();
@@ -1512,7 +1525,7 @@ function AttackLanesCard({
                   backwards. */}
               {isYourTurn ? (
                 <>
-                  <div className="dkm-lane-blockers">
+                  <div className="dkm-lane-blockers dkm-lane-half top">
                     {/* Direct feedback (2026-09-17): "there is no visual
                         [cue] to highlight who is the aggressor and who is
                         defending" - a plain text role caption per section,
@@ -1524,23 +1537,26 @@ function AttackLanesCard({
                       <LaneDie key={b.id} die={b} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === b.id} onTap={() => onTapBlocker(attackers[0]?.id ?? "", b.id)} preview={preview.get(b.id)} targeting={targeting} />
                     ))}
                   </div>
-                  {chipText && (
-                    <span
-                      className="dkm-lane-chip tappable"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onTapChip(lane);
-                      }}
-                    >
-                      {chipText}
-                    </span>
-                  )}
-                  {reflected > 0 && (
-                    <span className="dkm-lane-chip reflect" title="Damage a reflecting creature (Rhinoceros) takes is dealt to its opponent">
-                      ↩ {reflected} reflect
-                    </span>
-                  )}
-                  <div className="dkm-lane-attackers">
+                  {/* On the line where the two attack zones meet. */}
+                  <div className="dkm-lane-mid">
+                    {chipText && (
+                      <span
+                        className="dkm-lane-chip tappable"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onTapChip(lane);
+                        }}
+                      >
+                        {chipText}
+                      </span>
+                    )}
+                    {reflected > 0 && (
+                      <span className="dkm-lane-chip reflect" title="Damage a reflecting creature (Rhinoceros) takes is dealt to its opponent">
+                        ↩ {reflected} reflect
+                      </span>
+                    )}
+                  </div>
+                  <div className="dkm-lane-attackers dkm-lane-half bottom">
                     {attackers.length > 0 && <span className="dkm-lane-role atk">Attacking</span>}
                     {attackers.map((a) => (
                       <LaneDie key={a.id} die={a} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === a.id} onTap={() => onTapAttacker(a.id)} preview={preview.get(a.id)} targeting={targeting} />
@@ -1550,30 +1566,33 @@ function AttackLanesCard({
                 </>
               ) : (
                 <>
-                  <div className="dkm-lane-attackers">
+                  <div className="dkm-lane-attackers dkm-lane-half top">
                     {attackers.length > 0 && <span className="dkm-lane-role atk">Attacking</span>}
                     {[...attackers].reverse().map((a) => (
                       <LaneDie key={a.id} die={a} cardsById={cardsById} you={you} size={tileSize} picked={selectedId === a.id} onTap={() => onTapAttacker(a.id)} preview={preview.get(a.id)} targeting={targeting} />
                     ))}
                     {attackers.length === 0 && <div className="dkm-lane-tile empty attacker-empty" />}
                   </div>
-                  {chipText && (
-                    <span
-                      className="dkm-lane-chip tappable"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onTapChip(lane);
-                      }}
-                    >
-                      {chipText}
-                    </span>
-                  )}
-                  {reflected > 0 && (
-                    <span className="dkm-lane-chip reflect" title="Damage a reflecting creature (Rhinoceros) takes is dealt to its opponent">
-                      ↩ {reflected} reflect
-                    </span>
-                  )}
-                  <div className="dkm-lane-blockers">
+                  {/* On the line where the two attack zones meet. */}
+                  <div className="dkm-lane-mid">
+                    {chipText && (
+                      <span
+                        className="dkm-lane-chip tappable"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onTapChip(lane);
+                        }}
+                      >
+                        {chipText}
+                      </span>
+                    )}
+                    {reflected > 0 && (
+                      <span className="dkm-lane-chip reflect" title="Damage a reflecting creature (Rhinoceros) takes is dealt to its opponent">
+                        ↩ {reflected} reflect
+                      </span>
+                    )}
+                  </div>
+                  <div className="dkm-lane-blockers dkm-lane-half bottom">
                     {attackers.length > 0 && <span className="dkm-lane-role def">Blocking</span>}
                     {laneUnblockable && blockers.length === 0 && <span className="dkm-lane-cant">can't be blocked</span>}
                     {blockers.map((b) => (
@@ -1592,6 +1611,9 @@ function AttackLanesCard({
             </div>
           );
         })}
+      </div>
+      <div className="dkm-zone-row bottom">
+        <span className="dkm-zone-label">Your attack zone</span>
       </div>
     </div>
   );
@@ -3334,6 +3356,7 @@ export function DiceKingdomMobilePage() {
           onInspectPileDie={onInspectPileDie}
           targeting={targeting}
           reserveInTray={!isYourTurn && phase === "roll" && trayRolled}
+          joined={phase === "attack"}
         />
 
         {!isYourTurn && stage}
@@ -3369,6 +3392,7 @@ export function DiceKingdomMobilePage() {
         <MatCard
           mine
           part="field"
+          joined={phase === "attack"}
           onUsePower={
             youPlayer.championPowerUsable && game.priorityPlayerId === you && !game.pendingChoice && !busy
               ? () => run(() => api.championPower(game.gameId))
