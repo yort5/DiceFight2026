@@ -1083,6 +1083,57 @@
     0 4px 6px -5px rgba(0, 0, 0, 0.5);
 }
 
+/* ---- Table order (v3/PLAY_SCREEN_TABLE_ORDER_PLAN.md, 2026-11-17) ---- */
+
+/* Your side is two panels now: your Field up against the attack zones,
+   and your piles and nameplate closing the screen. The plate's head
+   swaps its two rows so the nameplate is the very last line. */
+.dicekingdom.dk-mobile .dkm-mat-plate .dkm-mat-head {
+  margin: 10px 0 0;
+}
+.dicekingdom.dk-mobile .dkm-mat-plate .dkm-plate-row {
+  grid-row: 1;
+}
+.dicekingdom.dk-mobile .dkm-mat-plate .dkm-plate-icon,
+.dicekingdom.dk-mobile .dkm-mat-plate .dkm-plate-who,
+.dicekingdom.dk-mobile .dkm-mat-plate .dkm-mat-life {
+  grid-row: 2;
+}
+/* The pile grid's top hairline divided it from the head above it; the
+   head is below now. */
+.dicekingdom.dk-mobile .dkm-mat-plate .dkm-pile-grid {
+  padding-top: 0;
+  border-top: 0;
+  margin-bottom: 0;
+}
+/* The Field panel is just the label and the mat. */
+.dicekingdom.dk-mobile .dkm-mat-field .dkm-fieldmat {
+  margin-bottom: 0;
+}
+/* The phase card is empty in the Attack step and on the opponent's
+   Main step - no double gap where it would be. */
+.dicekingdom.dk-mobile .dkm-phase-shell:has(> .dkm-phase-stage:empty) {
+  display: none;
+}
+/* The attack zones, folded away outside the Attack step: a seam between
+   the two Fields. */
+.dicekingdom.dk-mobile .dkm-attack-seam {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -2px 4px;
+  font: 700 8.5px/1 "Work Sans", var(--sans);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dkm-ink-dim);
+}
+.dicekingdom.dk-mobile .dkm-attack-seam::before,
+.dicekingdom.dk-mobile .dkm-attack-seam::after {
+  content: "";
+  flex: 1;
+  border-top: 1.5px dashed color-mix(in srgb, var(--dkm-ink-dim) 55%, transparent);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .dicekingdom.dk-mobile .dkm-bottom-bar .dkm-primary-btn,
   .dicekingdom.dk-mobile .dkm-life-hit,

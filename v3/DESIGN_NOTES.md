@@ -5723,3 +5723,22 @@ still belong to their owners"); and a lane keeps one box round attacker
 and blocker ("the attack and field blend together a bit too much"). The
 plan keeps today's one-box-per-lane structure and styles the strip as
 two joined halves, instead of splitting the lanes into two components.
+
+## 2026-11-18 - Play screen in table order, step 1: the column reordered
+
+Building `v3/PLAY_SCREEN_TABLE_ORDER_PLAN.md` (user: "Let's get to
+work!"). The scroll column now reads their panel, the phase card when
+it's their turn (their tray), the attack zones, your Field, the phase
+card when it's yours (tray, Buy with your Reserve), the Global
+abilities, then your piles and nameplate. `MatCard` takes
+`part="field" | "plate"` to draw your side as two panels; the
+opponent's is unchanged. Outside the Attack step the attack zones are a
+dashed "Attack zone" seam between the two Fields; the Attack Zone card
+itself is unchanged until step 2.
+
+Fielding a die now flies it up from the Reserve onto your Field
+(checked frame by frame at 402x1500). As the plan warned, your
+nameplate - and so your life - often sits under the bottom bar until
+you scroll; the edge flash on a hit still fires. Checked at 402x874,
+375x667 and 320x568, dark and light, at the draw, roll, buy, both
+players' attacks and the opponent's turn.

@@ -746,7 +746,12 @@ function MatCard({
   targeting,
   onUsePower,
   reserveInTray,
+  part = "all",
 }: {
+  /** Which part of the panel to draw (table order, 2026-11-17): your
+   *  side is split, so your Field sits up against the attack zone and
+   *  your nameplate closes the screen. "all" for the opponent's panel. */
+  part?: "all" | "field" | "plate";
   /** Their rolled Reserve dice are up in the tray right now (their Roll &
    *  Reroll step), so the reserve row leaves them out - see below. */
   reserveInTray?: boolean;
@@ -804,8 +809,10 @@ function MatCard({
   const turnClass = isActivePlayer ? " active" : "";
   const ChampIcon = player.champion ? CHAMPION_ICONS[player.champion.id] : null;
 
-  return (
-    <div className={`dkm-mat${mine ? " mine" : ""}${turnClass}${lifeDelta && lifeDelta.n <= -5 ? " dkm-mat-big-hit" : ""}`} style={{ ["--cc" as string]: accent }}>
+  const bigHit = lifeDelta && lifeDelta.n <= -5 ? " dkm-mat-big-hit" : "";
+  const style = { ["--cc" as string]: accent };
+  const nameplate = (
+    <>
       {/* A nameplate (2026-11-12 glow-up): Champion tile, who, life on the
           first row; Power, energy and the piles on the second. */}
       <div className="dkm-mat-head">
@@ -855,7 +862,10 @@ function MatCard({
           </span>
         </div>
       </div>
-
+    </>
+  );
+  const passiveText = (
+    <>
       {/* Real gap, direct feedback (2026-09-17): "once the game is in
           session, I can't tell what either myself or my opponent picked
           as champion" - the champion badge above names WHO, this names
@@ -864,7 +874,10 @@ function MatCard({
           example: a die reading a little high/low on attack or defense
           because of the OTHER player's champion, not yours). */}
       {championOpen && player.champion && <p className="dkm-champion-passive"><KeywordText text={player.champion.passiveText} /></p>}
-
+    </>
+  );
+  const pilesBlock = (
+    <>
       {!expandable || expanded ? (
         <div className={expandable ? "dkm-mat-expanded" : undefined}>
           <div className="dkm-pile-grid">
@@ -914,31 +927,13 @@ function MatCard({
           onInspect={onInspectPileDie}
         />
       )}
-
-      {/* The opponent's rolled Reserve dice, so a creature they field visibly
-          comes OUT of somewhere (it used to appear from nowhere - only their
-          energy total showed, in the header). Your own reserve lives in the
-          Buy card on your turn. While their tray is up showing those same
-          dice mid-roll, the row stays away (user, 2026-11-13: the dice sat
-          in two places during the roll) - the tray holds them, and when the
-          step ends they fly from the tray down into this row. A 3D throw can
-          outlast that, so the tiles also take the roll's spin: each stays
-          hidden until its thrown die lands on it. */}
-      {!mine && !reserveInTray && rolledReserve.length > 0 && (
-        <>
-          <span className="dkm-field-label">Their reserve</span>
-          <div className="dkm-tile-row wrap" data-region="opp-reserve">
-            {rolledReserve.map((d) => (
-              <DTile key={d.id} die={d} cardsById={cardsById} size={40} mine={false} spin={spins[d.id]} turnOffset={turnOffsets[d.id]}
-                clickable={!targeting} picked={selectedId === d.id} onClick={() => onTapDie(d.id)} />
-            ))}
-          </div>
-        </>
-      )}
-
+    </>
+  );
+  const fieldBlock = (
+    <>
       {/* A recessed playmat (2026-11-12 glow-up): an empty one shows
           slots waiting for dice. */}
-      <span className="dkm-field-label">{mine ? "Field" : "Their field"}</span>
+      <span className="dkm-field-label">{mine ? "Your field" : "Their field"}</span>
       {/* --slot is the die size below: the mat draws a dashed slot at
           every place a die can sit, and the dice cover the taken ones. */}
       <div className="dkm-tile-row wrap dkm-fieldmat dkm-fieldmat-slots" style={{ ["--slot" as string]: `${mine ? 50 : 48}px` }} data-region={mine ? "field-mine" : "field-opp"}>
@@ -974,6 +969,52 @@ function MatCard({
           </div>
         </>
       )}
+    </>
+  );
+
+  // Your Field alone, right up against the attack zone (table order).
+  if (part === "field") {
+    return <div className={`dkm-mat mine dkm-mat-field${turnClass}`} style={style}>{fieldBlock}</div>;
+  }
+  // Your piles, then your nameplate last: it closes the screen, mirroring
+  // the opponent's at the top.
+  if (part === "plate") {
+    return (
+      <div className={`dkm-mat mine dkm-mat-plate${turnClass}${bigHit}`} style={style}>
+        {pilesBlock}
+        {passiveText}
+        {nameplate}
+      </div>
+    );
+  }
+  return (
+    <div className={`dkm-mat${mine ? " mine" : ""}${turnClass}${bigHit}`} style={style}>
+      {nameplate}
+      {passiveText}
+      {pilesBlock}
+
+      {/* The opponent's rolled Reserve dice, so a creature they field visibly
+          comes OUT of somewhere (it used to appear from nowhere - only their
+          energy total showed, in the header). Your own reserve lives in the
+          Buy card on your turn. While their tray is up showing those same
+          dice mid-roll, the row stays away (user, 2026-11-13: the dice sat
+          in two places during the roll) - the tray holds them, and when the
+          step ends they fly from the tray down into this row. A 3D throw can
+          outlast that, so the tiles also take the roll's spin: each stays
+          hidden until its thrown die lands on it. */}
+      {!mine && !reserveInTray && rolledReserve.length > 0 && (
+        <>
+          <span className="dkm-field-label">Their reserve</span>
+          <div className="dkm-tile-row wrap" data-region="opp-reserve">
+            {rolledReserve.map((d) => (
+              <DTile key={d.id} die={d} cardsById={cardsById} size={40} mine={false} spin={spins[d.id]} turnOffset={turnOffsets[d.id]}
+                clickable={!targeting} picked={selectedId === d.id} onClick={() => onTapDie(d.id)} />
+            ))}
+          </div>
+        </>
+      )}
+
+      {fieldBlock}
     </div>
   );
 }
@@ -3152,6 +3193,76 @@ export function DiceKingdomMobilePage() {
   const rosterCards = rosterRowsFor(unpurchasedByCard);
   const oppRosterCards = rosterRowsFor(oppUnpurchasedByCard);
 
+  // The phase card (tray, Buy with your Reserve, end of turn) shows the
+  // ACTIVE player's dice, so it sits on their side of the attack zones:
+  // under your Field on your turn, above the seam on theirs (table order,
+  // 2026-11-17 - "when I fielded characters - they moved down from the
+  // screen, and it felt like they should move up").
+  // Keyed by phase so React remounts this on every phase change,
+  // replaying dkPhaseIn (dicekingdom.css) - a plain settle-in rather than
+  // a hard cut when the view swaps to a new phase's card, direct feedback
+  // (2026-09-16): "...then shrink them into their destination."
+  // (runWithReveal above is what makes sure this swap only happens once a
+  // reroll's tumble has actually been seen, not the instant the server
+  // responds.)
+  const stage = (
+    <div ref={stageShellRef} className="dkm-phase-shell">
+    <div key={phase} className="dkm-phase-stage">
+      {phase === "clear" && (
+        <TrayCard
+          title={isYourTurn ? "Draw" : `${oppPlayer.name} draws`}
+          hint={`${trayOwnerDice.filter((d) => d.zone === "Bag").length} in bag`}
+          dice={[]}
+          cardsById={cardsById}
+          rolledYet={false}
+          rerollPicked={[]}
+          onToggleReroll={() => {}}
+          onInspectDie={() => {}}
+          spins={spins}
+          turnOffsets={offsets}
+        />
+      )}
+      {phase === "roll" && (
+        <TrayCard
+          title={isYourTurn ? "Tray" : `${oppPlayer.name}'s tray`}
+          note={isYourTurn && hasRolledThisStep ? "Tap dice to reroll them · long press for die info" : undefined}
+          hint={`${trayDrawn.length || trayReserve.length} dice`}
+          dice={trayRolled ? trayReserve : trayDrawn}
+          cardsById={cardsById}
+          rolledYet={trayRolled}
+          rerollPicked={isYourTurn ? rerollPicked : []}
+          onToggleReroll={toggleReroll}
+          onInspectDie={(id) => { setLaneBreakdown(null); setSelectedId(id); }}
+          spins={spins}
+          turnOffsets={offsets}
+          interactive={isYourTurn}
+          lockedBy={new Map((game.lockedCards ?? []).filter((l) => l.playerId === (isYourTurn ? you : opponentId)).map((l) => [l.cardId, l.sources]))}
+        />
+      )}
+      {/* Only on your own turn - on the opponent's Main phase your
+          Buy strip was just noise (direct feedback 2026-09-25: "Not
+          necessary"); their Reserve row already shows what they
+          have to spend. */}
+      {phase === "main" && isYourTurn && (
+        <BuyCard
+          unpurchasedByCard={unpurchasedByCard}
+          cardsById={cardsById}
+          reserve={yourReserve}
+          you={you}
+          selectedId={selectedId}
+          onSelect={toggleSelect}
+          onOpenRoster={() => setRosterViewFor(you)}
+          purchaseCostOf={purchaseCostOf}
+          foresightReady={foresightReady}
+          virtualEnergy={yourVirtual}
+          lockedBy={new Map((game.lockedCards ?? []).filter((l) => l.playerId === you).map((l) => [l.cardId, l.sources]))}
+        />
+      )}
+      {phase === "cleanup" && <CleanUpCard reserve={yourReserve} cardsById={cardsById} you={you} />}
+    </div>
+    </div>
+  );
+
   return (
     <div
       ref={rootRef}
@@ -3225,6 +3336,67 @@ export function DiceKingdomMobilePage() {
           reserveInTray={!isYourTurn && phase === "roll" && trayRolled}
         />
 
+        {!isYourTurn && stage}
+
+        {/* The two attack zones, between the two Fields: folded to a seam
+            outside the Attack step (user, 2026-11-17: the attack zone "only
+            expands to 'full size' during the attack step"). */}
+        {phase === "attack" ? (
+          <AttackLanesCard
+            isYourTurn={isYourTurn}
+            step={step}
+            attackersByLane={attackersByLane}
+            blockersByAttacker={blockersByAttacker}
+            cardsById={cardsById}
+            you={you}
+            laneSel={laneSel}
+            closedLanes={
+              step === "select-attackers" && isYourTurn && selectedDie?.zone === "FieldZone" && selectedDie.controllerId === you
+                ? Array.from({ length: LANE_COUNT }, (_, lane) => !canAddToLane(laneCounts(pendingAttackers, selectedDie.id), lane))
+                : []
+            }
+            onTapLane={declareIntoLane}
+            onTapAttacker={onTapAttacker}
+            onTapBlocker={onTapBlocker}
+            onTapChip={toggleLaneBreakdown}
+            selectedId={selectedId}
+            targeting={targeting}
+          />
+        ) : (
+          <div className="dkm-attack-seam" aria-hidden="true">Attack zone</div>
+        )}
+
+        <MatCard
+          mine
+          part="field"
+          onUsePower={
+            youPlayer.championPowerUsable && game.priorityPlayerId === you && !game.pendingChoice && !busy
+              ? () => run(() => api.championPower(game.gameId))
+              : undefined
+          }
+          player={youPlayer}
+          dice={yourFieldVisibleDice}
+          cardsById={cardsById}
+          isActivePlayer={you === game.activePlayerId}
+          onOpenPile={(zone) => togglePileView(true, zone)}
+          openPile={pileView?.mine === true ? pileView.zone : null}
+          onOpenRoster={() => setRosterViewFor(you)}
+          expandable={false}
+          spins={spins}
+          turnOffsets={offsets}
+          selectedId={selectedId}
+          fieldClickable={(d) =>
+            (isYourTurn && phase === "main" && d.controllerId === you) ||
+            (isYourTurn && step === "select-attackers" && d.controllerId === you) ||
+            (!isYourTurn && step === "assign-blockers" && d.controllerId === you)
+          }
+          onTapDie={onTapMatDie}
+          onInspectPileDie={onInspectPileDie}
+          targeting={targeting}
+        />
+
+        {isYourTurn && stage}
+
         <SharedAbilityPanel
           variant="mobile"
           abilities={abilities}
@@ -3234,93 +3406,9 @@ export function DiceKingdomMobilePage() {
           renderDie={(d) => <DTile die={d} cardsById={cardsById} size={34} mine flyId={false} />}
         />
 
-        {/* Keyed by phase so React remounts this on every phase change,
-            replaying dkPhaseIn (dicekingdom.css) - a plain settle-in
-            rather than a hard cut when the view swaps to a new phase's
-            card, direct feedback (2026-09-16): "...then shrink them into
-            their destination." (runWithReveal above is what makes sure
-            this swap only happens once a reroll's tumble has actually
-            been seen, not the instant the server responds.) */}
-        <div ref={stageShellRef} className="dkm-phase-shell">
-        <div key={phase} className="dkm-phase-stage">
-          {phase === "clear" && (
-            <TrayCard
-              title={isYourTurn ? "Draw" : `${oppPlayer.name} draws`}
-              hint={`${trayOwnerDice.filter((d) => d.zone === "Bag").length} in bag`}
-              dice={[]}
-              cardsById={cardsById}
-              rolledYet={false}
-              rerollPicked={[]}
-              onToggleReroll={() => {}}
-              onInspectDie={() => {}}
-              spins={spins}
-              turnOffsets={offsets}
-            />
-          )}
-          {phase === "roll" && (
-            <TrayCard
-              title={isYourTurn ? "Tray" : `${oppPlayer.name}'s tray`}
-              note={isYourTurn && hasRolledThisStep ? "Tap dice to reroll them · long press for die info" : undefined}
-              hint={`${trayDrawn.length || trayReserve.length} dice`}
-              dice={trayRolled ? trayReserve : trayDrawn}
-              cardsById={cardsById}
-              rolledYet={trayRolled}
-              rerollPicked={isYourTurn ? rerollPicked : []}
-              onToggleReroll={toggleReroll}
-              onInspectDie={(id) => { setLaneBreakdown(null); setSelectedId(id); }}
-              spins={spins}
-              turnOffsets={offsets}
-              interactive={isYourTurn}
-              lockedBy={new Map((game.lockedCards ?? []).filter((l) => l.playerId === (isYourTurn ? you : opponentId)).map((l) => [l.cardId, l.sources]))}
-            />
-          )}
-          {/* Only on your own turn - on the opponent's Main phase your
-              Buy strip was just noise (direct feedback 2026-09-25: "Not
-              necessary"); their Reserve row already shows what they
-              have to spend. */}
-          {phase === "main" && isYourTurn && (
-            <BuyCard
-              unpurchasedByCard={unpurchasedByCard}
-              cardsById={cardsById}
-              reserve={yourReserve}
-              you={you}
-              selectedId={selectedId}
-              onSelect={toggleSelect}
-              onOpenRoster={() => setRosterViewFor(you)}
-              purchaseCostOf={purchaseCostOf}
-              foresightReady={foresightReady}
-              virtualEnergy={yourVirtual}
-              lockedBy={new Map((game.lockedCards ?? []).filter((l) => l.playerId === you).map((l) => [l.cardId, l.sources]))}
-            />
-          )}
-          {phase === "attack" && (
-            <AttackLanesCard
-              isYourTurn={isYourTurn}
-              step={step}
-              attackersByLane={attackersByLane}
-              blockersByAttacker={blockersByAttacker}
-              cardsById={cardsById}
-              you={you}
-              laneSel={laneSel}
-              closedLanes={
-                step === "select-attackers" && isYourTurn && selectedDie?.zone === "FieldZone" && selectedDie.controllerId === you
-                  ? Array.from({ length: LANE_COUNT }, (_, lane) => !canAddToLane(laneCounts(pendingAttackers, selectedDie.id), lane))
-                  : []
-              }
-              onTapLane={declareIntoLane}
-              onTapAttacker={onTapAttacker}
-              onTapBlocker={onTapBlocker}
-              onTapChip={toggleLaneBreakdown}
-              selectedId={selectedId}
-              targeting={targeting}
-            />
-          )}
-          {phase === "cleanup" && <CleanUpCard reserve={yourReserve} cardsById={cardsById} you={you} />}
-        </div>
-        </div>
-
         <MatCard
           mine
+          part="plate"
           onUsePower={
             youPlayer.championPowerUsable && game.priorityPlayerId === you && !game.pendingChoice && !busy
               ? () => run(() => api.championPower(game.gameId))
