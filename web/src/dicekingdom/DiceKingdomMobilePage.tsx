@@ -721,6 +721,56 @@ function StepPopout({
   );
 }
 
+// ---- Following the action ----
+
+// When a new step's card appears, scroll just enough that it sits whole
+// between the header and the bottom bar (user, 2026-11-20, on an iPhone
+// SE: "by default things often happen off-screen. Like when I first
+// start and I 'Draw 4,' they get drawn off the bottom of the screen").
+// The card is your tray / Buy card on your turn, the attack strip during
+// either player's attack; the opponent's tray already sits near the top.
+// Only ever scrolls toward the card, and never past its top: a card
+// taller than the gap shows from its top. On a 402x874 phone it rarely
+// has to move at all.
+function useFollowAction(rootRef: React.RefObject<HTMLDivElement | null>, phase: string, mine: boolean) {
+  useEffect(() => {
+    if (!phase) return;
+    const root = rootRef.current;
+    const target = phase === "attack"
+      ? root?.querySelector<HTMLElement>(".dkm-attack-strip")
+      : mine ? root?.querySelector<HTMLElement>(".dkm-phase-stage:not(:empty)") : null;
+    if (!root || !target) return;
+    const follow = () => {
+      const box = target.getBoundingClientRect();
+      const top = root.querySelector(".dkm-header")?.getBoundingClientRect().bottom ?? 0;
+      const bottom = root.querySelector(".dkm-bottom-bar")?.getBoundingClientRect().top ?? window.innerHeight;
+      const below = box.bottom - (bottom - 8);
+      if (below <= 0) return;
+      const by = Math.min(below, box.top - (top + 8));
+      if (by <= 0) return;
+      const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+      window.scrollBy({ top: by, behavior: reduced ? "auto" : "smooth" });
+    };
+    // After the phase card's own settle-in (dkPhaseIn, 260ms), so the
+    // measurement is of where it ends up - and again whenever the card
+    // grows within the step (the tray gains a line once the dice roll).
+    let timer = window.setTimeout(follow, 300);
+    let lastHeight = target.getBoundingClientRect().height;
+    const observer = new ResizeObserver(() => {
+      const height = target.getBoundingClientRect().height;
+      if (height <= lastHeight + 1) { lastHeight = height; return; }
+      lastHeight = height;
+      window.clearTimeout(timer);
+      timer = window.setTimeout(follow, 150);
+    });
+    observer.observe(target);
+    return () => {
+      window.clearTimeout(timer);
+      observer.disconnect();
+    };
+  }, [phase, mine, rootRef]);
+}
+
 // ---- Mat card (opponent / you) ----
 
 // The Champion power button's label (2026-10-04); the badge's tap text
@@ -2568,6 +2618,7 @@ export function DiceKingdomMobilePage() {
   const flightPhase = game ? phaseForStep(game.currentStepId) : "";
   usePhaseHeight(stageShellRef, flightPhase);
   useDieFlights(rootRef, game, flightPhase, game ? (game.yourPlayerId ?? game.playerOne.id) : "");
+  useFollowAction(rootRef, flightPhase, !!game && game.activePlayerId === (game.yourPlayerId ?? game.playerOne.id));
   useGameSounds(game);
   // Before a game: the home, or the setup step for one way to play (?play=).
   const playMode = usePlayMode();

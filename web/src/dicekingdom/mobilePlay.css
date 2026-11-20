@@ -1267,6 +1267,37 @@
   font-size: 8px;
 }
 
+/* ---- Using a Global or an action die: confirm first ---- */
+
+/* A full row under the ability's text: the quiet Cancel and the green
+   jewel that spends the energy (user, 2026-11-20 - a stray Use tap used
+   Mutation's Global with no way back). */
+.dicekingdom.dk-mobile .dkm-use-confirm {
+  flex: 1 0 100%;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  padding: 2px 0 4px;
+}
+.dicekingdom.dk-mobile .dkm-use-cancel {
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 12px;
+  border: 1.5px solid var(--dkm-border);
+  font: 700 12.5px/1 "Work Sans", var(--sans);
+  color: var(--dkm-ink-2);
+}
+.dicekingdom.dk-mobile .dkm-use-go {
+  grid-column: auto;
+}
+.dicekingdom.dk-mobile .dkm-global-use[aria-expanded="true"] {
+  background: color-mix(in srgb, #45c592 30%, var(--dkm-raised));
+  color: var(--dkm-ink);
+}
+.dicekingdom.dk-mobile .dkm-ready-action:has(.dkm-use-confirm) {
+  flex-wrap: wrap;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .dicekingdom.dk-mobile .dkm-bottom-bar .dkm-primary-btn,
   .dicekingdom.dk-mobile .dkm-life-hit,

@@ -5822,3 +5822,29 @@ Recorded games: 53 of the bucket's records drift on replay now, from 50
 before; the three new ones use Mutation's Global or a Champion power.
 9d918104 itself is refused at that Global, so if it's restored after
 the deploy it stops just before it.
+
+## 2026-11-20 - The play screen follows the action; Use asks first
+
+Two more from the same message.
+
+**Off-screen on a small phone.** User, on an iPhone SE: "by default
+things often happen off-screen. Like when I first start and I 'Draw 4,'
+they get drawn off the bottom of the screen." At 375x667 the page itself
+scrolls, and with the table order your tray / Buy card starts at about
+y=460, behind the bottom bar from y=582 - 85px of it showed. At 402x874
+it fits. Now `useFollowAction` (DiceKingdomMobilePage.tsx) scrolls just
+enough, when a step's card appears, that it sits whole between the
+header and the bar: your tray or Buy card on your turn, the attack strip
+in either player's attack. It only scrolls toward the card, never past
+its top, and again if the card grows within the step (the tray gains a
+line once the dice roll - it was 12px short at that moment). Smooth
+unless reduced motion. Checked at 375x667 from the first Draw: drawn
+dice, rolled tray and the Buy card each end fully above the bar.
+
+**Use asks first.** "There's no way to cancel a global if I accidentally
+clicked 'use'. I was trying to buy Mutation but ended up using the
+global." One tap on Use paid and fired. On mobile a Use now opens what
+the ability does with Cancel and a green "Use for 1" (action dice: "Use
+<name>"); nothing is spent until the second tap. Desktop is unchanged.
+The Mutation buy card and Mutation's Global row are separate places on
+the screen, but sit close together since the table-order change.

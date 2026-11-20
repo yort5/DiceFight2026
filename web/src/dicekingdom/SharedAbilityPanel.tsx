@@ -41,6 +41,22 @@ function globalTextWithEnergyIcons(text: string): ReactNode {
 // class controls placement and appearance, not which abilities exist.
 export function SharedAbilityPanel({ variant, abilities, onExecute, nameOf, actionTextOf, renderDie }: Props) {
   const [openText, setOpenText] = useState<string | null>(null);
+  // On mobile a Use takes two taps: the first opens what it does with
+  // Cancel and Use, so a stray tap spends nothing (user, 2026-11-20: "no
+  // way to cancel a global if I accidentally clicked 'use'. I was trying
+  // to buy Mutation but ended up using the global").
+  const [confirming, setConfirming] = useState<string | null>(null);
+  const confirmRow = (key: string, label: string, command: AbilityCommand) => confirming === key && (
+    <div className="dkm-use-confirm">
+      <button type="button" className="dkm-use-cancel" onClick={() => setConfirming(null)}>Cancel</button>
+      <button type="button" className="dkm-inspect-action dkm-use-go" onClick={() => { setConfirming(null); onExecute(command); }}>{label}</button>
+    </div>
+  );
+  const use = (key: string, command: AbilityCommand | null) => {
+    if (!command) return;
+    if (variant === "desktop") { onExecute(command); return; }
+    setConfirming(confirming === key ? null : key);
+  };
   return (
     <div className={variant === "mobile" ? "dkm-global-rail" : "dk-desktop-ability-rail"}>
       <div className="dkm-global-caption">
@@ -51,7 +67,7 @@ export function SharedAbilityPanel({ variant, abilities, onExecute, nameOf, acti
       <div className="dkm-global-list">
         {abilities.globals.map((g) => {
           const Icon = CHARACTER_ICONS[g.card.id];
-          const open = variant === "desktop" || openText === g.card.id;
+          const open = variant === "desktop" || openText === g.card.id || confirming === `g:${g.card.id}`;
           const heading = <>
             <span className="dkm-global-icon">{Icon && <Icon size={18} />}</span>
             <span>{g.card.name}</span>
@@ -68,9 +84,10 @@ export function SharedAbilityPanel({ variant, abilities, onExecute, nameOf, acti
                 onClick={() => setOpenText(open ? null : g.card.id)}>{heading}</button>
             )}
             <button type="button" className="dkm-chip-btn dkm-global-use"
-              disabled={g.command === null} title={g.blocked ?? undefined}
-              onClick={() => g.command && onExecute(g.command)}>Use</button>
+              disabled={g.command === null} title={g.blocked ?? undefined} aria-expanded={confirming === `g:${g.card.id}` || undefined}
+              onClick={() => use(`g:${g.card.id}`, g.command)}>Use</button>
             {open && <p className="dkm-global-text">{globalTextWithEnergyIcons(g.global.text)}</p>}
+            {g.command && confirmRow(`g:${g.card.id}`, g.global.cost > 0 ? `Use for ${g.global.cost}` : "Use it", g.command)}
           </div>;
         })}
       </div>
@@ -80,8 +97,9 @@ export function SharedAbilityPanel({ variant, abilities, onExecute, nameOf, acti
           {renderDie(a.die)}
           <div className="dkm-ready-action-body"><b>{nameOf(a.die)}</b><span><KeywordText text={actionTextOf(a.die) ?? ""} /></span></div>
           <button type="button" className="dkm-chip-btn dkm-global-use"
-            disabled={a.command === null} title={a.blocked ?? undefined}
-            onClick={() => a.command && onExecute(a.command)}>Use</button>
+            disabled={a.command === null} title={a.blocked ?? undefined} aria-expanded={confirming === `a:${a.die.id}` || undefined}
+            onClick={() => use(`a:${a.die.id}`, a.command)}>Use</button>
+          {a.command && confirmRow(`a:${a.die.id}`, `Use ${nameOf(a.die)}`, a.command)}
         </div>)}
       </div>}
       {variant === "desktop" && abilities.foresightDice.length > 0 && <div className="dkm-ready-actions">
