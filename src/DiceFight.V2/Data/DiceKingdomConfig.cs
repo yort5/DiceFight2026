@@ -889,14 +889,17 @@ public static class DiceKingdomConfig
             // Each pick says which it is (2026-09-27: "it wasn't clear which
             // die I was supposed to be selecting when"), and only offers
             // dice that can actually move that way (a level below / above
-            // on that die - a Tardigrade only has levels 2 and 3).
+            // on that die - a Tardigrade only has levels 2 and 3). The
+            // spin-up is ANOTHER creature (2026-11-20: the die just spun
+            // down was the only one able to go up, so it was auto-picked
+            // and spun straight back).
             new TriggeredAbility(TriggerKind.Global, new Sequence([
                 new Spin(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own,
-                    Stat: new StatThreshold(StatKind.LevelsBelow, Min: 1),
+                    Stat: new StatThreshold(StatKind.LevelsBelow, Min: 1), BindAs: "down",
                     Prompt: "first, choose one of YOUR creatures to spin DOWN a level."), LevelDelta: -1),
                 new Spin(new TargetFilter(Kind: TargetKind.CharacterDie,
-                    Stat: new StatThreshold(StatKind.LevelsAbove, Min: 1),
-                    Prompt: "now choose a creature to spin UP a level."), LevelDelta: 1),
+                    Stat: new StatThreshold(StatKind.LevelsAbove, Min: 1), ExcludeBound: "down",
+                    Prompt: "now choose ANOTHER creature to spin UP a level."), LevelDelta: 1),
             ]), EnergyCost: new EnergyCost(1, "Eye")),
         ],
         Continuous: []);

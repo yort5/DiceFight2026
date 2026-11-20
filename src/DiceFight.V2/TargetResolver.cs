@@ -45,6 +45,7 @@ public static class TargetResolver
             ? (s.FaceIndex is { } i ? state.GetDieDefinition(d).Faces[i] : null)
             : state.GetCurrentFace(d);
         var excludedId = filter.ExcludeSelf ? bindings.GetValueOrDefault("self") : null;
+        var excludedBoundId = filter.ExcludeBound is { } excludeName ? bindings.GetValueOrDefault(excludeName) : null;
         // Self/Bound resolve to ONE already-known id rather than scanning
         // the board - that's the whole point (Finding 9). But "already
         // known" only fixes WHICH die; an author-attached Tags/
@@ -69,7 +70,7 @@ public static class TargetResolver
 
         if (fixedId is not null)
         {
-            if (fixedId == excludedId) return [];
+            if (fixedId == excludedId || fixedId == excludedBoundId) return [];
             if (state.IsPlayerId(fixedId)) return [fixedId]; // Tags/Affiliations/Stat are die-only questions
             var fixedDie = state.Dice.First(d => d.Id == fixedId);
 
@@ -102,6 +103,7 @@ public static class TargetResolver
             ? []
             : state.Dice.Where(d => zones.Contains(ZoneOf(d)));
         if (excludedId is not null) dice = dice.Where(d => d.Id != excludedId);
+        if (excludedBoundId is not null) dice = dice.Where(d => d.Id != excludedBoundId);
         if (filter.EngagedWith is { } combatBinding)
         {
             IReadOnlySet<string> opponents = bindings.TryGetValue(combatBinding, out var combatDieId) && state.DeclaredBlocks is { } combat

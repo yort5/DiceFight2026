@@ -44,7 +44,10 @@ public class V2ActionsAndGlobalsTests
     {
         var (_, session, teamA, _) = StartInMain();
         var state = session.State;
-        Tardigrade(state, "teamA", Zone.FieldZone, 3); // a creature for Mutation's Global to spin
+        // Mutation's Global spins one of the Owl's own creatures down to spin
+        // another up (2026-11-20): one of each.
+        Tardigrade(state, "teamB", Zone.FieldZone, 4); // level 3 - Owl's, to spin down
+        Tardigrade(state, "teamA", Zone.FieldZone, 3); // level 2 - to spin up
 
         Assert.False(V2SeatedController.Dto(teamA.Get(session.Id)).PassGivesPriority); // Owl has no energy
 
@@ -108,13 +111,16 @@ public class V2ActionsAndGlobalsTests
         var (_, session, teamA, teamB) = StartInMain();
         var state = session.State;
         var attacker = Tardigrade(state, "teamA", Zone.FieldZone, 3);
-        Tardigrade(state, "teamB", Zone.FieldZone, 3); // a creature for Mutation's spins
+        // Two of the Owl's own at level 3, so each of its two Mutations has
+        // one to spin down (2026-11-20: the spin-up is another creature).
+        Tardigrade(state, "teamB", Zone.FieldZone, 4);
+        Tardigrade(state, "teamB", Zone.FieldZone, 4);
         var eye1 = Tardigrade(state, "teamB", Zone.ReservePool, 0); // 2 Eye, left over from their turn
         var eye2 = Tardigrade(state, "teamB", Zone.ReservePool, 0); // 2 more
         var mutation = DiceKingdomConfig.Mutation;
         var globalIndex = mutation.Abilities.ToList().FindIndex(a => a.Trigger == TriggerKind.Global);
         var useMutation = (string eyeId) => new V2UseGlobalRequest(mutation.Id, globalIndex, [eyeId]);
-        // Mutation's "spin another creature up" has two candidates - answer it.
+        // The first Mutation's spin-down has two candidates - answer it.
         void AnswerChoice()
         {
             if (state.PendingChoice is { } c) teamB.ResolvePendingChoice(session.Id, new V2ResolvePendingChoiceRequest([c.CandidateIds[0]]));
@@ -166,8 +172,8 @@ public class V2ActionsAndGlobalsTests
     {
         var (_, session, teamA, teamB) = StartInMain();
         var state = session.State;
-        Tardigrade(state, "teamB", Zone.FieldZone, 3);
-        Tardigrade(state, "teamA", Zone.FieldZone, 3);
+        Tardigrade(state, "teamB", Zone.FieldZone, 4); // level 3 - the Owl's, to spin down
+        Tardigrade(state, "teamA", Zone.FieldZone, 3); // level 2 - to spin up
         var wild = Tardigrade(state, "teamB", Zone.ReservePool, 5); // 1 Wild, their only energy
         var mutation = DiceKingdomConfig.Mutation;
         var globalIndex = mutation.Abilities.ToList().FindIndex(a => a.Trigger == TriggerKind.Global);
@@ -302,7 +308,7 @@ public class V2ActionsAndGlobalsTests
 
         Assert.Equal(2, state.GetCurrentFace(theirs)!.Character!.Level); // theirs spins down
         Assert.Equal(2, state.GetCurrentFace(mine)!.Character!.Level);
-        Assert.Equal("Great Horned Owl", dto.Dice.Single(d => d.Id == theirs.Id).LastSpin!.Source);
+        Assert.Equal("Great Horned Owl's power", dto.Dice.Single(d => d.Id == theirs.Id).LastSpin!.Source);
         Assert.False(dto.PlayerOne.ChampionPowerUsable); // once per turn
         Assert.Throws<InvalidOperationException>(() => owl.ChampionPower(session.Id));
     }
@@ -411,6 +417,7 @@ public class V2ActionsAndGlobalsTests
         var mid1 = Tardigrade(state, "teamA", Zone.FieldZone, 4); // level 3
         var mid2 = Tardigrade(state, "teamA", Zone.FieldZone, 4); // level 3
         var top = Tardigrade(state, "teamB", Zone.FieldZone, 4);  // level 3 - can't go up
+        var theirLow = Tardigrade(state, "teamB", Zone.FieldZone, 3); // level 2 - a second die to spin up
         var eye = Tardigrade(state, "teamA", Zone.ReservePool, 0);
         var index = DiceKingdomConfig.Mutation.Abilities.ToList().FindIndex(x => x.Trigger == TriggerKind.Global);
 
@@ -422,8 +429,10 @@ public class V2ActionsAndGlobalsTests
         a.ResolvePendingChoice(session.Id, new V2ResolvePendingChoiceRequest([mid1.Id]));
 
         var up = state.PendingChoice!;
-        Assert.Equal("Mutation: now choose a creature to spin UP a level.", up.Description);
+        Assert.Equal("Mutation: now choose ANOTHER creature to spin UP a level.", up.Description);
         Assert.Contains(low.Id, up.CandidateIds);
+        Assert.Contains(theirLow.Id, up.CandidateIds);
+        Assert.DoesNotContain(mid1.Id, up.CandidateIds); // the one just spun down (2026-11-20)
         Assert.DoesNotContain(top.Id, up.CandidateIds);
         a.ResolvePendingChoice(session.Id, new V2ResolvePendingChoiceRequest([low.Id]));
 

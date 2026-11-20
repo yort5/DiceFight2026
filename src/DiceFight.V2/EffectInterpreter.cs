@@ -290,6 +290,13 @@ public static class EffectInterpreter
 
     private static void LogAbility(EffectContext ctx, string text) => ctx.State.LogEvent(ctx.ControllerId, text);
 
+    // "your Tardigrade" / "Golden Eagle's Tardigrade" - whose die it is,
+    // from the ability user's side (2026-11-20: "Great Horned Owl spins
+    // Tardigrade down a level" read as Owl spinning one of its own, and
+    // the user took it for Mutation spinning down an opponent's die).
+    private static string OwnedName(EffectContext ctx, DieInstance die) =>
+        die.ControllerId == ctx.ControllerId ? $"its own {DieName(ctx.State, die)}" : $"{ctx.State.NameOf(die.ControllerId)}'s {DieName(ctx.State, die)}";
+
     // --- Damage / KO ---
 
     private static void ExecuteDealDamage(DealDamage n, EffectContext ctx, Action onComplete)
@@ -516,7 +523,7 @@ public static class EffectInterpreter
             {
                 var die = FindDie(ctx.State, id);
                 var up = die.ControllerId == ctx.ControllerId;
-                LogAbility(ctx, $"{SourceName(ctx)} spins {TargetName(ctx.State, id)} {(up ? "up" : "down")} {(n.Levels == 1 ? "a level" : $"{n.Levels} levels")}.");
+                LogAbility(ctx, $"{SourceName(ctx)} spins {OwnedName(ctx, die)} {(up ? "up" : "down")} {(n.Levels == 1 ? "a level" : $"{n.Levels} levels")}.");
                 SpinLevel(ctx.State, ctx.Queue, die, null, up ? n.Levels : -n.Levels, SourceName(ctx));
             }
             onComplete();
@@ -743,7 +750,16 @@ public static class EffectInterpreter
         ResolveTarget(ctx, n.Target, ProtectionFor(ctx.Trigger), (n.LevelDelta ?? 0) > 0 ? ChoiceIntent.Beneficial : n.LevelDelta < 0 || n.SetLevel is not null ? ChoiceIntent.Harmful : ChoiceIntent.Unknown, ids =>
         {
             foreach (var id in ids)
-                SpinLevel(ctx.State, ctx.Queue, FindDie(ctx.State, id), n.SetLevel, n.LevelDelta, SourceName(ctx));
+            {
+                var die = FindDie(ctx.State, id);
+                var before = ctx.State.GetCurrentFace(die)?.Character?.Level;
+                SpinLevel(ctx.State, ctx.Queue, die, n.SetLevel, n.LevelDelta, SourceName(ctx));
+                // Said in the log, as SpinByOwner already did (2026-11-20:
+                // a Global that spun nothing left no trace of what it did).
+                var after = ctx.State.GetCurrentFace(die)?.Character?.Level;
+                if (before is { } from && after is { } to && from != to)
+                    LogAbility(ctx, $"{SourceName(ctx)} spins {OwnedName(ctx, die)} {(to < from ? "down" : "up")} to level {to}.");
+            }
             onComplete();
         });
     }

@@ -91,7 +91,7 @@ public class ChampionPowersTests
         ChampionPowers.Use(state, queue, "p2");
         Drain(state, queue);
         Assert.Contains(CombatFlagKind.PreventCombatDamage, blocker.CombatFlags);
-        Assert.Contains(DieStatuses.For(state, blocker), s => s.Kind == "protected" && s.Source == "Armadillo");
+        Assert.Contains(DieStatuses.For(state, blocker), s => s.Kind == "protected" && s.Source == "Armadillo's power");
 
         Priority.AfterGlobal(state, "p2");
         Priority.Pass(state, queue, "p1"); // closes the window: combat damage
@@ -130,7 +130,7 @@ public class ChampionPowersTests
         EffectInterpreter.AnswerPendingChoice(state, [theirs.Id]);
         Drain(state, queue);
         Assert.Equal(2, state.GetCurrentFace(theirs)!.Character!.Level);
-        Assert.Equal("Great Horned Owl", theirs.LastSpin!.Source);
+        Assert.Equal("Great Horned Owl's power", theirs.LastSpin!.Source);
 
         // Next turn: its own creature goes up.
         state.ChampionPowerUsedThisTurn.Clear();

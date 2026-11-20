@@ -157,8 +157,12 @@ public class ImportedCardsTests
         var stag = Add(state, "JLL002", "p1", Zone.FieldZone);
         var global = DiceKingdomConfig.Mutation.Abilities.ToList().FindIndex(a => a.Trigger == TriggerKind.Global);
         var down = Add(state, DiceKingdomConfig.Hippopotamus.Id, "p1", Zone.FieldZone, level: 2);
+        // The spin-up is another creature (2026-11-20) - this one, not the stag.
+        var up = Add(state, DiceKingdomConfig.Hippopotamus.Id, "p2", Zone.FieldZone);
         TurnEngine.UseGlobal(state, queue, DiceKingdomConfig.Mutation.Id, "p1", global, Energy(state));
-        ResolveChoices(state, queue, down.Id); // Mutation spins this die down, then back up.
+        ResolveChoices(state, queue, up.Id);
+
+        Assert.Equal(2, Level(state, up));
 
         Assert.Equal(1, Level(state, stag));
     }

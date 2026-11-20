@@ -102,6 +102,12 @@ public sealed record TargetFilter(
     // "Other dice": exclude the physical source die bound as self,
     // while still allowing other copies of its card.
     bool ExcludeSelf = false,
+    // "Another": exclude the die an earlier step bound under this name.
+    // First user: Mutation's Global (2026-11-20) - "spin one of your
+    // creatures down a level to spin ANOTHER creature up a level". Without
+    // it, a die spun down was the only one able to go up, was auto-picked,
+    // and spun straight back: the Global did nothing.
+    string? ExcludeBound = null,
     // Only opposing dice engaged with the die named by this binding.
     string? EngagedWith = null)
 {

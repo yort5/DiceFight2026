@@ -84,7 +84,10 @@ public static class ChampionPowers
         };
         state.ChampionPowerUsedThisTurn.Add(playerId);
         state.LogEvent(playerId, $"{state.NameOf(playerId)} uses their Champion power.");
-        queue.Enqueue(null, playerId, TriggerKind.Global, effect, sourceName: champion.Name);
+        // "Great Horned Owl's power", not just "Great Horned Owl" - the
+        // Champion and its player share a name, so the log read as the
+        // player doing it by hand (2026-11-20).
+        queue.Enqueue(null, playerId, TriggerKind.Global, effect, sourceName: $"{champion.Name}'s power");
     }
 
     // Plain-language text for each kind - shared by the API and the card reference.

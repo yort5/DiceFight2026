@@ -122,16 +122,65 @@ public class DiceKingdomKeywordTests
 
         TurnEngine.UseGlobal(state, queue, DiceKingdomConfig.Mutation.Id, "p1", globalIndex,
             Energy(state, "p1", "Eye", 1));
-        Drain(state, queue);
-        var pending = Assert.IsType<PendingChoice>(state.PendingChoice);
-        Assert.Contains(swallow.Id, pending.CandidateIds);
-        EffectInterpreter.AnswerPendingChoice(state, [swallow.Id]);
+        // Each pick has one candidate, so neither asks: the Hippopotamus is
+        // the only one that can go down, and the Sloth the only OTHER one
+        // that can go up (the Hippopotamus just spun down is excluded -
+        // 2026-11-20; it used to be offered, and alone it was auto-picked).
         Drain(state, queue);
 
         Assert.Null(state.PendingChoice);
         Assert.Equal(1, state.GetCurrentFace(down)!.Character!.Level);
         Assert.Equal(2, state.GetCurrentFace(swallow)!.Character!.Level);
         Assert.Single(state.DiceIn("p1", Zone.PrepArea)); // Sloth's Awaken drew a die.
+    }
+
+    // A real game (2026-11-20): three Tardigrades on 1/2 (level 3), no
+    // other creatures. Mutation's Global spun the chosen one down, then
+    // auto-picked that same die - the only one able to go up - and spun
+    // it straight back: the Global was paid for and did nothing. "Spin
+    // another creature up" can't be the same die, so with nothing else
+    // able to go up the Global can't be used at all.
+    private static DieInstance Tardigrade(GameState state, string controllerId, int faceIndex, string tag)
+    {
+        var die = new DieInstance
+        {
+            Id = $"{controllerId}-tardigrade-{tag}", PoolDieId = "TardigradeEye", OwnerId = controllerId,
+            ControllerId = controllerId, Zone = Zone.FieldZone, CurrentFaceIndex = faceIndex,
+        };
+        state.Dice.Add(die);
+        return die;
+    }
+
+    [Fact]
+    public void Mutations_Global_Cant_Be_Used_When_Only_The_Spun_Down_Die_Could_Go_Up()
+    {
+        var state = NewGame();
+        var queue = new AbilityQueue();
+        foreach (var tag in new[] { "a", "b", "c" }) Tardigrade(state, "p1", 4, tag); // level 3, 1/2
+        var globalIndex = DiceKingdomConfig.Mutation.Abilities.ToList().FindIndex(a => a.Trigger == TriggerKind.Global);
+
+        Assert.Throws<InvalidOperationException>(() =>
+            TurnEngine.UseGlobal(state, queue, DiceKingdomConfig.Mutation.Id, "p1", globalIndex, Energy(state, "p1", "Eye", 1)));
+    }
+
+    [Fact]
+    public void Mutations_Global_Spins_Another_Creature_Up_And_Says_So()
+    {
+        var state = NewGame();
+        var queue = new AbilityQueue();
+        var high = Tardigrade(state, "p1", 4, "high"); // level 3 - the only one that can go down
+        var theirs = Tardigrade(state, "p2", 3, "theirs"); // level 2 - the only OTHER one that can go up
+        var globalIndex = DiceKingdomConfig.Mutation.Abilities.ToList().FindIndex(a => a.Trigger == TriggerKind.Global);
+
+        TurnEngine.UseGlobal(state, queue, DiceKingdomConfig.Mutation.Id, "p1", globalIndex, Energy(state, "p1", "Eye", 1));
+        Drain(state, queue);
+
+        Assert.Null(state.PendingChoice);
+        Assert.Equal(2, state.GetCurrentFace(high)!.Character!.Level);
+        Assert.Equal(3, state.GetCurrentFace(theirs)!.Character!.Level);
+        var log = state.Log.Select(l => l.Text).ToList();
+        Assert.Contains("Mutation spins its own Tardigrade down to level 2.", log);
+        Assert.Contains("Mutation spins Two's Tardigrade up to level 3.", log);
     }
 
     // --- Intimidate ---

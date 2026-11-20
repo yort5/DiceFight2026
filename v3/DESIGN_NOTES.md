@@ -5781,3 +5781,44 @@ the mock (your nameplate under the bar until you scroll), and the
 opponent's tray sits above the seam on their turn. On a 375x667 phone
 your Field is below the fold during your Attack step, so declaring
 means a scroll down first; at 402x874 it is in view.
+
+## 2026-11-20 - Mutation's Global spins ANOTHER creature up
+
+User, after a game: "I was trying to buy Mutation but ended up using the
+global. It also let me use it on a Tardigrade, but didn't actually spin
+it down." Their record (9d918104) replayed: three Tardigrades on 1/2
+(level 3), nothing else on the board. The spin-down asked which one;
+the spin-up then offered every creature able to go up - only the die
+just spun down to 1/1 - and with one candidate it was picked
+automatically and spun straight back. Paid, and nothing changed.
+
+The card says "spin one of your creatures down a level to spin ANOTHER
+creature up a level" (user: "The target to spin up can be any die,
+yours or your opponent's"). Now:
+- `TargetFilter.ExcludeBound` (new): a pick that excludes the die an
+  earlier step bound. Mutation's spin-down binds `down`, the spin-up
+  excludes it; the prompt says "ANOTHER".
+- `AbilityPreview` treats such a pair as one requirement: the Global can
+  be used only if some die of yours can go down and some OTHER die can
+  go up. On the board above it's refused. Before, it was usable with
+  nothing of your own to spin down at all (four API tests relied on
+  that; their setups now give the user a creature to spin down).
+- Spins are logged ("Mutation spins its own Tardigrade down to level
+  2.", "...spins Two's Tardigrade up to level 3."); before, Mutation's
+  left no line.
+
+Also from the same game: the user read "Great Horned Owl spins
+Tardigrade down a level" as Mutation spinning down THEIR die ("That's
+not allowed"). It was the Owl's Champion power, which does spin an
+opponent's creature down. The Champion and its player share a name, so
+powers now go by "<Champion>'s power", and a spin names whose die it is:
+"Great Horned Owl's power spins Golden Eagle's Tardigrade down a level."
+
+Known gap: if the only die that could go up is also one you can spin
+down, picking it for the spin-down leaves the spin-up nothing (it needs
+a three-level creature on level 2 and nothing else able to go up).
+
+Recorded games: 53 of the bucket's records drift on replay now, from 50
+before; the three new ones use Mutation's Global or a Champion power.
+9d918104 itself is refused at that Global, so if it's restored after
+the deploy it stops just before it.

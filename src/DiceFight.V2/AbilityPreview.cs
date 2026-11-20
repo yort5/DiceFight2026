@@ -23,9 +23,31 @@ public static class AbilityPreview
     {
         // A step bound to an earlier step's pick can't be judged alone, so
         // a sequence needs one independently judgeable step with a result.
-        Sequence s => s.Steps.Any(step => IndependentlyUseful(state, controllerId, step, protection)),
+        Sequence s => PairedPicksOk(state, controllerId, s, protection) ?? s.Steps.Any(step => IndependentlyUseful(state, controllerId, step, protection)),
         _ => IndependentlyUseful(state, controllerId, effect, protection) || TargetOf(effect) is { Bound: not null },
     };
+
+    // "Spin one of yours down to spin ANOTHER up" (Mutation's Global): a
+    // step that excludes an earlier step's pick (TargetFilter.ExcludeBound)
+    // makes the two a pair, and the ability has a result only if some
+    // choice for the first leaves a different die for the second. Judged
+    // on the board as it stands - the first pick is the one die whose
+    // state the first step changes, and the second may not take it anyway.
+    // Null when the sequence has no such pair.
+    private static bool? PairedPicksOk(GameState state, string controllerId, Sequence s, ProtectionFrom? protection)
+    {
+        var none = new Dictionary<string, string>();
+        for (var j = 0; j < s.Steps.Count; j++)
+        {
+            if (TargetOf(s.Steps[j]) is not { ExcludeBound: { } name } second) continue;
+            var first = s.Steps.Take(j).Select(TargetOf).LastOrDefault(f => f?.BindAs == name);
+            if (first is null) continue;
+            var firsts = TargetResolver.Query(state, controllerId, first, none, protection);
+            var seconds = TargetResolver.Query(state, controllerId, second with { ExcludeBound = null }, none, protection);
+            return firsts.Any(a => seconds.Any(b => b != a));
+        }
+        return null;
+    }
 
     private static bool IndependentlyUseful(GameState state, string controllerId, EffectNode effect, ProtectionFrom? protection)
     {
