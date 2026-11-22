@@ -2,6 +2,7 @@ using System.Text.Json;
 using DiceFight.Api.Recording;
 using DiceFight.V2;
 using DiceFight.V2.Bot;
+using DiceFight.V2.Model;
 
 // Reads recorded games (see GameRecords.csproj). For each: who played whom,
 // human or bot seats, the result, and whether it replays exactly. Then, per
@@ -11,6 +12,10 @@ using DiceFight.V2.Bot;
 // --disagreements lists every human move the bot would have made differently.
 
 var showDisagreements = args.Contains("--disagreements");
+// --bot-reasons: every move a bot seat made, with the bot's own reason and
+// what each side had on the Field (2026-11-22: "why did the computer's
+// Eagle never attack?").
+var showBotReasons = args.Contains("--bot-reasons");
 // --dump FILE: every human decision as one JSON line - what they did, what
 // the bot would have done, and the board around it, in card names rather
 // than die ids - for digging into where people and the bot differ.
@@ -47,6 +52,14 @@ foreach (var file in files)
         if (dilution is { } d) persona = persona with { DilutionPerDie = d };
         var bot = DiceKingdomBot.Decide(state, action.PlayerId, persona: persona);
         if (bot is null) return;
+        if (showBotReasons && seatKind[action.PlayerId] == "bot")
+        {
+            string Field(string id) => string.Join(", ", state.Dice.Where(x => x.ControllerId == id && x.Zone is Zone.FieldZone or Zone.AttackZone && state.GetCurrentFace(x)?.Character is { } c)
+                .Select(x => $"{(x.CardId is { } cid ? state.CardCatalog[cid].Name : "Tardigrade")} {QueryEngine.GetAttack(state, x)}/{QueryEngine.GetDefense(state, x)}"));
+            Console.WriteLine($"  turn {action.Turn,2} {action.Step,-18} {action.Action,-18} bot: {bot.Reason}");
+            if (action.Action is "DeclareAttackers" or "DeclareBlockers")
+                Console.WriteLine($"      life {state.GetPlayer(action.PlayerId).Life} vs {state.GetPlayer(state.OpponentOf(action.PlayerId)).Life}; own field [{Field(action.PlayerId)}]; theirs [{Field(state.OpponentOf(action.PlayerId))}]");
+        }
         var decision = Category(action.Action);
         var agreed = Same(bot, action);
         var key = (seatKind[action.PlayerId], decision);

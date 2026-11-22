@@ -716,6 +716,12 @@ public static class DiceKingdomBot
         var pump = ChampionPowers.Of(state, activeId) is { PassiveKind: ChampionPassiveKind.PumpOneAttack } wolf
             && !state.ChampionPowerUsedThisTurn.Contains(activeId) ? wolf.Amount : 0;
         incoming += pump;
+        // ...and with only one lane to put it on (nothing unblockable
+        // elsewhere), blocking that lane keeps the pump off this player's
+        // life too - a lone Wolverine let through came back +3 for 6 (a
+        // real game, 2026-11-22: the computer's Eagle kept its Tardigrade
+        // home rather than trade it for those 6).
+        var pumpAtStake = lanes.Count == 1 && unblockable == 0 ? pump : 0;
 
         foreach (var lane in lanes)
         {
@@ -726,7 +732,7 @@ public static class DiceKingdomBot
             if (lane.Need > 1)
             {
                 if (available.Count < lane.Need) continue;
-                var team = available.Select(b => (Blocker: b, Score: BlockScore(state, b, lane, DamageWeight(), pump: pump, chumpCost: persona.HoldWeakTardigrades ? persona.TardigradeChumpCost : null)))
+                var team = available.Select(b => (Blocker: b, Score: BlockScore(state, b, lane, DamageWeight(), pump: pump, chumpCost: persona.TardigradeChumpCost, pumpAtStake: pumpAtStake)))
                     .OrderByDescending(x => x.Score).Take(lane.Need).ToList();
                 if (team.Sum(x => x.Score) <= 0 && !mustBlock) continue;
                 foreach (var (blocker, _) in team)
@@ -740,12 +746,12 @@ public static class DiceKingdomBot
             (DieInstance Blocker, double Score)? best = null;
             foreach (var b in available)
             {
-                var score = BlockScore(state, b, lane, DamageWeight(), pump: pump, chumpCost: persona.HoldWeakTardigrades ? persona.TardigradeChumpCost : null);
+                var score = BlockScore(state, b, lane, DamageWeight(), pump: pump, chumpCost: persona.TardigradeChumpCost, pumpAtStake: pumpAtStake);
                 if (best is null || score > best.Value.Score) best = (b, score);
             }
             if (shieldLeft && !lane.Deadly)
             {
-                var shielded = available.Select(b => (Blocker: b, Score: BlockScore(state, b, lane, DamageWeight(), shielded: true, pump: pump, chumpCost: persona.HoldWeakTardigrades ? persona.TardigradeChumpCost : null)))
+                var shielded = available.Select(b => (Blocker: b, Score: BlockScore(state, b, lane, DamageWeight(), shielded: true, pump: pump, chumpCost: persona.TardigradeChumpCost, pumpAtStake: pumpAtStake)))
                     .OrderByDescending(x => x.Score).First();
                 if (shielded.Score > Math.Max(0, best?.Score ?? 0) + 0.5)
                 {
@@ -758,7 +764,7 @@ public static class DiceKingdomBot
 
             blocks.Add((lane.Attackers[0].Id, pick.Blocker.Id));
             available.Remove(pick.Blocker);
-            var prevented = lane.Overcrush ? Math.Min(lane.Attack, QueryEngine.GetDefense(state, pick.Blocker)) : lane.Attack;
+            var prevented = lane.Overcrush ? Math.Min(lane.Attack + pumpAtStake, QueryEngine.GetDefense(state, pick.Blocker)) : lane.Attack + pumpAtStake;
             incoming -= prevented;
         }
 
@@ -819,7 +825,7 @@ public static class DiceKingdomBot
     //   - an unblocked attacker leaves play for the Used Pile and then the
     //     Bag - a fielded Tardigrade is effectively culled, and letting one
     //     through un-culls it into the attacker's draws (UncullBonus).
-    private static double BlockScore(GameState state, DieInstance b, Lane lane, double damageWeight, bool shielded = false, int pump = 0, double? chumpCost = null)
+    private static double BlockScore(GameState state, DieInstance b, Lane lane, double damageWeight, bool shielded = false, int pump = 0, double? chumpCost = null, int pumpAtStake = 0)
     {
         var bAtk = QueryEngine.GetAttack(state, b);
         var bDef = QueryEngine.GetDefense(state, b) - b.Damage;
@@ -827,7 +833,7 @@ public static class DiceKingdomBot
         var bDeadly = QueryEngine.GetKeywords(state, b).Contains("Deadly");
         var killed = lane.Attackers.Where(a => bDeadly || QueryEngine.GetDefense(state, a) - a.Damage <= bAtk)
             .OrderByDescending(a => DieValue(state, a)).FirstOrDefault();
-        var prevented = lane.Overcrush && !shielded ? Math.Min(lane.Attack, bDef) : lane.Attack;
+        var prevented = lane.Overcrush && !shielded ? Math.Min(lane.Attack + pumpAtStake, bDef) : lane.Attack + pumpAtStake;
 
         var score = prevented * damageWeight;
         // A retaliating blocker sends the damage it takes to the attacker's

@@ -5985,3 +5985,23 @@ simulator numbers can't see that, so Eagle's 62% leans on bot play.
   effects and a die's effects on itself say nothing. In 240 simulated
   games it fired 80 times: Cuttlefish 62, Osprey 17, Barn Owl 1 -
   Cuttlefish whiffs a lot even with L1 Tardigrades.
+
+## 2026-11-22 - The computer chumps a pumpable lone attacker
+
+The user's Wolf beat the computer's Eagle 20 to -4. Replayed with the new
+`tools/GameRecords --bot-reasons` (every bot move with its reason and both
+Fields): Eagle "never attacking" was a result, not the cause - by the time
+it had creatures it was far behind, and holding blockers was sound. The
+cause was turn 5: at 14 life, with a 2/1 Tardigrade on the Field, it let a
+lone Wolverine through and Wolf pumped it +3 for 6. Two reasons:
+- the block's score counted the attacker's 3, not the pump that a lone
+  unblocked attacker will get (DecideBlockers now adds it when there's one
+  lane and nothing unblockable elsewhere), and
+- a Tardigrade blocker was valued by its stats (a 2/1 "worth" 2.2 after
+  the Prep bonus, against 6 life weighted at 0.21 a point). Losing one now
+  costs a flat BotPersona.TardigradeChumpCost of 1.0 for every persona -
+  the knob existed, used only by the HoldWeakTardigrades experiment.
+
+Simulator (powers on, 400/matchup): Wolf 49 -> 46, Armadillo 42 -> 43, Owl
+47 -> 49, Eagle 60 -> 60; turn cap 294 -> 278. Bot-vs-bot can't show the
+human-vs-bot gap this closes; the next real games will.

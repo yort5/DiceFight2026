@@ -73,12 +73,15 @@ public sealed record BotPersona(
     // home rather than swing it for 1, so it stays out of the Bag) - see
     // DiceKingdomBot.DecideAttackers and v3/DESIGN_NOTES.md for why it
     // isn't on. HoldTardigradesAt: only once this many bought Character
-    // dice are in the rotation. TardigradeChumpCost: with it on, what
-    // losing a Tardigrade blocker costs (null = its stats' value, which
-    // left the held ones standing by while 3 damage went through).
+    // dice are in the rotation.
     bool HoldWeakTardigrades = false,
     int HoldTardigradesAt = 0,
-    double? TardigradeChumpCost = null)
+    // What losing a Tardigrade blocker costs (null = its stats' value, net
+    // of the Prep bonus). On for every persona since 2026-11-22: valued by
+    // its stats, a free 2/1 Tardigrade was "worth" more than 6 points of
+    // life at 14 (a real game - the computer's Eagle let a pumped Wolverine
+    // through rather than chump it). Was used only with HoldWeakTardigrades.
+    double? TardigradeChumpCost = 1.0)
 {
     public static readonly BotPersona Default = new();
 

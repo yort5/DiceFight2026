@@ -119,6 +119,28 @@ public class DiceKingdomBotTests
     // what's on their Field now (user, 2026-10-04: "keep enough blockers so
     // that I can block the higher attack characters I expect my opponent to
     // have next turn"). Their Field is empty in both cases.
+    // A real game (2026-11-22): the computer's Eagle, at 14 life with a
+    // 2/1 Tardigrade on the Field, let a lone Wolverine through - and Wolf
+    // pumped it +3 after blocks for 6. Blocking a lone attacker keeps the
+    // pump off its life too, and a free Tardigrade is a cheap chump.
+    [Fact]
+    public void Bot_Chumps_A_Lone_Attacker_That_Wolf_Can_Still_Pump()
+    {
+        var state = NewGame("Wolf", "GoldenEagle");
+        var queue = new AbilityQueue();
+        state.GetPlayer("p2").Life = 14;
+        var wolverine = state.Dice.First(d => d.OwnerId == "p1" && d.CardId == DiceKingdomConfig.Wolverine.Id);
+        wolverine.Zone = Zone.FieldZone; wolverine.CurrentFaceIndex = 1; // L2 3/4
+        var tardigrade = state.Dice.First(d => d.OwnerId == "p2" && d.CardId is null);
+        tardigrade.Zone = Zone.FieldZone; tardigrade.CurrentFaceIndex = 4; // L2 2/1
+        state.MoveToStep(StepIds.SelectAttackers);
+        CombatEngine.DeclareAttackers(state, queue, [wolverine.Id]);
+
+        var decision = DiceKingdomBot.Decide(state, "p2")!;
+        Assert.Equal(BotActionKind.DeclareBlockers, decision.Kind);
+        Assert.Contains((wolverine.Id, tardigrade.Id), decision.Blocks);
+    }
+
     private static (GameState State, DieInstance Tardigrade) AboutToAttack()
     {
         var state = NewGame("Armadillo", "GreatHornedOwl");
