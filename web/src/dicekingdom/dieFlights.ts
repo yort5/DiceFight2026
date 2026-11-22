@@ -15,6 +15,12 @@
 //     and flashes red where it stood, then goes to the Prep pile.
 //   - a die with an element but no prior one (a fresh draw): fly out of the
 //     pile it came from.
+//   - a die that only ever moved between piles (no element either side - a
+//     Used Pile refilling the Bag, a draw into Prep): a small token flies
+//     pile to pile, and the pile it lands in pulses (2026-11-22, user: a
+//     Resurrection that refilled the Bag and drew a die showed nothing but
+//     counts changing). A refill goes first, then whatever was drawn out of
+//     the refilled Bag flies on from there.
 // Ghosts track their destination live every frame, so a layout that is
 // still animating (see usePhaseHeight) or a scroll can't make them miss.
 //
@@ -65,11 +71,48 @@ const PILE_KEYS: Record<string, string> = {
   Unpurchased: "roster",
 };
 
+// The first VISIBLE match: the mobile page has two copies of some piles
+// (one per layout), and the hidden one measures as an empty rect.
 function pileEl(root: HTMLElement, die: Die, zone: string, you: string): HTMLElement | null {
   const key = PILE_KEYS[zone];
   if (!key) return null;
   const side = die.ownerId === you ? "mine" : "opp";
-  return root.querySelector<HTMLElement>(`[data-pile="${side}-${key}"]`);
+  const all = root.querySelectorAll<HTMLElement>(`[data-pile="${side}-${key}"]`);
+  for (const el of all) {
+    const r = el.getBoundingClientRect();
+    if (r.width > 0 && r.height > 0) return el;
+  }
+  return all[0] ?? null;
+}
+
+const TOKEN_PX = 22;
+const TOKEN_STAGGER_MS = 55;
+const MAX_TOKENS = 10;
+
+// A die with no element of its own, for a pile-to-pile flight: a small
+// rounded square in its owner's Champion colour (the face it shows in a
+// pile is arbitrary, so its own energy would look random).
+function tokenNode(game: GameState, die: Die): HTMLElement {
+  const el = document.createElement("div");
+  el.className = "dkm-pile-token";
+  const owner = die.ownerId === game.playerTwo.id ? game.playerTwo : game.playerOne;
+  const energy = owner.champion?.energySymbolId;
+  if (energy) el.style.setProperty("--tone", `var(--${energy.toLowerCase()})`);
+  return el;
+}
+
+function centeredBox(r: DOMRect, size: number): DOMRect {
+  return new DOMRect(r.left + r.width / 2 - size / 2, r.top + r.height / 2 - size / 2, size, size);
+}
+
+function bump(el: HTMLElement, delay: number) {
+  window.setTimeout(() => {
+    if (!el.isConnected) return;
+    el.classList.remove("dkm-pile-bump");
+    void el.offsetWidth; // restart the animation
+    el.classList.add("dkm-pile-bump");
+    window.setTimeout(() => el.classList.remove("dkm-pile-bump"), 500);
+  }, delay);
 }
 
 interface Flight {
@@ -84,6 +127,12 @@ interface Flight {
   startScale?: number;
   /** A die spent as energy: quick, shrinks and fades out into the pile. */
   spend?: boolean;
+  /** Extra wait before it starts, on top of the stagger. */
+  delayMs?: number;
+  /** Keep its own size the whole way (a pile token), not the destination's. */
+  keepSize?: boolean;
+  /** Called once it lands. */
+  onLand?: () => void;
 }
 
 function launch(root: HTMLElement, f: Flight, index: number) {
@@ -111,20 +160,29 @@ function launch(root: HTMLElement, f: Flight, index: number) {
 
   const startScale = f.startScale ?? 1;
   const duration = f.spend ? SPEND_MS : FLIGHT_MS;
-  const delay = index * STAGGER_MS + (f.ko ? KO_HOLD_MS : 0);
+  const delay = (f.delayMs ?? index * STAGGER_MS) + (f.ko ? KO_HOLD_MS : 0);
   const start = performance.now() + delay;
   let last = f.from;
+  let landed = false;
   const finish = () => {
+    if (!landed) {
+      landed = true;
+      f.onLand?.();
+    }
     ghost.remove();
     if (hidden && hidden.isConnected) hidden.style.visibility = priorVisibility;
   };
   ghost.style.transform = `translate(${f.from.left}px, ${f.from.top}px) scale(${startScale})`;
+  // Not shown until it sets off - a delayed flight (a draw waiting on a
+  // refill) mustn't sit on its pile in the meantime.
+  if (delay > 0) ghost.style.opacity = "0";
   const frame = (now: number) => {
     const raw = (now - start) / duration;
     if (raw < 0) {
       requestAnimationFrame(frame);
       return;
     }
+    if (ghost.style.opacity === "0") ghost.style.opacity = "1";
     const t = Math.min(1, raw);
     const e = easeInOut(t);
     const d = f.dest() ?? last;
@@ -135,7 +193,7 @@ function launch(root: HTMLElement, f: Flight, index: number) {
     const fcy = f.from.top + f.from.height / 2;
     const cx = fcx + (d.left + d.width / 2 - fcx) * e;
     const cy = fcy + (d.top + d.height / 2 - fcy) * e;
-    const endScale = f.spend ? 0.35 : d.width / Math.max(1, f.from.width);
+    const endScale = f.spend ? 0.35 : f.keepSize ? 1 : d.width / Math.max(1, f.from.width);
     const scale = startScale + (endScale - startScale) * e;
     ghost.style.transform = `translate(${cx - f.from.width / 2}px, ${cy - f.from.height / 2}px) scale(${scale})`;
     if (f.spend) ghost.style.opacity = String(1 - e);
@@ -171,6 +229,19 @@ export function useDieFlights(rootRef: RefObject<HTMLElement | null>, game: Game
     const prevGameExists = prevDice.current.size > 0;
     const phaseChanged = prevPhase.current !== "" && prevPhase.current !== phase;
 
+    const pileMoves: { die: Die; from: string }[] = [];
+    // Owners whose Used Pile refilled their Bag in this update, and how
+    // long that wave of tokens takes - a die drawn in the same update came
+    // out of the refilled Bag, so it waits and flies from there.
+    const refillCount = new Map<string, number>();
+    for (const die of game.dice) {
+      const prev = prevDice.current.get(die.id);
+      if (prev?.zone === "UsedPile" && die.zone === "Bag") refillCount.set(die.ownerId, (refillCount.get(die.ownerId) ?? 0) + 1);
+    }
+    const refillMs = (owner: string) => {
+      const n = refillCount.get(owner) ?? 0;
+      return n ? Math.min(n, MAX_TOKENS) * TOKEN_STAGGER_MS + FLIGHT_MS + 120 : 0;
+    };
     if (!reducedMotion() && prevGameExists) {
       const adjust = (s: Snap) => {
         const dy = scrollTop - s.scrollTop;
@@ -225,8 +296,11 @@ export function useDieFlights(rootRef: RefObject<HTMLElement | null>, game: Game
             if (tile) from = adjust(tile);
           }
           let startScale: number | undefined;
+          let delayMs: number | undefined;
           if (!from) {
-            const src = pileEl(root, die, prev.zone, you);
+            const viaBag = prev.zone === "UsedPile" && refillCount.has(die.ownerId);
+            if (viaBag) delayMs = refillMs(die.ownerId);
+            const src = pileEl(root, die, viaBag ? "Bag" : prev.zone, you);
             if (src) {
               // Full-size die centred on the pile that grows out of it (a
               // pile-sized box would balloon the clone, then snap back).
@@ -236,7 +310,9 @@ export function useDieFlights(rootRef: RefObject<HTMLElement | null>, game: Game
               startScale = 0.35;
             }
           }
-          if (from) flights.push({ reason: `appear ${die.id} ${prev.zone}->${die.zone}`, from, node: el, dest: () => (el.isConnected ? el.getBoundingClientRect() : null), hide: el, startScale });
+          if (from) flights.push({ reason: `appear ${die.id} ${prev.zone}->${die.zone}`, from, node: el, dest: () => (el.isConnected ? el.getBoundingClientRect() : null), hide: el, startScale, delayMs });
+        } else if (!el && !snap && zoneChanged && prev.zone !== "Unpurchased" && PILE_KEYS[prev.zone] && PILE_KEYS[die.zone]) {
+          pileMoves.push({ die, from: prev.zone });
         } else if (!el && !snap && prev.zone === "Unpurchased" && die.zone !== "Unpurchased" && die.cardId) {
           // Bought and it has no element of its own (goes straight to the Used pile).
           const tile = snaps.current.get(`card:${die.cardId}`);
@@ -252,10 +328,49 @@ export function useDieFlights(rootRef: RefObject<HTMLElement | null>, game: Game
       }
     }
 
+    // Pile to pile: the refill wave (Used -> Bag) first, then anything that
+    // left the Used Pile for somewhere else this update went through the
+    // refilled Bag (drawn), so it flies on from there; plain moves (a draw
+    // from a Bag that needed no refill) go with the first wave.
+    const tokenFlights: Flight[] = [];
+    if (pileMoves.length && root) {
+      const refill = pileMoves.filter((m) => m.from === "UsedPile" && m.die.zone === "Bag");
+      const lastInto = new Map<HTMLElement, Flight>();
+      const queue = (die: Die, fromZone: string, toZone: string, delayMs: number) => {
+        const src = pileEl(root, die, fromZone, you);
+        const dst = pileEl(root, die, toZone, you);
+        if (!src || !dst || src === dst) return;
+        const flight: Flight = {
+          reason: `pile ${die.id} ${fromZone}->${toZone}`,
+          from: centeredBox(src.getBoundingClientRect(), TOKEN_PX),
+          node: tokenNode(game, die),
+          dest: () => (dst.isConnected ? centeredBox(dst.getBoundingClientRect(), TOKEN_PX) : null),
+          delayMs,
+          keepSize: true,
+          fadeAtEnd: true,
+        };
+        tokenFlights.push(flight);
+        const last = lastInto.get(dst);
+        if (!last || (last.delayMs ?? 0) <= delayMs) lastInto.set(dst, flight);
+      };
+      refill.slice(0, MAX_TOKENS).forEach((m, i) => queue(m.die, "UsedPile", "Bag", i * TOKEN_STAGGER_MS));
+      let later = 0;
+      for (const m of pileMoves) {
+        if (m.from === "UsedPile" && m.die.zone === "Bag") continue;
+        if (later >= MAX_TOKENS) break;
+        if (m.from === "UsedPile" && refillCount.has(m.die.ownerId)) queue(m.die, "Bag", m.die.zone, refillMs(m.die.ownerId) + later * TOKEN_STAGGER_MS);
+        else queue(m.die, m.from, m.die.zone, later * TOKEN_STAGGER_MS);
+        later++;
+      }
+      // Each pile a token lands in pulses once, as the last one arrives.
+      lastInto.forEach((f, dst) => (f.onLand = () => bump(dst, 0)));
+    }
+
     // Debug aid: set `window.__dkFlights = []` in the console to log why each flight launched.
     const dbg = (window as unknown as { __dkFlights?: string[] }).__dkFlights;
-    if (dbg && flights.length) dbg.push(...flights.map((f) => f.reason ?? '?'));
+    if (dbg && flights.length + tokenFlights.length) dbg.push(...flights.concat(tokenFlights).map((f) => f.reason ?? '?'));
     flights.slice(0, MAX_FLIGHTS).forEach((f, i) => launch(root, f, i));
+    tokenFlights.forEach((f, i) => launch(root, f, i));
 
     // Remember this commit for the next one.
     const next = new Map<string, Snap>();

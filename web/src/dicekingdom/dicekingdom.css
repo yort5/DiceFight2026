@@ -6045,3 +6045,21 @@
 @media (prefers-reduced-motion: reduce) {
   .dicekingdom .dk-flip-coin { animation-duration: 0.01s; }
 }
+
+/* Pile-to-pile flights (dieFlights.ts tokenNode, 2026-11-22): a die with
+   no element of its own - Used Pile into the Bag on a refill, Bag into Prep
+   on a draw - and the pile it lands in. */
+.dicekingdom .dkm-pile-token {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: radial-gradient(circle at 35% 30%, #fff5, transparent 60%), var(--tone, #c9a24a);
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px #0007;
+}
+.dicekingdom .dkm-pile-bump { animation: dkm-pile-bump 0.45s ease; }
+@keyframes dkm-pile-bump {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.18); filter: brightness(1.35); }
+  100% { transform: scale(1); }
+}

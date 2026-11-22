@@ -5923,3 +5923,17 @@ opponent waits while it's up; a boss (server-driven) doesn't, but the
 overlay sits above its dice. Tests keep player one first
 (tests/DiceFight.Api.Tests/TestSetup.cs); one recording test plays and
 replays a game teamB started.
+
+## 2026-11-22 - Refill and draw animations between piles
+
+User: using Resurrection's Global when the Bag is empty (the Used Pile
+refills the Bag, then a die is drawn into Prep) needed a better animation -
+the counts just changed. The flights in web/src/dicekingdom/dieFlights.ts
+only moved dice that have an element on screen; pile-to-pile moves had
+none. Now a small token in the owner's Champion colour flies pile to pile:
+the refill wave (Used -> Bag, staggered, the Bag pulses as the last one
+lands), then whatever was drawn out of the refilled Bag flies on from the
+Bag after the wave - as a token, or as the die itself where the page shows
+Prep's dice (desktop), held hidden until it arrives. A normal turn's
+Clear and Draw that refills the Bag gets the same order. Browser check:
+~/.devtools/playwright/resurrection-refill-check.js (+ -desktop).
