@@ -210,6 +210,23 @@ public class DiceKingdomKeywordTests
         Assert.Equal(FaceKind.EnergyFace, state.GetCurrentFace(victim)!.Kind);
     }
 
+    // ...and with no level 1 creature to hit, the log says so instead of
+    // staying silent (2026-11-22, user: "did it just not fire?").
+    [Fact]
+    public void Cuttlefish_With_No_Level_1_Target_Says_It_Did_Nothing()
+    {
+        var state = NewGame();
+        var queue = new AbilityQueue();
+        var only = Tardigrade(state, "p1", 4, "only"); // L2 - not a target
+        var onAttack = (TriggeredAbility)DiceKingdomConfig.Cuttlefish.Abilities.Single();
+
+        queue.Enqueue(null, "p2", TriggerKind.DieAttacks, onAttack.Effect, sourceName: "Cuttlefish");
+        Drain(state, queue);
+
+        Assert.Equal(Zone.FieldZone, only.Zone);
+        Assert.Contains(state.Log, l => l.Text == "Cuttlefish has no target, so it does nothing.");
+    }
+
     [Fact]
     public void A_1_Damage_Ping_Knocks_Out_A_Level_2_Tardigrade()
     {

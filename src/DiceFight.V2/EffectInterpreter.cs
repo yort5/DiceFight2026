@@ -1187,7 +1187,17 @@ public static class EffectInterpreter
     {
         var candidates = TargetResolver.Query(ctx.State, ctx.ControllerId, filter, ctx.Bindings, protection, snapshot: ctx.Snapshot);
 
-        if (candidates.Count == 0) { onResolved([]); return; }
+        if (candidates.Count == 0)
+        {
+            // Said in the log (2026-11-22, user: Cuttlefish's On Attack
+            // "didn't fire" - it had no level 1 creature to spin, and
+            // nothing said so). A single-target pick only: "each" effects
+            // and a die's effects on itself have nothing to report.
+            if (filter.Count > 0 && !filter.Self && filter.Bound is null)
+                LogAbility(ctx, $"{SourceName(ctx)} has no target, so it does nothing.");
+            onResolved([]);
+            return;
+        }
 
         if (filter.Count == 0)
         {

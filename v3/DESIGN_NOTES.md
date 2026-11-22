@@ -5971,3 +5971,17 @@ Eagle 20 to -4 in 9 turns. The Eagle bot never attacked, and twice left a
 lone small attacker unblocked that Wolf then pumped +3 after blocks - its
 blocking doesn't account for the attacker's Champion pump. Bot-vs-bot
 simulator numbers can't see that, so Eagle's 62% leans on bot play.
+
+## 2026-11-22 - Two log fixes: the win line last, and abilities with no target
+
+- "X wins!" now always reads last. Damage to a player ends the game the
+  moment it's marked, and a lethal Overcrush (or unblocked hit) logged its
+  own line after that, so the user's game read "Wolf wins!" above the
+  Overcrush that won it. GameState.LogEvent now slots anything logged after
+  the game ends in ahead of the win line.
+- A single-target ability with no legal target logs "<card> has no target,
+  so it does nothing." (EffectInterpreter.ResolveTarget) - the user's
+  Cuttlefish "didn't fire" with only L2/L3 Tardigrades to aim at. "Each"
+  effects and a die's effects on itself say nothing. In 240 simulated
+  games it fired 80 times: Cuttlefish 62, Osprey 17, Barn Owl 1 -
+  Cuttlefish whiffs a lot even with L1 Tardigrades.

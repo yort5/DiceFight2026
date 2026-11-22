@@ -29,10 +29,21 @@ public sealed class GameState
     public List<GameLogEntry> Log { get; } = [];
 
     private int _logSeq;
+    private GameLogEntry? _gameOverEntry;
 
     /// <summary>Records one line. `playerId` null means the game itself did it.</summary>
     public void LogEvent(string? playerId, string text, bool isTurnStart = false)
     {
+        // "X wins!" stays the last line (2026-11-22: a lethal Overcrush or
+        // unblocked hit marks its damage - which ends the game - before
+        // its own line is written, so "Wolf wins!" read above the hit that
+        // won it). Anything logged after the game ends goes in ahead of it.
+        if (_gameOverEntry is { } end && Log.Remove(end))
+        {
+            Log.Add(new GameLogEntry(++_logSeq, playerId, text, isTurnStart));
+            Log.Add(_gameOverEntry = end with { Seq = ++_logSeq });
+            return;
+        }
         Log.Add(new GameLogEntry(++_logSeq, playerId, text, isTurnStart));
         if (Log.Count > MaxLogEntries) Log.RemoveRange(0, Log.Count - MaxLogEntries);
     }
@@ -242,6 +253,7 @@ public sealed class GameState
         IsGameOver = true;
         WinnerId = oneOut && twoOut ? null : oneOut ? PlayerTwo.Id : PlayerOne.Id;
         LogEvent(WinnerId, WinnerId is null ? "Both players are out of Life - the game is a tie." : $"{NameOf(WinnerId)} wins!");
+        _gameOverEntry = Log[^1];
     }
     public int VirtualEnergyOf(string playerId) => VirtualEnergy.GetValueOrDefault(playerId);
 

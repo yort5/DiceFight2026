@@ -281,4 +281,35 @@ public class ChampionPowersTests
             Assert.Equal(shield ? Zone.FieldZone : Zone.PrepArea, crab.Zone);
         }
     }
+
+    // "X wins!" reads last (2026-11-22, a real game): a lethal Overcrush
+    // marked its damage - ending the game - before logging its own line,
+    // so "Wolf wins!" came out above the hit that won it.
+    [Fact]
+    public void The_Win_Line_Comes_After_The_Overcrush_That_Won()
+    {
+        var state = NewGame("Wolf", "Armadillo");
+        var queue = new AbilityQueue();
+        state.PlayerTwo.Life = 2;
+        var a1 = AddDie(state, DiceKingdomConfig.Hippopotamus.Id, "p1", Zone.FieldZone, level: 1, tag: "a");
+        var a2 = AddDie(state, DiceKingdomConfig.Hippopotamus.Id, "p1", Zone.FieldZone, level: 1, tag: "b");
+        var escort = AddDie(state, DiceKingdomConfig.HoneyBadger.Id, "p1", Zone.FieldZone, level: 1, tag: "c");
+        escort.AppliedModifiers.Add(new AppliedModifier(-1, 0, 0, "test", Duration.EndOfTurn)); // 0 ATK: only the Overcrush is lethal
+        var crab = AddDie(state, DiceKingdomConfig.HermitCrab.Id, "p2", Zone.FieldZone);
+        state.MoveToStep(StepIds.SelectAttackers);
+        CombatEngine.DeclareAttackers(state, queue, new Dictionary<string, int> { [a1.Id] = 0, [a2.Id] = 0, [escort.Id] = 1 });
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(a1.Id, crab.Id);
+        CombatEngine.DeclareBlockers(state, queue, assignment, [crab.Id]);
+        Drain(state, queue);
+        Priority.Sync(state);
+        Priority.Pass(state, queue, "p1");
+        Priority.Pass(state, queue, "p2");
+        Drain(state, queue);
+
+        Assert.True(state.IsGameOver);
+        Assert.EndsWith("wins!", state.Log[^1].Text);
+        Assert.StartsWith("Overcrush:", state.Log[^2].Text);
+        Assert.True(state.Log[^1].Seq > state.Log[^2].Seq);
+    }
 }
