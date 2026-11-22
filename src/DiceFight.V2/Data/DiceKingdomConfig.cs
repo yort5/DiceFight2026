@@ -21,21 +21,22 @@ public static class DiceKingdomConfig
     // --- Tardigrade dice (the free-to-field basic creature; one per
     // energy type). ---
     //
-    // Layout (2026-10-04, user call after a simulator sweep - v3/
-    // DESIGN_NOTES.md "Tardigrade face layouts"): Dice Masters' sidekick
-    // could be fielded on 1 face in 6, ours on 5, which "might have been
-    // too much". Now: three pure energy faces (2, 2, 1), two Wild faces
-    // that are also a level 2 1/1 - field it or spend the Wild - and the
-    // level 3 Bulwark at 1/2 (was 1/3), no energy. Same 7 energy per die
-    // as before. Faces 4 and 5 keep their old roles (Bulwark, Wild).
+    // Layout (2026-11-22, user call after a simulator sweep - v3/
+    // DESIGN_NOTES.md "Tardigrades relevel to L1/L2"): three pure energy
+    // faces (2, 2, 1), two Wild faces that are also a level 1 1/1 - field
+    // it or spend the Wild - and a level 2 2/1, no energy. Every face has
+    // 1 DEF, so a 1-damage ping always knocks a Tardigrade out (the old L3
+    // 1/2 walled them off), and as the weakest die a Tardigrade is a
+    // level 1 creature again (Cuttlefish, Owl's power spin down). Same 7
+    // energy per die; face indices unchanged (4 = the no-energy face).
     private static DieDefinition TardigradeDie(string energyType) => new($"Tardigrade{energyType}",
     [
         new Face([new SymbolAmount(energyType, 2)], Kind: FaceKind.EnergyFace),
         new Face([new SymbolAmount(energyType, 2)], Kind: FaceKind.EnergyFace),
         new Face([new SymbolAmount(energyType, 1)], Kind: FaceKind.EnergyFace),
-        new Face([new SymbolAmount("Wild", 1)], new CharacterFaceData(2, FieldingCost: 0, Attack: 1, Defense: 1), Kind: FaceKind.CharacterFace),
-        new Face([], new CharacterFaceData(3, FieldingCost: 0, Attack: 1, Defense: 2), Kind: FaceKind.CharacterFace), // Bulwark
-        new Face([new SymbolAmount("Wild", 1)], new CharacterFaceData(2, FieldingCost: 0, Attack: 1, Defense: 1), Kind: FaceKind.CharacterFace),
+        new Face([new SymbolAmount("Wild", 1)], new CharacterFaceData(1, FieldingCost: 0, Attack: 1, Defense: 1), Kind: FaceKind.CharacterFace),
+        new Face([], new CharacterFaceData(2, FieldingCost: 0, Attack: 2, Defense: 1), Kind: FaceKind.CharacterFace),
+        new Face([new SymbolAmount("Wild", 1)], new CharacterFaceData(1, FieldingCost: 0, Attack: 1, Defense: 1), Kind: FaceKind.CharacterFace),
     ]);
 
     // The reverse of TardigradeDie's id - "TardigradeEye" -> "Eye".

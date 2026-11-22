@@ -12,9 +12,9 @@ import type { CardDef, Die } from "./types";
 //
 // MIRRORS src/DiceFight.V2/Data/DiceKingdomConfig.cs's TardigradeDie/
 // CharacterDie, which are the authority. A Tardigrade die's six faces are
-// a fixed spec (v3/DESIGN_NOTES.md, 2026-10-04): three energy faces
-// (2, 2, 1 of its type), two L2 1A/1D faces that also carry a Wild, and
-// one L3 "Bulwark" (1A/2D, no energy). A Character die (2026-09-07, later-
+// a fixed spec (v3/DESIGN_NOTES.md, 2026-11-22): three energy faces
+// (2, 2, 1 of its type), two L1 1A/1D faces that also carry a Wild, and
+// one L2 2A/1D (no energy). A Character die (2026-09-07, later-
 // Dice-Masters layout, was "three levels each printed twice, no energy
 // at all"): three stat faces, one per level (no doubling), plus three
 // energy faces of the card's own type - two double, one single.
@@ -82,12 +82,12 @@ function tardigradeFaces(die: Die): CubeFace[] {
  *  on the How to Play page. */
 export function tardigradeFacesOf(type: string): CubeFace[] {
   return [
-    { kind: "character", level: 2, fieldingCost: 0, attack: 1, defense: 1, avatar: TardigradeIcon }, // + a Wild
+    { kind: "character", level: 1, fieldingCost: 0, attack: 1, defense: 1, avatar: TardigradeIcon }, // + a Wild
     { kind: "energy", icon: type, amount: 2, avatar: TardigradeIcon },
     { kind: "energy", icon: type, amount: 2, avatar: TardigradeIcon },
     { kind: "energy", icon: type, amount: 1, avatar: TardigradeIcon },
-    { kind: "character", level: 3, fieldingCost: 0, attack: 1, defense: 2, avatar: TardigradeIcon }, // Bulwark
-    { kind: "character", level: 2, fieldingCost: 0, attack: 1, defense: 1, avatar: TardigradeIcon }, // + a Wild
+    { kind: "character", level: 2, fieldingCost: 0, attack: 2, defense: 1, avatar: TardigradeIcon },
+    { kind: "character", level: 1, fieldingCost: 0, attack: 1, defense: 1, avatar: TardigradeIcon }, // + a Wild
   ];
 }
 

@@ -1,12 +1,12 @@
 # Dice Kingdom — Card Reference
 
-_Generated 2026-11-01 from `src/DiceFight.V2/Data/DiceKingdomConfig.cs` by `tools/CardCatalogDocs` — every field is read straight from the live CardDef/ChampionDef records. Re-run the tool after any card change; don't hand-edit this file._
+_Generated 2026-11-22 from `src/DiceFight.V2/Data/DiceKingdomConfig.cs` by `tools/CardCatalogDocs` — every field is read straight from the live CardDef/ChampionDef records. Re-run the tool after any card change; don't hand-edit this file._
 
 Dice Masters source: the printing a card was imported from, or the card an original animal was first adapted from; Original means it was designed for Dice Kingdom (or reworked past recognition).
 
 ## Wolf (Claw)
 
-_Power: Once per your turn: one of your creatures gets +3 ATK this turn_
+_Power: Once per your turn: one of your creatures gets +3 ATK this turn (not during either player's first turn)_
 
 ### Tardigrade die ×8 (starts in the Bag; free to field)
 
@@ -14,8 +14,8 @@ _Power: Once per your turn: one of your creatures gets +3 ATK this turn_
 |---|:-:|
 | 2 Claw | 2 |
 | 1 Claw | 1 |
-| L2: 0&#9889; / 1A / 1D + 1 Wild | 2 |
-| L3: 0&#9889; / 1A / 2D | 1 |
+| L1: 0&#9889; / 1A / 1D + 1 Wild | 2 |
+| L2: 0&#9889; / 2A / 1D | 1 |
 
 ### Characters
 
@@ -32,7 +32,7 @@ _Power: Once per your turn: one of your creatures gets +3 ATK this turn_
 
 ## Armadillo (Shell)
 
-_Power: Once per turn, after blocks: prevent all combat damage to one of your creatures in combat_
+_Power: Once per turn, after blocks: prevent all combat damage to one of your creatures in combat (not during either player's first turn)_
 
 ### Tardigrade die ×8 (starts in the Bag; free to field)
 
@@ -40,8 +40,8 @@ _Power: Once per turn, after blocks: prevent all combat damage to one of your cr
 |---|:-:|
 | 2 Shell | 2 |
 | 1 Shell | 1 |
-| L2: 0&#9889; / 1A / 1D + 1 Wild | 2 |
-| L3: 0&#9889; / 1A / 2D | 1 |
+| L1: 0&#9889; / 1A / 1D + 1 Wild | 2 |
+| L2: 0&#9889; / 2A / 1D | 1 |
 
 ### Characters
 
@@ -58,7 +58,7 @@ _Power: Once per turn, after blocks: prevent all combat damage to one of your cr
 
 ## Golden Eagle (Wing)
 
-_Power: Once per your turn: field one creature without paying its fielding cost_
+_Power: Once per your turn: field one creature without paying its fielding cost (not during either player's first turn)_
 
 ### Tardigrade die ×8 (starts in the Bag; free to field)
 
@@ -66,8 +66,8 @@ _Power: Once per your turn: field one creature without paying its fielding cost_
 |---|:-:|
 | 2 Wing | 2 |
 | 1 Wing | 1 |
-| L2: 0&#9889; / 1A / 1D + 1 Wild | 2 |
-| L3: 0&#9889; / 1A / 2D | 1 |
+| L1: 0&#9889; / 1A / 1D + 1 Wild | 2 |
+| L2: 0&#9889; / 2A / 1D | 1 |
 
 ### Characters
 
@@ -84,7 +84,7 @@ _Power: Once per your turn: field one creature without paying its fielding cost_
 
 ## Great Horned Owl (Eye)
 
-_Power: Once per your turn: spin one creature a level - yours up, theirs down_
+_Power: Once per your turn: spin one creature a level - yours up, theirs down (not during either player's first turn)_
 
 ### Tardigrade die ×8 (starts in the Bag; free to field)
 
@@ -92,8 +92,8 @@ _Power: Once per your turn: spin one creature a level - yours up, theirs down_
 |---|:-:|
 | 2 Eye | 2 |
 | 1 Eye | 1 |
-| L2: 0&#9889; / 1A / 1D + 1 Wild | 2 |
-| L3: 0&#9889; / 1A / 2D | 1 |
+| L1: 0&#9889; / 1A / 1D + 1 Wild | 2 |
+| L2: 0&#9889; / 2A / 1D | 1 |
 
 ### Characters
 

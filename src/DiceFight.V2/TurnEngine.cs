@@ -939,7 +939,7 @@ public static class TurnEngine
     // fully consumed. Only ever tried on a face offering exactly one
     // symbol type - true of every hybrid Character/Tardigrade energy
     // face in this catalog; anything else (or a die with no matching
-    // lower face at all - Bulwark, a Tardigrade's single-Wild faces, a
+    // lower face at all - the no-energy L2 face, a Tardigrade's single-Wild faces, a
     // Character's own single-energy face) just falls back to a full
     // consume via the caller's own `spentZone` assignment.
     private static bool TrySpinDown(GameState state, DieInstance die, int leftover)

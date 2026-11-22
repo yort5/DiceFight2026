@@ -24,7 +24,7 @@ public class NoResultAbilityTests
         foreach (var die in bag.Skip(1)) { die.Zone = Zone.FieldZone; die.CurrentFaceIndex = 0; }
         var wing = bag[0];
         wing.Zone = Zone.ReservePool;
-        wing.CurrentFaceIndex = 2; // Tardigrade level 2 - one Wing pip
+        wing.CurrentFaceIndex = 2; // a Tardigrade's 1-energy face - one Wing pip
         state.MoveToStep(StepIds.Main);
         return (state, wing);
     }

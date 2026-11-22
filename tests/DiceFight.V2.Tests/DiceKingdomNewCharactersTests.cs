@@ -336,7 +336,7 @@ public class DiceKingdomNewCharactersTests
         var qualifyingAlly = ActiveCharacter(state, DiceKingdomConfig.HoneyBadger.Id, "p1", level: 2); // L2, non-Tardigrade - qualifies
         var tooLowLevel = ActiveCharacter(state, DiceKingdomConfig.Wolverine.Id, "p1", level: 1); // L1 - must NOT qualify
 
-        // A level-2 Tardigrade (PoolDieId, no CardId - IsSidekick, tagged
+        // A level 2 Tardigrade (PoolDieId, no CardId - IsSidekick, tagged
         // "sidekick") sitting right in the Field Zone - must NOT qualify
         // either, which is the whole point of the Tags: NoneOf:["sidekick"]
         // clause: v3's own Tardigrades DO level past 1, unlike DPS103
@@ -344,7 +344,7 @@ public class DiceKingdomNewCharactersTests
         state.Dice.Add(new DieInstance
         {
             Id = "p1-tardigrade-l2-test", PoolDieId = "TardigradeClaw", OwnerId = "p1",
-            ControllerId = "p1", Zone = Zone.FieldZone, CurrentFaceIndex = 2, // one of the two L2 faces
+            ControllerId = "p1", Zone = Zone.FieldZone, CurrentFaceIndex = 4, // its L2 face
         });
 
         var lifeBefore = state.PlayerTwo.Life;

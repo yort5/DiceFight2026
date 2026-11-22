@@ -98,7 +98,7 @@ public class ProtectionCardsTests
         Assert.Contains("either player's", status.Description);
 
         var later = state.DiceIn("p1", Zone.Bag).First(d => d.CardId is null);
-        later.Zone = Zone.ReservePool; later.CurrentFaceIndex = 3; // Wild + L2 Tardigrade.
+        later.Zone = Zone.ReservePool; later.CurrentFaceIndex = 3; // Wild + L1 Tardigrade.
         Assert.True(QueryEngine.CanBeTargeted(state, later, "p2", ProtectionFrom.Global));
         TurnEngine.Field(state, queue, later.Id, []);
         Drain(state, queue);

@@ -46,8 +46,8 @@ public class V2ActionsAndGlobalsTests
         var state = session.State;
         // Mutation's Global spins one of the Owl's own creatures down to spin
         // another up (2026-11-20): one of each.
-        Tardigrade(state, "teamB", Zone.FieldZone, 4); // level 3 - Owl's, to spin down
-        Tardigrade(state, "teamA", Zone.FieldZone, 3); // level 2 - to spin up
+        Tardigrade(state, "teamB", Zone.FieldZone, 4); // level 2 - Owl's, to spin down
+        Tardigrade(state, "teamA", Zone.FieldZone, 3); // level 1 - to spin up
 
         Assert.False(V2SeatedController.Dto(teamA.Get(session.Id)).PassGivesPriority); // Owl has no energy
 
@@ -172,8 +172,8 @@ public class V2ActionsAndGlobalsTests
     {
         var (_, session, teamA, teamB) = StartInMain();
         var state = session.State;
-        Tardigrade(state, "teamB", Zone.FieldZone, 4); // level 3 - the Owl's, to spin down
-        Tardigrade(state, "teamA", Zone.FieldZone, 3); // level 2 - to spin up
+        Tardigrade(state, "teamB", Zone.FieldZone, 4); // level 2 - the Owl's, to spin down
+        Tardigrade(state, "teamA", Zone.FieldZone, 3); // level 1 - to spin up
         var wild = Tardigrade(state, "teamB", Zone.ReservePool, 5); // 1 Wild, their only energy
         var mutation = DiceKingdomConfig.Mutation;
         var globalIndex = mutation.Abilities.ToList().FindIndex(a => a.Trigger == TriggerKind.Global);
@@ -296,8 +296,8 @@ public class V2ActionsAndGlobalsTests
     {
         var (session, owl, wolf) = StartInMainAs("GreatHornedOwl", "Wolf");
         var state = session.State;
-        var mine = Tardigrade(state, "teamA", Zone.FieldZone, 3); // L2
-        var theirs = Tardigrade(state, "teamB", Zone.FieldZone, 4); // L3 Bulwark
+        var mine = Tardigrade(state, "teamA", Zone.FieldZone, 3); // L1
+        var theirs = Tardigrade(state, "teamB", Zone.FieldZone, 4); // L2 2/1
         Assert.True(V2SeatedController.Dto(owl.Get(session.Id)).PlayerOne.ChampionPowerUsable);
         Assert.False(V2SeatedController.Dto(owl.Get(session.Id)).PlayerTwo.ChampionPowerUsable); // not Wolf's turn
 
@@ -306,8 +306,8 @@ public class V2ActionsAndGlobalsTests
         Assert.Contains("Great Horned Owl", dto.PendingChoice!.Description);
         dto = V2SeatedController.Dto(owl.ResolvePendingChoice(session.Id, new V2ResolvePendingChoiceRequest([theirs.Id])));
 
-        Assert.Equal(2, state.GetCurrentFace(theirs)!.Character!.Level); // theirs spins down
-        Assert.Equal(2, state.GetCurrentFace(mine)!.Character!.Level);
+        Assert.Equal(1, state.GetCurrentFace(theirs)!.Character!.Level); // theirs spins down
+        Assert.Equal(1, state.GetCurrentFace(mine)!.Character!.Level);
         Assert.Equal("Great Horned Owl's power", dto.Dice.Single(d => d.Id == theirs.Id).LastSpin!.Source);
         Assert.False(dto.PlayerOne.ChampionPowerUsable); // once per turn
         Assert.Throws<InvalidOperationException>(() => owl.ChampionPower(session.Id));
@@ -333,18 +333,19 @@ public class V2ActionsAndGlobalsTests
 
     // Playtest report (2026-09-27): 2A + 1A attacking in one lane, blocked
     // by a 3D Tardigrade; the preview said KO, but it stayed on the field.
-    // (Bulwark is 1/2 since 2026-10-04 - +1D keeps the report's numbers.)
+    // (A Tardigrade tops out at 1 DEF since 2026-11-22 - +2D keeps the
+    // report's numbers.)
     [Fact]
     public void Two_Attackers_Pooling_3_Damage_KO_A_3_Defense_Blocker_Into_Prep()
     {
         var (session, a, b) = StartInMainAs("Wolf", "GreatHornedOwl");
         var state = session.State;
-        var twoA = Tardigrade(state, "teamA", Zone.FieldZone, 3); // L2 1/1, +1A below = 2A
+        var twoA = Tardigrade(state, "teamA", Zone.FieldZone, 3); // L1 1/1, +1A below = 2A
         twoA.AppliedModifiers.Add(new AppliedModifier(1, 0, 0, "test", Duration.EndOfTurn));
-        var oneA = Tardigrade(state, "teamA", Zone.FieldZone, 3); // L2 1/1 = 1A
+        var oneA = Tardigrade(state, "teamA", Zone.FieldZone, 3); // L1 1/1 = 1A
         var escort = Tardigrade(state, "teamA", Zone.FieldZone, 3); // the stacking rule: another lane as full
-        var wall = Tardigrade(state, "teamB", Zone.FieldZone, 4); // Bulwark 1/2, +1D below = 3D
-        wall.AppliedModifiers.Add(new AppliedModifier(0, 1, 0, "test", Duration.EndOfTurn));
+        var wall = Tardigrade(state, "teamB", Zone.FieldZone, 4); // L2 2/1, +2D below = 3D
+        wall.AppliedModifiers.Add(new AppliedModifier(0, 2, 0, "test", Duration.EndOfTurn));
 
         a.EnterAttackStep(session.Id);
         a.DeclareAttackers(session.Id, new V2DeclareAttackersRequest([new V2AttackerDeclaration(twoA.Id, 0), new V2AttackerDeclaration(oneA.Id, 0), new V2AttackerDeclaration(escort.Id, 1)]));
@@ -412,12 +413,12 @@ public class V2ActionsAndGlobalsTests
     {
         var (session, a, _) = StartInMainAs("GreatHornedOwl", "Wolf");
         var state = session.State;
-        // A Tardigrade's levels run 2-3 (2026-10-04).
-        var low = Tardigrade(state, "teamA", Zone.FieldZone, 3);  // level 2 - its lowest, can't go down
-        var mid1 = Tardigrade(state, "teamA", Zone.FieldZone, 4); // level 3
-        var mid2 = Tardigrade(state, "teamA", Zone.FieldZone, 4); // level 3
-        var top = Tardigrade(state, "teamB", Zone.FieldZone, 4);  // level 3 - can't go up
-        var theirLow = Tardigrade(state, "teamB", Zone.FieldZone, 3); // level 2 - a second die to spin up
+        // A Tardigrade's levels run 1-2 (2026-11-22).
+        var low = Tardigrade(state, "teamA", Zone.FieldZone, 3);  // level 1 - its lowest, can't go down
+        var mid1 = Tardigrade(state, "teamA", Zone.FieldZone, 4); // level 2
+        var mid2 = Tardigrade(state, "teamA", Zone.FieldZone, 4); // level 2
+        var top = Tardigrade(state, "teamB", Zone.FieldZone, 4);  // level 2 - can't go up
+        var theirLow = Tardigrade(state, "teamB", Zone.FieldZone, 3); // level 1 - a second die to spin up
         var eye = Tardigrade(state, "teamA", Zone.ReservePool, 0);
         var index = DiceKingdomConfig.Mutation.Abilities.ToList().FindIndex(x => x.Trigger == TriggerKind.Global);
 
@@ -436,8 +437,8 @@ public class V2ActionsAndGlobalsTests
         Assert.DoesNotContain(top.Id, up.CandidateIds);
         a.ResolvePendingChoice(session.Id, new V2ResolvePendingChoiceRequest([low.Id]));
 
-        Assert.Equal(2, state.GetCurrentFace(mid1)!.Character!.Level);
-        Assert.Equal(3, state.GetCurrentFace(low)!.Character!.Level);
+        Assert.Equal(1, state.GetCurrentFace(mid1)!.Character!.Level);
+        Assert.Equal(2, state.GetCurrentFace(low)!.Character!.Level);
     }
 
     [Fact]

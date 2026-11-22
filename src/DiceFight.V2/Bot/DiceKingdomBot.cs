@@ -97,7 +97,7 @@ public static class DiceKingdomBot
         // a body, and a body is why it was bought (user call 2026-09-28:
         // "at the very least, prefer stat faces to energy"). Not while
         // racing to a rush card (BotPersona.RushCardId) - then energy is
-        // the point, and a zero-energy Bulwark Tardigrade gets rerolled
+        // the point, and a zero-energy L2 Tardigrade gets rerolled
         // for some instead.
         if (!rushing)
         {
@@ -192,7 +192,7 @@ public static class DiceKingdomBot
 
         // Real Characters first: an unfielded one goes to the Used Pile at
         // the end of Main (TurnEngine.EnterAttackStep), and a Tardigrade's
-        // zero-energy Bulwark face (1/2) likewise has nothing else to give.
+        // zero-energy L2 face (2/1) likewise has nothing else to give.
         // Deck-out burn (TurnEngine.ClearAndDraw): each die short of a full
         // draw costs 1 life per turn, paid back as 1 generic energy. A
         // real player takes that burn on purpose when there's life to

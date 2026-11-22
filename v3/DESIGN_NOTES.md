@@ -5848,3 +5848,38 @@ the ability does with Cancel and a green "Use for 1" (action dice: "Use
 <name>"); nothing is spent until the second tap. Desktop is unchanged.
 The Mutation buy card and Mutation's Global row are separate places on
 the screen, but sit close together since the table-order change.
+
+## 2026-11-22 - Tardigrades relevel to L1/L2
+
+A real game: Owl's Cuttlefish attacked and nothing happened - its On
+Attack spins a *level 1* creature to energy, and since 2026-10-04
+("Tardigrade face layouts") a Tardigrade had only L2 and L3 faces, so a
+board of Tardigrades gave it no target (Owl's power "spinning down" an L2
+Tardigrade did nothing either). User: Tardigrades should run L1-L2, and
+the L3 1/2 "Bulwark" was throwing off the 1-damage pings (Banshee, Honey
+Badger, Box Turtle, Quokka) that in Dice Masters clear sidekicks - the
+1/1s died and the 1/2s piled up. Raising pings to 2 was the other option;
+rejected because it would also kill most cheap animals.
+
+Simulator, `SIM_TARDIGRADE`, powers on, 400 games/matchup (energy faces
+2, 2, 1 in every row):
+
+| Creature faces | Wolf | Arm | Owl | Eagle | Spread | Turn cap |
+|---|---|---|---|---|---|---|
+| Old: L2 1/1 + Wild ×2, L3 1/2 | 37 | 49 | 49 | 63 | 26 | 355 |
+| Relevel only: L1 1/1 + Wild ×2, L2 1/2 | 37 | 49 | 50 | 63 | 25 | 348 |
+| L1 0/1 + Wild ×2, L2 1/1 | 32 | 52 | 52 | 61 | 29 | 322 |
+| L1 1/1 + Wild ×2, L2 1/1 | 37 | 48 | 51 | 62 | 25 | 350 |
+| **L1 1/1 + Wild ×2, L2 2/1** | 39 | 46 | 53 | 62 | 23 | 300 |
+
+The level numbers alone barely matter (few cards check level). A 0-ATK
+face costs Wolf, the aggro team, ~5 points. L2 1/1 would make spinning
+up a downgrade (it loses the Wild).
+
+**Adopted (user call): L1 1/1 + Wild ×2, L2 2/1, no energy.** Every
+Tardigrade face has 1 DEF, so any ping kills one; spinning up is a real
+upgrade; turn-cap games drop ~15%. Cost: Owl gains ~4 (Cuttlefish and its
+power reach Tardigrades again) and Armadillo loses ~4 - Armadillo vs Owl
+is 28/72, the worst matchup. Also visible: Eagle 62 vs Wolf 39 was
+already a 26-point gap before this change (it was 13 on 2026-10-04), so
+the four rosters want a balance look of their own.

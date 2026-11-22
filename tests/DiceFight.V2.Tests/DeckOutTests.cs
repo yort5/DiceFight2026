@@ -88,7 +88,7 @@ public class DeckOutTests
 
         var claw = state.DiceIn("p1", Zone.DiceFromBag).Single();
         claw.Zone = Zone.ReservePool;
-        claw.CurrentFaceIndex = 2; // Tardigrade level 2 - one Claw pip
+        claw.CurrentFaceIndex = 2; // a Tardigrade's 1-energy face - one Claw pip
         TurnEngine.Purchase(state, new AbilityQueue(), badger.Id, [claw.Id]);
 
         Assert.Equal(Zone.UsedPile, badger.Zone);

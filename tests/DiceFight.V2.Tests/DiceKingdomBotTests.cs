@@ -79,7 +79,7 @@ public class DiceKingdomBotTests
         var mine = state.Dice.First(d => d.OwnerId == "p1" && d.CardId is null);
         var theirs = state.Dice.Where(d => d.OwnerId == "p2" && d.CardId is null).Take(2).ToList();
         foreach (var d in theirs.Append(mine)) { d.Zone = Zone.FieldZone; d.CurrentFaceIndex = 3; } // 1/1
-        theirs[1].CurrentFaceIndex = 4; // Bulwark 1/2 - the more valuable one
+        theirs[1].CurrentFaceIndex = 4; // L2 2/1 - the more valuable one
         string[]? answer = null;
         state.PendingChoice = new PendingChoice
         {

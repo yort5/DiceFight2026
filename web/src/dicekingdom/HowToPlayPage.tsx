@@ -153,7 +153,7 @@ export function HowToPlayPage() {
         <DieAnatomy cards={cards} />
         <p>
           <b>Tardigrade faces:</b> two faces of 2 energy, one of 1 energy, two creature faces worth a Wild energy
-          (spend them as energy, or field them as a level 2 1/1), and a level 3 1/2. Tardigrade creatures are free to
+          (spend them as energy, or field them as a level 1 1/1), and a level 2 2/1. Tardigrade creatures are free to
           field.
         </p>
         <TardigradeFaces type="Claw" />

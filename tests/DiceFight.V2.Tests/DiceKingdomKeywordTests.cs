@@ -134,7 +134,7 @@ public class DiceKingdomKeywordTests
         Assert.Single(state.DiceIn("p1", Zone.PrepArea)); // Sloth's Awaken drew a die.
     }
 
-    // A real game (2026-11-20): three Tardigrades on 1/2 (level 3), no
+    // A real game (2026-11-20): three Tardigrades on their top level (then 1/2 at L3), no
     // other creatures. Mutation's Global spun the chosen one down, then
     // auto-picked that same die - the only one able to go up - and spun
     // it straight back: the Global was paid for and did nothing. "Spin
@@ -156,7 +156,7 @@ public class DiceKingdomKeywordTests
     {
         var state = NewGame();
         var queue = new AbilityQueue();
-        foreach (var tag in new[] { "a", "b", "c" }) Tardigrade(state, "p1", 4, tag); // level 3, 1/2
+        foreach (var tag in new[] { "a", "b", "c" }) Tardigrade(state, "p1", 4, tag); // level 2, their top
         var globalIndex = DiceKingdomConfig.Mutation.Abilities.ToList().FindIndex(a => a.Trigger == TriggerKind.Global);
 
         Assert.Throws<InvalidOperationException>(() =>
@@ -168,19 +168,59 @@ public class DiceKingdomKeywordTests
     {
         var state = NewGame();
         var queue = new AbilityQueue();
-        var high = Tardigrade(state, "p1", 4, "high"); // level 3 - the only one that can go down
-        var theirs = Tardigrade(state, "p2", 3, "theirs"); // level 2 - the only OTHER one that can go up
+        var high = Tardigrade(state, "p1", 4, "high"); // level 2 - the only one that can go down
+        var theirs = Tardigrade(state, "p2", 3, "theirs"); // level 1 - the only OTHER one that can go up
         var globalIndex = DiceKingdomConfig.Mutation.Abilities.ToList().FindIndex(a => a.Trigger == TriggerKind.Global);
 
         TurnEngine.UseGlobal(state, queue, DiceKingdomConfig.Mutation.Id, "p1", globalIndex, Energy(state, "p1", "Eye", 1));
         Drain(state, queue);
 
         Assert.Null(state.PendingChoice);
-        Assert.Equal(2, state.GetCurrentFace(high)!.Character!.Level);
-        Assert.Equal(3, state.GetCurrentFace(theirs)!.Character!.Level);
+        Assert.Equal(1, state.GetCurrentFace(high)!.Character!.Level);
+        Assert.Equal(2, state.GetCurrentFace(theirs)!.Character!.Level);
         var log = state.Log.Select(l => l.Text).ToList();
-        Assert.Contains("Mutation spins its own Tardigrade down to level 2.", log);
-        Assert.Contains("Mutation spins Two's Tardigrade up to level 3.", log);
+        Assert.Contains("Mutation spins its own Tardigrade down to level 1.", log);
+        Assert.Contains("Mutation spins Two's Tardigrade up to level 2.", log);
+    }
+
+    // Tardigrades relevel to L1/L2 (2026-11-22): a real game's Cuttlefish
+    // On Attack had no level 1 creature to hit, and the old L3 1/2 shrugged
+    // off every 1-damage ping. Now the creature faces are L1 1/1 (x2, with
+    // a Wild) and L2 2/1 - level 1 is reachable and nothing has 2 DEF.
+    [Fact]
+    public void Tardigrades_Run_Levels_1_To_2_And_Never_Have_More_Than_1_Defense()
+    {
+        var faces = DiceKingdomConfig.CustomTardigrade("Eye", 1).Die.Faces.Where(f => f.Character is not null).ToList();
+        Assert.Equal([1, 1, 2], faces.Select(f => f.Character!.Level).Order().ToList());
+        Assert.All(faces, f => Assert.Equal(1, f.Character!.Defense));
+    }
+
+    [Fact]
+    public void Cuttlefish_Spins_A_Level_1_Tardigrade_To_Energy()
+    {
+        var state = NewGame();
+        var queue = new AbilityQueue();
+        var victim = Tardigrade(state, "p1", 3, "victim"); // L1 1/1 + a Wild
+        var onAttack = (TriggeredAbility)DiceKingdomConfig.Cuttlefish.Abilities.Single();
+
+        queue.Enqueue(null, "p2", TriggerKind.DieAttacks, onAttack.Effect, sourceName: "Cuttlefish");
+        Drain(state, queue);
+
+        Assert.Equal(Zone.ReservePool, victim.Zone);
+        Assert.Equal(FaceKind.EnergyFace, state.GetCurrentFace(victim)!.Kind);
+    }
+
+    [Fact]
+    public void A_1_Damage_Ping_Knocks_Out_A_Level_2_Tardigrade()
+    {
+        var state = NewGame();
+        var queue = new AbilityQueue();
+        var target = Tardigrade(state, "p1", 4, "target"); // L2 2/1
+
+        queue.Enqueue(null, "p2", TriggerKind.Global, new DealDamage(new Fixed(1), new TargetFilter(Kind: TargetKind.CharacterDie)), sourceName: "Ping");
+        Drain(state, queue);
+
+        Assert.NotEqual(Zone.FieldZone, target.Zone);
     }
 
     // --- Intimidate ---
