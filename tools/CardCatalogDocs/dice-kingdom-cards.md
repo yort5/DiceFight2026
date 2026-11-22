@@ -84,7 +84,7 @@ _Power: Once per your turn: field one creature without paying its fielding cost 
 
 ## Great Horned Owl (Eye)
 
-_Power: Once per your turn: spin one creature a level - yours up, theirs down (not during either player's first turn)_
+_Power: Once per your turn: spin one of your creatures up a level (not during either player's first turn)_
 
 ### Tardigrade die ×8 (starts in the Bag; free to field)
 

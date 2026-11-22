@@ -963,14 +963,12 @@ public static class DiceKingdomBot
             .OrderByDescending(d => DieValue(state, d) + OvercrushStopped(d) * faceWeight).FirstOrDefault();
     }
 
-    // Owl: spin down the opponent's most valuable creature at L2+, else spin
-    // up one of this player's below L3.
+    // Owl: spin up this player's most valuable creature that has a level
+    // above it (the power only spins its own since 2026-11-22).
     private static DieInstance? SpinTarget(GameState state, string botId)
     {
         var inPlay = state.Dice.Where(d => d.Zone is Zone.FieldZone or Zone.AttackZone && state.GetCurrentFace(d)?.Character is not null).ToList();
-        return inPlay.Where(d => d.ControllerId != botId && QueryEngine.LevelsAround(state, d, above: false) > 0)
-                .OrderByDescending(d => DieValue(state, d)).FirstOrDefault()
-            ?? inPlay.Where(d => d.ControllerId == botId && QueryEngine.LevelsAround(state, d, above: true) > 0)
+        return inPlay.Where(d => d.ControllerId == botId && QueryEngine.LevelsAround(state, d, above: true) > 0)
                 .OrderByDescending(d => DieValue(state, d)).FirstOrDefault();
     }
 

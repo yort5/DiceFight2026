@@ -43,8 +43,8 @@ public enum ChampionPassiveKind
     // Golden Eagle: once per your turn, field one creature without paying
     // its fielding cost.
     FieldOneFree,
-    // Great Horned Owl: once per your turn, spin one creature a level -
-    // yours up, theirs down.
+    // Great Horned Owl: once per your turn, spin one of its own creatures
+    // up a level (it spun an opponent's down too until 2026-11-22).
     SpinOne,
 }
 

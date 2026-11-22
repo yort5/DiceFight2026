@@ -8,7 +8,7 @@ namespace DiceFight.V2.Tests;
 // Champion once-per-turn powers (2026-10-04, replacing the always-on
 // passives): Wolf +3 ATK to one creature, Armadillo shields one creature
 // from combat damage after blocks, Golden Eagle fields one creature free,
-// Great Horned Owl spins one creature (yours up, theirs down).
+// Great Horned Owl spins one of its own creatures up a level.
 public class ChampionPowersTests
 {
     private sealed class FixedRoller(int index) : IDiceRoller
@@ -117,28 +117,37 @@ public class ChampionPowersTests
         Assert.Contains(state.Log, l => l.Text.Contains("for free (Golden Eagle)"));
     }
 
+    // Owl's power spins only its own creatures, and only up (2026-11-22,
+    // user: consistent with the other Champions' powers). It used to spin
+    // an opposing creature down too.
     [Fact]
-    public void Owl_Spins_Its_Own_Creature_Up_Or_Theirs_Down()
+    public void Owl_Spins_One_Of_Its_Own_Creatures_Up_A_Level()
     {
         var state = NewGame("GreatHornedOwl", "Wolf");
         var queue = new AbilityQueue();
         var mine = AddDie(state, DiceKingdomConfig.Magpie.Id, "p1", Zone.FieldZone, level: 1);
+        var other = AddDie(state, DiceKingdomConfig.Hyena.Id, "p1", Zone.FieldZone, level: 2);
+        var top = AddDie(state, DiceKingdomConfig.Basilisk.Id, "p1", Zone.FieldZone, level: 3);
         var theirs = AddDie(state, DiceKingdomConfig.Mongoose.Id, "p2", Zone.FieldZone, level: 3);
 
         ChampionPowers.Use(state, queue, "p1");
         Drain(state, queue);
-        EffectInterpreter.AnswerPendingChoice(state, [theirs.Id]);
-        Drain(state, queue);
-        Assert.Equal(2, state.GetCurrentFace(theirs)!.Character!.Level);
-        Assert.Equal("Great Horned Owl's power", theirs.LastSpin!.Source);
-
-        // Next turn: its own creature goes up.
-        state.ChampionPowerUsedThisTurn.Clear();
-        ChampionPowers.Use(state, queue, "p1");
-        Drain(state, queue);
+        Assert.Equal(new[] { mine.Id, other.Id }.Order(), state.PendingChoice!.CandidateIds.Order()); // not top, not theirs
         EffectInterpreter.AnswerPendingChoice(state, [mine.Id]);
         Drain(state, queue);
         Assert.Equal(2, state.GetCurrentFace(mine)!.Character!.Level);
+        Assert.Equal(3, state.GetCurrentFace(theirs)!.Character!.Level);
+        Assert.Equal("Great Horned Owl's power", mine.LastSpin!.Source);
+    }
+
+    [Fact]
+    public void Owl_Cant_Use_Its_Power_With_Nothing_Of_Its_Own_That_Can_Go_Up()
+    {
+        var state = NewGame("GreatHornedOwl", "Wolf");
+        AddDie(state, DiceKingdomConfig.Basilisk.Id, "p1", Zone.FieldZone, level: 3);
+        AddDie(state, DiceKingdomConfig.Mongoose.Id, "p2", Zone.FieldZone, level: 1);
+
+        Assert.False(ChampionPowers.CanUse(state, "p1"));
     }
 
     [Fact]

@@ -289,7 +289,7 @@ public class V2ActionsAndGlobalsTests
     }
 
     // Great Horned Owl's power (2026-10-04, replaced Foresight): once per
-    // your turn, spin one creature a level - yours up, theirs down. Used
+    // your turn, spin one of your creatures up a level. Used
     // through the champion-power endpoint; the target is a pending choice.
     [Fact]
     public void Owl_Spins_A_Creature_Through_The_Champion_Power_Endpoint()
@@ -297,18 +297,21 @@ public class V2ActionsAndGlobalsTests
         var (session, owl, wolf) = StartInMainAs("GreatHornedOwl", "Wolf");
         var state = session.State;
         var mine = Tardigrade(state, "teamA", Zone.FieldZone, 3); // L1
-        var theirs = Tardigrade(state, "teamB", Zone.FieldZone, 4); // L2 2/1
+        var mine2 = Tardigrade(state, "teamA", Zone.FieldZone, 3); // L1 - two picks, so it asks
+        var theirs = Tardigrade(state, "teamB", Zone.FieldZone, 3); // L1 - not the Owl's, so not offered
         Assert.True(V2SeatedController.Dto(owl.Get(session.Id)).PlayerOne.ChampionPowerUsable);
         Assert.False(V2SeatedController.Dto(owl.Get(session.Id)).PlayerTwo.ChampionPowerUsable); // not Wolf's turn
 
         var dto = V2SeatedController.Dto(owl.ChampionPower(session.Id));
         Assert.NotNull(dto.PendingChoice);
         Assert.Contains("Great Horned Owl", dto.PendingChoice!.Description);
-        dto = V2SeatedController.Dto(owl.ResolvePendingChoice(session.Id, new V2ResolvePendingChoiceRequest([theirs.Id])));
+        Assert.DoesNotContain(theirs.Id, state.PendingChoice!.CandidateIds);
+        dto = V2SeatedController.Dto(owl.ResolvePendingChoice(session.Id, new V2ResolvePendingChoiceRequest([mine.Id])));
 
-        Assert.Equal(1, state.GetCurrentFace(theirs)!.Character!.Level); // theirs spins down
-        Assert.Equal(1, state.GetCurrentFace(mine)!.Character!.Level);
-        Assert.Equal("Great Horned Owl's power", dto.Dice.Single(d => d.Id == theirs.Id).LastSpin!.Source);
+        Assert.Equal(2, state.GetCurrentFace(mine)!.Character!.Level); // spins up
+        Assert.Equal(1, state.GetCurrentFace(mine2)!.Character!.Level);
+        Assert.Equal(1, state.GetCurrentFace(theirs)!.Character!.Level);
+        Assert.Equal("Great Horned Owl's power", dto.Dice.Single(d => d.Id == mine.Id).LastSpin!.Source);
         Assert.False(dto.PlayerOne.ChampionPowerUsable); // once per turn
         Assert.Throws<InvalidOperationException>(() => owl.ChampionPower(session.Id));
     }

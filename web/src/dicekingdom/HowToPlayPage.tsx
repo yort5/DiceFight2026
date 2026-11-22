@@ -27,7 +27,7 @@ const CHAMPIONS = [
   { id: "Wolf", name: "Wolf", energy: "Claw", power: "Once during your turn, give one of your creatures +3 ATK." },
   { id: "Armadillo", name: "Armadillo", energy: "Shell", power: "Once a turn, after blockers are chosen, one of your creatures in the fight takes no combat damage." },
   { id: "GoldenEagle", name: "Golden Eagle", energy: "Wing", power: "Once during your turn, field one creature without paying its fielding cost." },
-  { id: "GreatHornedOwl", name: "Great Horned Owl", energy: "Eye", power: "Once during your turn, spin one creature one level - yours up, or your opponent's down." },
+  { id: "GreatHornedOwl", name: "Great Horned Owl", energy: "Eye", power: "Once during your turn, spin one of your creatures up a level." },
 ];
 
 /** A section's number on a die, the four energies' colours in turn. */

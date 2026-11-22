@@ -5883,3 +5883,24 @@ power reach Tardigrades again) and Armadillo loses ~4 - Armadillo vs Owl
 is 28/72, the worst matchup. Also visible: Eagle 62 vs Wolf 39 was
 already a 26-point gap before this change (it was 13 on 2026-10-04), so
 the four rosters want a balance look of their own.
+
+## 2026-11-22 - Owl's power spins only its own creatures
+
+User: Great Horned Owl's power ("spin one creature a level - yours up,
+theirs down") should only touch its own creatures, like the other
+Champions' powers. Now "Once per your turn: spin one of your creatures up
+a level"; it offers only creatures with a level above them, and can't be
+used without one. The bot spins its most valuable such creature. User
+kept 1 level (not 2) - it works better with Awaken.
+
+Simulator, new Tardigrades, powers on, 400 games/matchup:
+
+| Owl's power | Wolf | Arm | Owl | Eagle | Spread | Arm v Owl | Owl v Eagle |
+|---|---|---|---|---|---|---|---|
+| Yours up / theirs down | 39 | 46 | 53 | 62 | 23 | 28/72 | 31/69 |
+| **Yours only, up 1** | 39 | 47 | 50 | 62 | 22 | 33/67 | 30/70 |
+| Yours only, up 2 | 39 | 47 | 53 | 60 | 22 | 32/68 | 35/65 |
+
+The power was a small part of Owl's strength (-2 points without the
+spin-down). It undoes most of what the Tardigrade relevel did to
+Armadillo vs Owl. Eagle (62) vs Wolf (39) is still the open balance gap.

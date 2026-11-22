@@ -38,7 +38,7 @@ public static class ChampionPowers
                 && (!champion.PowerBeforeBlocksOnly || state.CurrentStepId == StepIds.Main),
             ChampionPassiveKind.SpinOne =>
                 playerId == state.ActivePlayerId && Priority.IsWindow(state)
-                && state.Dice.Any(d => d.Zone is Zone.FieldZone or Zone.AttackZone && state.GetCurrentFace(d)?.Character is not null),
+                && mine.Any(d => QueryEngine.LevelsAround(state, d, above: true) > 0),
             ChampionPassiveKind.ShieldOneFromCombat =>
                 state.CurrentStepId == StepIds.ActionGlobalWindow && InAFight(state, playerId).Any(),
             _ => false,
@@ -76,10 +76,11 @@ public static class ChampionPowers
                 Prompt: $"choose one of your creatures to get +{champion.Amount} ATK this turn."), AtkDelta: champion.Amount),
             ChampionPassiveKind.ShieldOneFromCombat => new CombatFlag(new TargetFilter(Ownership: TargetOwnership.Own, Zones: [Zone.AttackZone],
                 Prompt: "choose one of your creatures in combat - combat damage to it is prevented this turn."), CombatFlagKind.PreventCombatDamage),
-            ChampionPassiveKind.SpinOne => new SpinByOwner(new TargetFilter(
+            ChampionPassiveKind.SpinOne => new SpinByOwner(new TargetFilter(Ownership: TargetOwnership.Own,
+                Stat: new StatThreshold(StatKind.LevelsAbove, Min: 1),
                 Prompt: champion.Amount == 1
-                    ? "choose a creature - yours spins up a level, theirs spins down a level."
-                    : $"choose a creature - yours spins up {champion.Amount} levels, theirs spins down {champion.Amount} levels."), Math.Max(1, champion.Amount)),
+                    ? "choose one of your creatures to spin up a level."
+                    : $"choose one of your creatures to spin up {champion.Amount} levels."), Math.Max(1, champion.Amount)),
             _ => throw new InvalidOperationException("That Champion has no power to use."),
         };
         state.ChampionPowerUsedThisTurn.Add(playerId);
@@ -108,8 +109,8 @@ public static class ChampionPowers
         ChampionPassiveKind.ShieldOneFromCombat => "Once per turn, after blocks: prevent all combat damage to one of your creatures in combat",
         ChampionPassiveKind.FieldOneFree => "Once per your turn: field one creature without paying its fielding cost",
         ChampionPassiveKind.SpinOne => c.Amount <= 1
-            ? "Once per your turn: spin one creature a level - yours up, theirs down"
-            : $"Once per your turn: spin one creature {c.Amount} levels - yours up, theirs down",
+            ? "Once per your turn: spin one of your creatures up a level"
+            : $"Once per your turn: spin one of your creatures up {c.Amount} levels",
         _ => c.PassiveKind.ToString(),
     };
 }
