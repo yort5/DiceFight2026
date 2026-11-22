@@ -530,7 +530,7 @@ public class DiceKingdomKeywordTests
         var state = NewGame();
         var queue = new AbilityQueue();
         AddDie(state, DiceKingdomConfig.ElectricEel.Id, "p1", Zone.FieldZone);
-        var hippo = AddDie(state, DiceKingdomConfig.Hippopotamus.Id, "p2", Zone.FieldZone); // 5 DEF: a ping does nothing
+        var hippo = AddDie(state, DiceKingdomConfig.Hippopotamus.Id, "p2", Zone.FieldZone); // 3 DEF: a 1-damage ping leaves it standing
         TurnEngine.UseAction(state, queue, ActionDieReady(state).Id);
         Drain(state, queue);
         Assert.Contains("Attune", state.PendingChoice!.Description);
@@ -937,12 +937,12 @@ public class DiceKingdomKeywordTests
         var queue = new AbilityQueue();
         var fish = AddDie(state, DiceKingdomConfig.Archerfish.Id, "p1", Zone.FieldZone);
         fish.GrantedTags.Add(new GrantedTag("Range 3", Duration.EndOfTurn, "p1"));
-        var hippo = AddDie(state, DiceKingdomConfig.Hippopotamus.Id, "p2", Zone.FieldZone);
+        var elephant = AddDie(state, DiceKingdomConfig.Elephant.Id, "p2", Zone.FieldZone); // 7 DEF: survives to show the damage
         state.MoveToStep(StepIds.SelectAttackers);
         CombatEngine.DeclareAttackers(state, queue, [fish.Id]);
         Drain(state, queue);
 
-        Assert.Equal(3, hippo.Damage); // the higher of Range (1) and Range 3
+        Assert.Equal(3, elephant.Damage); // the higher of Range (1) and Range 3
     }
 
     // --- Status cues: every state reports its source and duration ---

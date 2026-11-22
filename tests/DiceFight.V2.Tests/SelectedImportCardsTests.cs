@@ -294,7 +294,7 @@ public class SelectedImportCardsTests
         EventBus.Fire(s, q, new GameEvent(TriggerKind.TurnStepEntered, null, "p1", StepIds.Main)); Drain(s, q);
         Assert.Equal(2, QueryEngine.GetPurchaseCostNow(s, DiceKingdomConfig.AngerIssues, "p1"));
         Assert.Equal(1, QueryEngine.GetPurchaseCostNow(s, s.CardCatalog["MYST002"], "p1"));
-        Assert.Equal(4, QueryEngine.GetPurchaseCostNow(s, DiceKingdomConfig.Hippopotamus, "p1"));
+        Assert.Equal(5, QueryEngine.GetPurchaseCostNow(s, DiceKingdomConfig.Hippopotamus, "p1"));
         for (var i = 0; i < 2; i++)
         {
             var d = Add(s, DiceKingdomConfig.AngerIssues.Id, "p2", Zone.Unpurchased);
@@ -353,7 +353,7 @@ public class SelectedImportCardsTests
         EventBus.Fire(s, q, new GameEvent(TriggerKind.TurnStepEntered, null, "p1", StepIds.Main)); Drain(s, q);
         for (var i = 0; i < 2; i++) { var action = Add(s, "IG003", zone: Zone.ReservePool); TurnEngine.UseAction(s, q, action.Id); Drain(s, q); }
         Assert.Equal(1, QueryEngine.GetPurchaseCostNow(s, DiceKingdomConfig.AngerIssues, "p1"));
-        Assert.Equal(3, QueryEngine.GetPurchaseCostNow(s, DiceKingdomConfig.Hippopotamus, "p1"));
+        Assert.Equal(4, QueryEngine.GetPurchaseCostNow(s, DiceKingdomConfig.Hippopotamus, "p1"));
         for (var i = 0; i < 2; i++)
         {
             var d = Add(s, DiceKingdomConfig.AngerIssues.Id, "p2", Zone.Unpurchased);

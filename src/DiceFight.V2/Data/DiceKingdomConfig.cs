@@ -222,13 +222,19 @@ public static class DiceKingdomConfig
 
     // Shell
 
+    // Hippopotamus takes Orca's role on Wolf's team (2026-11-22, user call):
+    // the vanilla 3/5-4/6-5/7 at 4 was the same buy as Greyhound with no
+    // Fast, a wall on an aggro team (Wolf's least-fielded card). Orca in its
+    // slot took Wolf from 39% to 51% in the simulator; Orca itself is in Set
+    // 2 with no painting, so Hippopotamus got Orca's cost, die and ability
+    // (v3/DESIGN_NOTES.md "Hippopotamus takes Orca's KO").
     public static readonly CardDef Hippopotamus = new(
         Id: "DK-SHELL-01", Name: "Hippopotamus", Subtitle: null, Set: "Dice Kingdom", CardType: CardType.Character,
-        PurchaseCost: 4, EnergySymbolIds: ["Shell"],
-        Die: CharacterDie("DK-SHELL-01Die", energyType: "Shell", (1, 3, 5), (1, 4, 6), (2, 5, 7)),
-        DieLimit: 4, Affiliations: [], Keywords: [],
-        RawText: "Vanilla - no ability.",
-        Abilities: [],
+        PurchaseCost: 5, EnergySymbolIds: ["Shell"],
+        Die: CharacterDie("DK-SHELL-01Die", energyType: "Shell", (1, 2, 3), (1, 4, 4), (2, 5, 5)),
+        DieLimit: 4, Affiliations: [], Keywords: ["On Field"],
+        RawText: "On Field: KO a target creature.",
+        Abilities: [new TriggeredAbility(TriggerKind.DieFielded, new Ko(new TargetFilter(Kind: TargetKind.CharacterDie)))],
         Continuous: []);
 
     public static readonly CardDef MuskOx = new(

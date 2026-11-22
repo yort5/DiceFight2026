@@ -252,8 +252,8 @@ public class ChampionPowersTests
         {
             var state = NewGame("Wolf", "Armadillo");
             var queue = new AbilityQueue();
-            var a1 = AddDie(state, DiceKingdomConfig.Hippopotamus.Id, "p1", Zone.FieldZone, level: 1, tag: "a"); // 3 ATK
-            var a2 = AddDie(state, DiceKingdomConfig.Hippopotamus.Id, "p1", Zone.FieldZone, level: 1, tag: "b"); // 3 ATK
+            var a1 = AddDie(state, DiceKingdomConfig.Hippopotamus.Id, "p1", Zone.FieldZone, level: 1, tag: "a"); // 2 ATK
+            var a2 = AddDie(state, DiceKingdomConfig.Hippopotamus.Id, "p1", Zone.FieldZone, level: 1, tag: "b"); // 2 ATK
             var escort = AddDie(state, DiceKingdomConfig.HoneyBadger.Id, "p1", Zone.FieldZone, level: 1, tag: "c"); // 1 ATK, unblocked
             var crab = AddDie(state, DiceKingdomConfig.HermitCrab.Id, "p2", Zone.FieldZone); // 2 DEF
             state.MoveToStep(StepIds.SelectAttackers);
@@ -275,9 +275,9 @@ public class ChampionPowersTests
             else Priority.Pass(state, queue, "p2");
             Drain(state, queue);
 
-            // 6 lane ATK into 2 DEF: 4 carries through only when the blocker is gone
+            // 4 lane ATK into 2 DEF: 2 carries through only when the blocker is gone
             // (and the escort's 1 either way).
-            Assert.Equal(shield ? 19 : 15, state.PlayerTwo.Life);
+            Assert.Equal(shield ? 19 : 17, state.PlayerTwo.Life);
             Assert.Equal(shield ? Zone.FieldZone : Zone.PrepArea, crab.Zone);
         }
     }

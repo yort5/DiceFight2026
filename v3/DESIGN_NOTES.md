@@ -5937,3 +5937,37 @@ Bag after the wave - as a token, or as the die itself where the page shows
 Prep's dice (desktop), held hidden until it arrives. A normal turn's
 Clear and Draw that refills the Bag gets the same order. Browser check:
 ~/.devtools/playwright/resurrection-refill-check.js (+ -desktop).
+
+## 2026-11-22 - Hippopotamus takes Orca's KO (Wolf roster)
+
+User: "I'm not sure I would ever choose a Hippo over a Greyhound - the
+stats are very similar, and Greyhound has Fast." Vanilla Hippopotamus
+(Shell, 4: 3/5, 4/6, 5/7) was Wolf's least-fielded card - a wall on the
+aggro team. Simulator, powers on, 400 games/matchup, each card in Hippo's
+slot:
+
+| Card | Wolf | Arm | Owl | Eagle | Fielded |
+|---|---|---|---|---|---|
+| Hippopotamus (vanilla) | 39 | 47 | 50 | 62 | 29% |
+| Bull Shark (4, On Attack +2 ATK) | 40 | 45 | 51 | 62 | 42% |
+| Army Ant (4, Sacrifice) | 39 | 46 | 51 | 62 | 42% |
+| Komodo Dragon (5, Breath Weapon) | 39 | 46 | 52 | 63 | 64% |
+| Orca (5, On Field: KO a creature) | 51 | 41 | 47 | 60 | 64% |
+| Tasmanian Devil (7, same KO) | 41 | 45 | 51 | 62 | 6% |
+
+Orca is in Set 2 (no painting); its Set 1 stand-in, Tasmanian Devil, is too
+expensive to matter on Wolf. **Adopted (user, option 2): Hippopotamus gets
+Orca's cost, die and ability** - 5, 2/3, 4/4, 5/5, "On Field: KO a target
+creature" - keeping its Shell energy and painting. User also noted set
+changes are fine ("a hobby project ... nothing keeping us from breaking
+changes between sets").
+
+Live roster with the new Hippopotamus (Shell, not Orca's Claw): Wolf 49,
+Armadillo 42, Owl 47, Eagle 60 - turn cap 294. Hippopotamus is fielded in
+57% of Wolf's games (was 29%).
+
+Also from the user's first game after this round: Wolf beat the computer's
+Eagle 20 to -4 in 9 turns. The Eagle bot never attacked, and twice left a
+lone small attacker unblocked that Wolf then pumped +3 after blocks - its
+blocking doesn't account for the attacker's Champion pump. Bot-vs-bot
+simulator numbers can't see that, so Eagle's 62% leans on bot play.
