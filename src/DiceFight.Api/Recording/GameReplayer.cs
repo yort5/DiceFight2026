@@ -23,7 +23,7 @@ public static class GameReplayer
     public static Outcome Replay(GameRecord record, Action<GameState, RecordedAction>? onAction = null)
     {
         var players = record.Seats.Select(BuildPlayer).ToList();
-        var state = GameSetup.NewGame(DiceKingdomConfig.Config, DiceKingdomConfig.Catalog, players[0], players[1]);
+        var state = GameSetup.NewGame(DiceKingdomConfig.Config, DiceKingdomConfig.Catalog, players[0], players[1], record.FirstPlayerId);
         var store = new V2GameStore();
         var session = store.Create(state, record.GameId, record.Seed);
 
@@ -52,7 +52,7 @@ public static class GameReplayer
     public static (V2GameSession Session, string? Divergence) Restore(GameRecord record, LiveGame live)
     {
         var players = record.Seats.Select(BuildPlayer).ToList();
-        var state = GameSetup.NewGame(DiceKingdomConfig.Config, DiceKingdomConfig.Catalog, players[0], players[1]);
+        var state = GameSetup.NewGame(DiceKingdomConfig.Config, DiceKingdomConfig.Catalog, players[0], players[1], record.FirstPlayerId);
         var store = new V2GameStore();
         var seats = record.Seats.Select(s => new Seat(s.PlayerId, live.SeatTokens[s.PlayerId])).ToList();
         var session = store.Create(state, record.GameId, record.Seed, live.BossId, seats);

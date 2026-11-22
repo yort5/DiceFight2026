@@ -258,7 +258,11 @@ public sealed record V2GameStateDto(
     IReadOnlyList<V2LockedCardDto>? LockedCards = null,
     // The seat the server plays itself - a boss battle's boss (BossTurns,
     // 2026-10-31). The browser leaves it alone and just watches.
-    string? ServerSeatId = null)
+    string? ServerSeatId = null,
+    // Who took (or takes) the first turn, and how many turns have started -
+    // 0 until the first Clear and Draw, when the client shows the coin flip.
+    string? FirstPlayerId = null,
+    int TurnNumber = 0)
 {
     public static V2GameStateDto From(string gameId, GameState state, string? yourPlayerId = null, int version = 0) => new(
         gameId, state.ActivePlayerId, state.CurrentStep.ToString(), state.CurrentStepId,
@@ -280,7 +284,9 @@ public sealed record V2GameStateDto(
         state.IsGameOver,
         state.WinnerId,
         DieStatuses.UnblockableLanes(state),
-        LockedCardsFor(state));
+        LockedCardsFor(state),
+        FirstPlayerId: state.FirstPlayerId,
+        TurnNumber: state.TurnNumber);
 
     private static IReadOnlyList<V2LockedCardDto> LockedCardsFor(GameState state) =>
         (from player in new[] { state.PlayerOne, state.PlayerTwo }

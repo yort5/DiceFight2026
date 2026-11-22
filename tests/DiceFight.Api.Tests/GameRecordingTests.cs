@@ -43,14 +43,16 @@ public class GameRecordingTests : IDisposable
     };
 
     [Theory]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
-    public async Task A_Played_Game_Is_Recorded_And_Replays_To_The_Same_State(bool customTeam, bool withChampion)
+    [InlineData(false, false, false)]
+    [InlineData(true, false, false)]
+    [InlineData(true, true, false)]
+    [InlineData(false, false, true)] // teamB won the coin flip (2026-11-22)
+    public async Task A_Played_Game_Is_Recorded_And_Replays_To_The_Same_State(bool customTeam, bool withChampion, bool playerTwoFirst)
     {
         string gameId;
         await using (var server = Server())
         {
+            if (playerTwoFirst) server.Services.GetRequiredService<V2GameStore>().FirstPlayer = (_, b) => b.Id;
             var http = server.CreateClient();
             object body = customTeam
                 ? new { playerOneCustomTeam = withChampion ? CustomWolfTeam : CustomTeam, playerTwoChampionId = "Armadillo" }
@@ -58,11 +60,15 @@ public class GameRecordingTests : IDisposable
             var created = await (await http.PostAsJsonAsync("/api/v2/games", body))
                 .Content.ReadFromJsonAsync<JsonElement>();
             gameId = created.GetProperty("game").GetProperty("gameId").GetString()!;
+            var starter = playerTwoFirst ? "teamB" : "teamA";
+            Assert.Equal(starter, created.GetProperty("game").GetProperty("activePlayerId").GetString());
+            Assert.Equal(starter, created.GetProperty("game").GetProperty("firstPlayerId").GetString());
+            Assert.Equal(0, created.GetProperty("game").GetProperty("turnNumber").GetInt32());
             var tokens = created.GetProperty("seats").EnumerateArray()
                 .ToDictionary(s => s.GetProperty("playerId").GetString()!, s => s.GetProperty("token").GetString()!);
 
             // One illegal move - recorded with its error, and replayed as one.
-            var bogus = await Send(http, gameId, tokens["teamA"], "purchase", new { dieId = "no-such-die", energyDieIds = Array.Empty<string>() });
+            var bogus = await Send(http, gameId, tokens[playerTwoFirst ? "teamB" : "teamA"], "purchase", new { dieId = "no-such-die", energyDieIds = Array.Empty<string>() });
             Assert.False(bogus.IsSuccessStatusCode);
 
             // Six turns of bot-vs-bot (two turn-end writes at least).
@@ -94,6 +100,7 @@ public class GameRecordingTests : IDisposable
         var record = GameRecordJson.Deserialize(File.ReadAllText(file));
 
         Assert.Equal([customTeam && !withChampion ? null : "Wolf", "Armadillo"], record.Seats.Select(s => s.ChampionId));
+        Assert.Equal(playerTwoFirst ? "teamB" : "teamA", record.FirstPlayerId);
         if (customTeam)
         {
             Assert.All(record.Seats[0].CardDiceCounts!.Where(kv => kv.Key != DiceFight.V2.Data.DiceKingdomConfig.AngerIssues.Id).Select(kv => kv.Value), n => Assert.Equal(2, n));
@@ -112,6 +119,7 @@ public class GameRecordingTests : IDisposable
         Assert.Null(outcome.Divergence);
         Assert.Equal(record.Actions.Count, outcome.ActionsReplayed);
         Assert.Equal(record.Result!.Life["teamA"], outcome.State.PlayerOne.Life);
+        Assert.Equal(record.FirstPlayerId, outcome.State.FirstPlayerId);
     }
 
     // A game the server has forgotten (a restart, a deploy, Cloud Run

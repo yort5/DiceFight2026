@@ -13,15 +13,22 @@ public static class GameSetup
         GameConfig config,
         IReadOnlyDictionary<string, CardDef> catalog,
         Player playerOne,
-        Player playerTwo)
+        Player playerTwo,
+        string? firstPlayerId = null)
     {
+        // Who takes the first turn (2026-11-22, user: "I always go first" -
+        // the game now picks at random; callers decide, so a replay can
+        // repeat it). Default: player one, as every game before that.
+        if (firstPlayerId is not null && firstPlayerId != playerOne.Id && firstPlayerId != playerTwo.Id)
+            throw new ArgumentException($"'{firstPlayerId}' isn't a player in this game.");
         var state = new GameState
         {
             Config = config,
             CardCatalog = catalog,
             PlayerOne = playerOne,
             PlayerTwo = playerTwo,
-            ActivePlayerId = playerOne.Id,
+            ActivePlayerId = firstPlayerId ?? playerOne.Id,
+            FirstPlayerId = firstPlayerId ?? playerOne.Id,
         };
 
         playerOne.Life = config.Rules.StartingLife;

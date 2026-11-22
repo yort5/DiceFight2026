@@ -58,7 +58,7 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
             return BadRequest(new { error = e.Message });
         }
 
-        var state = GameSetup.NewGame(config, catalog, playerOne, playerTwo);
+        var state = GameSetup.NewGame(config, catalog, playerOne, playerTwo, CoinFlip(playerOne, playerTwo));
         var session = store.Create(state, bossId: boss?.Id);
         store.Accounts?.GameCreated(session, HttpContext.Player());
 
@@ -68,6 +68,13 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
             session.Seats.Where(seat => boss is null || seat.PlayerId == state.PlayerOne.Id)
                 .Select(seat => new SeatDto(seat.PlayerId, seat.Token)).ToList()));
     }
+
+    // Who goes first: a coin flip (2026-11-22, user: "I always go first").
+    // Not the game's seeded Rng - drawing from it here would shift every
+    // roll after it, and the record keeps the result (FirstPlayerId) anyway.
+    // Tests can fix it (V2GameStore.FirstPlayer / DefaultFirstPlayer).
+    private string CoinFlip(Player a, Player b) =>
+        (store.FirstPlayer ?? V2GameStore.DefaultFirstPlayer)?.Invoke(a, b) ?? (Random.Shared.Next(2) == 0 ? a.Id : b.Id);
 
     // Open an online game with only your own Champion picked (2026-09-30,
     // user request - it used to take picking BOTH, starting, then copying
@@ -141,7 +148,7 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
         {
             return BadRequest(new { error = e.Message });
         }
-        var state = GameSetup.NewGame(DiceKingdomConfig.Config, DiceKingdomConfig.Catalog, host, guestPlayer);
+        var state = GameSetup.NewGame(DiceKingdomConfig.Config, DiceKingdomConfig.Catalog, host, guestPlayer, CoinFlip(host, guestPlayer));
         var session = store.StartLobby(lobby, state);
         store.Accounts?.LobbyJoined(lobby, session, HttpContext.Player());
         _session = session;

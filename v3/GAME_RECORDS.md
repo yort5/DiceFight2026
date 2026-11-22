@@ -12,6 +12,8 @@ at the end of every turn) and once more at game over:
   plus a git commit when built from a checkout), the game's random seed,
   and each seat's Champion, team and whether it was the computer. A seat
   counts as the computer if it ever asked for the bot's move.
+  `firstPlayerId` says who took the first turn (a coin flip since
+  2026-11-22; older records have none, and teamA always went first).
 - **Every action in order:** who, which action, the request as sent, the
   turn and step it was made in, and a checksum of the game state after it.
   Rejected (illegal) moves are kept, with their error. Moves the web

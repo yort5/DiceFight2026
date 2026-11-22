@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using DiceFight.V2;
+using DiceFight.V2.Model;
 
 namespace DiceFight.Api;
 
@@ -22,6 +23,11 @@ public sealed class V2GameStore(Recording.GameRecorder? recorder = null, Account
     public Recording.GameRecorder? Recorder => recorder;
     public Accounts.PlayerAccounts? Accounts => accounts;
     public TimeSpan BossPace { get; set; } = BossTurns.Pace;
+    // Who goes first in a new game (player one, player two -> its id); null
+    // = a coin flip (V2GamesController.CoinFlip). For tests: the default is
+    // set once for a whole test project, the per-store one by a single test.
+    public static Func<Player, Player, string>? DefaultFirstPlayer { get; set; }
+    public Func<Player, Player, string>? FirstPlayer { get; set; }
 
     public IEnumerable<V2GameSession> Sessions => _games.Values;
     public IEnumerable<V2Lobby> Lobbies => _lobbies.Values;

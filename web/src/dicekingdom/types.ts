@@ -207,6 +207,10 @@ export interface GameState {
   lockedCards?: LockedCard[];
   /** The seat the server plays itself - a boss battle's boss (2026-10-31). Only watched, never driven. */
   serverSeatId?: string | null;
+  /** Who takes the first turn - a coin flip since 2026-11-22. */
+  firstPlayerId?: string | null;
+  /** Turns started so far; 0 until the first Clear and Draw. */
+  turnNumber?: number;
 }
 
 export interface Seat {

@@ -5904,3 +5904,22 @@ Simulator, new Tardigrades, powers on, 400 games/matchup:
 The power was a small part of Owl's strength (-2 points without the
 spin-down). It undoes most of what the Tardigrade relevel did to
 Armadillo vs Owl. Eagle (62) vs Wolf (39) is still the open balance gap.
+
+## 2026-11-22 - A coin flip decides who goes first
+
+User: "I notice I always go first... We should randomize that, ideally
+with an animation." Every game used to start with player one (the host,
+or the human against the computer). Now the server flips a coin when the
+game is made (V2GamesController.CoinFlip - Random.Shared, not the game's
+seeded generator, so the rolls after it don't shift) and the record keeps
+the result (`firstPlayerId`); a replay of an older record starts with
+teamA as before. The state DTO carries `firstPlayerId` and `turnNumber`.
+
+Both play pages show FirstPlayerFlip before the first turn's draw: a coin
+with each Champion on a face spins ~2 s and lands on the starter ("You go
+first!" / "<Champion> goes first"), then closes itself, or on a tap. Once
+per game (localStorage), so a reload doesn't flip again. The computer
+opponent waits while it's up; a boss (server-driven) doesn't, but the
+overlay sits above its dice. Tests keep player one first
+(tests/DiceFight.Api.Tests/TestSetup.cs); one recording test plays and
+replays a game teamB started.

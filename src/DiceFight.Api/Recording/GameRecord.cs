@@ -27,6 +27,9 @@ public sealed class GameRecord
     public string? EngineVersion { get; init; }
     public required int Seed { get; init; }
     public required List<RecordedSeat> Seats { get; init; }
+    // Who took the first turn (picked at random since 2026-11-22). Null in
+    // older records - those games always started with Seats[0].
+    public string? FirstPlayerId { get; init; }
     // A boss battle (DiceKingdomBosses id) - teamB is the boss.
     public string? BossId { get; set; }
     public List<RecordedAction> Actions { get; init; } = [];

@@ -45,6 +45,7 @@ public sealed class GameRecorder(IGameRecordSink sink, GameRecordOptions options
             ],
             Turns = 1,
             BossId = session.BossId,
+            FirstPlayerId = session.State.ActivePlayerId,
         };
         if (session.BossId is not null) session.Record.Seats[1].Bot = true;
         session.RecordedActivePlayerId = session.State.ActivePlayerId;

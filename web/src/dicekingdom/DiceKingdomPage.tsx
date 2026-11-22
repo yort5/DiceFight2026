@@ -8,6 +8,7 @@ import { api, apiAs } from "./api";
 import { CHAMPION_ICONS, CHARACTER_ICONS, EnergyBadge, HelpIcon, TardigradeIcon } from "./icons";
 import { describeSavedGame, forgetSeats, inviteLink, myLink, rememberSeats } from "./seats";
 import { GameOverOverlay } from "./GameOverOverlay";
+import { FirstPlayerFlip, firstFlipShowing } from "./FirstPlayerFlip";
 import { AccountLink } from "./AccountPage";
 import { OPPONENT_PICKS, PickYourChampion, ResumeGames, WaitingForOpponent, resolveInvite } from "./lobby";
 import { ChampionPicker } from "./ChampionPicker";
@@ -952,7 +953,7 @@ export function DiceKingdomPage() {
   useEffect(() => {
     if (!vsComputer || !gameId) return;
     const timer = window.setInterval(() => {
-      if (botActingRef.current || busyRef.current) return;
+      if (botActingRef.current || busyRef.current || firstFlipShowing()) return;
       const g = gameRef.current;
       if (!g) return;
       const botId = g.playerTwo.id;
@@ -2051,6 +2052,7 @@ export function DiceKingdomPage() {
           )}
         </div>
       )}
+      <FirstPlayerFlip key={game.gameId} game={game} you={vsComputer ? game.playerOne.id : you} />
       <GameOverOverlay
         game={game}
         you={vsComputer ? game.playerOne.id : you}

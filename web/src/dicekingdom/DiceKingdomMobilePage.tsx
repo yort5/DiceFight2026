@@ -20,6 +20,7 @@ import { Painting, hasPainting } from "./cardArt";
 import { PawIcon } from "./kingdomArt";
 import { describeSavedGame, forgetSeats, inviteLink, myLink, rememberSeats } from "./seats";
 import { GameOverOverlay } from "./GameOverOverlay";
+import { FirstPlayerFlip, firstFlipShowing } from "./FirstPlayerFlip";
 import { OPPONENT_PICKS, PickYourChampion, WaitingForOpponent, resolveInvite } from "./lobby";
 import { MobileBrand, MobileHome, MobileSetup, clearPlayMode, openSetup, usePlayMode } from "./MobileHome";
 import { DieCube, type CubeSpin } from "./DieCube";
@@ -2540,7 +2541,7 @@ export function DiceKingdomMobilePage() {
   useEffect(() => {
     if (!vsComputer || !gameId) return;
     const timer = window.setInterval(() => {
-      if (botActingRef.current || busyRef.current) return;
+      if (botActingRef.current || busyRef.current || firstFlipShowing()) return;
       const g = gameRef.current;
       if (!g) return;
       const botId = g.playerTwo.id;
@@ -3358,6 +3359,7 @@ export function DiceKingdomMobilePage() {
       }}
     >
       <EnergyBadgeOutlineDefs />
+      <FirstPlayerFlip key={game.gameId} game={game} you={vsComputer ? game.playerOne.id : you} />
       <GameOverOverlay
         game={game}
         you={vsComputer ? game.playerOne.id : you}

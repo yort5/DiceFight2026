@@ -16,6 +16,8 @@ public sealed class GameState
     public List<DieInstance> Dice { get; } = [];
 
     public string ActivePlayerId { get; set; } = string.Empty;
+    // Who took the first turn (GameSetup.NewGame's pick).
+    public string FirstPlayerId { get; set; } = string.Empty;
 
     // A running account of what happened, oldest first, for the match
     // log - mirrors v1's GameState.cs LogEvent exactly (same cap, same

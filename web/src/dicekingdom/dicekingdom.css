@@ -5943,3 +5943,105 @@
   text-align: center;
   overflow-wrap: anywhere;
 }
+
+/* Who goes first (FirstPlayerFlip, 2026-11-22): a two-faced coin, one
+   Champion per face, spinning on its vertical axis and landing on the
+   side that starts. */
+.dicekingdom .dk-flip-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 250; /* over the dice-flight ghosts (200) */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(10, 10, 16, 0.78);
+  cursor: pointer;
+}
+.dicekingdom .dk-flip {
+  width: min(340px, 100%);
+  padding: 20px 18px 16px;
+  border-radius: 18px;
+  text-align: center;
+  background: var(--dkm-surface, var(--panel-bg, #22252e));
+  color: var(--dkm-ink, var(--text-h, #f4efe6));
+  border: 1px solid var(--dkm-border, #8884);
+  box-shadow: 0 10px 40px #0009;
+}
+.dicekingdom .dk-flip-eyebrow {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+.dicekingdom .dk-flip-stage {
+  height: 160px;
+  margin: 26px auto 8px;
+  perspective: 700px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dicekingdom .dk-flip-coin {
+  position: relative;
+  width: 132px;
+  height: 132px;
+  transform-style: preserve-3d;
+  animation-duration: 1.9s;
+  animation-timing-function: cubic-bezier(0.2, 0.6, 0.25, 1);
+  animation-fill-mode: forwards;
+}
+.dicekingdom .dk-flip-coin.lands-front { animation-name: dk-flip-front; }
+.dicekingdom .dk-flip-coin.lands-back { animation-name: dk-flip-back; }
+@keyframes dk-flip-front {
+  0% { transform: translateY(0) rotateY(0deg); }
+  40% { transform: translateY(-34px) rotateY(900deg); }
+  100% { transform: translateY(0) rotateY(1800deg); }
+}
+@keyframes dk-flip-back {
+  0% { transform: translateY(0) rotateY(0deg); }
+  40% { transform: translateY(-34px) rotateY(990deg); }
+  100% { transform: translateY(0) rotateY(1980deg); }
+}
+.dicekingdom .dk-flip-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  background: radial-gradient(circle at 35% 30%, #fff3, transparent 60%), var(--tone, #888);
+  color: #fff;
+  border: 4px solid #ffd45f;
+  box-shadow: inset 0 0 0 3px #0003;
+  overflow: hidden;
+}
+.dicekingdom .dk-flip-face.is-back { transform: rotateY(180deg); }
+.dicekingdom .dk-flip-face img,
+.dicekingdom .dk-flip-face svg { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; }
+.dicekingdom .dk-flip-name {
+  max-width: 92px;
+  white-space: normal;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.1;
+  text-shadow: 0 1px 2px #0008;
+}
+.dicekingdom .dk-flip-result {
+  margin: 4px 0 2px;
+  font-size: 22px;
+  opacity: 0;
+  transform: scale(0.9);
+  transition: opacity 0.25s, transform 0.25s;
+}
+.dicekingdom .dk-flip-result.is-shown { opacity: 1; transform: scale(1); }
+.dicekingdom .dk-flip-hint { margin: 0; font-size: 12px; opacity: 0.55; }
+@media (prefers-reduced-motion: reduce) {
+  .dicekingdom .dk-flip-coin { animation-duration: 0.01s; }
+}
