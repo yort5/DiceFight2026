@@ -843,7 +843,14 @@ export function DiceKingdomPage() {
       // the same way runBot does; see its own remarks for why. A no-op
       // in ordinary pass-and-play, where this always was the human's own
       // token/response already.
-      const next = vsComputer ? { ...raw, yourPlayerId: raw.playerOne.id } : raw;
+      // An automatic move may have gone out as the OTHER seat (apiAs(owner)
+      // - this browser can hold both tokens: vs-computer, and an online
+      // host keeps the guest's for the invite link). The server answers as
+      // whoever sent it, so keep "you" as it was - an online host whose
+      // phone auto-declared the guest's empty blocks was flipped to the
+      // guest's view and left waiting on itself (2026-11-23).
+      const you = vsComputer ? raw.playerOne.id : gameRef.current?.yourPlayerId;
+      const next = you ? { ...raw, yourPlayerId: you } : raw;
       setGame(next);
     } catch {
       // Expected on whichever browser doesn't hold the seat this

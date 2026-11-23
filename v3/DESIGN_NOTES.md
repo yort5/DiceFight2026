@@ -6005,3 +6005,21 @@ lone Wolverine through and Wolf pumped it +3 for 6. Two reasons:
 Simulator (powers on, 400/matchup): Wolf 49 -> 46, Armadillo 42 -> 43, Owl
 47 -> 49, Eagle 60 -> 60; turn cap 294 -> 278. Bot-vs-bot can't show the
 human-vs-bot gap this closes; the next real games will.
+
+## 2026-11-23 - An online host's view flipped to the guest's after an auto-move
+
+User, playing their son on two phones: "I fielded three Tardigrades and
+clicked Done buying and fielding and all of a sudden it switched around
+and showed my opponent having the Tardigrades I just fielded." The record
+(020022e6) was consistent - the user was the host (Owl, teamA), and it was
+their turn. The host's phone keeps BOTH seat tokens (the guest's becomes
+the invite link). Declaring no attackers left an empty assign-blockers
+step for the guest, and the page's auto-skip answers an empty step with
+the owner's token (apiAs) - the host's phone won the race, sent it as the
+guest (seq 39, auto), and setGame'd the server's reply, which is addressed
+to whoever sent it. The screen became the guest's and showed "waiting for
+Great Horned Owl" - itself. Not caused by the coin flip (older than it).
+
+Fix: runQuiet (both pages) keeps yourPlayerId as it was, as vs-computer
+already did. Browser check: ~/.devtools/playwright/host-both-seats-check.js.
+A stuck game recovers on a reload of the host's page.

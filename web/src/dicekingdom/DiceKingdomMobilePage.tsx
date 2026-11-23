@@ -2424,8 +2424,15 @@ export function DiceKingdomMobilePage() {
     if (busyRef.current) return;
     busyRef.current = true;
     try {
+      // An automatic move may have gone out as the OTHER seat (apiAs(owner)
+      // - this browser can hold both tokens: vs-computer, and an online
+      // host keeps the guest's for the invite link). The server answers as
+      // whoever sent it, so keep "you" as it was - an online host whose
+      // phone auto-declared the guest's empty blocks was flipped to the
+      // guest's view and left waiting on itself (2026-11-23).
       const raw = await fn();
-      const next = vsComputer ? { ...raw, yourPlayerId: raw.playerOne.id } : raw;
+      const you = vsComputer ? raw.playerOne.id : gameRef.current?.yourPlayerId;
+      const next = you ? { ...raw, yourPlayerId: you } : raw;
       setGame(next);
     } catch {
       // expected on whichever browser doesn't hold the seat this needed
