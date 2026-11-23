@@ -600,7 +600,12 @@ public sealed class V2GamesController(V2GameStore store) : ControllerBase, IActi
             throw new InvalidOperationException("The game is over.");
         _seatPlayerId = playerId;
         _session = session;
-        store.Accounts?.SeatUsed(session, playerId, HttpContext.Player());
+        // An automatic move (X-Auto-Move) doesn't claim the seat (2026-11-23):
+        // an online host's phone holds the guest's token for the invite link
+        // and answered the guest's empty blocking step with it - which moved
+        // the guest's seat, and the game, onto the host's account.
+        if (Request.Headers["X-Auto-Move"] != "1")
+            store.Accounts?.SeatUsed(session, playerId, HttpContext.Player());
         return (session, playerId);
     }
 

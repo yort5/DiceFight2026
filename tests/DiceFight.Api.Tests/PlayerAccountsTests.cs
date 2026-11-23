@@ -135,6 +135,28 @@ public class PlayerAccountsTests
         Assert.Equal(["teamB"], guestGame.Seats.Where(s => s.Token is not null).Select(s => s.SeatId));
     }
 
+    // A real game (2026-11-23): the host's phone keeps the guest's token
+    // (it made the invite link) and answered the guest's empty blocking
+    // step with it, automatically - which moved the guest's seat, and the
+    // game, onto the host's account. An automatic move claims nothing.
+    [Fact]
+    public void An_Automatic_Move_With_The_Other_Seats_Token_Does_Not_Take_The_Seat()
+    {
+        var store = new V2GameStore(accounts: NewAccounts());
+        var (host, _) = store.Accounts!.Register(null);
+        var (guest, _) = store.Accounts.Register(null);
+        var opened = Ok(Games(store, host).Open(new OpenV2GameRequest("GreatHornedOwl")));
+        var guestToken = opened.Seats.Single(s => s.PlayerId == "teamB").Token;
+        Games(store, guest, guestToken).Join(opened.GameId, new JoinV2GameRequest("GoldenEagle"));
+
+        var auto = Games(store, host, guestToken, "GET");
+        auto.ControllerContext.HttpContext.Request.Headers["X-Auto-Move"] = "1";
+        auto.Get(opened.GameId);
+
+        Assert.Equal(guest.Id, store.GetSession(opened.GameId).SeatOwners["teamB"]);
+        Assert.Equal(["teamB"], Assert.Single(Ok(Players(store, guest).Me()).Games).Seats.Where(s => s.Token is not null).Select(s => s.SeatId));
+    }
+
     [Fact]
     public void An_Invite_Link_Hands_That_Seat_To_Whoever_Plays_It()
     {

@@ -6023,3 +6023,10 @@ Great Horned Owl" - itself. Not caused by the coin flip (older than it).
 Fix: runQuiet (both pages) keeps yourPlayerId as it was, as vs-computer
 already did. Browser check: ~/.devtools/playwright/host-both-seats-check.js.
 A stuck game recovers on a reload of the host's page.
+
+Same bug, server side: every request with a seat token records the
+caller's account as that seat's owner (PlayerAccounts.SeatUsed), and the
+host's auto-move with the guest's token moved the guest's seat - and the
+game - onto the host's account (the record showed one account owning both
+seats; the son's iPad was a guest). Automatic moves (X-Auto-Move) no longer
+claim a seat. The guest's next real move takes it back for this game.
