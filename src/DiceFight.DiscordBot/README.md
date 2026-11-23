@@ -9,14 +9,15 @@ run in several bots.
 |---|---|---|
 | `dicemasters` | `/card`, `/team` | Dice Masters card lookup and Teambuilder link preview |
 | `radio` | none | Posts each new song a Live365 station plays to channels (from the church bot) |
+| `members` | `/introduce`, `/verify`, `/whois` | Members give their real name (set as their nickname) and verify their email with a code, earning a role |
 | `game-library` | `/games add · remove · list · available · borrow · return · mine · sell · unsell · forsale` | Board games the members own, to lend and sell |
 
 ## Adding a bot
 
 1. In the [Discord developer portal](https://discord.com/developers/applications),
    create an application, add a Bot, and copy its token. Invite it with the
-   `bot` and `applications.commands` scopes. It only needs to send messages
-   (radio) - no privileged intents.
+   `bot` and `applications.commands` scopes. It needs no privileged intents. The church bot
+   (members) also needs the Manage Nicknames and Manage Roles permissions.
 2. Add an entry under `DiscordBots` in `src/DiceFight.Api/appsettings.json`:
 
    ```json
@@ -47,6 +48,20 @@ to register in that one server instantly.
   role) can remove anyone's game or listing and mark any loan returned.
   Libraries are saved in the game-records bucket as
   `discord/libraries/<id>.json`.
+
+- **members** - `"Members": { "VerifiedRoleId": <role id>, "ManagerRoleIds": [ ... ], "SetNickname": true, "ServerName": "...", "Smtp": { "Host": "smtp.gmail.com", "Port": 587, "UserName": "...", "From": "...", "FromName": "Barnabas" } }`.
+  `/introduce` opens a form for a real name and an email. The name becomes
+  their server nickname. The email gets a 6-digit code (15 minutes, 5 tries,
+  one resend a minute) and entering it - the form's **Enter code** button or
+  `/verify` - gives them `VerifiedRoleId`; make private channels require that
+  role. `/whois` (Manage Nicknames, Manage Server or a manager role) shows
+  what someone gave. Set the SMTP password on the server as
+  `DiscordBots__<bot>__Members__Smtp__Password` (for Gmail, an
+  [app password](https://myaccount.google.com/apppasswords)); without SMTP,
+  emails are saved unverified. The bot's role needs **Manage Nicknames** and
+  **Manage Roles** and must sit above the members' roles and the verified
+  role; Discord never lets a bot rename the server owner. Saved as
+  `discord/members/<server id>.json` in the game-records bucket.
 
 ## Adding a feature
 

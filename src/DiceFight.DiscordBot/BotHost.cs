@@ -47,6 +47,7 @@ public sealed class BotHost
         Client.SlashCommandExecuted += OnSlashCommandAsync;
         Client.AutocompleteExecuted += OnAutocompleteAsync;
         Client.ButtonExecuted += OnButtonAsync;
+        Client.ModalSubmitted += OnModalAsync;
     }
 
     public DiscordSocketClient Client { get; }
@@ -148,6 +149,24 @@ public sealed class BotHost
             _logger.LogError(ex, "Bot {Bot}: button {Button} failed", Context.Name, button.Data.CustomId);
             if (!button.HasResponded)
                 await button.RespondAsync("Something went wrong with that button.", ephemeral: true);
+        }
+    }
+
+    private async Task OnModalAsync(SocketModal modal)
+    {
+        var commandName = modal.Data.CustomId.Split(':')[0];
+        if (!_byCommand.TryGetValue(commandName, out var feature)) return;
+        try
+        {
+            await feature.ModalAsync(modal, Context);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Bot {Bot}: form {Form} failed", Context.Name, modal.Data.CustomId);
+            if (!modal.HasResponded)
+                await modal.RespondAsync("Something went wrong with that form.", ephemeral: true);
+            else
+                await modal.FollowupAsync("Something went wrong with that form.", ephemeral: true);
         }
     }
 

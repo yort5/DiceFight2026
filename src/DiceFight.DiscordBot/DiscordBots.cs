@@ -46,6 +46,10 @@ public static class DiscordBotsRegistration
         services.AddSingleton<IBotFeature, RadioFeature>();
         services.AddSingleton<IBotFeature, GameLibraryFeature>();
         services.AddSingleton<GameLibraryStore>();
+        services.AddSingleton<IBotFeature, MembersFeature>();
+        services.AddSingleton<MemberDirectoryStore>();
+        services.AddSingleton(_ => new VerificationCodes(TimeProvider.System));
+        services.AddSingleton<IEmailSender, SmtpEmailSender>();
         services.AddHostedService<DiscordBotsService>();
         return services;
     }

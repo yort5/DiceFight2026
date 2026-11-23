@@ -18,7 +18,20 @@ public class DiscordBotsTests
         new DiceMastersFeature(),
         new RadioFeature(new NoHttp()),
         new GameLibraryFeature(new GameLibraryStore(new MemoryBotDataStore())),
+        new MembersFeature(new MemberDirectoryStore(new MemoryBotDataStore()), new VerificationCodes(TimeProvider.System), new NoEmail()),
     ];
+
+    private sealed class NoEmail : IEmailSender
+    {
+        public Task SendAsync(SmtpSettings smtp, string to, string subject, string body, CancellationToken cancel = default) =>
+            throw new InvalidOperationException("No email in tests.");
+    }
+
+    private sealed class Clock(DateTimeOffset start) : TimeProvider
+    {
+        public DateTimeOffset Now { get; set; } = start;
+        public override DateTimeOffset GetUtcNow() => Now;
+    }
 
     private sealed class NoHttp : IHttpClientFactory
     {
@@ -39,10 +52,11 @@ public class DiscordBotsTests
         {
             ["DiscordBots:church:Features:0"] = "radio",
             ["DiscordBots:church:Features:1"] = "game-library",
+            ["DiscordBots:church:Features:2"] = "members",
             ["DiscordBots:boardgames:Features:0"] = "game-library",
             ["DiscordBots:dicefight:Features:0"] = "dicemasters",
         });
-        Assert.Equal(["games"], Host("church", config).Commands.Keys); // radio has no commands
+        Assert.Equal(["games", "introduce", "verify", "whois"], Host("church", config).Commands.Keys.Order()); // radio has no commands
         Assert.Equal(["games"], Host("boardgames", config).Commands.Keys);
         Assert.Equal(["card", "team"], Host("dicefight", config).Commands.Keys.Order());
         Assert.IsType<GameLibraryFeature>(Host("church", config).Commands["games"]);
@@ -166,5 +180,65 @@ public class DiscordBotsTests
         Assert.False(RadioFeature.IsNew(seen, "Amazing Grace"));
         foreach (var title in new[] { "A", "B", "C", "D", "E" }) RadioFeature.IsNew(seen, title);
         Assert.True(RadioFeature.IsNew(seen, "Amazing Grace")); // only the last five are remembered
+    }
+
+    [Fact]
+    public void Real_Names_And_Emails_Are_Tidied_Or_Refused()
+    {
+        Assert.Equal(("Jane Smith", null), MemberDirectory.CleanName("  Jane   Smith "));
+        Assert.NotNull(MemberDirectory.CleanName("J").Problem);
+        Assert.NotNull(MemberDirectory.CleanName(new string('a', 33)).Problem); // Discord's nickname limit
+        Assert.Equal(("jane@example.org", null), MemberDirectory.CleanEmail(" Jane@Example.org "));
+        Assert.Equal((null, null), MemberDirectory.CleanEmail("  ")); // email is optional
+        foreach (var bad in new[] { "jane", "jane@localhost", "Jane <jane@example.org>", "a b@example.org" })
+            Assert.NotNull(MemberDirectory.CleanEmail(bad).Problem);
+    }
+
+    [Fact]
+    public void An_Emailed_Code_Verifies_Once_Within_Its_Time_And_Tries()
+    {
+        var clock = new Clock(new DateTimeOffset(2026, 11, 23, 12, 0, 0, TimeSpan.Zero));
+        var codes = new VerificationCodes(clock);
+        Assert.Equal(VerificationCodes.Check.NoCode, codes.Try(1, 7, "123456").Result);
+
+        var (code, _) = codes.Issue(1, 7, "jane@example.org");
+        Assert.Matches("^[0-9]{6}$", code!);
+        Assert.Null(codes.Issue(1, 7, "jane@example.org").Code); // no resending straight away
+        Assert.Equal(VerificationCodes.Check.NoCode, codes.Try(2, 7, code).Result); // another server
+        Assert.Equal(VerificationCodes.Check.NoCode, codes.Try(1, 8, code).Result); // another person
+        Assert.Equal((VerificationCodes.Check.Ok, "jane@example.org"), codes.Try(1, 7, $" {code![..3]} {code[3..]} "));
+        Assert.Equal(VerificationCodes.Check.NoCode, codes.Try(1, 7, code).Result); // used up
+
+        // Expired.
+        (code, _) = codes.Issue(1, 8, "bob@example.org");
+        clock.Now += VerificationCodes.Lifetime + TimeSpan.FromSeconds(1);
+        Assert.Equal(VerificationCodes.Check.Expired, codes.Try(1, 8, code).Result);
+
+        // Too many wrong guesses lock the code, even the right one; a new code starts over.
+        (code, _) = codes.Issue(1, 9, "cy@example.org");
+        var wrong = code == "000000" ? "111111" : "000000";
+        for (var i = 1; i < VerificationCodes.MaxTries; i++)
+            Assert.Equal(VerificationCodes.Check.Wrong, codes.Try(1, 9, wrong).Result);
+        Assert.Equal(VerificationCodes.Check.TooManyTries, codes.Try(1, 9, wrong).Result);
+        Assert.Equal(VerificationCodes.Check.TooManyTries, codes.Try(1, 9, code).Result);
+        clock.Now += VerificationCodes.ResendAfter;
+        (code, _) = codes.Issue(1, 9, "cy@example.org");
+        Assert.Equal(VerificationCodes.Check.Ok, codes.Try(1, 9, code).Result);
+    }
+
+    [Fact]
+    public async Task Introductions_Are_Saved_Per_Server_And_A_New_Address_Needs_Its_Own_Code()
+    {
+        var data = new MemoryBotDataStore();
+        var store = new MemberDirectoryStore(data);
+        await store.UseAsync("100", d => (d.Introduce(7, "jsmith", "Jane Smith", "jane@example.org", Now), true));
+        await store.UseAsync("100", d => (0, d.MarkVerified(7, "jane@example.org", Now)));
+        await store.UseAsync("100", d => (d.Introduce(7, "jsmith", "Jane Smith", "jane@new.org", Now), true));
+
+        var reloaded = new MemberDirectoryStore(data); // a restart
+        var jane = await reloaded.UseAsync("100", d => (d.Find(7), false));
+        Assert.Equal(("Jane Smith", "jane@new.org", "jane@example.org"), (jane!.RealName, jane.Email, jane.VerifiedEmail));
+        Assert.Null(await reloaded.UseAsync("200", d => (d.Find(7), false)));
+        Assert.Single(await reloaded.UseAsync("100", d => (d.Members, false))); // introducing again updates
     }
 }

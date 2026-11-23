@@ -34,6 +34,10 @@ public interface IBotFeature
     // how the bot knows whose it is.
     Task ButtonAsync(SocketMessageComponent button, BotContext bot) => Task.CompletedTask;
 
+    // A form (modal) one of its commands or buttons opened was submitted.
+    // Its custom id starts with the command name and a colon, like a button's.
+    Task ModalAsync(SocketModal modal, BotContext bot) => Task.CompletedTask;
+
     // Work that runs as long as the bot does, started once it's connected
     // (the radio's now-playing poll). Most features have none.
     Task RunAsync(BotContext bot, CancellationToken stop) => Task.CompletedTask;
