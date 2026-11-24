@@ -6040,10 +6040,12 @@ leaving 2 Wing that couldn't buy the 2-Shell Hermit Crab. Wing + Shell [1]
 pays the same 3 and keeps the Hermit Crab.
 
 Fix: pickEnergy takes an optional list of what else the payer could still
-spend on this turn (`wants`), and ranks payments first by the most
-expensive want the leftover can still afford - unspent energy is lost at
-end of turn - then by the old rules (fewest Wilds, best spun-down leftover,
-fewest dice). The mobile Purchase button passes the rest of the unpurchased
+spend energy on (`wants`), and ranks payments first by the most
+expensive want the leftover can still afford, then by how many Globals it
+keeps payable, then by the old rules (fewest Wilds, best spun-down
+leftover, fewest dice). Correction from the user the same day: unspent
+energy is NOT lost at end of turn - it stays in the Reserve and can pay for
+Globals during the opponent's turn - hence the separate Global count. The mobile Purchase button passes the rest of the unpurchased
 roster (minus locked cards), Field costs of rolled creatures in the
 Reserve, and Globals. Only for pools of 10 dice or fewer (it re-searches
 each candidate's leftover). Desktop pays with dice you pick, so unchanged;

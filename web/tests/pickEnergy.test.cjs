@@ -40,3 +40,11 @@ test('an overspent die counts its spun-down leftover', () => {
   const ids = pickEnergy([die('s', 'Shell', 2), die('w', 'Wing', 1)], 1, 'Shell', 0, [{ cost: 2, matchType: 'Shell' }, { cost: 1, matchType: 'Shell' }]);
   assert.deepEqual(ids, ['s']);
 });
+
+test('keeps a Global payable when the purchases tie', () => {
+  // 2-Shell buy from Shell[1], Shell[1], Claw[1]: either way a 1-cost buy
+  // is still affordable, but only spending both Shells keeps the 1-Claw Global.
+  const p = [die('c', 'Claw', 1), die('s1', 'Shell', 1), die('s2', 'Shell', 1)];
+  const ids = pickEnergy(p, 2, 'Shell', 0, [{ cost: 1, matchType: null }, { cost: 1, matchType: 'Claw', global: true }]);
+  assert.deepEqual([...ids].sort(), ['s1', 's2']);
+});

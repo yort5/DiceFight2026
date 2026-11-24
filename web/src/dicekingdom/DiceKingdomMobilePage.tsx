@@ -2921,15 +2921,16 @@ export function DiceKingdomMobilePage() {
   if (selectedDie) {
     if (selectedDie.zone === "Unpurchased" && step === "main" && isYourTurn) {
       const { amount, matchType } = costFor(selectedDie);
-      // Everything else this turn's leftover could still go to, so the
-      // payment keeps the energy that buys the next thing (bot.ts pickEnergy).
+      // Everything else the leftover could still go to - this turn's other
+      // buys and fields, and Globals (usable on the opponent's turn too) -
+      // so the payment keeps the energy that pays for it (bot.ts pickEnergy).
       const locked = new Set((game.lockedCards ?? []).filter((l) => l.playerId === you).map((l) => l.cardId));
       const wants: EnergyWant[] = [
         ...[...unpurchasedByCard.keys()].filter((id) => !locked.has(id))
           .map((id) => ({ cost: purchaseCostOf(id), matchType: cardsById.get(id)?.energyTypes[0] ?? null })),
         ...yourReserve.filter((d) => rolled(d) && d.effectiveAttack !== null && !(d.cardId && locked.has(d.cardId)))
           .map((d) => costFor(d)).filter((c) => c.amount > 0).map((c) => ({ cost: c.amount, matchType: c.matchType })),
-        ...globalCardsInGame(game, cardsById).map((c) => ({ cost: c.global!.cost, matchType: c.global!.energyType ?? null })),
+        ...globalCardsInGame(game, cardsById).map((c) => ({ cost: c.global!.cost, matchType: c.global!.energyType ?? null, global: true })),
       ];
       const ids = pickEnergyForCost(yourReserve, amount, matchType, yourVirtual, wants);
       // Pangolin's lockout (user, 2026-11-15: "clicking Purchase does

@@ -87,17 +87,21 @@ export function activeCouldAct(game: GameState, cardsById: Map<string, CardDef>)
 // dice - all of it but one pip when a type is required (generic can't
 // satisfy a type), mirroring BotEnergy.PickWithVirtual.
 //
-// `wants`: the other things the payer could still spend on this turn (the
+// `wants`: the other things the payer could still spend energy on (the
 // rest of their unpurchased roster, Field costs, Globals). When given, the
 // payment whose leftover can still afford the most expensive of them wins,
-// ahead of everything above - unspent energy is lost at end of turn, so
-// what it can still buy is what matters. Direct feedback (2026-11-24): with
+// ahead of everything above; then the one that keeps the most Globals
+// payable. Unspent energy stays in the Reserve through the opponent's turn,
+// where it can still pay for Globals (user, 2026-11-24), so a Global
+// counts even after this turn's purchases are done. Direct feedback (2026-11-24): with
 // Hummingbird [2 Wing], Shell [2] and Shell [1], buying a 3-Shell Pangolin
 // spent both Shells, leaving 2 Wing that couldn't buy the 2-Shell Hermit
 // Crab; Wing + Shell [1] pays the same 3 and keeps the Hermit Crab money.
 export interface EnergyWant {
   cost: number;
   matchType: string | null;
+  /** A Global - usable on either player's turn, not just this one. */
+  global?: boolean;
 }
 
 export function pickEnergy(
@@ -113,14 +117,18 @@ export function pickEnergy(
   return pickEnergyFromDice(pool, cost, matchType, wants, virtualEnergy);
 }
 
-// The most expensive want `pool` (plus leftover Virtual) can still pay for,
-// or -1 if none.
-function bestAffordable(pool: Die[], wants: EnergyWant[], virtualEnergy: number): number {
+// What `pool` (plus leftover Virtual) can still pay for: the most expensive
+// want (-1 if none), and how many Globals.
+function affordable(pool: Die[], wants: EnergyWant[], virtualEnergy: number): { best: number; globals: number } {
   let best = -1;
+  let globals = 0;
   for (const w of wants) {
-    if (w.cost > best && pickEnergy(pool, w.cost, w.matchType, virtualEnergy) !== null) best = w.cost;
+    if ((w.cost > best || w.global) && pickEnergy(pool, w.cost, w.matchType, virtualEnergy) !== null) {
+      best = Math.max(best, w.cost);
+      if (w.global) globals++;
+    }
   }
-  return best;
+  return { best, globals };
 }
 
 function pickEnergyFromDice(
@@ -133,7 +141,7 @@ function pickEnergyFromDice(
   // Looking ahead re-runs the search on every candidate's leftover, so only
   // for a pool small enough to stay instant (2^10 x 2^10 worst case).
   const lookAhead = wants.length > 0 && dice.length <= 10;
-  let best: { ids: string[]; leftover: number; wilds: number; score: number; count: number } | null = null;
+  let best: { ids: string[]; leftover: number; globals: number; wilds: number; score: number; count: number } | null = null;
   for (let mask = 1; mask < 1 << dice.length; mask++) {
     const members = dice.filter((_, i) => mask & (1 << i));
     const sum = members.reduce((n, d) => n + d.energyAmount, 0);
@@ -154,21 +162,24 @@ function pickEnergyFromDice(
         members.filter((d) => d.energySymbolId === "Wild").reduce((n, d) => n + d.energyAmount, 0) -
         (last.energySymbolId === "Wild" ? overspendOf(sum, cost) : 0);
       let leftover = -1;
+      let globals = 0;
       if (lookAhead) {
         // What's still in the Reserve afterwards: the unspent dice, plus the
         // overspent last die spun down to its leftover pips.
         const rest = pool.filter((d) => !members.includes(d));
         if (overspend > 0) rest.push({ ...last, energyAmount: overspend });
-        leftover = bestAffordable(rest, wants, leftoverVirtual);
+        ({ best: leftover, globals } = affordable(rest, wants, leftoverVirtual));
       }
       const better =
         !best ||
         leftover > best.leftover ||
         (leftover === best.leftover && (
-          wilds < best.wilds ||
-          (wilds === best.wilds && (score > best.score || (score === best.score && count < best.count)))));
+          globals > best.globals ||
+          (globals === best.globals && (
+            wilds < best.wilds ||
+            (wilds === best.wilds && (score > best.score || (score === best.score && count < best.count)))))));
       if (better) {
-        best = { ids: [...members.filter((d) => d !== last), last].map((d) => d.id), leftover, wilds, score, count };
+        best = { ids: [...members.filter((d) => d !== last), last].map((d) => d.id), leftover, globals, wilds, score, count };
       }
     }
   }
