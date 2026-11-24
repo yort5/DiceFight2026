@@ -614,9 +614,11 @@ export function DiceKingdomPage() {
         if (!cancelled && latest.version !== gameVersion) {
           // The other player's move - tumble their roll/reroll rather than
           // just swapping the faces (user request, 2026-09-30).
+          // Tumble first, then the data - otherwise the flight layer flies
+          // copies of dice a 3D throw is carrying (mobile adoptRemote).
           const previous = gameRef.current;
+          if (previous) animateRolledDice(previous, latest, remoteRolledIds(previous, latest));
           setGame(latest);
-          if (previous) requestAnimationFrame(() => animateRolledDice(previous, latest, remoteRolledIds(previous, latest)));
         }
       } catch {
         // quiet - the next poll in two seconds either works or it doesn't matter yet

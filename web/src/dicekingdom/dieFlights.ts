@@ -38,7 +38,12 @@ interface Snap {
 }
 
 const FLIGHT_MS = 520;
-const KO_HOLD_MS = 420;
+// A KO plays out where the die stood before it heads for Prep: a white
+// impact flash, a shake, shards and a "KO!" stamp (user, 2026-11-24: "the
+// KO of a die could use a more significant animation" - it used to be a
+// short red shake). Keep in step with dkKoHit / dkKoBurst in dicekingdom.css.
+const KO_HOLD_MS = 950;
+const KO_SHARDS = 10;
 const SPEND_MS = 380;
 const STAGGER_MS = 70;
 const MAX_FLIGHTS = 12;
@@ -135,6 +140,36 @@ interface Flight {
   onLand?: () => void;
 }
 
+// The burst stays where the die was hit while the die itself tumbles away.
+function koBurst(root: HTMLElement, at: DOMRect, delay: number) {
+  const burst = document.createElement("div");
+  burst.className = "dkm-ko-burst";
+  const size = Math.max(at.width, at.height);
+  burst.style.left = `${at.left + at.width / 2}px`;
+  burst.style.top = `${at.top + at.height / 2}px`;
+  burst.style.setProperty("--size", `${size}px`);
+  burst.style.animationDelay = `${delay}ms`;
+  const ring = document.createElement("span");
+  ring.className = "dkm-ko-ring";
+  burst.appendChild(ring);
+  for (let i = 0; i < KO_SHARDS; i++) {
+    const shard = document.createElement("span");
+    shard.className = "dkm-ko-shard";
+    const angle = (360 / KO_SHARDS) * i + (Math.random() * 24 - 12);
+    shard.style.setProperty("--a", `${angle}deg`);
+    shard.style.setProperty("--d", `${size * (0.75 + Math.random() * 0.5)}px`);
+    shard.style.setProperty("--r", `${Math.round(Math.random() * 540 - 270)}deg`);
+    burst.appendChild(shard);
+  }
+  const stamp = document.createElement("span");
+  stamp.className = "dkm-ko-stamp";
+  stamp.textContent = "KO!";
+  burst.appendChild(stamp);
+  for (const el of burst.querySelectorAll<HTMLElement>("span")) el.style.animationDelay = `${delay}ms`;
+  root.appendChild(burst);
+  window.setTimeout(() => burst.remove(), delay + KO_HOLD_MS + 600);
+}
+
 function launch(root: HTMLElement, f: Flight, index: number) {
   const ghost = document.createElement("div");
   ghost.className = "dkm-ghost";
@@ -161,6 +196,12 @@ function launch(root: HTMLElement, f: Flight, index: number) {
   const startScale = f.startScale ?? 1;
   const duration = f.spend ? SPEND_MS : FLIGHT_MS;
   const delay = (f.delayMs ?? index * STAGGER_MS) + (f.ko ? KO_HOLD_MS : 0);
+  if (f.ko) {
+    // Several KO'd at once land their hits one after another.
+    const hitAt = f.delayMs ?? index * STAGGER_MS * 2;
+    inner.style.animationDelay = `${hitAt}ms`;
+    koBurst(root, f.from, hitAt);
+  }
   const start = performance.now() + delay;
   let last = f.from;
   let landed = false;
@@ -175,7 +216,8 @@ function launch(root: HTMLElement, f: Flight, index: number) {
   ghost.style.transform = `translate(${f.from.left}px, ${f.from.top}px) scale(${startScale})`;
   // Not shown until it sets off - a delayed flight (a draw waiting on a
   // refill) mustn't sit on its pile in the meantime.
-  if (delay > 0) ghost.style.opacity = "0";
+  // A KO'd die stays in view through its hit (the hold is the hit).
+  if (delay > 0 && !f.ko) ghost.style.opacity = "0";
   const frame = (now: number) => {
     const raw = (now - start) / duration;
     if (raw < 0) {
@@ -195,7 +237,8 @@ function launch(root: HTMLElement, f: Flight, index: number) {
     const cy = fcy + (d.top + d.height / 2 - fcy) * e;
     const endScale = f.spend ? 0.35 : f.keepSize ? 1 : d.width / Math.max(1, f.from.width);
     const scale = startScale + (endScale - startScale) * e;
-    ghost.style.transform = `translate(${cx - f.from.width / 2}px, ${cy - f.from.height / 2}px) scale(${scale})`;
+    const spin = f.ko ? ` rotate(${-300 * e}deg)` : "";
+    ghost.style.transform = `translate(${cx - f.from.width / 2}px, ${cy - f.from.height / 2}px) scale(${scale})${spin}`;
     if (f.spend) ghost.style.opacity = String(1 - e);
     else if (f.fadeAtEnd) ghost.style.opacity = String(1 - 0.75 * e);
     if (t >= 1) finish();
@@ -216,8 +259,13 @@ export function useDieFlights(rootRef: RefObject<HTMLElement | null>, game: Game
   useLayoutEffect(() => {
     const root = rootRef.current;
     if (!root || !game) return;
+    // The page itself scrolls (the window), not just .dkm-scroll - counting
+    // only the latter, every remembered rect was off by however far you had
+    // scrolled since the last commit, so ghosts set off from empty spots
+    // (user, 2026-11-24: extra dice in the opponent's roll "especially if
+    // I'm scrolled down"; a KO's burst played off screen).
     const scroller = root.querySelector<HTMLElement>(".dkm-scroll");
-    const scrollTop = scroller?.scrollTop ?? 0;
+    const scrollTop = (scroller?.scrollTop ?? 0) + window.scrollY;
 
     const els = new Map<string, HTMLElement>();
     root.querySelectorAll<HTMLElement>("[data-fly-id]").forEach((el) => {

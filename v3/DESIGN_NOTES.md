@@ -6051,3 +6051,43 @@ Reserve, and Globals. Only for pools of 10 dice or fewer (it re-searches
 each candidate's leftover). Desktop pays with dice you pick, so unchanged;
 the computer's own payment (BotEnergy) is unchanged too.
 Tests: web/tests/pickEnergy.test.cjs.
+
+## 2026-11-24 - Opponent rolls showed extra dice; a bigger KO; Skip Attack's confirm
+
+**"The opponent's dice rolling animation shows way too many dice,
+especially if I'm scrolled down"** (user). Three causes, all fixed, found
+with `~/.devtools/playwright/opp-roll-scrolled-check.js` (phone viewport,
+scrolled to the bottom, counts 3D throws and 2D flights per opponent roll):
+- **The same roll thrown twice.** The 2-second poll's fetch could be in
+  flight while the computer's move (runBot -> adoptRemote) was adopted;
+  it then adopted the same state again, from a stale `gameRef`, and
+  threw the same dice a second time - one frame showed 4 dice in the tray
+  and ~8 in the air. The poll now drops a result if something else is
+  busy or has already shown that version, and adoptRemote sets `gameRef`
+  at once instead of after the commit.
+- **2D copies of thrown dice.** A remote roll committed the new state and
+  started the 3D throw a frame later (rAF), so the commit's flight pass
+  (dieFlights.ts) didn't yet know those dice were being thrown and flew
+  copies of them from the tray to the Reserve row. It now starts the
+  tumble first, as your own rolls already did (both pages).
+- **Flights from the wrong place after scrolling.** The flight layer
+  corrected remembered positions for `.dkm-scroll`'s scroll, but the page
+  scrolls the window, so after any scroll every ghost set off from an
+  empty spot. It now counts `window.scrollY` too.
+After: never more than one 3D throw at once and no 2D copies of thrown dice.
+
+**KO animation** (user: "could use a more significant animation"). A
+KO'd die now takes a hit where it stood (~0.95 s, `dkKoHit`): white
+flash and punch outwards, a hard red shake, then it sags, drained -
+with a shockwave ring, red shards and a "KO!" stamp (`koBurst`, fixed at
+the die's spot), then tumbles off to Prep. Several KOs hit one after
+another. The old 0.4 s red shake was in fact never seen: a delayed
+flight hid its ghost until it set off, and the KO shake was that delay.
+Check: `~/.devtools/playwright/ko-anim-check.js` (fields a creature, then
+rewrites the next polled state so it's KO'd; `FREEZE_MS` picks the frame).
+
+**"Skip Attack" then "Done anyway?" entered the Attack Step** (user). The
+"creature still fieldable" confirm was shared by both buttons and its
+big button always entered the Attack Step. It now remembers which was
+tapped: after Skip Attack the big button reads "Skip Attack anyway?" and
+the small one "Attack anyway".

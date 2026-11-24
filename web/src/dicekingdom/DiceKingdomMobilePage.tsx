@@ -2126,7 +2126,10 @@ export function DiceKingdomMobilePage() {
   // Leaving Main with a creature still fieldable takes a second tap; this
   // holds the game version that first tap was made on, so any move in
   // between (fielding it, say) asks again.
-  const [leaveMainArmedAt, setLeaveMainArmedAt] = useState<number | null>(null);
+  // Which leave-Main button the "still fieldable" warning was armed by, and
+  // at which game version (user, 2026-11-24: Skip Attack, then "Done
+  // anyway?", went INTO the Attack Step - the confirm always entered it).
+  const [leaveMainArmed, setLeaveMainArmed] = useState<{ version: number; skip: boolean } | null>(null);
   const [rerollUsedThisStep, setRerollUsedThisStep] = useState(false);
   const [pendingAttackers, setPendingAttackers] = useState<Record<string, number>>({});
   const [laneSel, setLaneSel] = useState(0);
@@ -2235,6 +2238,10 @@ export function DiceKingdomMobilePage() {
       try {
         const latest = await api.getGame(gameId);
         if (cancelled || latest.version === gameVersion) return;
+        // Something else (the computer's move, your own) adopted a state
+        // while this fetch was out - it's already shown, and animating it
+        // again threw the same dice twice (user, 2026-11-24).
+        if (busyRef.current || latest.version <= (gameRef.current?.version ?? -1)) return;
         // The other player's move: animate their roll/reroll (adoptRemote),
         // busy while a reroll's tumble is held on screen so this poll
         // can't cut the hold short.
@@ -2268,15 +2275,24 @@ export function DiceKingdomMobilePage() {
   // exactly like runWithReveal does for your own reroll, the old step is
   // held on screen (with the new dice) until the tumble has been seen.
   async function adoptRemote(previous: GameState | null, next: GameState) {
+    // Claimed now, not when the commit's effect gets round to it, so a
+    // poll answering meanwhile sees this state as already taken.
+    gameRef.current = next;
     const rolledIds = previous ? remoteRolledIds(previous, next) : [];
     const leavesRoll = !!previous && previous.currentStepId === "roll-and-reroll" && next.currentStepId !== "roll-and-reroll";
+    // The tumble starts BEFORE the data commit, as in run(). It used to
+    // start a frame after (rAF), so the commit's flight pass (dieFlights.ts)
+    // didn't yet know a 3D die was carrying these dice and flew 2D copies
+    // of them too - the opponent's roll showing twice as many dice (user,
+    // 2026-11-24, "especially if I'm scrolled down": a long page commits
+    // slower, so the copies were easier to catch).
     if (!previous || rolledIds.length === 0 || !leavesRoll) {
+      if (previous) animateRolledDice(previous, next, rolledIds);
       startTransition(() => setGame(next));
-      if (previous) requestAnimationFrame(() => animateRolledDice(previous, next, rolledIds));
       return;
     }
+    animateRolledDice(previous, next, rolledIds);
     startTransition(() => setGame({ ...next, currentStep: previous.currentStep, currentStepId: previous.currentStepId }));
-    requestAnimationFrame(() => animateRolledDice(previous, next, rolledIds));
     await new Promise((resolve) => setTimeout(resolve, TUMBLE_REVEAL_HOLD_MS));
     setGame(next);
   }
@@ -3211,22 +3227,27 @@ export function DiceKingdomMobilePage() {
       ? yourReserve.filter((d) => rolled(d) && d.effectiveAttack !== null && !(d.cardId && lockedIds.has(d.cardId)) && (youPlayer.freeFieldAvailable
         || pickEnergyForCost(yourReserve.filter((e) => e.id !== d.id), costFor(d).amount, null, yourVirtual) !== null))
       : [];
-    const armed = leaveMainArmedAt === game.version;
-    const leave = (go: () => void) => () => {
-      if (fieldable.length > 0 && !armed) setLeaveMainArmedAt(game.version);
+    const armed = leaveMainArmed?.version === game.version;
+    const armedSkip = armed && leaveMainArmed!.skip;
+    const leave = (skip: boolean, go: () => void) => () => {
+      if (fieldable.length > 0 && !armed) setLeaveMainArmed({ version: game.version, skip });
       else go();
     };
+    const enterAttack = () => run(() => api.enterAttackStep(game.gameId));
+    const skipAttack = () => run(() => api.skipAttackStep(game.gameId));
     // Says what passing does (user, 2026-11-15): hands the opponent a
     // chance to use a Global first (Priority.Pass), or ends Main now. If
     // they only pass back, Main still ends - hence the fielding check
     // either way.
-    primaryLabel = armed ? "Done anyway?" : game.passGivesPriority ? "Pass Priority" : "Done buying & fielding";
+    // Once armed, the big button confirms whichever one was tapped; the
+    // small one offers the other way out.
+    primaryLabel = armedSkip ? "Skip Attack anyway?" : armed ? "Done anyway?" : game.passGivesPriority ? "Pass Priority" : "Done buying & fielding";
     primaryNote = armed
       ? `${fieldable.length} creature${fieldable.length === 1 ? "" : "s"} still fieldable`
       : game.passGivesPriority ? `${oppPlayer.name} may use a Global, then the Attack Step` : "enter the Attack Step";
-    primaryRun = leave(() => run(() => api.enterAttackStep(game.gameId)));
-    secondaryLabel = armed ? "Skip Attack anyway" : "Skip Attack";
-    secondaryRun = leave(() => run(() => api.skipAttackStep(game.gameId)));
+    primaryRun = armedSkip ? skipAttack : leave(false, enterAttack);
+    secondaryLabel = armedSkip ? "Attack anyway" : armed ? "Skip Attack anyway" : "Skip Attack";
+    secondaryRun = armedSkip ? enterAttack : leave(true, skipAttack);
   } else if (step === "select-attackers") {
     const n = Object.keys(pendingAttackers).length;
     primaryLabel = `Declare Attackers (${n})`;
