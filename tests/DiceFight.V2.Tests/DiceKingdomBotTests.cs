@@ -1,6 +1,7 @@
 using DiceFight.V2.Bot;
 using DiceFight.V2.Data;
 using DiceFight.V2.Model;
+using DiceFight.V2.Model.Effects;
 
 namespace DiceFight.V2.Tests;
 
@@ -199,5 +200,67 @@ public class DiceKingdomBotTests
         state.GetPlayer("p2").Life = 1;
         var decision = DiceKingdomBot.Decide(state, "p1", persona: Holding)!;
         Assert.Contains(die.Id, decision.AttackerLanes.Keys);
+    }
+
+    // Game 18d54e04 (2026-11-24): Armadillo's Rhinoceros (reflects the damage
+    // it takes at the blocker's controller) attacked; Hermit Crab had forced
+    // the computer's Hyena to block. The computer added its Opossum too -
+    // 2 more reflected damage, for a Rhinoceros that comes straight back.
+    private static (GameState State, AbilityQueue Queue, DieInstance Rhino, DieInstance Hyena, DieInstance Opossum) RhinoIntoForcedHyena()
+    {
+        Player Build(string id, string champion, params string[] cards)
+        {
+            var p = new Player { Id = id, Name = champion, ChampionId = champion };
+            p.TeamCardIds.AddRange(cards);
+            return p;
+        }
+        var state = GameSetup.NewGame(DiceKingdomConfig.Config, DiceKingdomConfig.Catalog,
+            Build("p1", "Armadillo", DiceKingdomConfig.Rhinoceros.Id, DiceKingdomConfig.Archnemesis.Id),
+            Build("p2", "GreatHornedOwl", DiceKingdomConfig.Hyena.Id, DiceKingdomConfig.Opossum.Id));
+        Priority.Sync(state);
+        var queue = new AbilityQueue();
+        DieInstance Put(string owner, string cardId, int face)
+        {
+            var d = state.Dice.First(x => x.OwnerId == owner && x.CardId == cardId && x.Zone != Zone.FieldZone);
+            d.Zone = Zone.FieldZone; d.CurrentFaceIndex = face;
+            return d;
+        }
+        var rhino = Put("p1", DiceKingdomConfig.Rhinoceros.Id, 2);   // L3 3/9
+        var hyena = Put("p2", DiceKingdomConfig.Hyena.Id, 1);        // L2 2/5 (+1 ATK per weak opposing creature)
+        var opossum = Put("p2", DiceKingdomConfig.Opossum.Id, 1);    // L2 1/3 Deadly
+        hyena.CombatFlags.Add(CombatFlagKind.MustBlock);
+        state.GetPlayer("p2").Life = 17;
+        state.MoveToStep(StepIds.SelectAttackers);
+        CombatEngine.DeclareAttackers(state, queue, [rhino.Id]);
+        return (state, queue, rhino, hyena, opossum);
+    }
+
+    [Fact]
+    public void A_Forced_Blocker_Covers_A_Retaliator_Alone()
+    {
+        var (state, _, rhino, hyena, opossum) = RhinoIntoForcedHyena();
+        var decision = DiceKingdomBot.Decide(state, "p2")!;
+        Assert.Equal(BotActionKind.DeclareBlockers, decision.Kind);
+        Assert.Contains((rhino.Id, hyena.Id), decision.Blocks);
+        Assert.DoesNotContain(decision.Blocks, b => b.Item2 == opossum.Id);
+    }
+
+    [Fact]
+    public void Archnemesis_Global_Only_When_It_Changes_A_Fight()
+    {
+        var (state, queue, rhino, hyena, _) = RhinoIntoForcedHyena();
+        hyena.CurrentFaceIndex = 2; // L3 3/6
+        var assignment = new CombatAssignment();
+        assignment.AssignBlocker(rhino.Id, hyena.Id);
+        CombatEngine.DeclareBlockers(state, queue, assignment, [hyena.Id]);
+        // Rhinoceros (3/9) survives Hyena's ATK; D = A (3) would let Hyena KO it.
+        var hyenaAtk = QueryEngine.GetAttack(state, hyena);
+        Assert.True(hyenaAtk < 9 && hyenaAtk >= 3, $"setup: Hyena ATK {hyenaAtk}");
+        Assert.True(DiceKingdomBot.SetDefenseGain(state, "p2", rhino) > 0);
+        // Hyena isn't in danger from a 3-ATK Rhinoceros: raising its D gains nothing.
+        Assert.Equal(0, DiceKingdomBot.SetDefenseGain(state, "p2", hyena));
+        // Once Rhinoceros dies anyway, lowering its D gains nothing either.
+        rhino.Damage = 6; // 3 D left: Hyena's 3 KOs it already
+        Assert.Equal(0, DiceKingdomBot.SetDefenseGain(state, "p2", rhino));
     }
 }

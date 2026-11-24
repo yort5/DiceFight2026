@@ -723,9 +723,33 @@ public static class DiceKingdomBot
         // home rather than trade it for those 6).
         var pumpAtStake = lanes.Count == 1 && unblockable == 0 ? pump : 0;
 
+        // Forced blockers (Hermit Crab's "must block") go FIRST, into
+        // whichever legal lane hurts least - so the choices below know which
+        // lanes are already blocked. Placed last, a voluntary blocker was
+        // credited with stopping damage the forced one stopped anyway (a
+        // real game, 2026-11-24: Hyena was forced in front of a Rhinoceros
+        // and the computer added its Opossum too, for 2 more reflected
+        // damage and a Rhinoceros that comes straight back from Prep).
+        var covered = new HashSet<Lane>();
+        if (lanes.Count > 0)
+        {
+            foreach (var b in available.Where(d => d.CombatFlags.Contains(CombatFlagKind.MustBlock)).ToList())
+            {
+                // A lane that needs more blockers than it would then have is no place for one.
+                var legal = lanes.Where(l => l.Need <= 1 || blocks.Count(x => l.Attackers.Any(a => a.Id == x.Item1)) + 1 >= l.Need).ToList();
+                if (legal.Count == 0) continue;
+                var lane = legal.OrderByDescending(l => BlockScore(state, b, l, DamageWeight(), pump: pump, chumpCost: persona.TardigradeChumpCost, pumpAtStake: pumpAtStake)).First();
+                blocks.Add((lane.Attackers[0].Id, b.Id));
+                available.Remove(b);
+                if (covered.Add(lane))
+                    incoming -= lane.Overcrush ? Math.Min(lane.Attack + pumpAtStake, QueryEngine.GetDefense(state, b)) : lane.Attack + pumpAtStake;
+            }
+        }
+
         foreach (var lane in lanes)
         {
             if (available.Count == 0) break;
+            if (covered.Contains(lane)) continue;
             var mustBlock = incoming >= myLife;
             // Snow Leopard's "two or more blockers" (CombatRuleKind.MinBlockers):
             // send that many of the best blockers, or leave the lane alone.
@@ -744,8 +768,12 @@ public static class DiceKingdomBot
                 continue;
             }
             (DieInstance Blocker, double Score)? best = null;
+            // A retaliating attacker (Rhinoceros) sends a blocker's whole ATK
+            // back at this player - never volunteer one whose ATK is lethal.
+            var retaliates = lane.Attackers.Any(a => IsRetaliator(state, a));
             foreach (var b in available)
             {
+                if (retaliates && QueryEngine.GetAttack(state, b) >= myLife) continue;
                 var score = BlockScore(state, b, lane, DamageWeight(), pump: pump, chumpCost: persona.TardigradeChumpCost, pumpAtStake: pumpAtStake);
                 if (best is null || score > best.Value.Score) best = (b, score);
             }
@@ -785,21 +813,6 @@ public static class DiceKingdomBot
             if (lane is null) continue;
             blocks.Insert(blocks.FindIndex(x => x.Item1 == lane.Attackers[0].Id), (lane.Attackers[0].Id, rhino.Id));
             available.Remove(rhino);
-        }
-
-        // Forced blockers (Hermit Crab's "must block") have to be declared
-        // if there's anything to block - into whichever lane hurts least.
-        if (lanes.Count > 0)
-        {
-            foreach (var b in available.Where(d => d.CombatFlags.Contains(CombatFlagKind.MustBlock)).ToList())
-            {
-                // A lane that needs more blockers than it would then have is no place for one.
-                var legal = lanes.Where(l => l.Need <= 1 || blocks.Count(x => l.Attackers.Any(a => a.Id == x.Item1)) + 1 >= l.Need).ToList();
-                if (legal.Count == 0) continue;
-                var lane = legal.OrderByDescending(l => BlockScore(state, b, l, DamageWeight())).First();
-                blocks.Add((lane.Attackers[0].Id, b.Id));
-                available.Remove(b);
-            }
         }
 
         return new(BotActionKind.DeclareBlockers, blocks.Count == 0 ? "No blocks." : $"Block {blocks.Count}.") { Blocks = blocks };
@@ -979,20 +992,43 @@ public static class DiceKingdomBot
     }
 
     // Archnemesis's Global ("target creature's D becomes its A this turn"),
-    // in combat, when it swings a die's D by 2+ the right way: up for one
-    // of ours (a high-ATK die that would otherwise die), down for one of
-    // theirs (a wall our damage can then get through).
+    // in combat, only when it changes how a fight ends: one of ours that
+    // would be KO'd survives, or one of theirs that would survive is KO'd.
+    // It used to fire whenever it moved a D by 2+, and spent two Shell on
+    // nothing in a real game (2026-11-24): a Rhinoceros that was being KO'd
+    // anyway, then its own Hyena that nothing could hurt.
     private static BotDecision? SetDefenseGlobal(GameState state, string botId)
     {
         var best = state.Dice.Where(d => d.Zone == Zone.AttackZone).Select(d => SetDefenseGain(state, botId, d)).DefaultIfEmpty(0).Max();
-        return best >= 2 ? GlobalDecision(state, botId, onlyRealPips: false, g => g.Effect is ModifyStat { SetDefense: not null }) : null;
+        return best > 0 ? GlobalDecision(state, botId, onlyRealPips: false, g => g.Effect is ModifyStat { SetDefense: not null }) : null;
     }
 
-    private static double SetDefenseGain(GameState state, string botId, DieInstance die)
+    // What setting `die`'s D to its A is worth: the die's value when that
+    // flips its fight the right way for `botId`, else 0.
+    internal static double SetDefenseGain(GameState state, string botId, DieInstance die)
     {
-        if (state.GetCurrentFace(die)?.Character is null) return -1;
-        var change = QueryEngine.GetAttack(state, die) - QueryEngine.GetDefense(state, die);
-        return die.ControllerId == botId ? change : -change;
+        if (state.GetCurrentFace(die)?.Character is null) return 0;
+        var foes = CombatFoes(state, die);
+        if (foes.Count == 0) return 0;
+        var incoming = foes.Sum(f => QueryEngine.GetAttack(state, f));
+        var deadly = foes.Any(f => QueryEngine.GetKeywords(state, f).Contains("Deadly"));
+        var survivesNow = !deadly && incoming < QueryEngine.GetDefense(state, die) - die.Damage;
+        var survivesAfter = !deadly && incoming < QueryEngine.GetAttack(state, die) - die.Damage;
+        var flips = die.ControllerId == botId ? !survivesNow && survivesAfter : survivesNow && !survivesAfter;
+        return flips ? DieValue(state, die) : 0;
+    }
+
+    // The dice dealing `die` combat damage this turn: for an attacker, its
+    // lane's blockers; for a blocker, the attackers in the lanes it blocks.
+    private static IReadOnlyList<DieInstance> CombatFoes(GameState state, DieInstance die)
+    {
+        if (state.DeclaredBlocks is not { } blocks) return [];
+        var attackers = state.DiceIn(state.ActivePlayerId, Zone.AttackZone).ToList();
+        if (die.ControllerId == state.ActivePlayerId)
+            return attackers.Where(a => a.Lane == die.Lane).SelectMany(a => blocks.BlockersOf(a.Id)).Distinct()
+                .Select(id => state.Dice.First(d => d.Id == id)).ToList();
+        var lanes = attackers.Where(a => blocks.BlockersOf(a.Id).Contains(die.Id)).Select(a => a.Lane).ToHashSet();
+        return attackers.Where(a => lanes.Contains(a.Lane)).ToList();
     }
 
     // Archnemesis's fight: the (yours, theirs) pairing with the best
@@ -1140,8 +1176,7 @@ public static class DiceKingdomBot
                 return new(BotActionKind.ResolvePendingChoice, "Archnemesis: their fighter.") { DieIds = [fight.Theirs.Id] };
             case ModifyStat { SetDefense: not null }:
                 var pick = pending.CandidateIds.Where(id => !state.IsPlayerId(id))
-                    .OrderByDescending(id => SetDefenseGain(state, botId, state.Dice.First(d => d.Id == id))
-                        + (state.Dice.First(d => d.Id == id).Zone == Zone.AttackZone ? 1 : 0))
+                    .OrderByDescending(id => SetDefenseGain(state, botId, state.Dice.First(d => d.Id == id)))
                     .FirstOrDefault();
                 if (pick is not null)
                     return new(BotActionKind.ResolvePendingChoice, "D becomes A.") { DieIds = [pick] };

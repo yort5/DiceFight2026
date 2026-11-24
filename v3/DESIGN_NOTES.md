@@ -6091,3 +6091,30 @@ rewrites the next polled state so it's KO'd; `FREEZE_MS` picks the frame).
 big button always entered the Attack Step. It now remembers which was
 tapped: after Skip Attack the big button reads "Skip Attack anyway?" and
 the small one "Attack anyway".
+
+## 2026-11-24 - Computer blocks a Rhinoceros smarter; a pause before "You win"
+
+Game 18d54e04 (user: the computer "tried to KO Rhino by blocking with
+multiple, but against Rhino that just meant more damage reflected back").
+Rhinoceros reflects ALL damage it takes, so each blocker's full ATK comes
+back. Replay with `tools/GameRecords --bot-reasons`:
+- Turn 19 (Owl 17 life): Hermit Crab forced Hyena (8 ATK) to block Rhino;
+  the computer ALSO added Opossum (2 ATK, Deadly) to KO it - 8 + 2 back,
+  down to 7. Cause: forced blockers were placed last, so the voluntary
+  pass credited Opossum with stopping Rhino's damage that Hyena stopped
+  anyway. Now forced blockers go first, their lanes count as covered (no
+  voluntary second blocker), and a voluntary blocker whose ATK is lethal
+  as reflection is never put in front of a retaliator.
+- Turn 21 (7 life): forced Hyena now 10 ATK - lethal on its own, nothing
+  could save it. It also spent two Archnemesis Globals for nothing: on the
+  Rhino (already being KO'd) and its own Hyena (in no danger). The Global
+  (D becomes A) only reduces nothing about reflection - it changes who
+  survives. Now used only when it flips a fight: saves one of ours, or
+  KOs one of theirs that would otherwise survive (SetDefenseGain).
+Tests: DiceKingdomBotTests A_Forced_Blocker_Covers_A_Retaliator_Alone,
+Archnemesis_Global_Only_When_It_Changes_A_Fight (both fail on the old code).
+
+**Pause before the game-over screen** (user: "a second or two pause at the
+end when damage resolves"). GameOverOverlay waits 2.2 s when the game ends
+during play (the last KO takes ~1.5 s); a game already over when the page
+opens shows it at once. Check: `~/.devtools/playwright/gameover-pause-check.js`.

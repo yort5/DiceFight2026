@@ -3,7 +3,7 @@
 // Dice Kingdom pages: who won, both final Life totals, and a way back to
 // the setup screen. The board stays visible underneath. A boss battle
 // (2026-10-31) also shows what it paid, and a way back to the ladder.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { navigate } from "../router";
 import { api } from "./api";
 import { resultText } from "./BossesPage";
@@ -15,10 +15,30 @@ import type { CardDef, GameState } from "./types";
 // option to go to the home page, only start a new game" - on mobile that
 // button already went home, under the wrong name): with it, the buttons are
 // "Play again" (onNewGame, when given) and "Home".
+//
+// A game that ends while you watch holds the board for END_PAUSE_MS first
+// (user, 2026-11-24: "there should be a second or two pause at the end when
+// damage resolves before transitioning to the You Win screen") - long
+// enough for the last KO (dieFlights.ts, ~1.5 s) and the life totals to
+// land. One that was already over when the page opened shows at once.
+const END_PAUSE_MS = 2200;
+
 export function GameOverOverlay({ game, you, onNewGame, onHome }: { game: GameState; you: string | null; onNewGame?: () => void; onHome?: () => void }) {
   const [boss, setBoss] = useState<{ name: string; result: BossResult; cards: Map<string, CardDef> } | null>(null);
   // Coins for finishing it (2026-11-15) - settled on the move that ended it.
   const [coins, setCoins] = useState<{ earned: number; mode: string } | null>(null);
+  const overAtMount = useRef(game.gameOver);
+  const [shown, setShown] = useState(game.gameOver);
+  useEffect(() => {
+    if (!game.gameOver) {
+      overAtMount.current = false;
+      setShown(false);
+      return;
+    }
+    if (overAtMount.current) return;
+    const t = window.setTimeout(() => setShown(true), END_PAUSE_MS);
+    return () => window.clearTimeout(t);
+  }, [game.gameOver, game.gameId]);
   useEffect(() => {
     if (!game.gameOver) return;
     let live = true;
@@ -38,7 +58,7 @@ export function GameOverOverlay({ game, you, onNewGame, onHome }: { game: GameSt
     };
   }, [game.gameOver, game.gameId]);
 
-  if (!game.gameOver) return null;
+  if (!game.gameOver || !shown) return null;
   const winner = game.winnerId === game.playerOne.id ? game.playerOne : game.winnerId === game.playerTwo.id ? game.playerTwo : null;
   const title = !winner ? "It's a tie" : you && winner.id === you ? "You win!" : `${winner.name} wins`;
   const won = !!winner && !!you && winner.id === you;
