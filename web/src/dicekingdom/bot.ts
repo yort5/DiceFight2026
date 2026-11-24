@@ -86,19 +86,54 @@ export function activeCouldAct(game: GameState, cardsById: Map<string, CardDef>)
 // spent by the server automatically before any die, so only the rest needs
 // dice - all of it but one pip when a type is required (generic can't
 // satisfy a type), mirroring BotEnergy.PickWithVirtual.
-export function pickEnergy(pool: Die[], cost: number, matchType: string | null, virtualEnergy = 0): string[] | null {
+//
+// `wants`: the other things the payer could still spend on this turn (the
+// rest of their unpurchased roster, Field costs, Globals). When given, the
+// payment whose leftover can still afford the most expensive of them wins,
+// ahead of everything above - unspent energy is lost at end of turn, so
+// what it can still buy is what matters. Direct feedback (2026-11-24): with
+// Hummingbird [2 Wing], Shell [2] and Shell [1], buying a 3-Shell Pangolin
+// spent both Shells, leaving 2 Wing that couldn't buy the 2-Shell Hermit
+// Crab; Wing + Shell [1] pays the same 3 and keeps the Hermit Crab money.
+export interface EnergyWant {
+  cost: number;
+  matchType: string | null;
+}
+
+export function pickEnergy(
+  pool: Die[], cost: number, matchType: string | null, virtualEnergy = 0, wants: EnergyWant[] = [],
+): string[] | null {
   if (cost <= 0) return [];
   const usableVirtual = Math.min(virtualEnergy, matchType ? cost - 1 : cost);
   for (let v = usableVirtual; v > 0; v--) {
     if (cost - v === 0) return [];
-    const ids = pickEnergy(pool, cost - v, matchType);
+    const ids = pickEnergyFromDice(pool, cost - v, matchType, wants, virtualEnergy - v);
     if (ids) return ids;
   }
+  return pickEnergyFromDice(pool, cost, matchType, wants, virtualEnergy);
+}
+
+// The most expensive want `pool` (plus leftover Virtual) can still pay for,
+// or -1 if none.
+function bestAffordable(pool: Die[], wants: EnergyWant[], virtualEnergy: number): number {
+  let best = -1;
+  for (const w of wants) {
+    if (w.cost > best && pickEnergy(pool, w.cost, w.matchType, virtualEnergy) !== null) best = w.cost;
+  }
+  return best;
+}
+
+function pickEnergyFromDice(
+  pool: Die[], cost: number, matchType: string | null, wants: EnergyWant[], leftoverVirtual: number,
+): string[] | null {
   const dice = pool.filter((d) => d.energyAmount > 0).sort((a, b) => a.energyAmount - b.energyAmount);
   const matches = (d: Die) => !matchType || d.energySymbolId === matchType || d.energySymbolId === "Wild";
   if (dice.length > 14) return pickEnergyGreedy(dice, cost, matchType);
 
-  let best: { ids: string[]; wilds: number; score: number; count: number } | null = null;
+  // Looking ahead re-runs the search on every candidate's leftover, so only
+  // for a pool small enough to stay instant (2^10 x 2^10 worst case).
+  const lookAhead = wants.length > 0 && dice.length <= 10;
+  let best: { ids: string[]; leftover: number; wilds: number; score: number; count: number } | null = null;
   for (let mask = 1; mask < 1 << dice.length; mask++) {
     const members = dice.filter((_, i) => mask & (1 << i));
     const sum = members.reduce((n, d) => n + d.energyAmount, 0);
@@ -118,12 +153,22 @@ export function pickEnergy(pool: Die[], cost: number, matchType: string | null, 
       const wilds =
         members.filter((d) => d.energySymbolId === "Wild").reduce((n, d) => n + d.energyAmount, 0) -
         (last.energySymbolId === "Wild" ? overspendOf(sum, cost) : 0);
+      let leftover = -1;
+      if (lookAhead) {
+        // What's still in the Reserve afterwards: the unspent dice, plus the
+        // overspent last die spun down to its leftover pips.
+        const rest = pool.filter((d) => !members.includes(d));
+        if (overspend > 0) rest.push({ ...last, energyAmount: overspend });
+        leftover = bestAffordable(rest, wants, leftoverVirtual);
+      }
       const better =
         !best ||
-        wilds < best.wilds ||
-        (wilds === best.wilds && (score > best.score || (score === best.score && count < best.count)));
+        leftover > best.leftover ||
+        (leftover === best.leftover && (
+          wilds < best.wilds ||
+          (wilds === best.wilds && (score > best.score || (score === best.score && count < best.count)))));
       if (better) {
-        best = { ids: [...members.filter((d) => d !== last), last].map((d) => d.id), wilds, score, count };
+        best = { ids: [...members.filter((d) => d !== last), last].map((d) => d.id), leftover, wilds, score, count };
       }
     }
   }

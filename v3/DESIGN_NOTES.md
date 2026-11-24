@@ -6030,3 +6030,22 @@ host's auto-move with the guest's token moved the guest's seat - and the
 game - onto the host's account (the record showed one account owning both
 seats; the son's iPad was a guest). Automatic moves (X-Auto-Move) no longer
 claim a seat. The guest's next real move takes it back for this game.
+
+## 2026-11-24 - Auto-pay keeps the energy for your next purchase
+
+User, game 18d54e04 turn 9: 5 energy - Hummingbird [2 Wing], Shell
+Tardigrade [2], Shell Tardigrade [1] - bought a 3-Shell Pangolin. Auto-pay
+(bot.ts pickEnergy) spent both Shells (exact, no Wild, so it scored best),
+leaving 2 Wing that couldn't buy the 2-Shell Hermit Crab. Wing + Shell [1]
+pays the same 3 and keeps the Hermit Crab.
+
+Fix: pickEnergy takes an optional list of what else the payer could still
+spend on this turn (`wants`), and ranks payments first by the most
+expensive want the leftover can still afford - unspent energy is lost at
+end of turn - then by the old rules (fewest Wilds, best spun-down leftover,
+fewest dice). The mobile Purchase button passes the rest of the unpurchased
+roster (minus locked cards), Field costs of rolled creatures in the
+Reserve, and Globals. Only for pools of 10 dice or fewer (it re-searches
+each candidate's leftover). Desktop pays with dice you pick, so unchanged;
+the computer's own payment (BotEnergy) is unchanged too.
+Tests: web/tests/pickEnergy.test.cjs.

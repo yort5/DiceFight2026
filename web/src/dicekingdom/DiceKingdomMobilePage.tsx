@@ -35,7 +35,7 @@ import { useGameSounds } from "./sound";
 import { useDiceRoll, type RollTarget } from "./useDiceRoll";
 import { useLogAutoFollow } from "./useLogAutoFollow";
 import { classifyDieMotion, remoteRolledIds } from "./dieMotion";
-import { activeCouldAct, botDecisionCall, decisionOwner, pickEnergy, rolled } from "./bot";
+import { activeCouldAct, botDecisionCall, decisionOwner, globalCardsInGame, pickEnergy, rolled, type EnergyWant } from "./bot";
 import { getAbilityOptions, isCommunityBasicAction, purchasableDiceFor, executeAbility, type AbilityCommand } from "./sharedAbilities";
 import { SharedAbilityPanel } from "./SharedAbilityPanel";
 import { LANE_COUNT, canAddToLane, declareLane, laneCounts, lanesAllowed } from "./laneRule";
@@ -250,9 +250,11 @@ function blockAssignmentsToApi(assignments: Record<string, string[]>): { attacke
 // Claw-heavy reserve can absolutely buy a Wing card, one Wild pip plus
 // spare Claim for the rest, same as the physical game.
 // `virtualEnergy`: the payer's deck-out generic energy (bot.ts pickEnergy).
-function pickEnergyForCost(reserve: Die[], cost: number, matchType: string | null, virtualEnergy = 0): string[] | null {
+function pickEnergyForCost(
+  reserve: Die[], cost: number, matchType: string | null, virtualEnergy = 0, wants: EnergyWant[] = [],
+): string[] | null {
   // Shared with the bot - see bot.ts pickEnergy for how the leftover die is chosen.
-  return pickEnergy(reserve, cost, matchType, virtualEnergy);
+  return pickEnergy(reserve, cost, matchType, virtualEnergy, wants);
 }
 
 
@@ -2919,7 +2921,17 @@ export function DiceKingdomMobilePage() {
   if (selectedDie) {
     if (selectedDie.zone === "Unpurchased" && step === "main" && isYourTurn) {
       const { amount, matchType } = costFor(selectedDie);
-      const ids = pickEnergyForCost(yourReserve, amount, matchType, yourVirtual);
+      // Everything else this turn's leftover could still go to, so the
+      // payment keeps the energy that buys the next thing (bot.ts pickEnergy).
+      const locked = new Set((game.lockedCards ?? []).filter((l) => l.playerId === you).map((l) => l.cardId));
+      const wants: EnergyWant[] = [
+        ...[...unpurchasedByCard.keys()].filter((id) => !locked.has(id))
+          .map((id) => ({ cost: purchaseCostOf(id), matchType: cardsById.get(id)?.energyTypes[0] ?? null })),
+        ...yourReserve.filter((d) => rolled(d) && d.effectiveAttack !== null && !(d.cardId && locked.has(d.cardId)))
+          .map((d) => costFor(d)).filter((c) => c.amount > 0).map((c) => ({ cost: c.amount, matchType: c.matchType })),
+        ...globalCardsInGame(game, cardsById).map((c) => ({ cost: c.global!.cost, matchType: c.global!.energyType ?? null })),
+      ];
+      const ids = pickEnergyForCost(yourReserve, amount, matchType, yourVirtual, wants);
       // Pangolin's lockout (user, 2026-11-15: "clicking Purchase does
       // nothing" - the server refused it, out of sight) says so here.
       const lockers = selectedLockers;
