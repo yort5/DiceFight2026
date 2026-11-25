@@ -6131,6 +6131,11 @@ a blocker's damage goes down the lane in declaration order, lethal-first
 (CombatEngine.AutoSplit) - all 2 went into Phoenix. BlockScore now uses
 the same split (KilledByBlocker); replayed, it declines that block.
 Test: A_Chump_Does_Not_Count_On_A_KO_The_Damage_Split_Wont_Give_It.
-Open question for the user: should a lane's damage split let the blocking
-side KO what it can (or choose), rather than strictly lethal-first in
-declaration order? Humans are bound by the same split.
+Settled (user, same day): the automatic split is deliberate - in Dice
+Masters the player decides where damage goes; Dice Kingdom splits it
+automatically to simplify the interaction. Keep it.
+A Deadly blocker KOs EVERY attacker in its lane (engagement is per lane,
+CombatEngine), so KilledByBlocker returns all of them for Deadly and
+BlockScore counts each - the old scorer only credited the single most
+valuable one (and the first version of this fix wrongly limited Deadly to
+the attackers its damage reached).

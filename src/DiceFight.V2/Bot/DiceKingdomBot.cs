@@ -853,38 +853,38 @@ public static class DiceKingdomBot
         var reflectWeight = Math.Max(0.5, 6.0 / Math.Max(1, state.GetPlayer(state.ActivePlayerId).Life));
         if (IsRetaliator(state, b) && !shielded) score += Math.Min(lane.Attack, bDef) * reflectWeight; // shielded, it takes nothing to reflect
         if (lane.Attackers.Any(a => IsRetaliator(state, a))) score -= bAtk * damageWeight * 1.5;
-        if (killed is not null) score += DieValue(state, killed) - PrepBonus(killed);
+        score += killed.Sum(k => DieValue(state, k) - PrepBonus(k));
         if (!survives) score -= b.IsSidekick && chumpCost is { } cost ? cost : DieValue(state, b) - PrepBonus(b);
-        if (survives && killed is null) score += 0.5; // a free wall
+        if (survives && killed.Count == 0) score += 0.5; // a free wall
         // Blocking keeps the lane's surviving Tardigrade attackers on the
         // Field (still culled) instead of sending them back to their Bag.
-        score -= lane.Attackers.Count(a => a.CardId is null && a != killed) * UncullBonus(state, lane.Attackers[0].ControllerId);
+        score -= lane.Attackers.Count(a => a.CardId is null && !killed.Contains(a)) * UncullBonus(state, lane.Attackers[0].ControllerId);
         return score;
     }
 
-    // Which of a lane's attackers a lone blocker's damage KOs, as the engine
-    // splits it (CombatEngine.AutoSplit): down the lane in declaration
-    // order, each attacker taking a lethal amount before any goes to the
-    // next, the rest on the last. It used to assume the blocker could pick
-    // any attacker it could KO - a real game (2026-11-25): a 2/1 Tardigrade
-    // chumped a Phoenix + 1/1 Tardigrade lane "to KO the Tardigrade", but
-    // its 2 damage all went into Phoenix, declared first. Deadly KOs
-    // whatever it damages.
-    private static DieInstance? KilledByBlocker(GameState state, Lane lane, int bAtk, bool bDeadly)
+    // The lane's attackers a lone blocker KOs. Deadly: all of them - it is
+    // engaged with every attacker in its lane (CombatEngine records the
+    // engagement per lane). Otherwise as the engine splits its damage
+    // (CombatEngine.AutoSplit): down the lane in declaration order, each
+    // attacker taking a lethal amount before any goes to the next, the rest
+    // on the last. It used to assume the blocker could pick any attacker it
+    // could KO - a real game (2026-11-25): a 2/1 Tardigrade chumped a
+    // Phoenix + 1/1 Tardigrade lane "to KO the Tardigrade", but its 2
+    // damage all went into Phoenix, declared first.
+    private static List<DieInstance> KilledByBlocker(GameState state, Lane lane, int bAtk, bool bDeadly)
     {
+        if (bDeadly) return lane.Attackers.ToList();
         var order = lane.Attackers.OrderBy(a => a.AttackOrder ?? int.MaxValue).ToList();
         var remaining = bAtk;
-        DieInstance? best = null;
+        var killed = new List<DieInstance>();
         for (var i = 0; i < order.Count && remaining > 0; i++)
         {
-            var a = order[i];
-            var lethal = Math.Max(0, QueryEngine.GetDefense(state, a) - a.Damage);
+            var lethal = Math.Max(0, QueryEngine.GetDefense(state, order[i]) - order[i].Damage);
             var give = i == order.Count - 1 ? remaining : Math.Min(remaining, lethal);
             remaining -= give;
-            if (give > 0 && (bDeadly || give >= lethal) && (best is null || DieValue(state, a) > DieValue(state, best)))
-                best = a;
+            if (give >= lethal) killed.Add(order[i]);
         }
-        return best;
+        return killed;
     }
 
     // An extra die rolled next turn: mostly energy for a Tardigrade (5 of 6
