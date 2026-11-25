@@ -1757,7 +1757,7 @@ function RosterSheet({
           <span className="dkm-roster-col-label">Cost</span>
           <span className="dkm-roster-col-label">Dice left</span>
         </div>
-        {cards.length === 0 && <p className="dkm-empty-hint">Nothing left to buy.</p>}
+        {cards.every((c) => c.remaining === 0) && <p className="dkm-empty-hint">Nothing left to buy.</p>}
         {cards.map(({ card, cardId, dieId, remaining }) => {
           const Avatar = CHARACTER_ICONS[cardId];
           const types = card?.energyTypes ?? [];
@@ -1794,7 +1794,7 @@ function RosterSheet({
               <span className="dkm-roster-left">{remaining}</span>
             </>
           );
-          return canBuy ? (
+          return canBuy && remaining > 0 ? (
             <KeywordAction
               key={cardId}
               label={`Buy ${card?.name ?? cardId}`}
@@ -1808,7 +1808,7 @@ function RosterSheet({
               {row}
             </KeywordAction>
           ) : (
-            <div key={cardId} className="dkm-roster-row">
+            <div key={cardId} className={`dkm-roster-row${remaining === 0 ? " sold-out" : ""}`}>
               {row}
             </div>
           );
@@ -3297,16 +3297,25 @@ export function DiceKingdomMobilePage() {
   const link = inviteLink(game.gameId, "/dice-kingdom/mobile");
   const own = myLink(game.gameId, "/dice-kingdom/mobile");
   const logEntries = logOpen ? game.log : game.log.slice(-4);
-  function rosterRowsFor(map: Map<string, Die[]>) {
-    return [...map.entries()].map(([cardId, dice]) => ({
+  // Every card on the owner's team, not only those with dice left to buy -
+  // a card whose last die was bought used to drop off the roster (user,
+  // 2026-11-25: the Fire Ant Colony boss's Tasmanian Devil, its only copy
+  // bought, was on the board but not on "Their Roster"). Sold-out cards
+  // go last, at 0 left.
+  function rosterRowsFor(map: Map<string, Die[]>, ownerId: string) {
+    const ids = [...map.keys()];
+    for (const d of game!.dice) {
+      if (d.ownerId === ownerId && d.cardId && !ids.includes(d.cardId)) ids.push(d.cardId);
+    }
+    return ids.map((cardId) => ({
       card: cardsById.get(cardId),
       cardId,
-      dieId: dice[0].id,
-      remaining: dice.length,
+      dieId: map.get(cardId)?.[0].id ?? "",
+      remaining: map.get(cardId)?.length ?? 0,
     }));
   }
-  const rosterCards = rosterRowsFor(unpurchasedByCard);
-  const oppRosterCards = rosterRowsFor(oppUnpurchasedByCard);
+  const rosterCards = rosterRowsFor(unpurchasedByCard, you);
+  const oppRosterCards = rosterRowsFor(oppUnpurchasedByCard, opponentId);
 
   // The phase card (tray, Buy with your Reserve, end of turn) shows the
   // ACTIVE player's dice, so it sits on their side of the attack zones:

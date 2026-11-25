@@ -1520,6 +1520,14 @@ export function DiceKingdomPage() {
     // row behind a tap instead - see the `isOpponentBoard` branch below.
     const isOpponentBoard = playerId !== you;
     const regularCards = [...unpurchasedByCard.entries()];
+    // Cards with every die bought stay listed, at none left (2026-11-25:
+    // a boss's one-copy Tasmanian Devil vanished from its roster once bought).
+    for (const d of game!.dice) {
+      if (d.ownerId === playerId && d.cardId && !isCommunityBasicAction(cardsById.get(d.cardId))
+          && !regularCards.some(([cardId]) => cardId === d.cardId)) {
+        regularCards.push([d.cardId, []]);
+      }
+    }
     if (namedCardChoice && isOpponentBoard) {
       // Pangolin names a character CARD, not a die. Include cards even when
       // every copy is already purchased, and offer them on the actual roster.
@@ -1616,7 +1624,7 @@ export function DiceKingdomPage() {
     const rosterRow = (
       <div className="roster-row" data-pile={`${playerId === you ? "mine" : "opp"}-roster`}>
         <div className="roster-regular-cards">
-          {regularCards.length === 0 && <span className="roster-empty">No team dice left</span>}
+          {regularCards.every(([, dice]) => dice.length === 0) && <span className="roster-empty">No team dice left</span>}
           {renderRosterChips(regularCards)}
         </div>
         {sharedActionCards.length > 0 && (

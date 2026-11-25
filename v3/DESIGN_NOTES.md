@@ -6171,3 +6171,13 @@ Even_An_Aggressive_Bot_Does_Not_Swing_Into_A_Free_Kill.
 tools/GameRecords now replays a boss seat with its boss's Style (found by
 its team - records don't name the boss); it used the default style, which
 hid this.
+
+## 2026-11-25 - Rosters keep cards whose dice are all bought
+
+User: a Tasmanian Devil on the board "does not show up on my opponent's
+roster". It's the Fire Ant Colony boss's DPS027 (one copy). Both pages
+built the roster from Unpurchased dice only, so a card dropped off once
+its last die was bought - a boss's one-copy cards right away, and anyone's
+card bought out. Rosters now list every card the owner has, sold-out ones
+last at 0 left (dimmed on mobile; desktop already drew a card with no
+dice for Pangolin's naming). Check: ~/.devtools/playwright/roster-soldout-check.js.

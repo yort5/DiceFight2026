@@ -6130,3 +6130,8 @@
 @media (prefers-reduced-motion: reduce) {
   .dkm-ko-burst { display: none; }
 }
+
+/* A roster card with every die bought (2026-11-25): still listed, dimmed. */
+.dk-mobile .dkm-roster-row.sold-out {
+  opacity: .5;
+}
