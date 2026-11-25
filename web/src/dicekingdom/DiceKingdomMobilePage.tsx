@@ -3651,7 +3651,8 @@ export function DiceKingdomMobilePage() {
             <div className="dkm-inspect-mid">
               <div className="dkm-inspect-title-row">
                 <span className="dkm-inspect-name">{nameOf(selectedDie, cardsById)}</span>
-                {(inspectingPileDie || selectedPurchaseCard || selectedDie.zone === "FieldZone" || (phase === "roll" && selectedDie.zone === "ReservePool")) && (
+                {(inspectingPileDie || selectedPurchaseCard || selectedDie.zone === "FieldZone" || selectedDie.zone === "AttackZone"
+                  || selectedDie.zone === "Intimidated" || (phase === "roll" && selectedDie.zone === "ReservePool")) && (
                   <div className="dkm-purchase-character-faces" aria-label="Non-energy die faces">
                     {printedFacesFor(selectedDie, cardsById)
                       .filter((face) => face.kind !== "energy")
@@ -3690,16 +3691,15 @@ export function DiceKingdomMobilePage() {
             <button type="button" className="dkm-inspect-close" onClick={() => { setSelectedId(null); setPileInspectId(null); }}>
               ×
             </button>
-            {/* The card's text, wherever the die is being looked at: a pile,
-                the buy panel, the roll tray, the Field, or a Reserve die
-                showing a body (even one you can't afford to field yet). */}
-            {selectedDie.cardId &&
-              (inspectingPileDie ||
-                selectedPurchaseCard ||
-                selectedDie.zone === "FieldZone" ||
-                (selectedDie.zone === "ReservePool" && (phase === "roll" || selectedDie.effectiveAttack !== null))) && (
-                <div className="dkm-purchase-ability"><KeywordText text={cardTextOf(cardsById.get(selectedDie.cardId))} /></div>
-              )}
+            {/* The card's text, wherever the die is: a pile, the buy panel,
+                the tray, the Reserve, the Field, or attacking/blocking in
+                the Attack Zone (user, 2026-11-25: tapping an opponent's die
+                showed its name and stats but not its ability - the Attack
+                Zone, where their dice usually are when you look, was left
+                out). */}
+            {selectedDie.cardId && (
+              <div className="dkm-purchase-ability"><KeywordText text={cardTextOf(cardsById.get(selectedDie.cardId))} /></div>
+            )}
             {selectedPurchaseCard ? (
               <div className="dkm-purchase-row">
                 <div className="dkm-purchase-count" aria-label={`${purchaseOwned} purchased`}>

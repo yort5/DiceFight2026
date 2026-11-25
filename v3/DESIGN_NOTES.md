@@ -6181,3 +6181,14 @@ its last die was bought - a boss's one-copy cards right away, and anyone's
 card bought out. Rosters now list every card the owner has, sold-out ones
 last at 0 left (dimmed on mobile; desktop already drew a card with no
 dice for Pangolin's naming). Check: ~/.devtools/playwright/roster-soldout-check.js.
+
+## 2026-11-25 - A die's card text shows wherever you tap it
+
+User: tapping an opponent's die showed its name and stats "but not the
+ability"; their own dice did. The mobile inspect panel only showed card
+text for dice on the Field, in a pile/buy panel, or a Reserve die showing
+a body - dice attacking or blocking (Attack Zone), where you usually look
+at the opponent's, were left out, as was a Reserve die on an energy face.
+It now shows for any die with a card; the level-faces strip also covers
+the Attack Zone. Check: ~/.devtools/playwright/opp-ability-check.js
+(wait for the first-player coin flip before tapping - it covers the board).
