@@ -6139,3 +6139,21 @@ CombatEngine), so KilledByBlocker returns all of them for Deadly and
 BlockScore counts each - the old scorer only credited the single most
 valuable one (and the first version of this fix wrongly limited Deadly to
 the attackers its damage reached).
+
+## 2026-11-25 - The computer blocks to survive
+
+Game e1df2399 turn 9 (user screenshot: "another questionable blocking
+strategy, because it meant death"). The computer's Wolf at 7 life; Eagle
+attacked with two Overcrush lanes - Phoenix 4/5 + Tardigrade 1/1 (5) and
+Chipmunk 2/4 + Tardigrade 2/1 (4). It chumped each with a 1-DEF Tardigrade
+(4 + 3 through = 7, dead) and left Wolverine 2/3 and a 1/1 home. The
+planner picks at most one blocker per lane and never checked the whole
+plan against its life. Now, when the plan lets lethal damage through,
+SurvivingBlocks tries every assignment of its blockers to lanes (ganging
+up included; forced blockers always block; MinBlockers lanes get none or
+enough) and takes the one that survives losing the least, then taking the
+least damage (BlocksLetThrough: unblocked lanes, Overcrush past the
+blockers' D, reflection from a retaliator, Wolf's pump on the worst lane).
+Replayed: "Block 3 - all it takes to survive." Test:
+Blocks_To_Survive_Two_Overcrush_Lanes (runs the real combat; the old
+code ends at 0 life).

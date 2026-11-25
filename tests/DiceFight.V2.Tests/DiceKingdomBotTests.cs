@@ -293,4 +293,39 @@ public class DiceKingdomBotTests
         Assert.Equal(BotActionKind.DeclareBlockers, decision.Kind);
         Assert.DoesNotContain(decision.Blocks, b => b.Item1 == phoenix.Id || b.Item1 == small.Id);
     }
+
+    // Game e1df2399 turn 9 (2026-11-25): the computer's Wolf at 7 life,
+    // Eagle attacking with two Overcrush lanes - Phoenix 4/5 + Tardigrade
+    // 1/1 (5) and Chipmunk 2/4 + Tardigrade 2/1 (4). It chumped each lane
+    // with one 1-DEF Tardigrade and took exactly 7, leaving Wolverine 2/3
+    // and a 1/1 Tardigrade home. Ganging up lets it live.
+    [Fact]
+    public void Blocks_To_Survive_Two_Overcrush_Lanes()
+    {
+        var state = NewGame("GoldenEagle", "Wolf");
+        var queue = new AbilityQueue();
+        state.GetPlayer("p2").Life = 7;
+        DieInstance Put(string owner, string? cardId, int face, int skip = 0)
+        {
+            var d = state.Dice.Where(x => x.OwnerId == owner && x.CardId == cardId && x.Zone != Zone.FieldZone).Skip(skip).First();
+            d.Zone = Zone.FieldZone; d.CurrentFaceIndex = face;
+            return d;
+        }
+        var phoenix = Put("p1", DiceKingdomConfig.Phoenix.Id, 1);  // 4/5
+        var chipmunk = Put("p1", "GOTG021", 1);                      // 2/4
+        var t11 = Put("p1", null, 3);                                // 1/1
+        var t21 = Put("p1", null, 4);                                // 2/1
+        Put("p2", null, 4); Put("p2", null, 4); Put("p2", null, 3);   // Tardigrades 2/1, 2/1, 1/1
+        Put("p2", DiceKingdomConfig.Wolverine.Id, 0);                // 2/3
+        state.MoveToStep(StepIds.SelectAttackers);
+        CombatEngine.DeclareAttackers(state, queue, new Dictionary<string, int> { [phoenix.Id] = 0, [chipmunk.Id] = 1, [t11.Id] = 0, [t21.Id] = 1 });
+
+        var decision = DiceKingdomBot.Decide(state, "p2")!;
+        Assert.Equal(BotActionKind.DeclareBlockers, decision.Kind);
+        var assignment = new CombatAssignment();
+        foreach (var (attacker, blocker) in decision.Blocks) assignment.AssignBlocker(attacker, blocker);
+        CombatEngine.DeclareBlockers(state, queue, assignment, decision.Blocks.Select(b => b.Item2).ToList());
+        CombatEngine.AssignCombatDamage(state, queue, assignment, new Dictionary<string, IReadOnlyDictionary<string, int>>());
+        Assert.True(state.GetPlayer("p2").Life > 0, $"life {state.GetPlayer("p2").Life} after {decision.Reason}");
+    }
 }

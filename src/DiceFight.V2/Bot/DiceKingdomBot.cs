@@ -698,6 +698,7 @@ public static class DiceKingdomBot
             .ToList();
         var unblockable = attacking.Where(d => !openLanes.Contains(d.Lane ?? -1)).Sum(d => QueryEngine.GetAttack(state, d));
         var available = PotentialBlockers(state, botId).ToList();
+        var allBlockers = available.ToList();
         var blocks = new List<(string, string)>();
         var incoming = lanes.Sum(l => l.Attack) + unblockable;
 
@@ -815,7 +816,100 @@ public static class DiceKingdomBot
             available.Remove(rhino);
         }
 
+        // The plan above picks blockers lane by lane, one each. If what it
+        // lets through still kills, look for blocks that don't - ganging up
+        // on an Overcrush lane included (a real game, 2026-11-25: at 7 life
+        // against two Overcrush lanes of 5 and 4, it chumped each with a
+        // 1-DEF Tardigrade and took exactly 7, with Wolverine 2/3 and a
+        // third Tardigrade left home; Wolverine + Tardigrade in one lane and
+        // two Tardigrades in the other let 3 through).
+        if (lanes.Count > 0 && BlocksLetThrough(state, lanes, blocks, pump) + unblockable >= myLife
+            && SurvivingBlocks(state, lanes, allBlockers, myLife - unblockable, pump) is { } rescue)
+            return new(BotActionKind.DeclareBlockers, $"Block {rescue.Count} - all it takes to survive.") { Blocks = rescue };
+
         return new(BotActionKind.DeclareBlockers, blocks.Count == 0 ? "No blocks." : $"Block {blocks.Count}.") { Blocks = blocks };
+    }
+
+    // Damage that reaches this player through `blocks` (attacker id ->
+    // blocker id, any attacker of the lane): an unblocked lane's whole ATK;
+    // an Overcrush lane's ATK past its blockers' combined remaining D; a
+    // lane attacking with a retaliator (Rhinoceros) sends its blockers'
+    // ATK back. Wolf's pump goes on the attacker that hurts most.
+    private static int BlocksLetThrough(GameState state, IReadOnlyList<Lane> lanes, IReadOnlyList<(string, string)> blocks, int pump)
+    {
+        var total = 0;
+        var pumpBest = 0;
+        foreach (var lane in lanes)
+        {
+            var blockers = blocks.Where(x => lane.Attackers.Any(a => a.Id == x.Item1))
+                .Select(x => FindDie(state, x.Item2)).Distinct().ToList();
+            int Through(int extra)
+            {
+                if (blockers.Count == 0) return lane.Attack + extra;
+                return lane.Overcrush ? Math.Max(0, lane.Attack + extra - blockers.Sum(b => Math.Max(0, QueryEngine.GetDefense(state, b) - b.Damage))) : 0;
+            }
+            total += Through(0);
+            pumpBest = Math.Max(pumpBest, Through(pump) - Through(0));
+            if (lane.Attackers.Any(a => IsRetaliator(state, a))) total += blockers.Sum(b => QueryEngine.GetAttack(state, b));
+        }
+        return total + pumpBest;
+    }
+
+    private static DieInstance FindDie(GameState state, string id) => state.Dice.First(d => d.Id == id);
+
+    // Every way of sending this player's blockers into the lanes (or
+    // holding them home), for one that leaves it alive: what reaches it
+    // stays under `lifeLeft`. Of those, the one that loses the least
+    // (blockers the lane's ATK KOs, lethal-first in block order), then
+    // takes the least damage. Forced blockers (must block) always block;
+    // a lane that needs N blockers gets none or N+. Null if nothing
+    // survives - then the usual plan stands.
+    private static List<(string, string)>? SurvivingBlocks(GameState state, IReadOnlyList<Lane> lanes, IReadOnlyList<DieInstance> blockers, int lifeLeft, int pump)
+    {
+        if (blockers.Count == 0 || blockers.Count > 7 || lifeLeft <= 0) return null;
+        // Cheapest first within a lane, so the lane's ATK spends itself on them.
+        var pool = blockers.OrderBy(b => DieValue(state, b)).ToList();
+        var choice = new int[pool.Count]; // -1 home, else lane index
+        List<(string, string)>? best = null;
+        (double Lost, int Through) bestScore = (double.MaxValue, int.MaxValue);
+        var combos = (int)Math.Pow(lanes.Count + 1, pool.Count);
+        for (var n = 0; n < combos; n++)
+        {
+            var k = n;
+            var ok = true;
+            for (var i = 0; i < pool.Count; i++)
+            {
+                choice[i] = k % (lanes.Count + 1) - 1;
+                k /= lanes.Count + 1;
+                if (choice[i] < 0 && pool[i].CombatFlags.Contains(CombatFlagKind.MustBlock)) ok = false;
+            }
+            if (!ok) continue;
+            var blocks = new List<(string, string)>();
+            double lost = 0;
+            for (var l = 0; l < lanes.Count && ok; l++)
+            {
+                var mine = pool.Where((_, i) => choice[i] == l).ToList();
+                if (mine.Count > 0 && mine.Count < lanes[l].Need) { ok = false; break; }
+                blocks.AddRange(mine.Select(b => (lanes[l].Attackers[0].Id, b.Id)));
+                // The lane's ATK, lethal-first down its blockers (all of them if it's Deadly).
+                var atk = lanes[l].Attack;
+                foreach (var b in mine)
+                {
+                    var lethal = Math.Max(0, QueryEngine.GetDefense(state, b) - b.Damage);
+                    if (lanes[l].Deadly || atk >= lethal) lost += DieValue(state, b) - PrepBonus(b);
+                    atk = Math.Max(0, atk - lethal);
+                }
+            }
+            if (!ok) continue;
+            var through = BlocksLetThrough(state, lanes, blocks, pump);
+            if (through >= lifeLeft) continue;
+            if (lost < bestScore.Lost - 1e-9 || (Math.Abs(lost - bestScore.Lost) < 1e-9 && through < bestScore.Through))
+            {
+                best = blocks;
+                bestScore = (lost, through);
+            }
+        }
+        return best;
     }
 
     private sealed record Lane(IReadOnlyList<DieInstance> Attackers, int Attack, bool Overcrush, bool Deadly, int Need = 1);
