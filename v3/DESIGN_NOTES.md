@@ -6118,3 +6118,19 @@ Archnemesis_Global_Only_When_It_Changes_A_Fight (both fail on the old code).
 end when damage resolves"). GameOverOverlay waits 2.2 s when the game ends
 during play (the last KO takes ~1.5 s); a game already over when the page
 opens shows it at once. Check: `~/.devtools/playwright/gameover-pause-check.js`.
+
+## 2026-11-25 - The computer's chump expected a KO the damage split never gives
+
+Game e1df2399 turn 7 (user screenshot: "why did [it] block like this?").
+The computer (Wolf, 16 life) had one 2/1 Tardigrade; Eagle attacked with
+Chipmunk 3/4 + Tardigrade 2/1 in one lane and Phoenix 4/5 + Tardigrade
+1/1 in another. It chumped the Phoenix lane: two attackers = Overcrush,
+so it stopped 1 damage and lost the Tardigrade. Its BlockScore assumed
+the blocker could KO any attacker it was strong enough to (the 1/1), but
+a blocker's damage goes down the lane in declaration order, lethal-first
+(CombatEngine.AutoSplit) - all 2 went into Phoenix. BlockScore now uses
+the same split (KilledByBlocker); replayed, it declines that block.
+Test: A_Chump_Does_Not_Count_On_A_KO_The_Damage_Split_Wont_Give_It.
+Open question for the user: should a lane's damage split let the blocking
+side KO what it can (or choose), rather than strictly lethal-first in
+declaration order? Humans are bound by the same split.

@@ -263,4 +263,34 @@ public class DiceKingdomBotTests
         rhino.Damage = 6; // 3 D left: Hyena's 3 KOs it already
         Assert.Equal(0, DiceKingdomBot.SetDefenseGain(state, "p2", rhino));
     }
+
+    // Game e1df2399 (2026-11-25): Eagle's lane of Phoenix (4/5, declared
+    // first) + a 1/1 Tardigrade. The computer chumped it with its only 2/1
+    // Tardigrade "to KO the Tardigrade" - but a blocker's damage goes down
+    // the lane in declaration order, lethal-first (CombatEngine.AutoSplit),
+    // so all 2 went into Phoenix. Two attackers mean Overcrush: the chump
+    // stopped 1 damage for its life.
+    [Fact]
+    public void A_Chump_Does_Not_Count_On_A_KO_The_Damage_Split_Wont_Give_It()
+    {
+        var state = NewGame("GoldenEagle", "Wolf");
+        var queue = new AbilityQueue();
+        state.GetPlayer("p2").Life = 16;
+        var phoenix = state.Dice.First(d => d.OwnerId == "p1" && d.CardId == DiceKingdomConfig.Phoenix.Id);
+        phoenix.Zone = Zone.FieldZone; phoenix.CurrentFaceIndex = 1;
+        var small = state.Dice.First(d => d.OwnerId == "p1" && d.CardId is null);
+        small.Zone = Zone.FieldZone; small.CurrentFaceIndex = 3; // L2 1/1
+        // A lane takes a second attacker only when another lane has one.
+        var other = state.Dice.Where(d => d.OwnerId == "p1" && d.CardId is null).Skip(1).First();
+        other.Zone = Zone.FieldZone; other.CurrentFaceIndex = 4; // L2 2/1
+        var mine = state.Dice.First(d => d.OwnerId == "p2" && d.CardId is null);
+        mine.Zone = Zone.FieldZone; mine.CurrentFaceIndex = 4; // L2 2/1
+        state.MoveToStep(StepIds.SelectAttackers);
+        CombatEngine.DeclareAttackers(state, queue, new Dictionary<string, int> { [phoenix.Id] = 0, [small.Id] = 0, [other.Id] = 1 });
+        Assert.True(QueryEngine.GetDefense(state, phoenix) > 2, "setup: Phoenix survives 2");
+
+        var decision = DiceKingdomBot.Decide(state, "p2")!;
+        Assert.Equal(BotActionKind.DeclareBlockers, decision.Kind);
+        Assert.DoesNotContain(decision.Blocks, b => b.Item1 == phoenix.Id || b.Item1 == small.Id);
+    }
 }
