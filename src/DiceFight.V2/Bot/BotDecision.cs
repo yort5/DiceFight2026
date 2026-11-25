@@ -47,7 +47,8 @@ public sealed record BotDecision(BotActionKind Kind, string Reason)
 public sealed record BotPersona(
     // How readily an attacker swings into a board that could kill it:
     // 0 = only when no blocker can kill it, 1 = accepts even trades,
-    // 2 = swings into bad trades too.
+    // 2 = swings into bad trades too. Never into a free kill (a blocker
+    // that KOs it and survives) - unless that swing is lethal.
     double Aggression = 1.0,
     // How many points of incoming damage a chump block (losing the
     // blocker) is worth at full life; scales up as life drops.

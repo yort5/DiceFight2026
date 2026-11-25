@@ -6157,3 +6157,17 @@ blockers' D, reflection from a retaliator, Wolf's pump on the worst lane).
 Replayed: "Block 3 - all it takes to survive." Test:
 Blocks_To_Survive_Two_Overcrush_Lanes (runs the real combat; the old
 code ends at 0 life).
+
+## 2026-11-25 - No style swings into a free kill
+
+Game 7e9ce89c turn 12 (user: "I have two that can block with no
+consequence, why KO your Tardigrades for no reason?"). The boss (The Fire
+Ant Colony) plays BotStyles.Aggressive, and Aggression 2 skipped
+WorthSwinging's free-kill check (a blocker that KOs the attacker and
+survives) - so two 2/1 Tardigrades swung into 1/4 Cuttlefish. Aggression
+now only governs trades; no persona swings into a free kill (lethal
+alpha strikes are decided before that check). Test:
+Even_An_Aggressive_Bot_Does_Not_Swing_Into_A_Free_Kill.
+tools/GameRecords now replays a boss seat with its boss's Style (found by
+its team - records don't name the boss); it used the default style, which
+hid this.

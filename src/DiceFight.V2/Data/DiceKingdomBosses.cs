@@ -171,7 +171,8 @@ public static class BotStyles
 {
     // What every Champion plays like on the start screen.
     public static readonly BotPersona Balanced = BotPersona.Default;
-    // Swings into bad trades, and only chump-blocks big hits.
+    // Swings into bad trades (never into a blocker that KOs it and lives),
+    // and only chump-blocks big hits.
     public static readonly BotPersona Aggressive = BotPersona.Default with { Aggression = 2, ChumpThreshold = 3 };
     // Attacks only when nothing can kill the attacker; blocks early.
     public static readonly BotPersona Cautious = BotPersona.Default with { Aggression = 0, ChumpThreshold = 10 };

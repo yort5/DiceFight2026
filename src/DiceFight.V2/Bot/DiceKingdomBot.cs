@@ -661,7 +661,12 @@ public static class DiceKingdomBot
         {
             var kills = QueryEngine.GetAttack(state, b) >= def || QueryEngine.GetKeywords(state, b).Contains("Deadly");
             var survives = QueryEngine.GetDefense(state, b) - b.Damage > atk && !deadly;
-            if (kills && survives && persona.Aggression < 2) return false;
+            // A free kill is never worth it, however aggressive (user,
+            // 2026-11-25: the Aggressive Fire Ant Colony boss swung two 2/1
+            // Tardigrades into two 1/4 Cuttlefish - "why KO your Tardigrades
+            // for no reason?"). Aggression is for trades; lethal swings are
+            // decided before this.
+            if (kills && survives) return false;
             if (kills && !survives && persona.Aggression < 1) return false;
             if (kills && !survives && DieValue(state, b) < myValue * 0.75 && persona.Aggression < 2) return false; // a bad trade
         }

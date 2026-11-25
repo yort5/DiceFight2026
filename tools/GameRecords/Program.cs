@@ -48,7 +48,14 @@ foreach (var file in files)
     var outcome = GameReplayer.Replay(record, (state, action) =>
     {
         if (action.Error is not null || action.Auto) return; // an illegal try, or a move the client made for them, isn't a decision
-        var persona = BotPersona.ForChampion(state.GetPlayer(action.PlayerId).ChampionId);
+        // A boss seat (no Champion) plays its boss's Style on the server
+        // (V2GamesController) - records don't name the boss, so find it by
+        // its team.
+        var player = state.GetPlayer(action.PlayerId);
+        var boss = player.ChampionId is null
+            ? DiceFight.V2.Data.DiceKingdomBosses.Ladder.FirstOrDefault(b => player.TeamCardIds.Count > 0 && player.TeamCardIds.All(c => b.TeamLink.Contains(c)))
+            : null;
+        var persona = boss?.Style ?? BotPersona.ForChampion(player.ChampionId);
         if (dilution is { } d) persona = persona with { DilutionPerDie = d };
         var bot = DiceKingdomBot.Decide(state, action.PlayerId, persona: persona);
         if (bot is null) return;

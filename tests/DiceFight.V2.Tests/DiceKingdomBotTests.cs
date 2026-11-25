@@ -328,4 +328,28 @@ public class DiceKingdomBotTests
         CombatEngine.AssignCombatDamage(state, queue, assignment, new Dictionary<string, IReadOnlyDictionary<string, int>>());
         Assert.True(state.GetPlayer("p2").Life > 0, $"life {state.GetPlayer("p2").Life} after {decision.Reason}");
     }
+
+    // Game 7e9ce89c (2026-11-25): the Aggressive Fire Ant Colony boss swung
+    // two 2/1 Tardigrades into an Owl with two 1/4 Cuttlefish and a 1/3
+    // Opossum ready to block - each a free kill. Aggressive takes trades,
+    // not free kills.
+    [Fact]
+    public void Even_An_Aggressive_Bot_Does_Not_Swing_Into_A_Free_Kill()
+    {
+        var state = NewGame("GreatHornedOwl", "Wolf");
+        state.ActivePlayerId = "p2";
+        state.MoveToStep(StepIds.SelectAttackers);
+        var attacker = state.Dice.First(d => d.OwnerId == "p2" && d.CardId is null);
+        attacker.Zone = Zone.FieldZone; attacker.CurrentFaceIndex = 4; // 2/1
+        // One of the Owl's creatures on a face that KOs a 2/1 and survives it.
+        var (wall, face) = state.Dice.Where(d => d.OwnerId == "p1" && d.CardId is { } c && state.CardCatalog[c].CardType == CardType.Character)
+            .Select(d => (Die: d, Face: state.CardCatalog[d.CardId!].Die.Faces.ToList().FindIndex(f => f.Character is { Attack: >= 1, Defense: >= 3 })))
+            .First(x => x.Face >= 0);
+        wall.Zone = Zone.FieldZone; wall.CurrentFaceIndex = face;
+
+        var aggressive = BotPersona.Default with { Aggression = 2, ChumpThreshold = 3 };
+        var decision = DiceKingdomBot.Decide(state, "p2", persona: aggressive)!;
+        Assert.Equal(BotActionKind.DeclareAttackers, decision.Kind);
+        Assert.DoesNotContain(attacker.Id, decision.AttackerLanes.Keys);
+    }
 }
