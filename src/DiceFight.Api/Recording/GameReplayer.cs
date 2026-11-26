@@ -22,7 +22,7 @@ public static class GameReplayer
 
     public static Outcome Replay(GameRecord record, Action<GameState, RecordedAction>? onAction = null)
     {
-        var players = record.Seats.Select(BuildPlayer).ToList();
+        var players = PlayersOf(record);
         var state = GameSetup.NewGame(DiceKingdomConfig.Config, DiceKingdomConfig.Catalog, players[0], players[1], record.FirstPlayerId);
         var store = new V2GameStore();
         var session = store.Create(state, record.GameId, record.Seed);
@@ -51,7 +51,7 @@ public static class GameReplayer
     // that was refused now would), and the record is cut back to match.
     public static (V2GameSession Session, string? Divergence) Restore(GameRecord record, LiveGame live)
     {
-        var players = record.Seats.Select(BuildPlayer).ToList();
+        var players = PlayersOf(record);
         var state = GameSetup.NewGame(DiceKingdomConfig.Config, DiceKingdomConfig.Catalog, players[0], players[1], record.FirstPlayerId);
         var store = new V2GameStore();
         var seats = record.Seats.Select(s => new Seat(s.PlayerId, live.SeatTokens[s.PlayerId])).ToList();
@@ -107,8 +107,18 @@ public static class GameReplayer
         }
     }
 
+    // Both seats as dealt. A boss battle's boss (teamB) gets the boss's name
+    // back - otherwise a game rebuilt after a restart showed it as "Custom
+    // Team" (user, 2026-11-26: The Fire Ant Colony turned into Custom Team
+    // mid-game).
+    private static List<Player> PlayersOf(GameRecord record)
+    {
+        var bossName = DiceKingdomBosses.Find(record.BossId)?.Name;
+        return record.Seats.Select((seat, i) => BuildPlayer(seat, i == 1 ? bossName : null)).ToList();
+    }
+
     // The team exactly as it was dealt in the recorded game.
-    private static Player BuildPlayer(RecordedSeat seat)
+    private static Player BuildPlayer(RecordedSeat seat, string? name = null)
     {
         // A custom team - with or without a Champion of its own.
         if (seat.ChampionId is null || seat.CardDiceCounts is not null)
@@ -116,7 +126,7 @@ public static class GameReplayer
             var custom = new Player
             {
                 Id = seat.PlayerId,
-                Name = seat.ChampionId is { } id ? DiceKingdomConfig.Champions.First(c => c.Id == id).Name : "Custom Team",
+                Name = name ?? (seat.ChampionId is { } id ? DiceKingdomConfig.Champions.First(c => c.Id == id).Name : "Custom Team"),
                 ChampionId = seat.ChampionId,
                 CustomCardDiceCounts = new(seat.CardDiceCounts ?? []),
                 CustomBasicDicePool = [.. (seat.Tardigrades ?? []).Select(t => DiceKingdomConfig.CustomTardigrade(t.Key, t.Value))],

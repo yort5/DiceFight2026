@@ -6192,3 +6192,13 @@ at the opponent's, were left out, as was a Reserve die on an energy face.
 It now shows for any die with a card; the level-faces strip also covers
 the Attack Zone. Check: ~/.devtools/playwright/opp-ability-check.js
 (wait for the first-player coin flip before tapping - it covers the board).
+
+## 2026-11-26 - A rebuilt boss battle keeps the boss's name
+
+User: mid-game, The Fire Ant Colony "turned into Custom Team". A game the
+server forgot (restart/deploy/idle instance) is rebuilt from its record
+(GameReplayer.Restore); the record has the boss id (so its style and
+rewards came back), but the rebuild named every Champion-less seat
+"Custom Team". PlayersOf now gives teamB the boss's name when the record
+names a boss. Test: The_Server_Plays_A_Boss_Battle_And_It_Replays now
+also restores on a fresh server and checks the name.

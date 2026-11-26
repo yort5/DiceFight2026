@@ -190,6 +190,7 @@ public class GameRecordingTests : IDisposable
     public async Task The_Server_Plays_A_Boss_Battle_And_It_Replays()
     {
         string gameId;
+        string token;
         await using (var server = Server())
         {
             server.Services.GetRequiredService<V2GameStore>().BossPace = TimeSpan.Zero;
@@ -203,7 +204,7 @@ public class GameRecordingTests : IDisposable
             Assert.Equal("teamB", created.GetProperty("game").GetProperty("serverSeatId").GetString());
             var seat = Assert.Single(created.GetProperty("seats").EnumerateArray()); // the boss's stays on the server
             Assert.Equal("teamA", seat.GetProperty("playerId").GetString());
-            var token = seat.GetProperty("token").GetString()!;
+            token = seat.GetProperty("token").GetString()!;
 
             // Ten of the boss's turns, or the end - a cautious boss can stall
             // a game for dozens of turns, and results are BossBattleTests' job.
@@ -249,6 +250,14 @@ public class GameRecordingTests : IDisposable
         var outcome = GameReplayer.Replay(record);
         Assert.Null(outcome.Divergence);
         Assert.Equal(record.Actions.Count, outcome.ActionsReplayed);
+
+        // Rebuilt on a server that forgot it, the boss keeps its name (it came
+        // back as "Custom Team", 2026-11-26).
+        await using (var server = Server())
+        {
+            var after = await Get(server.CreateClient(), gameId, token);
+            Assert.Equal(DiceFight.V2.Data.DiceKingdomBosses.Ladder[0].Name, after.GetProperty("playerTwo").GetProperty("name").GetString());
+        }
     }
 
     [Fact]
