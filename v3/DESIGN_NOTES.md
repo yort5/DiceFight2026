@@ -6241,3 +6241,18 @@ and Cape Buffalo's aura were left out. New StatKind.CurrentAttack
 (continuous-inclusive, captured at bind like the others) - Archnemesis's
 fight and its Global's "D equal to its A" use it; every other card keeps
 the base reading. Test: Archnemesis_Fights_With_The_Real_Attack.
+
+## 2026-11-27 - Damage flies to the player it hits
+
+User: "Might be nice to have some kind of animation showing the damage to
+each player." The life badges already flashed and floated "-N" (MatCard),
+but in combat you're scrolled to the Attack Zone with one or both badges
+off screen. damageFlights.ts (mobile): when a player's life drops, each
+lane chip that read "N to face" for them in the previous commit sends a
+"-N" flying from the lane to their life badge, or to the screen's edge
+toward it when the badge isn't fully in view; then a callout at that edge
+("You -5", "Golden Eagle -3", green "+N" for a gain) when the badge is out
+of view. Chips carry data-face-damage/data-face-side, badges
+data-life-side. Check: ~/.devtools/playwright/damage-fly-check.js
+(FREEZE_MS freezes the page that long after the first hit; H=600 TOP=1
+for the off-screen callout).

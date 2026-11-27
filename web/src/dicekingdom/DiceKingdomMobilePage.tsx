@@ -30,6 +30,7 @@ import { facesFor, printedFacesFor } from "./dieFaces";
 import { explainRows, tileCues, whereText } from "./statusCues";
 import { CueRows } from "./CueRows";
 import { DieFramesLegend, legendSeen } from "./DieFramesLegend";
+import { useDamageFlights } from "./damageFlights";
 import { useDieFlights, usePhaseHeight } from "./dieFlights";
 import { useGameSounds } from "./sound";
 import { useDiceRoll, type RollTarget } from "./useDiceRoll";
@@ -890,7 +891,7 @@ function MatCard({
           )}
         </span>
         {/* Keyed by the change, so a second hit restarts the shake. */}
-        <span key={lifeDelta?.key ?? 0} className={`dkm-mat-life${lifeDelta && lifeDelta.n < 0 ? " dkm-life-hit" : ""}`} aria-label={`${player.life} life`}>
+        <span key={lifeDelta?.key ?? 0} data-life-side={mine ? "mine" : "opp"} className={`dkm-mat-life${lifeDelta && lifeDelta.n < 0 ? " dkm-life-hit" : ""}`} aria-label={`${player.life} life`}>
           <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" /></svg>
           {player.life}
           {lifeDelta && <b key={lifeDelta.key} className={`dkm-life-delta${lifeDelta.n < 0 ? " loss" : " gain"}`} aria-hidden="true">{lifeDelta.n > 0 ? `+${lifeDelta.n}` : lifeDelta.n}</b>}
@@ -1594,6 +1595,8 @@ function AttackLanesCard({
                   <div className="dkm-lane-mid">
                     {chipText && (
                       <span
+                        data-face-damage={faceDamage}
+                        data-face-side={isYourTurn ? "opp" : "mine"}
                         className="dkm-lane-chip tappable"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1630,6 +1633,8 @@ function AttackLanesCard({
                   <div className="dkm-lane-mid">
                     {chipText && (
                       <span
+                        data-face-damage={faceDamage}
+                        data-face-side={isYourTurn ? "opp" : "mine"}
                         className="dkm-lane-chip tappable"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -2644,6 +2649,7 @@ export function DiceKingdomMobilePage() {
   const flightPhase = game ? phaseForStep(game.currentStepId) : "";
   usePhaseHeight(stageShellRef, flightPhase);
   useDieFlights(rootRef, game, flightPhase, game ? (game.yourPlayerId ?? game.playerOne.id) : "");
+  useDamageFlights(rootRef, game, game ? (game.yourPlayerId ?? game.playerOne.id) : "");
   useFollowAction(rootRef, flightPhase, !!game && game.activePlayerId === (game.yourPlayerId ?? game.playerOne.id));
   useGameSounds(game);
   // Before a game: the home, or the setup step for one way to play (?play=).

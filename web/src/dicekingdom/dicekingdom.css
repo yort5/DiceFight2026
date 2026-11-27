@@ -6135,3 +6135,45 @@
 .dk-mobile .dkm-roster-row.sold-out {
   opacity: .5;
 }
+
+/* Damage on its way to a player (damageFlights.ts, 2026-11-27): a "-N"
+   flying from a lane's "to face" chip to their life badge, and a callout
+   at the screen's edge when that badge is out of view. */
+.dk-dmg-fly {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 210;
+  pointer-events: none;
+  padding: 3px 10px 2px;
+  border-radius: 999px;
+  font: 400 26px/1 Anton, "Arial Narrow", sans-serif;
+  color: #2a1206;
+  background: linear-gradient(160deg, #ffb066, #dd5a2a);
+  box-shadow: 0 0 14px rgba(255, 90, 46, 0.7), 0 3px 0 rgba(0, 0, 0, 0.3);
+  white-space: nowrap;
+  will-change: transform, opacity;
+}
+.dk-dmg-callout {
+  position: fixed;
+  left: 50%;
+  z-index: 211;
+  pointer-events: none;
+  padding: 8px 18px 6px;
+  border-radius: 999px;
+  font: 400 28px/1 Anton, "Arial Narrow", sans-serif;
+  letter-spacing: .02em;
+  white-space: nowrap;
+  box-shadow: 0 6px 20px -6px rgba(0, 0, 0, 0.7), 0 3px 0 rgba(0, 0, 0, 0.3);
+}
+.dk-dmg-callout.loss {
+  color: #2a1206;
+  background: linear-gradient(160deg, #ffb066, #dd5a2a);
+}
+.dk-dmg-callout.gain {
+  color: #fff;
+  background: linear-gradient(160deg, #45c592, #18805b);
+}
+@media (prefers-reduced-motion: reduce) {
+  .dk-dmg-fly, .dk-dmg-callout { display: none; }
+}
