@@ -352,4 +352,48 @@ public class DiceKingdomBotTests
         Assert.Equal(BotActionKind.DeclareAttackers, decision.Kind);
         Assert.DoesNotContain(attacker.Id, decision.AttackerLanes.Keys);
     }
+
+    // Game 6243b9b2 (2026-11-26): Armadillo's level-1 Pangolin locked the
+    // computer's Owl out of its Basilisk, and the Owl kept a Cuttlefish
+    // ("On Attack: spin a target opposing level 1 creature to an energy
+    // face") home. Swung, it frees the Basilisk - and its spin should take
+    // the Pangolin, not a Musk Ox worth more on stats alone.
+    [Fact]
+    public void Swings_An_On_Attack_Remover_At_A_Pangolin_Lockout()
+    {
+        Player Build(string id, string champion, params string[] cards)
+        {
+            var p = new Player { Id = id, Name = champion, ChampionId = champion };
+            p.TeamCardIds.AddRange(cards);
+            return p;
+        }
+        var state = GameSetup.NewGame(DiceKingdomConfig.Config, DiceKingdomConfig.Catalog,
+            Build("p1", "Armadillo", DiceKingdomConfig.Pangolin.Id, DiceKingdomConfig.MuskOx.Id),
+            Build("p2", "GreatHornedOwl", DiceKingdomConfig.Cuttlefish.Id, DiceKingdomConfig.Basilisk.Id));
+        Priority.Sync(state);
+        var queue = new AbilityQueue();
+        DieInstance Put(string owner, string cardId, int face)
+        {
+            var d = state.Dice.First(x => x.OwnerId == owner && x.CardId == cardId && x.Zone != Zone.FieldZone);
+            d.Zone = Zone.FieldZone; d.CurrentFaceIndex = face;
+            return d;
+        }
+        var pangolin = Put("p1", DiceKingdomConfig.Pangolin.Id, 0); // L1 1/3
+        Put("p1", DiceKingdomConfig.MuskOx.Id, 0);                  // L1 2/4
+        var cuttlefish = Put("p2", DiceKingdomConfig.Cuttlefish.Id, 1); // L2 1/3
+        state.Memories[("p1", DiceKingdomConfig.Pangolin.Id, "locked")] = DiceKingdomConfig.Basilisk.Id;
+        state.ActivePlayerId = "p2";
+        state.MoveToStep(StepIds.SelectAttackers);
+
+        var attack = DiceKingdomBot.Decide(state, "p2")!;
+        Assert.Equal(BotActionKind.DeclareAttackers, attack.Kind);
+        Assert.Contains(cuttlefish.Id, attack.AttackerLanes.Keys);
+
+        CombatEngine.DeclareAttackers(state, queue, attack.AttackerLanes);
+        EffectInterpreter.DrainQueue(state, queue, new RandomDiceRoller(new Random(1)), new Random(1));
+        Assert.NotNull(state.PendingChoice);
+        var pick = DiceKingdomBot.Decide(state, "p2")!;
+        Assert.Equal(BotActionKind.ResolvePendingChoice, pick.Kind);
+        Assert.Equal([pangolin.Id], pick.DieIds);
+    }
 }

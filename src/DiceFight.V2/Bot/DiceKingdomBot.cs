@@ -572,6 +572,13 @@ public static class DiceKingdomBot
             var home = PotentialBlockers(state, botId).Count(d => d != die && !attackers.Contains(d));
             var crackBack = theirAttack.Skip(home).Sum();
             if (crackBack >= myLife) continue;
+            // Its On Attack takes one of theirs out of play: that's worth more
+            // than the block it might make at home.
+            if (OnAttackRemovalValue(state, die, botId) >= DieValue(state, die))
+            {
+                attackers.Add(die);
+                continue;
+            }
             // The trade (user, 2026-10-04: "keep enough blockers so that I can
             // block the higher attack characters I expect my opponent to have
             // next turn"): swung, this die deals its ATK now and leaves play;
@@ -1364,13 +1371,55 @@ public static class DiceKingdomBot
     private static double ChoiceValue(GameState state, DieInstance die)
     {
         if (die.Zone is Zone.FieldZone or Zone.AttackZone && state.GetCurrentFace(die)?.Character is not null)
-            return DieValue(state, die);
+            return DieValue(state, die) + LockoutValue(state, die);
         return die.CardId is { } cardId ? state.CardCatalog[cardId].PurchaseCost : 0.5;
     }
 
     // ------------------------------------------------------------------
     // Shared helpers
     // ------------------------------------------------------------------
+
+    // What a die is worth to its opponent beyond its stats for locking them
+    // out of a card (Pangolin: "your opponent can't purchase or field it"):
+    // the locked card's cost, and a bit for the lock itself. 0 for any
+    // other die.
+    private static double LockoutValue(GameState state, DieInstance die)
+    {
+        if (die.CardId is not { } cardId || die.Zone is not (Zone.FieldZone or Zone.AttackZone)) return 0;
+        var card = state.CardCatalog[cardId];
+        double best = 0;
+        foreach (var lockout in card.Continuous.OfType<Lockout>())
+        {
+            var locked = lockout.CardId ?? (lockout.MemoryName is { } name
+                && state.Memories.TryGetValue((die.ControllerId, cardId, name), out var chosen) ? chosen : null);
+            if (locked is not null && state.CardCatalog.TryGetValue(locked, out var lockedCard))
+                best = Math.Max(best, 2 + lockedCard.PurchaseCost);
+        }
+        return best;
+    }
+
+    // The best opposing creature an attacker's On Attack ability takes out
+    // of play (spun to energy or KO'd), as a target is valued: 0 if none.
+    // A real game (2026-11-25, user): the computer's Owl kept a Cuttlefish
+    // ("On Attack: spin a target opposing level 1 creature to an energy
+    // face") home as a blocker while a level-1 Pangolin locked it out of
+    // its own Basilisk - swinging it would have freed the Basilisk.
+    private static double OnAttackRemovalValue(GameState state, DieInstance die, string botId)
+    {
+        double best = 0;
+        foreach (var ability in QueryEngine.AbilitiesOf(state, die).Where(a => a.Trigger == TriggerKind.DieAttacks))
+        {
+            var filter = ability.Effect switch { SpinToEnergy s => s.Target, Ko k => k.Target, _ => null };
+            if (filter is null || filter.Ownership != TargetOwnership.Opposing) continue;
+            foreach (var id in TargetResolver.Query(state, botId, filter, new Dictionary<string, string>(), null))
+            {
+                var target = state.Dice.First(d => d.Id == id);
+                if (target.ControllerId == botId) continue;
+                best = Math.Max(best, DieValue(state, target) + LockoutValue(state, target));
+            }
+        }
+        return best;
+    }
 
     private static double DieValue(GameState state, DieInstance die)
     {

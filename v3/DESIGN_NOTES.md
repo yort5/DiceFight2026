@@ -6202,3 +6202,21 @@ rewards came back), but the rebuild named every Champion-less seat
 "Custom Team". PlayersOf now gives teamB the boss's name when the record
 names a boss. Test: The_Server_Plays_A_Boss_Battle_And_It_Replays now
 also restores on a fresh server and checks the name.
+
+## 2026-11-27 - The computer swings an On Attack remover, and targets lockouts
+
+Game 6243b9b2 turn 8 (user: with "my L1 Pangolin blocking my opponent
+from buying their win condition, seems like they perhaps should have
+attacked with Cuttlefish?"). Yes: Cuttlefish's On Attack spins a level-1
+opposing creature to energy - it would have removed the Pangolin and
+freed the Basilisk. The attack decision only weighed an attacker's ATK
+(1 into 20 life) against keeping it home to block, so it held. Now:
+- OnAttackRemovalValue: an attacker whose On Attack spins to energy or
+  KOs an opposing creature swings (if it's otherwise safe) when the best
+  target is worth at least the attacker itself.
+- LockoutValue: a die locking its opponent out of a card (Pangolin) is
+  worth the locked card's cost + 2 extra as a target - so the spin takes
+  the Pangolin over a Musk Ox worth more on stats.
+Replayed: "Attack with 2" (Magpie + Cuttlefish). Test:
+Swings_An_On_Attack_Remover_At_A_Pangolin_Lockout. Simulator win rates
+unchanged within ~1 point.
