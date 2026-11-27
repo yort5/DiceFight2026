@@ -65,6 +65,7 @@ public sealed class EffectContext
             [StatKind.Attack] = QueryEngine.GetBaseAttack(State, die),
             [StatKind.Defense] = QueryEngine.GetBaseDefense(State, die),
             [StatKind.PrintedAttack] = State.GetCurrentFace(die)?.Character?.Attack ?? 0,
+            [StatKind.CurrentAttack] = QueryEngine.GetAttack(State, die),
             [StatKind.PrintedDefense] = State.GetCurrentFace(die)?.Character?.Defense ?? 0,
             [StatKind.Level] = State.GetCurrentFace(die)?.Character?.Level ?? 0,
             [StatKind.FieldingCost] = QueryEngine.GetBaseFieldingCost(State, die),

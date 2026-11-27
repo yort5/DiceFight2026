@@ -53,6 +53,11 @@ public enum StatKind
     LevelsAbove,
     PrintedAttack,
     PrintedDefense,
+    // ATK as it stands, ongoing effects included (Hyena's "+1 per weak
+    // creature", Cape Buffalo's aura) - for a card whose "A" means the
+    // die's real Attack (Archnemesis, user 2026-11-27). Attack stays the
+    // base reading (StatOf's own remarks).
+    CurrentAttack,
 }
 
 // ONE threshold (V2_VOCABULARY_HISTORY.md Part 1 - "ONE threshold" is a closed-

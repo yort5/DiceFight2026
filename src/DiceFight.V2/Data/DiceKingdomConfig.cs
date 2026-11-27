@@ -840,14 +840,16 @@ public static class DiceKingdomConfig
             new TriggeredAbility(TriggerKind.DieUsed, new Sequence([
                 new GrantTag(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own, BindAs: "mine",
                     Prompt: "choose YOUR creature to fight with."), []),
-                new DealDamage(new StatOf("mine", StatKind.Attack),
+                // Real ATK, auras included (user, 2026-11-27: it used the
+                // printed one).
+                new DealDamage(new StatOf("mine", StatKind.CurrentAttack),
                     new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Opposing, BindAs: "theirs",
                         Prompt: "choose the opposing creature it fights.")),
-                new DealDamage(new StatOf("theirs", StatKind.Attack), new TargetFilter(Bound: "mine")),
+                new DealDamage(new StatOf("theirs", StatKind.CurrentAttack), new TargetFilter(Bound: "mine")),
             ])),
             new TriggeredAbility(TriggerKind.Global,
                 new ModifyStat(new TargetFilter(Kind: TargetKind.CharacterDie, BindAs: "t",
-                    Prompt: "choose a creature whose D becomes its A this turn."), SetDefense: new StatOf("t", StatKind.Attack)),
+                    Prompt: "choose a creature whose D becomes its A this turn."), SetDefense: new StatOf("t", StatKind.CurrentAttack)),
                 EnergyCost: new EnergyCost(1, "Shell")),
         ],
         Continuous: []);

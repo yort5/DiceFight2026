@@ -6230,3 +6230,14 @@ remoteRolledIds counted every arrival in the Reserve as a roll. It now
 skips a die whose spin record (lastSpin.seq) is new in that update - it
 was spun, not rolled - so it just flies to the Reserve. Test in
 web/tests/dieMotion.test.cjs.
+
+## 2026-11-27 - Archnemesis reads the real Attack
+
+User: "Archnemesis action seems to be using printed attack instead of
+actual attack, should be the latter." StatOf deliberately reads the BASE
+stat (printed + applied modifiers, no ongoing auras - the 2026-08-24
+ruling for ported Dice Masters cards), so Hyena's "+1 per weak creature"
+and Cape Buffalo's aura were left out. New StatKind.CurrentAttack
+(continuous-inclusive, captured at bind like the others) - Archnemesis's
+fight and its Global's "D equal to its A" use it; every other card keeps
+the base reading. Test: Archnemesis_Fights_With_The_Real_Attack.

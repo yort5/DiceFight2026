@@ -116,6 +116,32 @@ public class ArmadilloRosterTests
         Assert.Equal(2, mine.Damage); // ...but it still hit back
     }
 
+    // Archnemesis uses the die's real ATK, auras included (user, 2026-11-27:
+    // it used the printed one). Cape Buffalo makes Hummingbird 2/3 a 3/3,
+    // which KOs a 3-DEF Honey Badger.
+    [Fact]
+    public void Archnemesis_Fights_With_The_Real_Attack()
+    {
+        var state = NewGame();
+        var queue = new AbilityQueue();
+        Place(state, "p1", d => d.CardId == DiceKingdomConfig.CapeBuffalo.Id, Zone.FieldZone, 0);
+        var mine = Place(state, "p1", d => d.CardId == DiceKingdomConfig.Hummingbird.Id, Zone.FieldZone, 1);  // L2: 2/3
+        var theirs = Place(state, "p2", d => d.CardId == DiceKingdomConfig.HoneyBadger.Id, Zone.FieldZone, 2); // L3: 2/3
+        Assert.Equal(3, QueryEngine.GetAttack(state, mine));
+        Assert.Equal(3, QueryEngine.GetDefense(state, theirs));
+        var action = Place(state, "p1", d => d.CardId == DiceKingdomConfig.Archnemesis.Id, Zone.ReservePool, 0);
+
+        TurnEngine.UseAction(state, queue, action.Id);
+        Drain(state, queue);
+        if (state.PendingChoice is not null) // Cape Buffalo could fight too
+        {
+            EffectInterpreter.AnswerPendingChoice(state, [mine.Id]);
+            Drain(state, queue);
+        }
+
+        Assert.Equal(Zone.PrepArea, theirs.Zone);
+    }
+
     // A die whose D drops to the damage already on it is KO'd then, not
     // only when it's next hit (user, 2026-11-14: Archnemesis's Global set a
     // creature's D to its A of 1 after Honey Badger dealt it 1, and it

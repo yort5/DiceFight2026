@@ -459,7 +459,7 @@ public static class QueryEngine
     // state, not something a continuous-modifier registry intercepts.
     public static int GetStatValue(GameState state, DieInstance die, StatThreshold stat) => stat.Kind switch
     {
-        StatKind.Attack => GetAttack(state, die),
+        StatKind.Attack or StatKind.CurrentAttack => GetAttack(state, die),
         StatKind.Defense => GetDefense(state, die),
         StatKind.PrintedAttack => state.GetCurrentFace(die)?.Character?.Attack ?? 0,
         StatKind.PrintedDefense => state.GetCurrentFace(die)?.Character?.Defense ?? 0,
@@ -489,7 +489,9 @@ public static class QueryEngine
     // checks for the same self-referential-cycle reason GetBaseTags is.
     public static int GetBaseStatValue(GameState state, DieInstance die, StatThreshold stat) => stat.Kind switch
     {
-        StatKind.Attack => GetBaseAttack(state, die),
+        // No continuous reading here, CurrentAttack included - this is the
+        // query continuous effects use to decide whether they apply at all.
+        StatKind.Attack or StatKind.CurrentAttack => GetBaseAttack(state, die),
         StatKind.Defense => GetBaseDefense(state, die),
         StatKind.PrintedAttack => state.GetCurrentFace(die)?.Character?.Attack ?? 0,
         StatKind.PrintedDefense => state.GetCurrentFace(die)?.Character?.Defense ?? 0,
