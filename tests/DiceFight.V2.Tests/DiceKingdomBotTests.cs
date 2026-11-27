@@ -396,4 +396,52 @@ public class DiceKingdomBotTests
         Assert.Equal(BotActionKind.ResolvePendingChoice, pick.Kind);
         Assert.Equal([pangolin.Id], pick.DieIds);
     }
+
+    // User, 2026-11-27: Mutation "can be played defensively - but probably
+    // should have used it to remove a Rhino of mine". With the original
+    // wording it can: the computer swaps the Rhinoceros out for the weakest
+    // creature in its owner's Used Pile.
+    [Fact]
+    public void Mutation_Swaps_Out_An_Opposing_Rhinoceros_For_Their_Weakest()
+    {
+        Player Build(string id, string champion, params string[] cards)
+        {
+            var p = new Player { Id = id, Name = champion, ChampionId = champion };
+            p.TeamCardIds.AddRange(cards);
+            return p;
+        }
+        var state = GameSetup.NewGame(DiceKingdomConfig.Config, DiceKingdomConfig.Catalog,
+            Build("p1", "Armadillo", DiceKingdomConfig.Rhinoceros.Id, DiceKingdomConfig.HermitCrab.Id, DiceKingdomConfig.MuskOx.Id),
+            Build("p2", "GreatHornedOwl", DiceKingdomConfig.Mutation.Id));
+        Priority.Sync(state);
+        var queue = new AbilityQueue();
+        DieInstance Put(string owner, string cardId, Zone zone, int face)
+        {
+            var d = state.Dice.First(x => x.OwnerId == owner && x.CardId == cardId && x.Zone == Zone.Unpurchased);
+            d.Zone = zone; d.CurrentFaceIndex = face;
+            return d;
+        }
+        var rhino = Put("p1", DiceKingdomConfig.Rhinoceros.Id, Zone.FieldZone, 2); // L3 3/9
+        var crab = Put("p1", DiceKingdomConfig.HermitCrab.Id, Zone.UsedPile, 0);
+        Put("p1", DiceKingdomConfig.MuskOx.Id, Zone.UsedPile, 0);
+        var mutation = Put("p2", DiceKingdomConfig.Mutation.Id, Zone.ReservePool, 0); // an action face
+        state.ActivePlayerId = "p2";
+        state.MoveToStep(StepIds.Main);
+        Priority.Sync(state);
+
+        var use = DiceKingdomBot.Decide(state, "p2")!;
+        Assert.Equal(BotActionKind.UseAction, use.Kind);
+        Assert.Equal(mutation.Id, use.DieId);
+        TurnEngine.UseAction(state, queue, mutation.Id);
+        EffectInterpreter.DrainQueue(state, queue, new RandomDiceRoller(new Random(1)), new Random(1));
+        for (var i = 0; i < 2 && state.PendingChoice is not null; i++)
+        {
+            var answer = DiceKingdomBot.Decide(state, "p2")!;
+            EffectInterpreter.AnswerPendingChoice(state, answer.DieIds);
+            EffectInterpreter.DrainQueue(state, queue, new RandomDiceRoller(new Random(1)), new Random(1));
+        }
+
+        Assert.Equal(Zone.UsedPile, rhino.Zone);
+        Assert.Equal(Zone.FieldZone, crab.Zone);
+    }
 }

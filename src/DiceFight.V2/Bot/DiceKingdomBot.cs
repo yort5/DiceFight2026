@@ -338,10 +338,9 @@ public static class DiceKingdomBot
             // Distraction: only worth it with an attack coming into blockers.
             case CombatFlag { Flag: CombatFlagKind.CantBlock }:
                 return PotentialAttackers(state, botId).Any() && PotentialBlockers(state, oppId).Any();
-            // Mutation: swap only for a real Character waiting in the Used Pile.
-            case Sequence s when s.Steps.FirstOrDefault() is MoveDie { ToZone: Zone.UsedPile }:
-                return state.DiceIn(botId, Zone.FieldZone).Any()
-                    && state.DiceIn(botId, Zone.UsedPile).Any(d => IsCharacterCard(state, d) && state.CardCatalog[d.CardId!].PurchaseCost >= 3);
+            // Mutation: only for a swap worth making, on either side.
+            case Sequence s when s.Steps.FirstOrDefault() is MoveDie { ToZone: Zone.UsedPile, Target: var outFilter }:
+                return BestSwap(state, botId, outFilter, pendingOut: null) is not null;
             // Resurrection: a free die back, as long as there's one to take.
             case Sequence s when s.Steps.FirstOrDefault() is MoveDie { ToZone: Zone.ReservePool }:
                 return state.DiceIn(botId, Zone.UsedPile).Any();
@@ -1300,6 +1299,17 @@ public static class DiceKingdomBot
                 var goHome = oppLife <= 1 || (atk < oppLife && atk <= 2);
                 return new(BotActionKind.ResolvePendingChoice, goHome ? "Infiltrate - back to the Field." : "Infiltrate declined - full hit.")
                     { DieIds = goHome ? [infiltrator.Id] : [] };
+            // Mutation's two picks: the planned swap-out, then the swap-in.
+            case MoveDie { ToZone: Zone.UsedPile, Target: { RequiresMatch: not null } outFilter }
+                when BestSwap(state, botId, outFilter, pending.CandidateIds) is { } swap:
+                return new(BotActionKind.ResolvePendingChoice, "Mutation: swap it out.") { DieIds = [swap.Out.Id] };
+            case MoveDie { ToZone: Zone.FieldZone, Target.SameOwnerAs: not null }:
+                var incoming = pending.CandidateIds.Select(id => state.Dice.First(d => d.Id == id)).ToList();
+                // Ours: the best of what's there. Theirs: the worst.
+                var swapIn = incoming[0].OwnerId == botId
+                    ? incoming.OrderByDescending(d => LevelOneValue(state, d)).First()
+                    : incoming.OrderBy(d => LevelOneValue(state, d)).First();
+                return new(BotActionKind.ResolvePendingChoice, "Mutation: swap it in.") { DieIds = [swapIn.Id] };
             case GrantTag { Tags.Count: 0 } when BestFight(state, botId) is { } fight && pending.CandidateIds.Contains(fight.Mine.Id):
                 return new(BotActionKind.ResolvePendingChoice, "Archnemesis: my fighter.") { DieIds = [fight.Mine.Id] };
             case DealDamage { Amount: StatOf } when BestFight(state, botId) is { } fight && pending.CandidateIds.Contains(fight.Theirs.Id):
@@ -1373,6 +1383,43 @@ public static class DiceKingdomBot
         if (die.Zone is Zone.FieldZone or Zone.AttackZone && state.GetCurrentFace(die)?.Character is not null)
             return DieValue(state, die) + LockoutValue(state, die);
         return die.CardId is { } cardId ? state.CardCatalog[cardId].PurchaseCost : 0.5;
+    }
+
+    // Mutation (original wording, 2026-11-27): swap a fielded creature,
+    // either player's, with a creature from its owner's Used Pile at level
+    // 1. The best swap for this player - its own die for a better one, or
+    // one of theirs (a Rhinoceros, a Pangolin locking it out) for the
+    // weakest die in their Used Pile - if it gains at least 2. `outFilter`
+    // is the swap-out pick (its RequiresMatch the swap-in);
+    // `pendingOut` limits it to an open choice's candidates.
+    private static (DieInstance Out, double Gain)? BestSwap(GameState state, string botId, TargetFilter outFilter, IReadOnlyList<string>? pendingOut)
+    {
+        if (outFilter.RequiresMatch is not { } inFilter) return null;
+        var outs = pendingOut ?? TargetResolver.Query(state, botId, outFilter, new Dictionary<string, string>(), ProtectionFrom.Action);
+        (DieInstance Out, double Gain)? best = null;
+        foreach (var outId in outs)
+        {
+            var o = state.Dice.First(d => d.Id == outId);
+            var bound = new Dictionary<string, string> { [outFilter.BindAs ?? "candidate"] = outId };
+            var ins = TargetResolver.Query(state, botId, inFilter, bound, ProtectionFrom.Action).Select(id => state.Dice.First(d => d.Id == id)).ToList();
+            if (ins.Count == 0) continue;
+            var gain = o.ControllerId == botId
+                ? ins.Max(i => LevelOneValue(state, i)) - DieValue(state, o)
+                : DieValue(state, o) + LockoutValue(state, o) - ins.Min(i => LevelOneValue(state, i));
+            if (best is null || gain > best.Value.Gain) best = (o, gain);
+        }
+        return best is { Gain: >= 2 } ? best : null;
+    }
+
+    // What a die would be worth fielded at level 1 (Mutation's swap-in),
+    // read off its card rather than the face it shows in the Used Pile.
+    private static double LevelOneValue(GameState state, DieInstance die)
+    {
+        if (die.CardId is not { } cardId) return 0;
+        var card = state.CardCatalog[cardId];
+        var level1 = state.GetDieDefinition(die).Faces.Select(f => f.Character).FirstOrDefault(c => c?.Level == 1);
+        if (level1 is null) return 0;
+        return level1.Attack * 1.2 + level1.Defense * 0.8 + 1 + (card.Abilities.Count > 0 || card.Continuous.Count > 0 || card.Keywords.Count > 0 ? 1 : 0);
     }
 
     // ------------------------------------------------------------------

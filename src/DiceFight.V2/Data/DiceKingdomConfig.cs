@@ -880,19 +880,29 @@ public static class DiceKingdomConfig
     // move, so it can't pick the die it just swapped out. Tags carry the
     // card's name, which is how Tardigrades and the four action cards are
     // kept out of the Used Pile pick without a new TargetKind.
+    // Mutation's swap-in: a non-Tardigrade creature die in the Used Pile
+    // of whoever owns the die swapped out (bound "out"), not that die itself.
+    private static readonly TargetFilter MutationSwapIn = new(Kind: TargetKind.AnyDie, Zones: [Zone.UsedPile],
+        Tags: new TagQuery(NoneOf: ["sidekick", "Anger Issues", "Distraction", "Resurrection", "Mutation", "Archnemesis"]),
+        SameOwnerAs: "out", ExcludeBound: "out");
+
     public static readonly CardDef Mutation = new(
         Id: "DK-ACT-04", Name: "Mutation", Subtitle: "Basic Action", Set: "Dice Kingdom", CardType: CardType.BasicAction,
         PurchaseCost: 3, EnergySymbolIds: [],
         Die: ActionDie("DK-ACT-04Die", "Eye"),
         DieLimit: ActionDieLimit, Affiliations: [], Keywords: [],
-        RawText: "Swap one of your fielded creatures with a non-Tardigrade creature die in your Used Pile. It comes in at level 1 (no On Field). Global: Pay 1 Eye. Spin one of your creatures down a level to spin another creature up a level.",
+        RawText: "Swap a fielded creature with a non-Tardigrade creature die in its owner's Used Pile. It comes in at level 1 (no On Field). Global: Pay 1 Eye. Spin one of your creatures down a level to spin another creature up a level.",
         Abilities: [
+            // Either player's creature (user, 2026-11-27: the original card
+            // says "target character die" and "that player's Used Pile";
+            // ours had been cut down to your own). The swap-out is offered
+            // only when its owner's Used Pile has something to swap in.
             new TriggeredAbility(TriggerKind.DieUsed, new Sequence([
-                new MoveDie(new TargetFilter(Kind: TargetKind.CharacterDie, Ownership: TargetOwnership.Own, Zones: [Zone.FieldZone],
-                    Prompt: "choose one of your creatures to swap OUT (it goes to your Used Pile)."), Zone.UsedPile),
-                new MoveDie(new TargetFilter(Kind: TargetKind.AnyDie, Ownership: TargetOwnership.Own, Zones: [Zone.UsedPile],
-                    Tags: new TagQuery(NoneOf: ["sidekick", "Anger Issues", "Distraction", "Resurrection", "Mutation", "Archnemesis"]), BindAs: "mutant",
-                    Prompt: "choose a creature from your Used Pile to swap IN at level 1."), Zone.FieldZone),
+                new MoveDie(new TargetFilter(Kind: TargetKind.CharacterDie, Zones: [Zone.FieldZone], BindAs: "out",
+                    RequiresMatch: MutationSwapIn,
+                    Prompt: "choose a creature to swap OUT (it goes to its owner's Used Pile)."), Zone.UsedPile),
+                new MoveDie(MutationSwapIn with { BindAs = "mutant",
+                    Prompt = "choose a creature from that player's Used Pile to swap IN at level 1." }, Zone.FieldZone),
                 new Spin(new TargetFilter(Bound: "mutant"), SetLevel: 1),
             ])),
             // Each pick says which it is (2026-09-27: "it wasn't clear which

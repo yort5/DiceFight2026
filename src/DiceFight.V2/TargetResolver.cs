@@ -111,6 +111,12 @@ public static class TargetResolver
             dice = dice.Where(d => opponents.Contains(d.Id));
         }
 
+        if (filter.SameOwnerAs is { } ownerBinding)
+        {
+            var ownerId = bindings.TryGetValue(ownerBinding, out var boundId) ? state.Dice.FirstOrDefault(d => d.Id == boundId)?.OwnerId : null;
+            dice = dice.Where(d => d.OwnerId == ownerId);
+        }
+
         dice = filter.Ownership switch
         {
             TargetOwnership.Own => dice.Where(d => d.ControllerId == requestingControllerId),
@@ -167,6 +173,16 @@ public static class TargetResolver
                 if (stat.Min is { } min && value < min) return false;
                 if (stat.Max is { } max && value > max) return false;
                 return true;
+            });
+        }
+
+        if (filter.RequiresMatch is { } partner)
+        {
+            var name = filter.BindAs ?? "candidate";
+            dice = dice.Where(d =>
+            {
+                var withThis = new Dictionary<string, string>(bindings) { [name] = d.Id };
+                return Query(state, requestingControllerId, partner, withThis, protection, includeContinuous, snapshot).Count > 0;
             });
         }
 

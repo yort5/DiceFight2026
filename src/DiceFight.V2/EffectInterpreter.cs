@@ -491,7 +491,7 @@ public static class EffectInterpreter
 
     private static void ExecuteMoveDie(MoveDie n, EffectContext ctx, Action onComplete)
     {
-        ResolveTarget(ctx, n.Target, ProtectionFor(ctx.Trigger), MoveIntent(n), ids =>
+        ResolveTarget(ctx, n.Target, ProtectionFor(ctx.Trigger), MoveIntent(n), n, ids =>
         {
             foreach (var id in ids)
             {

@@ -151,6 +151,40 @@ public class DiceKingdomKeywordTests
         return die;
     }
 
+    // The original wording (user, 2026-11-27): Mutation swaps EITHER
+    // player's fielded creature, with one from that player's Used Pile at
+    // level 1 - and only a creature whose owner has a swap-in to offer.
+    [Fact]
+    public void Mutation_Swaps_An_Opposing_Creature_With_One_From_Their_Used_Pile()
+    {
+        var state = NewGame();
+        var queue = new AbilityQueue();
+        var mine = AddDie(state, DiceKingdomConfig.Hummingbird.Id, "p1", Zone.FieldZone, level: 2, tag: "mine"); // p1's Used Pile is empty
+        var cuttlefish = AddDie(state, DiceKingdomConfig.Cuttlefish.Id, "p2", Zone.FieldZone, level: 2, tag: "out");
+        var magpie = AddDie(state, DiceKingdomConfig.Magpie.Id, "p2", Zone.UsedPile, level: 3, tag: "in");
+        var action = AddDie(state, DiceKingdomConfig.Mutation.Id, "p1", Zone.ReservePool, level: 1, tag: "action"); // an action face
+
+        TurnEngine.UseAction(state, queue, action.Id);
+        Drain(state, queue);
+        if (state.PendingChoice is { } pick)
+        {
+            Assert.DoesNotContain(mine.Id, pick.CandidateIds);
+            EffectInterpreter.AnswerPendingChoice(state, [cuttlefish.Id]);
+            Drain(state, queue);
+        }
+        if (state.PendingChoice is not null)
+        {
+            EffectInterpreter.AnswerPendingChoice(state, [magpie.Id]);
+            Drain(state, queue);
+        }
+
+        Assert.Equal(Zone.UsedPile, cuttlefish.Zone);
+        Assert.Equal(Zone.FieldZone, magpie.Zone);
+        Assert.Equal("p2", magpie.ControllerId);
+        Assert.Equal(1, state.GetCurrentFace(magpie)!.Character!.Level);
+        Assert.Equal(Zone.FieldZone, mine.Zone);
+    }
+
     [Fact]
     public void Mutations_Global_Cant_Be_Used_When_Only_The_Spun_Down_Die_Could_Go_Up()
     {

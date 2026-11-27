@@ -6256,3 +6256,27 @@ of view. Chips carry data-face-damage/data-face-side, badges
 data-life-side. Check: ~/.devtools/playwright/damage-fly-check.js
 (FREEZE_MS freezes the page that long after the first hit; H=600 TOP=1
 for the off-screen callout).
+
+## 2026-11-27 - Mutation back to the original wording
+
+User: "I wonder if we simplified Mutation in the beginning? The original
+does not specify 'your.'" We did: the 2026-09-26 Champion actions were
+"trimmed to the closed vocabulary", and the original - "Swap target
+character die in the Field Zone with target non-sidekick character dice in
+that player's Used Pile" - needed a target relative to an earlier pick.
+Now: "Swap a fielded creature with a non-Tardigrade creature die in its
+owner's Used Pile. It comes in at level 1 (no On Field)." Either player's.
+- TargetFilter.SameOwnerAs (dice owned by the bound die's owner) and
+  TargetFilter.RequiresMatch (a pick only offered if a partner pick
+  exists - no swap-out without a swap-in, else it's a free removal).
+- AbilityPreview's paired-pick check now binds each candidate first pick
+  before testing the second (it reported "would have no effect").
+- MoveDie choices now carry their effect (PendingChoice.Effect).
+- Computer: BestSwap weighs every legal pair on both sides - its own die
+  for a better level-1 swap-in, or one of yours (a Rhinoceros; a Pangolin
+  locking it out counts extra) for the weakest die in your Used Pile - and
+  plays Mutation when the best gains 2+.
+Tests: Mutation_Swaps_An_Opposing_Creature_With_One_From_Their_Used_Pile,
+Mutation_Swaps_Out_An_Opposing_Rhinoceros_For_Their_Weakest. Simulator:
+Owl +~1.5 points; Mutation 0.3-0.8 uses a game. (DPS009, the ported Dice
+Masters card, still has the cut-down version - not on any Dice Kingdom team.)

@@ -43,8 +43,11 @@ public static class AbilityPreview
             var first = s.Steps.Take(j).Select(TargetOf).LastOrDefault(f => f?.BindAs == name);
             if (first is null) continue;
             var firsts = TargetResolver.Query(state, controllerId, first, none, protection);
-            var seconds = TargetResolver.Query(state, controllerId, second with { ExcludeBound = null }, none, protection);
-            return firsts.Any(a => seconds.Any(b => b != a));
+            // The second pick is judged with each candidate first pick bound,
+            // since it may depend on it (Mutation's "that player's Used
+            // Pile" - TargetFilter.SameOwnerAs).
+            return firsts.Any(a => TargetResolver.Query(state, controllerId, second with { ExcludeBound = null },
+                new Dictionary<string, string> { [name] = a }, protection).Any(b => b != a));
         }
         return null;
     }

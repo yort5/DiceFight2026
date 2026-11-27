@@ -114,7 +114,18 @@ public sealed record TargetFilter(
     // and spun straight back: the Global did nothing.
     string? ExcludeBound = null,
     // Only opposing dice engaged with the die named by this binding.
-    string? EngagedWith = null)
+    string? EngagedWith = null,
+    // "That player's": only dice OWNED by whoever owns the die an earlier
+    // step bound under this name. First user: Mutation (2026-11-27, the
+    // original wording) - the swap-in comes from the swapped-out die's
+    // owner's Used Pile.
+    string? SameOwnerAs = null,
+    // Only dice that leave this other filter something to pick, with the
+    // die itself bound under this filter's BindAs - for a pick that only
+    // makes sense with a partner. Mutation: a creature can be swapped out
+    // only if its owner's Used Pile has a creature to swap in (otherwise
+    // the swap would be a free removal).
+    TargetFilter? RequiresMatch = null)
 {
     // Rule 3.3.4/3.3.5 - only Field Zone (which includes Attack Zone) is
     // targetable by default.
