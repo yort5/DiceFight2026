@@ -27,7 +27,11 @@ export function remoteRolledIds(previous: GameState, next: GameState): string[] 
     // (EffectInterpreter's DrawToZone/MoveDie roll on arrival). So arriving
     // from any other zone is a roll - even when the poll missed Clear & Draw
     // and Roll in between - without reading the log's wording.
-    if (was.zone !== "ReservePool") return true;
+    // Except a creature SPUN to an energy face (SpinToEnergy - Cuttlefish),
+    // which leaves the Field for the Reserve without being rolled: its spin
+    // record is new (user, 2026-11-27: a spun-down Pangolin "had a rolling
+    // effect... that implies randomness").
+    if (was.zone !== "ReservePool") return !(die.lastSpin && die.lastSpin.seq !== was.lastSpin?.seq);
     // RerollOwn() keeps dice in Reserve. Don't animate stat-only changes
     // or arbitrary Main-phase effects as randomized rolls.
     return wasRolling && die.controllerId === previous.activePlayerId && physicalFaceChanged(was, die);

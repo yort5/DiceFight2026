@@ -6220,3 +6220,13 @@ freed the Basilisk. The attack decision only weighed an attacker's ATK
 Replayed: "Attack with 2" (Magpie + Cuttlefish). Test:
 Swings_An_On_Attack_Remover_At_A_Pangolin_Lockout. Simulator win rates
 unchanged within ~1 point.
+
+## 2026-11-27 - A die spun to energy doesn't tumble like a roll
+
+User: the computer's Cuttlefish now swings (the fix above worked), but the
+spun Pangolin "had a rolling effect... that implies randomness".
+SpinToEnergy moves a fielded die to the Reserve (LeaveFieldIfEnergy), and
+remoteRolledIds counted every arrival in the Reserve as a roll. It now
+skips a die whose spin record (lastSpin.seq) is new in that update - it
+was spun, not rolled - so it just flies to the Reserve. Test in
+web/tests/dieMotion.test.cjs.

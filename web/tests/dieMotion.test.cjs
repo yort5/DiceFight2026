@@ -101,3 +101,17 @@ test('remote Basic Action roll into reserve also tumbles', () => {
   const after = game('main', [now]);
   assert.deepEqual(motion.remoteRolledIds(before, after), ['action']);
 });
+
+// 2026-11-27: Cuttlefish spun a fielded Pangolin to an energy face, which
+// moves it Field -> Reserve; it tumbled like a fresh roll. A new spin
+// record means it was spun, not rolled.
+test('a creature spun to energy into the Reserve is not a roll', () => {
+  const spun = { seq: 7, fromLevel: 1, toLevel: null, source: 'Cuttlefish' };
+  const prev = game('select-attackers', [die('a', { zone: 'FieldZone', controllerId: 'p1' })]);
+  const next = game('select-attackers', [die('a', { controllerId: 'p1', level: null, effectiveAttack: null, effectiveDefense: null, energySymbolId: 'Shell', energyAmount: 1, lastSpin: spun })]);
+  assert.deepEqual(motion.remoteRolledIds(prev, next), []);
+  // An older spin on the same die doesn't hide a real roll later.
+  const rolledLater = game('roll-and-reroll', [die('a', { zone: 'ReservePool', controllerId: 'p1', energySymbolId: 'Shell', energyAmount: 2, level: null, lastSpin: spun })]);
+  const fromBag = game('roll-and-reroll', [die('a', { zone: 'DiceFromBag', controllerId: 'p1', lastSpin: spun })]);
+  assert.deepEqual(motion.remoteRolledIds(fromBag, rolledLater), ['a']);
+});
